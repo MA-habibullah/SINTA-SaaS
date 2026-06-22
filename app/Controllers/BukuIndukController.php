@@ -25,7 +25,7 @@ class BukuIndukController extends BaseController {
         $tenantId = SessionManager::getTenantId();
         
         // Ambil opsi kelas untuk filter dropdown
-        $q = "SELECT id, nama_kelas FROM kelas WHERE is_active = 1";
+        $q = "SELECT id, nama_kelas FROM kelas WHERE is_active = 1 AND deleted_at IS NULL";
         if ($tenantId) {
             $q .= " AND tenant_id = :tenant_id";
         }

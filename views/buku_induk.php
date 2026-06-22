@@ -99,7 +99,7 @@
                 <div class="col-6 col-md-3">
                     <select class="form-select form-select-sm rounded-3" v-model="filterKelas" @change="fetchData(1)">
                         <option value="">🏫 Semua Kelas</option>
-                        <option v-for="k in kelasOptions" :value="k.id" :key="k.id">{{ k.nama_kelas }}</option>
+                        <option v-for="k in kelasOptions" :value="k.id" :key="k.id">{{ k.nama_kelas || k.nama }}</option>
                     </select>
                 </div>
 
@@ -263,7 +263,7 @@
                                 @change="loadKurikulumMapping">
                             <option value="">-- Pilih Kelas --</option>
                             <option v-for="k in masterKurikulum.kelas" :key="k.id" :value="k.id">
-                                {{ k.nama_kelas }}
+                                {{ k.nama_kelas || k.nama }}
                             </option>
                         </select>
                     </div>
@@ -425,7 +425,7 @@
                             <option v-for="k in filteredCopyKelasOptions" 
                                     :value="k.id" 
                                     :key="k.id">
-                                {{ k.nama_kelas }}
+                                {{ k.nama_kelas || k.nama }}
                             </option>
                         </select>
                         <small class="text-muted fs-8 mt-1 d-block">
