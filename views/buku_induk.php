@@ -960,6 +960,17 @@
             this.copyModalObj = new bootstrap.Modal(document.getElementById('copyKurikulumModal'));
             this.fetchData(1);
         },
+        computed: {
+            selectedTenantName() {
+                if (!this.filterTenantId) return '';
+                const t = this.listTenants.find(t => t.id === this.filterTenantId);
+                return t ? t.nama_sekolah : '';
+            },
+            filteredCopyKelasOptions() {
+                if (!this.masterKurikulum || !this.masterKurikulum.kelas) return [];
+                return this.masterKurikulum.kelas.filter(k => k.id != this.kurikulum.kelasId);
+            }
+        },
         methods: {
             switchMainTab(tabId) {
                 this.mainActiveTab = tabId;
@@ -968,14 +979,6 @@
                 } else {
                     this.fetchData(1);
                 }
-            },
-            get selectedTenantName() {
-                if (!this.filterTenantId) return '';
-                const t = this.listTenants.find(t => t.id === this.filterTenantId);
-                return t ? t.nama_sekolah : '';
-            },
-            get filteredCopyKelasOptions() {
-                return this.masterKurikulum.kelas.filter(k => k.id != this.kurikulum.kelasId);
             },
             onFilterTenantChange() {
                 // Ambil daftar kelas yang sesuai dengan tenant terpilih (untuk Super Admin)
