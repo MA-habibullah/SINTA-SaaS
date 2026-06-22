@@ -172,6 +172,26 @@ try {
             $controller->copyCurriculum();
             break;
 
+        case '/api/v1/nilai-rapor/grid':
+            $controller = new App\Controllers\NilaiRaporController();
+            $controller->getGrid();
+            break;
+
+        case '/api/v1/nilai-rapor/save':
+            $controller = new App\Controllers\NilaiRaporController();
+            $controller->save();
+            break;
+
+        case '/api/v1/nilai-rapor/export':
+            $controller = new App\Controllers\NilaiRaporController();
+            $controller->export();
+            break;
+
+        case '/api/v1/nilai-rapor/import':
+            $controller = new App\Controllers\NilaiRaporController();
+            $controller->import();
+            break;
+
         case '/cetak-rapot':
             $controller = new App\Controllers\BukuIndukController();
             $controller->printRapot();

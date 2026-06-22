@@ -443,6 +443,227 @@
         </div>
     </div>
 
+    </div>
+
+    <!-- ═══ PANEL INPUT NILAI RAPOR ═══════════════════════════════ -->
+    <div v-show="mainActiveTab === 'input_nilai_rapor'" class="animate-fade-in">
+        
+        <!-- Controls Card -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4" style="background: linear-gradient(135deg, #eff6ff, #f8fafc);">
+            <div class="card-body p-3 p-md-4">
+                <div class="row g-3 align-items-end">
+                    
+                    <!-- Tahun Ajaran -->
+                    <div class="col-12 col-md-3">
+                        <label class="form-label fw-bold text-dark fs-8 mb-1">Tahun Ajaran</label>
+                        <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle"
+                                v-model="nilaiRapor.tahunAjaran"
+                                @change="loadNilaiRaporGrid">
+                            <option value="">-- Pilih Tahun Ajaran --</option>
+                            <option v-for="t in masterNilaiRapor.tahun_ajaran" :key="t.id" :value="t.tahun_ajaran">
+                                {{ t.tahun_ajaran }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- Semester -->
+                    <div class="col-12 col-md-3">
+                        <label class="form-label fw-bold text-dark fs-8 mb-1">Semester</label>
+                        <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle"
+                                v-model="nilaiRapor.semester"
+                                @change="loadNilaiRaporGrid">
+                            <option value="Ganjil">Ganjil</option>
+                            <option value="Genap">Genap</option>
+                        </select>
+                    </div>
+
+                    <!-- Kelas -->
+                    <div class="col-12 col-md-3">
+                        <label class="form-label fw-bold text-dark fs-8 mb-1">Kelas Fisik</label>
+                        <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle"
+                                v-model="nilaiRapor.kelasId"
+                                @change="loadNilaiRaporGrid">
+                            <option value="">-- Pilih Kelas --</option>
+                            <option v-for="k in masterNilaiRapor.kelas" :key="k.id" :value="k.id">
+                                {{ k.nama_kelas || k.nama }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- Actions (Import/Export) -->
+                    <div class="col-12 col-md-3 d-flex gap-2">
+                        <button class="btn btn-outline-success btn-sm rounded-3 px-2 py-2 flex-grow-1 fs-8 fw-semibold"
+                                :disabled="!nilaiRapor.kelasId || nilaiRapor.subjects.length === 0"
+                                @click="exportNilaiRaporCSV"
+                                title="Unduh Format CSV">
+                            <i class="bi bi-file-earmark-arrow-down me-1"></i> Unduh
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm rounded-3 px-2 py-2 flex-grow-1 fs-8 fw-semibold"
+                                :disabled="!nilaiRapor.kelasId || nilaiRapor.subjects.length === 0"
+                                @click="showImportGradesModal"
+                                title="Unggah Nilai CSV">
+                            <i class="bi bi-file-earmark-arrow-up me-1"></i> Impor
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid Loading State -->
+        <div v-if="loadingNilaiRapor" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="text-muted mt-2 fs-7">Memuat data nilai rapor...</p>
+        </div>
+
+        <!-- No Selection State -->
+        <div v-else-if="!nilaiRapor.kelasId || !nilaiRapor.tahunAjaran" class="card border-0 shadow-sm rounded-4 py-5 text-center bg-white">
+            <div class="card-body">
+                <i class="bi bi-journal-text text-secondary display-4 d-block mb-3"></i>
+                <h5 class="fw-bold text-dark">Matriks Input Nilai Rapor</h5>
+                <p class="text-muted fs-7 mx-auto" style="max-width: 450px;">
+                    Silakan pilih Tahun Ajaran, Semester, dan Kelas fisik pada dropdown di atas untuk memuat lembar input nilai rapor siswa.
+                </p>
+            </div>
+        </div>
+
+        <!-- Empty Subjects State -->
+        <div v-else-if="nilaiRapor.subjects.length === 0" class="card border-0 shadow-sm rounded-4 py-5 text-center bg-white" style="border-left: 4px solid #ef4444 !important;">
+            <div class="card-body">
+                <i class="bi bi-exclamation-triangle text-danger display-4 d-block mb-3"></i>
+                <h5 class="fw-bold text-dark">Mata Pelajaran Belum Dipetakan</h5>
+                <p class="text-muted fs-7 mx-auto mb-3" style="max-width: 480px;">
+                    Kelas yang Anda pilih belum memiliki pemetaan kurikulum mata pelajaran pada tahun ajaran dan semester ini.
+                </p>
+                <button class="btn btn-primary btn-sm rounded-3 px-3 py-2 fs-8 fw-semibold" @click="switchMainTab('seting_kurikulum')">
+                    <i class="bi bi-gear-wide-connected me-1"></i> Atur Kurikulum Kelas Sekarang
+                </button>
+            </div>
+        </div>
+
+        <!-- Empty Students State -->
+        <div v-else-if="nilaiRapor.students.length === 0" class="card border-0 shadow-sm rounded-4 py-5 text-center bg-white">
+            <div class="card-body">
+                <i class="bi bi-people-mute text-secondary display-4 d-block mb-3"></i>
+                <h5 class="fw-bold text-dark">Tidak Ada Siswa Aktif</h5>
+                <p class="text-muted fs-7 mx-auto" style="max-width: 450px;">
+                    Tidak ditemukan siswa berstatus aktif di dalam kelas ini untuk tahun ajaran terpilih.
+                </p>
+            </div>
+        </div>
+
+        <!-- Matriks Grid Table -->
+        <div v-else>
+            
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-3 p-md-4">
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <div>
+                            <h5 class="fw-bold text-dark mb-1 fs-6">
+                                <i class="bi bi-table text-primary me-2"></i>Matriks Nilai Akhir Siswa
+                            </h5>
+                            <p class="text-muted fs-9 mb-0">Masukkan nilai akhir mata pelajaran siswa (Rentang: 0 - 100). Sel yang kosong tidak akan diubah.</p>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover align-middle mb-0" style="font-size: 0.82rem; min-width: 800px;">
+                            <thead class="table-light text-center">
+                                <tr>
+                                    <th style="width: 50px; vertical-align: middle;">No</th>
+                                    <th style="width: 120px; vertical-align: middle;">NISN</th>
+                                    <th style="min-width: 200px; vertical-align: middle;" class="text-start">Nama Siswa</th>
+                                    <th v-for="sub in nilaiRapor.subjects" :key="sub.mapel_id" class="text-center" style="min-width: 100px;">
+                                        <div class="fw-bold text-truncate" style="max-width: 150px;" :title="sub.nama_mapel">
+                                            {{ sub.nama_mapel }}
+                                        </div>
+                                        <small class="text-muted font-monospace fs-9" style="font-weight: normal;">{{ sub.kode_mapel }}</small>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(student, sIdx) in nilaiRapor.students" :key="student.id">
+                                    <td class="text-center text-muted">{{ sIdx + 1 }}</td>
+                                    <td class="text-center font-monospace">{{ student.nisn || student.nis || '-' }}</td>
+                                    <td class="fw-bold text-dark">{{ student.nama_lengkap }}</td>
+                                    
+                                    <!-- Dynamic subject value inputs -->
+                                    <td v-for="sub in nilaiRapor.subjects" :key="sub.mapel_id" class="p-1">
+                                        <input type="number" 
+                                               min="0" 
+                                               max="100" 
+                                               step="0.01" 
+                                               class="form-control form-control-sm text-center fw-semibold border-0 bg-light-subtle py-1"
+                                               placeholder="-"
+                                               v-model.number="nilaiRapor.grades[student.id][sub.mapel_id]">
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Save Section -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-3 p-md-4 d-flex justify-content-end align-items-center gap-2">
+                    <button class="btn btn-light rounded-3 px-4 py-2 fs-7 fw-semibold" @click="loadNilaiRaporGrid">
+                        Reset Perubahan
+                    </button>
+                    <button class="btn btn-primary rounded-3 px-4 py-2 fs-7 fw-semibold d-inline-flex align-items-center gap-2" @click="saveNilaiRapor">
+                        <i class="bi bi-save2"></i> Simpan Perubahan Nilai
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Reusable Import Nilai Modal -->
+    <div class="modal fade" id="importNilaiModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-bottom py-3">
+                    <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2">
+                        <i class="bi bi-file-earmark-arrow-up text-primary"></i>
+                        Impor Nilai Rapor (CSV)
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-muted fs-8">Tahun Ajaran & Semester</label>
+                        <div class="p-2.5 bg-light rounded-3 text-dark fw-bold fs-7">
+                            {{ nilaiRapor.tahunAjaran }} - Semester {{ nilaiRapor.semester }}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-muted fs-8">Kelas Sasaran (Target)</label>
+                        <div class="p-2.5 bg-light rounded-3 text-primary fw-bold fs-7">
+                            {{ getNilaiRaporKelasName(nilaiRapor.kelasId) }}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="importNilaiFile" class="form-label fw-semibold text-dark fs-7">Pilih Berkas CSV Format Nilai</label>
+                        <input type="file" id="importNilaiFile" class="form-control rounded-3" accept=".csv" @change="onImportFileChange">
+                        <small class="text-muted fs-8 mt-2 d-block">
+                            <i class="bi bi-info-circle me-1"></i>Pastikan format berkas CSV yang diunggah sesuai dengan berkas format unduhan dari kelas ini. Kolom Siswa ID dan Header Kode Mata Pelajaran tidak boleh diubah agar data terpetakan dengan benar.
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer border-top bg-light py-2.5 rounded-bottom-4">
+                    <button type="button" class="btn btn-light rounded-3 fs-8 px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-primary rounded-3 fs-8 px-4" @click="submitImportGrades" :disabled="!importFile">
+                        Mulai Impor
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Reusable Detail Modal (Buku Induk Lengkap) -->
     <div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
@@ -895,7 +1116,8 @@
                 mainActiveTab: 'buku_induk_siswa',
                 mainTabs: [
                     { id: 'buku_induk_siswa', name: 'Buku Induk Siswa', icon: 'bi bi-person-lines-fill' },
-                    { id: 'seting_kurikulum', name: 'Seting Kurikulum', icon: 'bi bi-gear-wide-connected' }
+                    { id: 'seting_kurikulum', name: 'Seting Kurikulum', icon: 'bi bi-gear-wide-connected' },
+                    { id: 'input_nilai_rapor', name: 'Input Nilai Rapor', icon: 'bi bi-journal-check' }
                 ],
                 userRole: '<?php echo htmlspecialchars($user_role ?? ""); ?>',
                 listTenants: <?php echo json_encode($tenantList ?? []); ?>,
@@ -929,6 +1151,24 @@
                 },
                 copySourceKelasId: '',
                 copyModalObj: null,
+
+                // Nilai Rapor State
+                nilaiRapor: {
+                    tahunAjaran: '',
+                    semester: 'Ganjil',
+                    kelasId: '',
+                    subjects: [],
+                    students: [],
+                    grades: {},
+                    isSaving: false
+                },
+                masterNilaiRapor: {
+                    tahun_ajaran: [],
+                    kelas: []
+                },
+                loadingNilaiRapor: false,
+                importFile: null,
+                importModalObj: null,
                 detailLoading: false,
                 selectedSiswa: null,
                 activeDetailTab: 'diri',
@@ -958,6 +1198,7 @@
         mounted() {
             this.detailModalObj = new bootstrap.Modal(document.getElementById('detailModal'));
             this.copyModalObj = new bootstrap.Modal(document.getElementById('copyKurikulumModal'));
+            this.importModalObj = new bootstrap.Modal(document.getElementById('importNilaiModal'));
             this.fetchData(1);
         },
         computed: {
@@ -976,9 +1217,214 @@
                 this.mainActiveTab = tabId;
                 if (tabId === 'seting_kurikulum') {
                     this.fetchKurikulumMaster();
+                } else if (tabId === 'input_nilai_rapor') {
+                    this.fetchNilaiRaporMaster();
                 } else {
                     this.fetchData(1);
                 }
+            },
+            fetchNilaiRaporMaster() {
+                this.loadingNilaiRapor = true;
+                const params = {};
+                if (this.userRole === 'super_admin' && this.filterTenantId) {
+                    params.tenant_id = this.filterTenantId;
+                }
+                axios.get('/SINTA-SaaS/api/v1/kurikulum', { params })
+                    .then(res => {
+                        this.masterNilaiRapor.tahun_ajaran = res.data.tahun_ajaran || [];
+                        this.masterNilaiRapor.kelas = res.data.kelas || [];
+                        
+                        if (this.masterNilaiRapor.tahun_ajaran.length > 0 && !this.nilaiRapor.tahunAjaran) {
+                            this.nilaiRapor.tahunAjaran = this.masterNilaiRapor.tahun_ajaran[0].tahun_ajaran;
+                        }
+                        
+                        this.loadingNilaiRapor = false;
+                        this.loadNilaiRaporGrid();
+                    })
+                    .catch(err => {
+                        this.loadingNilaiRapor = false;
+                        this.toast.fire({ icon: 'error', title: 'Gagal memuat master data nilai rapor.' });
+                    });
+            },
+            loadNilaiRaporGrid() {
+                if (!this.nilaiRapor.kelasId || !this.nilaiRapor.tahunAjaran || !this.nilaiRapor.semester) {
+                    this.nilaiRapor.subjects = [];
+                    this.nilaiRapor.students = [];
+                    this.nilaiRapor.grades = {};
+                    return;
+                }
+
+                this.loadingNilaiRapor = true;
+                const params = {
+                    kelas_id: this.nilaiRapor.kelasId,
+                    tahun_ajaran: this.nilaiRapor.tahunAjaran,
+                    semester: this.nilaiRapor.semester
+                };
+                if (this.userRole === 'super_admin' && this.filterTenantId) {
+                    params.tenant_id = this.filterTenantId;
+                }
+
+                axios.get('/SINTA-SaaS/api/v1/nilai-rapor/grid', { params })
+                    .then(res => {
+                        this.nilaiRapor.subjects = res.data.subjects || [];
+                        this.nilaiRapor.students = res.data.students || [];
+                        const rawGrades = res.data.grades || {};
+                        
+                        const gradesObj = {};
+                        this.nilaiRapor.students.forEach(student => {
+                            gradesObj[student.id] = {};
+                            this.nilaiRapor.subjects.forEach(subject => {
+                                const existingVal = (rawGrades[student.id] && rawGrades[student.id][subject.mapel_id] !== undefined)
+                                    ? rawGrades[student.id][subject.mapel_id]
+                                    : '';
+                                gradesObj[student.id][subject.mapel_id] = existingVal;
+                            });
+                        });
+                        
+                        this.nilaiRapor.grades = gradesObj;
+                        this.loadingNilaiRapor = false;
+                    })
+                    .catch(err => {
+                        this.loadingNilaiRapor = false;
+                        this.toast.fire({ icon: 'error', title: 'Gagal memuat tabel nilai rapor.' });
+                    });
+            },
+            saveNilaiRapor() {
+                if (!this.nilaiRapor.kelasId || !this.nilaiRapor.tahunAjaran || !this.nilaiRapor.semester) {
+                    this.toast.fire({ icon: 'warning', title: 'Pilih Kelas, Tahun Ajaran, dan Semester terlebih dahulu.' });
+                    return;
+                }
+
+                const gradesPayload = [];
+                this.nilaiRapor.students.forEach(student => {
+                    const studentId = student.id;
+                    this.nilaiRapor.subjects.forEach(subject => {
+                        const subjectId = subject.mapel_id;
+                        let val = '';
+                        if (this.nilaiRapor.grades[studentId] && this.nilaiRapor.grades[studentId][subjectId] !== undefined) {
+                            val = this.nilaiRapor.grades[studentId][subjectId];
+                        }
+                        
+                        gradesPayload.push({
+                            siswa_id: studentId,
+                            mapel_id: subjectId,
+                            nilai_akhir: val !== '' ? val : null
+                        });
+                    });
+                });
+
+                const payload = {
+                    kelas_id: this.nilaiRapor.kelasId,
+                    tahun_ajaran: this.nilaiRapor.tahunAjaran,
+                    semester: this.nilaiRapor.semester,
+                    grades: gradesPayload
+                };
+
+                if (this.userRole === 'super_admin' && this.filterTenantId) {
+                    payload.tenant_id = this.filterTenantId;
+                }
+
+                Swal.fire({
+                    title: 'Simpan Perubahan Nilai?',
+                    text: 'Nilai yang dimasukkan akan disimpan secara permanen.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#2563eb',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: 'Ya, Simpan',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        Swal.fire({
+                            title: 'Menyimpan...',
+                            allowOutsideClick: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
+
+                        axios.post('/SINTA-SaaS/api/v1/nilai-rapor/save', payload)
+                            .then(res => {
+                                Swal.close();
+                                this.toast.fire({ icon: 'success', title: res.data.message || 'Nilai rapor berhasil disimpan.' });
+                                this.loadNilaiRaporGrid();
+                            })
+                            .catch(err => {
+                                Swal.close();
+                                const msg = err.response && err.response.data && err.response.data.message 
+                                    ? err.response.data.message 
+                                    : 'Gagal menyimpan nilai.';
+                                this.toast.fire({ icon: 'error', title: msg });
+                            });
+                    }
+                });
+            },
+            exportNilaiRaporCSV() {
+                if (!this.nilaiRapor.kelasId || !this.nilaiRapor.tahunAjaran || !this.nilaiRapor.semester) {
+                    this.toast.fire({ icon: 'warning', title: 'Pilih Kelas, Tahun Ajaran, dan Semester terlebih dahulu.' });
+                    return;
+                }
+                let url = `/SINTA-SaaS/api/v1/nilai-rapor/export?kelas_id=${this.nilaiRapor.kelasId}&tahun_ajaran=${encodeURIComponent(this.nilaiRapor.tahunAjaran)}&semester=${this.nilaiRapor.semester}`;
+                if (this.userRole === 'super_admin' && this.filterTenantId) {
+                    url += `&tenant_id=${this.filterTenantId}`;
+                }
+                window.location.href = url;
+            },
+            showImportGradesModal() {
+                this.importFile = null;
+                const fileEl = document.getElementById('importNilaiFile');
+                if (fileEl) fileEl.value = '';
+                this.importModalObj.show();
+            },
+            onImportFileChange(e) {
+                this.importFile = e.target.files[0] || null;
+            },
+            submitImportGrades() {
+                if (!this.importFile) {
+                    this.toast.fire({ icon: 'warning', title: 'Pilih berkas CSV terlebih dahulu.' });
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('file', this.importFile);
+                formData.append('kelas_id', this.nilaiRapor.kelasId);
+                formData.append('tahun_ajaran', this.nilaiRapor.tahunAjaran);
+                formData.append('semester', this.nilaiRapor.semester);
+                if (this.userRole === 'super_admin' && this.filterTenantId) {
+                    formData.append('tenant_id', this.filterTenantId);
+                }
+
+                Swal.fire({
+                    title: 'Mengimpor...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                axios.post('/SINTA-SaaS/api/v1/nilai-rapor/import', formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                })
+                .then(res => {
+                    Swal.close();
+                    this.importModalObj.hide();
+                    this.toast.fire({ icon: 'success', title: res.data.message || 'Nilai rapor berhasil diimpor.' });
+                    this.loadNilaiRaporGrid();
+                })
+                .catch(err => {
+                    Swal.close();
+                    const msg = err.response && err.response.data && err.response.data.message 
+                        ? err.response.data.message 
+                        : 'Gagal mengimpor nilai rapor.';
+                    this.toast.fire({ icon: 'error', title: msg });
+                });
+            },
+            getNilaiRaporKelasName(kelasId) {
+                if (!kelasId) return '';
+                const k = this.masterNilaiRapor.kelas.find(x => x.id == kelasId);
+                return k ? k.nama_kelas : '';
             },
             onFilterTenantChange() {
                 // Ambil daftar kelas yang sesuai dengan tenant terpilih (untuk Super Admin)
