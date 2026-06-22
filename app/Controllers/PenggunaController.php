@@ -537,8 +537,8 @@ class PenggunaController extends BaseController {
     public function naikkanKelasApi(): void {
         $roleName = $_SESSION['role_name'] ?? '';
 
-        if ($roleName === 'siswa') {
-            $this->jsonResponse(['error' => 'Akses ditolak.'], 403);
+        if (!in_array($roleName, ['super_admin', 'operator_sekolah'])) {
+            $this->jsonResponse(['error' => 'Akses ditolak. Fitur ini hanya untuk Super Admin dan Admin Sekolah.'], 403);
             return;
         }
 
@@ -603,8 +603,8 @@ class PenggunaController extends BaseController {
     public function luluskanSiswaApi(): void {
         $roleName = $_SESSION['role_name'] ?? '';
 
-        if ($roleName === 'siswa') {
-            $this->jsonResponse(['error' => 'Akses ditolak.'], 403);
+        if (!in_array($roleName, ['super_admin', 'operator_sekolah'])) {
+            $this->jsonResponse(['error' => 'Akses ditolak. Fitur ini hanya untuk Super Admin dan Admin Sekolah.'], 403);
             return;
         }
 

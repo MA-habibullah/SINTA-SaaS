@@ -45,7 +45,7 @@
                             id="sa-filter-sekolah-bukuinduk"
                             name="filter_tenant_id"
                             style="border:1.5px solid #bfdbfe;">
-                        <option value="">🏫 Semua Sekolah</option>
+                        <option value="">🏫 -- Pilih Sekolah --</option>
                         <option v-for="t in listTenants" :key="t.id" :value="t.id">
                             {{ t.nama_sekolah }}
                         </option>
@@ -126,8 +126,17 @@
                 </div>
             </div>
 
+            <!-- Warning State: Super Admin must select school -->
+            <div v-if="userRole === 'super_admin' && !filterTenantId" class="py-5 text-center bg-white rounded-4 border-0">
+                <i class="bi bi-building text-secondary display-4 d-block mb-3"></i>
+                <h5 class="fw-bold text-dark">Pilih Sekolah Terlebih Dahulu</h5>
+                <p class="text-muted fs-7 mx-auto" style="max-width: 480px;">
+                    Silakan pilih Sekolah terlebih dahulu pada filter "Filter Sekolah" di atas untuk memuat data Buku Induk siswa.
+                </p>
+            </div>
+
             <!-- Loader State -->
-            <div v-if="loading" class="text-center py-5">
+            <div v-else-if="loading" class="text-center py-5">
                 <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
@@ -226,7 +235,19 @@
     <!-- ═══ PANEL SETING KURIKULUM ═══════════════════════════════ -->
     <div v-show="mainActiveTab === 'seting_kurikulum'" class="animate-fade-in">
         
-        <!-- Controls Card -->
+        <!-- Warning: Super Admin must select school -->
+        <div v-if="userRole === 'super_admin' && !filterTenantId" class="card border-0 shadow-sm rounded-4 py-5 text-center bg-white mb-4">
+            <div class="card-body">
+                <i class="bi bi-building-fill-gear text-secondary display-4 d-block mb-3"></i>
+                <h5 class="fw-bold text-dark">Pilih Sekolah Terlebih Dahulu</h5>
+                <p class="text-muted fs-7 mx-auto" style="max-width: 450px;">
+                    Silakan pilih Sekolah terlebih dahulu pada filter "Filter Sekolah" di atas untuk mengonfigurasi seting kurikulum.
+                </p>
+            </div>
+        </div>
+
+        <div v-else>
+            <!-- Controls Card -->
         <div class="card border-0 shadow-sm rounded-4 mb-4" style="background: linear-gradient(135deg, #f8fafc, #f1f5f9);">
             <div class="card-body p-3 p-md-4">
                 <div class="row g-3 align-items-end">
@@ -389,9 +410,8 @@
                     </button>
                 </div>
             </div>
-
         </div>
-
+        </div>
     </div>
 
     <!-- Reusable Copy Kurikulum Modal -->
@@ -446,176 +466,190 @@
     <!-- ═══ PANEL INPUT NILAI RAPOR ═══════════════════════════════ -->
     <div v-show="mainActiveTab === 'input_nilai_rapor'" class="animate-fade-in">
         
-        <!-- Controls Card -->
-        <div class="card border-0 shadow-sm rounded-4 mb-4" style="background: linear-gradient(135deg, #eff6ff, #f8fafc);">
-            <div class="card-body p-3 p-md-4">
-                <div class="row g-3 align-items-end">
-                    
-                    <!-- Tahun Ajaran -->
-                    <div class="col-12 col-md-3">
-                        <label class="form-label fw-bold text-dark fs-8 mb-1">Tahun Ajaran</label>
-                        <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle"
-                                v-model="nilaiRapor.tahunAjaran"
-                                @change="loadNilaiRaporGrid">
-                            <option value="">-- Pilih Tahun Ajaran --</option>
-                            <option v-for="t in masterNilaiRapor.tahun_ajaran" :key="t.id" :value="t.tahun_ajaran">
-                                {{ t.tahun_ajaran }}
-                            </option>
-                        </select>
-                    </div>
-
-                    <!-- Semester -->
-                    <div class="col-12 col-md-3">
-                        <label class="form-label fw-bold text-dark fs-8 mb-1">Semester</label>
-                        <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle"
-                                v-model="nilaiRapor.semester"
-                                @change="loadNilaiRaporGrid">
-                            <option value="Ganjil">Ganjil</option>
-                            <option value="Genap">Genap</option>
-                        </select>
-                    </div>
-
-                    <!-- Kelas -->
-                    <div class="col-12 col-md-3">
-                        <label class="form-label fw-bold text-dark fs-8 mb-1">Kelas Fisik</label>
-                        <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle"
-                                v-model="nilaiRapor.kelasId"
-                                @change="loadNilaiRaporGrid">
-                            <option value="">-- Pilih Kelas --</option>
-                            <option v-for="k in masterNilaiRapor.kelas" :key="k.id" :value="k.id">
-                                {{ k.nama_kelas || k.nama }}
-                            </option>
-                        </select>
-                    </div>
-
-                    <!-- Actions (Import/Export) -->
-                    <div class="col-12 col-md-3 d-flex gap-2">
-                        <button class="btn btn-outline-success btn-sm rounded-3 px-2 py-2 flex-grow-1 fs-8 fw-semibold"
-                                :disabled="!nilaiRapor.kelasId || nilaiRapor.subjects.length === 0"
-                                @click="exportNilaiRaporCSV"
-                                title="Unduh Format CSV">
-                            <i class="bi bi-file-earmark-arrow-down me-1"></i> Unduh
-                        </button>
-                        <button class="btn btn-outline-primary btn-sm rounded-3 px-2 py-2 flex-grow-1 fs-8 fw-semibold"
-                                :disabled="!nilaiRapor.kelasId || nilaiRapor.subjects.length === 0"
-                                @click="showImportGradesModal"
-                                title="Unggah Nilai CSV">
-                            <i class="bi bi-file-earmark-arrow-up me-1"></i> Impor
-                        </button>
-                    </div>
-
-                </div>
-            </div>
-        </div>
-
-        <!-- Grid Loading State -->
-        <div v-if="loadingNilaiRapor" class="text-center py-5">
-            <div class="spinner-border text-primary" role="status"></div>
-            <p class="text-muted mt-2 fs-7">Memuat data nilai rapor...</p>
-        </div>
-
-        <!-- No Selection State -->
-        <div v-else-if="!nilaiRapor.kelasId || !nilaiRapor.tahunAjaran" class="card border-0 shadow-sm rounded-4 py-5 text-center bg-white">
+        <!-- Warning: Super Admin must select school -->
+        <div v-if="userRole === 'super_admin' && !filterTenantId" class="card border-0 shadow-sm rounded-4 py-5 text-center bg-white mb-4">
             <div class="card-body">
-                <i class="bi bi-journal-text text-secondary display-4 d-block mb-3"></i>
-                <h5 class="fw-bold text-dark">Matriks Input Nilai Rapor</h5>
+                <i class="bi bi-building-fill-gear text-secondary display-4 d-block mb-3"></i>
+                <h5 class="fw-bold text-dark">Pilih Sekolah Terlebih Dahulu</h5>
                 <p class="text-muted fs-7 mx-auto" style="max-width: 450px;">
-                    Silakan pilih Tahun Ajaran, Semester, dan Kelas fisik pada dropdown di atas untuk memuat lembar input nilai rapor siswa.
+                    Silakan pilih Sekolah terlebih dahulu pada filter "Filter Sekolah" di atas untuk mengonfigurasi input nilai rapor.
                 </p>
             </div>
         </div>
 
-        <!-- Empty Subjects State -->
-        <div v-else-if="nilaiRapor.subjects.length === 0" class="card border-0 shadow-sm rounded-4 py-5 text-center bg-white" style="border-left: 4px solid #ef4444 !important;">
-            <div class="card-body">
-                <i class="bi bi-exclamation-triangle text-danger display-4 d-block mb-3"></i>
-                <h5 class="fw-bold text-dark">Mata Pelajaran Belum Dipetakan</h5>
-                <p class="text-muted fs-7 mx-auto mb-3" style="max-width: 480px;">
-                    Kelas yang Anda pilih belum memiliki pemetaan kurikulum mata pelajaran pada tahun ajaran dan semester ini.
-                </p>
-                <button class="btn btn-primary btn-sm rounded-3 px-3 py-2 fs-8 fw-semibold" @click="switchMainTab('seting_kurikulum')">
-                    <i class="bi bi-gear-wide-connected me-1"></i> Atur Kurikulum Kelas Sekarang
-                </button>
-            </div>
-        </div>
-
-        <!-- Empty Students State -->
-        <div v-else-if="nilaiRapor.students.length === 0" class="card border-0 shadow-sm rounded-4 py-5 text-center bg-white">
-            <div class="card-body">
-                <i class="bi bi-people-mute text-secondary display-4 d-block mb-3"></i>
-                <h5 class="fw-bold text-dark">Tidak Ada Siswa Aktif</h5>
-                <p class="text-muted fs-7 mx-auto" style="max-width: 450px;">
-                    Tidak ditemukan siswa berstatus aktif di dalam kelas ini untuk tahun ajaran terpilih.
-                </p>
-            </div>
-        </div>
-
-        <!-- Matriks Grid Table -->
         <div v-else>
-            
-            <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <!-- Controls Card -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4" style="background: linear-gradient(135deg, #eff6ff, #f8fafc);">
                 <div class="card-body p-3 p-md-4">
-                    
-                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                        <div>
-                            <h5 class="fw-bold text-dark mb-1 fs-6">
-                                <i class="bi bi-table text-primary me-2"></i>Matriks Nilai Akhir Siswa
-                            </h5>
-                            <p class="text-muted fs-9 mb-0">Masukkan nilai akhir mata pelajaran siswa (Rentang: 0 - 100). Sel yang kosong tidak akan diubah.</p>
+                    <div class="row g-3 align-items-end">
+                        
+                        <!-- Tahun Ajaran -->
+                        <div class="col-12 col-md-3">
+                            <label class="form-label fw-bold text-dark fs-8 mb-1">Tahun Ajaran</label>
+                            <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle"
+                                    v-model="nilaiRapor.tahunAjaran"
+                                    @change="loadNilaiRaporGrid">
+                                <option value="">-- Pilih Tahun Ajaran --</option>
+                                <option v-for="t in masterNilaiRapor.tahun_ajaran" :key="t.id" :value="t.tahun_ajaran">
+                                    {{ t.tahun_ajaran }}
+                                </option>
+                            </select>
                         </div>
-                    </div>
 
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover align-middle mb-0" style="font-size: 0.82rem; min-width: 800px;">
-                            <thead class="table-light text-center">
-                                <tr>
-                                    <th style="width: 50px; vertical-align: middle;">No</th>
-                                    <th style="width: 120px; vertical-align: middle;">NISN</th>
-                                    <th style="min-width: 200px; vertical-align: middle;" class="text-start">Nama Siswa</th>
-                                    <th v-for="sub in nilaiRapor.subjects" :key="sub.mapel_id" class="text-center" style="min-width: 100px;">
-                                        <div class="fw-bold text-truncate" style="max-width: 150px;" :title="sub.nama_mapel">
-                                            {{ sub.nama_mapel }}
-                                        </div>
-                                        <small class="text-muted font-monospace fs-9" style="font-weight: normal;">{{ sub.kode_mapel }}</small>
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="(student, sIdx) in nilaiRapor.students" :key="student.id">
-                                    <td class="text-center text-muted">{{ sIdx + 1 }}</td>
-                                    <td class="text-center font-monospace">{{ student.nisn || student.nis || '-' }}</td>
-                                    <td class="fw-bold text-dark">{{ student.nama_lengkap }}</td>
-                                    
-                                    <!-- Dynamic subject value inputs -->
-                                    <td v-for="sub in nilaiRapor.subjects" :key="sub.mapel_id" class="p-1">
-                                        <input type="number" 
-                                               min="0" 
-                                               max="100" 
-                                               step="0.01" 
-                                               class="form-control form-control-sm text-center fw-semibold border-0 bg-light-subtle py-1"
-                                               :placeholder="isReligionMismatch(student.agama, sub.nama_mapel) ? 'N/A' : '-'"
-                                               :disabled="isReligionMismatch(student.agama, sub.nama_mapel)"
-                                               :class="{'bg-secondary-subtle text-muted': isReligionMismatch(student.agama, sub.nama_mapel)}"
-                                               v-model.number="nilaiRapor.grades[student.id][sub.mapel_id]">
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                        <!-- Semester -->
+                        <div class="col-12 col-md-3">
+                            <label class="form-label fw-bold text-dark fs-8 mb-1">Semester</label>
+                            <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle"
+                                    v-model="nilaiRapor.semester"
+                                    @change="loadNilaiRaporGrid">
+                                <option value="Ganjil">Ganjil</option>
+                                <option value="Genap">Genap</option>
+                            </select>
+                        </div>
 
+                        <!-- Kelas -->
+                        <div class="col-12 col-md-3">
+                            <label class="form-label fw-bold text-dark fs-8 mb-1">Kelas Fisik</label>
+                            <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle"
+                                    v-model="nilaiRapor.kelasId"
+                                    @change="loadNilaiRaporGrid">
+                                <option value="">-- Pilih Kelas --</option>
+                                <option v-for="k in masterNilaiRapor.kelas" :key="k.id" :value="k.id">
+                                    {{ k.nama_kelas || k.nama }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Actions (Import/Export) -->
+                        <div class="col-12 col-md-3 d-flex gap-2">
+                            <button class="btn btn-outline-success btn-sm rounded-3 px-2 py-2 flex-grow-1 fs-8 fw-semibold"
+                                    :disabled="!nilaiRapor.kelasId || nilaiRapor.subjects.length === 0"
+                                    @click="exportNilaiRaporCSV"
+                                    title="Unduh Format CSV">
+                                <i class="bi bi-file-earmark-arrow-down me-1"></i> Unduh
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm rounded-3 px-2 py-2 flex-grow-1 fs-8 fw-semibold"
+                                    :disabled="!nilaiRapor.kelasId || nilaiRapor.subjects.length === 0"
+                                    @click="showImportGradesModal"
+                                    title="Unggah Nilai CSV">
+                                <i class="bi bi-file-earmark-arrow-up me-1"></i> Impor
+                            </button>
+                        </div>
+
+                    </div>
                 </div>
             </div>
 
-            <!-- Save Section -->
-            <div class="card border-0 shadow-sm rounded-4 mb-4">
-                <div class="card-body p-3 p-md-4 d-flex justify-content-end align-items-center gap-2">
-                    <button class="btn btn-light rounded-3 px-4 py-2 fs-7 fw-semibold" @click="loadNilaiRaporGrid">
-                        Reset Perubahan
-                    </button>
-                    <button class="btn btn-primary rounded-3 px-4 py-2 fs-7 fw-semibold d-inline-flex align-items-center gap-2" @click="saveNilaiRapor">
-                        <i class="bi bi-save2"></i> Simpan Perubahan Nilai
+            <!-- Grid Loading State -->
+            <div v-if="loadingNilaiRapor" class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="text-muted mt-2 fs-7">Memuat data nilai rapor...</p>
+            </div>
+
+            <!-- No Selection State -->
+            <div v-else-if="!nilaiRapor.kelasId || !nilaiRapor.tahunAjaran" class="card border-0 shadow-sm rounded-4 py-5 text-center bg-white">
+                <div class="card-body">
+                    <i class="bi bi-journal-text text-secondary display-4 d-block mb-3"></i>
+                    <h5 class="fw-bold text-dark">Matriks Input Nilai Rapor</h5>
+                    <p class="text-muted fs-7 mx-auto" style="max-width: 450px;">
+                        Silakan pilih Tahun Ajaran, Semester, dan Kelas fisik pada dropdown di atas untuk memuat lembar input nilai rapor siswa.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Empty Subjects State -->
+            <div v-else-if="nilaiRapor.subjects.length === 0" class="card border-0 shadow-sm rounded-4 py-5 text-center bg-white" style="border-left: 4px solid #ef4444 !important;">
+                <div class="card-body">
+                    <i class="bi bi-exclamation-triangle text-danger display-4 d-block mb-3"></i>
+                    <h5 class="fw-bold text-dark">Mata Pelajaran Belum Dipetakan</h5>
+                    <p class="text-muted fs-7 mx-auto mb-3" style="max-width: 480px;">
+                        Kelas yang Anda pilih belum memiliki pemetaan kurikulum mata pelajaran pada tahun ajaran dan semester ini.
+                    </p>
+                    <button class="btn btn-primary btn-sm rounded-3 px-3 py-2 fs-8 fw-semibold" @click="switchMainTab('seting_kurikulum')">
+                        <i class="bi bi-gear-wide-connected me-1"></i> Atur Kurikulum Kelas Sekarang
                     </button>
                 </div>
+            </div>
+
+            <!-- Empty Students State -->
+            <div v-else-if="nilaiRapor.students.length === 0" class="card border-0 shadow-sm rounded-4 py-5 text-center bg-white">
+                <div class="card-body">
+                    <i class="bi bi-people-mute text-secondary display-4 d-block mb-3"></i>
+                    <h5 class="fw-bold text-dark">Tidak Ada Siswa Aktif</h5>
+                    <p class="text-muted fs-7 mx-auto" style="max-width: 450px;">
+                        Tidak ditemukan siswa berstatus aktif di dalam kelas ini untuk tahun ajaran terpilih.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Matriks Grid Table -->
+            <div v-else>
+                
+                <div class="card border-0 shadow-sm rounded-4 mb-4">
+                    <div class="card-body p-3 p-md-4">
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <div>
+                                <h5 class="fw-bold text-dark mb-1 fs-6">
+                                    <i class="bi bi-table text-primary me-2"></i>Matriks Nilai Akhir Siswa
+                                </h5>
+                                <p class="text-muted fs-9 mb-0">Masukkan nilai akhir mata pelajaran siswa (Rentang: 0 - 100). Sel yang kosong tidak akan diubah.</p>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover align-middle mb-0" style="font-size: 0.82rem; min-width: 800px;">
+                                <thead class="table-light text-center">
+                                    <tr>
+                                        <th style="width: 50px; vertical-align: middle;">No</th>
+                                        <th style="width: 120px; vertical-align: middle;">NISN</th>
+                                        <th style="min-width: 200px; vertical-align: middle;" class="text-start">Nama Siswa</th>
+                                        <th v-for="sub in nilaiRapor.subjects" :key="sub.mapel_id" class="text-center" style="min-width: 100px;">
+                                            <div class="fw-bold text-truncate" style="max-width: 150px;" :title="sub.nama_mapel">
+                                                {{ sub.nama_mapel }}
+                                            </div>
+                                            <small class="text-muted font-monospace fs-9" style="font-weight: normal;">{{ sub.kode_mapel }}</small>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(student, sIdx) in nilaiRapor.students" :key="student.id">
+                                        <td class="text-center text-muted">{{ sIdx + 1 }}</td>
+                                        <td class="text-center font-monospace">{{ student.nisn || student.nis || '-' }}</td>
+                                        <td class="fw-bold text-dark">{{ student.nama_lengkap }}</td>
+                                        
+                                        <!-- Dynamic subject value inputs -->
+                                        <td v-for="sub in nilaiRapor.subjects" :key="sub.mapel_id" class="p-1">
+                                            <input type="number" 
+                                                   min="0" 
+                                                   max="100" 
+                                                   step="0.01" 
+                                                   class="form-control form-control-sm text-center fw-semibold border-0 bg-light-subtle py-1"
+                                                   :placeholder="isReligionMismatch(student.agama, sub.nama_mapel) ? 'N/A' : '-'"
+                                                   :disabled="isReligionMismatch(student.agama, sub.nama_mapel)"
+                                                   :class="{'bg-secondary-subtle text-muted': isReligionMismatch(student.agama, sub.nama_mapel)}"
+                                                   v-model.number="nilaiRapor.grades[student.id][sub.mapel_id]">
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Save Section -->
+                <div class="card border-0 shadow-sm rounded-4 mb-4">
+                    <div class="card-body p-3 p-md-4 d-flex justify-content-end align-items-center gap-2">
+                        <button class="btn btn-light rounded-3 px-4 py-2 fs-7 fw-semibold" @click="loadNilaiRaporGrid">
+                            Reset Perubahan
+                        </button>
+                        <button class="btn btn-primary rounded-3 px-4 py-2 fs-7 fw-semibold d-inline-flex align-items-center gap-2" @click="saveNilaiRapor">
+                            <i class="bi bi-save2"></i> Simpan Perubahan Nilai
+                        </button>
+                    </div>
+                </div>
+
             </div>
 
         </div>
@@ -1224,6 +1258,12 @@
                 }
             },
             fetchNilaiRaporMaster() {
+                if (this.userRole === 'super_admin' && !this.filterTenantId) {
+                    this.masterNilaiRapor.tahun_ajaran = [];
+                    this.masterNilaiRapor.kelas = [];
+                    this.loadingNilaiRapor = false;
+                    return;
+                }
                 this.loadingNilaiRapor = true;
                 const params = {};
                 if (this.userRole === 'super_admin' && this.filterTenantId) {
@@ -1247,6 +1287,12 @@
                     });
             },
             loadNilaiRaporGrid() {
+                if (this.userRole === 'super_admin' && !this.filterTenantId) {
+                    this.nilaiRapor.subjects = [];
+                    this.nilaiRapor.students = [];
+                    this.nilaiRapor.grades = {};
+                    return;
+                }
                 if (!this.nilaiRapor.kelasId || !this.nilaiRapor.tahunAjaran || !this.nilaiRapor.semester) {
                     this.nilaiRapor.subjects = [];
                     this.nilaiRapor.students = [];
@@ -1290,6 +1336,10 @@
                     });
             },
             saveNilaiRapor() {
+                if (this.userRole === 'super_admin' && !this.filterTenantId) {
+                    this.toast.fire({ icon: 'warning', title: 'Pilih Sekolah terlebih dahulu.' });
+                    return;
+                }
                 if (!this.nilaiRapor.kelasId || !this.nilaiRapor.tahunAjaran || !this.nilaiRapor.semester) {
                     this.toast.fire({ icon: 'warning', title: 'Pilih Kelas, Tahun Ajaran, dan Semester terlebih dahulu.' });
                     return;
@@ -1380,6 +1430,10 @@
                 this.importFile = e.target.files[0] || null;
             },
             submitImportGrades() {
+                if (this.userRole === 'super_admin' && !this.filterTenantId) {
+                    this.toast.fire({ icon: 'warning', title: 'Pilih Sekolah terlebih dahulu.' });
+                    return;
+                }
                 if (!this.importFile) {
                     this.toast.fire({ icon: 'warning', title: 'Pilih berkas CSV terlebih dahulu.' });
                     return;
@@ -1432,11 +1486,20 @@
                 this.fetchKelasOptions(this.filterTenantId || null);
                 if (this.mainActiveTab === 'seting_kurikulum') {
                     this.fetchKurikulumMaster();
+                } else if (this.mainActiveTab === 'input_nilai_rapor') {
+                    this.fetchNilaiRaporMaster();
                 } else {
                     this.fetchData(1);
                 }
             },
             fetchKurikulumMaster() {
+                if (this.userRole === 'super_admin' && !this.filterTenantId) {
+                    this.masterKurikulum.tahun_ajaran = [];
+                    this.masterKurikulum.kelas = [];
+                    this.masterKurikulum.bank_mapel = [];
+                    this.loadingKurikulum = false;
+                    return;
+                }
                 this.loadingKurikulum = true;
                 const params = {};
                 if (this.userRole === 'super_admin' && this.filterTenantId) {
@@ -1461,6 +1524,10 @@
                     });
             },
             loadKurikulumMapping() {
+                if (this.userRole === 'super_admin' && !this.filterTenantId) {
+                    this.kurikulum.groups = [];
+                    return;
+                }
                 if (!this.kurikulum.kelasId || !this.kurikulum.tahunAjaran || !this.kurikulum.semester) {
                     this.kurikulum.groups = [];
                     return;
@@ -1561,6 +1628,10 @@
                 this.copyModalObj.show();
             },
             submitCopyKurikulum() {
+                if (this.userRole === 'super_admin' && !this.filterTenantId) {
+                    this.toast.fire({ icon: 'warning', title: 'Pilih Sekolah terlebih dahulu.' });
+                    return;
+                }
                 if (!this.copySourceKelasId) return;
                 
                 const payload = {
@@ -1611,6 +1682,10 @@
                 });
             },
             saveKurikulum() {
+                if (this.userRole === 'super_admin' && !this.filterTenantId) {
+                    this.toast.fire({ icon: 'warning', title: 'Pilih Sekolah terlebih dahulu.' });
+                    return;
+                }
                 if (!this.kurikulum.kelasId || !this.kurikulum.tahunAjaran || !this.kurikulum.semester) {
                     this.toast.fire({ icon: 'warning', title: 'Pilih Kelas, Tahun Ajaran, dan Semester terlebih dahulu.' });
                     return;
@@ -1694,6 +1769,15 @@
                      });
             },
             fetchData(page = 1) {
+                if (this.userRole === 'super_admin' && !this.filterTenantId) {
+                    this.listData = [];
+                    this.totalPages = 1;
+                    this.total = 0;
+                    this.from = 0;
+                    this.to = 0;
+                    this.loading = false;
+                    return;
+                }
                 this.loading = true;
                 this.currentPage = page;
 

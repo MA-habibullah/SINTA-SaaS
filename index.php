@@ -137,6 +137,11 @@ try {
             $controller->downloadTemplate();
             break;
 
+        case '/api/v1/siswa/bulk-photo':
+            $controller = new App\Controllers\BulkPhotoController();
+            $controller->uploadZip();
+            break;
+
         case '/pengguna/download-excel':
             $controller = new App\Controllers\PenggunaController();
             $controller->downloadExcel();

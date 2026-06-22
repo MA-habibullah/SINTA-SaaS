@@ -33,6 +33,16 @@ class KurikulumController extends BaseController {
             $tenantId = $_GET['tenant_id'];
         }
 
+        if (!$tenantId) {
+            $this->jsonResponse([
+                'tahun_ajaran' => [],
+                'kelas' => [],
+                'bank_mapel' => [],
+                'existing_mapping' => []
+            ]);
+            return;
+        }
+
         // 1. Get list of Tahun Ajaran
         $qTahun = "SELECT id, tahun_ajaran FROM tahun_ajaran WHERE is_active = 1";
         if ($tenantId) {

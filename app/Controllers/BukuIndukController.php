@@ -59,13 +59,27 @@ class BukuIndukController extends BaseController {
     public function fetchApi(): void {
         $db = \App\Config\Database::getConnection();
         $tenantId = SessionManager::getTenantId();
+        $filterTenant = isset($_GET['filter_tenant_id']) ? trim($_GET['filter_tenant_id']) : '';
+
+        // Guard against Super Admin requesting data without a school filter context
+        if (empty($tenantId) && empty($filterTenant)) {
+            $this->jsonResponse([
+                'data' => [],
+                'total' => 0,
+                'per_page' => isset($_GET['per_page']) ? (int)$_GET['per_page'] : 10,
+                'current_page' => isset($_GET['page']) ? (int)$_GET['page'] : 1,
+                'last_page' => 1,
+                'from' => 0,
+                'to' => 0
+            ]);
+            return;
+        }
 
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
         $perPage = isset($_GET['per_page']) ? (int)$_GET['per_page'] : 10;
         $search = isset($_GET['search']) ? trim($_GET['search']) : '';
         $filterKelas = isset($_GET['kelas_id']) ? trim($_GET['kelas_id']) : '';
         $filterStatus = isset($_GET['status']) ? trim($_GET['status']) : '';
-        $filterTenant = isset($_GET['filter_tenant_id']) ? trim($_GET['filter_tenant_id']) : '';
 
         $offset = ($page - 1) * $perPage;
 

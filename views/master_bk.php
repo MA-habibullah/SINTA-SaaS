@@ -26,13 +26,26 @@ $baseUrl    = '/SINTA-SaaS';
     /* ─── Tab Nav ────────────────────────────────────── */
     .bk-tabs {
         display: flex;
+        flex-wrap: nowrap;
         gap: 0.25rem;
         border-bottom: 2px solid var(--bk-border);
         overflow-x: auto;
-        scrollbar-width: none;
-        padding-bottom: 0;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 5px;
     }
-    .bk-tabs::-webkit-scrollbar { display: none; }
+    .bk-tabs::-webkit-scrollbar {
+        height: 5px;
+    }
+    .bk-tabs::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .bk-tabs::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 99px;
+    }
+    .bk-tabs::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
 
     .bk-tab-btn {
         flex-shrink: 0;
@@ -250,10 +263,6 @@ $baseUrl    = '/SINTA-SaaS';
         <button class="bk-tab-btn" :class="{'active': activeTab === 'jurnal'}"
                 @click="switchTab('jurnal')" id="tab-jurnal">
             <i class="bi bi-journal-text"></i> Rekam Kasus & Jurnal
-        </button>
-        <button class="bk-tab-btn" :class="{'active': activeTab === 'kelulusan'}"
-                @click="switchTab('kelulusan')" id="tab-kelulusan">
-            <i class="bi bi-mortarboard-fill"></i> Kelola Kelulusan & Alumni
         </button>
     </div>
 
@@ -1070,129 +1079,6 @@ $baseUrl    = '/SINTA-SaaS';
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════════
-         TAB 6: KELOLA KELULUSAN & ALUMNI
-    ════════════════════════════════════════════════════════════ -->
-    <div v-show="activeTab === 'kelulusan'" class="animate-fade-in">
-        <!-- Header -->
-        <div class="bk-card p-4 mb-4">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon text-white" style="background:linear-gradient(135deg,#059669,#10b981); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                    <i class="bi bi-mortarboard-fill fs-4"></i>
-                </div>
-                <div>
-                    <h5 class="fw-bold mb-0 text-dark">Kelola Kelulusan & Alumni</h5>
-                    <p class="text-muted mb-0" style="font-size:0.82rem;">Ubah status siswa menjadi <b>Lulus</b> secara massal. Setiap aksi kelulusan akan tercatat dalam riwayat kenaikan kelas / kelulusan.</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Filter Section -->
-        <div class="bk-card p-4 mb-4">
-            <div class="row g-3 align-items-end">
-                <!-- Filter Sekolah (Super Admin Only) -->
-                <div class="col-12 col-md-4" v-if="userRole === 'super_admin'">
-                    <label for="ls-tenant" class="form-label fw-semibold fs-8 text-muted mb-1"><i class="bi bi-building me-1"></i> Instansi Sekolah <span class="text-danger">*</span></label>
-                    <select class="form-select rounded-3" v-model="aksiTenantId" @change="onAksiTenantChange" id="ls-tenant" name="aksi_tenant_id">
-                        <option value="">-- Pilih Sekolah --</option>
-                        <option v-for="t in listTenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
-                    </select>
-                </div>
-
-                <!-- Filter Kelas -->
-                <div class="col-12 col-md-4">
-                    <label for="ls-kelas" class="form-label fw-semibold fs-8 text-muted mb-1"><i class="bi bi-door-open me-1"></i> Kelas / Rombel <span class="text-danger">*</span></label>
-                    <select class="form-select rounded-3" v-model="aksiKelasAsalId" @change="onAksiKelasAsalChange" id="ls-kelas" name="aksi_kelas_asal_id" :disabled="userRole === 'super_admin' && !aksiTenantId">
-                        <option value="">-- Pilih Kelas --</option>
-                        <option v-for="k in aksiListKelas" :key="k.id" :value="k.id">{{ k.nama_jenjang }} &ndash; {{ k.nama_kelas }}</option>
-                    </select>
-                </div>
-
-                <!-- Tahun Ajaran -->
-                <div class="col-12 col-md-2">
-                    <label for="ls-tahun" class="form-label fw-semibold fs-8 text-muted mb-1"><i class="bi bi-calendar3 me-1"></i> Tahun Ajaran <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control rounded-3" v-model="aksiTahunAjaran" placeholder="2024/2025" id="ls-tahun" name="aksi_tahun_ajaran">
-                </div>
-            </div>
-            <!-- Catatan -->
-            <div class="row g-3 mt-1">
-                <div class="col-12">
-                    <label for="ls-catatan" class="form-label fw-semibold fs-8 text-muted mb-1"><i class="bi bi-chat-left-text me-1"></i> Catatan (opsional)</label>
-                    <input type="text" class="form-control rounded-3" v-model="aksiCatatan" placeholder="Misal: Kelulusan tahun ajaran 2024/2025" id="ls-catatan" name="aksi_catatan">
-                </div>
-            </div>
-        </div>
-
-        <!-- Tabel Siswa -->
-        <div class="bk-card p-4">
-            <div v-if="userRole === 'super_admin' && !aksiTenantId" class="text-center py-4 text-muted">
-                <i class="bi bi-building fs-1 text-muted opacity-50 d-block mb-2"></i>
-                <span>Pilih instansi sekolah terlebih dahulu.</span>
-            </div>
-            <div v-else-if="!aksiKelasAsalId" class="text-center py-4 text-muted">
-                <i class="bi bi-funnel fs-1 text-muted opacity-50 d-block mb-2"></i>
-                <span>Pilih kelas untuk menampilkan daftar siswa yang akan diluluskan.</span>
-            </div>
-            <div v-else-if="aksiLoading" class="text-center py-5">
-                <div class="spinner-border text-success" role="status"></div>
-                <p class="text-muted mt-2">Memuat daftar siswa...</p>
-            </div>
-            <div v-else>
-                <!-- Toolbar checklist -->
-                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2" v-if="aksiListSiswa.length > 0">
-                    <div class="d-flex align-items-center gap-2">
-                        <div class="form-check mb-0">
-                            <input class="form-check-input" type="checkbox" v-model="aksiSelectAll" @change="toggleAksiSelectAll" id="ls-select-all" name="select_all">
-                            <label class="form-check-label fw-semibold text-dark fs-7" for="ls-select-all">Pilih Semua ({{ aksiListSiswa.length }} siswa)</label>
-                        </div>
-                        <span class="badge bg-success rounded-pill" v-if="aksiSelectedIds.length > 0">{{ aksiSelectedIds.length }} terpilih</span>
-                    </div>
-                    <button class="btn btn-success rounded-3 px-4 fw-semibold border-0 fs-8" @click="submitLuluskan" :disabled="aksiSubmitLoading || aksiSelectedIds.length === 0" id="btn-luluskan">
-                        <span v-if="aksiSubmitLoading" class="spinner-border spinner-border-sm me-1"></span>
-                        <i class="bi bi-mortarboard me-1" v-else></i>
-                        Luluskan Siswa Terpilih
-                    </button>
-                </div>
-
-                <div v-if="aksiListSiswa.length === 0" class="text-center py-4 text-muted">
-                    <i class="bi bi-person-slash fs-1 text-muted opacity-50 d-block mb-2"></i>
-                    <span>Tidak ada siswa aktif di kelas ini.</span>
-                </div>
-
-                <div class="table-responsive" v-if="aksiListSiswa.length > 0">
-                    <table class="table table-hover align-middle mb-0" style="font-size:0.84rem;">
-                        <thead class="table-light">
-                            <tr>
-                                <th style="width:40px;">
-                                    <input class="form-check-input" type="checkbox" v-model="aksiSelectAll" @change="toggleAksiSelectAll" id="ls-select-all-header" name="select_all_header" aria-label="Pilih semua siswa">
-                                </th>
-                                <th>No</th>
-                                <th>Nama Lengkap</th>
-                                <th>NISN</th>
-                                <th>NIS</th>
-                                <th>Kelas</th>
-                                <th>Jenjang</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="(s, i) in aksiListSiswa" :key="s.id" :class="{'table-success bg-opacity-10': aksiSelectedIds.includes(s.id)}">
-                                <td>
-                                    <input class="form-check-input" type="checkbox" :id="'cb-siswa-' + s.id" name="siswa_ids[]" :value="s.id" v-model="aksiSelectedIds" @change="onAksiCheckboxChange" :aria-label="'Pilih siswa ' + s.nama_lengkap">
-                                </td>
-                                <td class="text-muted">{{ i + 1 }}</td>
-                                <td class="fw-semibold text-dark">{{ s.nama_lengkap }}</td>
-                                <td><span class="badge bg-light text-dark border font-monospace">{{ s.nisn || '-' }}</span></td>
-                                <td><span class="badge bg-light text-dark border font-monospace">{{ s.nis || '-' }}</span></td>
-                                <td><span class="badge text-bg-success px-2 py-1 fs-9 rounded-2" style="font-size:0.75rem;">{{ s.nama_kelas }}</span></td>
-                                <td class="text-muted">{{ s.nama_jenjang }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
 </div><!-- End #bkApp -->
 
 <script>
@@ -1278,7 +1164,7 @@ window.VueAppRegistry.register('#bkApp', {
         });
 
         // ─── Tab Switch + Lazy Load ──────────────────────────
-        const tabsLoaded = ref({ dashboard: false, penjurusan: false, tracer: false, pdss: false, jurnal: false, kelulusan: false });
+        const tabsLoaded = ref({ dashboard: false, penjurusan: false, tracer: false, pdss: false, jurnal: false });
 
         function switchTab(tab) {
             activeTab.value = tab;
@@ -1289,13 +1175,6 @@ window.VueAppRegistry.register('#bkApp', {
                 if (tab === 'tracer')     loadTracer();
                 if (tab === 'pdss')       loadPdss();
                 if (tab === 'jurnal')     { loadKasus(); loadKelasList(); }
-                if (tab === 'kelulusan') {
-                    if (_userRole !== 'super_admin') {
-                        fetchAksiKelas();
-                    } else if (aksiTenantId.value) {
-                        fetchAksiKelas();
-                    }
-                }
             }
         }
 
@@ -1587,134 +1466,6 @@ window.VueAppRegistry.register('#bkApp', {
             }
         }
 
-        // ─── Kelola Kelulusan & Alumni (BK) ──────────────────
-        const aksiTenantId      = ref('');
-        const aksiKelasAsalId   = ref('');
-        const aksiTahunAjaran   = ref('');
-        const aksiCatatan       = ref('');
-        const aksiListKelas     = ref([]);
-        const aksiListSiswa     = ref([]);
-        const aksiSelectedIds   = ref([]);
-        const aksiLoading       = ref(false);
-        const aksiSubmitLoading = ref(false);
-        const aksiSelectAll     = ref(false);
-        const listTenants       = ref(<?= json_encode($tenantList) ?>);
-
-        // Hitung tahun ajaran default
-        const now = new Date();
-        const y = now.getFullYear();
-        const m = now.getMonth() + 1; // 1-indexed
-        aksiTahunAjaran.value = m >= 7 ? `${y}/${y+1}` : `${y-1}/${y}`;
-
-        function onAksiTenantChange() {
-            aksiKelasAsalId.value = '';
-            aksiListSiswa.value = [];
-            aksiSelectedIds.value = [];
-            aksiSelectAll.value = false;
-            if (aksiTenantId.value) {
-                fetchAksiKelas();
-            } else {
-                aksiListKelas.value = [];
-            }
-        }
-
-        async function fetchAksiKelas() {
-            let params = {};
-            if (_userRole === 'super_admin') {
-                if (!aksiTenantId.value) return;
-                params.tenant_id = aksiTenantId.value;
-            }
-            try {
-                const res = await axios.get(`${_baseUrl}/api/v1/pengguna/aksi/kelas`, { params });
-                aksiListKelas.value = res.data.data || [];
-            } catch (err) {
-                Swal.fire({ icon: 'error', title: 'Gagal', text: err.response?.data?.error || 'Gagal memuat daftar kelas.', confirmButtonColor: '#ef4444' });
-            }
-        }
-
-        function onAksiKelasAsalChange() {
-            aksiListSiswa.value = [];
-            aksiSelectedIds.value = [];
-            aksiSelectAll.value = false;
-            if (!aksiKelasAsalId.value) return;
-            fetchAksiSiswa();
-        }
-
-        async function fetchAksiSiswa() {
-            if (!aksiKelasAsalId.value) return;
-            const params = { kelas_id: aksiKelasAsalId.value };
-            if (_userRole === 'super_admin') {
-                if (!aksiTenantId.value) return;
-                params.tenant_id = aksiTenantId.value;
-            }
-            aksiLoading.value = true;
-            try {
-                const res = await axios.get(`${_baseUrl}/api/v1/pengguna/aksi/siswa`, { params });
-                aksiListSiswa.value = res.data.data || [];
-                aksiSelectedIds.value = [];
-                aksiSelectAll.value = false;
-            } catch (err) {
-                Swal.fire({ icon: 'error', title: 'Gagal', text: err.response?.data?.error || 'Gagal memuat daftar siswa.', confirmButtonColor: '#ef4444' });
-            } finally {
-                aksiLoading.value = false;
-            }
-        }
-
-        function toggleAksiSelectAll() {
-            if (aksiSelectAll.value) {
-                aksiSelectedIds.value = aksiListSiswa.value.map(s => s.id);
-            } else {
-                aksiSelectedIds.value = [];
-            }
-        }
-
-        function onAksiCheckboxChange() {
-            aksiSelectAll.value = aksiSelectedIds.value.length === aksiListSiswa.value.length && aksiListSiswa.value.length > 0;
-        }
-
-        function submitLuluskan() {
-            if (aksiSelectedIds.value.length === 0) {
-                Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Pilih minimal satu siswa.', confirmButtonColor: '#7c3aed' }); return;
-            }
-            if (!aksiTahunAjaran.value) {
-                Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Isi tahun ajaran.', confirmButtonColor: '#7c3aed' }); return;
-            }
-
-            Swal.fire({
-                title: 'Konfirmasi Luluskan Siswa',
-                html: `Anda akan meluluskan <b>${aksiSelectedIds.value.length} siswa</b>.<br>Tahun Ajaran: <b>${aksiTahunAjaran.value}</b><br><span class='text-danger'>Status siswa akan berubah menjadi <b>Lulus</b> secara permanen.</span>`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#10b981',
-                cancelButtonColor: '#64748b',
-                confirmButtonText: 'Ya, Luluskan!',
-                cancelButtonText: 'Batal'
-            }).then(async result => {
-                if (!result.isConfirmed) return;
-                aksiSubmitLoading.value = true;
-                const payload = {
-                    siswa_ids: aksiSelectedIds.value,
-                    tahun_ajaran: aksiTahunAjaran.value,
-                    catatan: aksiCatatan.value
-                };
-                if (_userRole === 'super_admin') payload.tenant_id = aksiTenantId.value;
-
-                try {
-                    const res = await axios.post(`${_baseUrl}/api/v1/pengguna/aksi/luluskan`, payload);
-                    Swal.fire({ icon: 'success', title: 'Berhasil!', text: res.data.message, confirmButtonColor: '#10b981' });
-                    aksiKelasAsalId.value = '';
-                    aksiListSiswa.value = [];
-                    aksiSelectedIds.value = [];
-                    aksiSelectAll.value = false;
-                    aksiCatatan.value = '';
-                } catch (err) {
-                    Swal.fire({ icon: 'error', title: 'Gagal', text: err.response?.data?.error || 'Terjadi kesalahan.', confirmButtonColor: '#ef4444' });
-                } finally {
-                    aksiSubmitLoading.value = false;
-                }
-            });
-        }
-
         // ─── Init ────────────────────────────────────────────
         onMounted(() => {
             loadDashboard();
@@ -1743,13 +1494,7 @@ window.VueAppRegistry.register('#bkApp', {
             kelasList, filterKelasId,
             submitKasus, loadKasus, loadKelasList,
             searchSiswaDebounce, selectSiswa, clearSiswa,
-            onFilterKelasChange, onSearchFocus, hideDropdownDelay,
-            // Kelola Kelulusan & Alumni (BK)
-            aksiTenantId, aksiKelasAsalId, aksiTahunAjaran, aksiCatatan,
-            aksiListKelas, aksiListSiswa, aksiSelectedIds, aksiLoading,
-            aksiSubmitLoading, aksiSelectAll, listTenants,
-            onAksiTenantChange, fetchAksiKelas, onAksiKelasAsalChange,
-            fetchAksiSiswa, toggleAksiSelectAll, onAksiCheckboxChange, submitLuluskan
+            onFilterKelasChange, onSearchFocus, hideDropdownDelay
         };
     }
 });

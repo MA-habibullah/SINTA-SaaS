@@ -711,20 +711,131 @@
         </div>
     </div>
 
+    <!-- Modal Bulk Photo Upload -->
+    <div class="modal fade" id="bulkPhotoModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-bottom py-3">
+                    <h5 class="modal-title fw-bold text-dark">
+                        <i class="bi bi-images text-success me-2"></i>Unggah Foto Profil Siswa Masal (.ZIP)
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" :disabled="bulkPhotoLoading" @click="resetBulkPhotoModal"></button>
+                </div>
+                <form @submit.prevent="submitBulkPhoto">
+                    <div class="modal-body p-4">
+                        <!-- Instructions -->
+                        <div class="alert alert-info border-0 rounded-3 mb-4 fs-8">
+                            <h6 class="fw-bold mb-1"><i class="bi bi-info-circle-fill me-1"></i>Petunjuk Upload Masal:</h6>
+                            <ul class="mb-0 ps-3">
+                                <li>Pastikan semua foto dimasukkan ke dalam satu file arsip berformat <strong>.ZIP</strong>.</li>
+                                <li>Setiap file foto harus dinamai dengan format: <strong>NPSN_NISN.ekstensi</strong> (Contoh: <code>20524512_0051234567.jpg</code> atau <code>20524512_0051234567.png</code>).</li>
+                                <li>Ekstensi foto yang didukung: <strong>.jpg, .jpeg, .png</strong>.</li>
+                                <li>Batas ukuran masing-masing file foto maksimal <strong>500 KB</strong>.</li>
+                                <li v-if="userRole !== 'super_admin'">Sebagai Operator Sekolah, Anda hanya dapat mengunggah foto untuk siswa dengan NPSN sekolah Anda (<strong>{{ userNpsn }}</strong>).</li>
+                            </ul>
+                        </div>
+
+                        <!-- Upload File Input -->
+                        <div class="mb-4" v-if="!bulkPhotoReport && !bulkPhotoLoading">
+                            <label for="bulk_photo_file" class="form-label fw-semibold fs-8 text-muted mb-1">Pilih File ZIP <span class="text-danger">*</span></label>
+                            <input id="bulk_photo_file" name="bulk_photo_file" type="file" ref="bulkPhotoFile" class="form-control rounded-3" accept=".zip" required @change="handleBulkPhotoFileChange">
+                        </div>
+
+                        <!-- Progress Loading -->
+                        <div class="text-center py-4" v-if="bulkPhotoLoading">
+                            <div class="spinner-border text-success" role="status" style="width: 3rem; height: 3rem;"></div>
+                            <h6 class="fw-bold mt-3 text-dark">Mengekstrak dan Memproses Foto...</h6>
+                            <p class="text-muted fs-8 mb-0">Mohon tunggu, jangan menutup modal atau me-refresh halaman.</p>
+                        </div>
+
+                        <!-- Report Results -->
+                        <div v-if="bulkPhotoReport && !bulkPhotoLoading" class="report-section">
+                            <div class="row g-3 text-center mb-4">
+                                <div class="col-4">
+                                    <div class="p-3 bg-light rounded-3 border">
+                                        <h5 class="fw-bold text-dark mb-1">{{ bulkPhotoReport.total_files }}</h5>
+                                        <span class="text-muted fs-8">Total File</span>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-3 rounded-3 border" style="background-color: #f0fdf4; border-color: #bbf7d0 !important;">
+                                        <h5 class="fw-bold text-success mb-1">{{ bulkPhotoReport.success_count }}</h5>
+                                        <span class="text-success fs-8">Berhasil</span>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-3 rounded-3 border" style="background-color: #fef2f2; border-color: #fecaca !important;">
+                                        <h5 class="fw-bold text-danger mb-1">{{ bulkPhotoReport.failed_count }}</h5>
+                                        <span class="text-danger fs-8">Gagal</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- List of files report -->
+                            <h6 class="fw-bold text-dark mb-2"><i class="bi bi-list-task me-1"></i>Rincian Hasil Pemrosesan:</h6>
+                            <div class="border rounded-3 overflow-y-auto bg-light p-2" style="max-height: 250px;">
+                                <div v-for="(rep, rIdx) in bulkPhotoReport.report" :key="rIdx" class="d-flex justify-content-between align-items-start py-2 px-2 border-bottom last-border-0 fs-8 gap-2">
+                                    <div class="d-flex align-items-start gap-2">
+                                        <i :class="rep.status === 'success' ? 'bi bi-check-circle-fill text-success' : 'bi bi-x-circle-fill text-danger'" class="mt-0.5"></i>
+                                        <span class="font-monospace text-dark fw-medium break-all">{{ rep.file }}</span>
+                                    </div>
+                                    <span :class="rep.status === 'success' ? 'text-success' : 'text-danger'" class="text-end fw-semibold flex-shrink-0" style="max-width: 60%;">
+                                        {{ rep.message }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer border-top bg-light py-2.5 rounded-bottom-4">
+                        <button type="button" class="btn btn-light rounded-3 fs-8 px-3" data-bs-dismiss="modal" :disabled="bulkPhotoLoading" @click="resetBulkPhotoModal">
+                            {{ bulkPhotoReport ? 'Tutup' : 'Batal' }}
+                        </button>
+                        <button type="submit" class="btn btn-success rounded-3 fs-8 px-4" :disabled="bulkPhotoLoading" v-if="!bulkPhotoReport">
+                            Mulai Upload
+                        </button>
+                        <button type="button" class="btn btn-primary rounded-3 fs-8 px-4" v-else @click="resetBulkPhotoModal">
+                            Upload Lagi
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- ================================================================== -->
     <!-- PANEL: NAIKKAN KELAS                                                 -->
     <!-- ================================================================== -->
-    <div v-if="activeTab === 'naikkan_kelas'" class="aksi-panel">
+    <div v-if="activeTab === 'naikkan_kelas' && (userRole === 'super_admin' || userRole === 'operator_sekolah')" class="aksi-panel">
         <!-- Header -->
         <div class="aksi-panel-header">
             <div class="d-flex align-items-center gap-3">
-                <div class="aksi-icon-wrap" style="background:linear-gradient(135deg,#2563eb,#3b82f6);">
-                    <i class="bi bi-arrow-up-circle-fill fs-4 text-white"></i>
+                <div class="aksi-icon-wrap" :style="aksiMode === 'promote' ? 'background:linear-gradient(135deg,#2563eb,#3b82f6);' : 'background:linear-gradient(135deg,#059669,#10b981);'">
+                    <i class="bi fs-4 text-white" :class="aksiMode === 'promote' ? 'bi-arrow-up-circle-fill' : 'bi-mortarboard-fill'"></i>
                 </div>
                 <div>
-                    <h5 class="fw-bold mb-0 text-dark">Naikkan Kelas Siswa</h5>
-                    <p class="text-muted mb-0" style="font-size:0.82rem;">Pindahkan siswa dari kelas asal ke kelas tujuan secara massal. Setiap aksi tercatat dalam riwayat.</p>
+                    <h5 class="fw-bold mb-0 text-dark">{{ aksiMode === 'promote' ? 'Naikkan Kelas Siswa' : 'Luluskan Siswa & Alumni' }}</h5>
+                    <p class="text-muted mb-0" style="font-size:0.82rem;">{{ aksiMode === 'promote' ? 'Pindahkan siswa dari kelas asal ke kelas tujuan secara massal. Setiap aksi tercatat dalam riwayat.' : 'Ubah status siswa menjadi Lulus secara massal. Setiap aksi kelulusan akan tercatat dalam riwayat.' }}</p>
                 </div>
+            </div>
+        </div>
+
+        <!-- Mode Switcher -->
+        <div class="px-4 py-3 bg-white border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-gear-wide-connected text-primary fs-5"></i>
+                <span class="fw-bold text-dark fs-7">Pilih Mode Aksi Kolektif:</span>
+            </div>
+            <div class="btn-group border rounded-3 p-1 bg-light" role="group" aria-label="Tipe Aksi Kolektif">
+                <input type="radio" class="btn-check" name="promotemode" id="mode-promote" value="promote" v-model="aksiMode" @change="aksiSelectedIds = []; aksiSelectAll = false; aksiKelasTujuanId = '';">
+                <label class="btn btn-outline-primary btn-sm rounded-2 border-0 px-3 fw-semibold py-1.5 fs-8" for="mode-promote">
+                    <i class="bi bi-arrow-up-circle-fill me-1"></i>Kenaikan Kelas
+                </label>
+
+                <input type="radio" class="btn-check" name="promotemode" id="mode-graduate" value="graduate" v-model="aksiMode" @change="aksiSelectedIds = []; aksiSelectAll = false; aksiKelasTujuanId = '';">
+                <label class="btn btn-outline-success btn-sm rounded-2 border-0 px-3 fw-semibold py-1.5 fs-8" for="mode-graduate">
+                    <i class="bi bi-mortarboard-fill me-1"></i>Kelulusan Siswa
+                </label>
             </div>
         </div>
 
@@ -741,7 +852,7 @@
                 </div>
 
                 <!-- Filter Kelas Asal -->
-                <div class="col-12 col-md-3">
+                <div class="col-12" :class="userRole === 'super_admin' ? 'col-md-3' : 'col-md-5'">
                     <label for="nk-kelas-asal" class="aksi-label"><i class="bi bi-door-open me-1"></i> Kelas Asal <span class="text-danger">*</span></label>
                     <select id="nk-kelas-asal" name="nk_kelas_asal" class="form-select form-select-sm rounded-3" v-model="aksiKelasAsalId" @change="onAksiKelasAsalChange" :disabled="userRole === 'super_admin' && !aksiTenantId">
                         <option value="">-- Pilih Kelas Asal --</option>
@@ -749,8 +860,8 @@
                     </select>
                 </div>
 
-                <!-- Filter Kelas Tujuan -->
-                <div class="col-12 col-md-3">
+                <!-- Filter Kelas Tujuan (hanya untuk mode promote) -->
+                <div class="col-12 col-md-3" v-if="aksiMode === 'promote'">
                     <label for="nk-kelas-tujuan" class="aksi-label"><i class="bi bi-door-closed me-1"></i> Kelas Tujuan <span class="text-danger">*</span></label>
                     <select id="nk-kelas-tujuan" name="nk_kelas_tujuan" class="form-select form-select-sm rounded-3" v-model="aksiKelasTujuanId" :disabled="!aksiKelasAsalId">
                         <option value="">-- Pilih Kelas Tujuan --</option>
@@ -759,7 +870,7 @@
                 </div>
 
                 <!-- Tahun Ajaran -->
-                <div class="col-12 col-md-2">
+                <div class="col-12" :class="aksiMode === 'promote' ? 'col-md-2' : (userRole === 'super_admin' ? 'col-md-5' : 'col-md-7')">
                     <label for="nk-tahun" class="aksi-label"><i class="bi bi-calendar3 me-1"></i> Tahun Ajaran <span class="text-danger">*</span></label>
                     <input id="nk-tahun" name="nk_tahun" type="text" class="form-control form-control-sm rounded-3" v-model="aksiTahunAjaran" placeholder="2024/2025">
                 </div>
@@ -795,12 +906,19 @@
                             <input id="nk-select-all" name="nk_select_all" class="form-check-input" type="checkbox" v-model="aksiSelectAll" @change="toggleAksiSelectAll">
                             <label class="form-check-label fw-semibold" for="nk-select-all">Pilih Semua ({{ aksiListSiswa.length }} siswa)</label>
                         </div>
-                        <span class="badge bg-primary rounded-pill" v-if="aksiSelectedIds.length > 0">{{ aksiSelectedIds.length }} dipilih</span>
+                        <span class="badge rounded-pill" :class="aksiMode === 'promote' ? 'bg-primary' : 'bg-success'" v-if="aksiSelectedIds.length > 0">{{ aksiSelectedIds.length }} dipilih</span>
                     </div>
-                    <button class="btn btn-primary btn-sm rounded-3 px-4" @click="submitNaikkanKelas" :disabled="aksiSubmitLoading || aksiSelectedIds.length === 0 || !aksiKelasTujuanId" id="btn-naikkan">
+                    <!-- Submit Promotion Button -->
+                    <button v-if="aksiMode === 'promote'" class="btn btn-primary btn-sm rounded-3 px-4 fw-semibold" @click="submitNaikkanKelas" :disabled="aksiSubmitLoading || aksiSelectedIds.length === 0 || !aksiKelasTujuanId" id="btn-naikkan">
                         <span v-if="aksiSubmitLoading" class="spinner-border spinner-border-sm me-1"></span>
                         <i class="bi bi-arrow-up-circle me-1" v-else></i>
                         Naikkan Kelas Terpilih
+                    </button>
+                    <!-- Submit Graduation Button -->
+                    <button v-if="aksiMode === 'graduate'" class="btn btn-success btn-sm rounded-3 px-4 fw-semibold border-0" @click="submitLuluskan" :disabled="aksiSubmitLoading || aksiSelectedIds.length === 0" id="btn-luluskan">
+                        <span v-if="aksiSubmitLoading" class="spinner-border spinner-border-sm me-1"></span>
+                        <i class="bi bi-mortarboard me-1" v-else></i>
+                        Luluskan Siswa Terpilih
                     </button>
                 </div>
 
@@ -823,13 +941,13 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="(s, i) in aksiListSiswa" :key="s.id" :class="{'table-primary bg-opacity-10': aksiSelectedIds.includes(s.id)}">
+                            <tr v-for="(s, i) in aksiListSiswa" :key="s.id" :class="{'table-primary bg-opacity-10': aksiSelectedIds.includes(s.id) && aksiMode === 'promote', 'table-success bg-opacity-10': aksiSelectedIds.includes(s.id) && aksiMode === 'graduate'}">
                                 <td><input :id="'nk_select_siswa_' + s.id" :name="'nk_select_siswa_' + s.id" aria-label="Pilih baris siswa" class="form-check-input" type="checkbox" :value="s.id" v-model="aksiSelectedIds" @change="onAksiCheckboxChange"></td>
                                 <td class="text-muted">{{ i + 1 }}</td>
                                 <td class="fw-semibold">{{ s.nama_lengkap }}</td>
                                 <td><span class="badge bg-light text-dark border">{{ s.nisn || '-' }}</span></td>
                                 <td><span class="badge bg-light text-dark border">{{ s.nis || '-' }}</span></td>
-                                <td><span class="badge" style="background:#dbeafe;color:#1e40af;">{{ s.nama_kelas }}</span></td>
+                                <td><span class="badge" :style="aksiMode === 'promote' ? 'background:#dbeafe;color:#1e40af;' : 'background:#d1fae5;color:#065f46;'">{{ s.nama_kelas }}</span></td>
                                 <td class="text-muted">{{ s.nama_jenjang }}</td>
                             </tr>
                         </tbody>
@@ -854,6 +972,22 @@
                     <p class="text-muted mb-0" style="font-size:0.82rem;">Unduh lembar Identitas Peserta Didik per siswa atau per kelas dengan format A4 standar.</p>
                 </div>
             </div>
+        </div>
+
+        <!-- Bulk Photo Upload Card -->
+        <div class="px-4 py-3 bg-emerald-50 border-bottom border-emerald-100 d-flex align-items-center justify-content-between flex-wrap gap-3" style="background-color: #f0fdf4;">
+            <div class="d-flex align-items-start gap-3">
+                <div class="d-flex align-items-center justify-content-center bg-success bg-opacity-10 text-success rounded-circle" style="width: 40px; height: 40px; flex-shrink: 0;">
+                    <i class="bi bi-images fs-5"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold text-success-800 mb-1" style="color: #166534;">Unggah Foto Profil Siswa Masal (ZIP)</h6>
+                    <p class="text-muted mb-0 fs-8">Upload file ZIP berisi foto siswa dengan format nama file <code>NPSN_NISN.jpg/png</code> (Contoh: <code>20524512_0051234567.jpg</code>). Ukuran maksimal 500 KB per foto.</p>
+                </div>
+            </div>
+            <button class="btn btn-success btn-sm rounded-3 px-3 py-2 fs-8 fw-semibold" @click="openBulkPhotoModal">
+                <i class="bi bi-cloud-upload me-1"></i> Unggah Foto Masal
+            </button>
         </div>
 
         <!-- Filter & Metadata Section -->
@@ -1172,6 +1306,7 @@
                 printTanggal: '',
 
                 // ---- State untuk panel Naikkan Kelas & Luluskan Siswa ----
+                aksiMode: 'promote',
                 aksiTenantId: '',
                 aksiKelasAsalId: '',
                 aksiKelasTujuanId: '',
@@ -1197,7 +1332,13 @@
                 quickAddForm: { npsn: '', nama_lengkap: '', nisn: '', tanggal_lahir: '', email: '' },
                 quickAddErrors: {},
                 quickAddLoading: false,
-                quickAddModalObj: null
+                quickAddModalObj: null,
+
+                // ---- State untuk Bulk Photo Upload ----
+                bulkPhotoModalObj: null,
+                bulkPhotoLoading: false,
+                bulkPhotoReport: null,
+                bulkPhotoFile: null
             };
         },
         mounted() {
@@ -1206,6 +1347,10 @@
             const qEl = document.getElementById('quickAddModal');
             if (qEl) {
                 this.quickAddModalObj = new bootstrap.Modal(qEl);
+            }
+            const bpEl = document.getElementById('bulkPhotoModal');
+            if (bpEl) {
+                this.bulkPhotoModalObj = new bootstrap.Modal(bpEl);
             }
             
             if (this.userRole === 'siswa') {
@@ -1695,6 +1840,49 @@
                         });
                 });
             },
+            submitLuluskan() {
+                if (this.aksiSelectedIds.length === 0) {
+                    this.toast.fire({ icon: 'warning', title: 'Pilih minimal satu siswa.' }); return;
+                }
+                if (!this.aksiTahunAjaran) {
+                    this.toast.fire({ icon: 'warning', title: 'Isi tahun ajaran.' }); return;
+                }
+
+                Swal.fire({
+                    title: 'Konfirmasi Luluskan Siswa',
+                    html: `Anda akan meluluskan <b>${this.aksiSelectedIds.length} siswa</b>.<br>Tahun Ajaran: <b>${this.aksiTahunAjaran}</b><br><span class='text-danger'>Status siswa akan berubah menjadi <b>Lulus</b> secara permanen.</span>`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#10b981',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: 'Ya, Luluskan!',
+                    cancelButtonText: 'Batal'
+                }).then(result => {
+                    if (!result.isConfirmed) return;
+                    this.aksiSubmitLoading = true;
+                    const payload = {
+                        siswa_ids: this.aksiSelectedIds,
+                        tahun_ajaran: this.aksiTahunAjaran,
+                        catatan: this.aksiCatatan
+                    };
+                    if (this.userRole === 'super_admin') payload.tenant_id = this.aksiTenantId;
+
+                    axios.post('/SINTA-SaaS/api/v1/pengguna/aksi/luluskan', payload)
+                        .then(res => {
+                            this.aksiSubmitLoading = false;
+                            Swal.fire({ icon: 'success', title: 'Berhasil!', text: res.data.message, confirmButtonColor: '#10b981' });
+                            this.aksiKelasAsalId = '';
+                            this.aksiListSiswa = [];
+                            this.aksiSelectedIds = [];
+                            this.aksiSelectAll = false;
+                            this.aksiCatatan = '';
+                        })
+                        .catch(err => {
+                            this.aksiSubmitLoading = false;
+                            Swal.fire({ icon: 'error', title: 'Gagal', text: err.response?.data?.error || 'Terjadi kesalahan.', confirmButtonColor: '#ef4444' });
+                        });
+                });
+            },
 
             // ---- Methods untuk Registrasi Cepat Siswa ----
             openQuickAddModal() {
@@ -1770,6 +1958,69 @@
                 
                 const url = `/SINTA-SaaS/cetak-rapot-kelas?kelas_id=${encodeURIComponent(this.filterKelas)}&tempat=${encodeURIComponent(this.printTempat.trim())}&tanggal=${encodeURIComponent(this.printTanggal.trim())}`;
                 window.open(url, '_blank');
+            },
+
+            // ---- Methods untuk Bulk Photo Upload ----
+            openBulkPhotoModal() {
+                this.resetBulkPhotoModal();
+                if (this.bulkPhotoModalObj) {
+                    this.bulkPhotoModalObj.show();
+                }
+            },
+            handleBulkPhotoFileChange(e) {
+                const files = e.target.files;
+                if (files.length > 0) {
+                    this.bulkPhotoFile = files[0];
+                }
+            },
+            submitBulkPhoto() {
+                if (!this.bulkPhotoFile) {
+                    Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Silakan pilih berkas ZIP terlebih dahulu.' });
+                    return;
+                }
+
+                this.bulkPhotoLoading = true;
+                this.bulkPhotoReport = null;
+
+                const formData = new FormData();
+                formData.append('file', this.bulkPhotoFile);
+
+                axios.post('/SINTA-SaaS/api/v1/siswa/bulk-photo', formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                })
+                .then(response => {
+                    this.bulkPhotoLoading = false;
+                    this.bulkPhotoReport = response.data;
+                    Swal.fire({
+                        icon: response.data.success_count > 0 ? 'success' : 'warning',
+                        title: 'Proses Selesai',
+                        text: `${response.data.success_count} foto berhasil dipasang, ${response.data.failed_count} gagal.`,
+                        confirmButtonColor: '#10b981'
+                    });
+                    this.fetchData(this.currentPage);
+                })
+                .catch(error => {
+                    this.bulkPhotoLoading = false;
+                    const errorMsg = error.response && error.response.data.error 
+                        ? error.response.data.error 
+                        : 'Terjadi kesalahan sistem saat memproses upload foto masal.';
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Sistem Error',
+                        text: errorMsg,
+                        confirmButtonColor: '#ef4444'
+                    });
+                });
+            },
+            resetBulkPhotoModal() {
+                this.bulkPhotoLoading = false;
+                this.bulkPhotoReport = null;
+                this.bulkPhotoFile = null;
+                if (this.$refs.bulkPhotoFile) {
+                    this.$refs.bulkPhotoFile.value = '';
+                }
             }
         }
     });
