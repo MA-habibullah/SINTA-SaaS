@@ -1,0 +1,17 @@
+# Disable script engine execution inside uploads directory to prevent remote code execution
+<FilesMatch "\.(php|php3|php4|php5|php7|php8|phtml|pl|py|jsp|asp|sh|cgi)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+# Prevent directory indexing / listing
+Options -Indexes
+
+# Prevent direct web access to sensitive student files (anything not in tenants/ folder)
+# This forces all student file access to go through download.php
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_URI} !/tenants/ [NC]
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^.*$ - [F,L]
+</IfModule>

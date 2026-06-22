@@ -1,0 +1,157 @@
+<?php
+
+namespace App\Controllers;
+
+use App\Models\Menu;
+use App\Core\SessionManager;
+use PDO;
+
+class AksesController extends BaseController {
+
+    private Menu $menuModel;
+
+    public function __construct() {
+        parent::__construct();
+
+        // 1. Amankan Operasi: Pastikan user sudah login
+        SessionManager::requireLogin();
+
+        // 2. Proteksi Otoritas: Super Admin atau Operator Sekolah (SaaS Tenant-Level Access)
+        $roleName = $_SESSION['role_name'] ?? '';
+        if ($roleName !== 'super_admin' && $roleName !== 'operator_sekolah') {
+            header('Location: /dapodik-spmb/dashboard?error=' . urlencode('Akses ditolak. Anda tidak memiliki wewenang untuk mengelola akses menu sidebar.'));
+            exit;
+        }
+
+        // Inisialisasi Model Menu dengan tenant_id aktif
+        $tenantId = SessionManager::getTenantId();
+        $this->menuModel = new Menu($tenantId);
+    }
+
+    /**
+     * Tampilkan Halaman Matriks Kelola Akses Menu
+     * GET /konfigurasi/akses
+     */
+    public function index(): void {
+        $menus = $this->menuModel->getAllMenus();
+        $roles = $this->menuModel->getAllRoles();
+        $accessMap = $this->menuModel->getAccessMap();
+
+        $roleName = $_SESSION['role_name'] ?? '';
+        $tenantId = SessionManager::getTenantId();
+
+        // Jika peran adalah operator sekolah, saring data peran & menu secara ketat
+        if ($roleName === 'operator_sekolah') {
+            // A. Peran bawahan: Guru (3), Siswa (4), Karyawan (6)
+            $roles = array_filter($roles, function($r) {
+                return in_array((int)$r['id'], [3, 4, 6]);
+            });
+
+            // B. Menu yang diizinkan untuk sekolah (tenant) ini oleh Super Admin
+            try {
+                $db = \App\Config\Database::getConnection();
+                $stmt = $db->prepare("SELECT menu_id FROM tenant_menu_access WHERE tenant_id = :tenant_id");
+                $stmt->execute(['tenant_id' => $tenantId]);
+                $activeMenuIds = $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+
+                $menus = array_filter($menus, function($m) use ($activeMenuIds) {
+                    return in_array((int)$m['id'], $activeMenuIds);
+                });
+            } catch (\Throwable $e) {
+                error_log("Failed to load active tenant menus: " . $e->getMessage());
+                $menus = [];
+            }
+        }
+
+        $data = [
+            'title' => ($roleName === 'super_admin') ? 'Kelola Akses Menu Sidebar (Global)' : 'Kelola Akses Menu Sekolah',
+            'menus' => $menus,
+            'roles' => $roles,
+            'access_map' => $accessMap,
+            'user_nama' => $_SESSION['nama_lengkap'],
+            'user_role' => $_SESSION['role_name']
+        ];
+
+        $this->render('kelola_akses', $data);
+    }
+
+    /**
+     * Simpan Perubahan Matriks Akses Menu (POST)
+     * POST /konfigurasi/akses/simpan
+     */
+    public function store(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /dapodik-spmb/konfigurasi/akses?error=' . urlencode('Metode request tidak diizinkan.'));
+            exit;
+        }
+
+        $roleName = $_SESSION['role_name'] ?? '';
+
+        // Ambil input checklist akses
+        $accessInput = $_POST['access'] ?? [];
+
+        // Sanitasi data masukan secara ketat (Secure by Design)
+        $cleanedAccess = [];
+        foreach ($accessInput as $roleId => $menus) {
+            if (!is_numeric($roleId)) {
+                continue;
+            }
+            
+            // Otorisasi Sisi Server: Operator sekolah tidak boleh mengubah akses role super_admin (1) atau operator_sekolah (2)
+            if ($roleName === 'operator_sekolah' && in_array((int)$roleId, [1, 2])) {
+                continue;
+            }
+
+            $cleanedAccess[(int)$roleId] = [];
+            if (is_array($menus)) {
+                foreach ($menus as $menuId) {
+                    if (is_numeric($menuId)) {
+                        $cleanedAccess[(int)$roleId][] = (int)$menuId;
+                    }
+                }
+            }
+        }
+
+        // Jika operator sekolah menyimpan akses, pastikan data yang tersimpan di database hanya mencakup role bawahan
+        if ($roleName === 'operator_sekolah') {
+            // Tetap pertahankan akses peran lain yang sudah ada sebelumnya di database untuk tenant ini
+            // Agar tidak menimpa peran yang di luar wewenang operator
+            $currentAccessMap = $this->menuModel->getAccessMap();
+            
+            // Rekonstruksi accessData lengkap: gabung wewenang lama + modifikasi baru
+            $finalAccess = [];
+            
+            // Baca wewenang yang ada saat ini
+            foreach ($currentAccessMap as $key => $val) {
+                list($rId, $mId) = explode('-', $key);
+                $rId = (int)$rId;
+                $mId = (int)$mId;
+                
+                // Jika role berada diluar wewenang operator, pertahankan datanya
+                if (!in_array($rId, [3, 4, 6])) {
+                    if (!isset($finalAccess[$rId])) {
+                        $finalAccess[$rId] = [];
+                    }
+                    $finalAccess[$rId][] = $mId;
+                }
+            }
+            
+            // Gabung dengan modifikasi baru dari form operator
+            foreach ($cleanedAccess as $rId => $mIds) {
+                $finalAccess[$rId] = $mIds;
+            }
+            
+            $cleanedAccess = $finalAccess;
+        }
+
+        // Proses penyimpanan lewat transaksi aman di Model
+        $success = $this->menuModel->saveAccessMap($cleanedAccess);
+
+        if ($success) {
+            header('Location: /dapodik-spmb/konfigurasi/akses?success=' . urlencode('Matriks hak akses menu berhasil diperbarui.'));
+        } else {
+            header('Location: /dapodik-spmb/konfigurasi/akses?error=' . urlencode('Terjadi kesalahan sistem saat memperbarui matriks hak akses.'));
+        }
+        exit;
+    }
+}
