@@ -6,12 +6,12 @@
     <style>
         @page {
             size: A4;
-            margin: 2cm;
+            margin: 1.0cm 1.5cm 0.8cm 1.5cm;
         }
         body {
             font-family: "Times New Roman", Times, serif;
-            font-size: 11pt;
-            line-height: 1.4;
+            font-size: 10pt;
+            line-height: 1.25;
             color: #000;
             background-color: #fff;
             margin: 0;
@@ -20,22 +20,22 @@
         .header {
             text-align: center;
             font-weight: bold;
-            font-size: 14pt;
+            font-size: 12pt;
             text-transform: uppercase;
-            margin-bottom: 1.5cm;
+            margin-bottom: 0.5cm;
             letter-spacing: 0.5px;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 1cm;
+            margin-bottom: 0.4cm;
         }
         td {
-            padding: 2.5px 0;
+            padding: 1.2px 0;
             vertical-align: top;
         }
         .col-num {
-            width: 5%;
+            width: 4%;
         }
         .col-label {
             width: 38%;
@@ -45,15 +45,16 @@
             text-align: center;
         }
         .col-val {
-            width: 54%;
+            width: 55%;
         }
         .sub-row {
-            padding-left: 20px;
+            padding-left: 15px;
         }
         .footer-section {
             width: 100%;
-            margin-top: 1cm;
+            margin-top: 0.3cm;
             display: table;
+            page-break-inside: avoid;
         }
         .photo-box {
             display: table-cell;
@@ -62,14 +63,16 @@
             border: 1px solid #000;
             text-align: center;
             vertical-align: middle;
-            font-size: 9pt;
+            font-size: 8.5pt;
             color: #555;
             background-color: #fcfcfc;
+            box-sizing: border-box;
         }
         .photo-box img {
-            width: 100%;
-            height: 100%;
+            width: 3cm;
+            height: 4cm;
             object-fit: cover;
+            display: block;
         }
         .signature-box {
             display: table-cell;
@@ -79,10 +82,10 @@
         .signature-container {
             display: inline-block;
             text-align: left;
-            min-width: 250px;
+            min-width: 220px;
         }
         .signature-space {
-            height: 1.8cm;
+            height: 1.3cm;
         }
         .bold {
             font-weight: bold;
@@ -99,19 +102,19 @@
             }
         }
         .print-btn-container {
-            padding: 12px;
+            padding: 10px;
             background-color: #f1f5f9;
             border-bottom: 1px solid #e2e8f0;
             text-align: center;
         }
         .btn-print {
-            padding: 8px 20px;
+            padding: 6px 16px;
             background-color: #2563eb;
             color: #fff;
             border: none;
             border-radius: 6px;
             font-family: sans-serif;
-            font-size: 10pt;
+            font-size: 9pt;
             font-weight: bold;
             cursor: pointer;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -353,7 +356,7 @@
         <div class="signature-box">
             <div class="signature-container">
                 <div style="margin-bottom: 2px;"><?= htmlspecialchars($tempat) ?>, <?= htmlspecialchars($tanggal) ?></div>
-                <div style="margin-bottom: 20px;">Kepala Madrasah</div>
+                <div style="margin-bottom: 20px;">Kepala Sekolah</div>
                 <div class="signature-space"></div>
                 <div class="bold underline"><?= htmlspecialchars($siswa['nama_kepsek']) ?></div>
                 <div>NIP. <?= htmlspecialchars($siswa['nip_kepsek'] ?? '-') ?></div>
