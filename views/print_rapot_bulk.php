@@ -5,13 +5,13 @@
     <title>Identitas Peserta Didik - Kelas</title>
     <style>
         @page {
-            size: A4;
-            margin: 1.0cm 1.5cm 0.8cm 1.5cm;
+            size: A4 portrait;
+            margin: 1.5cm;
         }
         body {
             font-family: "Times New Roman", Times, serif;
-            font-size: 10pt;
-            line-height: 1.25;
+            font-size: 11pt;
+            line-height: 1.3;
             color: #000;
             background-color: #fff;
             margin: 0;
@@ -20,6 +20,9 @@
         .page {
             page-break-after: always;
             page-break-inside: avoid;
+            break-inside: avoid;
+            box-sizing: border-box;
+            width: 100%;
         }
         .page:last-child {
             page-break-after: avoid;
@@ -27,22 +30,22 @@
         .header {
             text-align: center;
             font-weight: bold;
-            font-size: 12pt;
+            font-size: 14pt;
             text-transform: uppercase;
-            margin-bottom: 0.5cm;
+            margin-bottom: 0.8cm;
             letter-spacing: 0.5px;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 0.4cm;
+            margin-bottom: 0.6cm;
         }
         td {
-            padding: 1.2px 0;
+            padding: 1.5px 0;
             vertical-align: top;
         }
         .col-num {
-            width: 4%;
+            width: 5%;
         }
         .col-label {
             width: 38%;
@@ -52,25 +55,30 @@
             text-align: center;
         }
         .col-val {
-            width: 55%;
+            width: 54%;
         }
         .sub-row {
-            padding-left: 15px;
+            padding-left: 20px;
         }
         .footer-section {
             width: 100%;
-            margin-top: 0.3cm;
+            margin-top: 0.5cm;
             display: table;
             page-break-inside: avoid;
+            break-inside: avoid;
         }
         .photo-box {
             display: table-cell;
             width: 3cm;
             height: 4cm;
+            min-width: 3cm;
+            max-width: 3cm;
+            min-height: 4cm;
+            max-height: 4cm;
             border: 1px solid #000;
             text-align: center;
             vertical-align: middle;
-            font-size: 8.5pt;
+            font-size: 9pt;
             color: #555;
             background-color: #fcfcfc;
             box-sizing: border-box;
@@ -89,10 +97,10 @@
         .signature-container {
             display: inline-block;
             text-align: left;
-            min-width: 220px;
+            min-width: 250px;
         }
         .signature-space {
-            height: 1.3cm;
+            height: 1.8cm;
         }
         .bold {
             font-weight: bold;
@@ -101,27 +109,29 @@
             text-decoration: underline;
         }
         @media print {
-            body {
+            html, body {
                 background-color: #fff;
+                margin: 0;
+                padding: 0;
             }
-            .no-print {
-                display: none;
+            .no-print, .print-btn-container, .btn-print, header, footer, nav, sidebar {
+                display: none !important;
             }
         }
         .print-btn-container {
-            padding: 10px;
+            padding: 12px;
             background-color: #f1f5f9;
             border-bottom: 1px solid #e2e8f0;
             text-align: center;
         }
         .btn-print {
-            padding: 6px 16px;
+            padding: 8px 20px;
             background-color: #2563eb;
             color: #fff;
             border: none;
             border-radius: 6px;
             font-family: sans-serif;
-            font-size: 9pt;
+            font-size: 10pt;
             font-weight: bold;
             cursor: pointer;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -356,8 +366,18 @@
         
         <div class="footer-section">
             <div class="photo-box">
-                <?php if (!empty($siswa['foto_profil'])): ?>
-                    <img src="/SINTA-SaaS/storage/app/public/<?= htmlspecialchars($siswa['foto_profil']) ?>" alt="Foto Siswa">
+                <?php 
+                $photoUrl = '';
+                if (!empty($siswa['foto_profil'])) {
+                    $relativePath = $siswa['foto_profil'];
+                    $absolutePath = __DIR__ . '/../storage/app/public/' . $relativePath;
+                    if (file_exists($absolutePath) && is_file($absolutePath)) {
+                        $photoUrl = '/SINTA-SaaS/storage/app/public/' . $relativePath;
+                    }
+                }
+                ?>
+                <?php if (!empty($photoUrl)): ?>
+                    <img src="<?= htmlspecialchars($photoUrl) ?>" alt="Foto Siswa">
                 <?php else: ?>
                     FOTO<br>3 x 4
                 <?php endif; ?>
