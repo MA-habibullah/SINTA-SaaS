@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * View: Identitas Sekolah (Profile/Tenant Settings)
  * Bagian ini dimuat secara dinamis oleh views/layout/master.php di area #main-content.

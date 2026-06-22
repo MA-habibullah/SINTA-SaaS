@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Migration 007 - Create Menus and Access Tables
  */

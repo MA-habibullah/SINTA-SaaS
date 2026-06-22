@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * View: Bimbingan Konseling — Master BK
  * Module hub dengan 5 horizontal tab: Dashboard, Penjurusan, Tracer Study, PDSS, Jurnal BK

@@ -1,4 +1,4 @@
-﻿<!-- Load Tailwind CSS CDN and disable preflight to prevent conflict with Bootstrap core styles -->
+<!-- Load Tailwind CSS CDN and disable preflight to prevent conflict with Bootstrap core styles -->
 <script>
     (function() {
         const origWarn = console.warn;

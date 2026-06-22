@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Layout Component: Header
  * Berisi navbar utama, burger button, nama sekolah (tenant), search bar, dan user dropdown.

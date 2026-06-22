@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Migration 011 - Create Tenant Menu Access Table & Seeder
  */

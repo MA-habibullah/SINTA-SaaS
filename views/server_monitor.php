@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * View: Server & Tenant Resource Monitor Dashboard
  * Akses: Super Admin Only

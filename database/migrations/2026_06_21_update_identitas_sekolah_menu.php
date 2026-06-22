@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Migration: Update Identitas Sekolah Menu URL
  * 

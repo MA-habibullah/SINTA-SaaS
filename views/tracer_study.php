@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * View: Tracer Study / Portofolio Alumni
  * Hanya dapat diakses oleh siswa berstatus 'Lulus' atau Admin Sekolah / Super Admin.

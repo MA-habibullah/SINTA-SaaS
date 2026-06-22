@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * View: Error Monitor — System Debugger
  * Akses: Super Admin Only

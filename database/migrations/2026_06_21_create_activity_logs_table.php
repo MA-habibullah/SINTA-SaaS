@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Migration: Create Activity Logs (Audit Trail) Table and Sidebar Menu
  * 

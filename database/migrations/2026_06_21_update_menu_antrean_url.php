@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Migration: Update Menu Antrean URL
  * 

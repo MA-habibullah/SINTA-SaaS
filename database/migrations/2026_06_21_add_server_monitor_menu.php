@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Migration: Server Monitor Menu (ID 23)
  * Mendaftarkan menu "Server Monitor" di bawah "Sistem & Utilitas" (parent_id = 13)

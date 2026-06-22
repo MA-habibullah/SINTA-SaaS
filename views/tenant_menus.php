@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * View: Kelola Akses Menu Per Tenant (Child View)
  * Dipanggil oleh SuperAdminController dan dimuat di dalam layout/master.php

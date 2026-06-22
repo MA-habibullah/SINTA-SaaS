@@ -1,4 +1,4 @@
-﻿<!-- Halaman Sentral: Master Data Kelembagaan -->
+<!-- Halaman Sentral: Master Data Kelembagaan -->
 <div id="masterKelembagaanApp" v-cloak>
     
     <!-- Row Header & Tabs -->

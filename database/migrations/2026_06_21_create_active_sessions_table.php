@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Migration: Create Active Sessions Table
  * 

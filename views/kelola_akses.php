@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * View: Kelola Akses (Child View)
  * Bagian ini dimuat secara dinamis oleh views/layout/master.php di area #main-content.

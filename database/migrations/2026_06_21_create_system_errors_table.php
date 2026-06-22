@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Migration: Create System Errors Table (Error Tracker & Log Monitor)
  *

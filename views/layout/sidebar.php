@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Layout Component: Sidebar (Dinamis Berbasis RBAC)
  * Menu dimuat dari database secara real-time berdasarkan peran (role) user aktif di session.

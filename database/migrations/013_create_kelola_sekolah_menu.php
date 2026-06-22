@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Migration 013 - Create Kelola Sekolah Menu & Access Map for Super Admin
  */

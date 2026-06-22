@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * View: Log Aktivitas Sistem (Audit Trail)
  * Bagian ini dimuat secara dinamis oleh views/layout/master.php di area #main-content.

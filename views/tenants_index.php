@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * View: Kelola Sekolah (SaaS Tenant Management)
  * Terintegrasi dengan Tailwind CSS, Vue.js, Axios, dan SweetAlert2
