@@ -16,6 +16,7 @@ app/Config/Database.php
 
 # Mengabaikan folder scratch untuk file debugging lokal
 /scratch/
+/scratch/implementasi md/
 
 # Mengabaikan file sistem operasi
 .DS_Store

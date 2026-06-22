@@ -143,6 +143,21 @@ try {
             $controller->index();
             break;
 
+        case '/buku-induk':
+            $controller = new App\Controllers\BukuIndukController();
+            $controller->index();
+            break;
+
+        case '/api/v1/buku-induk':
+            $controller = new App\Controllers\BukuIndukController();
+            $controller->fetchApi();
+            break;
+
+        case '/api/v1/buku-induk/detail':
+            $controller = new App\Controllers\BukuIndukController();
+            $controller->fetchDetailApi();
+            break;
+
         case '/siswa/tambah':
             // Panggil SiswaController - Render Form Tambah
             $controller = new App\Controllers\SiswaController();
