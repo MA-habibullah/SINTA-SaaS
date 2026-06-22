@@ -12,9 +12,7 @@ app/Config/Database.php
 # Mengabaikan folder upload dokumen siswa (SPO, KK, Ijazah) & tenant demi privasi data
 # Tetap lacak file .htaccess untuk keamanan direktori web server
 /storage/app/public/uploads/**/*
-!/storage/app/public/uploads/.htaccess
 /storage/uploads/**/*
-!/storage/uploads/.htaccess
 
 # Mengabaikan folder scratch untuk file debugging lokal
 /scratch/
