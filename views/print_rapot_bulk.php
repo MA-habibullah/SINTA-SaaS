@@ -6,12 +6,12 @@
     <style>
         @page {
             size: A4 portrait;
-            margin: 1.5cm;
+            margin: 2.5cm;
         }
         body {
             font-family: "Times New Roman", Times, serif;
             font-size: 11pt;
-            line-height: 1.3;
+            line-height: 1.25;
             color: #000;
             background-color: #fff;
             margin: 0;
@@ -32,16 +32,22 @@
             font-weight: bold;
             font-size: 14pt;
             text-transform: uppercase;
-            margin-bottom: 0.8cm;
+            margin-bottom: 0.6cm;
             letter-spacing: 0.5px;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 0.6cm;
+            margin-bottom: 0.5cm;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+        tr {
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
         td {
-            padding: 1.5px 0;
+            padding: 1px 0;
             vertical-align: top;
         }
         .col-num {
@@ -62,13 +68,26 @@
         }
         .footer-section {
             width: 100%;
-            margin-top: 0.5cm;
+            margin-top: 0.4cm;
             display: table;
+            table-layout: fixed;
             page-break-inside: avoid;
             break-inside: avoid;
         }
-        .photo-box {
+        .signature-left {
             display: table-cell;
+            width: 35%;
+            text-align: left;
+            vertical-align: top;
+        }
+        .photo-cell {
+            display: table-cell;
+            width: 30%;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .photo-box {
+            display: inline-block;
             width: 3cm;
             height: 4cm;
             min-width: 3cm;
@@ -82,22 +101,52 @@
             color: #555;
             background-color: #fcfcfc;
             box-sizing: border-box;
+            position: relative;
+        }
+        .photo-box.has-photo {
+            border: none;
+            background-color: transparent;
         }
         .photo-box img {
             width: 3cm;
             height: 4cm;
             object-fit: cover;
             display: block;
+            position: relative;
+            color: transparent;
         }
-        .signature-box {
+        /* Fallback styling for broken image */
+        .photo-box img::after {
+            content: "FOTO\A 3 x 4";
+            white-space: pre-wrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #fcfcfc;
+            color: #555;
+            font-family: "Times New Roman", Times, serif;
+            font-size: 9pt;
+            line-height: 1.4;
+            text-align: center;
+            box-sizing: border-box;
+            z-index: 2;
+            border: 1px solid #000;
+        }
+        .signature-right {
             display: table-cell;
+            width: 35%;
             text-align: right;
             vertical-align: top;
         }
         .signature-container {
             display: inline-block;
             text-align: left;
-            min-width: 250px;
+            min-width: 200px;
         }
         .signature-space {
             height: 1.8cm;
@@ -114,7 +163,7 @@
                 margin: 0;
                 padding: 0;
             }
-            .no-print, .print-btn-container, .btn-print, header, footer, nav, sidebar {
+            .no-print, .print-btn-container, .btn-print, header, footer, nav, sidebar, #sidebar, #navbar {
                 display: none !important;
             }
         }
@@ -246,13 +295,13 @@
             </tr>
             <tr>
                 <td class="col-num">11.</td>
-                <td class="col-label">Madrasah Asal (SMP/MTs)</td>
+                <td class="col-label">Sekolah Asal (SMP/MTs)</td>
                 <td class="col-colon">:</td>
                 <td class="col-val"><?= htmlspecialchars($siswa['sekolah_asal'] ?? '-') ?></td>
             </tr>
             <tr>
                 <td class="col-num">12.</td>
-                <td class="col-label">Diterima di madrasah ini</td>
+                <td class="col-label">Diterima di sekolah ini</td>
                 <td class="col-colon"></td>
                 <td class="col-val"></td>
             </tr>
@@ -365,24 +414,38 @@
         </table>
         
         <div class="footer-section">
-            <div class="photo-box">
+            <div class="signature-left">
+                <div class="signature-container">
+                    <br>
+                    <div style="margin-bottom: 20px;">Orang Tua / Wali</div>
+                    <div class="signature-space"></div>
+                    <div>.........................................</div>
+                </div>
+            </div>
+            <div class="photo-cell">
                 <?php 
                 $photoUrl = '';
                 if (!empty($siswa['foto_profil'])) {
                     $relativePath = $siswa['foto_profil'];
                     $absolutePath = __DIR__ . '/../storage/app/public/' . $relativePath;
                     if (file_exists($absolutePath) && is_file($absolutePath)) {
-                        $photoUrl = '/SINTA-SaaS/storage/app/public/' . $relativePath;
+                        $basePath = '/';
+                        if (isset($_SERVER['REQUEST_URI']) && strncasecmp($_SERVER['REQUEST_URI'], '/SINTA-SaaS', 11) === 0) {
+                            $basePath = '/SINTA-SaaS/';
+                        }
+                        $photoUrl = $basePath . 'download.php?file=' . urlencode($relativePath);
                     }
                 }
                 ?>
-                <?php if (!empty($photoUrl)): ?>
-                    <img src="<?= htmlspecialchars($photoUrl) ?>" alt="Foto Siswa">
-                <?php else: ?>
-                    FOTO<br>3 x 4
-                <?php endif; ?>
+                <div class="photo-box <?= !empty($photoUrl) ? 'has-photo' : '' ?>">
+                    <?php if (!empty($photoUrl)): ?>
+                        <img src="<?= htmlspecialchars($photoUrl) ?>" alt="Foto Siswa">
+                    <?php else: ?>
+                        FOTO<br>3 x 4
+                    <?php endif; ?>
+                </div>
             </div>
-            <div class="signature-box">
+            <div class="signature-right">
                 <div class="signature-container">
                     <div style="margin-bottom: 2px;"><?= htmlspecialchars($tempat) ?>, <?= htmlspecialchars($tanggal) ?></div>
                     <div style="margin-bottom: 20px;">Kepala Sekolah</div>

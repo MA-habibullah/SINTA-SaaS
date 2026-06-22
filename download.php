@@ -54,10 +54,8 @@ if (!$isLegacy) {
             http_response_code(403);
             die("403 Forbidden: Anda tidak memiliki wewenang untuk mengakses berkas ini.");
         }
-    } elseif ($roleName === 'guru' || $roleName === 'guru_bk') {
-        http_response_code(403);
-        die("403 Forbidden: Peran Anda tidak diizinkan mengakses berkas ini.");
     } elseif ($roleName !== 'super_admin') {
+        // Operator Sekolah, Guru, and Guru BK are allowed but restricted to their own tenant/school
         $currentTenantId = SessionManager::getTenantId();
         if (empty($currentTenantId) || $currentTenantId !== $tenantId) {
             http_response_code(403);
@@ -94,10 +92,8 @@ if (!$isLegacy) {
             http_response_code(403);
             die("403 Forbidden: Anda tidak memiliki wewenang untuk mengakses berkas ini.");
         }
-    } elseif ($roleName === 'guru' || $roleName === 'guru_bk') {
-        http_response_code(403);
-        die("403 Forbidden: Peran Anda tidak diizinkan mengakses berkas ini.");
     } elseif ($roleName !== 'super_admin') {
+        // Operator Sekolah, Guru, and Guru BK are allowed but restricted to their own tenant/school
         $currentTenantId = SessionManager::getTenantId();
         if (empty($currentTenantId) || $currentTenantId !== $tenantId) {
             http_response_code(403);

@@ -64,6 +64,23 @@
         </div>
     </div>
 
+    <!-- Navigation Tabs (Sleek Underline, 14px, Dark Grey) -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-2 bg-white rounded-4">
+            <div class="nav-tabs-wrapper">
+                <ul class="nav nav-tabs border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-3 px-2">
+                    <li class="nav-item" v-for="tab in tabs" :key="tab.id">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" 
+                                :class="{active: filterStatus === tab.id}" 
+                                @click="switchTab(tab.id)">
+                            <i :class="tab.icon" class="me-2 fs-6"></i>{{ tab.name }}
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Card Grid -->
     <div class="card border-0 shadow-sm rounded-4">
         <div class="card-body p-3 p-md-4">
@@ -71,7 +88,7 @@
             <!-- Table Action Filters -->
             <div class="row g-3 mb-4">
                 <!-- Search Box -->
-                <div class="col-12 col-md-4">
+                <div class="col-12 col-md-6">
                     <div class="input-group input-group-sm">
                         <span class="input-group-text bg-light border-end-0 rounded-start-3"><i class="bi bi-search text-muted"></i></span>
                         <input id="global_search_input" name="search" type="text" class="form-control bg-light border-start-0 rounded-end-3" placeholder="Cari Nama, NISN atau NIS..." v-model="search" @input="debounceSearch">
@@ -79,26 +96,15 @@
                 </div>
 
                 <!-- Filter Kelas -->
-                <div class="col-6 col-md-3">
+                <div class="col-6 col-md-4">
                     <select class="form-select form-select-sm rounded-3" v-model="filterKelas" @change="fetchData(1)">
                         <option value="">🏫 Semua Kelas</option>
                         <option v-for="k in kelasOptions" :value="k.id" :key="k.id">{{ k.nama_kelas }}</option>
                     </select>
                 </div>
 
-                <!-- Filter Status -->
-                <div class="col-6 col-md-3">
-                    <select class="form-select form-select-sm rounded-3" v-model="filterStatus" @change="fetchData(1)">
-                        <option value="">📋 Semua Status</option>
-                        <option value="Aktif">Aktif</option>
-                        <option value="Lulus">Lulus</option>
-                        <option value="Pindah">Pindah</option>
-                        <option value="Keluar">Keluar</option>
-                    </select>
-                </div>
-
                 <!-- Per Page -->
-                <div class="col-12 col-md-2 d-flex align-items-center justify-content-md-end gap-2">
+                <div class="col-6 col-md-2 d-flex align-items-center justify-content-md-end gap-2">
                     <label for="per_page_select" class="fs-8 text-muted mb-0">Baris</label>
                     <select id="per_page_select" name="per_page" class="form-select form-select-sm rounded-3" v-model="perPage" @change="fetchData(1)" style="width: 75px;">
                         <option value="10">10</option>
@@ -229,7 +235,7 @@
                         <!-- Profile Sidebar -->
                         <div class="col-12 col-lg-3 border-end bg-light p-4 text-center">
                             <div class="d-inline-block position-relative mb-3">
-                                <img :src="selectedSiswa.foto_profil ? '/SINTA-SaaS/storage/app/public/' + selectedSiswa.foto_profil : 'https://cdn-icons-png.flaticon.com/512/149/149071.png'" 
+                                <img :src="selectedSiswa.foto_profil ? '/SINTA-SaaS/download.php?file=' + encodeURIComponent(selectedSiswa.foto_profil) : 'https://cdn-icons-png.flaticon.com/512/149/149071.png'" 
                                      class="img-fluid rounded-4 shadow border border-3 border-white object-fit-cover" 
                                      style="width: 150px; height: 180px;" alt="Foto Siswa">
                             </div>
@@ -521,7 +527,7 @@
                                                     <div class="text-muted fs-9" v-else>Belum Diunggah</div>
                                                 </div>
                                             </div>
-                                            <a v-if="selectedSiswa[doc.key]" :href="'/SINTA-SaaS/storage/app/public/' + selectedSiswa[doc.key]" 
+                                            <a v-if="selectedSiswa[doc.key]" :href="'/SINTA-SaaS/download.php?file=' + encodeURIComponent(selectedSiswa[doc.key])" 
                                                target="_blank" class="btn btn-sm btn-outline-primary rounded-2 px-2 py-1 fs-9">
                                                 <i class="bi bi-download"></i> Lihat
                                             </a>
@@ -598,6 +604,42 @@
     .fs-7 {
         font-size: 0.875rem !important;
     }
+
+    .scrollable-nav-tabs {
+        padding-bottom: 5px;
+        border-bottom: none;
+    }
+
+    .scrollable-nav-tabs::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    .scrollable-nav-tabs::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border-radius: 4px;
+    }
+
+    .nav-tabs-wrapper .nav-link {
+        font-size: 14px;
+        color: #475569;
+        background-color: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        border-radius: 0;
+        font-weight: 600;
+        padding: 10px 16px;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .nav-tabs-wrapper .nav-link:hover {
+        color: #2563eb;
+    }
+
+    .nav-tabs-wrapper .nav-link.active {
+        color: #2563eb !important;
+        background-color: transparent !important;
+        border-bottom: 2px solid #2563eb !important;
+    }
 </style>
 
 <!-- Script Inisialisasi Vue App -->
@@ -606,6 +648,13 @@
     window.VueAppRegistry.register('#bukuIndukApp', {
         data() {
             return {
+                tabs: [
+                    { id: '', name: 'Semua Siswa', icon: 'bi bi-people' },
+                    { id: 'Aktif', name: 'Siswa Aktif', icon: 'bi bi-person-check' },
+                    { id: 'Lulus', name: 'Alumni / Lulus', icon: 'bi bi-mortarboard' },
+                    { id: 'Pindah', name: 'Siswa Pindah', icon: 'bi bi-person-exclamation' },
+                    { id: 'Keluar', name: 'Siswa Keluar', icon: 'bi bi-person-x' }
+                ],
                 userRole: '<?php echo htmlspecialchars($user_role ?? ""); ?>',
                 listTenants: <?php echo json_encode($tenantList ?? []); ?>,
                 filterTenantId: '', 
@@ -653,6 +702,10 @@
             this.fetchData(1);
         },
         methods: {
+            switchTab(tabId) {
+                this.filterStatus = tabId;
+                this.fetchData(1);
+            },
             get selectedTenantName() {
                 if (!this.filterTenantId) return '';
                 const t = this.listTenants.find(t => t.id === this.filterTenantId);
