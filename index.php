@@ -40,9 +40,9 @@ App\Helpers\ErrorTracker::register();
 $request_uri = $_SERVER['REQUEST_URI'];
 $path = parse_url($request_uri, PHP_URL_PATH);
 
-// Bersihkan path dari sub-folder XAMPP (e.g. /SINTA-SaaS/login -> /login)
+// Bersihkan path dari sub-folder XAMPP (case-insensitive, e.g. /sinta-saas/login -> /login)
 $project_folder = '/SINTA-SaaS';
-if (str_starts_with($path, $project_folder)) {
+if (strncasecmp($path, $project_folder, strlen($project_folder)) === 0) {
     $path = substr($path, strlen($project_folder));
 }
 
