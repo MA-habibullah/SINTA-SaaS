@@ -39,7 +39,7 @@
         </div>
         
         <!-- Toggle Trash & Add Action -->
-        <div class="col-12 col-md-5 d-flex gap-2 justify-content-start justify-content-md-end align-items-center flex-wrap" v-if="userRole !== 'siswa'">
+        <div class="col-12 col-md-5 d-flex gap-2 justify-content-start justify-content-md-end align-items-center flex-wrap" v-if="userRole !== 'siswa' && activeTab !== 'profile_rapot'">
             <button class="btn btn-outline-secondary btn-sm rounded-3 px-3 py-2 fs-8 fs-md-7 flex-grow-1 flex-md-grow-0" 
                     @click="toggleTrashMode" 
                     :class="{'btn-danger text-white': trashMode}"
@@ -85,7 +85,7 @@
     </div>
 
     <!-- Main Datatable Grid (disembunyikan saat tab aksi aktif) -->
-    <div class="card border-0 shadow-sm rounded-4" v-if="activeTab !== 'naikkan_kelas'">
+    <div class="card border-0 shadow-sm rounded-4" v-if="activeTab !== 'naikkan_kelas' && activeTab !== 'profile_rapot'">
         <div class="card-body p-3 p-md-4">
             
             <!-- Horizontal Filter Form (Tailwind CSS) -->
@@ -839,7 +839,144 @@
         </div>
     </div>
 
+    <!-- ================================================================== -->
+    <!-- PANEL: PROFILE RAPOT                                               -->
+    <!-- ================================================================== -->
+    <div v-if="activeTab === 'profile_rapot'" class="aksi-panel">
+        <!-- Header -->
+        <div class="aksi-panel-header">
+            <div class="d-flex align-items-center gap-3">
+                <div class="aksi-icon-wrap" style="background:linear-gradient(135deg,#059669,#10b981);">
+                    <i class="bi bi-file-earmark-person-fill fs-4 text-white"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold mb-0 text-dark">Profile Rapot (Identitas Peserta Didik)</h5>
+                    <p class="text-muted mb-0" style="font-size:0.82rem;">Unduh lembar Identitas Peserta Didik per siswa atau per kelas dengan format A4 standar.</p>
+                </div>
+            </div>
+        </div>
 
+        <!-- Filter & Metadata Section -->
+        <div class="aksi-filter-section">
+            <div class="row g-3 align-items-end">
+                <!-- Filter Sekolah (Super Admin Only) -->
+                <div class="col-12 col-md-3" v-if="userRole === 'super_admin'">
+                    <label for="pr-tenant" class="aksi-label"><i class="bi bi-building me-1"></i> Instansi Sekolah <span class="text-danger">*</span></label>
+                    <select id="pr-tenant" name="pr_tenant" class="form-select form-select-sm rounded-3" v-model="filterTenantId" @change="onFilterTenantChange">
+                        <option value="">-- Pilih Sekolah --</option>
+                        <option v-for="t in listTenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
+                    </select>
+                </div>
+
+                <!-- Filter Kelas -->
+                <div class="col-12 col-md-3">
+                    <label for="pr-kelas" class="aksi-label"><i class="bi bi-door-open me-1"></i> Kelas / Rombel <span class="text-danger">*</span></label>
+                    <select id="pr-kelas" name="pr_kelas" class="form-select form-select-sm rounded-3" v-model="filterKelas" @change="fetchData(1)">
+                        <option value="">-- Pilih Kelas --</option>
+                        <option v-for="k in listKelas" :key="k.id" :value="k.id">{{ k.nama_kelas }}</option>
+                    </select>
+                </div>
+
+                <!-- Input Tempat -->
+                <div class="col-12 col-md-3">
+                    <label for="pr-tempat" class="aksi-label"><i class="bi bi-geo-alt me-1"></i> Tempat Tanda Tangan <span class="text-danger">*</span></label>
+                    <input id="pr-tempat" name="pr_tempat" type="text" class="form-control form-control-sm rounded-3" v-model="printTempat" placeholder="Contoh: Jombang" required>
+                </div>
+
+                <!-- Input Tanggal -->
+                <div class="col-12 col-md-3">
+                    <label for="pr-tanggal" class="aksi-label"><i class="bi bi-calendar3 me-1"></i> Tanggal Tanda Tangan <span class="text-danger">*</span></label>
+                    <input id="pr-tanggal" name="pr_tanggal" type="text" class="form-control form-control-sm rounded-3" v-model="printTanggal" placeholder="Contoh: 10 November 2022" required>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabel & Actions Section -->
+        <div class="aksi-table-section">
+            <div v-if="userRole === 'super_admin' && !filterTenantId" class="aksi-empty-state text-center py-5">
+                <i class="bi bi-building fs-1 text-muted opacity-50"></i>
+                <p class="text-muted mt-2 mb-0">Pilih instansi sekolah terlebih dahulu.</p>
+            </div>
+            <div v-else-if="!filterKelas" class="aksi-empty-state text-center py-5">
+                <i class="bi bi-funnel fs-1 text-muted opacity-50"></i>
+                <p class="text-muted mt-2 mb-0">Pilih kelas terlebih dahulu untuk melihat daftar siswa.</p>
+            </div>
+            <div v-else-if="loading" class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="text-muted mt-2">Memuat daftar siswa...</p>
+            </div>
+            <div v-else>
+                <!-- Bulk Actions -->
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2" v-if="listData.length > 0">
+                    <div>
+                        <span class="text-muted fs-8">Total: <strong>{{ total }}</strong> siswa aktif ditemukan.</span>
+                    </div>
+                    <button class="btn btn-success btn-sm rounded-3 px-4 d-flex align-items-center gap-1.5" @click="printBulk">
+                        <i class="bi bi-printer-fill"></i>
+                        Cetak Rapot Kelas (Bulk)
+                    </button>
+                </div>
+
+                <div v-if="listData.length === 0" class="aksi-empty-state text-center py-5">
+                    <i class="bi bi-person-slash fs-1 text-muted opacity-50"></i>
+                    <p class="text-muted mt-2 mb-0">Tidak ada siswa aktif di kelas ini.</p>
+                </div>
+
+                <div class="table-responsive" v-if="listData.length > 0">
+                    <table class="table table-hover align-middle mb-4" style="font-size:0.84rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 50px;">No</th>
+                                <th>Nama Lengkap</th>
+                                <th>NISN</th>
+                                <th>NIS</th>
+                                <th class="text-center" style="width: 150px;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(item, idx) in listData" :key="item.id">
+                                <td class="text-muted">{{ (currentPage - 1) * perPage + idx + 1 }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-circle me-2 bg-light-primary fw-bold">
+                                            {{ getInitials(item.nama_lengkap) }}
+                                        </div>
+                                        <span class="fw-semibold text-dark">{{ item.nama_lengkap }}</span>
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-light text-dark border font-monospace">{{ item.nisn || '-' }}</span></td>
+                                <td><span class="badge bg-light text-dark border font-monospace">{{ item.nis || '-' }}</span></td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-outline-primary rounded-2 px-3 py-1 fs-8 d-inline-flex align-items-center gap-1" @click="printSingle(item.id)">
+                                        <i class="bi bi-printer"></i> Cetak
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3 mt-3" v-if="totalPages > 1">
+                    <span class="fs-8 text-muted">Menampilkan {{ from }} s.d. {{ to }} dari {{ total }} baris</span>
+                    <nav>
+                        <ul class="pagination pagination-sm m-0">
+                            <li class="page-item" :class="{disabled: currentPage === 1}">
+                                <a class="page-link" href="#" @click.prevent="fetchData(currentPage - 1)">&laquo;</a>
+                            </li>
+                            <li class="page-item" v-for="page in totalPages" :key="page" :class="{active: page === currentPage}">
+                                <a class="page-link" href="#" @click.prevent="fetchData(page)">{{ page }}</a>
+                            </li>
+                            <li class="page-item" :class="{disabled: currentPage === totalPages}">
+                                <a class="page-link" href="#" @click.prevent="fetchData(currentPage + 1)">&raquo;</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+
+            </div>
+        </div>
+    </div>
 
 </div>
 
@@ -994,7 +1131,8 @@
                     { id: 'karyawan', name: 'Karyawan', icon: 'bi bi-briefcase' },
                     { id: 'operator', name: 'Operator', icon: 'bi bi-person-gear' },
                     { id: 'naikkan_kelas', name: 'Naikkan Kelas', icon: 'bi bi-arrow-up-circle' },
-                    { id: 'mutasi', name: 'Log Mutasi & Putus Sekolah', icon: 'bi bi-person-x' }
+                    { id: 'mutasi', name: 'Log Mutasi & Putus Sekolah', icon: 'bi bi-person-x' },
+                    { id: 'profile_rapot', name: 'Profile Rapot', icon: 'bi bi-file-earmark-person' }
                 ],
                 activeTab: 'siswa', // Default tab aktif
                 userRole: '<?php echo htmlspecialchars($user_role ?? ""); ?>',
@@ -1028,6 +1166,10 @@
                 importLoading: false,
                 importFile: null,
                 importErrors: [],
+
+                // ---- State untuk panel Profile Rapot ----
+                printTempat: '',
+                printTanggal: '',
 
                 // ---- State untuk panel Naikkan Kelas & Luluskan Siswa ----
                 aksiTenantId: '',
@@ -1083,6 +1225,15 @@
             const y = now.getFullYear();
             const m = now.getMonth() + 1; // 1-indexed
             this.aksiTahunAjaran = m >= 7 ? `${y}/${y+1}` : `${y-1}/${y}`;
+
+            // Init print metadata
+            this.printTempat = 'Jombang';
+            const now2 = new Date();
+            const day2 = now2.getDate();
+            const monthNames2 = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            const month2 = monthNames2[now2.getMonth()];
+            const year2 = now2.getFullYear();
+            this.printTanggal = `${day2} ${month2} ${year2}`;
         },
         methods: {
             switchTab(tabId) {
@@ -1187,19 +1338,34 @@
             },
             // Pemuatan data utama terpaginasi
             fetchData(page = 1) {
+                if (this.activeTab === 'profile_rapot' && !this.filterKelas) {
+                    this.listData = [];
+                    this.total = 0;
+                    this.totalPages = 1;
+                    this.currentPage = 1;
+                    this.from = 0;
+                    this.to = 0;
+                    return;
+                }
+
                 this.loading = true;
                 this.currentPage = page;
                 
+                let targetTab = this.activeTab;
+                if (targetTab === 'profile_rapot') {
+                    targetTab = 'siswa';
+                }
+                
                 let params = {
-                    tab: this.activeTab,
+                    tab: targetTab,
                     page: this.currentPage,
                     per_page: this.perPage,
                     search: this.search,
                     trash: this.trashMode ? 'true' : 'false'
                 };
 
-                if (this.activeTab === 'siswa' || this.activeTab === 'mutasi') {
-                    params.status = this.filterStatus;
+                if (this.activeTab === 'siswa' || this.activeTab === 'mutasi' || this.activeTab === 'profile_rapot') {
+                    params.status = this.activeTab === 'profile_rapot' ? 'Aktif' : this.filterStatus;
                     params.id_kelas = this.filterKelas;
                     if (this.userRole === 'super_admin') {
                         params.tenant_id = this.filterTenantId;
@@ -1574,6 +1740,36 @@
             },
             getQuickAddError(field) {
                 return this.quickAddErrors[field] ? this.quickAddErrors[field][0] : '';
+            },
+            printSingle(studentId) {
+                if (!this.printTempat || !this.printTempat.trim()) {
+                    Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Tempat penandatanganan wajib diisi sebelum mencetak.' });
+                    return;
+                }
+                if (!this.printTanggal || !this.printTanggal.trim()) {
+                    Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Tanggal penandatanganan wajib diisi sebelum mencetak.' });
+                    return;
+                }
+                
+                const url = `/SINTA-SaaS/cetak-rapot?id=${encodeURIComponent(studentId)}&tempat=${encodeURIComponent(this.printTempat.trim())}&tanggal=${encodeURIComponent(this.printTanggal.trim())}`;
+                window.open(url, '_blank');
+            },
+            printBulk() {
+                if (!this.filterKelas) {
+                    Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Silakan pilih kelas terlebih dahulu.' });
+                    return;
+                }
+                if (!this.printTempat || !this.printTempat.trim()) {
+                    Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Tempat penandatanganan wajib diisi sebelum mencetak.' });
+                    return;
+                }
+                if (!this.printTanggal || !this.printTanggal.trim()) {
+                    Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Tanggal penandatanganan wajib diisi sebelum mencetak.' });
+                    return;
+                }
+                
+                const url = `/SINTA-SaaS/cetak-rapot-kelas?kelas_id=${encodeURIComponent(this.filterKelas)}&tempat=${encodeURIComponent(this.printTempat.trim())}&tanggal=${encodeURIComponent(this.printTanggal.trim())}`;
+                window.open(url, '_blank');
             }
         }
     });

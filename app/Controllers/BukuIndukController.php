@@ -187,4 +187,174 @@ class BukuIndukController extends BaseController {
         
         $this->jsonResponse($siswa);
     }
+
+    public function printRapot(): void {
+        $id = $_GET['id'] ?? '';
+        $tempat = $_GET['tempat'] ?? 'Jombang';
+        $tanggal = $_GET['tanggal'] ?? '';
+
+        if (empty($id)) {
+            die("<h1>Bad Request</h1><p>ID siswa tidak valid.</p>");
+        }
+
+        $tenantId = SessionManager::getTenantId();
+        $siswaModel = new \App\Models\Siswa($tenantId);
+        $siswa = $siswaModel->findFullById($id);
+
+        if (!$siswa) {
+            die("<h1>Not Found</h1><p>Data siswa tidak ditemukan.</p>");
+        }
+
+        // Dapatkan nama-nama wilayah (Provinsi, Kota, Kecamatan, Kelurahan) secara human readable jika ada
+        if (!empty($siswa['id_kelurahan'])) {
+            try {
+                $db = \App\Config\Database::getConnection();
+                $stmt = $db->prepare("
+                    SELECT kl.nama_kelurahan, kc.nama_kecamatan, kt.nama_kota, pr.nama_provinsi
+                    FROM kelurahan kl
+                    JOIN kecamatan kc ON kl.id_kecamatan = kc.id_kecamatan
+                    JOIN kota kt ON kc.id_kota = kt.id_kota
+                    JOIN provinsi pr ON kt.id_provinsi = pr.id_provinsi
+                    WHERE kl.id_kelurahan = ?
+                    LIMIT 1
+                ");
+                $stmt->execute([$siswa['id_kelurahan']]);
+                $wilayahNames = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($wilayahNames) {
+                    $siswa['nama_kelurahan'] = $wilayahNames['nama_kelurahan'];
+                    $siswa['nama_kecamatan'] = $wilayahNames['nama_kecamatan'];
+                    $siswa['nama_kota'] = $wilayahNames['nama_kota'];
+                    $siswa['nama_provinsi'] = $wilayahNames['nama_provinsi'];
+                }
+            } catch (\Throwable $e) {
+                // Ignore errors
+            }
+        }
+
+        // Dapatkan nama kelas
+        if (!empty($siswa['id_kelas'])) {
+            try {
+                $db = \App\Config\Database::getConnection();
+                $stmtKelas = $db->prepare("SELECT nama_kelas FROM kelas WHERE id = ?");
+                $stmtKelas->execute([$siswa['id_kelas']]);
+                $siswa['nama_kelas'] = $stmtKelas->fetchColumn() ?: '-';
+            } catch (\Throwable $e) {
+                $siswa['nama_kelas'] = '-';
+            }
+        } else {
+            $siswa['nama_kelas'] = '-';
+        }
+
+        // Dapatkan data headmaster (nama_kepsek & nip_kepsek) dari tenants
+        try {
+            $db = \App\Config\Database::getConnection();
+            $stmtTenant = $db->prepare("SELECT nama_kepsek, nip_kepsek FROM tenants WHERE id = ?");
+            $stmtTenant->execute([$siswa['tenant_id']]);
+            $tenantInfo = $stmtTenant->fetch(PDO::FETCH_ASSOC);
+            $siswa['nama_kepsek'] = $tenantInfo['nama_kepsek'] ?? '-';
+            $siswa['nip_kepsek'] = $tenantInfo['nip_kepsek'] ?? '-';
+        } catch (\Throwable $e) {
+            $siswa['nama_kepsek'] = '-';
+            $siswa['nip_kepsek'] = '-';
+        }
+
+        // Load the print view directly (no layout wrapper)
+        require __DIR__ . '/../../views/print_rapot.php';
+        exit;
+    }
+
+    public function printRapotKelas(): void {
+        $kelasId = $_GET['kelas_id'] ?? '';
+        $tempat = $_GET['tempat'] ?? 'Jombang';
+        $tanggal = $_GET['tanggal'] ?? '';
+
+        if (empty($kelasId)) {
+            die("<h1>Bad Request</h1><p>Kelas tidak valid.</p>");
+        }
+
+        $tenantId = SessionManager::getTenantId();
+        $db = \App\Config\Database::getConnection();
+
+        // Ambil daftar siswa aktif di kelas ini
+        $query = "SELECT id FROM siswa WHERE id_kelas = :kelas_id AND deleted_at IS NULL AND status = 'Aktif'";
+        $params = ['kelas_id' => $kelasId];
+        
+        if ($tenantId !== null) {
+            $query .= " AND tenant_id = :tenant_id";
+            $params['tenant_id'] = $tenantId;
+        }
+        
+        $query .= " ORDER BY nama_lengkap ASC";
+        $stmt = $db->prepare($query);
+        $stmt->execute($params);
+        $studentIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        if (empty($studentIds)) {
+            die("<h1>Not Found</h1><p>Tidak ada siswa aktif di kelas yang dipilih.</p>");
+        }
+
+        $siswaModel = new \App\Models\Siswa($tenantId);
+        $studentsData = [];
+
+        foreach ($studentIds as $id) {
+            $siswa = $siswaModel->findFullById($id);
+            if (!$siswa) continue;
+
+            // Dapatkan nama-nama wilayah (Provinsi, Kota, Kecamatan, Kelurahan) secara human readable jika ada
+            if (!empty($siswa['id_kelurahan'])) {
+                try {
+                    $stmtWilayah = $db->prepare("
+                        SELECT kl.nama_kelurahan, kc.nama_kecamatan, kt.nama_kota, pr.nama_provinsi
+                        FROM kelurahan kl
+                        JOIN kecamatan kc ON kl.id_kecamatan = kc.id_kecamatan
+                        JOIN kota kt ON kc.id_kota = kt.id_kota
+                        JOIN provinsi pr ON kt.id_provinsi = pr.id_provinsi
+                        WHERE kl.id_kelurahan = ?
+                        LIMIT 1
+                    ");
+                    $stmtWilayah->execute([$siswa['id_kelurahan']]);
+                    $wilayahNames = $stmtWilayah->fetch(PDO::FETCH_ASSOC);
+                    if ($wilayahNames) {
+                        $siswa['nama_kelurahan'] = $wilayahNames['nama_kelurahan'];
+                        $siswa['nama_kecamatan'] = $wilayahNames['nama_kecamatan'];
+                        $siswa['nama_kota'] = $wilayahNames['nama_kota'];
+                        $siswa['nama_provinsi'] = $wilayahNames['nama_provinsi'];
+                    }
+                } catch (\Throwable $e) {
+                    // Ignore errors
+                }
+            }
+
+            // Dapatkan nama kelas
+            if (!empty($siswa['id_kelas'])) {
+                try {
+                    $stmtKelas = $db->prepare("SELECT nama_kelas FROM kelas WHERE id = ?");
+                    $stmtKelas->execute([$siswa['id_kelas']]);
+                    $siswa['nama_kelas'] = $stmtKelas->fetchColumn() ?: '-';
+                } catch (\Throwable $e) {
+                    $siswa['nama_kelas'] = '-';
+                }
+            } else {
+                $siswa['nama_kelas'] = '-';
+            }
+
+            // Dapatkan data headmaster (nama_kepsek & nip_kepsek) dari tenants
+            try {
+                $stmtTenant = $db->prepare("SELECT nama_kepsek, nip_kepsek FROM tenants WHERE id = ?");
+                $stmtTenant->execute([$siswa['tenant_id']]);
+                $tenantInfo = $stmtTenant->fetch(PDO::FETCH_ASSOC);
+                $siswa['nama_kepsek'] = $tenantInfo['nama_kepsek'] ?? '-';
+                $siswa['nip_kepsek'] = $tenantInfo['nip_kepsek'] ?? '-';
+            } catch (\Throwable $e) {
+                $siswa['nama_kepsek'] = '-';
+                $siswa['nip_kepsek'] = '-';
+            }
+
+            $studentsData[] = $siswa;
+        }
+
+        // Load bulk print view directly
+        require __DIR__ . '/../../views/print_rapot_bulk.php';
+        exit;
+    }
 }

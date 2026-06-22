@@ -158,6 +158,16 @@ try {
             $controller->fetchDetailApi();
             break;
 
+        case '/cetak-rapot':
+            $controller = new App\Controllers\BukuIndukController();
+            $controller->printRapot();
+            break;
+
+        case '/cetak-rapot-kelas':
+            $controller = new App\Controllers\BukuIndukController();
+            $controller->printRapotKelas();
+            break;
+
         case '/siswa/tambah':
             // Panggil SiswaController - Render Form Tambah
             $controller = new App\Controllers\SiswaController();
