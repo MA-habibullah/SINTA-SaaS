@@ -443,8 +443,6 @@
         </div>
     </div>
 
-    </div>
-
     <!-- ═══ PANEL INPUT NILAI RAPOR ═══════════════════════════════ -->
     <div v-show="mainActiveTab === 'input_nilai_rapor'" class="animate-fade-in">
         
