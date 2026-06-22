@@ -295,6 +295,18 @@ try {
             }
             break;
 
+        case '/api/v1/bk/kasus/update-status':
+            // API: POST update status riwayat kasus BK + log
+            $controller = new App\Controllers\BKController();
+            $controller->apiUpdateStatus();
+            break;
+
+        case '/api/v1/bk/kasus/logs':
+            // API: GET list log riwayat penanganan kasus BK
+            $controller = new App\Controllers\BKController();
+            $controller->apiGetLogs();
+            break;
+
         case '/api/v1/bk/tracer':
             // API: Ringkasan Tracer Study alumni (Tab 3)
             $controller = new App\Controllers\BKController();

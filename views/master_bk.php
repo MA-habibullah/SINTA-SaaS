@@ -990,6 +990,7 @@ $baseUrl    = '/SINTA-SaaS';
                                     <th>Jenis</th>
                                     <th>Status</th>
                                     <th class="text-center"><i class="bi bi-lock" title="Privasi"></i></th>
+                                    <th class="text-end pe-3" style="width:130px;">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1046,6 +1047,26 @@ $baseUrl    = '/SINTA-SaaS';
                                         <i v-else
                                            class="bi bi-unlock text-muted" title="Tidak Rahasia"></i>
                                     </td>
+                                    <!-- Aksi -->
+                                    <td class="text-end pe-3">
+                                        <div class="d-flex gap-1 justify-content-end">
+                                            <button v-if="canEditKasus(k)"
+                                                    class="btn btn-xs btn-outline-primary rounded-2 py-0 px-2 fw-semibold"
+                                                    style="font-size:0.7rem; line-height:1.5;"
+                                                    @click="openChangeStatus(k)"
+                                                    :id="'btn-status-' + k.id"
+                                                    title="Ubah Status Kasus">
+                                                <i class="bi bi-pencil-square"></i> Status
+                                            </button>
+                                            <button class="btn btn-xs btn-outline-secondary rounded-2 py-0 px-2 fw-semibold"
+                                                    style="font-size:0.7rem; line-height:1.5; color:#475569; border-color:#cbd5e1;"
+                                                    @click="openLogs(k)"
+                                                    :id="'btn-logs-' + k.id"
+                                                    title="Riwayat Penanganan / Log Kasus">
+                                                <i class="bi bi-clock-history"></i> Log
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1088,6 +1109,7 @@ const { ref, computed, onMounted } = Vue;
 // Inject PHP variables safely
 const _tenantId  = <?= json_encode($tenantId) ?>;
 const _userRole  = <?= json_encode($userRole) ?>;
+const _userId    = <?= json_encode($_SESSION['user_id'] ?? '') ?>;
 const _baseUrl   = '<?= $baseUrl ?>';
 
 window.VueAppRegistry.register('#bkApp', {
@@ -1456,13 +1478,193 @@ window.VueAppRegistry.register('#bkApp', {
                     kasusSearchSiswa.value  = '';
                     loadKasus();
                 } else {
-                    alertJurnal.value = { msg: '❌ ' + (res.data.error || 'Gagal menyimpan.'), type: 'danger' };
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal',
+                        text: res.data.error || 'Gagal memuat log.',
+                        confirmButtonColor: 'var(--bk-primary)'
+                    });
                 }
             } catch (err) {
-                const msg = err.response?.data?.error || 'Koneksi gagal.';
-                alertJurnal.value = { msg: '❌ ' + msg, type: 'danger' };
-            } finally {
-                loadingKasus.value = false;
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Kesalahan',
+                    text: err.response?.data?.error || 'Koneksi ke server gagal.',
+                    confirmButtonColor: 'var(--bk-primary)'
+                });
+            }
+        }
+
+        // ─── Status & Log Penanganan Kasus ───────────────────
+        function canEditKasus(k) {
+            if (_userRole === 'super_admin' || _userRole === 'operator_sekolah') {
+                return true;
+            }
+            if (_userRole === 'guru_bk') {
+                if (k.is_rahasia == 0) return true;
+                return k.id_guru_bk === _userId;
+            }
+            return false;
+        }
+
+        async function openChangeStatus(k) {
+            const { value: newStatus } = await Swal.fire({
+                title: 'Ubah Status Kasus',
+                text: `Siswa: ${k.nama_siswa}`,
+                input: 'select',
+                inputOptions: {
+                    'Terbuka': 'Terbuka',
+                    'Proses': 'Proses (Dalam Proses)',
+                    'Selesai': 'Selesai'
+                },
+                inputValue: k.status_kasus,
+                showCancelButton: true,
+                confirmButtonColor: 'var(--bk-primary)',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Simpan',
+                cancelButtonText: 'Batal',
+                inputValidator: (value) => {
+                    return new Promise((resolve) => {
+                        if (value) {
+                            resolve();
+                        } else {
+                            resolve('Pilih status kasus!');
+                        }
+                    });
+                }
+            });
+
+            if (newStatus && newStatus !== k.status_kasus) {
+                try {
+                    const res = await axios.post(`${_baseUrl}/api/v1/bk/kasus/update-status`, {
+                        id_kasus: k.id,
+                        status_kasus: newStatus,
+                        tenant_id: currentTenantId.value
+                    }, { headers: { 'Content-Type': 'application/json' } });
+
+                    if (res.data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Sukses',
+                            text: res.data.message,
+                            confirmButtonColor: 'var(--bk-primary)'
+                        });
+                        loadKasus();
+                        loadDashboard();
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal',
+                            text: res.data.error || 'Terjadi kesalahan.',
+                            confirmButtonColor: 'var(--bk-primary)'
+                        });
+                    }
+                } catch (err) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Koneksi Gagal',
+                        text: err.response?.data?.error || 'Gagal menghubungi server.',
+                        confirmButtonColor: 'var(--bk-primary)'
+                    });
+                }
+            }
+        }
+
+        async function openLogs(k) {
+            Swal.fire({
+                title: 'Memuat Log...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            try {
+                const res = await axios.get(`${_baseUrl}/api/v1/bk/kasus/logs?id_kasus=${k.id}`);
+                if (res.data.success) {
+                    const logs = res.data.data || [];
+                    if (logs.length === 0) {
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Riwayat Log',
+                            text: 'Belum ada log aktivitas untuk kasus ini.',
+                            confirmButtonColor: 'var(--bk-primary)'
+                        });
+                        return;
+                    }
+
+                    let htmlContent = `
+                        <div class="text-start mt-2 px-1" style="max-height: 380px; overflow-y: auto; font-family: sans-serif;">
+                            <div class="position-relative ps-4 border-start border-2" style="border-color: #ede9fe !important; margin-left: 10px;">
+                    `;
+
+                    logs.forEach((log) => {
+                        const dateObj = new Date(log.created_at);
+                        const formattedDate = dateObj.toLocaleDateString('id-ID', {
+                            day: 'numeric', month: 'short', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                        });
+
+                        let badgeColor = 'bg-secondary';
+                        let actionText = '';
+                        if (log.status_lama === null) {
+                            badgeColor = 'background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe;';
+                            actionText = `Merekam kasus baru dengan status awal <span class="badge rounded-pill badge-terbuka font-semibold px-2 py-0.5" style="font-size: 0.7rem;">${log.status_baru}</span>`;
+                        } else {
+                            if (log.status_baru === 'Terbuka') badgeColor = 'background: #fef3c7; color: #92400e; border: 1px solid #fde68a;';
+                            else if (log.status_baru === 'Proses') badgeColor = 'background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe;';
+                            else if (log.status_baru === 'Selesai') badgeColor = 'background: #d1fae5; color: #065f46; border: 1px solid #bbf7d0;';
+                            
+                            actionText = `Mengubah status dari <strong>${log.status_lama}</strong> menjadi <span class="badge rounded-pill px-2 py-0.5 fw-semibold" style="${badgeColor} font-size: 0.7rem;">${log.status_baru}</span>`;
+                        }
+
+                        let roleBadgeColor = 'background: #f1f5f9; color: #475569;';
+                        if (log.peran_user === 'super_admin') roleBadgeColor = 'background: #fee2e2; color: #991b1b;';
+                        else if (log.peran_user === 'operator_sekolah') roleBadgeColor = 'background: #ede9fe; color: #5b21b6;';
+
+                        const cleanRole = log.peran_user.replace('_', ' ').toUpperCase();
+
+                        htmlContent += `
+                            <div class="mb-4 position-relative">
+                                <div class="position-absolute" style="left: -32px; top: 4px; width: 14px; height: 14px; border-radius: 50%; background: #7c3aed; border: 3px solid #fff; box-shadow: 0 0 0 2px #ddd;"></div>
+                                
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="text-muted fw-normal" style="font-size: 0.75rem;"><i class="bi bi-clock me-1"></i>${formattedDate}</span>
+                                    <span class="badge rounded-pill fw-bold" style="${roleBadgeColor} font-size: 0.62rem;">${cleanRole}</span>
+                                </div>
+                                <div class="fw-bold text-dark fs-7 mb-1">${log.nama_user}</div>
+                                <p class="text-muted fs-8 mb-0" style="line-height: 1.4;">${actionText}</p>
+                            </div>
+                        `;
+                    });
+
+                    htmlContent += `
+                            </div>
+                        </div>
+                    `;
+
+                    Swal.fire({
+                        title: `<span style="font-size: 1.15rem; font-weight: 700; color: #7c3aed;"><i class="bi bi-clock-history me-2"></i>Log Riwayat Kasus</span>`,
+                        html: htmlContent,
+                        width: '480px',
+                        confirmButtonColor: '#7c3aed',
+                        confirmButtonText: 'Tutup'
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal',
+                        text: res.data.error || 'Gagal memuat log.',
+                        confirmButtonColor: 'var(--bk-primary)'
+                    });
+                }
+            } catch (err) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Kesalahan',
+                    text: err.response?.data?.error || 'Koneksi ke server gagal.',
+                    confirmButtonColor: 'var(--bk-primary)'
+                });
             }
         }
 
@@ -1494,7 +1696,8 @@ window.VueAppRegistry.register('#bkApp', {
             kelasList, filterKelasId,
             submitKasus, loadKasus, loadKelasList,
             searchSiswaDebounce, selectSiswa, clearSiswa,
-            onFilterKelasChange, onSearchFocus, hideDropdownDelay
+            onFilterKelasChange, onSearchFocus, hideDropdownDelay,
+            canEditKasus, openChangeStatus, openLogs
         };
     }
 });

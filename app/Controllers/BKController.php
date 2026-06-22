@@ -435,6 +435,47 @@ class BKController extends BaseController {
                 'rahasia'         => $isRahasia,
             ]);
             $newId = $db->lastInsertId();
+
+            // Ambil role penindak saat ini
+            $rolesList = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
+            $currentUserRole = 'guru_bk';
+            foreach (['super_admin', 'operator_sekolah', 'guru_bk'] as $allowed) {
+                if (in_array($allowed, $rolesList)) {
+                    $currentUserRole = $allowed;
+                    break;
+                }
+            }
+            $currentUserName = $_SESSION['nama_lengkap'] ?? 'Guru BK / Admin';
+
+            // Insert log inisiasi pembuatan kasus ke catatan_bk_log
+            $stmtLog = $db->prepare("
+                INSERT INTO catatan_bk_log (
+                    id_catatan_bk,
+                    tenant_id,
+                    status_lama,
+                    status_baru,
+                    id_user,
+                    nama_user,
+                    peran_user
+                ) VALUES (
+                    :id_catatan_bk,
+                    :tenant_id,
+                    NULL,
+                    :status_baru,
+                    :id_user,
+                    :nama_user,
+                    :peran_user
+                )
+            ");
+            $stmtLog->execute([
+                'id_catatan_bk' => $newId,
+                'tenant_id'     => $tenantId,
+                'status_baru'   => $statusKasus,
+                'id_user'       => $idGuruBk,
+                'nama_user'     => $currentUserName,
+                'peran_user'    => $currentUserRole
+            ]);
+
             $db->commit();
 
             $this->jsonResponse([
@@ -479,6 +520,7 @@ class BKController extends BaseController {
                     cb.status_kasus,
                     cb.is_rahasia,
                     cb.tindak_lanjut,
+                    cb.id_guru_bk,
                     -- Data snapshot (diutamakan — immutable historis)
                     COALESCE(cb.snapshot_nama_siswa, s.nama_lengkap) AS nama_siswa,
                     COALESCE(cb.snapshot_nisn,        s.nisn)         AS nisn,
@@ -514,6 +556,190 @@ class BKController extends BaseController {
         } catch (\Throwable $e) {
             error_log('[BKController::apiListKasus] ' . $e->getMessage());
             $this->jsonResponse(['error' => 'Gagal memuat data kasus.'], 500);
+        }
+    }
+
+    // =========================================================================
+    // API: Tab 5 — Update Status Riwayat Kasus BK + Log
+    // POST /api/v1/bk/kasus/update-status
+    // =========================================================================
+    public function apiUpdateStatus(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->jsonResponse(['error' => 'Method not allowed.'], 405);
+            return;
+        }
+
+        $tenantId = $this->getSecureTenantId();
+        $roles    = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
+        $isGuruBkOnly = in_array('guru_bk', $roles) && !in_array('operator_sekolah', $roles) && !in_array('super_admin', $roles);
+        $userId   = $_SESSION['user_id'] ?? null;
+        $body     = $this->getJsonInput();
+
+        $idKasus = (int)($body['id_kasus'] ?? 0);
+        $status  = $this->sanitize($body['status_kasus'] ?? '');
+
+        if (!$idKasus) {
+            $this->jsonResponse(['error' => 'ID Kasus tidak valid.'], 422);
+            return;
+        }
+
+        $validStatus = ['Terbuka', 'Proses', 'Selesai'];
+        if (!in_array($status, $validStatus, true)) {
+            $this->jsonResponse(['error' => 'Status kasus tidak valid.'], 422);
+            return;
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+
+            // Pengecekan data kasus di DB
+            $qCheck = "SELECT id, tenant_id, id_guru_bk, is_rahasia, status_kasus FROM catatan_bk WHERE id = ? AND deleted_at IS NULL LIMIT 1";
+            $stmtCheck = $db->prepare($qCheck);
+            $stmtCheck->execute([$idKasus]);
+            $kasus = $stmtCheck->fetch(\PDO::FETCH_ASSOC);
+
+            if (!$kasus) {
+                $this->jsonResponse(['error' => 'Catatan kasus tidak ditemukan.'], 404);
+                return;
+            }
+
+            // Validasi kepemilikan tenant
+            if ($tenantId && $kasus['tenant_id'] !== $tenantId) {
+                $this->jsonResponse(['error' => 'Akses ditolak. Kasus berada di sekolah lain.'], 403);
+                return;
+            }
+
+            // Otorisasi guru_bk untuk kasus rahasia
+            if ($isGuruBkOnly && (int)$kasus['is_rahasia'] === 1 && $kasus['id_guru_bk'] !== $userId) {
+                $this->jsonResponse(['error' => 'Akses ditolak. Anda tidak berhak mengubah kasus rahasia milik rekan guru lain.'], 403);
+                return;
+            }
+
+            $statusLama = $kasus['status_kasus'];
+            if ($statusLama === $status) {
+                $this->jsonResponse(['success' => true, 'message' => 'Status kasus tidak berubah.']);
+                return;
+            }
+
+            // Mulai transaksi untuk ACID lock/log
+            $db->beginTransaction();
+
+            // Update status kasus
+            $stmtUpdate = $db->prepare("UPDATE catatan_bk SET status_kasus = ?, updated_at = NOW() WHERE id = ?");
+            $stmtUpdate->execute([$status, $idKasus]);
+
+            // Ambil role penindak saat ini
+            $currentUserRole = 'guru_bk';
+            foreach (['super_admin', 'operator_sekolah', 'guru_bk'] as $allowed) {
+                if (in_array($allowed, $roles)) {
+                    $currentUserRole = $allowed;
+                    break;
+                }
+            }
+            $currentUserName = $_SESSION['nama_lengkap'] ?? 'Guru BK / Admin';
+
+            // Log update status ke catatan_bk_log
+            $stmtLog = $db->prepare("
+                INSERT INTO catatan_bk_log (
+                    id_catatan_bk,
+                    tenant_id,
+                    status_lama,
+                    status_baru,
+                    id_user,
+                    nama_user,
+                    peran_user
+                ) VALUES (
+                    :id_catatan_bk,
+                    :tenant_id,
+                    :status_lama,
+                    :status_baru,
+                    :id_user,
+                    :nama_user,
+                    :peran_user
+                )
+            ");
+            $stmtLog->execute([
+                'id_catatan_bk' => $idKasus,
+                'tenant_id'     => $kasus['tenant_id'],
+                'status_lama'   => $statusLama,
+                'status_baru'   => $status,
+                'id_user'       => $userId,
+                'nama_user'     => $currentUserName,
+                'peran_user'    => $currentUserRole
+            ]);
+
+            $db->commit();
+
+            $this->jsonResponse(['success' => true, 'message' => 'Status kasus berhasil diperbarui menjadi ' . $status]);
+        } catch (\Throwable $e) {
+            if (isset($db) && $db->inTransaction()) $db->rollBack();
+            error_log('[BKController::apiUpdateStatus] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal memperbarui status kasus. Coba lagi.'], 500);
+        }
+    }
+
+    // =========================================================================
+    // API: Tab 5 — Get Log Riwayat Aktivitas Kasus BK
+    // GET /api/v1/bk/kasus/logs?id_kasus=X
+    // =========================================================================
+    public function apiGetLogs(): void {
+        $tenantId = $this->getSecureTenantId();
+        $roles    = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
+        $isGuruBkOnly = in_array('guru_bk', $roles) && !in_array('operator_sekolah', $roles) && !in_array('super_admin', $roles);
+        $userId   = $_SESSION['user_id'] ?? null;
+
+        $idKasus = (int)($_GET['id_kasus'] ?? 0);
+        if (!$idKasus) {
+            $this->jsonResponse(['error' => 'ID Kasus tidak valid.'], 422);
+            return;
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+
+            // Pengecekan data kasus di DB
+            $qCheck = "SELECT id, tenant_id, id_guru_bk, is_rahasia FROM catatan_bk WHERE id = ? AND deleted_at IS NULL LIMIT 1";
+            $stmtCheck = $db->prepare($qCheck);
+            $stmtCheck->execute([$idKasus]);
+            $kasus = $stmtCheck->fetch(\PDO::FETCH_ASSOC);
+
+            if (!$kasus) {
+                $this->jsonResponse(['error' => 'Catatan kasus tidak ditemukan.'], 404);
+                return;
+            }
+
+            // Validasi tenant
+            if ($tenantId && $kasus['tenant_id'] !== $tenantId) {
+                $this->jsonResponse(['error' => 'Akses ditolak. Kasus berada di sekolah lain.'], 403);
+                return;
+            }
+
+            // Otorisasi guru_bk untuk kasus rahasia
+            if ($isGuruBkOnly && (int)$kasus['is_rahasia'] === 1 && $kasus['id_guru_bk'] !== $userId) {
+                $this->jsonResponse(['error' => 'Akses ditolak. Anda tidak berhak melihat log kasus rahasia milik rekan guru lain.'], 403);
+                return;
+            }
+
+            // Ambil semua log
+            $stmtLogs = $db->prepare("
+                SELECT 
+                    id, 
+                    status_lama, 
+                    status_baru, 
+                    nama_user, 
+                    peran_user, 
+                    created_at 
+                FROM catatan_bk_log 
+                WHERE id_catatan_bk = ? 
+                ORDER BY created_at DESC, id DESC
+            ");
+            $stmtLogs->execute([$idKasus]);
+            $logs = $stmtLogs->fetchAll(\PDO::FETCH_ASSOC);
+
+            $this->jsonResponse(['success' => true, 'data' => $logs]);
+        } catch (\Throwable $e) {
+            error_log('[BKController::apiGetLogs] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal memuat log riwayat kasus.'], 500);
         }
     }
 
