@@ -126,17 +126,21 @@ class KurikulumController extends BaseController {
         }
 
         // Resolve tenant_id
+        $db = \App\Config\Database::getConnection();
         $tenantId = SessionManager::getTenantId();
         if (!$tenantId && !empty($input['tenant_id'])) {
             $tenantId = $input['tenant_id'];
+        }
+        if (!$tenantId && !empty($kelasId)) {
+            $stmtKelasTenant = $db->prepare("SELECT tenant_id FROM kelas WHERE id = :kelas_id LIMIT 1");
+            $stmtKelasTenant->execute(['kelas_id' => $kelasId]);
+            $tenantId = $stmtKelasTenant->fetchColumn() ?: null;
         }
 
         if (!$tenantId) {
             $this->jsonResponse(['status' => 'error', 'message' => 'Tenant ID tidak terdeteksi.'], 400);
             return;
         }
-
-        $db = \App\Config\Database::getConnection();
         $db->beginTransaction();
         try {
             // 1. Delete existing mapping for the target scope
@@ -199,17 +203,21 @@ class KurikulumController extends BaseController {
         }
 
         // Resolve tenant_id
+        $db = \App\Config\Database::getConnection();
         $tenantId = SessionManager::getTenantId();
         if (!$tenantId && !empty($input['tenant_id'])) {
             $tenantId = $input['tenant_id'];
+        }
+        if (!$tenantId && !empty($targetKelasId)) {
+            $stmtKelasTenant = $db->prepare("SELECT tenant_id FROM kelas WHERE id = :kelas_id LIMIT 1");
+            $stmtKelasTenant->execute(['kelas_id' => $targetKelasId]);
+            $tenantId = $stmtKelasTenant->fetchColumn() ?: null;
         }
 
         if (!$tenantId) {
             $this->jsonResponse(['status' => 'error', 'message' => 'Tenant ID tidak terdeteksi.'], 400);
             return;
         }
-
-        $db = \App\Config\Database::getConnection();
         $db->beginTransaction();
         try {
             // 1. Fetch source mappings

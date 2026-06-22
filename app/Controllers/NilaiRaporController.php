@@ -32,6 +32,11 @@ class NilaiRaporController extends BaseController {
         if (!$tenantId && !empty($_GET['tenant_id'])) {
             $tenantId = $_GET['tenant_id'];
         }
+        if (!$tenantId && !empty($kelasId)) {
+            $stmtKelasTenant = $db->prepare("SELECT tenant_id FROM kelas WHERE id = :kelas_id LIMIT 1");
+            $stmtKelasTenant->execute(['kelas_id' => $kelasId]);
+            $tenantId = $stmtKelasTenant->fetchColumn() ?: null;
+        }
 
         if (!$tenantId) {
             $this->jsonResponse(['error' => 'Tenant ID tidak terdeteksi.'], 400);
@@ -138,17 +143,21 @@ class NilaiRaporController extends BaseController {
         }
 
         // Resolve tenant_id
+        $db = \App\Config\Database::getConnection();
         $tenantId = SessionManager::getTenantId();
         if (!$tenantId && !empty($input['tenant_id'])) {
             $tenantId = $input['tenant_id'];
+        }
+        if (!$tenantId && !empty($kelasId)) {
+            $stmtKelasTenant = $db->prepare("SELECT tenant_id FROM kelas WHERE id = :kelas_id LIMIT 1");
+            $stmtKelasTenant->execute(['kelas_id' => $kelasId]);
+            $tenantId = $stmtKelasTenant->fetchColumn() ?: null;
         }
 
         if (!$tenantId) {
             $this->jsonResponse(['status' => 'error', 'message' => 'Tenant ID tidak terdeteksi.'], 400);
             return;
         }
-
-        $db = \App\Config\Database::getConnection();
         $db->beginTransaction();
         try {
             $stmtUpsert = $db->prepare("
@@ -196,19 +205,24 @@ class NilaiRaporController extends BaseController {
     public function export(): void {
         $db = \App\Config\Database::getConnection();
         
+        $kelasId = $_GET['kelas_id'] ?? '';
+        $tahunAjaran = $_GET['tahun_ajaran'] ?? '';
+        $semester = $_GET['semester'] ?? '';
+
         // Resolve tenant_id
         $tenantId = SessionManager::getTenantId();
         if (!$tenantId && !empty($_GET['tenant_id'])) {
             $tenantId = $_GET['tenant_id'];
         }
+        if (!$tenantId && !empty($kelasId)) {
+            $stmtKelasTenant = $db->prepare("SELECT tenant_id FROM kelas WHERE id = :kelas_id LIMIT 1");
+            $stmtKelasTenant->execute(['kelas_id' => $kelasId]);
+            $tenantId = $stmtKelasTenant->fetchColumn() ?: null;
+        }
 
         if (!$tenantId) {
             die("Tenant ID tidak terdeteksi.");
         }
-
-        $kelasId = $_GET['kelas_id'] ?? '';
-        $tahunAjaran = $_GET['tahun_ajaran'] ?? '';
-        $semester = $_GET['semester'] ?? '';
 
         if (empty($kelasId) || empty($tahunAjaran) || empty($semester)) {
             die("Parameter kelas_id, tahun_ajaran, dan semester wajib diisi.");
@@ -331,9 +345,15 @@ class NilaiRaporController extends BaseController {
         }
 
         // Resolve tenant_id
+        $db = \App\Config\Database::getConnection();
         $tenantId = SessionManager::getTenantId();
         if (!$tenantId && !empty($_POST['tenant_id'])) {
             $tenantId = $_POST['tenant_id'];
+        }
+        if (!$tenantId && !empty($kelasId)) {
+            $stmtKelasTenant = $db->prepare("SELECT tenant_id FROM kelas WHERE id = :kelas_id LIMIT 1");
+            $stmtKelasTenant->execute(['kelas_id' => $kelasId]);
+            $tenantId = $stmtKelasTenant->fetchColumn() ?: null;
         }
 
         if (!$tenantId) {
