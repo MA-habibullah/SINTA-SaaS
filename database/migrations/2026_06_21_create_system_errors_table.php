@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Migration: Create System Errors Table (Error Tracker & Log Monitor)
  *
@@ -34,7 +34,7 @@ return [
         // 2. Tambah menu Error Monitor di Sistem & Utilitas (parent_id = 13, urutan = 10)
         $pdo->exec("
             INSERT INTO `menus` (`id`, `nama_menu`, `url`, `icon`, `parent_id`, `urutan`)
-            VALUES (22, 'Error Monitor', '/dapodik-spmb/super-admin/error-monitor', 'bi bi-bug-fill', 13, 10)
+            VALUES (22, 'Error Monitor', '/SINTA-SaaS/super-admin/error-monitor', 'bi bi-bug-fill', 13, 10)
             ON DUPLICATE KEY UPDATE
                 `nama_menu` = VALUES(`nama_menu`),
                 `url`       = VALUES(`url`),

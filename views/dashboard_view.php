@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * View: Dashboard (Child View)
  * Bagian ini dimuat secara dinamis oleh views/layout/master.php di area #main-content.
@@ -256,7 +256,7 @@
                 <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
                     <h5 class="fw-bold m-0 text-dark"><i class="bi bi-people text-primary me-2"></i>Daftar Siswa Terdaftar (Max 20 Baris)</h5>
                     <?php if ($stats['user_role'] !== 'siswa'): ?>
-                        <a href="/dapodik-spmb/pengguna" class="btn btn-primary btn-sm rounded-3 px-3 py-2 shadow-sm fs-8 fs-sm-7">
+                        <a href="/SINTA-SaaS/pengguna" class="btn btn-primary btn-sm rounded-3 px-3 py-2 shadow-sm fs-8 fs-sm-7">
                             <i class="bi bi-pencil-square me-1"></i>Kelola Siswa Lengkap
                         </a>
                     <?php endif; ?>
@@ -615,7 +615,7 @@
 
                     this.isCheckingNpsn = true;
                     this.npsnError = '';
-                    axios.get('/dapodik-spmb/api/v1/tenant/check-npsn', {
+                    axios.get('/SINTA-SaaS/api/v1/tenant/check-npsn', {
                         params: {
                             npsn: this.editForm.npsn,
                             exclude_id: this.schoolInfo.id
@@ -896,7 +896,7 @@
                 this.serverError = '';
                 this.validationErrors = {};
 
-                axios.post('/dapodik-spmb/api/v1/tenant/update', this.editForm)
+                axios.post('/SINTA-SaaS/api/v1/tenant/update', this.editForm)
                 .then(response => {
                     this.isSaving = false;
                     if (response.data.success) {

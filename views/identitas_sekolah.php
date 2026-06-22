@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * View: Identitas Sekolah (Profile/Tenant Settings)
  * Bagian ini dimuat secara dinamis oleh views/layout/master.php di area #main-content.
@@ -189,7 +189,7 @@
                 clearTimeout(npsnTimeout);
                 npsnTimeout = setTimeout(async () => {
                     try {
-                        const response = await axios.get('/dapodik-spmb/api/v1/tenant/check-npsn', {
+                        const response = await axios.get('/SINTA-SaaS/api/v1/tenant/check-npsn', {
                             params: {
                                 npsn: form.npsn,
                                 exclude_id: schoolData.value.id
@@ -214,7 +214,7 @@
                 errors.value = {};
                 
                 try {
-                    const response = await axios.post('/dapodik-spmb/api/v1/tenant/update', {
+                    const response = await axios.post('/SINTA-SaaS/api/v1/tenant/update', {
                         nama_sekolah: form.nama_sekolah,
                         npsn: form.npsn,
                         subdomain: form.subdomain

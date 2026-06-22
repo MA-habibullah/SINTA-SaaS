@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -7,7 +7,7 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Bootstrap Icons -->
-    <link href="/dapodik-spmb/assets/css/bootstrap-icons.css" rel="stylesheet">
+    <link href="/SINTA-SaaS/assets/css/bootstrap-icons.css" rel="stylesheet">
     <!-- Tailwind CSS -->
     <script>
         // Suppress tailwind CDN production warning in console
@@ -30,9 +30,9 @@
             }
         };
     </script>
-    <script src="/dapodik-spmb/assets/js/tailwindcss.js"></script>
+    <script src="/SINTA-SaaS/assets/js/tailwindcss.js"></script>
     <!-- Vue 3 -->
-    <script src="/dapodik-spmb/assets/js/vue.global.prod.js"></script>
+    <script src="/SINTA-SaaS/assets/js/vue.global.prod.js"></script>
     <style>
         [v-cloak] { display: none !important; }
     </style>
@@ -145,7 +145,7 @@
             </form>
 
             <div class="mt-6 text-center border-t border-slate-100 pt-5">
-                <a href="/dapodik-spmb/siswa/logout" class="text-xs font-semibold text-slate-500 hover:text-rose-600 transition-colors flex items-center justify-center gap-1.5">
+                <a href="/SINTA-SaaS/siswa/logout" class="text-xs font-semibold text-slate-500 hover:text-rose-600 transition-colors flex items-center justify-center gap-1.5">
                     <i class="bi bi-box-arrow-left"></i> Batal & Keluar Sesi
                 </a>
             </div>
@@ -154,8 +154,8 @@
     </div>
 
     <!-- Axios & SweetAlert2 -->
-    <script src="/dapodik-spmb/assets/js/axios.min.js"></script>
-    <script src="/dapodik-spmb/assets/js/sweetalert2.all.min.js"></script>
+    <script src="/SINTA-SaaS/assets/js/axios.min.js"></script>
+    <script src="/SINTA-SaaS/assets/js/sweetalert2.all.min.js"></script>
 
     <script>
 {
@@ -191,7 +191,7 @@
                         this.loading = true;
                         this.errorMsg = '';
 
-                        axios.post('/dapodik-spmb/api/v1/siswa/ubah-password', this.form)
+                        axios.post('/SINTA-SaaS/api/v1/siswa/ubah-password', this.form)
                         .then(response => {
                             this.loading = false;
                             if (response.data.success) {
@@ -203,7 +203,7 @@
                                     showConfirmButton: false,
                                     timerProgressBar: true,
                                     willClose: () => {
-                                        window.location.href = '/dapodik-spmb/dashboard';
+                                        window.location.href = '/SINTA-SaaS/dashboard';
                                     }
                                 });
                             }

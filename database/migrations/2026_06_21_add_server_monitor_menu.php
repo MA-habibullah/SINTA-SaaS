@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Migration: Server Monitor Menu (ID 23)
  * Mendaftarkan menu "Server Monitor" di bawah "Sistem & Utilitas" (parent_id = 13)
@@ -9,7 +9,7 @@ return [
     'up' => function (PDO $pdo): void {
         $pdo->exec("
             INSERT INTO `menus` (`id`, `nama_menu`, `url`, `icon`, `parent_id`, `urutan`)
-            VALUES (23, 'Server Monitor', '/dapodik-spmb/super-admin/server-monitor', 'bi bi-hdd-network-fill', 13, 11)
+            VALUES (23, 'Server Monitor', '/SINTA-SaaS/super-admin/server-monitor', 'bi bi-hdd-network-fill', 13, 11)
             ON DUPLICATE KEY UPDATE
                 `nama_menu` = VALUES(`nama_menu`),
                 `url`       = VALUES(`url`),

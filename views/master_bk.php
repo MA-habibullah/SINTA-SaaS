@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * View: Bimbingan Konseling — Master BK
  * Module hub dengan 5 horizontal tab: Dashboard, Penjurusan, Tracer Study, PDSS, Jurnal BK
@@ -7,7 +7,7 @@ $userRole   = $data['user_role']   ?? ($_SESSION['role_name']    ?? '');
 $userNama   = $data['user_nama']   ?? ($_SESSION['nama_lengkap'] ?? '');
 $tenantId   = $data['tenant_id']   ?? '';
 $tenantList = $data['tenant_list'] ?? [];
-$baseUrl    = '/dapodik-spmb';
+$baseUrl    = '/SINTA-SaaS';
 ?>
 
 <style>

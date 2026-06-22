@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Controllers;
 
@@ -20,7 +20,7 @@ class AuthSiswaController extends BaseController {
         // Jika sudah login, langsung lempar ke dashboard
         if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
             if (($_SESSION['role_name'] ?? '') === 'siswa') {
-                header('Location: /dapodik-spmb/dashboard');
+                header('Location: /SINTA-SaaS/dashboard');
                 exit;
             }
         }
@@ -121,13 +121,13 @@ class AuthSiswaController extends BaseController {
 
         // Pastikan yang mengakses adalah siswa yang terautentikasi
         if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true || ($_SESSION['role_name'] ?? '') !== 'siswa') {
-            header('Location: /dapodik-spmb/login');
+            header('Location: /SINTA-SaaS/login');
             exit;
         }
 
         // Jika dia bukan first login lagi, kembalikan ke dashboard
         if (!($_SESSION['is_first_login'] ?? false)) {
-            header('Location: /dapodik-spmb/dashboard');
+            header('Location: /SINTA-SaaS/dashboard');
             exit;
         }
 
@@ -201,7 +201,7 @@ class AuthSiswaController extends BaseController {
      */
     public function logout(): void {
         SessionManager::logout();
-        header('Location: /dapodik-spmb/login');
+        header('Location: /SINTA-SaaS/login');
         exit;
     }
 }

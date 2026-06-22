@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Helpers;
 
@@ -151,7 +151,7 @@ class ErrorTracker
         http_response_code(500);
         
         $isApiRequest = (
-            str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/dapodik-spmb/api/') ||
+            str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/SINTA-SaaS/api/') ||
             strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'xmlhttprequest' ||
             str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json')
         );
@@ -319,7 +319,7 @@ HTML;
         http_response_code(500);
 
         $isApiRequest = (
-            str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/dapodik-spmb/api/') ||
+            str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/SINTA-SaaS/api/') ||
             strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'xmlhttprequest' ||
             str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json')
         );
@@ -356,7 +356,7 @@ HTML;
         <div class="icon">⚙️</div>
         <h1>Terjadi Kesalahan Sistem</h1>
         <p>Tim kami sedang menangani masalah ini. Silakan coba beberapa saat lagi atau hubungi administrator platform.</p>
-        <a href="/dapodik-spmb/dashboard">Kembali ke Dashboard</a>
+        <a href="/SINTA-SaaS/dashboard">Kembali ke Dashboard</a>
     </div>
 </body>
 </html>

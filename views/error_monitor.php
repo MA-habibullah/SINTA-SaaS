@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * View: Error Monitor — System Debugger
  * Akses: Super Admin Only
@@ -449,7 +449,7 @@
                         search:       this.searchQuery,
                         level_filter: this.levelFilter,
                     });
-                    const res  = await axios.get(`/dapodik-spmb/api/v1/error-monitor?${params}`);
+                    const res  = await axios.get(`/SINTA-SaaS/api/v1/error-monitor?${params}`);
                     const data = res.data;
 
                     this.errors      = data.data              || [];
@@ -604,7 +604,7 @@
 
                 this.loadingClear = true;
                 try {
-                    await axios.post('/dapodik-spmb/api/v1/error-monitor/clear');
+                    await axios.post('/SINTA-SaaS/api/v1/error-monitor/clear');
                     Swal.fire({
                         icon: 'success',
                         title: 'Berhasil Dihapus',
@@ -625,7 +625,7 @@
             // ─── Delete One ────────────────────────────────────────────
             async deleteOne(id) {
                 try {
-                    await axios.post('/dapodik-spmb/api/v1/error-monitor/delete', { id });
+                    await axios.post('/SINTA-SaaS/api/v1/error-monitor/delete', { id });
                     Swal.fire({
                         icon: 'success',
                         title: 'Log Dihapus',

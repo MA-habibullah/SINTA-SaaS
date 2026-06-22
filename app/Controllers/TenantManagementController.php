@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Controllers;
 
@@ -18,11 +18,11 @@ class TenantManagementController extends BaseController {
         // 2. Middleware khusus CheckIsSuperAdmin (Cybersecurity Enforcement)
         $roleName = $_SESSION['role_name'] ?? '';
         if ($roleName !== 'super_admin') {
-            $isApi = str_starts_with($_SERVER['REQUEST_URI'], '/dapodik-spmb/api/');
+            $isApi = str_starts_with($_SERVER['REQUEST_URI'], '/SINTA-SaaS/api/');
             if ($isApi) {
                 $this->jsonResponse(['error' => 'Akses ditolak. Fitur ini memerlukan wewenang Super Admin Platform.'], 403);
             } else {
-                header('Location: /dapodik-spmb/dashboard?error=' . urlencode('Akses ditolak. Halaman tersebut khusus untuk Super Admin Platform.'));
+                header('Location: /SINTA-SaaS/dashboard?error=' . urlencode('Akses ditolak. Halaman tersebut khusus untuk Super Admin Platform.'));
                 exit;
             }
         }

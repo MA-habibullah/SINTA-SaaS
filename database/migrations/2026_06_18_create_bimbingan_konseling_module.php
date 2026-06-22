@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Migration: Bimbingan Konseling (BK) Module
  *
@@ -59,7 +59,7 @@ return [
         $pdo->exec("
             INSERT INTO menus (id, nama_menu, url, icon, parent_id, urutan)
             VALUES
-                (30, 'Bimbingan Konseling', '/dapodik-spmb/bk', 'bi bi-heart-pulse-fill', NULL, 6)
+                (30, 'Bimbingan Konseling', '/SINTA-SaaS/bk', 'bi bi-heart-pulse-fill', NULL, 6)
             ON DUPLICATE KEY UPDATE
                 nama_menu = VALUES(nama_menu),
                 url       = VALUES(url),

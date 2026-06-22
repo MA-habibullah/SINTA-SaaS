@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * View: Tambah/Edit Siswa (Child View)
  * Bagian ini dimuat secara dinamis oleh views/layout/master.php di area #main-content.
@@ -8,7 +8,7 @@ use App\Config\Database;
 
 // Tentukan mode: Edit atau Tambah Baru
 $isEdit = isset($data['siswa']);
-$actionUrl = $isEdit ? '/dapodik-spmb/siswa/update' : '/dapodik-spmb/siswa/simpan';
+$actionUrl = $isEdit ? '/SINTA-SaaS/siswa/update' : '/SINTA-SaaS/siswa/simpan';
 $formTitle = $isEdit ? 'Edit Data Siswa' : 'Tambah Siswa Baru';
 $idSiswa = $isEdit ? ($data['siswa']['id'] ?? '') : '';
 $siswaFullData = $isEdit ? $data['siswa'] : [];
@@ -277,7 +277,7 @@ if ($userRole === 'siswa'):
         <p class="text-muted fs-7">Lengkapi formulir registrasi multi-step di bawah ini sesuai database Dapodik.</p>
     </div>
     <div class="btn-toolbar mb-2 mb-md-0">
-        <a href="/dapodik-spmb/pengguna" class="btn btn-outline-secondary d-flex align-items-center rounded-3 px-3 py-2 fs-7">
+        <a href="/SINTA-SaaS/pengguna" class="btn btn-outline-secondary d-flex align-items-center rounded-3 px-3 py-2 fs-7">
             <i class="bi bi-arrow-left me-2"></i> Kembali ke Daftar
         </a>
     </div>
@@ -307,7 +307,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
             Karena status Anda adalah <strong><?= htmlspecialchars($siswaStatus) ?></strong>, data pokok Anda dikunci secara otomatis
             oleh sistem untuk menjaga integritas arsip akademik. Hubungi Admin Sekolah jika ada kesalahan data.
         </p>
-        <a href="/dapodik-spmb/tracer-study" class="btn btn-sm btn-warning fw-semibold rounded-3">
+        <a href="/SINTA-SaaS/tracer-study" class="btn btn-sm btn-warning fw-semibold rounded-3">
             <i class="bi bi-mortarboard-fill me-1"></i> Isi Tracer Study Alumni →
         </a>
     </div>
@@ -1542,8 +1542,8 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 </button>
             </div>
             <div class="d-flex gap-2">
-                <a v-if="userRole !== 'siswa'" href="/dapodik-spmb/pengguna" class="btn btn-light rounded-3 px-4 py-2 fs-7">Batal</a>
-                <a v-else href="/dapodik-spmb/dashboard" class="btn btn-light rounded-3 px-4 py-2 fs-7">Batal</a>
+                <a v-if="userRole !== 'siswa'" href="/SINTA-SaaS/pengguna" class="btn btn-light rounded-3 px-4 py-2 fs-7">Batal</a>
+                <a v-else href="/SINTA-SaaS/dashboard" class="btn btn-light rounded-3 px-4 py-2 fs-7">Batal</a>
                 
                 <!-- Special Save Button for each step (Edit Mode only, Steps 1-4) -->
                 <button v-if="isEdit && currentStep < 5" type="button" class="btn btn-success rounded-3 px-4 py-2 fs-7 shadow-sm" :disabled="loadingSaveStep" @click="saveCurrentStep(false)">
@@ -1980,7 +1980,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
             const fetchTenants = async () => {
                 try {
-                    const res = await axios.get('/dapodik-spmb/api/v1/pengguna/tenants');
+                    const res = await axios.get('/SINTA-SaaS/api/v1/pengguna/tenants');
                     listTenants.value = res.data.data;
                 } catch (err) {
                     console.error("Gagal load list tenants", err);
@@ -2125,9 +2125,9 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
             const getFileUrl = (path, fieldName) => {
                 if (!path) return '#';
                 if (path.indexOf('/') !== -1) {
-                    return '/dapodik-spmb/download.php?file=' + encodeURIComponent(path);
+                    return '/SINTA-SaaS/download.php?file=' + encodeURIComponent(path);
                 }
-                return '/dapodik-spmb/download.php?file=' + encodeURIComponent(path) + 
+                return '/SINTA-SaaS/download.php?file=' + encodeURIComponent(path) + 
                        '&tenant=' + encodeURIComponent(form.value.tenant_id || '') + 
                        '&field=' + encodeURIComponent(fieldName);
             };
@@ -2248,7 +2248,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                     }
 
                     // Send to backend via Axios
-                    const response = await axios.post('/dapodik-spmb/siswa/update', formData, {
+                    const response = await axios.post('/SINTA-SaaS/siswa/update', formData, {
                         headers: {
                             'Content-Type': 'multipart/form-data',
                             'X-Requested-With': 'XMLHttpRequest'
@@ -2265,9 +2265,9 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                                 confirmButtonText: 'OK'
                             }).then(() => {
                                 if (userRole.value === 'siswa') {
-                                    window.location.href = '/dapodik-spmb/dashboard';
+                                    window.location.href = '/SINTA-SaaS/dashboard';
                                 } else {
-                                    window.location.href = '/dapodik-spmb/pengguna';
+                                    window.location.href = '/SINTA-SaaS/pengguna';
                                 }
                             });
                         } else {

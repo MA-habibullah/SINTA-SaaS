@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * View: Kelola Akses (Child View)
  * Bagian ini dimuat secara dinamis oleh views/layout/master.php di area #main-content.
@@ -11,7 +11,7 @@
         <p class="text-muted fs-7">Atur menu sidebar mana saja yang dapat dilihat oleh masing-masing peran secara real-time.</p>
     </div>
     <div class="btn-toolbar mb-2 mb-md-0">
-        <a href="/dapodik-spmb/dashboard" class="btn btn-outline-secondary btn-sm d-flex align-items-center rounded-3 px-3 py-2 fs-7">
+        <a href="/SINTA-SaaS/dashboard" class="btn btn-outline-secondary btn-sm d-flex align-items-center rounded-3 px-3 py-2 fs-7">
             <i class="bi bi-arrow-left me-2"></i> Kembali ke Dashboard
         </a>
     </div>
@@ -43,7 +43,7 @@
         </div>
     </div>
 
-    <form action="/dapodik-spmb/konfigurasi/akses/simpan" method="POST">
+    <form action="/SINTA-SaaS/konfigurasi/akses/simpan" method="POST">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-4">
                 <thead class="table-light">
@@ -115,7 +115,7 @@
         </div>
 
         <div class="d-flex justify-content-end gap-2 border-top pt-3">
-            <a href="/dapodik-spmb/dashboard" class="btn btn-light rounded-3 px-4 py-2 fs-7">Batal</a>
+            <a href="/SINTA-SaaS/dashboard" class="btn btn-light rounded-3 px-4 py-2 fs-7">Batal</a>
             <button type="submit" class="btn btn-primary rounded-3 px-4 py-2 fs-7 shadow-sm">
                 <i class="bi bi-save me-2"></i> Simpan Matriks Hak Akses
             </button>

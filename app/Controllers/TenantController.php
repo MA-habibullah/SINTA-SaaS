@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Controllers;
 
@@ -23,7 +23,7 @@ class TenantController extends BaseController {
         // 2. Otorisasi: Hanya super_admin atau operator_sekolah
         $role = $_SESSION['role_name'] ?? '';
         if ($role !== 'super_admin' && $role !== 'operator_sekolah') {
-            header('Location: /dapodik-spmb/dashboard?error=' . urlencode('Akses ditolak.'));
+            header('Location: /SINTA-SaaS/dashboard?error=' . urlencode('Akses ditolak.'));
             exit;
         }
 
@@ -44,7 +44,7 @@ class TenantController extends BaseController {
         }
 
         if (empty($tenantId)) {
-            header('Location: /dapodik-spmb/dashboard?error=' . urlencode('Data sekolah tidak ditemukan.'));
+            header('Location: /SINTA-SaaS/dashboard?error=' . urlencode('Data sekolah tidak ditemukan.'));
             exit;
         }
 
@@ -55,7 +55,7 @@ class TenantController extends BaseController {
             $tenant = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$tenant) {
-                header('Location: /dapodik-spmb/dashboard?error=' . urlencode('Sekolah tidak ditemukan.'));
+                header('Location: /SINTA-SaaS/dashboard?error=' . urlencode('Sekolah tidak ditemukan.'));
                 exit;
             }
 
@@ -69,7 +69,7 @@ class TenantController extends BaseController {
             $this->render('identitas_sekolah', $data);
         } catch (\Throwable $e) {
             error_log("Failed to load tenant identity view: " . $e->getMessage());
-            header('Location: /dapodik-spmb/dashboard?error=' . urlencode('Terjadi kesalahan sistem.'));
+            header('Location: /SINTA-SaaS/dashboard?error=' . urlencode('Terjadi kesalahan sistem.'));
             exit;
         }
     }

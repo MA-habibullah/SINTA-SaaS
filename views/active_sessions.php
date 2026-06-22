@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * View: Monitoring Sesi Aktif & Analitik
  * Bagian ini dimuat secara dinamis oleh views/layout/master.php di area #main-content.
@@ -179,7 +179,7 @@
             const fetchData = async () => {
                 loading.value = true;
                 try {
-                    const response = await axios.get('/dapodik-spmb/api/v1/sessions/data');
+                    const response = await axios.get('/SINTA-SaaS/api/v1/sessions/data');
                     if (response.data && response.data.success) {
                         onlineUsers.value = response.data.online_users;
                         chartRawData.value = response.data.chart_data;
@@ -293,7 +293,7 @@
                     if (result.isConfirmed) {
                         cleaning.value = true;
                         try {
-                            const response = await axios.post('/dapodik-spmb/api/v1/sessions/retention', {
+                            const response = await axios.post('/SINTA-SaaS/api/v1/sessions/retention', {
                                 date_limit: retentionDate.value
                             });
                             

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Controllers;
 
@@ -87,7 +87,7 @@ class LoginController extends BaseController {
     public function logout(): void {
         SessionManager::logout();
         // Redirect langsung ke halaman login setelah menghancurkan session
-        header('Location: /dapodik-spmb/login');
+        header('Location: /SINTA-SaaS/login');
         exit;
     }
 

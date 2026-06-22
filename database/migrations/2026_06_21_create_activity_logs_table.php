@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Migration: Create Activity Logs (Audit Trail) Table and Sidebar Menu
  * 
@@ -34,7 +34,7 @@ return [
         // 2. Tambah menu Log Aktivitas di bawah Sistem & Utilitas (parent_id = 13, urutan = 7)
         $pdo->exec("
             INSERT INTO `menus` (`id`, `nama_menu`, `url`, `icon`, `parent_id`, `urutan`)
-            VALUES (20, 'Log Aktivitas', '/dapodik-spmb/utilitas/log-aktivitas', 'bi bi-journal-text', 13, 7)
+            VALUES (20, 'Log Aktivitas', '/SINTA-SaaS/utilitas/log-aktivitas', 'bi bi-journal-text', 13, 7)
             ON DUPLICATE KEY UPDATE `nama_menu`=VALUES(`nama_menu`), `url`=VALUES(`url`), `icon`=VALUES(`icon`), `parent_id`=VALUES(`parent_id`), `urutan`=VALUES(`urutan`);
         ");
 

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Layout Component: Sidebar (Dinamis Berbasis RBAC)
  * Menu dimuat dari database secara real-time berdasarkan peran (role) user aktif di session.
@@ -109,14 +109,14 @@ if (!empty($roles)) {
                 [
                     'id'       => 1,
                     'nama_menu'=> 'Dashboard',
-                    'url'      => '/dapodik-spmb/dashboard',
+                    'url'      => '/SINTA-SaaS/dashboard',
                     'icon'     => 'bi bi-grid-fill',
                     'children' => []
                 ],
                 [
                     'id'       => 6,
                     'nama_menu'=> 'Data Diri',
-                    'url'      => '/dapodik-spmb/siswa/edit?id=' . $siswaId,
+                    'url'      => '/SINTA-SaaS/siswa/edit?id=' . $siswaId,
                     'icon'     => 'bi bi-person-bounding-box',
                     'children' => []
                 ]
@@ -127,7 +127,7 @@ if (!empty($roles)) {
                 $sidebarMenus[] = [
                     'id'        => 99,
                     'nama_menu' => 'Tracer Study',
-                    'url'       => '/dapodik-spmb/tracer-study',
+                    'url'       => '/SINTA-SaaS/tracer-study',
                     'icon'      => 'bi bi-mortarboard-fill',
                     'badge'     => 'BARU',  // Untuk indikator visual di template
                     'children'  => []

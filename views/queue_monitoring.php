@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * View: Antrean Sistem & Background Jobs
  * Bagian ini dimuat secara dinamis oleh views/layout/master.php di area #main-content.
@@ -24,7 +24,7 @@
         }
     };
 </script>
-<script src="/dapodik-spmb/assets/js/tailwindcss.js"></script>
+<script src="/SINTA-SaaS/assets/js/tailwindcss.js"></script>
 
 <style>
     /* Styling khusus monitoring antrean */
@@ -396,7 +396,7 @@
                 loading.value = true;
                 currentPage.value = page;
                 try {
-                    const response = await axios.get('/dapodik-spmb/api/v1/queue/data', {
+                    const response = await axios.get('/SINTA-SaaS/api/v1/queue/data', {
                         params: {
                             page: page,
                             status: filters.status,
@@ -436,7 +436,7 @@
                 }
 
                 try {
-                    const response = await axios.post('/dapodik-spmb/api/v1/queue/dispatch', {
+                    const response = await axios.post('/SINTA-SaaS/api/v1/queue/dispatch', {
                         job_type: jobType,
                         payload: payload,
                         tenant_id: simTenantId.value
@@ -471,7 +471,7 @@
             const runWorkerOnce = async () => {
                 runningWorker.value = true;
                 try {
-                    const response = await axios.post('/dapodik-spmb/api/v1/queue/run-worker');
+                    const response = await axios.post('/SINTA-SaaS/api/v1/queue/run-worker');
                     
                     if (response.data) {
                         if (response.data.success) {
@@ -507,7 +507,7 @@
             // Retry failed job
             const retryJob = async (jobId) => {
                 try {
-                    const response = await axios.post('/dapodik-spmb/api/v1/queue/retry', { id: jobId });
+                    const response = await axios.post('/SINTA-SaaS/api/v1/queue/retry', { id: jobId });
                     if (response.data && response.data.success) {
                         Swal.fire({
                             icon: 'success',
@@ -545,7 +545,7 @@
                 }).then(async (result) => {
                     if (result.isConfirmed) {
                         try {
-                            const response = await axios.post('/dapodik-spmb/api/v1/queue/delete', { id: jobId });
+                            const response = await axios.post('/SINTA-SaaS/api/v1/queue/delete', { id: jobId });
                             if (response.data && response.data.success) {
                                 Swal.fire({
                                     icon: 'success',

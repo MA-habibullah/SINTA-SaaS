@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Migration 011 - Create Tenant Menu Access Table & Seeder
  */
@@ -20,7 +20,7 @@ return [
 
         // 2. Masukkan menu baru "Akses Fitur Sekolah" (id 18) ke tabel menus di bawah parent_id 13 (Sistem & Utilitas)
         $pdo->exec("INSERT INTO menus (id, nama_menu, url, icon, parent_id, urutan) VALUES
-            (18, 'Akses Fitur Sekolah', '/dapodik-spmb/super-admin/tenant-menus', 'bi bi-building-lock', 13, 5)
+            (18, 'Akses Fitur Sekolah', '/SINTA-SaaS/super-admin/tenant-menus', 'bi bi-building-lock', 13, 5)
         ON DUPLICATE KEY UPDATE nama_menu=VALUES(nama_menu), url=VALUES(url), icon=VALUES(icon), parent_id=VALUES(parent_id), urutan=VALUES(urutan);");
 
         // 3. Daftarkan menu baru ini ke hak akses Super Admin (role_id = 1)

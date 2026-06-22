@@ -1,4 +1,4 @@
-<!-- Halaman Sentral: Master Data Kelembagaan -->
+﻿<!-- Halaman Sentral: Master Data Kelembagaan -->
 <div id="masterKelembagaanApp" v-cloak>
     
     <!-- Row Header & Tabs -->
@@ -561,7 +561,7 @@
                     params.filter_tenant_id = this.filterTenantId;
                 }
 
-                axios.get('/dapodik-spmb/api/v1/kelembagaan', { params })
+                axios.get('/SINTA-SaaS/api/v1/kelembagaan', { params })
                     .then(res => {
                         this.listData    = res.data.data;
                         this.totalPages  = res.data.last_page;
@@ -583,13 +583,13 @@
                     params2.tenant_id = tenantId;
                 }
                 
-                axios.get('/dapodik-spmb/api/v1/kelembagaan/options', { params })
+                axios.get('/SINTA-SaaS/api/v1/kelembagaan/options', { params })
                      .then(res => this.listJenjang = res.data.data);
-                axios.get('/dapodik-spmb/api/v1/kelembagaan/options', { params: params2 })
+                axios.get('/SINTA-SaaS/api/v1/kelembagaan/options', { params: params2 })
                      .then(res => this.listJurusan = res.data.data);
             },
             fetchTenants() {
-                axios.get('/dapodik-spmb/api/v1/kelembagaan/tenants')
+                axios.get('/SINTA-SaaS/api/v1/kelembagaan/tenants')
                      .then(res => {
                          this.listTenants = res.data.data;
                      })
@@ -672,7 +672,7 @@
                     payload.id = this.editId;
                 }
 
-                axios.post('/dapodik-spmb/api/v1/kelembagaan/simpan', payload)
+                axios.post('/SINTA-SaaS/api/v1/kelembagaan/simpan', payload)
                      .then(res => {
                          this.submitLoading = false;
                          this.modalObj.hide();
@@ -704,7 +704,7 @@
                     cancelButtonText: 'Batal'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        axios.post('/dapodik-spmb/api/v1/kelembagaan/hapus', { module: this.activeTab, id: id })
+                        axios.post('/SINTA-SaaS/api/v1/kelembagaan/hapus', { module: this.activeTab, id: id })
                              .then(res => {
                                  this.toast.fire({ icon: 'success', title: res.data.message });
                                  this.fetchData(this.currentPage);
@@ -716,7 +716,7 @@
                 });
             },
             restoreItem(id) {
-                axios.post('/dapodik-spmb/api/v1/kelembagaan/restore', { module: this.activeTab, id: id })
+                axios.post('/SINTA-SaaS/api/v1/kelembagaan/restore', { module: this.activeTab, id: id })
                      .then(res => {
                          this.toast.fire({ icon: 'success', title: res.data.message });
                          this.fetchData(this.currentPage);
@@ -726,7 +726,7 @@
                      });
             },
             toggleStatus(id) {
-                axios.post('/dapodik-spmb/api/v1/kelembagaan/toggle-status', { module: this.activeTab, id: id })
+                axios.post('/SINTA-SaaS/api/v1/kelembagaan/toggle-status', { module: this.activeTab, id: id })
                      .then(res => {
                          this.toast.fire({ icon: 'success', title: res.data.message });
                      })

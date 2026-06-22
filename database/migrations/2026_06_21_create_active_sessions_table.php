@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Migration: Create Active Sessions Table
  * 
@@ -31,10 +31,10 @@ return [
         // 2. Update URL menu Monitoring Sesi Aktif (ID 16)
         $pdo->exec("
             UPDATE `menus` 
-            SET `url` = '/dapodik-spmb/utilitas/sesi-aktif' 
+            SET `url` = '/SINTA-SaaS/utilitas/sesi-aktif' 
             WHERE `id` = 16;
         ");
-        echo "  OK Menu Monitoring Sesi Aktif berhasil diupdate ke /dapodik-spmb/utilitas/sesi-aktif.\n";
+        echo "  OK Menu Monitoring Sesi Aktif berhasil diupdate ke /SINTA-SaaS/utilitas/sesi-aktif.\n";
     },
 
     'down' => function (PDO $pdo): void {

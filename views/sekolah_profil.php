@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * View: Profil / Identitas Sekolah (Tenant Profile)
  * Bagian ini dimuat secara dinamis oleh views/layout/master.php di area #main-content.
@@ -24,7 +24,7 @@
         }
     };
 </script>
-<script src="/dapodik-spmb/assets/js/tailwindcss.js"></script>
+<script src="/SINTA-SaaS/assets/js/tailwindcss.js"></script>
 
 <!-- Custom Styles for Premium UI/UX -->
 <style>
@@ -197,7 +197,7 @@
                             <i class="bi" :class="isPdf(tenant.sertifikat_akreditasi) ? 'bi-file-pdf-fill text-red-500' : 'bi-file-image-fill text-blue-500'"></i>
                             <span class="text-xs text-slate-600 truncate font-mono">{{ getFilename(tenant.sertifikat_akreditasi) }}</span>
                         </div>
-                        <a :href="'/dapodik-spmb/storage/app/public/' + tenant.sertifikat_akreditasi" target="_blank" class="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1">
+                        <a :href="'/SINTA-SaaS/storage/app/public/' + tenant.sertifikat_akreditasi" target="_blank" class="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1">
                             Lihat <i class="bi bi-box-arrow-up-right"></i>
                         </a>
                     </div>
@@ -484,7 +484,7 @@
 </div>
 
 <!-- SweetAlert2 Library -->
-<script src="/dapodik-spmb/assets/js/sweetalert2.all.min.js"></script>
+<script src="/SINTA-SaaS/assets/js/sweetalert2.all.min.js"></script>
 
 <!-- Vue App Registration Script -->
 <script>
@@ -497,7 +497,7 @@
             const tenant = ref(<?= json_encode($tenant, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>);
             
             // Map logo preview
-            const logoPreview = ref(tenant.value.logo ? `/dapodik-spmb/storage/app/public/${tenant.value.logo}` : null);
+            const logoPreview = ref(tenant.value.logo ? `/SINTA-SaaS/storage/app/public/${tenant.value.logo}` : null);
             
             // Form Model
             const form = reactive({
@@ -612,7 +612,7 @@
             const clearFile = (type) => {
                 if (type === 'logo') {
                     logoFile.value = null;
-                    logoPreview.value = tenant.value.logo ? `/dapodik-spmb/storage/app/public/${tenant.value.logo}` : null;
+                    logoPreview.value = tenant.value.logo ? `/SINTA-SaaS/storage/app/public/${tenant.value.logo}` : null;
                     const el = document.getElementById('logo_file_input') || logoInput.value;
                     if (el) el.value = '';
                 } else {
@@ -625,7 +625,7 @@
             // Redirect for super admin filter
             const changeTenant = (event) => {
                 const selectedId = event.target.value;
-                window.location.href = `/dapodik-spmb/sekolah/identitas?tenant_id=${selectedId}`;
+                window.location.href = `/SINTA-SaaS/sekolah/identitas?tenant_id=${selectedId}`;
             };
 
             // Submit Profile Handler
@@ -653,7 +653,7 @@
                 formData.append('tenant_id', tenant.value.id);
 
                 try {
-                    const response = await axios.post('/dapodik-spmb/api/v1/sekolah/update', formData, {
+                    const response = await axios.post('/SINTA-SaaS/api/v1/sekolah/update', formData, {
                         headers: {
                             'Content-Type': 'multipart/form-data'
                         }

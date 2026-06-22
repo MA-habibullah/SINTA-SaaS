@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Controllers;
 
@@ -37,7 +37,7 @@ class ErrorMonitorController extends BaseController
             echo "<div style='font-family:sans-serif;text-align:center;padding:60px'>";
             echo "<h1 style='color:#dc3545;font-size:2rem;'>🔒 403 — Akses Ditolak</h1>";
             echo "<p style='color:#6c757d;font-size:1rem;'>Halaman Error Monitor bersifat rahasia dan hanya dapat diakses oleh <strong>Super Admin Platform</strong>.</p>";
-            echo "<a href='/dapodik-spmb/dashboard' style='display:inline-block;margin-top:1rem;padding:0.5rem 1.5rem;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;'>Kembali ke Dashboard</a>";
+            echo "<a href='/SINTA-SaaS/dashboard' style='display:inline-block;margin-top:1rem;padding:0.5rem 1.5rem;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;'>Kembali ke Dashboard</a>";
             echo "</div>";
             exit;
         }

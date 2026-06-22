@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Controllers;
 
@@ -21,7 +21,7 @@ class AuthAdminController extends BaseController {
         // Jika sudah login, langsung lempar ke dashboard
         if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
             if (($_SESSION['role_name'] ?? '') !== 'siswa') {
-                header('Location: /dapodik-spmb/dashboard');
+                header('Location: /SINTA-SaaS/dashboard');
                 exit;
             }
         }
@@ -145,7 +145,7 @@ class AuthAdminController extends BaseController {
      */
     public function logout(): void {
         SessionManager::logout();
-        header('Location: /dapodik-spmb/admin');
+        header('Location: /SINTA-SaaS/admin');
         exit;
     }
 

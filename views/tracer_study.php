@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * View: Tracer Study / Portofolio Alumni
  * Hanya dapat diakses oleh siswa berstatus 'Lulus' atau Admin Sekolah / Super Admin.
@@ -7,7 +7,7 @@ $userRole  = $data['user_role']         ?? ($_SESSION['role_name']    ?? '');
 $userNama  = $data['user_nama']         ?? ($_SESSION['nama_lengkap'] ?? 'Alumni');
 $kuliah    = $data['riwayat_kuliah']    ?? [];
 $pekerjaan = $data['riwayat_pekerjaan'] ?? [];
-$baseUrl   = '/dapodik-spmb';
+$baseUrl   = '/SINTA-SaaS';
 ?>
 
 <style>
@@ -424,7 +424,7 @@ $baseUrl   = '/dapodik-spmb';
                 loadingKuliah.value = true;
                 alertKuliah.value   = { msg: '', type: 'success' };
                 try {
-                    const res = await fetch('/dapodik-spmb/api/v1/tracer/kuliah', {
+                    const res = await fetch('/SINTA-SaaS/api/v1/tracer/kuliah', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                         body: JSON.stringify(formKuliah.value)
@@ -455,7 +455,7 @@ $baseUrl   = '/dapodik-spmb';
                 loadingPekerjaan.value = true;
                 alertPekerjaan.value   = { msg: '', type: 'success' };
                 try {
-                    const res = await fetch('/dapodik-spmb/api/v1/tracer/pekerjaan', {
+                    const res = await fetch('/SINTA-SaaS/api/v1/tracer/pekerjaan', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                         body: JSON.stringify(formPekerjaan.value)

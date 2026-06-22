@@ -1,4 +1,4 @@
-<!-- Load Tailwind CSS CDN and disable preflight to prevent conflict with Bootstrap core styles -->
+﻿<!-- Load Tailwind CSS CDN and disable preflight to prevent conflict with Bootstrap core styles -->
 <script>
     (function() {
         const origWarn = console.warn;
@@ -17,7 +17,7 @@
         }
     };
 </script>
-<script src="/dapodik-spmb/assets/js/tailwindcss.js"></script>
+<script src="/SINTA-SaaS/assets/js/tailwindcss.js"></script>
 
 <!-- Halaman Sentral: Manajemen Pengguna -->
 <div id="penggunaApp" v-cloak>
@@ -444,7 +444,7 @@
                         <div class="mb-3">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <label for="import_csv_file" class="form-label fw-semibold fs-8 text-muted mb-0">Pilih File CSV <span class="text-danger">*</span></label>
-                                <a href="/dapodik-spmb/api/v1/siswa/import/template" class="text-decoration-none fs-9 fw-bold text-success" download>
+                                <a href="/SINTA-SaaS/api/v1/siswa/import/template" class="text-decoration-none fs-9 fw-bold text-success" download>
                                     <i class="bi bi-download me-1"></i>Download Template CSV
                                 </a>
                             </div>
@@ -1133,7 +1133,7 @@
                 const formData = new FormData();
                 formData.append('file', this.importFile);
 
-                axios.post('/dapodik-spmb/api/v1/siswa/import', formData, {
+                axios.post('/SINTA-SaaS/api/v1/siswa/import', formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data'
                     }
@@ -1179,7 +1179,7 @@
                 return tab ? tab.name : '';
             },
             downloadExcel() {
-                let url = '/dapodik-spmb/pengguna/download-excel';
+                let url = '/SINTA-SaaS/pengguna/download-excel';
                 if (this.userRole === 'super_admin' && this.selectedExportTenantId) {
                     url += '?tenant_id=' + encodeURIComponent(this.selectedExportTenantId);
                 }
@@ -1206,7 +1206,7 @@
                     }
                 }
 
-                axios.get('/dapodik-spmb/api/v1/pengguna', {
+                axios.get('/SINTA-SaaS/api/v1/pengguna', {
                     params: params
                 }).then(res => {
                     this.listData = res.data.data;
@@ -1221,7 +1221,7 @@
                 });
             },
             fetchTenants() {
-                axios.get('/dapodik-spmb/api/v1/pengguna/tenants')
+                axios.get('/SINTA-SaaS/api/v1/pengguna/tenants')
                      .then(res => {
                           this.listTenants = res.data.data;
                      })
@@ -1234,7 +1234,7 @@
                 if (this.userRole === 'super_admin') {
                     tenantId = this.filterTenantId;
                 }
-                axios.get('/dapodik-spmb/api/v1/pengguna/kelas', {
+                axios.get('/SINTA-SaaS/api/v1/pengguna/kelas', {
                     params: { tenant_id: tenantId }
                 }).then(res => {
                     this.listKelas = res.data.data || [];
@@ -1296,7 +1296,7 @@
             },
             openCreateModal() {
                 if (this.activeTab === 'siswa') {
-                    window.location.href = '/dapodik-spmb/siswa/tambah';
+                    window.location.href = '/SINTA-SaaS/siswa/tambah';
                     return;
                 }
                 this.isEditMode = false;
@@ -1305,7 +1305,7 @@
             },
             openEditModal(item) {
                 if (this.activeTab === 'siswa' || this.activeTab === 'mutasi') {
-                    window.location.href = '/dapodik-spmb/siswa/edit?id=' + item.id;
+                    window.location.href = '/SINTA-SaaS/siswa/edit?id=' + item.id;
                     return;
                 }
                 this.isEditMode = true;
@@ -1334,7 +1334,7 @@
                     payload.id = this.editId;
                 }
 
-                axios.post('/dapodik-spmb/api/v1/pengguna/simpan', payload)
+                axios.post('/SINTA-SaaS/api/v1/pengguna/simpan', payload)
                      .then(res => {
                           this.submitLoading = false;
                           this.modalObj.hide();
@@ -1363,7 +1363,7 @@
                     cancelButtonText: 'Batal'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        axios.post('/dapodik-spmb/api/v1/pengguna/hapus', { tab: this.activeTab, id: id })
+                        axios.post('/SINTA-SaaS/api/v1/pengguna/hapus', { tab: this.activeTab, id: id })
                              .then(res => {
                                   this.toast.fire({ icon: 'success', title: res.data.message });
                                   this.fetchData(this.currentPage);
@@ -1375,7 +1375,7 @@
                 });
             },
             restoreItem(id) {
-                axios.post('/dapodik-spmb/api/v1/pengguna/restore', { tab: this.activeTab, id: id })
+                axios.post('/SINTA-SaaS/api/v1/pengguna/restore', { tab: this.activeTab, id: id })
                      .then(res => {
                           this.toast.fire({ icon: 'success', title: res.data.message });
                           this.fetchData(this.currentPage);
@@ -1385,7 +1385,7 @@
                       });
             },
             toggleStatus(id) {
-                axios.post('/dapodik-spmb/api/v1/pengguna/toggle-status', { tab: this.activeTab, id: id })
+                axios.post('/SINTA-SaaS/api/v1/pengguna/toggle-status', { tab: this.activeTab, id: id })
                      .then(res => {
                           this.toast.fire({ icon: 'success', title: res.data.message });
                       })
@@ -1433,7 +1433,7 @@
                     if (!this.aksiTenantId) return;
                     params.tenant_id = this.aksiTenantId;
                 }
-                axios.get('/dapodik-spmb/api/v1/pengguna/aksi/kelas', { params })
+                axios.get('/SINTA-SaaS/api/v1/pengguna/aksi/kelas', { params })
                     .then(res => {
                         this.aksiListKelas = res.data.data || [];
                     })
@@ -1456,7 +1456,7 @@
                     params.tenant_id = this.aksiTenantId;
                 }
                 this.aksiLoading = true;
-                axios.get('/dapodik-spmb/api/v1/pengguna/aksi/siswa', { params })
+                axios.get('/SINTA-SaaS/api/v1/pengguna/aksi/siswa', { params })
                     .then(res => {
                         this.aksiListSiswa = res.data.data || [];
                         this.aksiSelectedIds = [];
@@ -1512,7 +1512,7 @@
                     };
                     if (this.userRole === 'super_admin') payload.tenant_id = this.aksiTenantId;
 
-                    axios.post('/dapodik-spmb/api/v1/pengguna/aksi/naikkan-kelas', payload)
+                    axios.post('/SINTA-SaaS/api/v1/pengguna/aksi/naikkan-kelas', payload)
                         .then(res => {
                             this.aksiSubmitLoading = false;
                             Swal.fire({ icon: 'success', title: 'Berhasil!', text: res.data.message, confirmButtonColor: '#10b981' });
@@ -1548,7 +1548,7 @@
                 this.quickAddLoading = true;
                 this.quickAddErrors = {};
 
-                axios.post('/dapodik-spmb/api/v1/pengguna/quick-add-siswa', this.quickAddForm)
+                axios.post('/SINTA-SaaS/api/v1/pengguna/quick-add-siswa', this.quickAddForm)
                     .then(res => {
                         this.quickAddLoading = false;
                         if (this.quickAddModalObj) {

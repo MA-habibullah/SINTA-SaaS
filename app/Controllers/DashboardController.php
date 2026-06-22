@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Controllers;
 
@@ -22,7 +22,7 @@ class DashboardController extends BaseController {
         // 2. Amankan Dashboard: Cek apakah session user_id telah disetel
         // Jika belum login, redirect ke halaman login
         if (!isset($_SESSION['user_id'])) {
-            header('Location: /dapodik-spmb/login');
+            header('Location: /SINTA-SaaS/login');
             exit;
         }
 
@@ -92,7 +92,7 @@ class DashboardController extends BaseController {
                 if ($tenantId === null) {
                     // Jika bukan super admin tapi tidak memiliki tenant_id, paksa logout
                     SessionManager::logout();
-                    header('Location: /dapodik-spmb/login?error=tenant_suspended');
+                    header('Location: /SINTA-SaaS/login?error=tenant_suspended');
                     exit;
                 }
 
@@ -117,7 +117,7 @@ class DashboardController extends BaseController {
                 if (!$schoolInfo) {
                     // Jika tenant_id session tidak valid (misal sekolah dinonaktifkan secara global)
                     SessionManager::logout();
-                    header('Location: /dapodik-spmb/login?error=tenant_suspended');
+                    header('Location: /SINTA-SaaS/login?error=tenant_suspended');
                     exit;
                 }
 

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Controllers;
 
@@ -19,7 +19,7 @@ class AksesController extends BaseController {
         // 2. Proteksi Otoritas: Super Admin atau Operator Sekolah (SaaS Tenant-Level Access)
         $roleName = $_SESSION['role_name'] ?? '';
         if ($roleName !== 'super_admin' && $roleName !== 'operator_sekolah') {
-            header('Location: /dapodik-spmb/dashboard?error=' . urlencode('Akses ditolak. Anda tidak memiliki wewenang untuk mengelola akses menu sidebar.'));
+            header('Location: /SINTA-SaaS/dashboard?error=' . urlencode('Akses ditolak. Anda tidak memiliki wewenang untuk mengelola akses menu sidebar.'));
             exit;
         }
 
@@ -81,7 +81,7 @@ class AksesController extends BaseController {
      */
     public function store(): void {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header('Location: /dapodik-spmb/konfigurasi/akses?error=' . urlencode('Metode request tidak diizinkan.'));
+            header('Location: /SINTA-SaaS/konfigurasi/akses?error=' . urlencode('Metode request tidak diizinkan.'));
             exit;
         }
 
@@ -148,9 +148,9 @@ class AksesController extends BaseController {
         $success = $this->menuModel->saveAccessMap($cleanedAccess);
 
         if ($success) {
-            header('Location: /dapodik-spmb/konfigurasi/akses?success=' . urlencode('Matriks hak akses menu berhasil diperbarui.'));
+            header('Location: /SINTA-SaaS/konfigurasi/akses?success=' . urlencode('Matriks hak akses menu berhasil diperbarui.'));
         } else {
-            header('Location: /dapodik-spmb/konfigurasi/akses?error=' . urlencode('Terjadi kesalahan sistem saat memperbarui matriks hak akses.'));
+            header('Location: /SINTA-SaaS/konfigurasi/akses?error=' . urlencode('Terjadi kesalahan sistem saat memperbarui matriks hak akses.'));
         }
         exit;
     }

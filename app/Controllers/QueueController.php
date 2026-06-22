@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Controllers;
 
@@ -23,7 +23,7 @@ class QueueController extends BaseController {
             echo "<div style='font-family: sans-serif; text-align: center; padding: 50px;'>";
             echo "<h1 style='color: #dc3545;'>403 Akses Ditolak</h1>";
             echo "<p style='color: #6c757d;'>Anda tidak memiliki wewenang untuk mengakses dashboard antrean sistem.</p>";
-            echo "<a href='/dapodik-spmb/dashboard'>Kembali ke Dashboard</a>";
+            echo "<a href='/SINTA-SaaS/dashboard'>Kembali ke Dashboard</a>";
             echo "</div>";
             exit;
         }

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * View: Kelola Sekolah (SaaS Tenant Management)
  * Terintegrasi dengan Tailwind CSS, Vue.js, Axios, dan SweetAlert2
@@ -34,7 +34,7 @@
         }
     };
 </script>
-<script src="/dapodik-spmb/assets/js/tailwindcss.js"></script>
+<script src="/SINTA-SaaS/assets/js/tailwindcss.js"></script>
 
 <style>
     /* Fix Bootstrap collapse conflict with Tailwind CSS Play CDN */
@@ -707,7 +707,7 @@
             // Fetch all tenants from API
             fetchTenants() {
                 this.isLoading = true;
-                axios.get('/dapodik-spmb/api/v1/super-admin/tenants')
+                axios.get('/SINTA-SaaS/api/v1/super-admin/tenants')
                 .then(response => {
                     this.isLoading = false;
                     if (response.data.success) {
@@ -827,7 +827,7 @@
                 this.isSaving = true;
                 this.errors = {};
 
-                axios.post('/dapodik-spmb/api/v1/super-admin/tenants/simpan', this.form)
+                axios.post('/SINTA-SaaS/api/v1/super-admin/tenants/simpan', this.form)
                 .then(response => {
                     this.isSaving = false;
                     if (response.data.success) {
@@ -912,7 +912,7 @@
 
             // Save status update to database
             saveStatus(id, newStatus, namaSekolah) {
-                axios.post('/dapodik-spmb/api/v1/super-admin/tenants/toggle-status', {
+                axios.post('/SINTA-SaaS/api/v1/super-admin/tenants/toggle-status', {
                     id: id,
                     status: newStatus
                 })
@@ -952,7 +952,7 @@
                     cancelButtonText: 'Batal'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        axios.post('/dapodik-spmb/api/v1/super-admin/tenants/hapus', {
+                        axios.post('/SINTA-SaaS/api/v1/super-admin/tenants/hapus', {
                             id: tenant.id
                         })
                         .then(response => {

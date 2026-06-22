@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Core;
 
@@ -151,13 +151,13 @@ class SessionManager {
                 echo json_encode(['error' => 'Unauthorized access. Please login.']);
                 exit;
             } else {
-                $redirectUrl = '/dapodik-spmb/login';
+                $redirectUrl = '/SINTA-SaaS/login';
                 // Jika mengakses halaman khusus admin/staf/pengguna, arahkan ke login admin
                 $path = parse_url($requestUri, PHP_URL_PATH);
                 $adminPaths = ['/pengguna', '/super-admin', '/konfigurasi', '/master-data', '/siswa/tambah', '/siswa/edit', '/siswa/hapus'];
                 foreach ($adminPaths as $adminPath) {
                     if (str_contains($path, $adminPath)) {
-                        $redirectUrl = '/dapodik-spmb/admin';
+                        $redirectUrl = '/SINTA-SaaS/admin';
                         break;
                     }
                 }

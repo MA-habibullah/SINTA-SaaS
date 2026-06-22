@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Core;
 
@@ -28,10 +28,10 @@ class RouteGuard {
         try {
             $db = Database::getConnection();
 
-            // Normalisasi URL path agar cocok dengan data seed tabel menus (contoh: /pengguna menjadi /dapodik-spmb/pengguna)
+            // Normalisasi URL path agar cocok dengan data seed tabel menus (contoh: /pengguna menjadi /SINTA-SaaS/pengguna)
             $normalizedPath = $path;
-            if (!str_starts_with($normalizedPath, '/dapodik-spmb')) {
-                $normalizedPath = '/dapodik-spmb' . $normalizedPath;
+            if (!str_starts_with($normalizedPath, '/SINTA-SaaS')) {
+                $normalizedPath = '/SINTA-SaaS' . $normalizedPath;
             }
 
             // 3. Cari menu_id berdasarkan path URL yang diakses

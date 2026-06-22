@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * View: Log Aktivitas Sistem (Audit Trail)
  * Bagian ini dimuat secara dinamis oleh views/layout/master.php di area #main-content.
@@ -349,7 +349,7 @@ $userRole = $_SESSION['role_name'] ?? '';
             // Fetch filters options
             const fetchFilters = async () => {
                 try {
-                    const response = await axios.get('/dapodik-spmb/api/v1/activity-logs/filters');
+                    const response = await axios.get('/SINTA-SaaS/api/v1/activity-logs/filters');
                     if (response.data && response.data.success) {
                         tenantOptions.value = response.data.tenants || [];
                         roleOptions.value = response.data.roles || [];
@@ -363,7 +363,7 @@ $userRole = $_SESSION['role_name'] ?? '';
             const fetchLogs = async () => {
                 loading.value = true;
                 try {
-                    const response = await axios.get('/dapodik-spmb/api/v1/activity-logs', {
+                    const response = await axios.get('/SINTA-SaaS/api/v1/activity-logs', {
                         params: {
                             page: currentPage.value,
                             search: searchQuery.value,

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * View: Kelola Akses Menu Per Tenant (Child View)
  * Dipanggil oleh SuperAdminController dan dimuat di dalam layout/master.php
@@ -14,7 +14,7 @@
             <p class="text-muted fs-7">Atur ketersediaan menu sidebar dan akses modul fitur bagi masing-masing sekolah (Tenant) secara terpusat.</p>
         </div>
         <div class="btn-toolbar mb-2 mb-md-0">
-            <a href="/dapodik-spmb/dashboard" class="btn btn-outline-secondary btn-sm d-flex align-items-center rounded-3 px-3 py-2 fs-7">
+            <a href="/SINTA-SaaS/dashboard" class="btn btn-outline-secondary btn-sm d-flex align-items-center rounded-3 px-3 py-2 fs-7">
                 <i class="bi bi-arrow-left me-2"></i> Kembali ke Dashboard
             </a>
         </div>
@@ -197,7 +197,7 @@
         methods: {
             fetchTenants() {
                 this.isLoading = true;
-                axios.get('/dapodik-spmb/api/v1/super-admin/tenant-menus/fetch')
+                axios.get('/SINTA-SaaS/api/v1/super-admin/tenant-menus/fetch')
                 .then(response => {
                     this.isLoading = false;
                     if (response.data.success) {
@@ -221,7 +221,7 @@
                 }
 
                 this.isLoading = true;
-                axios.get('/dapodik-spmb/api/v1/super-admin/tenant-menus/fetch', {
+                axios.get('/SINTA-SaaS/api/v1/super-admin/tenant-menus/fetch', {
                     params: { tenant_id: this.selectedTenantId }
                 })
                 .then(response => {
@@ -270,7 +270,7 @@
                 if (!this.selectedTenantId) return;
 
                 this.isSaving = true;
-                axios.post('/dapodik-spmb/api/v1/super-admin/tenant-menus/save', {
+                axios.post('/SINTA-SaaS/api/v1/super-admin/tenant-menus/save', {
                     tenant_id: this.selectedTenantId,
                     menu_ids: this.checkedMenuIds
                 })

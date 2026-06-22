@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Controllers;
 
@@ -22,7 +22,7 @@ class SekolahController extends BaseController {
             echo "<div style='font-family: sans-serif; text-align: center; padding: 50px;'>";
             echo "<h1 style='color: #dc3545;'>403 Akses Ditolak</h1>";
             echo "<p style='color: #6c757d;'>Anda tidak memiliki wewenang untuk mengakses manajemen profil sekolah.</p>";
-            echo "<a href='/dapodik-spmb/dashboard'>Kembali ke Dashboard</a>";
+            echo "<a href='/SINTA-SaaS/dashboard'>Kembali ke Dashboard</a>";
             echo "</div>";
             exit;
         }
@@ -62,7 +62,7 @@ class SekolahController extends BaseController {
         }
 
         if (empty($tenantId)) {
-            header('Location: /dapodik-spmb/dashboard?error=' . urlencode('Data sekolah tidak ditemukan.'));
+            header('Location: /SINTA-SaaS/dashboard?error=' . urlencode('Data sekolah tidak ditemukan.'));
             exit;
         }
 
@@ -73,7 +73,7 @@ class SekolahController extends BaseController {
             $tenant = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$tenant) {
-                header('Location: /dapodik-spmb/dashboard?error=' . urlencode('Sekolah tidak ditemukan.'));
+                header('Location: /SINTA-SaaS/dashboard?error=' . urlencode('Sekolah tidak ditemukan.'));
                 exit;
             }
 
@@ -88,7 +88,7 @@ class SekolahController extends BaseController {
             $this->render('sekolah_profil', $data);
         } catch (\Throwable $e) {
             error_log("Failed to load school profile view: " . $e->getMessage());
-            header('Location: /dapodik-spmb/dashboard?error=' . urlencode('Terjadi kesalahan sistem.'));
+            header('Location: /SINTA-SaaS/dashboard?error=' . urlencode('Terjadi kesalahan sistem.'));
             exit;
         }
     }

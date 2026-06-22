@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -11,28 +11,28 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" data-turbo-track="reload">
     
     <!-- Bootstrap 5.3 CSS -->
-    <link href="/dapodik-spmb/assets/css/bootstrap.min.css" rel="stylesheet" data-turbo-track="reload">
+    <link href="/SINTA-SaaS/assets/css/bootstrap.min.css" rel="stylesheet" data-turbo-track="reload">
     
     <!-- Bootstrap Icons -->
-    <link href="/dapodik-spmb/assets/css/bootstrap-icons.css" rel="stylesheet" data-turbo-track="reload">
+    <link href="/SINTA-SaaS/assets/css/bootstrap-icons.css" rel="stylesheet" data-turbo-track="reload">
     
     <!-- Bootstrap Bundle with Popper -->
-    <script src="/dapodik-spmb/assets/js/bootstrap.bundle.min.js" data-turbo-track="reload"></script>
+    <script src="/SINTA-SaaS/assets/js/bootstrap.bundle.min.js" data-turbo-track="reload"></script>
     
     <!-- Vue 3 Global Build -->
-    <script src="/dapodik-spmb/assets/js/vue.global.prod.js" data-turbo-track="reload"></script>
+    <script src="/SINTA-SaaS/assets/js/vue.global.prod.js" data-turbo-track="reload"></script>
     
     <!-- Axios (API Requests client) -->
-    <script src="/dapodik-spmb/assets/js/axios.min.js" data-turbo-track="reload"></script>
+    <script src="/SINTA-SaaS/assets/js/axios.min.js" data-turbo-track="reload"></script>
     
     <!-- Hotwire Turbo Drive -->
-    <script src="/dapodik-spmb/assets/js/turbo.es2017-umd.js" defer data-turbo-track="reload"></script>
+    <script src="/SINTA-SaaS/assets/js/turbo.es2017-umd.js" defer data-turbo-track="reload"></script>
     
     <!-- SweetAlert2 (Loaded globally to support all pages offline) -->
-    <script src="/dapodik-spmb/assets/js/sweetalert2.all.min.js" data-turbo-track="reload"></script>
+    <script src="/SINTA-SaaS/assets/js/sweetalert2.all.min.js" data-turbo-track="reload"></script>
     
     <!-- Chart.js (Loaded globally to support offline graphs without race conditions) -->
-    <script src="/dapodik-spmb/assets/js/chart.umd.js" data-turbo-track="reload"></script>
+    <script src="/SINTA-SaaS/assets/js/chart.umd.js" data-turbo-track="reload"></script>
     
     <!-- Vue 3 Lifecycle Registry and Turbo Drive Integration -->
     <script>

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -7,7 +7,7 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Bootstrap Icons -->
-    <link href="/dapodik-spmb/assets/css/bootstrap-icons.css" rel="stylesheet">
+    <link href="/SINTA-SaaS/assets/css/bootstrap-icons.css" rel="stylesheet">
     <!-- Tailwind CSS -->
     <script>
         // Suppress tailwind CDN production warning in console
@@ -30,9 +30,9 @@
             }
         };
     </script>
-    <script src="/dapodik-spmb/assets/js/tailwindcss.js"></script>
+    <script src="/SINTA-SaaS/assets/js/tailwindcss.js"></script>
     <!-- Vue 3 -->
-    <script src="/dapodik-spmb/assets/js/vue.global.prod.js"></script>
+    <script src="/SINTA-SaaS/assets/js/vue.global.prod.js"></script>
     <style>
         [v-cloak] { display: none !important; }
     </style>
@@ -223,7 +223,7 @@
             </form>
             
             <div class="mt-6 text-center border-t border-slate-100 pt-5">
-                <a href="/dapodik-spmb/admin" class="text-xs font-semibold text-slate-500 hover:text-blue-600 transition-colors flex items-center justify-center gap-1.5">
+                <a href="/SINTA-SaaS/admin" class="text-xs font-semibold text-slate-500 hover:text-blue-600 transition-colors flex items-center justify-center gap-1.5">
                     <i class="bi bi-arrow-left"></i> Login sebagai Operator / Guru / Super Admin
                 </a>
             </div>
@@ -231,8 +231,8 @@
     </div>
 
     <!-- Axios & SweetAlert2 -->
-    <script src="/dapodik-spmb/assets/js/axios.min.js"></script>
-    <script src="/dapodik-spmb/assets/js/sweetalert2.all.min.js"></script>
+    <script src="/SINTA-SaaS/assets/js/axios.min.js"></script>
+    <script src="/SINTA-SaaS/assets/js/sweetalert2.all.min.js"></script>
 
     <script>
 {
@@ -279,7 +279,7 @@
                     },
                     fetchTenants(append = false) {
                         this.loadingTenants = true;
-                        axios.get('/dapodik-spmb/api/v1/tenant/search', {
+                        axios.get('/SINTA-SaaS/api/v1/tenant/search', {
                             params: {
                                 q: this.searchQuery,
                                 page: this.page,
@@ -337,16 +337,16 @@
                             headers['X-Tenant-ID'] = this.form.tenant_id;
                         }
 
-                        axios.post('/dapodik-spmb/api/v1/siswa/login', this.form, { headers: headers })
+                        axios.post('/SINTA-SaaS/api/v1/siswa/login', this.form, { headers: headers })
                         .then(response => {
                             this.loading = false;
                             if (response.data.success) {
                                 if (response.data.is_first_login) {
                                     // First login wajib ubah password
-                                    window.location.href = '/dapodik-spmb/siswa/ubah-password';
+                                    window.location.href = '/SINTA-SaaS/siswa/ubah-password';
                                 } else {
                                     // Siswa yang sudah update password dialihkan langsung ke dashboard
-                                    window.location.href = '/dapodik-spmb/dashboard';
+                                    window.location.href = '/SINTA-SaaS/dashboard';
                                 }
                             }
                         })

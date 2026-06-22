@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * View: Server & Tenant Resource Monitor Dashboard
  * Akses: Super Admin Only
@@ -18,7 +18,7 @@
 })();
 window.tailwind = { config: { corePlugins: { preflight: false } } };
 </script>
-<script src="/dapodik-spmb/assets/js/tailwindcss.js"></script>
+<script src="/SINTA-SaaS/assets/js/tailwindcss.js"></script>
 
 <style>
 /* Progress bar gradient animation */
@@ -584,7 +584,7 @@ window.tailwind = { config: { corePlugins: { preflight: false } } };
     document.head.appendChild(_s);
 
     const POLL_INTERVAL_MS = 5000; // 5 detik
-    const API_URL = '/dapodik-spmb/api/v1/super-admin/server-monitor/fetch';
+    const API_URL = '/SINTA-SaaS/api/v1/super-admin/server-monitor/fetch';
 
     window.VueAppRegistry.register('#serverMonitorApp', {
         data() {
@@ -760,7 +760,7 @@ window.tailwind = { config: { corePlugins: { preflight: false } } };
             async submitNetworkConfig() {
                 this.formSubmitting = true;
                 try {
-                    const res = await axios.post('/dapodik-spmb/api/v1/super-admin/server-monitor/save-network', this.form);
+                    const res = await axios.post('/SINTA-SaaS/api/v1/super-admin/server-monitor/save-network', this.form);
                     if (res.data.success) {
                         Swal.fire({
                             icon: 'success',

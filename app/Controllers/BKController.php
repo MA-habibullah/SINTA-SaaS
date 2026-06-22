@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Controllers;
 
@@ -46,20 +46,20 @@ class BKController extends BaseController {
             }
         }
         if (!$hasAllowedRole) {
-            $isApi = str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/dapodik-spmb/api/');
+            $isApi = str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/SINTA-SaaS/api/');
             if ($isApi) {
                 $this->jsonResponse(['error' => 'Akses ditolak. Modul ini hanya untuk Guru BK, Admin Sekolah, dan Super Admin.'], 403);
             }
             http_response_code(403);
             echo '<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><title>403 Akses Ditolak</title>'
-               . '<link href="/dapodik-spmb/assets/css/bootstrap.min.css" rel="stylesheet">'
-               . '<link href="/dapodik-spmb/assets/css/bootstrap-icons.css" rel="stylesheet">'
+               . '<link href="/SINTA-SaaS/assets/css/bootstrap.min.css" rel="stylesheet">'
+               . '<link href="/SINTA-SaaS/assets/css/bootstrap-icons.css" rel="stylesheet">'
                . '</head><body class="bg-light d-flex align-items-center justify-content-center" style="min-height:100vh;">'
                . '<div class="card shadow-sm p-5 text-center" style="max-width:480px;">'
                . '<i class="bi bi-shield-x text-danger fs-1 mb-3 d-block"></i>'
                . '<h4 class="fw-bold mb-2">403 — Akses Ditolak</h4>'
                . '<p class="text-muted">Modul Bimbingan Konseling hanya dapat diakses oleh <strong>Guru BK</strong>, <strong>Admin Sekolah</strong>, atau <strong>Super Admin</strong>.</p>'
-               . '<a href="/dapodik-spmb/dashboard" class="btn btn-primary mt-2 rounded-3">Kembali ke Dashboard</a>'
+               . '<a href="/SINTA-SaaS/dashboard" class="btn btn-primary mt-2 rounded-3">Kembali ke Dashboard</a>'
                . '</div></body></html>';
             exit;
         }

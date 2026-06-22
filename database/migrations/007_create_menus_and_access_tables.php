@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Migration 007 - Create Menus and Access Tables
  */
@@ -30,15 +30,15 @@ return [
 
         // 3. Seed master data menus (Parent & Child structure)
         $pdo->exec("INSERT INTO menus (id, nama_menu, url, icon, parent_id, urutan) VALUES
-            (1, 'Dashboard', '/dapodik-spmb/dashboard', 'bi bi-grid-fill', NULL, 1),
+            (1, 'Dashboard', '/SINTA-SaaS/dashboard', 'bi bi-grid-fill', NULL, 1),
             
             (2, 'PPDB / Penerimaan Siswa Baru', '#', 'bi bi-clipboard-check', NULL, 2),
             (3, 'Verifikasi Pendaftaran', '#', 'bi bi-check2-square', 2, 1),
             (4, 'Kelola Calon Siswa', '#', 'bi bi-person-plus', 2, 2),
             
             (5, 'Data Pokok / Core Dapodik', '#', 'bi bi-folder2-open', NULL, 3),
-            (6, 'Pengguna', '/dapodik-spmb/pengguna', 'bi bi-people', 5, 1),
-            (7, 'Master Data', '/dapodik-spmb/master-data', 'bi bi-diagram-3', 5, 2),
+            (6, 'Pengguna', '/SINTA-SaaS/pengguna', 'bi bi-people', 5, 1),
+            (7, 'Master Data', '/SINTA-SaaS/master-data', 'bi bi-diagram-3', 5, 2),
             
             (9, 'Registrasi & Mutasi', '#', 'bi bi-arrow-left-right', NULL, 4),
             (10, 'Riwayat Jalur PPDB', '#', 'bi bi-clock-history', 9, 1),
@@ -47,7 +47,7 @@ return [
             
             (13, 'Sistem & Utilitas', '#', 'bi bi-shield-lock-fill', NULL, 5),
             (14, 'Identitas Sekolah', '#', 'bi bi-info-circle', 13, 1),
-            (15, 'Manajemen User & Hak Akses', '/dapodik-spmb/konfigurasi/akses', 'bi bi-shield-lock-fill', 13, 2),
+            (15, 'Manajemen User & Hak Akses', '/SINTA-SaaS/konfigurasi/akses', 'bi bi-shield-lock-fill', 13, 2),
             (16, 'Monitoring Sesi Aktif', '#', 'bi bi-clock', 13, 3),
             (17, 'Antrean Sistem & Background Jobs', '#', 'bi bi-cpu', 13, 4)
         ON DUPLICATE KEY UPDATE nama_menu=VALUES(nama_menu), url=VALUES(url), icon=VALUES(icon), parent_id=VALUES(parent_id), urutan=VALUES(urutan);");

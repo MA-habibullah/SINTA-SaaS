@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Layout Component: Header
  * Berisi navbar utama, burger button, nama sekolah (tenant), search bar, dan user dropdown.
@@ -33,7 +33,7 @@ if ($tenantId) {
         </button>
 
         <!-- Brand Logo / Name -->
-        <a class="navbar-brand d-flex align-items-center text-decoration-none me-4" href="/dapodik-spmb/dashboard">
+        <a class="navbar-brand d-flex align-items-center text-decoration-none me-4" href="/SINTA-SaaS/dashboard">
             <i class="bi bi-mortarboard-fill text-primary fs-3 me-2"></i>
             <span class="fw-extrabold fs-5 text-dark tracking-tight d-none d-sm-inline">DAPODIK <span class="text-primary">SAAS</span></span>
         </a>
@@ -87,14 +87,14 @@ if ($tenantId) {
                 </li>
                 <li><hr class="dropdown-divider my-1"></li>
                 <?php if (($_SESSION['role_name'] ?? '') === 'siswa'): ?>
-                    <li><a class="dropdown-item py-2" href="/dapodik-spmb/siswa/edit?id=<?= htmlspecialchars($_SESSION['user_id'] ?? '') ?>"><i class="bi bi-person me-2 fs-7"></i>Profil Saya</a></li>
+                    <li><a class="dropdown-item py-2" href="/SINTA-SaaS/siswa/edit?id=<?= htmlspecialchars($_SESSION['user_id'] ?? '') ?>"><i class="bi bi-person me-2 fs-7"></i>Profil Saya</a></li>
                 <?php else: ?>
                     <li><a class="dropdown-item py-2" href="#" onclick="showSimulationAlert('Profil Saya'); return false;"><i class="bi bi-person me-2 fs-7"></i>Profil Saya</a></li>
                 <?php endif; ?>
                 <li><a class="dropdown-item py-2" href="#" onclick="showSimulationAlert('Keamanan'); return false;"><i class="bi bi-shield-lock me-2 fs-7"></i>Keamanan</a></li>
                 <li><hr class="dropdown-divider my-1"></li>
                 <li>
-                    <form action="<?= ($_SESSION['role_name'] ?? '') === 'siswa' ? '/dapodik-spmb/siswa/logout' : '/dapodik-spmb/api/v1/auth/logout' ?>" method="<?= ($_SESSION['role_name'] ?? '') === 'siswa' ? 'GET' : 'POST' ?>" class="m-0" id="logoutForm">
+                    <form action="<?= ($_SESSION['role_name'] ?? '') === 'siswa' ? '/SINTA-SaaS/siswa/logout' : '/SINTA-SaaS/api/v1/auth/logout' ?>" method="<?= ($_SESSION['role_name'] ?? '') === 'siswa' ? 'GET' : 'POST' ?>" class="m-0" id="logoutForm">
                         <button type="submit" class="dropdown-item py-2 text-danger fw-semibold d-flex align-items-center">
                             <i class="bi bi-box-arrow-right me-2 fs-7"></i>Keluar Aplikasi
                         </button>

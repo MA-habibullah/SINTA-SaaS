@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Controllers;
 
@@ -442,7 +442,7 @@ class SiswaController extends BaseController {
             // Clear draft session after successful creation
             unset($_SESSION['siswa_draft']);
 
-            $this->redirectWithSuccess('Data siswa berhasil ditambahkan.', '/dapodik-spmb/pengguna');
+            $this->redirectWithSuccess('Data siswa berhasil ditambahkan.', '/SINTA-SaaS/pengguna');
         } catch (\Throwable $e) {
             if ($db->inTransaction()) {
                 $db->rollBack();
@@ -454,7 +454,7 @@ class SiswaController extends BaseController {
                 }
             }
             error_log("Gagal tambah siswa: " . $e->getMessage());
-            $this->redirectWithError('Terjadi kegagalan sistem saat menyimpan data: ' . $e->getMessage(), '/dapodik-spmb/pengguna');
+            $this->redirectWithError('Terjadi kegagalan sistem saat menyimpan data: ' . $e->getMessage(), '/SINTA-SaaS/pengguna');
         }
     }
 
@@ -470,7 +470,7 @@ class SiswaController extends BaseController {
 
         $id = $_GET['id'] ?? '';
         if (empty($id)) {
-            $this->redirectWithError('ID siswa tidak valid.', '/dapodik-spmb/pengguna');
+            $this->redirectWithError('ID siswa tidak valid.', '/SINTA-SaaS/pengguna');
         }
 
         // Keamanan: Jika yang login adalah Siswa, hanya boleh edit datanya sendiri
@@ -483,7 +483,7 @@ class SiswaController extends BaseController {
 
         $siswa = $this->siswaModel->findFullById($id);
         if (!$siswa) {
-            $this->redirectWithError('Data siswa tidak ditemukan atau Anda tidak memiliki akses.', '/dapodik-spmb/pengguna');
+            $this->redirectWithError('Data siswa tidak ditemukan atau Anda tidak memiliki akses.', '/SINTA-SaaS/pengguna');
         }
 
         // Keamanan: Jika yang login adalah Siswa, dan status sudah Lulus/Pindah, kunci akses
@@ -492,15 +492,15 @@ class SiswaController extends BaseController {
             if ($statusDiDb === 'Lulus' || $statusDiDb === 'Pindah') {
                 http_response_code(403);
                 echo '<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><title>403 Data Dikunci</title>'
-                   . '<link href="/dapodik-spmb/assets/css/bootstrap.min.css" rel="stylesheet">'
+                   . '<link href="/SINTA-SaaS/assets/css/bootstrap.min.css" rel="stylesheet">'
                    . '</head><body class="bg-light d-flex align-items-center justify-content-center" style="min-height:100vh;">'
                    . '<div class="card shadow-sm p-5 text-center" style="max-width:480px;">'
                    . '<div class="text-warning fs-1 mb-3"><i class="bi bi-lock-fill"></i></div>'
                    . '<h4 class="fw-bold mb-2">Data Telah Dikunci</h4>'
                    . '<p class="text-muted">Akses ditolak. Data Anda telah dikunci oleh sistem (Status: ' . htmlspecialchars($statusDiDb) . '). Hubungi Admin Sekolah jika ada kesalahan data.</p>'
-                   . '<a href="/dapodik-spmb/dashboard" class="btn btn-primary mt-3">Kembali ke Dashboard</a>'
+                   . '<a href="/SINTA-SaaS/dashboard" class="btn btn-primary mt-3">Kembali ke Dashboard</a>'
                    . '</div>'
-                   . '<link href="/dapodik-spmb/assets/css/bootstrap-icons.css" rel="stylesheet">'
+                   . '<link href="/SINTA-SaaS/assets/css/bootstrap-icons.css" rel="stylesheet">'
                    . '</body></html>';
                 exit;
             }
@@ -537,12 +537,12 @@ class SiswaController extends BaseController {
      */
     public function update(): void {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->redirectWithError('Metode request tidak diizinkan.', '/dapodik-spmb/pengguna');
+            $this->redirectWithError('Metode request tidak diizinkan.', '/SINTA-SaaS/pengguna');
         }
 
         $id = $_POST['id'] ?? '';
         if (empty($id)) {
-            $this->redirectWithError('ID siswa tidak valid.', '/dapodik-spmb/pengguna');
+            $this->redirectWithError('ID siswa tidak valid.', '/SINTA-SaaS/pengguna');
         }
 
         // Keamanan: Jika yang login adalah Siswa, hanya boleh update datanya sendiri
@@ -555,7 +555,7 @@ class SiswaController extends BaseController {
 
         $siswa = $this->siswaModel->findById($id);
         if (!$siswa) {
-            $this->redirectWithError('Data siswa tidak ditemukan atau Anda tidak memiliki akses.', '/dapodik-spmb/pengguna');
+            $this->redirectWithError('Data siswa tidak ditemukan atau Anda tidak memiliki akses.', '/SINTA-SaaS/pengguna');
         }
 
         // ================================================================
@@ -585,15 +585,15 @@ class SiswaController extends BaseController {
                 http_response_code(403);
                 // Render halaman error informatif (tidak sekedar die())
                 echo '<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><title>403 Data Dikunci</title>'
-                   . '<link href="/dapodik-spmb/assets/css/bootstrap.min.css" rel="stylesheet">'
+                   . '<link href="/SINTA-SaaS/assets/css/bootstrap.min.css" rel="stylesheet">'
                    . '</head><body class="bg-light d-flex align-items-center justify-content-center" style="min-height:100vh;">'
                    . '<div class="card shadow-sm p-5 text-center" style="max-width:480px;">'
                    . '<div class="text-warning fs-1 mb-3"><i class="bi bi-lock-fill"></i></div>'
                    . '<h4 class="fw-bold mb-2">Data Telah Dikunci</h4>'
                    . '<p class="text-muted">' . htmlspecialchars($msg) . '</p>'
-                   . '<a href="/dapodik-spmb/dashboard" class="btn btn-primary mt-3">Kembali ke Dashboard</a>'
+                   . '<a href="/SINTA-SaaS/dashboard" class="btn btn-primary mt-3">Kembali ke Dashboard</a>'
                    . '</div>'
-                   . '<link href="/dapodik-spmb/assets/css/bootstrap-icons.css" rel="stylesheet">'
+                   . '<link href="/SINTA-SaaS/assets/css/bootstrap-icons.css" rel="stylesheet">'
                    . '</body></html>';
                 exit;
             }
@@ -727,7 +727,7 @@ class SiswaController extends BaseController {
                 exit;
             }
 
-            $this->redirectWithSuccess('Data siswa berhasil diperbarui.', '/dapodik-spmb/pengguna');
+            $this->redirectWithSuccess('Data siswa berhasil diperbarui.', '/SINTA-SaaS/pengguna');
 
         } catch (\Throwable $e) {
             if ($db->inTransaction()) {
@@ -752,7 +752,7 @@ class SiswaController extends BaseController {
             }
             $this->redirectWithError(
                 'Terjadi kegagalan sistem saat memperbarui data: ' . $e->getMessage(),
-                '/dapodik-spmb/pengguna'
+                '/SINTA-SaaS/pengguna'
             );
         }
     }
@@ -769,17 +769,17 @@ class SiswaController extends BaseController {
         }
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->redirectWithError('Metode request tidak diizinkan.', '/dapodik-spmb/pengguna');
+            $this->redirectWithError('Metode request tidak diizinkan.', '/SINTA-SaaS/pengguna');
         }
 
         $id = $_POST['id'] ?? '';
         if (empty($id)) {
-            $this->redirectWithError('ID siswa tidak valid.', '/dapodik-spmb/pengguna');
+            $this->redirectWithError('ID siswa tidak valid.', '/SINTA-SaaS/pengguna');
         }
 
         $siswa = $this->siswaModel->findById($id);
         if (!$siswa) {
-            $this->redirectWithError('Data siswa tidak ditemukan atau Anda tidak memiliki akses.', '/dapodik-spmb/pengguna');
+            $this->redirectWithError('Data siswa tidak ditemukan atau Anda tidak memiliki akses.', '/SINTA-SaaS/pengguna');
         }
 
         // Set tenant ID dinamis jika Super Admin
@@ -790,10 +790,10 @@ class SiswaController extends BaseController {
         try {
             $this->siswaModel->delete($id);
             \App\Helpers\ActivityLogger::record('DELETE', 'siswa', $id, $siswa, null);
-            $this->redirectWithSuccess('Data siswa berhasil dihapus.', '/dapodik-spmb/pengguna');
+            $this->redirectWithSuccess('Data siswa berhasil dihapus.', '/SINTA-SaaS/pengguna');
         } catch (\PDOException $e) {
             error_log("Gagal hapus siswa: " . $e->getMessage());
-            $this->redirectWithError('Terjadi kegagalan sistem saat menghapus data.', '/dapodik-spmb/pengguna');
+            $this->redirectWithError('Terjadi kegagalan sistem saat menghapus data.', '/SINTA-SaaS/pengguna');
         }
     }
 
@@ -1019,12 +1019,12 @@ class SiswaController extends BaseController {
     /**
      * Helper Redirect
      */
-    private function redirectWithError(string $msg, string $target = '/dapodik-spmb/pengguna'): void {
+    private function redirectWithError(string $msg, string $target = '/SINTA-SaaS/pengguna'): void {
         header("Location: {$target}?error=" . urlencode($msg));
         exit;
     }
 
-    private function redirectWithSuccess(string $msg, string $target = '/dapodik-spmb/pengguna'): void {
+    private function redirectWithSuccess(string $msg, string $target = '/SINTA-SaaS/pengguna'): void {
         header("Location: {$target}?success=" . urlencode($msg));
         exit;
     }

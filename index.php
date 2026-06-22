@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
@@ -40,8 +40,8 @@ App\Helpers\ErrorTracker::register();
 $request_uri = $_SERVER['REQUEST_URI'];
 $path = parse_url($request_uri, PHP_URL_PATH);
 
-// Bersihkan path dari sub-folder XAMPP (e.g. /dapodik-spmb/login -> /login)
-$project_folder = '/dapodik-spmb';
+// Bersihkan path dari sub-folder XAMPP (e.g. /SINTA-SaaS/login -> /login)
+$project_folder = '/SINTA-SaaS';
 if (str_starts_with($path, $project_folder)) {
     $path = substr($path, strlen($project_folder));
 }
@@ -57,7 +57,7 @@ try {
     if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true && ($_SESSION['role_name'] ?? '') === 'siswa') {
         $isFirstLogin = $_SESSION['is_first_login'] ?? false;
         if ($isFirstLogin && !in_array($path, ['/siswa/ubah-password', '/siswa/logout', '/api/v1/siswa/ubah-password'])) {
-            header('Location: /dapodik-spmb/siswa/ubah-password');
+            header('Location: /SINTA-SaaS/siswa/ubah-password');
             exit;
         }
     }
@@ -71,7 +71,7 @@ try {
             echo "<div style='font-family: sans-serif; text-align: center; padding: 50px;'>";
             echo "<h1 style='color: #dc3545; font-size: 2.5rem; margin-bottom: 15px;'>403 Fitur Belum Aktif / Silakan Upgrade Paket</h1>";
             echo "<p style='color: #6c757d; font-size: 1.1rem; line-height: 1.6;'>Menu fitur ini dinonaktifkan untuk sekolah Anda oleh Super Admin Platform. Silakan hubungi Administrator untuk upgrade paket fitur.</p>";
-            echo "<a href='/dapodik-spmb/dashboard' style='display: inline-block; margin-top: 25px; padding: 10px 20px; background-color: #0d6efd; color: #fff; text-decoration: none; border-radius: 5px; font-weight: 600;'>Kembali ke Dashboard</a>";
+            echo "<a href='/SINTA-SaaS/dashboard' style='display: inline-block; margin-top: 25px; padding: 10px 20px; background-color: #0d6efd; color: #fff; text-decoration: none; border-radius: 5px; font-weight: 600;'>Kembali ke Dashboard</a>";
             echo "</div>";
             exit;
         }
@@ -81,7 +81,7 @@ try {
         case '/login':
             // Jika sudah login sebagai siswa, langsung lempar ke dashboard
             if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true && ($_SESSION['role_name'] ?? '') === 'siswa') {
-                header('Location: /dapodik-spmb/dashboard');
+                header('Location: /SINTA-SaaS/dashboard');
                 exit;
             }
             $controller = new App\Controllers\AuthSiswaController();
@@ -89,13 +89,13 @@ try {
             break;
 
         case '/siswa/login':
-            header('Location: /dapodik-spmb/login');
+            header('Location: /SINTA-SaaS/login');
             exit;
 
         case '/admin':
             // Jika sudah login sebagai admin/super_admin, langsung lempar ke dashboard
             if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true && ($_SESSION['role_name'] ?? '') !== 'siswa') {
-                header('Location: /dapodik-spmb/dashboard');
+                header('Location: /SINTA-SaaS/dashboard');
                 exit;
             }
             $controller = new App\Controllers\AuthAdminController();
