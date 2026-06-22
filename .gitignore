@@ -1,0 +1,31 @@
+# Mengabaikan file konfigurasi database lokal & env
+.env
+app/Config/Database.php
+
+# Mengabaikan folder vendor dependensi backend & node
+/vendor/
+/node_modules/
+
+# Mengabaikan log sampah internal
+*.log
+
+# Mengabaikan folder upload dokumen siswa (SPO, KK, Ijazah) & tenant demi privasi data
+# Tetap lacak file .htaccess untuk keamanan direktori web server
+/storage/app/public/uploads/**/*
+!/storage/app/public/uploads/.htaccess
+/storage/uploads/**/*
+!/storage/uploads/.htaccess
+
+# Mengabaikan folder scratch untuk file debugging lokal
+/scratch/
+
+# Mengabaikan file sistem operasi
+.DS_Store
+Thumbs.db
+
+# Mengabaikan konfigurasi IDE editor lokal
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
