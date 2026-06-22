@@ -158,6 +158,20 @@ try {
             $controller->fetchDetailApi();
             break;
 
+        case '/api/v1/kurikulum':
+            $controller = new App\Controllers\KurikulumController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->store();
+            } else {
+                $controller->index();
+            }
+            break;
+
+        case '/api/v1/kurikulum/copy':
+            $controller = new App\Controllers\KurikulumController();
+            $controller->copyCurriculum();
+            break;
+
         case '/cetak-rapot':
             $controller = new App\Controllers\BukuIndukController();
             $controller->printRapot();
