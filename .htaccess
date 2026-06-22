@@ -1,6 +1,6 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteBase /dapodik-spmb/
+    RewriteBase /SINTA-SaaS/
 
     # Jangan mengarahkan request jika file atau direktori fisik memang ada di server
     RewriteCond %{REQUEST_FILENAME} !-f
