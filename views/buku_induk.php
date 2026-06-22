@@ -593,7 +593,9 @@
                                                max="100" 
                                                step="0.01" 
                                                class="form-control form-control-sm text-center fw-semibold border-0 bg-light-subtle py-1"
-                                               placeholder="-"
+                                               :placeholder="isReligionMismatch(student.agama, sub.nama_mapel) ? 'N/A' : '-'"
+                                               :disabled="isReligionMismatch(student.agama, sub.nama_mapel)"
+                                               :class="{'bg-secondary-subtle text-muted': isReligionMismatch(student.agama, sub.nama_mapel)}"
                                                v-model.number="nilaiRapor.grades[student.id][sub.mapel_id]">
                                     </td>
                                 </tr>
@@ -1782,6 +1784,57 @@
                     text: 'Menghubungkan ke printer kartu sekolah... (Simulasi)',
                     confirmButtonText: 'Tutup'
                 });
+            },
+            isReligionMismatch(studentReligion, subjectName) {
+                if (!subjectName) return false;
+                const subjLower = subjectName.toLowerCase();
+                
+                // If it's not a religion subject, it's general
+                if (subjLower.indexOf('agama') === -1 && subjLower.indexOf('keagamaan') === -1) {
+                    return false;
+                }
+
+                const religions = {
+                    islam: ['islam'],
+                    kristen: ['kristen', 'protestan'],
+                    katolik: ['katolik'],
+                    hindu: ['hindu'],
+                    buddha: ['buddha', 'budha'],
+                    konghucu: ['khonghucu', 'konghucu']
+                };
+
+                // Find subject religion key
+                let subjectReligionKey = null;
+                for (const [key, keywords] of Object.entries(religions)) {
+                    for (const kw of keywords) {
+                        if (subjLower.indexOf(kw) !== -1) {
+                            subjectReligionKey = key;
+                            break;
+                        }
+                    }
+                    if (subjectReligionKey) break;
+                }
+
+                // If not matched to any specific religion, assume general religion course
+                if (!subjectReligionKey) return false;
+
+                // Normalize student religion
+                if (!studentReligion) return false;
+                const studLower = studentReligion.toLowerCase().trim();
+
+                // Find student religion key
+                let studentReligionKey = null;
+                for (const [key, keywords] of Object.entries(religions)) {
+                    for (const kw of keywords) {
+                        if (studLower.indexOf(kw) !== -1) {
+                            studentReligionKey = key;
+                            break;
+                        }
+                    }
+                    if (studentReligionKey) break;
+                }
+
+                return studentReligionKey !== subjectReligionKey;
             }
         }
     });

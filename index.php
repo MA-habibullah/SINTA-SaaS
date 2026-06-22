@@ -46,6 +46,11 @@ if (strncasecmp($path, $project_folder, strlen($project_folder)) === 0) {
     $path = substr($path, strlen($project_folder));
 }
 
+if (str_starts_with($path, '/api/')) {
+    $logMsg = date('Y-m-d H:i:s') . " - " . $_SERVER['REQUEST_METHOD'] . " - " . $path . " - GET: " . json_encode($_GET) . " - POST: " . json_encode($_POST) . " - INPUT: " . file_get_contents('php://input') . "\n";
+    @file_put_contents(__DIR__ . '/scratch/api_requests.log', $logMsg, FILE_APPEND);
+}
+
 // Standardisasi path kosong atau slash saja
 if (empty($path) || $path === '/') {
     $path = '/login';

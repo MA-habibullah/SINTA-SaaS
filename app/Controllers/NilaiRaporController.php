@@ -73,7 +73,7 @@ class NilaiRaporController extends BaseController {
         $subjects = $stmtMapel->fetchAll(PDO::FETCH_ASSOC);
 
         // 2. Get students in this class
-        $qSiswa = "SELECT s.id, s.nama_lengkap, s.nisn, s.nis
+        $qSiswa = "SELECT s.id, s.nama_lengkap, s.nisn, s.nis, s.agama
                    FROM siswa s
                    WHERE s.id_kelas = :kelas_id
                      AND s.tenant_id = :tenant_id
@@ -158,6 +158,38 @@ class NilaiRaporController extends BaseController {
             $this->jsonResponse(['status' => 'error', 'message' => 'Tenant ID tidak terdeteksi.'], 400);
             return;
         }
+
+        // Fetch student religion mapping for validation
+        $qSiswaList = "SELECT id, agama FROM siswa WHERE id_kelas = :kelas_id AND tenant_id = :tenant_id AND status = 'Aktif' AND deleted_at IS NULL";
+        $stmtSiswaList = $db->prepare($qSiswaList);
+        $stmtSiswaList->execute(['kelas_id' => $kelasId, 'tenant_id' => $tenantId]);
+        $studentsMap = [];
+        foreach ($stmtSiswaList->fetchAll(PDO::FETCH_ASSOC) as $s) {
+            $studentsMap[$s['id']] = $s['agama'] ?? null;
+        }
+
+        // Fetch subject names mapping for validation
+        $qMapelNames = "SELECT DISTINCT p.mapel_id, m.nama_mapel 
+                        FROM pemetaan_mapel p
+                        JOIN mata_pelajaran m ON p.mapel_id = m.id
+                        WHERE p.kelas_id = :kelas_id 
+                          AND p.tahun_ajaran = :tahun_ajaran 
+                          AND p.semester = :semester
+                          AND p.tenant_id = :tenant_id
+                          AND p.deleted_at IS NULL
+                          AND m.deleted_at IS NULL";
+        $stmtMapelNames = $db->prepare($qMapelNames);
+        $stmtMapelNames->execute([
+            'kelas_id' => $kelasId,
+            'tahun_ajaran' => $tahunAjaran,
+            'semester' => $semester,
+            'tenant_id' => $tenantId
+        ]);
+        $subjectsMap = [];
+        foreach ($stmtMapelNames->fetchAll(PDO::FETCH_ASSOC) as $sub) {
+            $subjectsMap[$sub['mapel_id']] = $sub['nama_mapel'];
+        }
+
         $db->beginTransaction();
         try {
             $stmtUpsert = $db->prepare("
@@ -177,6 +209,13 @@ class NilaiRaporController extends BaseController {
 
                 if (empty($sId) || empty($mId)) {
                     continue;
+                }
+
+                // Check for student-subject religion mismatch
+                $studentReligion = $studentsMap[$sId] ?? null;
+                $mapelName = $subjectsMap[$mId] ?? '';
+                if ($this->isReligionSubjectMismatch($studentReligion, $mapelName)) {
+                    continue; // Skip saving grade if there is a religion mismatch
                 }
 
                 $stmtUpsert->execute([
@@ -254,7 +293,7 @@ class NilaiRaporController extends BaseController {
         $subjects = $stmtMapel->fetchAll(PDO::FETCH_ASSOC);
 
         // 2. Get students
-        $qSiswa = "SELECT s.id, s.nama_lengkap, s.nisn, s.nis
+        $qSiswa = "SELECT s.id, s.nama_lengkap, s.nisn, s.nis, s.agama
                    FROM siswa s
                    WHERE s.id_kelas = :kelas_id
                      AND s.tenant_id = :tenant_id
@@ -309,14 +348,22 @@ class NilaiRaporController extends BaseController {
 
         // Build rows
         foreach ($students as $stu) {
+            $nisnVal = $stu['nisn'] ?: $stu['nis'] ?: '-';
+            if ($nisnVal !== '-' && strpos($nisnVal, "'") !== 0) {
+                $nisnVal = "'" . $nisnVal;
+            }
             $row = [
                 $stu['id'],
-                $stu['nisn'] ?: $stu['nis'] ?: '-',
+                $nisnVal,
                 $stu['nama_lengkap']
             ];
             foreach ($subjects as $sub) {
-                $val = $gradesMatrix[$stu['id']][$sub['mapel_id']] ?? '';
-                $row[] = $val !== '' ? $val : '';
+                if ($this->isReligionSubjectMismatch($stu['agama'] ?? null, $sub['nama_mapel'])) {
+                    $row[] = 'N/A';
+                } else {
+                    $val = $gradesMatrix[$stu['id']][$sub['mapel_id']] ?? '';
+                    $row[] = $val !== '' ? $val : '';
+                }
             }
             fputcsv($output, $row);
         }
@@ -421,11 +468,41 @@ class NilaiRaporController extends BaseController {
         }
 
         $db = \App\Config\Database::getConnection();
-        $db->beginTransaction();
 
+        // Fetch student religion mapping for validation
+        $qSiswaList = "SELECT id, agama FROM siswa WHERE id_kelas = :kelas_id AND tenant_id = :tenant_id AND status = 'Aktif' AND deleted_at IS NULL";
+        $stmtSiswaList = $db->prepare($qSiswaList);
+        $stmtSiswaList->execute(['kelas_id' => $kelasId, 'tenant_id' => $tenantId]);
+        $studentsMap = [];
+        foreach ($stmtSiswaList->fetchAll(PDO::FETCH_ASSOC) as $s) {
+            $studentsMap[$s['id']] = $s['agama'] ?? null;
+        }
+
+        // Fetch subject names mapping for validation
+        $qMapelNames = "SELECT DISTINCT p.mapel_id, m.nama_mapel 
+                        FROM pemetaan_mapel p
+                        JOIN mata_pelajaran m ON p.mapel_id = m.id
+                        WHERE p.kelas_id = :kelas_id 
+                          AND p.tahun_ajaran = :tahun_ajaran 
+                          AND p.semester = :semester
+                          AND p.tenant_id = :tenant_id
+                          AND p.deleted_at IS NULL
+                          AND m.deleted_at IS NULL";
+        $stmtMapelNames = $db->prepare($qMapelNames);
+        $stmtMapelNames->execute([
+            'kelas_id' => $kelasId,
+            'tahun_ajaran' => $tahunAjaran,
+            'semester' => $semester,
+            'tenant_id' => $tenantId
+        ]);
+        $subjectsMap = [];
+        foreach ($stmtMapelNames->fetchAll(PDO::FETCH_ASSOC) as $sub) {
+            $subjectsMap[$sub['mapel_id']] = $sub['nama_mapel'];
+        }
+
+        $db->beginTransaction();
         $rowCount = 0;
         $successCount = 0;
-        
         try {
             $stmtUpsert = $db->prepare("
                 INSERT INTO detail_nilai_rapor 
@@ -451,7 +528,18 @@ class NilaiRaporController extends BaseController {
                 // Loop through subject columns and insert values
                 foreach ($mapelCols as $idx => $mapelId) {
                     $rawVal = isset($row[$idx]) ? trim($row[$idx]) : '';
-                    $val = $rawVal !== '' ? (float)$rawVal : null;
+                    if ($rawVal === 'N/A' || $rawVal === 'n/a' || $rawVal === '') {
+                        continue; // Skip N/A or empty values
+                    }
+
+                    // Check for religion mismatch
+                    $studentReligion = $studentsMap[$siswaId] ?? null;
+                    $mapelName = $subjectsMap[$mapelId] ?? '';
+                    if ($this->isReligionSubjectMismatch($studentReligion, $mapelName)) {
+                        continue; // Skip mismatched religion subjects
+                    }
+
+                    $val = (float)$rawVal;
 
                     $stmtUpsert->execute([
                         'tenant_id' => $tenantId,
@@ -473,7 +561,53 @@ class NilaiRaporController extends BaseController {
             fclose($handle);
             $db->rollBack();
             error_log("Failed importing grades: " . $e->getMessage());
-            $this->jsonResponse(['error' => 'Gagal mengimpor nilai: ' . $e->getMessage()], 500);
         }
+    }
+
+    private function isReligionSubjectMismatch(?string $studentReligion, string $subjectName): bool {
+        $subjectNameLower = strtolower($subjectName);
+        if (strpos($subjectNameLower, 'agama') === false && strpos($subjectNameLower, 'keagamaan') === false) {
+            return false;
+        }
+
+        $religions = [
+            'islam' => ['islam'],
+            'kristen' => ['kristen', 'protestan'],
+            'katolik' => ['katolik'],
+            'hindu' => ['hindu'],
+            'buddha' => ['buddha', 'budha'],
+            'konghucu' => ['khonghucu', 'konghucu']
+        ];
+
+        $subjectReligionKey = null;
+        foreach ($religions as $key => $keywords) {
+            foreach ($keywords as $keyword) {
+                if (strpos($subjectNameLower, $keyword) !== false) {
+                    $subjectReligionKey = $key;
+                    break 2;
+                }
+            }
+        }
+
+        if ($subjectReligionKey === null) {
+            return false;
+        }
+
+        if (empty($studentReligion)) {
+            return false;
+        }
+        
+        $studentReligionLower = strtolower(trim($studentReligion));
+        $studentReligionKey = null;
+        foreach ($religions as $key => $keywords) {
+            foreach ($keywords as $keyword) {
+                if (strpos($studentReligionLower, $keyword) !== false) {
+                    $studentReligionKey = $key;
+                    break 2;
+                }
+            }
+        }
+
+        return $studentReligionKey !== $subjectReligionKey;
     }
 }
