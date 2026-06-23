@@ -192,9 +192,9 @@ if (!empty($roles)) {
                                             $activeClass = $isActive($child['url']);
                                         ?>
                                             <li class="nav-item">
-                                                <a href="<?= htmlspecialchars($child['url'] ?? '#') ?>" class="nav-link-item py-1.5 <?= $activeClass ?>"
+                                                <a href="<?= htmlspecialchars($child['url'] ?? '#') ?>" class="nav-link-item <?= $activeClass ?>"
                                                    <?= ($child['url'] === '#' || empty($child['url'])) ? 'onclick="showSimulationAlert(\'' . htmlspecialchars($child['nama_menu'], ENT_QUOTES, 'UTF-8') . '\'); return false;"' : '' ?>>
-                                                    <i class="<?= htmlspecialchars($child['icon'] ?? 'bi bi-circle') ?> fs-8"></i>
+                                                    <i class="<?= htmlspecialchars($child['icon'] ?? 'bi bi-circle') ?>"></i>
                                                     <span class="nav-label"><?= htmlspecialchars($child['nama_menu']) ?></span>
                                                 </a>
                                             </li>
@@ -234,21 +234,9 @@ if (!empty($roles)) {
                     .collapse {
                         visibility: visible !important;
                     }
-                    
+
                     .nav-link-item[aria-expanded="true"] .arrow-icon {
                         transform: rotate(180deg);
-                    }
-                    /* Gaya font sub-menu (13px) */
-                    #sidebar .collapse .nav-link-item {
-                        font-size: 0.8125rem; /* ~13px */
-                        padding-top: 0.4rem;
-                        padding-bottom: 0.4rem;
-                    }
-                    /* Efek penyeimbang ukuran teks di mobile */
-                    @media (max-width: 991.98px) {
-                        #sidebar .collapse .nav-link-item {
-                            font-size: 0.85rem;
-                        }
                     }
                 </style>
 
