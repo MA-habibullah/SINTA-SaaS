@@ -264,9 +264,10 @@ class BukuIndukController extends BaseController {
         // Dapatkan data headmaster (nama_kepsek & nip_kepsek) dari tenants
         try {
             $db = \App\Config\Database::getConnection();
-            $stmtTenant = $db->prepare("SELECT nama_kepsek, nip_kepsek, pangkat_kepsek FROM tenants WHERE id = ?");
+            $stmtTenant = $db->prepare("SELECT nama_sekolah, nama_kepsek, nip_kepsek, pangkat_kepsek FROM tenants WHERE id = ?");
             $stmtTenant->execute([$siswa['tenant_id']]);
             $tenantInfo = $stmtTenant->fetch(PDO::FETCH_ASSOC);
+            $siswa['nama_sekolah'] = $tenantInfo['nama_sekolah'] ?? '-';
             $siswa['nama_kepsek'] = $tenantInfo['nama_kepsek'] ?? '-';
             $siswa['nip_kepsek'] = $tenantInfo['nip_kepsek'] ?? '-';
             $siswa['pangkat_kepsek'] = $tenantInfo['pangkat_kepsek'] ?? '';
@@ -358,9 +359,10 @@ class BukuIndukController extends BaseController {
 
             // Dapatkan data headmaster (nama_kepsek & nip_kepsek) dari tenants
             try {
-                $stmtTenant = $db->prepare("SELECT nama_kepsek, nip_kepsek, pangkat_kepsek FROM tenants WHERE id = ?");
+                $stmtTenant = $db->prepare("SELECT nama_sekolah, nama_kepsek, nip_kepsek, pangkat_kepsek FROM tenants WHERE id = ?");
                 $stmtTenant->execute([$siswa['tenant_id']]);
                 $tenantInfo = $stmtTenant->fetch(PDO::FETCH_ASSOC);
+                $siswa['nama_sekolah'] = $tenantInfo['nama_sekolah'] ?? '-';
                 $siswa['nama_kepsek'] = $tenantInfo['nama_kepsek'] ?? '-';
                 $siswa['nip_kepsek'] = $tenantInfo['nip_kepsek'] ?? '-';
                 $siswa['pangkat_kepsek'] = $tenantInfo['pangkat_kepsek'] ?? '';

@@ -189,12 +189,43 @@
         .btn-print:hover {
             background-color: #1d4ed8;
         }
+        .watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-35deg);
+            font-size: 24pt;
+            color: rgba(220, 220, 220, 0.18);
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            z-index: -1000;
+            pointer-events: none;
+            white-space: nowrap;
+            text-align: center;
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        }
+        .watermark-footer {
+            position: fixed;
+            bottom: 0.5cm;
+            left: 0;
+            right: 0;
+            font-size: 8pt;
+            color: #aaa;
+            text-align: center;
+            font-family: sans-serif;
+            z-index: 1000;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
     <div class="print-btn-container no-print">
         <button class="btn-print" onclick="window.print()"><i class="bi bi-printer"></i> Cetak Semua Halaman</button>
     </div>
+    
+    <div class="watermark">RAHASIA & TERBATAS • <?= htmlspecialchars($studentsData[0]['nama_sekolah'] ?? '-') ?></div>
+    <div class="watermark-footer">Dokumen resmi Buku Induk | Dicetak oleh: <?= htmlspecialchars($_SESSION['nama_lengkap'] ?? 'System') ?> (<?= htmlspecialchars($_SESSION['role_name'] ?? 'Staff') ?>) pada <?= date('d-m-Y H:i:s') ?></div>
     
     <?php foreach ($studentsData as $siswa): ?>
     <div class="page">
