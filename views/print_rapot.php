@@ -6,7 +6,7 @@
     <style>
         @page {
             size: A4 portrait;
-            margin: 2.5cm;
+            margin: 2.0cm 2.2cm;
         }
         body {
             font-family: "Times New Roman", Times, serif;
@@ -35,7 +35,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 0.5cm;
+            margin-bottom: 0.6cm;
             page-break-inside: avoid;
             break-inside: avoid;
         }
@@ -44,7 +44,7 @@
             break-inside: avoid;
         }
         td {
-            padding: 1px 0;
+            padding: 3.5px 0;
             vertical-align: top;
         }
         .col-num {
@@ -65,7 +65,7 @@
         }
         .footer-section {
             width: 100%;
-            margin-top: 0.4cm;
+            margin-top: 0.6cm;
             display: table;
             table-layout: fixed;
             page-break-inside: avoid;
@@ -73,14 +73,14 @@
         }
         .signature-left {
             display: table-cell;
-            width: 35%;
+            width: 20%;
             text-align: left;
             vertical-align: top;
         }
         .photo-cell {
             display: table-cell;
-            width: 30%;
-            text-align: center;
+            width: 25%;
+            text-align: left;
             vertical-align: middle;
         }
         .photo-box {
@@ -136,7 +136,7 @@
         }
         .signature-right {
             display: table-cell;
-            width: 35%;
+            width: 55%;
             text-align: right;
             vertical-align: top;
         }
@@ -144,6 +144,7 @@
             display: inline-block;
             text-align: left;
             min-width: 200px;
+            white-space: nowrap;
         }
         .signature-space {
             height: 1.8cm;
@@ -197,256 +198,295 @@
             IDENTITAS PESERTA DIDIK
         </div>
         
+        <?php
+        // 1. Nama Lengkap Peserta Didik
+        $namaLengkap = $siswa['nama_lengkap'] ?? '';
+
+        // 2. Nomor Induk/NISN
+        $nis = !empty($siswa['nis']) ? trim($siswa['nis']) : '';
+        $nisn = !empty($siswa['nisn']) ? trim($siswa['nisn']) : '';
+        if ($nis !== '' && $nisn !== '') {
+            $nomorIndukNisn = $nis . '/ ' . $nisn;
+        } elseif ($nis !== '') {
+            $nomorIndukNisn = $nis;
+        } elseif ($nisn !== '') {
+            $nomorIndukNisn = $nisn;
+        } else {
+            $nomorIndukNisn = '-';
+        }
+
+        // 3. Tempat, Tanggal Lahir
+        $tempatLahir = !empty($siswa['tempat_lahir']) ? trim($siswa['tempat_lahir']) : '';
+        $tanggalLahirStr = '';
+        if (!empty($siswa['tanggal_lahir'])) {
+            $d = new DateTime($siswa['tanggal_lahir']);
+            $months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            $tanggalLahirStr = $d->format('d') . ' ' . $months[$d->format('n') - 1] . ' ' . $d->format('Y');
+        }
+        $tempatTanggalLahir = '-';
+        if ($tempatLahir !== '' && $tanggalLahirStr !== '') {
+            $tempatTanggalLahir = $tempatLahir . ', ' . $tanggalLahirStr;
+        } elseif ($tempatLahir !== '') {
+            $tempatTanggalLahir = $tempatLahir;
+        } elseif ($tanggalLahirStr !== '') {
+            $tempatTanggalLahir = $tanggalLahirStr;
+        }
+
+        // 4. Jenis Kelamin
+        $jenisKelamin = ($siswa['jenis_kelamin'] ?? '') === 'L' ? 'Laki-laki' : 'Perempuan';
+
+        // 5. Agama
+        $agama = $siswa['agama'] ?? '-';
+
+        // 6. Status dalam Keluarga
+        $statusDalamKeluarga = $siswa['status_anak'] ?? '-';
+
+        // 7. Anak ke
+        $anakKe = $siswa['anak_ke'] ?? '-';
+
+        // 8. Alamat Peserta Didik
+        $alamatFull = $siswa['alamat_kk'] ?? $siswa['alamat'] ?? '';
+        if (!empty($siswa['rt']) || !empty($siswa['rw'])) {
+            $alamatFull .= ' RT. ' . ($siswa['rt'] ?: '00') . ' RW. ' . ($siswa['rw'] ?: '00');
+        }
+        $alamatExtra = [];
+        if (!empty($siswa['nama_kelurahan'])) {
+            $alamatExtra[] = 'Kel. ' . $siswa['nama_kelurahan'];
+        }
+        if (!empty($siswa['nama_kecamatan'])) {
+            $alamatExtra[] = 'Kec. ' . $siswa['nama_kecamatan'];
+        }
+        $alamatExtraStr = implode(' ', $alamatExtra);
+        if (!empty($siswa['nama_kota'])) {
+            if (!empty($alamatExtraStr)) {
+                $alamatExtraStr .= '-' . $siswa['nama_kota'];
+            } else {
+                $alamatExtraStr = $siswa['nama_kota'];
+            }
+        }
+        if (!empty($siswa['nama_provinsi'])) {
+            $alamatExtraStr .= ', ' . $siswa['nama_provinsi'];
+        }
+        if (!empty($alamatExtraStr)) {
+            $alamatFull .= ' ' . $alamatExtraStr;
+        }
+        if (empty($alamatFull)) {
+            $alamatFull = '-';
+        }
+
+        // 9. Nomor Telepon Rumah (Siswa)
+        $noTelpSiswa = $siswa['no_telepon_rumah'] ?? $siswa['no_telepon_siswa'] ?? '';
+        if (empty($noTelpSiswa)) {
+            $noTelpSiswa = '-';
+        }
+
+        // 10. Sekolah Asal
+        $sekolahAsal = $siswa['sekolah_asal'] ?? '-';
+
+        // 11. Diterima di sekolah ini
+        // a. Di kelas
+        $diterimaDiKelas = $siswa['nama_kelas'] ?? '-';
+        // b. Pada tanggal
+        $diterimaTanggal = '-';
+        if (!empty($siswa['tanggal_masuk'])) {
+            $d = new DateTime($siswa['tanggal_masuk']);
+            $months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            $diterimaTanggal = $d->format('d') . ' ' . $months[$d->format('n') - 1] . ' ' . $d->format('Y');
+        }
+
+        // Parents Info
+        $namaAyah = $siswa['nama_ayah'] ?? '';
+        $namaIbu = $siswa['nama_ibu'] ?? '';
+
+        // 13. Alamat Orang Tua
+        $alamatOrangTua = $alamatFull;
+
+        // 14. Nomor Telepon Rumah (Orang Tua)
+        $noTelpOrangTua = $siswa['no_telepon_orang_tua'] ?? '';
+        if (empty($noTelpOrangTua)) {
+            $noTelpOrangTua = '-';
+        }
+
+        // 15. Pekerjaan Orang Tua
+        $pekerjaanAyah = $siswa['pekerjaan_ayah'] ?? '';
+        $pekerjaanIbu = $siswa['pekerjaan_ibu'] ?? '';
+
+        // Guardian Info
+        $hasWali = !empty($siswa['nama_wali']) && $siswa['nama_wali'] !== '-';
+        $namaWali = $hasWali ? $siswa['nama_wali'] : '-';
+        $alamatWali = $hasWali ? $alamatFull : '-';
+        $noTelpWali = $hasWali ? ($siswa['kontak_wali'] ?? '-') : '-';
+        $pekerjaanWali = $hasWali ? ($siswa['pekerjaan_wali'] ?? '-') : '-';
+        ?>
         <table>
             <tr>
                 <td class="col-num">1.</td>
-                <td class="col-label">Nama Lengkap</td>
+                <td class="col-label">Nama Lengkap Peserta Didik</td>
                 <td class="col-colon">:</td>
-                <td class="col-val bold"><?= htmlspecialchars($siswa['nama_lengkap']) ?></td>
+                <td class="col-val bold"><?= htmlspecialchars($namaLengkap) ?></td>
             </tr>
             <tr>
                 <td class="col-num">2.</td>
-                <td class="col-label">NIS</td>
+                <td class="col-label">Nomor Induk/NISN</td>
                 <td class="col-colon">:</td>
-                <td class="col-val"><?= htmlspecialchars($siswa['nis'] ?? '') ?></td>
+                <td class="col-val"><?= htmlspecialchars($nomorIndukNisn) ?></td>
             </tr>
             <tr>
                 <td class="col-num">3.</td>
-                <td class="col-label">NISN</td>
+                <td class="col-label">Tempat, Tanggal Lahir</td>
                 <td class="col-colon">:</td>
-                <td class="col-val"><?= htmlspecialchars($siswa['nisn'] ?? '') ?></td>
+                <td class="col-val"><?= htmlspecialchars($tempatTanggalLahir) ?></td>
             </tr>
             <tr>
                 <td class="col-num">4.</td>
-                <td class="col-label">Tempat, Tanggal lahir</td>
+                <td class="col-label">Jenis Kelamin</td>
                 <td class="col-colon">:</td>
-                <td class="col-val">
-                    <?= htmlspecialchars($siswa['tempat_lahir'] ?? '-') ?>, 
-                    <?php
-                    if (!empty($siswa['tanggal_lahir'])) {
-                        $d = new DateTime($siswa['tanggal_lahir']);
-                        $months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-                        echo $d->format('d') . ' ' . $months[$d->format('n') - 1] . ' ' . $d->format('Y');
-                    } else {
-                        echo '-';
-                    }
-                    ?>
-                </td>
+                <td class="col-val"><?= htmlspecialchars($jenisKelamin) ?></td>
             </tr>
             <tr>
                 <td class="col-num">5.</td>
-                <td class="col-label">Jenis Kelamin</td>
+                <td class="col-label">Agama</td>
                 <td class="col-colon">:</td>
-                <td class="col-val"><?= $siswa['jenis_kelamin'] === 'L' ? 'Laki-laki' : 'Perempuan' ?></td>
+                <td class="col-val"><?= htmlspecialchars($agama) ?></td>
             </tr>
             <tr>
                 <td class="col-num">6.</td>
-                <td class="col-label">Agama</td>
+                <td class="col-label">Status dalam Keluarga</td>
                 <td class="col-colon">:</td>
-                <td class="col-val"><?= htmlspecialchars($siswa['agama'] ?? '-') ?></td>
+                <td class="col-val"><?= htmlspecialchars($statusDalamKeluarga) ?></td>
             </tr>
             <tr>
                 <td class="col-num">7.</td>
-                <td class="col-label">Status dalam Keluarga</td>
+                <td class="col-label">Anak ke</td>
                 <td class="col-colon">:</td>
-                <td class="col-val"><?= htmlspecialchars($siswa['status_anak'] ?? '-') ?></td>
+                <td class="col-val"><?= htmlspecialchars($anakKe) ?></td>
             </tr>
             <tr>
                 <td class="col-num">8.</td>
-                <td class="col-label">Anak ke</td>
+                <td class="col-label">Alamat Peserta Didik</td>
                 <td class="col-colon">:</td>
-                <td class="col-val"><?= htmlspecialchars($siswa['anak_ke'] ?? '1') ?></td>
+                <td class="col-val"><?= htmlspecialchars($alamatFull) ?></td>
             </tr>
             <tr>
                 <td class="col-num">9.</td>
-                <td class="col-label">Alamat</td>
+                <td class="col-label">Nomor Telepon Rumah</td>
                 <td class="col-colon">:</td>
-                <td class="col-val">
-                    <?php
-                    $alamatFull = $siswa['alamat_kk'] ?? $siswa['alamat'] ?? '';
-                    if (!empty($siswa['rt']) || !empty($siswa['rw'])) {
-                        $alamatFull .= ' RT. ' . ($siswa['rt'] ?: '00') . ' RW. ' . ($siswa['rw'] ?: '00');
-                    }
-                    if (!empty($siswa['nama_kelurahan'])) {
-                        $alamatFull .= ', Kel. ' . $siswa['nama_kelurahan'];
-                    }
-                    if (!empty($siswa['nama_kecamatan'])) {
-                        $alamatFull .= ', Kec. ' . $siswa['nama_kecamatan'];
-                    }
-                    if (!empty($siswa['nama_kota'])) {
-                        $alamatFull .= ', ' . $siswa['nama_kota'];
-                    }
-                    if (!empty($siswa['nama_provinsi'])) {
-                        $alamatFull .= ', Prov. ' . $siswa['nama_provinsi'];
-                    }
-                    echo htmlspecialchars($alamatFull ?: '-');
-                    ?>
-                </td>
+                <td class="col-val"><?= htmlspecialchars($noTelpSiswa) ?></td>
             </tr>
             <tr>
                 <td class="col-num">10.</td>
-                <td class="col-label">Nomor Telepon Rumah</td>
+                <td class="col-label">Sekolah Asal</td>
                 <td class="col-colon">:</td>
-                <td class="col-val"><?= htmlspecialchars($siswa['no_telepon_rumah'] ?? $siswa['no_telepon_siswa'] ?? '-') ?></td>
+                <td class="col-val"><?= htmlspecialchars($sekolahAsal) ?></td>
             </tr>
             <tr>
                 <td class="col-num">11.</td>
-                <td class="col-label">Sekolah Asal (SMP/MTs)</td>
+                <td class="col-label">Diterima di sekolah ini</td>
                 <td class="col-colon">:</td>
-                <td class="col-val"><?= htmlspecialchars($siswa['sekolah_asal'] ?? '-') ?></td>
+                <td class="col-val"></td>
+            </tr>
+            <tr>
+                <td class="col-num"></td>
+                <td class="col-label sub-row">Di kelas</td>
+                <td class="col-colon">:</td>
+                <td class="col-val"><?= htmlspecialchars($diterimaDiKelas) ?></td>
+            </tr>
+            <tr>
+                <td class="col-num"></td>
+                <td class="col-label sub-row">Pada tanggal</td>
+                <td class="col-colon">:</td>
+                <td class="col-val"><?= htmlspecialchars($diterimaTanggal) ?></td>
             </tr>
             <tr>
                 <td class="col-num">12.</td>
-                <td class="col-label">Diterima di sekolah ini</td>
+                <td class="col-label">Nama Orang Tua</td>
                 <td class="col-colon"></td>
                 <td class="col-val"></td>
             </tr>
             <tr>
                 <td class="col-num"></td>
-                <td class="col-label sub-row">a. Di kelas</td>
+                <td class="col-label sub-row">a. Ayah</td>
                 <td class="col-colon">:</td>
-                <td class="col-val"><?= htmlspecialchars($siswa['nama_kelas'] ?? '-') ?></td>
+                <td class="col-val"><?= htmlspecialchars($namaAyah ?: '-') ?></td>
             </tr>
             <tr>
                 <td class="col-num"></td>
-                <td class="col-label sub-row">b. Pada Tanggal</td>
+                <td class="col-label sub-row">b. Ibu</td>
                 <td class="col-colon">:</td>
-                <td class="col-val">
-                    <?php
-                    if (!empty($siswa['tanggal_masuk'])) {
-                        $d = new DateTime($siswa['tanggal_masuk']);
-                        $months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-                        echo $d->format('d') . ' ' . $months[$d->format('n') - 1] . ' ' . $d->format('Y');
-                    } else {
-                        echo '-';
-                    }
-                    ?>
-                </td>
+                <td class="col-val"><?= htmlspecialchars($namaIbu ?: '-') ?></td>
             </tr>
             <tr>
                 <td class="col-num">13.</td>
-                <td class="col-label">Orang Tua</td>
-                <td class="col-colon"></td>
-                <td class="col-val"></td>
-            </tr>
-            <tr>
-                <td class="col-num"></td>
-                <td class="col-label sub-row">a. Nama Ayah</td>
+                <td class="col-label">Alamat Orang Tua</td>
                 <td class="col-colon">:</td>
-                <td class="col-val bold"><?= htmlspecialchars($siswa['nama_ayah'] ?? '-') ?></td>
-            </tr>
-            <tr>
-                <td class="col-num"></td>
-                <td class="col-label sub-row">b. Pekerjaan</td>
-                <td class="col-colon">:</td>
-                <td class="col-val"><?= htmlspecialchars($siswa['pekerjaan_ayah'] ?? '-') ?></td>
-            </tr>
-            <tr>
-                <td class="col-num"></td>
-                <td class="col-label sub-row">c. Nomor Telepon/HP</td>
-                <td class="col-colon">:</td>
-                <td class="col-val"><?= htmlspecialchars($siswa['no_telepon_orang_tua'] ?? '-') ?></td>
-            </tr>
-            <tr>
-                <td class="col-num"></td>
-                <td class="col-label sub-row">d. Alamat</td>
-                <td class="col-colon">:</td>
-                <td class="col-val"><?= htmlspecialchars($siswa['alamat_kk'] ?? $siswa['alamat'] ?? '-') ?></td>
-            </tr>
-            <tr>
-                <td class="col-num"></td>
-                <td class="col-label sub-row">e. Nama Ibu</td>
-                <td class="col-colon">:</td>
-                <td class="col-val bold"><?= htmlspecialchars($siswa['nama_ibu'] ?? '-') ?></td>
-            </tr>
-            <tr>
-                <td class="col-num"></td>
-                <td class="col-label sub-row">f. Pekerjaan</td>
-                <td class="col-colon">:</td>
-                <td class="col-val"><?= htmlspecialchars($siswa['pekerjaan_ibu'] ?? '-') ?></td>
-            </tr>
-            <tr>
-                <td class="col-num"></td>
-                <td class="col-label sub-row">g. Nomor Telepon/HP</td>
-                <td class="col-colon">:</td>
-                <td class="col-val"><?= htmlspecialchars($siswa['no_telepon_orang_tua'] ?? '-') ?></td>
-            </tr>
-            <tr>
-                <td class="col-num"></td>
-                <td class="col-label sub-row">h. Alamat</td>
-                <td class="col-colon">:</td>
-                <td class="col-val"><?= htmlspecialchars($siswa['alamat_kk'] ?? $siswa['alamat'] ?? '-') ?></td>
+                <td class="col-val"><?= htmlspecialchars($alamatOrangTua) ?></td>
             </tr>
             <tr>
                 <td class="col-num">14.</td>
-                <td class="col-label">Wali</td>
-                <td class="col-colon"></td>
+                <td class="col-label">Nomor Telepon Rumah</td>
+                <td class="col-colon">:</td>
+                <td class="col-val"><?= htmlspecialchars($noTelpOrangTua) ?></td>
+            </tr>
+            <tr>
+                <td class="col-num">15.</td>
+                <td class="col-label">Pekerjaan Orang Tua</td>
+                <td class="col-colon">:</td>
                 <td class="col-val"></td>
             </tr>
             <tr>
                 <td class="col-num"></td>
-                <td class="col-label sub-row">a. Nama Wali</td>
+                <td class="col-label sub-row">a. Ayah</td>
                 <td class="col-colon">:</td>
-                <td class="col-val bold"><?= htmlspecialchars($siswa['nama_wali'] ?? '-') ?></td>
+                <td class="col-val"><?= htmlspecialchars($pekerjaanAyah ?: '-') ?></td>
             </tr>
             <tr>
                 <td class="col-num"></td>
-                <td class="col-label sub-row">b. Pekerjaan</td>
+                <td class="col-label sub-row">b. Ibu</td>
                 <td class="col-colon">:</td>
-                <td class="col-val"><?= htmlspecialchars($siswa['pekerjaan_wali'] ?? '-') ?></td>
+                <td class="col-val"><?= htmlspecialchars($pekerjaanIbu ?: '-') ?></td>
+            </tr>
+            <tr>
+                <td class="col-num">16.</td>
+                <td class="col-label">Nama Wali Siswa</td>
+                <td class="col-colon">:</td>
+                <td class="col-val"><?= htmlspecialchars($namaWali) ?></td>
+            </tr>
+            <tr>
+                <td class="col-num">17.</td>
+                <td class="col-label">Alamat Wali Peserta Didik</td>
+                <td class="col-colon">:</td>
+                <td class="col-val"><?= htmlspecialchars($alamatWali) ?></td>
             </tr>
             <tr>
                 <td class="col-num"></td>
-                <td class="col-label sub-row">c. Nomor Telepon/HP</td>
+                <td class="col-label sub-row">Nomor Telepon Rumah</td>
                 <td class="col-colon">:</td>
-                <td class="col-val"><?= htmlspecialchars($siswa['kontak_wali'] ?? '-') ?></td>
+                <td class="col-val"><?= htmlspecialchars($noTelpWali) ?></td>
             </tr>
             <tr>
-                <td class="col-num"></td>
-                <td class="col-label sub-row">d. Alamat</td>
+                <td class="col-num">18.</td>
+                <td class="col-label">Pekerjaan Wali Peserta Didik</td>
                 <td class="col-colon">:</td>
-                <td class="col-val"><?= htmlspecialchars($siswa['alamat_kk'] ?? $siswa['alamat'] ?? '-') ?></td>
+                <td class="col-val"><?= htmlspecialchars($pekerjaanWali) ?></td>
             </tr>
         </table>
         
         <div class="footer-section">
             <div class="signature-left">
-                <div class="signature-container">
-                    <br>
-                    <div style="margin-bottom: 20px;">Orang Tua / Wali</div>
-                    <div class="signature-space"></div>
-                    <div>.........................................</div>
-                </div>
+                <!-- Left column remains empty for spacing alignment -->
             </div>
             <div class="photo-cell">
-                <?php 
-                $photoUrl = '';
-                if (!empty($siswa['foto_profil'])) {
-                    $relativePath = $siswa['foto_profil'];
-                    $absolutePath = __DIR__ . '/../storage/app/public/' . $relativePath;
-                    if (file_exists($absolutePath) && is_file($absolutePath)) {
-                        $basePath = '/';
-                        if (isset($_SERVER['REQUEST_URI']) && strncasecmp($_SERVER['REQUEST_URI'], '/SINTA-SaaS', 11) === 0) {
-                            $basePath = '/SINTA-SaaS/';
-                        }
-                        $photoUrl = $basePath . 'download.php?file=' . urlencode($relativePath);
-                    }
-                }
-                ?>
-                <div class="photo-box <?= !empty($photoUrl) ? 'has-photo' : '' ?>">
-                    <?php if (!empty($photoUrl)): ?>
-                        <img src="<?= htmlspecialchars($photoUrl) ?>" alt="Foto Siswa">
-                    <?php else: ?>
-                        FOTO<br>3 x 4
-                    <?php endif; ?>
-                </div>
+                <div class="photo-box"></div>
             </div>
             <div class="signature-right">
                 <div class="signature-container">
                     <div style="margin-bottom: 2px;"><?= htmlspecialchars($tempat) ?>, <?= htmlspecialchars($tanggal) ?></div>
-                    <div style="margin-bottom: 20px;">Kepala Sekolah</div>
+                    <div style="margin-bottom: 0;">Kepala Sekolah</div>
                     <div class="signature-space"></div>
                     <div class="bold underline"><?= htmlspecialchars($siswa['nama_kepsek']) ?></div>
+                    <?php if (!empty($siswa['pangkat_kepsek'])): ?>
+                        <div><?= htmlspecialchars($siswa['pangkat_kepsek']) ?></div>
+                    <?php endif; ?>
                     <div>NIP. <?= htmlspecialchars($siswa['nip_kepsek'] ?? '-') ?></div>
                 </div>
             </div>

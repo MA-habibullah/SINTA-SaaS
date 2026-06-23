@@ -75,6 +75,21 @@ class Siswa extends Model {
             $fullData = array_merge($fullData, $wilayah);
         }
 
+        // Fetch birth city name if tempat_lahir is numeric (ID)
+        if (!empty($fullData['tempat_lahir']) && is_numeric($fullData['tempat_lahir'])) {
+            try {
+                $stmtKota = $this->db->prepare("SELECT nama_kota FROM kota WHERE id_kota = ? LIMIT 1");
+                $stmtKota->execute([$fullData['tempat_lahir']]);
+                $cityName = $stmtKota->fetchColumn();
+                if ($cityName) {
+                    $fullData['tempat_lahir_id'] = $fullData['tempat_lahir']; // Keep original ID
+                    $fullData['tempat_lahir'] = $cityName;
+                }
+            } catch (\Throwable $e) {
+                // Ignore
+            }
+        }
+
         return $fullData;
     }
 

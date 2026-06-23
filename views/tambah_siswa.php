@@ -463,17 +463,19 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                     </select>
                 </div>
 
-                <!-- Tempat Lahir (Relasi Kota) -->
+                <!-- Tempat Lahir -->
                 <div class="col-md-6">
                     <label for="tempat_lahir" class="form-label">Tempat Lahir <span class="text-danger">*</span></label>
-                    <searchable-select 
-                        id="tempat_lahir" 
-                        name="tempat_lahir" 
-                        v-model="form.tempat_lahir" 
-                        :options="citiesOptions" 
-                        placeholder="-- Pilih Kota Tempat Lahir --"
-                        :required="true">
-                    </searchable-select>
+                    <input type="text" 
+                           class="form-control" 
+                           id="tempat_lahir" 
+                           name="tempat_lahir" 
+                           v-model="form.tempat_lahir" 
+                           placeholder="Masukkan tempat lahir" 
+                           required>
+                    <div class="form-text text-muted" style="font-size: 0.75rem;">
+                        Sesuai dengan ijazah.
+                    </div>
                 </div>
 
                 <!-- Tanggal Lahir -->
@@ -2416,7 +2418,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                         errs.push("Tanggal Lahir wajib diisi.");
                     }
                     if (!form.value.tempat_lahir) {
-                        errs.push("Tempat Lahir wajib dipilih.");
+                        errs.push("Tempat Lahir wajib diisi.");
                     }
                 }
                 

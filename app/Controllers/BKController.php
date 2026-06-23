@@ -125,12 +125,24 @@ class BKController extends BaseController {
             } catch (\Throwable) {}
         }
 
+        // Ambil daftar tahun ajaran aktif berdasarkan tenant (sekolah)
+        $tahunAjaranList = [];
+        if ($tenantId) {
+            try {
+                $db = \App\Config\Database::getConnection();
+                $stmt = $db->prepare("SELECT id, tahun_ajaran FROM tahun_ajaran WHERE tenant_id = ? AND is_active = 1 AND deleted_at IS NULL ORDER BY tahun_ajaran DESC");
+                $stmt->execute([$tenantId]);
+                $tahunAjaranList = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            } catch (\Throwable $e) {}
+        }
+
         $this->render('master_bk', [
-            'title'       => 'Bimbingan Konseling',
-            'user_role'   => $role,
-            'user_nama'   => $userNama,
-            'tenant_id'   => $tenantId,
-            'tenant_list' => $tenantList,
+            'title'             => 'Bimbingan Konseling',
+            'user_role'         => $role,
+            'user_nama'         => $userNama,
+            'tenant_id'         => $tenantId,
+            'tenant_list'       => $tenantList,
+            'tahun_ajaran_list' => $tahunAjaranList,
         ]);
     }
 
@@ -1159,6 +1171,599 @@ class BKController extends BaseController {
             if (isset($db) && $db->inTransaction()) $db->rollBack();
             error_log('[BKController::apiToggleKunci] ' . $e->getMessage());
             $this->jsonResponse(['error' => 'Operasi gagal.'], 500);
+        }
+    }
+
+    // =========================================================================
+    // API: Tab 6 — Get Guru List
+    // GET /api/v1/bk/guru
+    // =========================================================================
+    public function apiGetGuruList(): void {
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Pilih sekolah terlebih dahulu.'], 400);
+            return;
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+            // Ambil guru (role_id = 3 untuk guru, role_id = 20 untuk guru_bk)
+            $stmt = $db->prepare("
+                SELECT id, nama_lengkap 
+                FROM users 
+                WHERE tenant_id = ? 
+                  AND role_id IN (3, 20) 
+                  AND deleted_at IS NULL 
+                ORDER BY nama_lengkap ASC
+            ");
+            $stmt->execute([$tenantId]);
+            $gurus = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            $this->jsonResponse(['success' => true, 'data' => $gurus]);
+        } catch (\Throwable $e) {
+            error_log('[BKController::apiGetGuruList] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal memuat data guru.'], 500);
+        }
+    }
+
+    // =========================================================================
+    // API: Tab 6 — List Prestasi Siswa
+    // GET /api/v1/bk/prestasi
+    // =========================================================================
+    public function apiListPrestasi(): void {
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Pilih sekolah terlebih dahulu.'], 400);
+            return;
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+            $stmt = $db->prepare("
+                SELECT 
+                    ps.id,
+                    ps.tahun_ajaran_id,
+                    ta.tahun_ajaran,
+                    ps.semester,
+                    ps.bidang_lomba,
+                    ps.nama_lomba,
+                    ps.nomor_sertifikat,
+                    ps.juara,
+                    ps.kategori,
+                    ps.tingkat_kejuaraan,
+                    ps.jenis_lomba,
+                    ps.tempat_lomba,
+                    ps.tanggal_lomba,
+                    ps.penyelenggara,
+                    ps.guru_pendamping,
+                    ps.poin_prestasi,
+                    ps.foto_bukti_prestasi,
+                    ps.foto_siswa_prestasi,
+                    ps.foto_kegiatan_lomba,
+                    ps.surat_tugas_pdf
+                FROM prestasi_siswa ps
+                JOIN tahun_ajaran ta ON ps.tahun_ajaran_id = ta.id
+                WHERE ps.tenant_id = ? 
+                  AND ps.deleted_at IS NULL
+                ORDER BY ps.tanggal_lomba DESC, ps.created_at DESC
+            ");
+            $stmt->execute([$tenantId]);
+            $prestasiList = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            // Ambil anggota/siswa untuk setiap prestasi
+            foreach ($prestasiList as &$p) {
+                $stmtAnggota = $db->prepare("
+                    SELECT 
+                        s.id,
+                        s.nama_lengkap,
+                        s.nisn,
+                        s.nik,
+                        k.nama_kelas
+                    FROM prestasi_siswa_anggota psa
+                    JOIN siswa s ON psa.id_siswa = s.id
+                    LEFT JOIN kelas k ON s.id_kelas = k.id
+                    WHERE psa.id_prestasi = ? 
+                      AND s.deleted_at IS NULL
+                ");
+                $stmtAnggota->execute([$p['id']]);
+                $p['siswa_list'] = $stmtAnggota->fetchAll(\PDO::FETCH_ASSOC);
+            }
+
+            $this->jsonResponse(['success' => true, 'data' => $prestasiList]);
+        } catch (\Throwable $e) {
+            error_log('[BKController::apiListPrestasi] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal memuat daftar prestasi.'], 500);
+        }
+    }
+
+    // =========================================================================
+    // API: Tab 6 — Store Prestasi Siswa
+    // POST /api/v1/bk/prestasi
+    // =========================================================================
+    public function apiStorePrestasi(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->jsonResponse(['error' => 'Method not allowed.'], 405);
+            return;
+        }
+
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Tenant tidak terdeteksi.'], 400);
+            return;
+        }
+
+        // Ambil data POST (biasanya multipart/form-data)
+        $tahunAjaranId    = (int)($_POST['tahun_ajaran_id']    ?? 0);
+        $semester         = $this->sanitize($_POST['semester']         ?? '');
+        $bidangLomba      = $this->sanitize($_POST['bidang_lomba']      ?? '');
+        $namaLomba        = $this->sanitize($_POST['nama_lomba']        ?? '');
+        $nomorSertifikat  = $this->sanitize($_POST['nomor_sertifikat']  ?? '');
+        $juara            = $this->sanitize($_POST['juara']            ?? '');
+        $juaraLainnya     = $this->sanitize($_POST['juara_lainnya']     ?? '');
+        $kategori         = $this->sanitize($_POST['kategori']         ?? 'Personal');
+        $tingkatKejuaraan = $this->sanitize($_POST['tingkat_kejuaraan'] ?? '');
+        $jenisLomba       = $this->sanitize($_POST['jenis_lomba']       ?? 'Offline');
+        $tempatLomba      = $this->sanitize($_POST['tempat_lomba']      ?? '');
+        $tanggalLomba     = $this->sanitize($_POST['tanggal_lomba']     ?? '');
+        $penyelenggara    = $this->sanitize($_POST['penyelenggara']    ?? '');
+        $guruPendamping   = $this->sanitize($_POST['guru_pendamping']   ?? '');
+
+        // Siswa IDs (array JSON atau string koma)
+        $siswaIdsJson = $_POST['siswa_ids'] ?? '[]';
+        $siswaIds     = json_decode($siswaIdsJson, true);
+        if (!is_array($siswaIds) || empty($siswaIds)) {
+            $this->jsonResponse(['error' => 'Minimal pilih satu siswa.'], 422);
+            return;
+        }
+
+        if (empty($guruPendamping)) {
+            $guruPendamping = null;
+        }
+
+        // Tentukan nilai juara jika manual
+        if ($juara === 'Lainnya' && !empty($juaraLainnya)) {
+            $juaraText = $juaraLainnya;
+        } else {
+            $juaraText = $juara;
+        }
+
+        // Validasi input wajib
+        if (!$tahunAjaranId || empty($semester) || empty($bidangLomba) || empty($namaLomba) || empty($juaraText) || empty($tingkatKejuaraan) || empty($tempatLomba) || empty($tanggalLomba) || empty($penyelenggara)) {
+            $this->jsonResponse(['error' => 'Semua kolom bertanda bintang (*) wajib diisi.'], 422);
+            return;
+        }
+
+        // Otomatis hitung poin
+        $poin = $this->calculatePoints($tingkatKejuaraan, $juaraText);
+
+        // Upload files
+        $fotoBukti    = null;
+        $fotoSiswa    = null;
+        $fotoKegiatan = null;
+        $suratTugas   = null;
+
+        // Gunakan UUID siswa pertama untuk folder
+        $firstSiswaId = $siswaIds[0];
+        $basePath     = "tenants/{$tenantId}/prestasi/{$firstSiswaId}/{$tahunAjaranId}/";
+        $uploadDir    = __DIR__ . '/../../storage/app/public/' . $basePath;
+
+        try {
+            $this->validateAndUploadFiles($uploadDir, $basePath, $fotoBukti, $fotoSiswa, $fotoKegiatan, $suratTugas);
+
+            $db = \App\Config\Database::getConnection();
+            $db->beginTransaction();
+
+            $idPrestasi = bin2hex(random_bytes(16)); // UUID generator sederhana atau UUID v4 format
+            $idPrestasi = sprintf('%s-%s-%s-%s-%s',
+                substr($idPrestasi, 0, 8),
+                substr($idPrestasi, 8, 4),
+                substr($idPrestasi, 12, 4),
+                substr($idPrestasi, 16, 4),
+                substr($idPrestasi, 20, 12)
+            );
+
+            // Insert prestasi_siswa
+            $stmt = $db->prepare("
+                INSERT INTO prestasi_siswa (
+                    id, tenant_id, tahun_ajaran_id, semester, bidang_lomba, nama_lomba,
+                    nomor_sertifikat, juara, kategori, tingkat_kejuaraan, jenis_lomba,
+                    tempat_lomba, tanggal_lomba, penyelenggara, guru_pendamping,
+                    poin_prestasi, foto_bukti_prestasi, foto_siswa_prestasi,
+                    foto_kegiatan_lomba, surat_tugas_pdf
+                ) VALUES (
+                    :id, :tenant_id, :tahun_ajaran_id, :semester, :bidang_lomba, :nama_lomba,
+                    :nomor_sertifikat, :juara, :kategori, :tingkat_kejuaraan, :jenis_lomba,
+                    :tempat_lomba, :tanggal_lomba, :penyelenggara, :guru_pendamping,
+                    :poin_prestasi, :foto_bukti_prestasi, :foto_siswa_prestasi,
+                    :foto_kegiatan_lomba, :surat_tugas_pdf
+                )
+            ");
+            $stmt->execute([
+                'id'                  => $idPrestasi,
+                'tenant_id'           => $tenantId,
+                'tahun_ajaran_id'     => $tahunAjaranId,
+                'semester'            => $semester,
+                'bidang_lomba'        => $bidangLomba,
+                'nama_lomba'          => $namaLomba,
+                'nomor_sertifikat'    => $nomorSertifikat,
+                'juara'               => $juaraText,
+                'kategori'            => $kategori,
+                'tingkat_kejuaraan'   => $tingkatKejuaraan,
+                'jenis_lomba'         => $jenisLomba,
+                'tempat_lomba'        => $tempatLomba,
+                'tanggal_lomba'       => $tanggalLomba,
+                'penyelenggara'       => $penyelenggara,
+                'guru_pendamping'     => $guruPendamping,
+                'poin_prestasi'       => $poin,
+                'foto_bukti_prestasi' => $fotoBukti,
+                'foto_siswa_prestasi' => $fotoSiswa,
+                'foto_kegiatan_lomba' => $fotoKegiatan,
+                'surat_tugas_pdf'     => $suratTugas
+            ]);
+
+            // Insert pivot anggota
+            $stmtAnggota = $db->prepare("INSERT INTO prestasi_siswa_anggota (id_prestasi, id_siswa) VALUES (?, ?)");
+            foreach ($siswaIds as $sId) {
+                $stmtAnggota->execute([$idPrestasi, $sId]);
+            }
+
+            $db->commit();
+            $this->jsonResponse(['success' => true, 'message' => 'Data prestasi siswa berhasil disimpan.']);
+        } catch (\Throwable $e) {
+            if (isset($db) && $db->inTransaction()) $db->rollBack();
+            // Hapus berkas yang baru diunggah jika gagal simpan
+            foreach ([$fotoBukti, $fotoSiswa, $fotoKegiatan, $suratTugas] as $file) {
+                if ($file && file_exists(__DIR__ . '/../../storage/app/public/' . $file)) {
+                    @unlink(__DIR__ . '/../../storage/app/public/' . $file);
+                }
+            }
+            error_log('[BKController::apiStorePrestasi] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal menyimpan data prestasi. ' . $e->getMessage()], 500);
+        }
+    }
+
+    // =========================================================================
+    // API: Tab 6 — Update Prestasi Siswa
+    // POST /api/v1/bk/prestasi/update
+    // =========================================================================
+    public function apiUpdatePrestasi(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->jsonResponse(['error' => 'Method not allowed.'], 405);
+            return;
+        }
+
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Tenant tidak terdeteksi.'], 400);
+            return;
+        }
+
+        $idPrestasi = $this->sanitize($_POST['id'] ?? '');
+        if (empty($idPrestasi)) {
+            $this->jsonResponse(['error' => 'ID Prestasi tidak valid.'], 422);
+            return;
+        }
+
+        $db = \App\Config\Database::getConnection();
+
+        try {
+            // Ambil data prestasi saat ini
+            $stmtGet = $db->prepare("SELECT * FROM prestasi_siswa WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL LIMIT 1");
+            $stmtGet->execute([$idPrestasi, $tenantId]);
+            $current = $stmtGet->fetch(\PDO::FETCH_ASSOC);
+
+            if (!$current) {
+                $this->jsonResponse(['error' => 'Data prestasi tidak ditemukan.'], 404);
+                return;
+            }
+
+            // Ambil data POST
+            $tahunAjaranId    = (int)($_POST['tahun_ajaran_id']    ?? 0);
+            $semester         = $this->sanitize($_POST['semester']         ?? '');
+            $bidangLomba      = $this->sanitize($_POST['bidang_lomba']      ?? '');
+            $namaLomba        = $this->sanitize($_POST['nama_lomba']        ?? '');
+            $nomorSertifikat  = $this->sanitize($_POST['nomor_sertifikat']  ?? '');
+            $juara            = $this->sanitize($_POST['juara']            ?? '');
+            $juaraLainnya     = $this->sanitize($_POST['juara_lainnya']     ?? '');
+            $kategori         = $this->sanitize($_POST['kategori']         ?? 'Personal');
+            $tingkatKejuaraan = $this->sanitize($_POST['tingkat_kejuaraan'] ?? '');
+            $jenisLomba       = $this->sanitize($_POST['jenis_lomba']       ?? 'Offline');
+            $tempatLomba      = $this->sanitize($_POST['tempat_lomba']      ?? '');
+            $tanggalLomba     = $this->sanitize($_POST['tanggal_lomba']     ?? '');
+            $penyelenggara    = $this->sanitize($_POST['penyelenggara']    ?? '');
+            $guruPendamping   = $this->sanitize($_POST['guru_pendamping']   ?? '');
+
+            $siswaIdsJson = $_POST['siswa_ids'] ?? '[]';
+            $siswaIds     = json_decode($siswaIdsJson, true);
+            if (!is_array($siswaIds) || empty($siswaIds)) {
+                $this->jsonResponse(['error' => 'Minimal pilih satu siswa.'], 422);
+                return;
+            }
+
+            if (empty($guruPendamping)) {
+                $guruPendamping = null;
+            }
+
+            if ($juara === 'Lainnya' && !empty($juaraLainnya)) {
+                $juaraText = $juaraLainnya;
+            } else {
+                $juaraText = $juara;
+            }
+
+            if (!$tahunAjaranId || empty($semester) || empty($bidangLomba) || empty($namaLomba) || empty($juaraText) || empty($tingkatKejuaraan) || empty($tempatLomba) || empty($tanggalLomba) || empty($penyelenggara)) {
+                $this->jsonResponse(['error' => 'Semua kolom bertanda bintang (*) wajib diisi.'], 422);
+                return;
+            }
+
+            // Hitung poin
+            $poin = $this->calculatePoints($tingkatKejuaraan, $juaraText);
+
+            // Upload files
+            $fotoBukti    = $current['foto_bukti_prestasi'];
+            $fotoSiswa    = $current['foto_siswa_prestasi'];
+            $fotoKegiatan = $current['foto_kegiatan_lomba'];
+            $suratTugas   = $current['surat_tugas_pdf'];
+
+            $firstSiswaId = $siswaIds[0];
+            $basePath     = "tenants/{$tenantId}/prestasi/{$firstSiswaId}/{$tahunAjaranId}/";
+            $uploadDir    = __DIR__ . '/../../storage/app/public/' . $basePath;
+
+            $oldPathsToDelete = [];
+            $newUploadedPaths = [];
+
+            // Helper upload file baru dan jadwalkan hapus file lama
+            $fileKeys = [
+                'foto_bukti_prestasi' => &$fotoBukti,
+                'foto_siswa_prestasi' => &$fotoSiswa,
+                'foto_kegiatan_lomba' => &$fotoKegiatan,
+                'surat_tugas_pdf'     => &$suratTugas
+            ];
+
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+
+            foreach ($fileKeys as $formKey => &$dbVal) {
+                if (isset($_FILES[$formKey]) && $_FILES[$formKey]['error'] === UPLOAD_ERR_OK) {
+                    $tmpName   = $_FILES[$formKey]['tmp_name'];
+                    $fileName  = $_FILES[$formKey]['name'];
+                    $fileSize  = $_FILES[$formKey]['size'];
+                    $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+                    $allowedExt = ($formKey === 'surat_tugas_pdf') ? ['pdf', 'jpg', 'jpeg', 'png'] : ['jpg', 'jpeg', 'png'];
+                    if (!in_array($extension, $allowedExt, true)) {
+                        throw new \Exception("Ekstensi berkas {$formKey} tidak diizinkan.");
+                    }
+                    if ($fileSize > 1024 * 1024) {
+                        throw new \Exception("Ukuran berkas {$formKey} melebihi batas 1 MB.");
+                    }
+
+                    $newFileName = bin2hex(random_bytes(20)) . '.' . $extension;
+                    $destPath    = $uploadDir . $newFileName;
+
+                    if (!move_uploaded_file($tmpName, $destPath)) {
+                        throw new \Exception("Gagal mengunggah berkas {$formKey}.");
+                    }
+
+                    $newUploadedPaths[] = $destPath;
+
+                    // Jadwalkan hapus file lama jika ada
+                    if (!empty($dbVal)) {
+                        $trustedPrefix = "tenants/{$tenantId}/prestasi/";
+                        if (str_starts_with($dbVal, $trustedPrefix)) {
+                            $oldAbsPath = __DIR__ . '/../../storage/app/public/' . $dbVal;
+                            if (file_exists($oldAbsPath)) {
+                                $oldPathsToDelete[] = $oldAbsPath;
+                            }
+                        }
+                    }
+
+                    // Update data basepath untuk DB
+                    $dbVal = $basePath . $newFileName;
+                }
+            }
+
+            // Mulai transaksi
+            $db->beginTransaction();
+
+            $stmtUpdate = $db->prepare("
+                UPDATE prestasi_siswa
+                SET tahun_ajaran_id = :tahun_ajaran_id,
+                    semester = :semester,
+                    bidang_lomba = :bidang_lomba,
+                    nama_lomba = :nama_lomba,
+                    nomor_sertifikat = :nomor_sertifikat,
+                    juara = :juara,
+                    kategori = :kategori,
+                    tingkat_kejuaraan = :tingkat_kejuaraan,
+                    jenis_lomba = :jenis_lomba,
+                    tempat_lomba = :tempat_lomba,
+                    tanggal_lomba = :tanggal_lomba,
+                    penyelenggara = :penyelenggara,
+                    guru_pendamping = :guru_pendamping,
+                    poin_prestasi = :poin_prestasi,
+                    foto_bukti_prestasi = :foto_bukti_prestasi,
+                    foto_siswa_prestasi = :foto_siswa_prestasi,
+                    foto_kegiatan_lomba = :foto_kegiatan_lomba,
+                    surat_tugas_pdf = :surat_tugas_pdf,
+                    updated_at = NOW()
+                WHERE id = :id AND tenant_id = :tenant_id
+            ");
+            $stmtUpdate->execute([
+                'tahun_ajaran_id'     => $tahunAjaranId,
+                'semester'            => $semester,
+                'bidang_lomba'        => $bidangLomba,
+                'nama_lomba'          => $namaLomba,
+                'nomor_sertifikat'    => $nomorSertifikat,
+                'juara'               => $juaraText,
+                'kategori'            => $kategori,
+                'tingkat_kejuaraan'   => $tingkatKejuaraan,
+                'jenis_lomba'         => $jenisLomba,
+                'tempat_lomba'        => $tempatLomba,
+                'tanggal_lomba'       => $tanggalLomba,
+                'penyelenggara'       => $penyelenggara,
+                'guru_pendamping'     => $guruPendamping,
+                'poin_prestasi'       => $poin,
+                'foto_bukti_prestasi' => $fotoBukti,
+                'foto_siswa_prestasi' => $fotoSiswa,
+                'foto_kegiatan_lomba' => $fotoKegiatan,
+                'surat_tugas_pdf'     => $suratTugas,
+                'id'                  => $idPrestasi,
+                'tenant_id'           => $tenantId
+            ]);
+
+            // Sync anggota pivot table
+            $db->prepare("DELETE FROM prestasi_siswa_anggota WHERE id_prestasi = ?")->execute([$idPrestasi]);
+            $stmtAnggota = $db->prepare("INSERT INTO prestasi_siswa_anggota (id_prestasi, id_siswa) VALUES (?, ?)");
+            foreach ($siswaIds as $sId) {
+                $stmtAnggota->execute([$idPrestasi, $sId]);
+            }
+
+            $db->commit();
+
+            // Pembersihan File Pasca-Commit Sukses
+            foreach ($oldPathsToDelete as $oldFile) {
+                if (file_exists($oldFile)) {
+                    @unlink($oldFile);
+                }
+            }
+
+            $this->jsonResponse(['success' => true, 'message' => 'Data prestasi siswa berhasil diperbarui.']);
+        } catch (\Throwable $e) {
+            if (isset($db) && $db->inTransaction()) $db->rollBack();
+            // Hapus berkas baru jika gagal
+            foreach ($newUploadedPaths as $newFile) {
+                if (file_exists($newFile)) {
+                    @unlink($newFile);
+                }
+            }
+            error_log('[BKController::apiUpdatePrestasi] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal memperbarui data prestasi. ' . $e->getMessage()], 500);
+        }
+    }
+
+    // =========================================================================
+    // API: Tab 6 — Delete Prestasi Siswa (Soft Delete)
+    // POST /api/v1/bk/prestasi/delete
+    // =========================================================================
+    public function apiDeletePrestasi(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->jsonResponse(['error' => 'Method not allowed.'], 405);
+            return;
+        }
+
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Tenant tidak terdeteksi.'], 400);
+            return;
+        }
+
+        $body       = $this->getJsonInput();
+        $idPrestasi = $this->sanitize($body['id'] ?? '');
+
+        if (empty($idPrestasi)) {
+            $this->jsonResponse(['error' => 'ID Prestasi tidak valid.'], 422);
+            return;
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+
+            // Soft delete
+            $stmt = $db->prepare("UPDATE prestasi_siswa SET deleted_at = NOW() WHERE id = ? AND tenant_id = ?");
+            $stmt->execute([$idPrestasi, $tenantId]);
+
+            $this->jsonResponse(['success' => true, 'message' => 'Data prestasi berhasil dihapus.']);
+        } catch (\Throwable $e) {
+            error_log('[BKController::apiDeletePrestasi] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal menghapus data prestasi.'], 500);
+        }
+    }
+
+    // =========================================================================
+    // HELPER: Otomatisasi Poin Prestasi
+    // =========================================================================
+    private function calculatePoints(string $tingkat, string $juara): int {
+        $tingkat = strtolower($tingkat);
+        $juara   = strtolower($juara);
+
+        if (str_contains($tingkat, 'internasional')) {
+            if (str_contains($juara, '1')) return 100;
+            if (str_contains($juara, '2')) return 95;
+            if (str_contains($juara, '3')) return 90;
+            if (str_contains($juara, 'harapan 1')) return 85;
+            if (str_contains($juara, 'harapan 2')) return 80;
+            if (str_contains($juara, 'harapan 3')) return 75;
+            return 70; // manual / lainnya
+        } elseif (str_contains($tingkat, 'nasional')) {
+            if (str_contains($juara, '1')) return 90;
+            if (str_contains($juara, '2')) return 85;
+            if (str_contains($juara, '3')) return 80;
+            if (str_contains($juara, 'harapan 1')) return 75;
+            if (str_contains($juara, 'harapan 2')) return 70;
+            if (str_contains($juara, 'harapan 3')) return 65;
+            return 60;
+        } elseif (str_contains($tingkat, 'provinsi')) {
+            if (str_contains($juara, '1')) return 80;
+            if (str_contains($juara, '2')) return 75;
+            if (str_contains($juara, '3')) return 70;
+            if (str_contains($juara, 'harapan 1')) return 65;
+            if (str_contains($juara, 'harapan 2')) return 60;
+            if (str_contains($juara, 'harapan 3')) return 55;
+            return 50;
+        } else { // Kota/Kabupaten
+            if (str_contains($juara, '1')) return 70;
+            if (str_contains($juara, '2')) return 65;
+            if (str_contains($juara, '3')) return 60;
+            if (str_contains($juara, 'harapan 1')) return 55;
+            if (str_contains($juara, 'harapan 2')) return 50;
+            if (str_contains($juara, 'harapan 3')) return 45;
+            return 40;
+        }
+    }
+
+    // =========================================================================
+    // HELPER: Upload berkas pendukung
+    // =========================================================================
+    private function validateAndUploadFiles(
+        string $uploadDir, string $basePath,
+        ?string &$fotoBukti, ?string &$fotoSiswa, ?string &$fotoKegiatan, ?string &$suratTugas
+    ): void {
+        $fileKeys = [
+            'foto_bukti_prestasi' => &$fotoBukti,
+            'foto_siswa_prestasi' => &$fotoSiswa,
+            'foto_kegiatan_lomba' => &$fotoKegiatan,
+            'surat_tugas_pdf'     => &$suratTugas
+        ];
+
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        foreach ($fileKeys as $formKey => &$dbVal) {
+            if (isset($_FILES[$formKey]) && $_FILES[$formKey]['error'] === UPLOAD_ERR_OK) {
+                $tmpName   = $_FILES[$formKey]['tmp_name'];
+                $fileName  = $_FILES[$formKey]['name'];
+                $fileSize  = $_FILES[$formKey]['size'];
+                $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+                $allowedExt = ($formKey === 'surat_tugas_pdf') ? ['pdf', 'jpg', 'jpeg', 'png'] : ['jpg', 'jpeg', 'png'];
+                if (!in_array($extension, $allowedExt, true)) {
+                    throw new \Exception("Format berkas {$formKey} tidak diizinkan.");
+                }
+                if ($fileSize > 1024 * 1024) {
+                    throw new \Exception("Ukuran berkas {$formKey} melebihi batas 1 MB.");
+                }
+
+                $newFileName = bin2hex(random_bytes(20)) . '.' . $extension;
+                $destPath    = $uploadDir . $newFileName;
+
+                if (!move_uploaded_file($tmpName, $destPath)) {
+                    throw new \Exception("Gagal mengunggah berkas {$formKey}.");
+                }
+
+                $dbVal = $basePath . $newFileName;
+            }
         }
     }
 

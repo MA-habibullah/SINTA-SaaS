@@ -352,12 +352,19 @@
                         <h4 class="text-base font-bold text-slate-800 mb-0">Manajemen SDM & Kepemimpinan</h4>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
                         <div>
                             <label for="nama_kepsek" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Nama Kepala Sekolah</label>
                             <input type="text" id="nama_kepsek" name="nama_kepsek" v-model="form.nama_kepsek" 
                                 class="w-full h-11 px-4 rounded-xl border border-slate-200 text-sm bg-white input-premium focus:outline-none"
                                 placeholder="Nama Kepala Sekolah beserta gelar">
+                        </div>
+
+                        <div>
+                            <label for="pangkat_kepsek" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Pangkat Kepala Sekolah</label>
+                            <input type="text" id="pangkat_kepsek" name="pangkat_kepsek" v-model="form.pangkat_kepsek" 
+                                class="w-full h-11 px-4 rounded-xl border border-slate-200 text-sm bg-white input-premium focus:outline-none"
+                                placeholder="Contoh: Pembina / Pembina Tk. I">
                         </div>
 
                         <div>
@@ -499,7 +506,6 @@
             // Map logo preview
             const logoPreview = ref(tenant.value.logo ? `/SINTA-SaaS/storage/app/public/${tenant.value.logo}` : null);
             
-            // Form Model
             const form = reactive({
                 alamat_sekolah: tenant.value.alamat_sekolah || '',
                 rt_rw: tenant.value.rt_rw || '',
@@ -512,6 +518,7 @@
                 email_sekolah: tenant.value.email_sekolah || '',
                 website: tenant.value.website || '',
                 nama_kepsek: tenant.value.nama_kepsek || 'Nana Petty Puspitasari',
+                pangkat_kepsek: tenant.value.pangkat_kepsek || 'Pembina',
                 nip_kepsek: tenant.value.nip_kepsek || '',
                 nama_operator: tenant.value.nama_operator || 'Edi Sugiarto',
                 email_operator: tenant.value.email_operator || 'aidasugiarto@gmail.com',

@@ -131,6 +131,7 @@ class SekolahController extends BaseController {
         $emailSekolah = isset($_POST['email_sekolah']) ? trim(strip_tags($_POST['email_sekolah'])) : '';
         $website = isset($_POST['website']) ? trim(strip_tags($_POST['website'])) : '';
         $namaKepsek = isset($_POST['nama_kepsek']) ? trim(strip_tags($_POST['nama_kepsek'])) : 'Nana Petty Puspitasari';
+        $pangkatKepsek = isset($_POST['pangkat_kepsek']) ? trim(strip_tags($_POST['pangkat_kepsek'])) : 'Pembina';
         $nipKepsek = isset($_POST['nip_kepsek']) ? trim(strip_tags($_POST['nip_kepsek'])) : '';
         $namaOperator = isset($_POST['nama_operator']) ? trim(strip_tags($_POST['nama_operator'])) : 'Edi Sugiarto';
         $emailOperator = isset($_POST['email_operator']) ? trim(strip_tags($_POST['email_operator'])) : 'aidasugiarto@gmail.com';
@@ -252,6 +253,7 @@ class SekolahController extends BaseController {
                     email_sekolah = :email_sekolah,
                     website = :website,
                     nama_kepsek = :nama_kepsek,
+                    pangkat_kepsek = :pangkat_kepsek,
                     nip_kepsek = :nip_kepsek,
                     nama_operator = :nama_operator,
                     email_operator = :email_operator,
@@ -274,6 +276,7 @@ class SekolahController extends BaseController {
                 'email_sekolah' => $emailSekolah,
                 'website' => $website,
                 'nama_kepsek' => $namaKepsek,
+                'pangkat_kepsek' => $pangkatKepsek,
                 'nip_kepsek' => $nipKepsek,
                 'nama_operator' => $namaOperator,
                 'email_operator' => $emailOperator,

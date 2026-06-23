@@ -107,24 +107,30 @@ class Kelembagaan extends Model {
             $searchParts = [];
             $meta = $this->allowedTables[$table];
             
+            $cols = [];
             if ($table === 'kelas') {
-                $searchParts[] = "k.nama_kelas LIKE :search";
-                $searchParts[] = "k.kode_kelas LIKE :search";
-                $searchParts[] = "j.nama_jenjang LIKE :search";
-                $searchParts[] = "ju.nama_jurusan LIKE :search";
+                $cols[] = "k.nama_kelas";
+                $cols[] = "k.kode_kelas";
+                $cols[] = "j.nama_jenjang";
+                $cols[] = "ju.nama_jurusan";
             } else {
                 foreach ($meta['search_cols'] as $col) {
-                    $searchParts[] = "k.{$col} LIKE :search";
+                    $cols[] = "k.{$col}";
                 }
             }
 
             if ($isSuperAdmin) {
-                $searchParts[] = "t.nama_sekolah LIKE :search";
+                $cols[] = "t.nama_sekolah";
+            }
+            
+            foreach ($cols as $i => $col) {
+                $paramName = "search_" . $i;
+                $searchParts[] = "{$col} LIKE :{$paramName}";
+                $params[$paramName] = "%{$search}%";
             }
             
             if (!empty($searchParts)) {
                 $whereClause .= " AND (" . implode(" OR ", $searchParts) . ")";
-                $params['search'] = "%{$search}%";
             }
         }
 
@@ -143,8 +149,10 @@ class Kelembagaan extends Model {
         if (!$isSuperAdmin) {
             $dataStmt->bindValue(':tenant_id', $this->tenantId, PDO::PARAM_STR);
         }
-        if ($search !== '') {
-            $dataStmt->bindValue(':search', "%{$search}%", PDO::PARAM_STR);
+        foreach ($params as $key => $val) {
+            if ($key !== 'tenant_id') {
+                $dataStmt->bindValue(':' . $key, $val, PDO::PARAM_STR);
+            }
         }
         $dataStmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
         $dataStmt->bindValue(':offset', $offset, PDO::PARAM_INT);

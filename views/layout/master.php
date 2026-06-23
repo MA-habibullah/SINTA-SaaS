@@ -43,15 +43,20 @@
             axios.interceptors.response.use(
                 response => response,
                 error => {
-                    const status = error.response ? error.response.status : 'Network / Timeout Error';
+                    const status = error.response ? error.response.status : null;
+                    if (status === 401) {
+                        window.location.href = '/SINTA-SaaS/login';
+                        return new Promise(() => {}); // Gantung request agar tidak memicu error modal/alert lain di halaman
+                    }
+                    const statusText = status || 'Network / Timeout Error';
                     const data = error.response ? error.response.data : 'Tidak ada data payload';
                     console.error(
-                        '%c[AXIOS API ERROR] Status: ' + status, 
+                        '%c[AXIOS API ERROR] Status: ' + statusText, 
                         'background: #dc2626; color: white; font-size: 14px; font-weight: bold; padding: 4px; border-radius: 4px;',
                         '\nPayload Response:', data,
                         '\nRequest Config:', error.config
                     );
-                    alert('API Error: ' + status + '\n(Periksa Developer Console Chrome untuk detail data payload)');
+                    alert('API Error: ' + statusText + '\n(Periksa Developer Console Chrome untuk detail data payload)');
                     return Promise.reject(error);
                 }
             );

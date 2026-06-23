@@ -68,12 +68,18 @@ class Pengguna extends Model {
             }
 
             if ($search !== '') {
-                $whereClause .= " AND (LOWER(s.nama_lengkap) LIKE :search OR LOWER(s.nisn) LIKE :search OR LOWER(s.nis) LIKE :search OR LOWER(u.email) LIKE :search";
+                $whereClause .= " AND (LOWER(s.nama_lengkap) LIKE :search_nama OR LOWER(s.nisn) LIKE :search_nisn OR LOWER(s.nis) LIKE :search_nis OR LOWER(u.email) LIKE :search_email";
                 if ($isSuperAdmin) {
-                    $whereClause .= " OR LOWER(t.nama_sekolah) LIKE :search";
+                    $whereClause .= " OR LOWER(t.nama_sekolah) LIKE :search_sekolah";
                 }
                 $whereClause .= ")";
-                $params['search'] = "%" . strtolower($search) . "%";
+                $params['search_nama'] = "%" . strtolower($search) . "%";
+                $params['search_nisn'] = "%" . strtolower($search) . "%";
+                $params['search_nis'] = "%" . strtolower($search) . "%";
+                $params['search_email'] = "%" . strtolower($search) . "%";
+                if ($isSuperAdmin) {
+                    $params['search_sekolah'] = "%" . strtolower($search) . "%";
+                }
             }
 
             $orderBy = " ORDER BY reg.tanggal_keluar DESC, s.nama_lengkap ASC";
@@ -133,12 +139,18 @@ class Pengguna extends Model {
             }
 
             if ($search !== '') {
-                $whereClause .= " AND (LOWER(s.nama_lengkap) LIKE :search OR LOWER(s.nisn) LIKE :search OR LOWER(s.nis) LIKE :search OR LOWER(u.email) LIKE :search";
+                $whereClause .= " AND (LOWER(s.nama_lengkap) LIKE :search_nama OR LOWER(s.nisn) LIKE :search_nisn OR LOWER(s.nis) LIKE :search_nis OR LOWER(u.email) LIKE :search_email";
                 if ($isSuperAdmin) {
-                    $whereClause .= " OR LOWER(t.nama_sekolah) LIKE :search";
+                    $whereClause .= " OR LOWER(t.nama_sekolah) LIKE :search_sekolah";
                 }
                 $whereClause .= ")";
-                $params['search'] = "%" . strtolower($search) . "%";
+                $params['search_nama'] = "%" . strtolower($search) . "%";
+                $params['search_nisn'] = "%" . strtolower($search) . "%";
+                $params['search_nis'] = "%" . strtolower($search) . "%";
+                $params['search_email'] = "%" . strtolower($search) . "%";
+                if ($isSuperAdmin) {
+                    $params['search_sekolah'] = "%" . strtolower($search) . "%";
+                }
             }
 
             $orderBy = " ORDER BY s.nama_lengkap ASC";
@@ -169,12 +181,16 @@ class Pengguna extends Model {
             }
 
             if ($search !== '') {
-                $whereClause .= " AND (LOWER(u.nama_lengkap) LIKE :search OR LOWER(u.email) LIKE :search";
+                $whereClause .= " AND (LOWER(u.nama_lengkap) LIKE :search_nama OR LOWER(u.email) LIKE :search_email";
                 if ($isSuperAdmin) {
-                    $whereClause .= " OR LOWER(t.nama_sekolah) LIKE :search";
+                    $whereClause .= " OR LOWER(t.nama_sekolah) LIKE :search_sekolah";
                 }
                 $whereClause .= ")";
-                $params['search'] = "%" . strtolower($search) . "%";
+                $params['search_nama'] = "%" . strtolower($search) . "%";
+                $params['search_email'] = "%" . strtolower($search) . "%";
+                if ($isSuperAdmin) {
+                    $params['search_sekolah'] = "%" . strtolower($search) . "%";
+                }
             }
 
             $orderBy = " ORDER BY u.nama_lengkap ASC";

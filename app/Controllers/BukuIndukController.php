@@ -98,8 +98,10 @@ class BukuIndukController extends BaseController {
 
         // Search filter (Nama, NISN, NIS)
         if ($search !== '') {
-            $where[] = "(s.nama_lengkap LIKE :search OR s.nisn LIKE :search OR s.nis LIKE :search)";
-            $params['search'] = "%$search%";
+            $where[] = "(s.nama_lengkap LIKE :search_nama OR s.nisn LIKE :search_nisn OR s.nis LIKE :search_nis)";
+            $params['search_nama'] = "%$search%";
+            $params['search_nisn'] = "%$search%";
+            $params['search_nis'] = "%$search%";
         }
 
         // Kelas filter
@@ -262,14 +264,16 @@ class BukuIndukController extends BaseController {
         // Dapatkan data headmaster (nama_kepsek & nip_kepsek) dari tenants
         try {
             $db = \App\Config\Database::getConnection();
-            $stmtTenant = $db->prepare("SELECT nama_kepsek, nip_kepsek FROM tenants WHERE id = ?");
+            $stmtTenant = $db->prepare("SELECT nama_kepsek, nip_kepsek, pangkat_kepsek FROM tenants WHERE id = ?");
             $stmtTenant->execute([$siswa['tenant_id']]);
             $tenantInfo = $stmtTenant->fetch(PDO::FETCH_ASSOC);
             $siswa['nama_kepsek'] = $tenantInfo['nama_kepsek'] ?? '-';
             $siswa['nip_kepsek'] = $tenantInfo['nip_kepsek'] ?? '-';
+            $siswa['pangkat_kepsek'] = $tenantInfo['pangkat_kepsek'] ?? '';
         } catch (\Throwable $e) {
             $siswa['nama_kepsek'] = '-';
             $siswa['nip_kepsek'] = '-';
+            $siswa['pangkat_kepsek'] = '';
         }
 
         // Load the print view directly (no layout wrapper)
@@ -354,14 +358,16 @@ class BukuIndukController extends BaseController {
 
             // Dapatkan data headmaster (nama_kepsek & nip_kepsek) dari tenants
             try {
-                $stmtTenant = $db->prepare("SELECT nama_kepsek, nip_kepsek FROM tenants WHERE id = ?");
+                $stmtTenant = $db->prepare("SELECT nama_kepsek, nip_kepsek, pangkat_kepsek FROM tenants WHERE id = ?");
                 $stmtTenant->execute([$siswa['tenant_id']]);
                 $tenantInfo = $stmtTenant->fetch(PDO::FETCH_ASSOC);
                 $siswa['nama_kepsek'] = $tenantInfo['nama_kepsek'] ?? '-';
                 $siswa['nip_kepsek'] = $tenantInfo['nip_kepsek'] ?? '-';
+                $siswa['pangkat_kepsek'] = $tenantInfo['pangkat_kepsek'] ?? '';
             } catch (\Throwable $e) {
                 $siswa['nama_kepsek'] = '-';
                 $siswa['nip_kepsek'] = '-';
+                $siswa['pangkat_kepsek'] = '';
             }
 
             $studentsData[] = $siswa;

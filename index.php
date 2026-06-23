@@ -307,6 +307,34 @@ try {
             $controller->apiGetLogs();
             break;
 
+        case '/api/v1/bk/prestasi':
+            // API: GET list prestasi / POST simpan prestasi baru
+            $controller = new App\Controllers\BKController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiStorePrestasi();
+            } else {
+                $controller->apiListPrestasi();
+            }
+            break;
+
+        case '/api/v1/bk/prestasi/update':
+            // API: POST update prestasi
+            $controller = new App\Controllers\BKController();
+            $controller->apiUpdatePrestasi();
+            break;
+
+        case '/api/v1/bk/prestasi/delete':
+            // API: POST delete (soft-delete) prestasi
+            $controller = new App\Controllers\BKController();
+            $controller->apiDeletePrestasi();
+            break;
+
+        case '/api/v1/bk/guru':
+            // API: GET list guru pendamping
+            $controller = new App\Controllers\BKController();
+            $controller->apiGetGuruList();
+            break;
+
         case '/api/v1/bk/tracer':
             // API: Ringkasan Tracer Study alumni (Tab 3)
             $controller = new App\Controllers\BKController();

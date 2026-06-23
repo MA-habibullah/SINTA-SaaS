@@ -7,6 +7,7 @@ $userRole   = $data['user_role']   ?? ($_SESSION['role_name']    ?? '');
 $userNama   = $data['user_nama']   ?? ($_SESSION['nama_lengkap'] ?? '');
 $tenantId   = $data['tenant_id']   ?? '';
 $tenantList = $data['tenant_list'] ?? [];
+$tahunAjaranList = $data['tahun_ajaran_list'] ?? [];
 $baseUrl    = '/SINTA-SaaS';
 ?>
 
@@ -195,6 +196,13 @@ $baseUrl    = '/SINTA-SaaS';
         to { opacity: 1; transform: translateY(0); }
     }
 
+    .hover-bg-slate:hover {
+        background-color: #f1f5f9;
+    }
+    .cursor-pointer {
+        cursor: pointer;
+    }
+
     [v-cloak] { display: none !important; }
 </style>
 
@@ -249,7 +257,7 @@ $baseUrl    = '/SINTA-SaaS';
             <i class="bi bi-speedometer2"></i> Dashboard
         </button>
         <button class="bk-tab-btn" :class="{'active': activeTab === 'penjurusan'}"
-                @click="switchTab('penjurusan')" id="tab-penjurusan">
+                @click="switchTab('penjurusan')" id="tab-tab-penjurusan">
             <i class="bi bi-diagram-3"></i> Penjurusan Mandiri
         </button>
         <button class="bk-tab-btn" :class="{'active': activeTab === 'tracer'}"
@@ -263,6 +271,10 @@ $baseUrl    = '/SINTA-SaaS';
         <button class="bk-tab-btn" :class="{'active': activeTab === 'jurnal'}"
                 @click="switchTab('jurnal')" id="tab-jurnal">
             <i class="bi bi-journal-text"></i> Rekam Kasus & Jurnal
+        </button>
+        <button class="bk-tab-btn" :class="{'active': activeTab === 'prestasi'}"
+                @click="switchTab('prestasi')" id="tab-prestasi">
+            <i class="bi bi-trophy"></i> Prestasi Siswa
         </button>
     </div>
 
@@ -556,8 +568,9 @@ $baseUrl    = '/SINTA-SaaS';
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label fw-semibold fs-7">Jurusan Saat Ini</label>
+                    <label for="input-jurusan-sekarang" class="form-label fw-semibold fs-7">Jurusan Saat Ini</label>
                     <input type="text" class="form-control rounded-3 bg-light" readonly
+                           id="input-jurusan-sekarang" name="jurusan_sekarang"
                            :value="overrideModal.siswa.kode_jurusan + ' — ' + overrideModal.siswa.nama_jurusan">
                 </div>
 
@@ -1100,6 +1113,383 @@ $baseUrl    = '/SINTA-SaaS';
         </div>
     </div>
 
+    <!-- ═══════════════════════════════════════════════════════════
+         TAB 6: PRESTASI SISWA
+    ════════════════════════════════════════════════════════════ -->
+    <div v-show="activeTab === 'prestasi'">
+        <!-- Warning untuk Super Admin jika belum memilih sekolah -->
+        <div v-if="userRole === 'super_admin' && !currentTenantId" class="text-center py-5">
+            <div class="card border-0 shadow-sm rounded-4 p-5 mx-auto animate-fade-in" style="max-width: 500px; background: #fff;">
+                <i class="bi bi-funnel text-warning fs-1 mb-3"></i>
+                <h5 class="fw-bold mb-2 text-dark">Pilih Sekolah Terlebih Dahulu</h5>
+                <p class="text-muted fs-7 mb-0">
+                    Silakan gunakan filter di bagian atas halaman untuk memilih sekolah sebelum mengelola data prestasi siswa.
+                </p>
+            </div>
+        </div>
+
+        <div v-else class="row g-4">
+            <!-- Panel Kiri: Form Input/Edit Prestasi -->
+            <div class="col-lg-5">
+                <div class="bk-card p-4">
+                    <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                        <h6 class="fw-bold mb-0">
+                            <i class="bi bi-trophy-fill me-2" style="color:var(--bk-primary);"></i>
+                            {{ formPrestasi.id ? 'Edit Data Prestasi' : 'Tambah Data Prestasi' }}
+                        </h6>
+                        <button v-if="formPrestasi.id" @click="clearFormPrestasi" class="btn btn-xs btn-outline-secondary rounded-3 py-1 px-2 fw-semibold" style="font-size: 0.72rem;">
+                            <i class="bi bi-plus-circle me-1"></i> Mode Tambah
+                        </button>
+                    </div>
+
+                    <!-- Alert Info / Warning Form -->
+                    <div v-if="alertPrestasi.msg" :class="'alert alert-' + alertPrestasi.type + ' border-0 rounded-3 py-2 px-3 mb-3 fs-7 animate-fade-in'">
+                        {{ alertPrestasi.msg }}
+                    </div>                    <form @submit.prevent="submitPrestasi" enctype="multipart/form-data">
+                        <!-- Siswa Selection -->
+                        <div class="mb-3">
+                            <label for="input-prestasi-cari-siswa" class="form-label fw-bold fs-7 mb-1 text-dark">Pilih Siswa <span class="text-danger">*</span></label>
+                            <div class="position-relative">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                                    <input type="text" 
+                                           id="input-prestasi-cari-siswa"
+                                           name="prestasi_cari_siswa"
+                                           class="form-control form-control-sm border-start-0 ps-1 rounded-end-3" 
+                                           placeholder="Ketik Nama, NISN, atau NIK Siswa..."
+                                           v-model="prestasiSearchSiswa"
+                                           @input="searchSiswaPrestasiDebounce"
+                                           @focus="showPrestasiSiswaDropdown = true"
+                                           @blur="hidePrestasiDropdownDelay" />
+                                </div>
+                                
+                                <!-- Dropdown Pencarian Siswa -->
+                                <div v-if="showPrestasiSiswaDropdown && prestasiSiswaOptions.length > 0" 
+                                     class="position-absolute w-100 bg-white border rounded-3 shadow-lg p-1 mt-1 z-3"
+                                     style="max-height: 250px; overflow-y: auto;">
+                                    <div v-for="s in prestasiSiswaOptions" 
+                                         :key="s.id" 
+                                         @mousedown.prevent="selectSiswaPrestasi(s)"
+                                         class="p-2 rounded-2 hover-bg-slate cursor-pointer fs-7 d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <div class="fw-bold text-dark">{{ s.nama_lengkap }}</div>
+                                            <div class="text-muted fs-8">NISN: {{ s.nisn }} | Kelas: {{ s.nama_kelas || '-' }}</div>
+                                        </div>
+                                        <i class="bi bi-plus-circle-fill text-primary fs-6"></i>
+                                    </div>
+                                </div>
+                                <div v-else-if="showPrestasiSiswaDropdown && loadingSearchPrestasiSiswa" 
+                                     class="position-absolute w-100 bg-white border rounded-3 shadow-lg p-3 text-center mt-1 z-3">
+                                    <div class="spinner-border spinner-border-sm text-primary"></div>
+                                    <span class="fs-7 text-muted ms-2">Mencari...</span>
+                                </div>
+                            </div>
+
+                            <!-- List Siswa Terpilih -->
+                            <div v-if="selectedPrestasiSiswa.length > 0" class="mt-2 d-flex flex-wrap gap-2">
+                                <div v-for="s in selectedPrestasiSiswa" :key="s.id" 
+                                     class="badge d-inline-flex align-items-center gap-2 p-2 rounded-3 text-dark" 
+                                     style="background: var(--bk-p-light); color: var(--bk-primary); border: 1px solid #ddd;">
+                                    <span class="fw-semibold">{{ s.nama_lengkap }} ({{ s.nama_kelas || '-' }})</span>
+                                    <button type="button" class="btn-close" style="font-size: 0.6rem; margin-left: 5px;" @click="removeSiswaPrestasi(s.id)"></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Kategori & Tahun Ajaran & Semester -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <label for="select-prestasi-kategori" class="form-label fw-bold fs-7 mb-1 text-dark">Kategori Kepesertaan <span class="text-danger">*</span></label>
+                                <select id="select-prestasi-kategori" name="kategori" v-model="formPrestasi.kategori" class="form-select form-select-sm rounded-3">
+                                    <option value="Personal">Personal (Individu)</option>
+                                    <option value="Regu">Regu (Kelompok)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="select-prestasi-tahun-ajaran" class="form-label fw-bold fs-7 mb-1 text-dark">Tahun Ajaran <span class="text-danger">*</span></label>
+                                <select id="select-prestasi-tahun-ajaran" name="tahun_ajaran_id" v-model="formPrestasi.tahun_ajaran_id" class="form-select form-select-sm rounded-3">
+                                    <option value="">— Pilih Tahun —</option>
+                                    <option v-for="y in activeYearsList" :key="y.id" :value="y.id">
+                                        {{ y.tahun_ajaran }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <label for="select-prestasi-semester" class="form-label fw-bold fs-7 mb-1 text-dark">Semester <span class="text-danger">*</span></label>
+                                <select id="select-prestasi-semester" name="semester" v-model="formPrestasi.semester" class="form-select form-select-sm rounded-3">
+                                    <option value="Ganjil">Ganjil</option>
+                                    <option value="Genap">Genap</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="select-prestasi-tingkat" class="form-label fw-bold fs-7 mb-1 text-dark">Tingkat Kejuaraan <span class="text-danger">*</span></label>
+                                <select id="select-prestasi-tingkat" name="tingkat_kejuaraan" v-model="formPrestasi.tingkat_kejuaraan" class="form-select form-select-sm rounded-3">
+                                    <option value="">— Pilih Tingkat —</option>
+                                    <option value="Kabupaten/Kota">Kabupaten/Kota</option>
+                                    <option value="Provinsi">Provinsi</option>
+                                    <option value="Nasional">Nasional</option>
+                                    <option value="Internasional">Internasional</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Bidang Lomba & Nama Lomba -->
+                        <div class="mb-3">
+                            <label for="input-prestasi-bidang" class="form-label fw-bold fs-7 mb-1 text-dark">Bidang Lomba / Prestasi <span class="text-danger">*</span></label>
+                            <input type="text" id="input-prestasi-bidang" name="bidang_lomba" v-model="formPrestasi.bidang_lomba" class="form-control form-control-sm rounded-3" placeholder="Contoh: Sains/OSN, Olahraga/O2SN, Seni, dll." />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="input-prestasi-nama-lomba" class="form-label fw-bold fs-7 mb-1 text-dark">Nama Perlombaan / Kegiatan <span class="text-danger">*</span></label>
+                            <input type="text" id="input-prestasi-nama-lomba" name="nama_lomba" v-model="formPrestasi.nama_lomba" class="form-control form-control-sm rounded-3" placeholder="Contoh: Olimpiade Matematika Nasional 2026" />
+                        </div>
+
+                        <!-- Kategori Juara & Nomor Sertifikat -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <label for="select-prestasi-juara" class="form-label fw-bold fs-7 mb-1 text-dark">Peringkat Juara <span class="text-danger">*</span></label>
+                                <select id="select-prestasi-juara" name="juara" v-model="formPrestasi.juara" class="form-select form-select-sm rounded-3">
+                                    <option value="">— Pilih Juara —</option>
+                                    <option value="Juara 1">Juara 1</option>
+                                    <option value="Juara 2">Juara 2</option>
+                                    <option value="Juara 3">Juara 3</option>
+                                    <option value="Harapan 1">Juara Harapan 1</option>
+                                    <option value="Harapan 2">Juara Harapan 2</option>
+                                    <option value="Harapan 3">Juara Harapan 3</option>
+                                    <option value="Lainnya">Lainnya (Tulis Keterangan)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6" v-if="formPrestasi.juara === 'Lainnya'">
+                                <label for="input-prestasi-juara-lainnya" class="form-label fw-bold fs-7 mb-1 text-dark">Keterangan Juara <span class="text-danger">*</span></label>
+                                <input type="text" id="input-prestasi-juara-lainnya" name="juara_lainnya" v-model="formPrestasi.juara_lainnya" class="form-control form-control-sm rounded-3" placeholder="Contoh: Gold Medal / Juara Favorit" />
+                            </div>
+                            <div class="col-md-6" v-else>
+                                <label for="input-prestasi-sertifikat" class="form-label fw-bold fs-7 mb-1 text-dark">Nomor Sertifikat / Piagam</label>
+                                <input type="text" id="input-prestasi-sertifikat" name="nomor_sertifikat" v-model="formPrestasi.nomor_sertifikat" class="form-control form-control-sm rounded-3" placeholder="No. Sertifikat jika ada" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3" v-if="formPrestasi.juara === 'Lainnya'">
+                            <label for="input-prestasi-sertifikat-lainnya" class="form-label fw-bold fs-7 mb-1 text-dark">Nomor Sertifikat / Piagam</label>
+                            <input type="text" id="input-prestasi-sertifikat-lainnya" name="nomor_sertifikat" v-model="formPrestasi.nomor_sertifikat" class="form-control form-control-sm rounded-3" placeholder="No. Sertifikat jika ada" />
+                        </div>
+
+                        <!-- Detail Pelaksanaan -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <label for="select-prestasi-jenis" class="form-label fw-bold fs-7 mb-1 text-dark">Jenis Pelaksanaan <span class="text-danger">*</span></label>
+                                <select id="select-prestasi-jenis" name="jenis_lomba" v-model="formPrestasi.jenis_lomba" class="form-select form-select-sm rounded-3">
+                                    <option value="Offline">Offline (Luring)</option>
+                                    <option value="Online">Online (Daring)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="input-prestasi-tanggal" class="form-label fw-bold fs-7 mb-1 text-dark">Tanggal Kegiatan <span class="text-danger">*</span></label>
+                                <input type="date" id="input-prestasi-tanggal" name="tanggal_lomba" v-model="formPrestasi.tanggal_lomba" class="form-control form-control-sm rounded-3" />
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <label for="input-prestasi-tempat" class="form-label fw-bold fs-7 mb-1 text-dark">Tempat / Kota <span class="text-danger">*</span></label>
+                                <input type="text" id="input-prestasi-tempat" name="tempat_lomba" v-model="formPrestasi.tempat_lomba" class="form-control form-control-sm rounded-3" placeholder="Contoh: Jakarta" />
+                            </div>
+                            <div class="col-md-6">
+                                <label for="input-prestasi-penyelenggara" class="form-label fw-bold fs-7 mb-1 text-dark">Penyelenggara <span class="text-danger">*</span></label>
+                                <input type="text" id="input-prestasi-penyelenggara" name="penyelenggara" v-model="formPrestasi.penyelenggara" class="form-control form-control-sm rounded-3" placeholder="Contoh: Puspresnas / Kemendikbud" />
+                            </div>
+                        </div>
+
+                        <!-- Guru Pendamping -->
+                        <div class="mb-3">
+                            <label for="input-prestasi-guru" class="form-label fw-bold fs-7 mb-1 text-dark">Guru Pendamping</label>
+                            <input type="text" id="input-prestasi-guru" name="guru_pendamping" v-model="formPrestasi.guru_pendamping" class="form-control form-control-sm rounded-3" placeholder="Tulis nama Guru Pendamping jika ada (Opsional)" />
+                        </div>
+
+                        <!-- Files Upload -->
+                        <div class="border rounded-3 p-3 bg-light mb-4">
+                            <div class="fw-bold fs-7 text-dark mb-2"><i class="bi bi-file-earmark-arrow-up me-1"></i>Berkas Pendukung (Masing-masing maks. 1 MB)</div>
+                            
+                            <div class="mb-2">
+                                <label for="input-file-bukti" class="form-label fs-8 fw-semibold mb-1 text-muted">Foto Bukti Sertifikat (.jpg, .jpeg, .png)</label>
+                                <input type="file" id="input-file-bukti" name="foto_bukti_prestasi" class="form-control form-control-sm prestasi-file-input" accept="image/*" @change="handleFileUpload($event, 'foto_bukti_prestasi')" />
+                                <div v-if="formPrestasi.existing_foto_bukti" class="fs-8 mt-1 text-success">
+                                    <i class="bi bi-check-circle-fill"></i> Sudah ada file terunggah:
+                                    <a :href="baseUrl + '/storage/app/public/' + formPrestasi.existing_foto_bukti" target="_blank" class="fw-bold">Lihat Foto</a>
+                                </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <label for="input-file-siswa" class="form-label fs-8 fw-semibold mb-1 text-muted">Foto Penerimaan Penghargaan / Siswa (.jpg, .jpeg, .png)</label>
+                                <input type="file" id="input-file-siswa" name="foto_siswa_prestasi" class="form-control form-control-sm prestasi-file-input" accept="image/*" @change="handleFileUpload($event, 'foto_siswa_prestasi')" />
+                                <div v-if="formPrestasi.existing_foto_siswa" class="fs-8 mt-1 text-success">
+                                    <i class="bi bi-check-circle-fill"></i> Sudah ada file terunggah:
+                                    <a :href="baseUrl + '/storage/app/public/' + formPrestasi.existing_foto_siswa" target="_blank" class="fw-bold">Lihat Foto</a>
+                                </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <label for="input-file-kegiatan" class="form-label fs-8 fw-semibold mb-1 text-muted">Foto Dokumentasi Kegiatan (.jpg, .jpeg, .png)</label>
+                                <input type="file" id="input-file-kegiatan" name="foto_kegiatan_lomba" class="form-control form-control-sm prestasi-file-input" accept="image/*" @change="handleFileUpload($event, 'foto_kegiatan_lomba')" />
+                                <div v-if="formPrestasi.existing_foto_kegiatan" class="fs-8 mt-1 text-success">
+                                    <i class="bi bi-check-circle-fill"></i> Sudah ada file terunggah:
+                                    <a :href="baseUrl + '/storage/app/public/' + formPrestasi.existing_foto_kegiatan" target="_blank" class="fw-bold">Lihat Foto</a>
+                                </div>
+                            </div>
+
+                            <div class="mb-0">
+                                <label for="input-file-surat-tugas" class="form-label fs-8 fw-semibold mb-1 text-muted">Surat Tugas PDF/Gambar (.pdf, .jpg, .jpeg, .png)</label>
+                                <input type="file" id="input-file-surat-tugas" name="surat_tugas_pdf" class="form-control form-control-sm prestasi-file-input" accept=".pdf,image/*" @change="handleFileUpload($event, 'surat_tugas_pdf')" />
+                                <div v-if="formPrestasi.existing_surat_tugas" class="fs-8 mt-1 text-success">
+                                    <i class="bi bi-check-circle-fill"></i> Sudah ada file terunggah:
+                                    <a :href="baseUrl + '/storage/app/public/' + formPrestasi.existing_surat_tugas" target="_blank" class="fw-bold">Lihat Berkas</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Buttons -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-sm btn-primary rounded-3 px-4 w-100" :disabled="loadingPrestasi">
+                                <span v-if="loadingPrestasi" class="spinner-border spinner-border-sm me-1"></span>
+                                <i v-else class="bi bi-save me-1"></i> Simpan Prestasi
+                            </button>
+                            <button type="button" @click="clearFormPrestasi" class="btn btn-sm btn-outline-secondary rounded-3 px-3">
+                                Batal
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Panel Kanan: Tabel List Prestasi -->
+            <div class="col-lg-7">
+                <div class="bk-card p-4 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold mb-0">
+                            <i class="bi bi-list-stars me-2" style="color:var(--bk-primary);"></i>
+                            Daftar Prestasi Siswa
+                        </h6>
+                        <span class="badge bg-primary rounded-pill">{{ prestasiList.length }} Data</span>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div v-if="loadingPrestasiList" class="text-center py-5">
+                        <div class="spinner-border text-primary"></div>
+                        <p class="text-muted mt-2 fs-7">Memuat daftar prestasi...</p>
+                    </div>
+
+                    <!-- Table List -->
+                    <div v-else-if="prestasiList.length > 0" class="table-responsive" style="max-height: 800px; overflow-y: auto;">
+                        <table class="table table-hover align-middle table-sm border-top" style="font-size:0.8rem;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3 py-2" style="width:35%;">Siswa & Prestasi</th>
+                                    <th class="py-2" style="width:30%;">Detail Event</th>
+                                    <th class="py-2 text-center" style="width:10%;">Poin</th>
+                                    <th class="py-2 text-center" style="width:10%;">Berkas</th>
+                                    <th class="pe-3 py-2 text-end" style="width:15%;">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="p in prestasiList" :key="p.id" class="align-middle">
+                                    <td class="ps-3 py-3">
+                                        <!-- Siswa Names -->
+                                        <div class="mb-1">
+                                            <span v-for="(s, idx) in p.siswa_list" :key="s.id">
+                                                <span class="fw-bold text-dark">{{ s.nama_lengkap }}</span>
+                                                <span class="text-muted fs-8"> ({{ s.nama_kelas || '-' }})</span>
+                                                <span v-if="idx < p.siswa_list.length - 1">, </span>
+                                            </span>
+                                        </div>
+                                        <!-- Kategori & Bidang -->
+                                        <div class="d-flex align-items-center gap-1 flex-wrap mt-1">
+                                            <span class="badge bg-secondary rounded-pill" style="font-size: 0.65rem;">{{ p.kategori }}</span>
+                                            <span class="badge rounded-pill" style="font-size: 0.65rem; background: var(--bk-p-light); color: var(--bk-primary);">{{ p.bidang_lomba }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3">
+                                        <div class="fw-bold text-slate-800">{{ p.nama_lomba }}</div>
+                                        <div class="text-muted fs-8">
+                                            <span class="badge bg-light text-dark border me-1" style="font-size: 0.62rem;">{{ p.tingkat_kejuaraan }}</span>
+                                            <span class="fw-semibold text-primary">{{ p.juara }}</span>
+                                        </div>
+                                        <div class="text-muted fs-8 mt-1">
+                                            <i class="bi bi-calendar-event me-1"></i>{{ p.tanggal_lomba }} | {{ p.tempat_lomba }}
+                                        </div>
+                                        <div v-if="p.guru_pendamping" class="text-muted fs-8 mt-1">
+                                            <i class="bi bi-person-badge me-1"></i>Pendamping: {{ p.guru_pendamping }}
+                                        </div>
+                                    </td>
+                                    <td class="text-center py-3 fw-bold text-success fs-7">
+                                        {{ p.poin_prestasi }}
+                                    </td>
+                                    <td class="text-center py-3">
+                                        <div class="d-flex flex-wrap gap-1 justify-content-center">
+                                            <a v-if="p.foto_bukti_prestasi" 
+                                               :href="baseUrl + '/storage/app/public/' + p.foto_bukti_prestasi" 
+                                               target="_blank" 
+                                               class="btn btn-xs btn-outline-info p-1 rounded-2" 
+                                               title="Foto Bukti Sertifikat">
+                                                <i class="bi bi-file-earmark-image"></i>
+                                            </a>
+                                            <a v-if="p.foto_siswa_prestasi" 
+                                               :href="baseUrl + '/storage/app/public/' + p.foto_siswa_prestasi" 
+                                               target="_blank" 
+                                               class="btn btn-xs btn-outline-info p-1 rounded-2" 
+                                               title="Foto Siswa / Penyerahan Juara">
+                                                <i class="bi bi-person-badge"></i>
+                                            </a>
+                                            <a v-if="p.foto_kegiatan_lomba" 
+                                               :href="baseUrl + '/storage/app/public/' + p.foto_kegiatan_lomba" 
+                                               target="_blank" 
+                                               class="btn btn-xs btn-outline-info p-1 rounded-2" 
+                                               title="Foto Kegiatan">
+                                                <i class="bi bi-camera"></i>
+                                            </a>
+                                            <a v-if="p.surat_tugas_pdf" 
+                                               :href="baseUrl + '/storage/app/public/' + p.surat_tugas_pdf" 
+                                               target="_blank" 
+                                               class="btn btn-xs btn-outline-info p-1 rounded-2" 
+                                               title="Surat Tugas">
+                                                <i class="bi bi-file-earmark-pdf"></i>
+                                            </a>
+                                            <span v-if="!p.foto_bukti_prestasi && !p.foto_siswa_prestasi && !p.foto_kegiatan_lomba && !p.surat_tugas_pdf" class="text-muted fs-8">—</span>
+                                        </div>
+                                    </td>
+                                    <td class="text-end pe-3 py-3">
+                                        <div class="d-flex gap-1 justify-content-end">
+                                            <button @click="editPrestasi(p)" 
+                                                    class="btn btn-xs btn-outline-primary rounded-2 py-0 px-2 fw-semibold" 
+                                                    style="font-size:0.7rem; line-height:1.5;" 
+                                                    title="Edit Data Prestasi">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </button>
+                                            <button @click="deletePrestasi(p.id)" 
+                                                    class="btn btn-xs btn-outline-danger rounded-2 py-0 px-2 fw-semibold" 
+                                                    style="font-size:0.7rem; line-height:1.5;" 
+                                                    title="Hapus Data Prestasi">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Empty state -->
+                    <div v-else class="text-center py-5 text-muted">
+                        <i class="bi bi-trophy fs-1 d-block mb-2"></i>
+                        Belum ada catatan prestasi siswa yang terdaftar.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div><!-- End #bkApp -->
 
 <script>
@@ -1111,9 +1501,13 @@ const _tenantId  = <?= json_encode($tenantId) ?>;
 const _userRole  = <?= json_encode($userRole) ?>;
 const _userId    = <?= json_encode($_SESSION['user_id'] ?? '') ?>;
 const _baseUrl   = '<?= $baseUrl ?>';
+const _tahunAjaranList = <?= json_encode($tahunAjaranList) ?>;
 
 window.VueAppRegistry.register('#bkApp', {
     setup() {
+        const userRole       = _userRole;
+        const baseUrl        = _baseUrl;
+
         // ─── State ──────────────────────────────────────────
         const activeTab      = ref('dashboard');
         const currentTenantId= ref(_tenantId);
@@ -1186,7 +1580,7 @@ window.VueAppRegistry.register('#bkApp', {
         });
 
         // ─── Tab Switch + Lazy Load ──────────────────────────
-        const tabsLoaded = ref({ dashboard: false, penjurusan: false, tracer: false, pdss: false, jurnal: false });
+        const tabsLoaded = ref({ dashboard: false, penjurusan: false, tracer: false, pdss: false, jurnal: false, prestasi: false });
 
         function switchTab(tab) {
             activeTab.value = tab;
@@ -1197,6 +1591,7 @@ window.VueAppRegistry.register('#bkApp', {
                 if (tab === 'tracer')     loadTracer();
                 if (tab === 'pdss')       loadPdss();
                 if (tab === 'jurnal')     { loadKasus(); loadKelasList(); }
+                if (tab === 'prestasi')   { loadPrestasi(); }
             }
         }
 
@@ -1668,6 +2063,333 @@ window.VueAppRegistry.register('#bkApp', {
             }
         }
 
+        // ─── Prestasi Siswa ──────────────────────────────────
+        const activeYearsList = ref(_tahunAjaranList);
+        const prestasiList = ref([]);
+        const guruList = ref([]);
+        const loadingPrestasi = ref(false);
+        const loadingPrestasiList = ref(false);
+        const prestasiSearchSiswa = ref('');
+        const prestasiSiswaOptions = ref([]);
+        const selectedPrestasiSiswa = ref([]);
+        const showPrestasiSiswaDropdown = ref(false);
+        const loadingSearchPrestasiSiswa = ref(false);
+        const alertPrestasi = ref({ msg: '', type: 'success' });
+        
+        const formPrestasi = ref({
+            id: '',
+            tahun_ajaran_id: '',
+            semester: 'Ganjil',
+            bidang_lomba: '',
+            nama_lomba: '',
+            nomor_sertifikat: '',
+            juara: '',
+            juara_lainnya: '',
+            kategori: 'Personal',
+            tingkat_kejuaraan: '',
+            jenis_lomba: 'Offline',
+            tempat_lomba: '',
+            tanggal_lomba: '',
+            penyelenggara: '',
+            guru_pendamping: '',
+            foto_bukti_prestasi: null,
+            foto_siswa_prestasi: null,
+            foto_kegiatan_lomba: null,
+            surat_tugas_pdf: null,
+            existing_foto_bukti: null,
+            existing_foto_siswa: null,
+            existing_foto_kegiatan: null,
+            existing_surat_tugas: null
+        });
+
+        let debouncePrestasiTimer = null;
+        function searchSiswaPrestasiDebounce() {
+            clearTimeout(debouncePrestasiTimer);
+            const q = prestasiSearchSiswa.value.trim();
+            if (q.length < 1) {
+                prestasiSiswaOptions.value = [];
+                showPrestasiSiswaDropdown.value = false;
+                return;
+            }
+            debouncePrestasiTimer = setTimeout(async () => {
+                loadingSearchPrestasiSiswa.value = true;
+                showPrestasiSiswaDropdown.value = true;
+                try {
+                    const params = new URLSearchParams();
+                    params.set('q', q);
+                    if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
+                    params.set('limit', '12');
+                    const res = await axios.get(`${_baseUrl}/api/v1/bk/siswa?${params}`);
+                    prestasiSiswaOptions.value = res.data.data || [];
+                } catch (e) {
+                    prestasiSiswaOptions.value = [];
+                } finally {
+                    loadingSearchPrestasiSiswa.value = false;
+                }
+            }, 280);
+        }
+
+        function hidePrestasiDropdownDelay() {
+            setTimeout(() => { showPrestasiSiswaDropdown.value = false; }, 200);
+        }
+
+        function selectSiswaPrestasi(s) {
+            if (formPrestasi.value.kategori === 'Personal') {
+                selectedPrestasiSiswa.value = [s];
+            } else {
+                if (!selectedPrestasiSiswa.value.some(item => item.id === s.id)) {
+                    selectedPrestasiSiswa.value.push(s);
+                }
+            }
+            prestasiSearchSiswa.value = '';
+            prestasiSiswaOptions.value = [];
+            showPrestasiSiswaDropdown.value = false;
+        }
+
+        function removeSiswaPrestasi(id) {
+            selectedPrestasiSiswa.value = selectedPrestasiSiswa.value.filter(s => s.id !== id);
+        }
+
+        function handleFileUpload(event, fieldName) {
+            const file = event.target.files[0];
+            if (file) {
+                if (file.size > 1024 * 1024) {
+                    alert('Ukuran berkas melebihi batas 1 MB.');
+                    event.target.value = '';
+                    return;
+                }
+                formPrestasi.value[fieldName] = file;
+            }
+        }
+
+        async function loadPrestasi() {
+            if (_userRole === 'super_admin' && !currentTenantId.value) return;
+            loadingPrestasiList.value = true;
+            try {
+                let url = `${_baseUrl}/api/v1/bk/prestasi`;
+                if (currentTenantId.value) url += `?tenant_id=${currentTenantId.value}`;
+                const res = await axios.get(url);
+                if (res.data.success) {
+                    prestasiList.value = res.data.data || [];
+                }
+            } catch (e) {
+                console.error('loadPrestasi error', e);
+            } finally {
+                loadingPrestasiList.value = false;
+            }
+        }
+
+        async function loadGuruList() {
+            if (_userRole === 'super_admin' && !currentTenantId.value) return;
+            try {
+                let url = `${_baseUrl}/api/v1/bk/guru`;
+                if (currentTenantId.value) url += `?tenant_id=${currentTenantId.value}`;
+                const res = await axios.get(url);
+                if (res.data.success) {
+                    guruList.value = res.data.data || [];
+                }
+            } catch (e) {
+                console.error('loadGuruList error', e);
+            }
+        }
+
+        async function submitPrestasi() {
+            alertPrestasi.value = { msg: '', type: 'success' };
+            
+            if (!formPrestasi.value.tahun_ajaran_id) { alertPrestasi.value = { msg: 'Tahun Ajaran wajib dipilih.', type: 'danger' }; return; }
+            if (!formPrestasi.value.semester) { alertPrestasi.value = { msg: 'Semester wajib dipilih.', type: 'danger' }; return; }
+            if (!formPrestasi.value.bidang_lomba) { alertPrestasi.value = { msg: 'Bidang Lomba wajib diisi.', type: 'danger' }; return; }
+            if (!formPrestasi.value.nama_lomba) { alertPrestasi.value = { msg: 'Nama Lomba wajib diisi.', type: 'danger' }; return; }
+            if (!formPrestasi.value.juara) { alertPrestasi.value = { msg: 'Kategori Juara wajib diisi.', type: 'danger' }; return; }
+            if (formPrestasi.value.juara === 'Lainnya' && !formPrestasi.value.juara_lainnya.trim()) { alertPrestasi.value = { msg: 'Keterangan Juara Lainnya wajib diisi.', type: 'danger' }; return; }
+            if (!formPrestasi.value.tingkat_kejuaraan) { alertPrestasi.value = { msg: 'Tingkat Kejuaraan wajib dipilih.', type: 'danger' }; return; }
+            if (!formPrestasi.value.tempat_lomba) { alertPrestasi.value = { msg: 'Tempat Lomba wajib diisi.', type: 'danger' }; return; }
+            if (!formPrestasi.value.tanggal_lomba) { alertPrestasi.value = { msg: 'Tanggal Lomba wajib diisi.', type: 'danger' }; return; }
+            if (!formPrestasi.value.penyelenggara) { alertPrestasi.value = { msg: 'Penyelenggara wajib diisi.', type: 'danger' }; return; }
+            if (selectedPrestasiSiswa.value.length === 0) { alertPrestasi.value = { msg: 'Minimal pilih satu siswa peraih prestasi.', type: 'danger' }; return; }
+
+            loadingPrestasi.value = true;
+            try {
+                const formData = new FormData();
+                if (formPrestasi.value.id) formData.append('id', formPrestasi.value.id);
+                if (currentTenantId.value) formData.append('tenant_id', currentTenantId.value);
+                formData.append('tahun_ajaran_id', formPrestasi.value.tahun_ajaran_id);
+                formData.append('semester', formPrestasi.value.semester);
+                formData.append('bidang_lomba', formPrestasi.value.bidang_lomba);
+                formData.append('nama_lomba', formPrestasi.value.nama_lomba);
+                formData.append('nomor_sertifikat', formPrestasi.value.nomor_sertifikat);
+                formData.append('juara', formPrestasi.value.juara);
+                formData.append('juara_lainnya', formPrestasi.value.juara_lainnya);
+                formData.append('kategori', formPrestasi.value.kategori);
+                formData.append('tingkat_kejuaraan', formPrestasi.value.tingkat_kejuaraan);
+                formData.append('jenis_lomba', formPrestasi.value.jenis_lomba);
+                formData.append('tempat_lomba', formPrestasi.value.tempat_lomba);
+                formData.append('tanggal_lomba', formPrestasi.value.tanggal_lomba);
+                formData.append('penyelenggara', formPrestasi.value.penyelenggara);
+                formData.append('guru_pendamping', formPrestasi.value.guru_pendamping);
+
+                const siswaIds = selectedPrestasiSiswa.value.map(s => s.id);
+                formData.append('siswa_ids', JSON.stringify(siswaIds));
+
+                if (formPrestasi.value.foto_bukti_prestasi) formData.append('foto_bukti_prestasi', formPrestasi.value.foto_bukti_prestasi);
+                if (formPrestasi.value.foto_siswa_prestasi) formData.append('foto_siswa_prestasi', formPrestasi.value.foto_siswa_prestasi);
+                if (formPrestasi.value.foto_kegiatan_lomba) formData.append('foto_kegiatan_lomba', formPrestasi.value.foto_kegiatan_lomba);
+                if (formPrestasi.value.surat_tugas_pdf) formData.append('surat_tugas_pdf', formPrestasi.value.surat_tugas_pdf);
+
+                const isUpdate = !!formPrestasi.value.id;
+                const endpoint = isUpdate ? `${_baseUrl}/api/v1/bk/prestasi/update` : `${_baseUrl}/api/v1/bk/prestasi`;
+
+                const res = await axios.post(endpoint, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+
+                if (res.data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Sukses',
+                        text: res.data.message,
+                        confirmButtonColor: 'var(--bk-primary)'
+                    });
+                    clearFormPrestasi();
+                    loadPrestasi();
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal',
+                        text: res.data.error || 'Terjadi kesalahan.',
+                        confirmButtonColor: 'var(--bk-primary)'
+                    });
+                }
+            } catch (err) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Kesalahan',
+                    text: err.response?.data?.error || 'Koneksi ke server gagal.',
+                    confirmButtonColor: 'var(--bk-primary)'
+                });
+            } finally {
+                loadingPrestasi.value = false;
+            }
+        }
+
+        function editPrestasi(p) {
+            clearFormPrestasi();
+            formPrestasi.value.id = p.id;
+            formPrestasi.value.tahun_ajaran_id = p.tahun_ajaran_id;
+            formPrestasi.value.semester = p.semester;
+            formPrestasi.value.bidang_lomba = p.bidang_lomba;
+            formPrestasi.value.nama_lomba = p.nama_lomba;
+            formPrestasi.value.nomor_sertifikat = p.nomor_sertifikat || '';
+            if (['Juara 1', 'Juara 2', 'Juara 3', 'Harapan 1', 'Harapan 2', 'Harapan 3'].includes(p.juara)) {
+                formPrestasi.value.juara = p.juara;
+                formPrestasi.value.juara_lainnya = '';
+            } else {
+                formPrestasi.value.juara = 'Lainnya';
+                formPrestasi.value.juara_lainnya = p.juara;
+            }
+            formPrestasi.value.kategori = p.kategori;
+            formPrestasi.value.tingkat_kejuaraan = p.tingkat_kejuaraan;
+            formPrestasi.value.jenis_lomba = p.jenis_lomba;
+            formPrestasi.value.tempat_lomba = p.tempat_lomba;
+            formPrestasi.value.tanggal_lomba = p.tanggal_lomba;
+            formPrestasi.value.penyelenggara = p.penyelenggara;
+            formPrestasi.value.guru_pendamping = p.guru_pendamping || '';
+            
+            formPrestasi.value.existing_foto_bukti = p.foto_bukti_prestasi;
+            formPrestasi.value.existing_foto_siswa = p.foto_siswa_prestasi;
+            formPrestasi.value.existing_foto_kegiatan = p.foto_kegiatan_lomba;
+            formPrestasi.value.existing_surat_tugas = p.surat_tugas_pdf;
+
+            selectedPrestasiSiswa.value = (p.siswa_list || []).map(s => ({
+                id: s.id,
+                nama_lengkap: s.nama_lengkap,
+                nisn: s.nisn,
+                nama_kelas: s.nama_kelas
+            }));
+        }
+
+        async function deletePrestasi(id) {
+            const confirmResult = await Swal.fire({
+                title: 'Konfirmasi Hapus',
+                text: 'Apakah Anda yakin ingin menghapus data prestasi ini?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: 'var(--bk-red)',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Hapus',
+                cancelButtonText: 'Batal'
+            });
+
+            if (confirmResult.isConfirmed) {
+                try {
+                    const res = await axios.post(`${_baseUrl}/api/v1/bk/prestasi/delete`, {
+                        id: id,
+                        tenant_id: currentTenantId.value
+                    }, { headers: { 'Content-Type': 'application/json' } });
+
+                    if (res.data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Dihapus',
+                            text: res.data.message,
+                            confirmButtonColor: 'var(--bk-primary)'
+                        });
+                        loadPrestasi();
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal',
+                            text: res.data.error || 'Gagal menghapus data.',
+                            confirmButtonColor: 'var(--bk-primary)'
+                        });
+                    }
+                } catch (err) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Kesalahan',
+                        text: err.response?.data?.error || 'Koneksi ke server gagal.',
+                        confirmButtonColor: 'var(--bk-primary)'
+                    });
+                }
+            }
+        }
+
+        function clearFormPrestasi() {
+            formPrestasi.value = {
+                id: '',
+                tahun_ajaran_id: '',
+                semester: 'Ganjil',
+                bidang_lomba: '',
+                nama_lomba: '',
+                nomor_sertifikat: '',
+                juara: '',
+                juara_lainnya: '',
+                kategori: 'Personal',
+                tingkat_kejuaraan: '',
+                jenis_lomba: 'Offline',
+                tempat_lomba: '',
+                tanggal_lomba: '',
+                penyelenggara: '',
+                guru_pendamping: '',
+                foto_bukti_prestasi: null,
+                foto_siswa_prestasi: null,
+                foto_kegiatan_lomba: null,
+                surat_tugas_pdf: null,
+                existing_foto_bukti: null,
+                existing_foto_siswa: null,
+                existing_foto_kegiatan: null,
+                existing_surat_tugas: null
+            };
+            selectedPrestasiSiswa.value = [];
+            prestasiSearchSiswa.value = '';
+            prestasiSiswaOptions.value = [];
+            showPrestasiSiswaDropdown.value = false;
+            
+            document.querySelectorAll('.prestasi-file-input').forEach(input => {
+                input.value = '';
+            });
+        }
+
         // ─── Init ────────────────────────────────────────────
         onMounted(() => {
             loadDashboard();
@@ -1697,7 +2419,14 @@ window.VueAppRegistry.register('#bkApp', {
             submitKasus, loadKasus, loadKelasList,
             searchSiswaDebounce, selectSiswa, clearSiswa,
             onFilterKelasChange, onSearchFocus, hideDropdownDelay,
-            canEditKasus, openChangeStatus, openLogs
+            canEditKasus, openChangeStatus, openLogs,
+            // Prestasi Siswa
+            activeYearsList, prestasiList, guruList, loadingPrestasi, loadingPrestasiList,
+            prestasiSearchSiswa, prestasiSiswaOptions, selectedPrestasiSiswa,
+            showPrestasiSiswaDropdown, loadingSearchPrestasiSiswa, alertPrestasi, formPrestasi,
+            searchSiswaPrestasiDebounce, hidePrestasiDropdownDelay, selectSiswaPrestasi,
+            removeSiswaPrestasi, handleFileUpload, submitPrestasi, loadPrestasi, loadGuruList,
+            editPrestasi, deletePrestasi, clearFormPrestasi, userRole, baseUrl, currentTenantId
         };
     }
 });
