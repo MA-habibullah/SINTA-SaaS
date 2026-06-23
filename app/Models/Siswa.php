@@ -113,13 +113,17 @@ class Siswa extends Model {
                         tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, nama_wali, kontak_wali,
                         id_angkatan, id_tahun_ajaran, id_pendidikan, id_jenjang, id_jurusan, id_kelas,
                         nik, no_kk, nama_panggilan, agama, ukuran_seragam_sekolah, ukuran_seragam_olahraga,
-                        sekolah_asal, status, password
+                        sekolah_asal, status, password,
+                        kewarganegaraan, bahasa_sehari_hari, no_ijazah_sebelumnya, tanggal_ijazah_sebelumnya,
+                        lama_belajar_sebelumnya, nomor_ijazah_kelulusan, nomor_skl, keterangan_setelah_lulus
                     ) VALUES (
                         :id, :tenant_id, :user_id, :nisn, :nis, :nama_lengkap, 
                         :tempat_lahir, :tanggal_lahir, :jenis_kelamin, :alamat, :nama_wali, :kontak_wali,
                         :id_angkatan, :id_tahun_ajaran, :id_pendidikan, :id_jenjang, :id_jurusan, :id_kelas,
                         :nik, :no_kk, :nama_panggilan, :agama, :ukuran_seragam_sekolah, :ukuran_seragam_olahraga,
-                        :sekolah_asal, :status, :password
+                        :sekolah_asal, :status, :password,
+                        :kewarganegaraan, :bahasa_sehari_hari, :no_ijazah_sebelumnya, :tanggal_ijazah_sebelumnya,
+                        :lama_belajar_sebelumnya, :nomor_ijazah_kelulusan, :nomor_skl, :keterangan_setelah_lulus
                     )";
 
             $stmt = $this->db->prepare($sql);
@@ -150,7 +154,15 @@ class Siswa extends Model {
                 'ukuran_seragam_olahraga' => !empty($data['ukuran_seragam_olahraga']) ? $data['ukuran_seragam_olahraga'] : null,
                 'sekolah_asal' => !empty($data['sekolah_asal']) ? $data['sekolah_asal'] : null,
                 'status' => !empty($data['status']) ? $data['status'] : 'Aktif',
-                'password' => !empty($data['password']) ? password_hash($data['password'], PASSWORD_BCRYPT) : password_hash($data['tanggal_lahir'] ?? '123456', PASSWORD_BCRYPT)
+                'password' => !empty($data['password']) ? password_hash($data['password'], PASSWORD_BCRYPT) : password_hash($data['tanggal_lahir'] ?? '123456', PASSWORD_BCRYPT),
+                'kewarganegaraan' => $data['kewarganegaraan'] ?? 'WNI',
+                'bahasa_sehari_hari' => $data['bahasa_sehari_hari'] ?? 'Indonesia',
+                'no_ijazah_sebelumnya' => !empty($data['no_ijazah_sebelumnya']) ? $data['no_ijazah_sebelumnya'] : null,
+                'tanggal_ijazah_sebelumnya' => !empty($data['tanggal_ijazah_sebelumnya']) ? $data['tanggal_ijazah_sebelumnya'] : null,
+                'lama_belajar_sebelumnya' => !empty($data['lama_belajar_sebelumnya']) ? (int) $data['lama_belajar_sebelumnya'] : null,
+                'nomor_ijazah_kelulusan' => !empty($data['nomor_ijazah_kelulusan']) ? $data['nomor_ijazah_kelulusan'] : null,
+                'nomor_skl' => !empty($data['nomor_skl']) ? $data['nomor_skl'] : null,
+                'keterangan_setelah_lulus' => !empty($data['keterangan_setelah_lulus']) ? $data['keterangan_setelah_lulus'] : null
             ]);
 
             // Simpan data sub-tabel terkait
@@ -183,7 +195,9 @@ class Siswa extends Model {
                 'jenis_kelamin', 'nama_wali', 'kontak_wali', 'id_angkatan', 
                 'id_tahun_ajaran', 'id_pendidikan', 'id_jenjang', 'id_jurusan', 'id_kelas',
                 'nik', 'no_kk', 'nama_panggilan', 'agama', 'ukuran_seragam_sekolah', 'ukuran_seragam_olahraga',
-                'sekolah_asal', 'status'
+                'sekolah_asal', 'status',
+                'kewarganegaraan', 'bahasa_sehari_hari', 'no_ijazah_sebelumnya', 'tanggal_ijazah_sebelumnya',
+                'lama_belajar_sebelumnya', 'nomor_ijazah_kelulusan', 'nomor_skl', 'keterangan_setelah_lulus'
             ];
 
             $setParts = [];
@@ -200,7 +214,9 @@ class Siswa extends Model {
                         'nisn', 'nis', 'tempat_lahir', 'id_angkatan', 'id_tahun_ajaran', 
                         'id_pendidikan', 'id_jenjang', 'id_jurusan', 'id_kelas', 'nama_wali', 'kontak_wali',
                         'nik', 'no_kk', 'nama_panggilan', 'agama', 'ukuran_seragam_sekolah', 'ukuran_seragam_olahraga',
-                        'sekolah_asal'
+                        'sekolah_asal',
+                        'kewarganegaraan', 'bahasa_sehari_hari', 'no_ijazah_sebelumnya', 'tanggal_ijazah_sebelumnya',
+                        'lama_belajar_sebelumnya', 'nomor_ijazah_kelulusan', 'nomor_skl', 'keterangan_setelah_lulus'
                     ];
                     
                     if (in_array($col, $nullableCols) && $data[$col] === '') {
@@ -318,7 +334,8 @@ class Siswa extends Model {
                     'transportasi' => $data['transportasi'] ?? 'Lainnya',
                     'jumlah_saudara' => (int) ($data['jumlah_saudara'] ?? 0),
                     'penyakit_yang_diderita' => !empty($data['penyakit_yang_diderita']) ? $data['penyakit_yang_diderita'] : null,
-                    'foto_profil' => !empty($data['foto_profil']) ? $data['foto_profil'] : null
+                    'foto_profil' => !empty($data['foto_profil']) ? $data['foto_profil'] : null,
+                    'kelainan_jasmani' => !empty($data['kelainan_jasmani']) ? $data['kelainan_jasmani'] : 'Tidak Ada'
                 ]
             ],
             'rincian_alamat' => [
@@ -329,7 +346,8 @@ class Siswa extends Model {
                     'rt' => $data['rt'] ?? '',
                     'rw' => $data['rw'] ?? '',
                     'kode_pos' => $data['kode_pos'] ?? '',
-                    'status_tinggal' => $data['status_tinggal'] ?? 'Lainnya'
+                    'status_tinggal' => $data['status_tinggal'] ?? 'Lainnya',
+                    'tinggal_dengan' => $data['tinggal_dengan'] ?? 'Orang Tua'
                 ]
             ],
             'orang_tua' => [
@@ -357,7 +375,16 @@ class Siswa extends Model {
                     'pendidikan_wali' => !empty($data['pendidikan_wali']) ? $data['pendidikan_wali'] : null,
                     'pekerjaan_wali' => !empty($data['pekerjaan_wali']) ? $data['pekerjaan_wali'] : null,
                     'penghasilan_wali' => !empty($data['penghasilan_wali']) ? $data['penghasilan_wali'] : null,
-                    'agama_wali' => !empty($data['agama_wali']) ? $data['agama_wali'] : null
+                    'agama_wali' => !empty($data['agama_wali']) ? $data['agama_wali'] : null,
+                    'tanggal_lahir_ayah' => !empty($data['tanggal_lahir_ayah']) ? $data['tanggal_lahir_ayah'] : null,
+                    'kewarganegaraan_ayah' => $data['kewarganegaraan_ayah'] ?? 'WNI',
+                    'status_hidup_ayah' => $data['status_hidup_ayah'] ?? 'Hidup',
+                    'tanggal_lahir_ibu' => !empty($data['tanggal_lahir_ibu']) ? $data['tanggal_lahir_ibu'] : null,
+                    'kewarganegaraan_ibu' => $data['kewarganegaraan_ibu'] ?? 'WNI',
+                    'status_hidup_ibu' => $data['status_hidup_ibu'] ?? 'Hidup',
+                    'tanggal_lahir_wali' => !empty($data['tanggal_lahir_wali']) ? $data['tanggal_lahir_wali'] : null,
+                    'kewarganegaraan_wali' => $data['kewarganegaraan_wali'] ?? null,
+                    'hubungan_wali' => $data['hubungan_wali'] ?? null
                 ]
             ],
             'kontak' => [
@@ -388,7 +415,9 @@ class Siswa extends Model {
                     'hobi' => $data['hobi'] ?? '',
                     'keluar_karena' => !empty($data['keluar_karena']) ? $data['keluar_karena'] : null,
                     'tanggal_keluar' => !empty($data['tanggal_keluar']) ? $data['tanggal_keluar'] : null,
-                    'alasan_keluar' => !empty($data['alasan_keluar']) ? $data['alasan_keluar'] : null
+                    'alasan_keluar' => !empty($data['alasan_keluar']) ? $data['alasan_keluar'] : null,
+                    'sekolah_tujuan' => !empty($data['sekolah_tujuan']) ? $data['sekolah_tujuan'] : null,
+                    'nomor_skp' => !empty($data['nomor_skp']) ? $data['nomor_skp'] : null
                 ]
             ],
             'dokumen' => [

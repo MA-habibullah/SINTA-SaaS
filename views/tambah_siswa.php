@@ -463,6 +463,21 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                     </select>
                 </div>
 
+                <!-- Kewarganegaraan -->
+                <div class="col-md-6">
+                    <label for="kewarganegaraan" class="form-label">Kewarganegaraan <span class="text-danger">*</span></label>
+                    <select class="form-select" id="kewarganegaraan" name="kewarganegaraan" v-model="form.kewarganegaraan" required>
+                        <option value="WNI">Warga Negara Indonesia (WNI)</option>
+                        <option value="WNA">Warga Negara Asing (WNA)</option>
+                    </select>
+                </div>
+
+                <!-- Bahasa Sehari-hari -->
+                <div class="col-md-6">
+                    <label for="bahasa_sehari_hari" class="form-label">Bahasa Sehari-hari <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="bahasa_sehari_hari" name="bahasa_sehari_hari" v-model="form.bahasa_sehari_hari" placeholder="Contoh: Indonesia, Jawa" required>
+                </div>
+
                 <!-- Tempat Lahir -->
                 <div class="col-md-6">
                     <label for="tempat_lahir" class="form-label">Tempat Lahir <span class="text-danger">*</span></label>
@@ -488,6 +503,24 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 <div class="col-md-6">
                     <label for="sekolah_asal" class="form-label">Asal Sekolah Sebelumnya</label>
                     <input type="text" class="form-control" id="sekolah_asal" name="sekolah_asal" v-model="form.sekolah_asal" placeholder="Contoh: SMP Negeri 1 Jakarta">
+                </div>
+
+                <!-- Nomor Ijazah Sebelumnya -->
+                <div class="col-md-4">
+                    <label for="no_ijazah_sebelumnya" class="form-label">No. Ijazah Sebelumnya</label>
+                    <input type="text" class="form-control" id="no_ijazah_sebelumnya" name="no_ijazah_sebelumnya" v-model="form.no_ijazah_sebelumnya" placeholder="Masukkan nomor ijazah">
+                </div>
+
+                <!-- Tanggal Ijazah Sebelumnya -->
+                <div class="col-md-4">
+                    <label for="tanggal_ijazah_sebelumnya" class="form-label">Tanggal Ijazah Sebelumnya</label>
+                    <input type="date" class="form-control" id="tanggal_ijazah_sebelumnya" name="tanggal_ijazah_sebelumnya" v-model="form.tanggal_ijazah_sebelumnya">
+                </div>
+
+                <!-- Lama Belajar Sebelumnya -->
+                <div class="col-md-4">
+                    <label for="lama_belajar_sebelumnya" class="form-label">Lama Belajar Sebelumnya (Tahun)</label>
+                    <input type="number" class="form-control" id="lama_belajar_sebelumnya" name="lama_belajar_sebelumnya" v-model.number="form.lama_belajar_sebelumnya" min="1" max="10" placeholder="Contoh: 3">
                 </div>
 
                 <!-- Status Siswa -->
@@ -660,6 +693,18 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                     </select>
                 </div>
 
+                <!-- Tinggal Dengan -->
+                <div class="col-md-6">
+                    <label for="tinggal_dengan" class="form-label">Tinggal Dengan <span class="text-danger">*</span></label>
+                    <select class="form-select" id="tinggal_dengan" name="tinggal_dengan" v-model="form.tinggal_dengan" required>
+                        <option value="Orang Tua">Orang Tua</option>
+                        <option value="Wali">Wali</option>
+                        <option value="Kos">Kos</option>
+                        <option value="Asrama">Asrama</option>
+                        <option value="Lainnya">Lainnya</option>
+                    </select>
+                </div>
+
                 <!-- Email Siswa -->
                 <div class="col-md-6">
                     <label for="email" class="form-label">Email Siswa <span class="text-danger">*</span></label>
@@ -738,6 +783,12 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 <div class="col-md-12">
                     <label for="penyakit_yang_diderita" class="form-label">Riwayat Penyakit yang Diderita (Opsional)</label>
                     <input type="text" class="form-control" id="penyakit_yang_diderita" name="penyakit_yang_diderita" v-model="form.penyakit_yang_diderita" placeholder="Tulis nama penyakit jika ada (asma, jantung, alergi, dsb)">
+                </div>
+
+                <!-- Kelainan Jasmani -->
+                <div class="col-md-12">
+                    <label for="kelainan_jasmani" class="form-label">Kelainan Jasmani / Disabilitas <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="kelainan_jasmani" name="kelainan_jasmani" v-model="form.kelainan_jasmani" placeholder="Contoh: Tidak Ada, Tuli, Low Vision, dll" required>
                 </div>
 
                 <!-- Jarak Rumah ke Sekolah -->
@@ -890,8 +941,22 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                             </searchable-select>
                         </div>
                         <div class="col-md-6">
-                            <label for="tahun_lahir_ayah" class="form-label">Tahun Lahir Ayah</label>
-                            <input type="number" class="form-control" id="tahun_lahir_ayah" name="tahun_lahir_ayah" v-model.number="form.tahun_lahir_ayah" min="1930" max="2020" placeholder="Contoh: 1975">
+                            <label for="tanggal_lahir_ayah" class="form-label">Tanggal Lahir Ayah</label>
+                            <input type="date" class="form-control" id="tanggal_lahir_ayah" name="tanggal_lahir_ayah" v-model="form.tanggal_lahir_ayah">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="kewarganegaraan_ayah" class="form-label">Kewarganegaraan Ayah</label>
+                            <select class="form-select" id="kewarganegaraan_ayah" name="kewarganegaraan_ayah" v-model="form.kewarganegaraan_ayah">
+                                <option value="WNI">Warga Negara Indonesia (WNI)</option>
+                                <option value="WNA">Warga Negara Asing (WNA)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="status_hidup_ayah" class="form-label">Status Kelangsungan Hidup Ayah</label>
+                            <select class="form-select" id="status_hidup_ayah" name="status_hidup_ayah" v-model="form.status_hidup_ayah">
+                                <option value="Hidup">Masih Hidup</option>
+                                <option value="Meninggal">Wafat / Meninggal</option>
+                            </select>
                         </div>
                         <div class="col-md-4">
                             <label for="pendidikan_ayah" class="form-label">Pendidikan Terakhir Ayah</label>
@@ -977,8 +1042,22 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                             </searchable-select>
                         </div>
                         <div class="col-md-6">
-                            <label for="tahun_lahir_ibu" class="form-label">Tahun Lahir Ibu <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="tahun_lahir_ibu" name="tahun_lahir_ibu" v-model.number="form.tahun_lahir_ibu" min="1930" max="2020" placeholder="Contoh: 1978" :required="activeParentTab === 'mother'">
+                            <label for="tanggal_lahir_ibu" class="form-label">Tanggal Lahir Ibu <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="tanggal_lahir_ibu" name="tanggal_lahir_ibu" v-model="form.tanggal_lahir_ibu" :required="activeParentTab === 'mother'">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="kewarganegaraan_ibu" class="form-label">Kewarganegaraan Ibu</label>
+                            <select class="form-select" id="kewarganegaraan_ibu" name="kewarganegaraan_ibu" v-model="form.kewarganegaraan_ibu">
+                                <option value="WNI">Warga Negara Indonesia (WNI)</option>
+                                <option value="WNA">Warga Negara Asing (WNA)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="status_hidup_ibu" class="form-label">Status Kelangsungan Hidup Ibu</label>
+                            <select class="form-select" id="status_hidup_ibu" name="status_hidup_ibu" v-model="form.status_hidup_ibu">
+                                <option value="Hidup">Masih Hidup</option>
+                                <option value="Meninggal">Wafat / Meninggal</option>
+                            </select>
                         </div>
                         <div class="col-md-4">
                             <label for="pendidikan_ibu" class="form-label">Pendidikan Terakhir Ibu <span class="text-danger">*</span></label>
@@ -1063,8 +1142,20 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                             </searchable-select>
                         </div>
                         <div class="col-md-6">
-                            <label for="tahun_lahir_wali" class="form-label">Tahun Lahir Wali</label>
-                            <input type="number" class="form-control" id="tahun_lahir_wali" name="tahun_lahir_wali" v-model.number="form.tahun_lahir_wali" min="1930" max="2020" placeholder="Contoh: 1980">
+                            <label for="tanggal_lahir_wali" class="form-label">Tanggal Lahir Wali</label>
+                            <input type="date" class="form-control" id="tanggal_lahir_wali" name="tanggal_lahir_wali" v-model="form.tanggal_lahir_wali">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="kewarganegaraan_wali" class="form-label">Kewarganegaraan Wali</label>
+                            <select class="form-select" id="kewarganegaraan_wali" name="kewarganegaraan_wali" v-model="form.kewarganegaraan_wali">
+                                <option value="">-- Pilih --</option>
+                                <option value="WNI">Warga Negara Indonesia (WNI)</option>
+                                <option value="WNA">Warga Negara Asing (WNA)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="hubungan_wali" class="form-label">Hubungan Keluarga Wali</label>
+                            <input type="text" class="form-control" id="hubungan_wali" name="hubungan_wali" v-model="form.hubungan_wali" placeholder="Contoh: Paman, Tante, Kakak Kandung">
                         </div>
                         <div class="col-md-4">
                             <label for="pendidikan_wali" class="form-label">Pendidikan Terakhir Wali</label>
@@ -1237,6 +1328,37 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                                 <label for="tanggal_keluar" class="form-label">Tanggal Keluar</label>
                                 <input type="date" class="form-control" id="tanggal_keluar" name="tanggal_keluar" v-model="form.tanggal_keluar">
                             </div>
+
+                            <!-- Fields for Mutasi -->
+                            <div class="col-md-6" v-if="form.keluar_karena === 'Mutasi'">
+                                <label for="sekolah_tujuan" class="form-label">Sekolah Tujuan Pindahan</label>
+                                <input type="text" class="form-control" id="sekolah_tujuan" name="sekolah_tujuan" v-model="form.sekolah_tujuan" placeholder="Masukkan nama sekolah tujuan">
+                            </div>
+                            <div class="col-md-6" v-if="form.keluar_karena === 'Mutasi'">
+                                <label for="nomor_skp" class="form-label">Nomor Surat Keterangan Pindah (SKP)</label>
+                                <input type="text" class="form-control" id="nomor_skp" name="nomor_skp" v-model="form.nomor_skp" placeholder="Masukkan nomor SKP">
+                            </div>
+
+                            <!-- Fields for Lulus -->
+                            <div class="col-md-4" v-if="form.keluar_karena === 'Lulus'">
+                                <label for="nomor_ijazah_kelulusan" class="form-label">Nomor Blangko Ijazah Kelulusan</label>
+                                <input type="text" class="form-control" id="nomor_ijazah_kelulusan" name="nomor_ijazah_kelulusan" v-model="form.nomor_ijazah_kelulusan" placeholder="Masukkan nomor ijazah kelulusan">
+                            </div>
+                            <div class="col-md-4" v-if="form.keluar_karena === 'Lulus'">
+                                <label for="nomor_skl" class="form-label">Nomor Surat Keterangan Lulus (SKL)</label>
+                                <input type="text" class="form-control" id="nomor_skl" name="nomor_skl" v-model="form.nomor_skl" placeholder="Masukkan nomor SKL">
+                            </div>
+                            <div class="col-md-4" v-if="form.keluar_karena === 'Lulus'">
+                                <label for="keterangan_setelah_lulus" class="form-label">Rencana Setelah Lulus</label>
+                                <select class="form-select" id="keterangan_setelah_lulus" name="keterangan_setelah_lulus" v-model="form.keterangan_setelah_lulus">
+                                    <option value="">-- Pilih Rencana --</option>
+                                    <option value="Kuliah">Kuliah / Melanjutkan Studi</option>
+                                    <option value="Bekerja">Bekerja</option>
+                                    <option value="Wirausaha">Wirausaha</option>
+                                    <option value="Lainnya">Lainnya</option>
+                                </select>
+                            </div>
+
                             <div class="col-12">
                                 <label for="alasan_keluar" class="form-label">Uraian / Alasan Keluar Lengkap</label>
                                 <textarea class="form-control" id="alasan_keluar" name="alasan_keluar" rows="2" v-model="form.alasan_keluar" placeholder="Jelaskan alasan resmi keluar atau nama sekolah tujuan mutasi"></textarea>
@@ -1705,6 +1827,11 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 id_pendidikan: '',
                 ukuran_seragam_sekolah: '',
                 ukuran_seragam_olahraga: '',
+                kewarganegaraan: 'WNI',
+                bahasa_sehari_hari: 'Indonesia',
+                no_ijazah_sebelumnya: '',
+                tanggal_ijazah_sebelumnya: '',
+                lama_belajar_sebelumnya: '',
 
                 // Rincian Alamat
                 alamat_kk: '',
@@ -1717,6 +1844,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 id_provinsi: '',
                 id_kota: '',
                 id_kecamatan: '',
+                tinggal_dengan: 'Orang Tua',
 
                 // Kontak
                 email: '',
@@ -1735,6 +1863,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 jarak_rumah: '',
                 transportasi: '',
                 foto_profil: '', // database filename
+                kelainan_jasmani: 'Tidak Ada',
 
                 // KIP
                 penerima_kps: 0,
@@ -1753,6 +1882,9 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 pekerjaan_ayah: '',
                 penghasilan_ayah: '',
                 agama_ayah: '',
+                tanggal_lahir_ayah: '',
+                kewarganegaraan_ayah: 'WNI',
+                status_hidup_ayah: 'Hidup',
 
                 nik_ibu: '',
                 nama_ibu: '',
@@ -1762,6 +1894,9 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 pekerjaan_ibu: '',
                 penghasilan_ibu: '',
                 agama_ibu: '',
+                tanggal_lahir_ibu: '',
+                kewarganegaraan_ibu: 'WNI',
+                status_hidup_ibu: 'Hidup',
 
                 nik_wali: '',
                 nama_wali: '',
@@ -1771,6 +1906,9 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 pekerjaan_wali: '',
                 penghasilan_wali: '',
                 agama_wali: '',
+                tanggal_lahir_wali: '',
+                kewarganegaraan_wali: '',
+                hubungan_wali: '',
 
                 // Registrasi
                 jenis_pendaftaran: '',
@@ -1782,6 +1920,11 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 keluar_karena: '',
                 tanggal_keluar: '',
                 alasan_keluar: '',
+                sekolah_tujuan: '',
+                nomor_skp: '',
+                nomor_ijazah_kelulusan: '',
+                nomor_skl: '',
+                keterangan_setelah_lulus: '',
 
                 // Dokumen DB filenames
                 berkas_kk: '',
@@ -1864,7 +2007,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 if (!f.nik_ibu || f.nik_ibu.length !== 16) return false;
                 if (!f.nama_ibu) return false;
                 if (!f.id_tempat_lahir_ibu) return false;
-                if (!f.tahun_lahir_ibu) return false;
+                if (!f.tanggal_lahir_ibu) return false;
                 if (!f.pendidikan_ibu) return false;
                 if (!f.pekerjaan_ibu) return false;
                 if (!f.penghasilan_ibu) return false;
@@ -2149,30 +2292,35 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                         'tempat_lahir', 'tanggal_lahir', 'sekolah_asal', 'status',
                         'id_angkatan', 'id_tahun_ajaran', 'id_jenjang', 'id_jurusan',
                         'id_kelas', 'id_pendidikan', 'ukuran_seragam_sekolah', 'ukuran_seragam_olahraga',
-                        'nama_wali', 'kontak_wali'
+                        'nama_wali', 'kontak_wali', 'kewarganegaraan', 'bahasa_sehari_hari',
+                        'no_ijazah_sebelumnya', 'tanggal_ijazah_sebelumnya', 'lama_belajar_sebelumnya'
                     ],
                     2: [
                         'alamat_kk', 'alamat_domisili', 'rt', 'rw', 'kode_pos',
                         'status_tinggal', 'id_kelurahan', 'id_provinsi', 'id_kota', 'id_kecamatan',
-                        'email', 'no_telepon_rumah', 'no_telepon_siswa', 'no_telepon_orang_tua'
+                        'email', 'no_telepon_rumah', 'no_telepon_siswa', 'no_telepon_orang_tua', 'tinggal_dengan'
                     ],
                     3: [
                         'tinggi_badan', 'berat_badan', 'lingkar_kepala', 'golongan_darah',
                         'anak_ke', 'jumlah_saudara', 'penyakit_yang_diderita', 'jarak_rumah',
                         'transportasi', 'status_anak', 'penerima_kps', 'punya_kip',
-                        'layak_kip', 'no_kip', 'alasan_layak'
+                        'layak_kip', 'no_kip', 'alasan_layak', 'kelainan_jasmani'
                     ],
                     4: [
                         'nik_ayah', 'nama_ayah', 'id_tempat_lahir_ayah', 'tahun_lahir_ayah',
                         'pendidikan_ayah', 'pekerjaan_ayah', 'penghasilan_ayah', 'agama_ayah',
+                        'tanggal_lahir_ayah', 'kewarganegaraan_ayah', 'status_hidup_ayah',
                         'nik_ibu', 'nama_ibu', 'id_tempat_lahir_ibu', 'tahun_lahir_ibu',
                         'pendidikan_ibu', 'pekerjaan_ibu', 'penghasilan_ibu', 'agama_ibu',
+                        'tanggal_lahir_ibu', 'kewarganegaraan_ibu', 'status_hidup_ibu',
                         'nik_wali', 'nama_wali', 'id_tempat_lahir_wali', 'tahun_lahir_wali',
-                        'pendidikan_wali', 'pekerjaan_wali', 'penghasilan_wali', 'agama_wali'
+                        'pendidikan_wali', 'pekerjaan_wali', 'penghasilan_wali', 'agama_wali',
+                        'tanggal_lahir_wali', 'kewarganegaraan_wali', 'hubungan_wali'
                     ],
                     5: [
                         'jenis_pendaftaran', 'jalur_diterima', 'tanggal_masuk', 'paud_formal',
-                        'paud_non_formal', 'hobi', 'keluar_karena', 'tanggal_keluar', 'alasan_keluar', 'status'
+                        'paud_non_formal', 'hobi', 'keluar_karena', 'tanggal_keluar', 'alasan_keluar', 'status',
+                        'sekolah_tujuan', 'nomor_skp', 'nomor_ijazah_kelulusan', 'nomor_skl', 'keterangan_setelah_lulus'
                     ]
                 };
                 return stepFields[step] || [];
@@ -2495,8 +2643,13 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                     if (!form.value.id_tempat_lahir_ibu) {
                         errs.push("Tempat Lahir Ibu wajib dipilih.");
                     }
-                    if (!form.value.tahun_lahir_ibu || form.value.tahun_lahir_ibu < 1930 || form.value.tahun_lahir_ibu > 2020) {
-                        errs.push("Tahun Lahir Ibu tidak valid.");
+                    if (!form.value.tanggal_lahir_ibu) {
+                        errs.push("Tanggal Lahir Ibu wajib diisi.");
+                    } else {
+                        const year = new Date(form.value.tanggal_lahir_ibu).getFullYear();
+                        if (isNaN(year) || year < 1930 || year > 2020) {
+                            errs.push("Tanggal Lahir Ibu tidak valid (tahun lahir harus di antara 1930 - 2020).");
+                        }
                     }
                     if (!form.value.pendidikan_ibu) {
                         errs.push("Pendidikan Ibu wajib dipilih.");
@@ -2678,6 +2831,42 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
             Vue.watch(() => form.value.ukuran_seragam_olahraga, (newVal) => {
                 if (newVal) {
                     form.value.ukuran_seragam_olahraga = newVal.toUpperCase();
+                }
+            });
+
+            // Watch tanggal_lahir_ayah to auto-populate tahun_lahir_ayah
+            Vue.watch(() => form.value.tanggal_lahir_ayah, (newVal) => {
+                if (newVal) {
+                    form.value.tahun_lahir_ayah = new Date(newVal).getFullYear();
+                } else {
+                    form.value.tahun_lahir_ayah = '';
+                }
+            });
+
+            // Watch tanggal_lahir_ibu to auto-populate tahun_lahir_ibu
+            Vue.watch(() => form.value.tanggal_lahir_ibu, (newVal) => {
+                if (newVal) {
+                    form.value.tahun_lahir_ibu = new Date(newVal).getFullYear();
+                } else {
+                    form.value.tahun_lahir_ibu = '';
+                }
+            });
+
+            // Watch tanggal_lahir_wali to auto-populate tahun_lahir_wali
+            Vue.watch(() => form.value.tanggal_lahir_wali, (newVal) => {
+                if (newVal) {
+                    form.value.tahun_lahir_wali = new Date(newVal).getFullYear();
+                } else {
+                    form.value.tahun_lahir_wali = '';
+                }
+            });
+
+            // Watch status to automatically set keluar_karena when status is Lulus or Pindah
+            Vue.watch(() => form.value.status, (newVal) => {
+                if (newVal === 'Lulus') {
+                    form.value.keluar_karena = 'Lulus';
+                } else if (newVal === 'Pindah') {
+                    form.value.keluar_karena = 'Mutasi';
                 }
             });
 

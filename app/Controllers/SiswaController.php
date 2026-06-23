@@ -611,6 +611,17 @@ class SiswaController extends BaseController {
                   || $currentStep !== null;
 
         $input = $this->sanitizeInput($_POST);
+
+        // Extract birth years from date pickers for parent/guardian compatibility
+        if (!empty($input['tanggal_lahir_ayah'])) {
+            $input['tahun_lahir_ayah'] = date('Y', strtotime($input['tanggal_lahir_ayah']));
+        }
+        if (!empty($input['tanggal_lahir_ibu'])) {
+            $input['tahun_lahir_ibu'] = date('Y', strtotime($input['tanggal_lahir_ibu']));
+        }
+        if (!empty($input['tanggal_lahir_wali'])) {
+            $input['tahun_lahir_wali'] = date('Y', strtotime($input['tanggal_lahir_wali']));
+        }
         
         // Proteksi: Siswa tidak boleh mengubah NAMA, NISN, dan NIS
         if ($roleName === 'siswa') {
@@ -956,8 +967,18 @@ class SiswaController extends BaseController {
             if (empty($data['id_tempat_lahir_ibu'])) {
                 $errors['id_tempat_lahir_ibu'] = 'Tempat lahir Ibu kandung wajib dipilih.';
             }
-            if (empty($data['tahun_lahir_ibu']) || $data['tahun_lahir_ibu'] < 1930 || $data['tahun_lahir_ibu'] > 2020) {
-                $errors['tahun_lahir_ibu'] = 'Tahun lahir Ibu kandung wajib diisi (1930-2020).';
+            if (empty($data['tanggal_lahir_ibu'])) {
+                $errors['tanggal_lahir_ibu'] = 'Tanggal lahir Ibu kandung wajib diisi.';
+            } else {
+                $d = \DateTime::createFromFormat('Y-m-d', $data['tanggal_lahir_ibu']);
+                if (!$d || $d->format('Y-m-d') !== $data['tanggal_lahir_ibu']) {
+                    $errors['tanggal_lahir_ibu'] = 'Format tanggal lahir Ibu kandung tidak valid.';
+                } else {
+                    $year = (int) $d->format('Y');
+                    if ($year < 1930 || $year > 2020) {
+                        $errors['tanggal_lahir_ibu'] = 'Tahun lahir Ibu kandung tidak valid (1930-2020).';
+                    }
+                }
             }
             if (empty($data['pendidikan_ibu'])) {
                 $errors['pendidikan_ibu'] = 'Pendidikan Ibu kandung wajib dipilih.';
