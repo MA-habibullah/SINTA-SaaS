@@ -186,8 +186,8 @@ class PDSSController extends BaseController {
             $params = [$tenantId];
 
             if (!empty($query)) {
-                $sql .= " AND (nama_lengkap LIKE ? OR nisn LIKE ? OR nis LIKE ?)";
-                $searchVal = '%' . $query . '%';
+                $sql .= " AND (LOWER(nama_lengkap) LIKE ? OR LOWER(nisn) LIKE ? OR LOWER(nis) LIKE ?)";
+                $searchVal = '%' . strtolower($query) . '%';
                 $params[] = $searchVal;
                 $params[] = $searchVal;
                 $params[] = $searchVal;
