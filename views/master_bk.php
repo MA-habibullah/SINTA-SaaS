@@ -204,6 +204,91 @@ $baseUrl    = '/SINTA-SaaS';
     }
 
     [v-cloak] { display: none !important; }
+
+    /* ─── Pelanggaran & Custom Modal backdrop ──────────────────────── */
+    .modal-backdrop-custom {
+        backdrop-filter: blur(4px);
+    }
+    .col-lg-2.4 {
+        flex: 0 0 auto;
+        width: 20%;
+    }
+    .border-violet {
+        border-left-color: var(--bk-primary) !important;
+    }
+    .text-area-vertical {
+        resize: vertical;
+    }
+    @media (max-width: 991.98px) {
+        .col-lg-2.4 {
+            width: 50%;
+        }
+    }
+
+    /* ─── Modern Segmented Tabs ──────────────────────── */
+    .sub-tabs-segment {
+        display: inline-flex;
+        padding: 0.25rem;
+        background: #f1f5f9;
+        border-radius: 0.75rem;
+        border: 1px solid #e2e8f0;
+        gap: 0.25rem;
+    }
+    .sub-tab-btn-modern {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border: none;
+        background: transparent;
+        color: #64748b;
+        font-size: 0.85rem;
+        font-weight: 600;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .sub-tab-btn-modern:hover {
+        color: var(--bk-primary);
+        background: rgba(124, 58, 237, 0.05);
+    }
+    .sub-tab-btn-modern.active {
+        color: var(--bk-primary);
+        background: #ffffff;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    /* ─── Kehadiran Grid & Dirty State styles ─────────── */
+    .dirty-row {
+        background-color: #eff6ff !important;
+    }
+    .dirty-cell {
+        background-color: #dbeafe !important;
+    }
+    .cell-warning {
+        background-color: #fee2e2 !important;
+        color: #991b1b !important;
+        font-weight: bold;
+    }
+    .cell-caution {
+        background-color: #fef3c7 !important;
+        color: #92400e !important;
+        font-weight: bold;
+    }
+    .grid-input-number {
+        text-align: center;
+        font-family: monospace;
+        font-weight: bold;
+        width: 50px;
+    }
+    .grid-input-number::-webkit-inner-spin-button,
+    .grid-input-number::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    .grid-input-number {
+        -moz-appearance: textfield;
+    }
 </style>
 
 <!-- Page Header -->
@@ -264,10 +349,7 @@ $baseUrl    = '/SINTA-SaaS';
                 @click="switchTab('tracer')" id="tab-tracer">
             <i class="bi bi-mortarboard"></i> Tracer Study
         </button>
-        <button class="bk-tab-btn" :class="{'active': activeTab === 'pdss'}"
-                @click="switchTab('pdss')" id="tab-pdss">
-            <i class="bi bi-award"></i> Kesiapan PDSS
-        </button>
+
         <button class="bk-tab-btn" :class="{'active': activeTab === 'jurnal'}"
                 @click="switchTab('jurnal')" id="tab-jurnal">
             <i class="bi bi-journal-text"></i> Rekam Kasus & Jurnal
@@ -275,6 +357,14 @@ $baseUrl    = '/SINTA-SaaS';
         <button class="bk-tab-btn" :class="{'active': activeTab === 'prestasi'}"
                 @click="switchTab('prestasi')" id="tab-prestasi">
             <i class="bi bi-trophy"></i> Prestasi Siswa
+        </button>
+        <button class="bk-tab-btn" :class="{'active': activeTab === 'kehadiran'}"
+                @click="switchTab('kehadiran')" id="tab-kehadiran">
+            <i class="bi bi-calendar-check"></i> Kehadiran Semester
+        </button>
+        <button class="bk-tab-btn" :class="{'active': activeTab === 'pelanggaran'}"
+                @click="switchTab('pelanggaran')" id="tab-pelanggaran">
+            <i class="bi bi-shield-exclamation"></i> Tata Tertib & Poin
         </button>
     </div>
 
@@ -689,69 +779,7 @@ $baseUrl    = '/SINTA-SaaS';
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════════
-         TAB 4: KESIAPAN PDSS (SNBP ELIGIBLE)
-    ════════════════════════════════════════════════════════════ -->
-    <div v-show="activeTab === 'pdss'">
-        <div class="bk-card p-4">
-            <div class="d-flex align-items-center gap-3 mb-4">
-                <div class="kpi-icon" style="background:linear-gradient(135deg,#fef3c7,#fde68a);color:#92400e;">
-                    <i class="bi bi-award-fill"></i>
-                </div>
-                <div>
-                    <h5 class="fw-bold mb-0">Kesiapan PDSS & Eligibilitas SNBP</h5>
-                    <p class="text-muted fs-7 mb-0">Pemetaan siswa kelas 12 yang memenuhi syarat SNBP (berdasarkan nama kelas).</p>
-                </div>
-            </div>
 
-            <div v-if="loadingPdss" class="text-center py-4">
-                <div class="spinner-border" style="color:var(--bk-amber);"></div>
-            </div>
-            <div v-else>
-                <div v-if="pdssData.length > 0">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <span class="fw-semibold text-dark">
-                            <i class="bi bi-person-check-fill me-1" style="color:var(--bk-primary);"></i>
-                            {{ pdssData.length }} Siswa Eligible Terdeteksi
-                        </span>
-                        <label for="input-pdss-search" class="visually-hidden">Cari siswa eligible SNBP</label>
-                        <input type="text" class="form-control form-control-sm rounded-3"
-                               v-model="pdssSearch" placeholder="Cari nama/NISN..."
-                               id="input-pdss-search" name="pdss_search"
-                               style="max-width:220px;">
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle" id="tbl-pdss">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>#</th>
-                                    <th>Nama Siswa</th>
-                                    <th>NISN</th>
-                                    <th>Kelas</th>
-                                    <th>Jurusan</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="(s, idx) in filteredPdss" :key="s.id">
-                                    <td class="text-muted">{{ idx + 1 }}</td>
-                                    <td class="fw-semibold">{{ s.nama_lengkap }}</td>
-                                    <td class="font-monospace fs-7">{{ s.nisn || '—' }}</td>
-                                    <td>{{ s.nama_kelas || '—' }}</td>
-                                    <td>{{ s.nama_jurusan || '—' }}</td>
-                                    <td><span class="pdss-eligible-badge">ELIGIBLE</span></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div v-else class="text-center py-5 text-muted">
-                    <i class="bi bi-award fs-1 d-block mb-2"></i>
-                    Tidak ada siswa kelas 12 yang terdeteksi. Pastikan nama kelas mengandung "12".
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- ═══════════════════════════════════════════════════════════
          TAB 5: REKAM KASUS & JURNAL BK
@@ -1490,11 +1518,929 @@ $baseUrl    = '/SINTA-SaaS';
         </div>
     </div>
 
+    <!-- ═══════════════════════════════════════════════════════════
+         TAB 6: KEHADIRAN SISWA SEMESTERAN
+    ════════════════════════════════════════════════════════════ -->
+    <div v-show="activeTab === 'kehadiran'" class="animate-fade-in">
+        <!-- Filter Card -->
+        <div class="bk-card p-4 mb-4">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label for="select-ta-kehadiran" class="form-label fw-semibold fs-8 mb-1">Tahun Ajaran</label>
+                    <select id="select-ta-kehadiran" name="ta_kehadiran" class="form-select form-select-sm rounded-3" v-model="filterKehadiran.tahun_ajaran_id" v-if="tahunAjaranList && tahunAjaranList.length">
+                        <option value="">-- Pilih Tahun Ajaran --</option>
+                        <option v-for="ta in tahunAjaranList" :key="ta.id" :value="ta.id">
+                            {{ ta.tahun_ajaran }} ({{ ta.status === 'Aktif' ? 'Aktif' : 'Non-Aktif' }})
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="select-sm-kehadiran" class="form-label fw-semibold fs-8 mb-1">Semester</label>
+                    <select id="select-sm-kehadiran" name="sm_kehadiran" class="form-select form-select-sm rounded-3" v-model="filterKehadiran.semester">
+                        <option value="Ganjil">Ganjil</option>
+                        <option value="Genap">Genap</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="select-kls-kehadiran" class="form-label fw-semibold fs-8 mb-1">Kelas</label>
+                    <select id="select-kls-kehadiran" name="kls_kehadiran" class="form-select form-select-sm rounded-3" v-model="filterKehadiran.kelas_id">
+                        <option value="">-- Pilih Kelas --</option>
+                        <option v-for="k in listKelasKehadiran" :key="k.id" :value="k.id">
+                            {{ k.nama_kelas }}
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex gap-2">
+                    <button class="btn btn-sm btn-primary rounded-3 w-100 fw-semibold" @click="loadKehadiran" :disabled="loadingKehadiran" id="btn-muat-kehadiran">
+                        <span v-if="loadingKehadiran" class="spinner-border spinner-border-sm me-1"></span>
+                        <i v-else class="bi bi-search"></i> Muat Data
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Workspace -->
+        <div class="row g-4" v-if="kehadiranData.length > 0">
+            <!-- Grid Table (Left) -->
+            <div class="col-lg-8">
+                <div class="bk-card p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <div>
+                            <h6 class="fw-bold mb-0 text-dark">
+                                <i class="bi bi-grid-3x3-gap-fill me-2 text-primary"></i>Input Absensi Kehadiran Siswa
+                            </h6>
+                            <small class="text-muted fs-8">Gunakan tombol arah keyboard &larr; &rarr; &uarr; &darr; atau Enter untuk berpindah sel.</small>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-secondary rounded-3 text-dark fw-semibold" @click="setAllEmptyToZero" id="btn-set-nol">
+                                Set Kosong &rarr; 0
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="tbl-kehadiran-grid">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Siswa</th>
+                                    <th>NISN</th>
+                                    <th>Kelas</th>
+                                    <th class="text-center" style="width: 80px;">Sakit (S)</th>
+                                    <th class="text-center" style="width: 80px;">Izin (I)</th>
+                                    <th class="text-center" style="width: 80px;">Alfa (A)</th>
+                                    <th class="text-center" style="width: 140px;">Status Peringatan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(s, idx) in kehadiranData" :key="s.siswa_id" :class="{'dirty-row': isRowDirty(s.siswa_id)}">
+                                    <td>
+                                        <div class="fw-bold text-dark">{{ s.nama_lengkap }}</div>
+                                    </td>
+                                    <td><span class="text-muted">{{ s.nisn || '-' }}</span></td>
+                                    <td>
+                                        <span class="badge bg-light text-primary border rounded-3">{{ s.nama_kelas || '-' }}</span>
+                                        <span v-if="isRowDirty(s.siswa_id)" class="badge bg-primary text-white ms-1" style="font-size:0.65rem;">Belum Disimpan</span>
+                                    </td>
+                                    <!-- Sakit input -->
+                                    <td class="text-center" :class="{'dirty-cell': isCellDirty(s.siswa_id, 'sakit')}">
+                                        <div class="d-flex align-items-center justify-content-center gap-1">
+                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:20px;height:20px;line-height:0.5;" @click="decrementAbsen(s.siswa_id, 'sakit')">-</button>
+                                            <label :for="'sakit-' + s.siswa_id" class="visually-hidden">Sakit {{ s.nama_lengkap }}</label>
+                                            <input type="number" :id="'sakit-' + s.siswa_id" :name="'sakit_' + s.siswa_id" class="form-control form-control-sm grid-input-number rounded-2 p-1" 
+                                                   v-model.number="s.sakit" min="0" @keydown="handleGridKeydown($event, idx, 'sakit')">
+                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:20px;height:20px;line-height:0.5;" @click="incrementAbsen(s.siswa_id, 'sakit')">+</button>
+                                        </div>
+                                    </td>
+                                    <!-- Izin input -->
+                                    <td class="text-center" :class="{'dirty-cell': isCellDirty(s.siswa_id, 'izin')}">
+                                        <div class="d-flex align-items-center justify-content-center gap-1">
+                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:20px;height:20px;line-height:0.5;" @click="decrementAbsen(s.siswa_id, 'izin')">-</button>
+                                            <label :for="'izin-' + s.siswa_id" class="visually-hidden">Izin {{ s.nama_lengkap }}</label>
+                                            <input type="number" :id="'izin-' + s.siswa_id" :name="'izin_' + s.siswa_id" class="form-control form-control-sm grid-input-number rounded-2 p-1" 
+                                                   v-model.number="s.izin" min="0" @keydown="handleGridKeydown($event, idx, 'izin')">
+                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:20px;height:20px;line-height:0.5;" @click="incrementAbsen(s.siswa_id, 'izin')">+</button>
+                                        </div>
+                                    </td>
+                                    <!-- Alfa input -->
+                                    <td class="text-center" :class="{'dirty-cell': isCellDirty(s.siswa_id, 'alfa')}" 
+                                        :class="s.alfa > 5 ? 'cell-warning' : ((s.sakit + s.izin + s.alfa) > 7 ? 'cell-caution' : '')">
+                                        <div class="d-flex align-items-center justify-content-center gap-1">
+                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:20px;height:20px;line-height:0.5;" @click="decrementAbsen(s.siswa_id, 'alfa')">-</button>
+                                            <label :for="'alfa-' + s.siswa_id" class="visually-hidden">Alfa {{ s.nama_lengkap }}</label>
+                                            <input type="number" :id="'alfa-' + s.siswa_id" :name="'alfa_' + s.siswa_id" class="form-control form-control-sm grid-input-number rounded-2 p-1" 
+                                                   v-model.number="s.alfa" min="0" @keydown="handleGridKeydown($event, idx, 'alfa')">
+                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:20px;height:20px;line-height:0.5;" @click="incrementAbsen(s.siswa_id, 'alfa')">+</button>
+                                        </div>
+                                    </td>
+                                    <!-- Status -->
+                                    <td class="text-center">
+                                        <span v-if="s.alfa > 5" class="badge bg-danger rounded-3 py-1.5 px-2">Bahaya (BK Alert)</span>
+                                        <span v-else-if="(s.sakit + s.izin + s.alfa) > 7" class="badge bg-warning text-dark rounded-3 py-1.5 px-2">Perlu Binaan</span>
+                                        <span v-else class="badge bg-success rounded-3 py-1.5 px-2">Aman</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <button class="btn btn-primary rounded-3 px-4 fw-bold" @click="saveKehadiran" :disabled="savingKehadiran" id="btn-simpan-kehadiran">
+                            <span v-if="savingKehadiran" class="spinner-border spinner-border-sm me-1"></span>
+                            <i v-else class="bi bi-floppy-fill me-1"></i> Simpan Absensi Kelas
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Import/Export Tools (Right) -->
+            <div class="col-lg-4">
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <div class="card border-0 shadow-sm rounded-3 p-3 bg-light h-100">
+                            <div class="fw-bold fs-7 text-dark mb-1"><i class="bi bi-file-earmark-arrow-down me-2"></i>📤 Ekspor Kehadiran ke Excel</div>
+                            <p class="fs-8 text-muted mb-3">Unduh template data kehadiran kelas terpilih untuk diisi offline melalui Excel.</p>
+                            <button class="btn btn-sm btn-outline-primary rounded-3 fw-semibold" @click="exportKehadiran" id="btn-ekspor-kehadiran">
+                                <i class="bi bi-download"></i> Unduh Berkas Excel
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="card border-0 shadow-sm rounded-3 p-3 bg-light h-100">
+                            <div class="fw-bold fs-7 text-dark mb-1"><i class="bi bi-file-earmark-arrow-up me-2"></i>📥 Impor Kehadiran dari Excel / CSV</div>
+                            <p class="fs-8 text-muted mb-2">Unggah berkas template Excel (.xlsx, .xls) atau CSV (.csv) yang sudah diedit. Pastikan kolom **NISN, Sakit, Izin, Alfa** tetap ada.</p>
+                            <div class="d-flex gap-2 align-items-center">
+                                <label for="file-import-kehadiran" class="visually-hidden">Unggah template kehadiran</label>
+                                <input type="file" id="file-import-kehadiran" name="file_import_kehadiran" @change="handleFileImportChange" class="form-control form-control-sm" accept=".xlsx,.xls,.csv">
+                                <button class="btn btn-sm btn-success rounded-3 fw-semibold" @click="importKehadiran" :disabled="importingKehadiran" id="btn-proses-impor-kehadiran">
+                                    <span v-if="importingKehadiran" class="spinner-border spinner-border-sm me-1"></span>
+                                    <i v-else class="bi bi-upload"></i> Impor
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Empty state -->
+        <div v-else class="text-center py-5 text-muted">
+            <i class="bi bi-calendar-x fs-1 d-block mb-2"></i>
+            <h6 class="fw-bold">Belum Ada Data Yang Ditampilkan</h6>
+            <p class="fs-7">Silakan pilih Tahun Ajaran, Semester, dan Kelas di atas untuk menampilkan grid input.</p>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         TAB 7: TATA TERTIB & POIN PELANGGARAN
+    ════════════════════════════════════════════════════════════ -->
+    <div v-show="activeTab === 'pelanggaran'" class="animate-fade-in">
+        <!-- Sub navigation segment control -->
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2 border-bottom pb-2">
+            <div class="sub-tabs-segment">
+                <button id="sub-tab-dashboard-btn" name="sub_tab_dashboard_btn" class="sub-tab-btn-modern" 
+                        :class="{ active: activeSubTab === 'p_dashboard' }"
+                        @click="switchSubTab('p_dashboard')">
+                    <i class="bi bi-speedometer2"></i> Dashboard & Tren
+                </button>
+                <button id="sub-tab-input-btn" name="sub_tab_input_btn" class="sub-tab-btn-modern" 
+                        :class="{ active: activeSubTab === 'p_input' }"
+                        @click="switchSubTab('p_input')">
+                    <i class="bi bi-plus-circle"></i> Catat Pelanggaran
+                </button>
+                <button id="sub-tab-sanksi-btn" name="sub_tab_sanksi_btn" class="sub-tab-btn-modern" 
+                        :class="{ active: activeSubTab === 'p_sanksi' }"
+                        @click="switchSubTab('p_sanksi')">
+                    <i class="bi bi-journal-bookmark"></i> Buku Catatan Sanksi
+                </button>
+                <button id="sub-tab-master-btn" name="sub_tab_master_btn" class="sub-tab-btn-modern" 
+                        :class="{ active: activeSubTab === 'p_master' }"
+                        @click="switchSubTab('p_master')">
+                    <i class="bi bi-gear-fill"></i> Master Kategori & Poin
+                </button>
+            </div>
+            <div class="text-muted fs-8">
+                <i class="bi bi-info-circle me-1"></i> Akumulasi poin dihitung berdasarkan tahun ajaran berjalan.
+            </div>
+        </div>
+
+        <!-- SUB-TAB 1: DASHBOARD & TREN -->
+        <div v-show="activeSubTab === 'p_dashboard'" class="animate-fade-in">
+            <div v-if="loadingPelanggaranDashboard" class="text-center py-5">
+                <div class="spinner-border text-danger"></div>
+                <p class="text-muted mt-2 fs-7">Memuat analisis pelanggaran...</p>
+            </div>
+            <div v-else>
+                <!-- KPI Cards Row -->
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-md-4 col-lg-2.4 col-xl">
+                        <div class="kpi-card h-100 border-start border-4 border-violet">
+                            <p class="text-muted fs-9 fw-semibold text-uppercase mb-1">Total Melanggar</p>
+                            <div class="kpi-value text-dark fs-3">{{ pelanggaranKpi.total_siswa_melanggar }}</div>
+                            <small class="text-muted fs-9">Siswa berpoin aktif</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4 col-lg-2.4 col-xl">
+                        <div class="kpi-card h-100 border-start border-4 border-info">
+                            <p class="text-muted fs-9 fw-semibold text-uppercase mb-1">Peringatan Wali Kelas</p>
+                            <div class="kpi-value text-info fs-3">{{ pelanggaranKpi.wali_kelas }}</div>
+                            <small class="text-muted fs-9">Rentang 25 - 49 Poin</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4 col-lg-2.4 col-xl">
+                        <div class="kpi-card h-100 border-start border-4 border-warning">
+                            <p class="text-muted fs-9 fw-semibold text-uppercase mb-1">SP 1 / BK</p>
+                            <div class="kpi-value text-warning fs-3">{{ pelanggaranKpi.sp1_bk }}</div>
+                            <small class="text-muted fs-9">Rentang 50 - 74 Poin</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4 col-lg-2.4 col-xl">
+                        <div class="kpi-card h-100 border-start border-4 text-orange" style="border-left-color: #f97316 !important;">
+                            <p class="text-muted fs-9 fw-semibold text-uppercase mb-1">SP 2 / Skorsing</p>
+                            <div class="kpi-value fs-3" style="color: #f97316;">{{ pelanggaranKpi.sp2_skorsing }}</div>
+                            <small class="text-muted fs-9">Rentang 75 - 99 Poin</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4 col-lg-2.4 col-xl">
+                        <div class="kpi-card h-100 border-start border-4 border-danger">
+                            <p class="text-muted fs-9 fw-semibold text-uppercase mb-1">SP 3 / Evaluasi DO</p>
+                            <div class="kpi-value text-danger fs-3">{{ pelanggaranKpi.sp3_do }}</div>
+                            <small class="text-muted fs-9">Akumulasi >= 100 Poin</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <!-- Top Violators List (Left) -->
+                    <div class="col-lg-6">
+                        <div class="bk-card p-4 h-100">
+                            <h6 class="fw-bold mb-3 text-dark">
+                                <i class="bi bi-trophy-fill me-2 text-danger"></i>Akumulasi Poin Tertinggi Minggu Ini
+                            </h6>
+                            <div v-if="pelanggaranTopStudents.length > 0" class="table-responsive">
+                                <table class="table table-hover align-middle fs-8">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Siswa</th>
+                                            <th>Kelas</th>
+                                            <th class="text-center">Total Poin</th>
+                                            <th class="text-end">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="s in pelanggaranTopStudents" :key="s.siswa_id">
+                                            <td>
+                                                <div class="fw-bold text-dark">{{ s.nama_lengkap }}</div>
+                                                <div class="text-muted" style="font-size:0.7rem;">NISN: {{ s.nisn }}</div>
+                                            </td>
+                                            <td>{{ s.nama_kelas || '-' }}</td>
+                                            <td class="text-center">
+                                                <span class="badge px-2 py-1.5 rounded-3 fw-semibold"
+                                                      :class="{
+                                                          'bg-danger': s.total_poin >= 100,
+                                                          'bg-warning text-dark': s.total_poin >= 75 && s.total_poin < 100,
+                                                          'bg-info text-dark': s.total_poin >= 50 && s.total_poin < 75,
+                                                          'bg-secondary': s.total_poin >= 25 && s.total_poin < 50,
+                                                          'bg-success': s.total_poin < 25
+                                                      }">
+                                                    {{ s.total_poin }} Poin
+                                                </span>
+                                            </td>
+                                            <td class="text-end">
+                                                <button class="btn btn-xs btn-outline-primary rounded-pill px-2"
+                                                        @click="openSanksiDetail(s.siswa_id)">
+                                                    Pembinaan
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div v-else class="text-center py-5 text-muted">
+                                <i class="bi bi-emoji-smile fs-2 mb-2 d-block text-success"></i>
+                                Tidak ada data pelanggaran aktif. Pertahankan lingkungan sekolah yang aman!
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Trend Chart (Right) -->
+                    <div class="col-lg-6">
+                        <div class="bk-card p-4 h-100">
+                            <h6 class="fw-bold mb-3 text-dark">
+                                <i class="bi bi-graph-up-arrow me-2 text-danger"></i>Tren Kejadian Pelanggaran Bulanan
+                            </h6>
+                            <div class="position-relative" style="height: 280px; width: 100%;">
+                                <canvas id="pelanggaranTrendChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SUB-TAB 2: CATAT PELANGGARAN (TRANSAKSI) -->
+        <div v-show="activeSubTab === 'p_input'" class="animate-fade-in">
+            <div class="row g-4">
+                <!-- Form Input/Edit Laporan (Kiri) -->
+                <div class="col-lg-4">
+                    <div class="bk-form-card p-4 rounded-4 shadow-sm border bg-white">
+                        <h6 class="fw-bold mb-3" style="color:var(--bk-primary);">
+                            <i class="bi" :class="formInputPelanggaran.id ? 'bi-pencil-square' : 'bi-plus-circle-fill'"></i>
+                            {{ formInputPelanggaran.id ? 'Edit Laporan Pelanggaran' : 'Catat Pelanggaran Siswa' }}
+                        </h6>
+
+                        <!-- Autocomplete search input -->
+                        <div v-if="!selectedPelanggaranSiswa.id" class="mb-3">
+                            <label for="pelanggaran-siswa-search" class="form-label fw-semibold fs-7">Cari Nama Siswa <span class="text-danger">*</span></label>
+                            <div style="position:relative;">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                                    <input type="text" id="pelanggaran-siswa-search" name="pelanggaran_siswa_search" class="form-control rounded-end-3 fs-7"
+                                           v-model="pelanggaranSearchSiswa"
+                                           @input="searchSiswaPelanggaranDebounce"
+                                           @blur="hidePelanggaranDropdownDelay"
+                                           placeholder="Ketik nama siswa..."
+                                           autocomplete="off">
+                                </div>
+                                <!-- Dropdown Autocomplete -->
+                                <div v-show="showPelanggaranSiswaDropdown && pelanggaranSiswaOptions.length > 0"
+                                     class="border rounded-3 bg-white shadow mt-1"
+                                     style="position:absolute;z-index:200;max-height:200px;overflow-y:auto;width:100%;">
+                                    <div v-for="s in pelanggaranSiswaOptions" :key="s.id"
+                                         class="px-3 py-2 border-bottom"
+                                         @mousedown.prevent="selectSiswaPelanggaran(s)"
+                                         style="cursor:pointer;font-size:0.8rem;"
+                                         :style="{background: siswaHoverPelanggaran === s.id ? '#eff6ff' : '#fff'}"
+                                         @mouseenter="siswaHoverPelanggaran = s.id" @mouseleave="siswaHoverPelanggaran = null">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="fw-semibold text-dark">{{ s.nama_lengkap }}</div>
+                                            <span class="badge rounded-pill bg-light text-primary border" style="font-size:0.65rem;">
+                                                {{ s.nama_kelas || 'Tanpa Kelas' }}
+                                            </span>
+                                        </div>
+                                        <div class="text-muted" style="font-size:0.7rem;">NISN: {{ s.nisn || '-' }}</div>
+                                    </div>
+                                    <div v-if="loadingSearchPelanggaranSiswa" class="text-center py-2 text-muted fs-8">
+                                        <span class="spinner-border spinner-border-sm me-1"></span>Mencari...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card info siswa terpilih -->
+                        <div v-else class="p-3 mb-3 rounded-4 shadow-sm border bg-light">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="text-truncate" style="max-width:75%;">
+                                    <h6 class="fw-bold text-dark mb-0 text-truncate">{{ selectedPelanggaranSiswa.nama_lengkap }}</h6>
+                                    <p class="text-muted fs-9 mb-0">NISN: {{ selectedPelanggaranSiswa.nisn || '-' }}</p>
+                                </div>
+                                <button v-if="!formInputPelanggaran.id" class="btn btn-xs btn-outline-secondary rounded-pill px-2 py-0.5 fs-9"
+                                        type="button" @click="clearSiswaPelanggaran" id="btn-clear-siswa-pelanggaran">
+                                    <i class="bi bi-arrow-left-right"></i> Ganti
+                                </button>
+                            </div>
+                            <div class="border-top pt-2 mt-2">
+                                <span class="badge bg-primary rounded-3 py-1.5 px-2.5 fs-9">
+                                    {{ selectedPelanggaranSiswa.nama_kelas || '-' }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Form fields -->
+                        <div class="mb-3">
+                            <label for="input-pelanggaran-id" class="form-label fw-semibold fs-7">Aturan Pelanggaran & Poin <span class="text-danger">*</span></label>
+                            <select id="input-pelanggaran-id" name="pelanggaran_id" class="form-select form-select-sm rounded-3" v-model="formInputPelanggaran.pelanggaran_id">
+                                <option value="">-- Pilih Pelanggaran --</option>
+                                <option v-for="rule in pelanggaranMasterList" :key="rule.id" :value="rule.id">
+                                    [{{ rule.kategori }}] {{ rule.nama_pelanggaran }} ({{ rule.bobot_poin }} Poin)
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="input-tanggal-kejadian" class="form-label fw-semibold fs-7">Tanggal Kejadian <span class="text-danger">*</span></label>
+                            <input type="date" id="input-tanggal-kejadian" name="tanggal_kejadian" class="form-control form-control-sm rounded-3" v-model="formInputPelanggaran.tanggal_kejadian">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="input-catatan-keterangan" class="form-label fw-semibold fs-7">Kronologi / Catatan Kejadian</label>
+                            <textarea id="input-catatan-keterangan" name="catatan_keterangan" class="form-control form-control-sm rounded-3 text-area-vertical" rows="3" 
+                                      v-model="formInputPelanggaran.catatan_keterangan"
+                                      placeholder="Tulis detail kronologi pelanggaran..."></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="input-foto-bukti-file" class="form-label fw-semibold fs-7">Foto Bukti (Maks 2MB)</label>
+                            <input type="file" id="input-foto-bukti-file" name="foto_bukti" class="form-control form-control-sm rounded-3 mb-2" 
+                                   accept="image/*" @change="handleFotoUpload">
+                            <div v-if="formInputPelanggaran.existing_foto" class="mt-2">
+                                <small class="text-muted d-block">Foto Sebelumnya:</small>
+                                <a :href="baseUrl + '/' + formInputPelanggaran.existing_foto" target="_blank" class="fs-8 text-primary fw-bold text-decoration-underline">
+                                    <i class="bi bi-image me-1"></i>Lihat Foto Bukti
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button class="btn btn-sm btn-outline-secondary rounded-3 w-50" type="button" @click="clearSiswaPelanggaran" id="btn-reset-pelanggaran-form">
+                                Batal / Reset
+                            </button>
+                            <button class="btn btn-sm btn-primary rounded-3 w-50 text-white fw-bold" @click="submitPelanggaran" :disabled="submittingPelanggaran" id="btn-submit-pelanggaran">
+                                <i class="bi bi-floppy me-1"></i>
+                                {{ formInputPelanggaran.id ? 'Perbarui' : 'Simpan' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Riwayat Laporan (Kanan) -->
+                <div class="col-lg-8">
+                    <div class="bk-card p-4 rounded-4 shadow-sm border bg-white">
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <div>
+                                <h6 class="fw-bold mb-0 text-dark">
+                                    <i class="bi bi-clock-history me-2 text-danger"></i>Riwayat Laporan Hari Ini & Terkini
+                                </h6>
+                                <small class="text-muted fs-8">{{ filteredCatatanPelanggaran.length }} kejadian terdaftar</small>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <label for="catatan-list-search" class="visually-hidden">Cari riwayat laporan</label>
+                                <input type="text" id="catatan-list-search" name="catatan_list_search" class="form-control form-control-sm rounded-3" style="width: 200px;" 
+                                       v-model="catatanListSearch" placeholder="Cari nama, kelas...">
+                                <button class="btn btn-sm btn-outline-secondary rounded-3" @click="loadPelanggaranCatatan" :disabled="loadingPelanggaranCatatan" id="btn-refresh-catatan">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div v-if="loadingPelanggaranCatatan" class="text-center py-5">
+                            <div class="spinner-border text-primary"></div>
+                        </div>
+                        <div v-else-if="filteredCatatanPelanggaran.length > 0" class="table-responsive" style="max-height:480px; overflow-y:auto;">
+                            <table class="table table-hover align-middle fs-8" id="tbl-riwayat-laporan">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th>Tanggal</th>
+                                        <th>Nama Siswa</th>
+                                        <th>NISN</th>
+                                        <th>Kelas</th>
+                                        <th>Kejadian Pelanggaran</th>
+                                        <th class="text-center">Bukti</th>
+                                        <th class="text-end" style="width: 100px;">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="c in filteredCatatanPelanggaran" :key="c.id">
+                                        <td class="text-muted text-nowrap">{{ formatTanggalIndo(c.tanggal_kejadian) }}</td>
+                                        <td class="fw-bold text-dark">{{ c.nama_siswa }}</td>
+                                        <td class="text-muted">{{ c.nisn || '-' }}</td>
+                                        <td>
+                                            <span class="badge bg-light text-primary border rounded-3">{{ c.nama_kelas || '-' }}</span>
+                                        </td>
+                                        <td>
+                                            <div class="fw-semibold text-dark">
+                                                <span class="badge me-1" 
+                                                      :class="getKategoriBadge(c.kategori)">{{ c.kategori }}</span>
+                                                {{ c.nama_pelanggaran }}
+                                            </div>
+                                            <div class="text-muted fs-9 mt-1" v-if="c.catatan_keterangan">
+                                                {{ c.catatan_keterangan }}
+                                            </div>
+                                            <div class="mt-1">
+                                                <span class="badge rounded-pill bg-light text-danger border" style="font-size: 0.65rem;">
+                                                    +{{ c.bobot_poin }} Poin
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <a v-if="c.foto_bukti" @click.prevent="showFotoModal(baseUrl + '/' + c.foto_bukti)" href="#" 
+                                               class="btn btn-xs btn-outline-info p-1 rounded-2" title="Foto Bukti">
+                                                <i class="bi bi-image"></i>
+                                            </a>
+                                            <span v-else class="text-muted">—</span>
+                                        </td>
+                                        <td class="text-end">
+                                            <button class="btn btn-xs btn-outline-primary me-1 rounded-2 py-0 px-2 fw-semibold" style="font-size:0.7rem; line-height:1.5;" @click="editPelanggaran(c)" title="Edit Laporan">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </button>
+                                            <button class="btn btn-xs btn-outline-danger rounded-2 py-0 px-2 fw-semibold" style="font-size:0.7rem; line-height:1.5;" @click="deletePelanggaran(c.id)" title="Hapus Laporan">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div v-else class="text-center py-5 text-muted">
+                            <i class="bi bi-journal-x fs-2 mb-2 d-block"></i>
+                            Tidak ada data pelanggaran.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SUB-TAB 3: BUKU CATATAN SANKSI -->
+        <div v-show="activeSubTab === 'p_sanksi'" class="animate-fade-in">
+            <div class="bk-card p-4">
+                <!-- Search & Filters -->
+                <div class="row g-3 mb-4 align-items-end">
+                    <div class="col-md-5">
+                        <label for="input-sanksi-search" class="form-label fw-semibold fs-8 mb-1">Cari Siswa</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" id="input-sanksi-search" name="sanksi_search" class="form-control rounded-end-3 fs-7 border-start-0 shadow-none" 
+                                   v-model="sanksiSearch" placeholder="Cari nama siswa, kelas, NISN...">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="select-sanksi-status" class="form-label fw-semibold fs-8 mb-1">Filter Status Sanksi</label>
+                        <select id="select-sanksi-status" name="sanksi_status" class="form-select form-select-sm rounded-3 fs-7" v-model="sanksiStatus">
+                            <option value="">-- Semua Status Sanksi --</option>
+                            <option value="Aman">Aman (Poin &lt; 25)</option>
+                            <option value="Wali Kelas">Peringatan Wali Kelas (Poin 25 - 49)</option>
+                            <option value="SP 1">SP 1 / Panggilan Orang Tua (Poin 50 - 74)</option>
+                            <option value="SP 2">SP 2 / Skorsing (Poin 75 - 99)</option>
+                            <option value="SP 3">SP 3 / Rekomendasi DO (Poin &gt;= 100)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-sm btn-outline-secondary w-100 rounded-3 fs-7 fw-semibold" @click="loadPelanggaranSanksi" :disabled="loadingPelanggaranSanksi" id="btn-refresh-sanksi">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Refresh Data
+                        </button>
+                    </div>
+                </div>
+
+                <div v-if="loadingPelanggaranSanksi" class="text-center py-5">
+                    <div class="spinner-border text-primary"></div>
+                </div>
+                <div v-else-if="filteredSanksiBuku.length > 0" class="table-responsive">
+                    <table class="table table-hover align-middle fs-8" id="tbl-buku-sanksi">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-nowrap" style="min-width: 150px;">Siswa</th>
+                                <th class="text-nowrap" style="min-width: 100px;">NISN</th>
+                                <th class="text-nowrap" style="min-width: 80px;">Kelas</th>
+                                <th class="text-nowrap" style="min-width: 200px;">Distribusi Akumulasi Poin</th>
+                                <th class="text-nowrap" style="min-width: 140px;">Status Peringatan</th>
+                                <th class="text-nowrap" style="min-width: 200px;">Kebijakan Penanganan</th>
+                                <th class="text-center text-nowrap" style="min-width: 150px;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="item in filteredSanksiBuku" :key="item.siswa_id">
+                                <td><div class="fw-bold text-dark text-nowrap">{{ item.nama_lengkap }}</div></td>
+                                <td class="text-muted text-nowrap">{{ item.nisn || '-' }}</td>
+                                <td>
+                                    <span class="badge bg-light text-primary border rounded-3 text-nowrap">{{ item.nama_kelas || '-' }}</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="progress flex-grow-1" style="height: 8px; border-radius: 99px; overflow: hidden; background-color: #f1f5f9;">
+                                            <div class="progress-bar progress-bar-striped progress-bar-animated rounded-pill" role="progressbar" 
+                                                 :style="{
+                                                     width: Math.min(100, item.total_poin) + '%',
+                                                     backgroundColor: item.total_poin >= 100 ? '#ef4444' : 
+                                                                      item.total_poin >= 75 ? '#f97316' : 
+                                                                      item.total_poin >= 50 ? '#f59e0b' : 
+                                                                      item.total_poin >= 25 ? '#2563eb' : '#10b981'
+                                                 }"
+                                                 aria-valuemin="0" aria-valuemax="100">
+                                            </div>
+                                        </div>
+                                        <span class="fw-bold text-dark fs-8">{{ item.total_poin }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge" 
+                                          :class="{
+                                              'bg-danger': item.total_poin >= 100,
+                                              'bg-warning text-dark': item.total_poin >= 75 && item.total_poin < 100,
+                                              'bg-info text-dark': item.total_poin >= 50 && item.total_poin < 75,
+                                              'bg-secondary': item.total_poin >= 25 && item.total_poin < 50,
+                                              'bg-success': item.total_poin < 25
+                                          }">
+                                        {{ item.status_label }}
+                                    </span>
+                                </td>
+                                <td><small class="text-muted">{{ item.sanksi_detail }}</small></td>
+                                <td class="text-center">
+                                    <button class="btn btn-xs btn-primary rounded-pill px-3 py-1.5 fw-semibold text-white d-inline-flex align-items-center gap-1"
+                                            @click="openSanksiDetail(item.siswa_id)">
+                                        <i class="bi bi-shield-shaded"></i> Detail & Pembinaan
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div v-else class="text-center py-5 text-muted">
+                    <i class="bi bi-people-fill fs-2 mb-2 d-block"></i>
+                    Tidak ada siswa berpoin yang memenuhi kriteria pencarian Anda.
+                </div>
+            </div>
+        </div>
+
+        <!-- SUB-TAB 4: MASTER DATA KATEGORI & POIN -->
+        <div v-show="activeSubTab === 'p_master'" class="animate-fade-in">
+            <div class="row g-4">
+                <!-- Form Input/Edit Aturan (Kiri) -->
+                <div class="col-lg-4">
+                    <div class="bk-form-card p-4 rounded-4 shadow-sm border bg-white">
+                        <h6 class="fw-bold mb-3" style="color:var(--bk-primary);">
+                            <i class="bi" :class="masterModal.isEdit ? 'bi-pencil-square' : 'bi-plus-circle-fill'"></i>
+                            {{ masterModal.isEdit ? 'Edit Aturan Pelanggaran' : 'Tambah Aturan Pelanggaran' }}
+                        </h6>
+
+                        <div class="mb-3">
+                            <label for="master-kategori" class="form-label fw-semibold fs-7">Kategori Pelanggaran <span class="text-danger">*</span></label>
+                            <select id="master-kategori" name="master_kategori" class="form-select form-select-sm rounded-3" v-model="masterModal.form.kategori">
+                                <option value="Ringan">Ringan (Teguran / Persuasif)</option>
+                                <option value="Sedang">Sedang (Konseling / Administratif)</option>
+                                <option value="Berat">Berat (Pernyataan SP / Skorsing)</option>
+                                <option value="Khusus">Khusus (DO / Hukum Negara)</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="master-nama-pelanggaran" class="form-label fw-semibold fs-7">Nama / Deskripsi Pelanggaran <span class="text-danger">*</span></label>
+                            <input type="text" id="master-nama-pelanggaran" name="master_nama_pelanggaran" class="form-control form-control-sm rounded-3" 
+                                   v-model="masterModal.form.nama_pelanggaran" 
+                                   placeholder="Contoh: Terlambat masuk sekolah">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="master-bobot-poin" class="form-label fw-semibold fs-7">Bobot Poin Pelanggaran <span class="text-danger">*</span></label>
+                            <input type="number" id="master-bobot-poin" name="master_bobot_poin" class="form-control form-control-sm rounded-3" 
+                                   v-model.number="masterModal.form.bobot_poin" min="1">
+                            <div class="form-text fs-9 text-muted">Direkomendasikan: Ringan (5-10), Sedang (15-20), Berat (30-50), Khusus (75-100).</div>
+                        </div>
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button class="btn btn-sm btn-outline-secondary rounded-3 w-50" type="button" @click="openMasterModal(null)" id="btn-reset-master-form">
+                                Batal / Reset
+                            </button>
+                            <button class="btn btn-sm btn-primary rounded-3 w-50 text-white fw-bold" @click="submitMasterRule" :disabled="masterModal.saving" id="btn-submit-master">
+                                <i class="bi bi-floppy me-1"></i>
+                                {{ masterModal.isEdit ? 'Perbarui' : 'Simpan' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Daftar Aturan (Kanan) -->
+                <div class="col-lg-8">
+                    <div class="bk-card p-4 rounded-4 shadow-sm border bg-white">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h6 class="fw-bold mb-0 text-dark">
+                                    <i class="bi bi-gear-fill me-2 text-violet"></i>Aturan Pelanggaran Sekolah
+                                </h6>
+                                <small class="text-muted fs-8">Kategori tata tertib & alokasi akumulasi poin</small>
+                            </div>
+                            <button class="btn btn-sm btn-outline-secondary rounded-3" @click="loadPelanggaranMaster" :disabled="loadingPelanggaranMaster" id="btn-refresh-master">
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </button>
+                        </div>
+
+                        <div v-if="loadingPelanggaranMaster" class="text-center py-5">
+                            <div class="spinner-border text-primary"></div>
+                        </div>
+                        <div v-else-if="pelanggaranMasterList.length > 0" class="table-responsive">
+                            <table class="table table-hover align-middle fs-8" id="tbl-master-aturan">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Kategori</th>
+                                        <th>Nama Pelanggaran</th>
+                                        <th class="text-center">Bobot Poin</th>
+                                        <th class="text-end" style="width: 100px;">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="rule in pelanggaranMasterList" :key="rule.id">
+                                        <td>
+                                            <span class="badge" :class="getKategoriBadge(rule.kategori)">{{ rule.kategori }}</span>
+                                        </td>
+                                        <td class="fw-semibold text-dark">{{ rule.nama_pelanggaran }}</td>
+                                        <td class="text-center fw-bold text-danger">{{ rule.bobot_poin }}</td>
+                                        <td class="text-end">
+                                            <button class="btn btn-xs btn-outline-primary me-1 rounded-2 py-0 px-2 fw-semibold" style="font-size:0.7rem; line-height:1.5;" @click="openMasterModal(rule)" title="Edit Aturan">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </button>
+                                            <button class="btn btn-xs btn-outline-danger rounded-2 py-0 px-2 fw-semibold" style="font-size:0.7rem; line-height:1.5;" @click="deleteMasterRule(rule.id)" title="Hapus Aturan">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div v-else class="text-center py-5 text-muted">
+                            <i class="bi bi-info-circle fs-2 mb-2 d-block"></i>
+                            Belum ada master aturan.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SANKSI & COUNSELING DETAIL MODAL (REACTIVE MODAL) -->
+    <div v-if="sanksiDetailModal.show" class="modal-backdrop-custom d-flex align-items-center justify-content-center" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); z-index:1050;">
+        <div class="modal-dialog modal-dialog-centered modal-xl animate-fade-in" style="width: 90%; max-width: 1100px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-content border-0 rounded-4 shadow-lg bg-white" style="height: 100%; display: flex; flex-direction: column; overflow: hidden;">
+                
+                <!-- Modal Header -->
+                <div class="modal-header border-bottom px-4 py-3 d-flex justify-content-between align-items-center bg-light">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-shield-shaded text-primary fs-4"></i>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-0">Profil Kedisiplinan & Intervensi Siswa</h5>
+                            <small class="text-muted">Manajemen Sanksi & Buku Pembinaan Guru BK</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close rounded-circle" @click="sanksiDetailModal.show = false" aria-label="Close" id="btn-close-sanksi-modal"></button>
+                </div>
+
+                <!-- Modal Body (Scrollable) -->
+                <div class="modal-body p-4 fs-8" style="overflow-y: auto; flex: 1;">
+                    <!-- Student Header Details -->
+                    <div class="p-3 mb-4 rounded-4 shadow-sm border bg-white">
+                        <div class="row g-3">
+                            <div class="col-md-6 border-end">
+                                <span class="badge bg-light text-primary border mb-1">PROFIL SISWA</span>
+                                <h5 class="fw-bold text-dark mb-1">{{ sanksiDetailModal.student.nama_lengkap }}</h5>
+                                <div class="text-muted fs-8 d-flex flex-wrap gap-3">
+                                    <span><strong>NISN:</strong> {{ sanksiDetailModal.student.nisn || '-' }}</span>
+                                    <span><strong>NIS:</strong> {{ sanksiDetailModal.student.nis || '-' }}</span>
+                                    <span><strong>Kelas:</strong> {{ sanksiDetailModal.student.nama_kelas || '-' }}</span>
+                                </div>
+                            </div>
+                            <!-- Point Gauge and Status Indicators -->
+                            <div class="col-md-6 d-flex flex-column justify-content-center">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-bold text-dark fs-8">Status Akumulasi Poin Siswa</span>
+                                    <span class="badge fw-bold"
+                                          :class="{
+                                              'bg-danger': sanksiDetailModal.total_poin >= 100,
+                                              'bg-warning text-dark': sanksiDetailModal.total_poin >= 75 && sanksiDetailModal.total_poin < 100,
+                                              'bg-info text-dark': sanksiDetailModal.total_poin >= 50 && sanksiDetailModal.total_poin < 75,
+                                              'bg-secondary': sanksiDetailModal.total_poin >= 25 && sanksiDetailModal.total_poin < 50,
+                                              'bg-success': sanksiDetailModal.total_poin < 25
+                                          }">
+                                        {{ 
+                                            sanksiDetailModal.total_poin >= 100 ? 'SP 3 / Evaluasi DO' :
+                                            sanksiDetailModal.total_poin >= 75 ? 'SP 2 / Skorsing' :
+                                            sanksiDetailModal.total_poin >= 50 ? 'SP 1 / Panggilan Ortu' :
+                                            sanksiDetailModal.total_poin >= 25 ? 'Peringatan Wali Kelas' : 'Status Aman'
+                                        }}
+                                    </span>
+                                </div>
+                                <div class="progress mb-2" style="height: 16px; border-radius: 99px; overflow: hidden; border:1px solid #e2e8f0; background-color: #f1f5f9;">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated rounded-pill" role="progressbar" 
+                                         :style="{
+                                             width: Math.min(100, sanksiDetailModal.total_poin) + '%',
+                                             backgroundColor: sanksiDetailModal.total_poin >= 100 ? '#ef4444' : 
+                                                              sanksiDetailModal.total_poin >= 75 ? '#f97316' : 
+                                                              sanksiDetailModal.total_poin >= 50 ? '#f59e0b' : 
+                                                              sanksiDetailModal.total_poin >= 25 ? '#2563eb' : '#10b981'
+                                         }"
+                                         aria-valuemin="0" aria-valuemax="100">
+                                        <span class="fw-bold px-2 text-white" style="font-size: 0.72rem;">{{ sanksiDetailModal.total_poin }} / 100 Poin</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between text-muted" style="font-size:0.68rem;">
+                                    <span>0 Poin (Aman)</span>
+                                    <span>25 (Wali Kelas)</span>
+                                    <span>50 (SP 1)</span>
+                                    <span>75 (SP 2)</span>
+                                    <span>100 (DO)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Split Panels: Timeline (Left) & Pembinaan Log (Right) -->
+                    <div class="row g-4">
+                        
+                        <!-- Timeline of Incidents (Kiri) -->
+                        <div class="col-lg-6">
+                            <div class="p-3 border rounded-4 bg-light" style="max-height: 400px; overflow-y: auto;">
+                                <h6 class="fw-bold text-dark mb-3"><i class="bi bi-clock-history me-2 text-danger"></i>Timeline Riwayat Pelanggaran</h6>
+                                
+                                <div v-if="sanksiDetailModal.violations.length > 0" class="timeline-container px-2">
+                                    <div v-for="v in sanksiDetailModal.violations" :key="v.id" class="border-start border-2 border-danger pb-3 ps-3 position-relative">
+                                        <!-- Timeline node dot -->
+                                        <div class="rounded-circle bg-danger position-absolute" style="width: 10px; height: 10px; left: -6px; top: 4px;"></div>
+                                        
+                                        <div class="d-flex justify-content-between align-items-start flex-wrap">
+                                            <span class="badge bg-danger rounded-3 fs-9">+{{ v.bobot_poin }} Poin</span>
+                                            <small class="text-muted fw-semibold">{{ formatTanggalIndo(v.tanggal_kejadian) }}</small>
+                                        </div>
+                                        <div class="fw-bold text-dark mt-1">{{ v.nama_pelanggaran }}</div>
+                                        <p class="text-muted mb-1 fs-8 mt-1" v-if="v.catatan_keterangan">
+                                            {{ v.catatan_keterangan }}
+                                        </p>
+                                        
+                                        <!-- Image Proof Thumbnail -->
+                                        <div v-if="v.foto_bukti" class="mt-2">
+                                            <a @click.prevent="showFotoModal(baseUrl + '/' + v.foto_bukti)" href="#" class="d-inline-flex align-items-center gap-1 btn btn-xs btn-outline-secondary p-1 rounded-2">
+                                                <i class="bi bi-file-earmark-image text-info"></i>
+                                                <span class="fs-9">Lihat Bukti Foto</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div v-else class="text-center py-5 text-muted">
+                                    <i class="bi bi-check-circle fs-3 text-success d-block mb-1"></i>
+                                    Siswa belum memiliki riwayat pelanggaran di tahun ajaran ini.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Follow-up Counseling & Action Logs (Kanan) -->
+                        <div class="col-lg-6">
+                            <div class="p-3 border rounded-4 bg-light mb-3" style="max-height: 250px; overflow-y: auto;">
+                                <h6 class="fw-bold text-dark mb-3"><i class="bi bi-journal-check me-2 text-violet"></i>Log Intervensi & Pembinaan BK</h6>
+                                
+                                <div v-if="sanksiDetailModal.followUps.length > 0" class="timeline-container px-2">
+                                    <div v-for="f in sanksiDetailModal.followUps" :key="f.id" class="border-start border-2 border-primary pb-3 ps-3 position-relative">
+                                        <!-- Timeline node dot -->
+                                        <div class="rounded-circle bg-primary position-absolute" style="width: 10px; height: 10px; left: -6px; top: 4px;"></div>
+                                        
+                                        <div class="d-flex justify-content-between align-items-start flex-wrap">
+                                            <span class="badge bg-primary rounded-3 fs-9">{{ f.jenis_tindakan }}</span>
+                                            <small class="text-muted fw-semibold">{{ formatTanggalIndo(f.tanggal_tindakan) }}</small>
+                                        </div>
+                                        <p class="text-dark mb-1 fs-8 mt-1 fw-semibold">
+                                            {{ f.keterangan_tindakan }}
+                                        </p>
+                                        <div class="text-muted fs-9 text-end">
+                                            Diinput oleh: <strong>{{ f.nama_guru }}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div v-else class="text-center py-5 text-muted">
+                                    <i class="bi bi-info-circle fs-3 text-muted d-block mb-1"></i>
+                                    Belum ada log pembinaan BK/Wali Kelas.
+                                </div>
+                            </div>
+
+                            <!-- Input Form for Counseling Logs -->
+                            <div class="p-3 border rounded-4 bg-white">
+                                <h6 class="fw-bold text-dark mb-3"><i class="bi bi-plus-circle me-1"></i>Input Log Pembinaan Baru</h6>
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label for="input-tindak-tanggal" class="form-label fw-semibold fs-8 mb-1">Tanggal Tindakan <span class="text-danger">*</span></label>
+                                        <input type="date" id="input-tindak-tanggal" name="tanggal_tindakan" class="form-control form-control-sm rounded-3 fs-8" v-model="formTindakLanjut.tanggal_tindakan">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="input-tindak-jenis" class="form-label fw-semibold fs-8 mb-1">Jenis Tindakan <span class="text-danger">*</span></label>
+                                        <select id="input-tindak-jenis" name="jenis_tindakan" class="form-select form-select-sm rounded-3 fs-8" v-model="formTindakLanjut.jenis_tindakan">
+                                            <option value="Pembinaan Wali Kelas">Pembinaan Wali Kelas</option>
+                                            <option value="Konseling BK">Konseling BK</option>
+                                            <option value="Pemanggilan Orang Tua">Pemanggilan Orang Tua</option>
+                                            <option value="Surat Peringatan (SP)">Surat Peringatan (SP)</option>
+                                            <option value="Skorsing Akademik">Skorsing Akademik</option>
+                                            <option value="Evaluasi / DO">Evaluasi / DO</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-12 mt-2">
+                                        <label for="input-tindak-keterangan" class="form-label fw-semibold fs-8 mb-1">Hasil / Keterangan Tindakan <span class="text-danger">*</span></label>
+                                        <textarea id="input-tindak-keterangan" name="keterangan_tindakan" class="form-control form-control-sm rounded-3 fs-8 text-area-vertical" rows="2" 
+                                                  v-model="formTindakLanjut.keterangan_tindakan" placeholder="Deskripsikan hasil konseling, komitmen siswa, atau sanksi administratif..."></textarea>
+                                    </div>
+                                    <div class="col-md-12 mt-3 text-end">
+                                        <button class="btn btn-sm btn-primary rounded-3 px-3 py-1.5 fw-bold" @click="submitTindakLanjut(sanksiDetailModal.student.id)" :disabled="submittingTindakLanjut" id="btn-save-tindakan">
+                                            <span v-if="submittingTindakLanjut" class="spinner-border spinner-border-sm me-1"></span>
+                                            <i v-else class="bi bi-check-circle me-1"></i> Simpan Catatan Pembinaan
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- PROOF IMAGE LIGHTBOX MODAL -->
+    <div v-if="fotoModal.show" class="modal-backdrop-custom d-flex align-items-center justify-content-center" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.8); z-index:1060;" @click="fotoModal.show = false">
+        <div class="position-relative p-2" style="max-width:90%; max-height:90%;">
+            <img :src="fotoModal.src" class="img-fluid rounded-3 shadow-lg" style="max-height:80vh;" alt="Foto bukti fisik pelanggaran">
+            <button class="btn btn-dark rounded-circle position-absolute" style="top:-15px; right:-15px; width:36px; height:36px; display:flex; align-items:center; justify-content:center;" @click="fotoModal.show = false" id="btn-close-foto-modal">
+                <i class="bi bi-x fs-4"></i>
+            </button>
+        </div>
+    </div>
+
 </div><!-- End #bkApp -->
 
 <script>
 {
-const { ref, computed, onMounted } = Vue;
+const { ref, computed, onMounted, nextTick } = Vue;
 
 // Inject PHP variables safely
 const _tenantId  = <?= json_encode($tenantId) ?>;
@@ -1512,6 +2458,76 @@ window.VueAppRegistry.register('#bkApp', {
         const activeTab      = ref('dashboard');
         const currentTenantId= ref(_tenantId);
 
+        // ─── Kehadiran State ────────────────────────────────
+        const loadingKehadiran = ref(false);
+        const savingKehadiran = ref(false);
+        const importingKehadiran = ref(false);
+        const filterKehadiran = ref({ tahun_ajaran_id: '', semester: 'Ganjil', kelas_id: '' });
+        const kehadiranData = ref([]);
+        const originalKehadiranData = ref([]);
+        const listKelasKehadiran = ref([]);
+        const fileImportKehadiran = ref(null);
+        const tahunAjaranList = ref(_tahunAjaranList || []);
+
+        // ─── Pelanggaran & Poin State ────────────────────────
+        const activeSubTab = ref('p_dashboard');
+        const loadingPelanggaranDashboard = ref(false);
+        const pelanggaranKpi = ref({ wali_kelas: 0, sp1_bk: 0, sp2_skorsing: 0, sp3_do: 0, total_siswa_melanggar: 0 });
+        const pelanggaranTopStudents = ref([]);
+        let pelanggaranChartInstance = null;
+
+        // Master Rules CRUD
+        const loadingPelanggaranMaster = ref(false);
+        const pelanggaranMasterList = ref([]);
+        const masterModal = ref({
+            show: false,
+            isEdit: false,
+            saving: false,
+            form: { id: '', kategori: 'Ringan', nama_pelanggaran: '', bobot_poin: 5 }
+        });
+
+        // Catatan Pelanggaran
+        const submittingPelanggaran = ref(false);
+        const pelanggaranSearchSiswa = ref('');
+        const pelanggaranSiswaOptions = ref([]);
+        const selectedPelanggaranSiswa = ref({});
+        const loadingSearchPelanggaranSiswa = ref(false);
+        const showPelanggaranSiswaDropdown = ref(false);
+        const formInputPelanggaran = ref({
+            id: '',
+            siswa_id: '',
+            pelanggaran_id: '',
+            tanggal_kejadian: new Date().toISOString().split('T')[0],
+            catatan_keterangan: '',
+            foto_bukti: null,
+            existing_foto: null
+        });
+        const loadingPelanggaranCatatan = ref(false);
+        const pelanggaranCatatanList = ref([]);
+        const catatanListSearch = ref('');
+        const fotoModal = ref({ show: false, src: '' });
+
+        // Buku Sanksi & Detail Modal
+        const loadingPelanggaranSanksi = ref(false);
+        const pelanggaranSanksiList = ref([]);
+        const sanksiSearch = ref('');
+        const sanksiStatus = ref('');
+        const sanksiDetailModal = ref({
+            show: false,
+            student: {},
+            total_poin: 0,
+            violations: [],
+            followUps: []
+        });
+        const formTindakLanjut = ref({
+            tanggal_tindakan: new Date().toISOString().split('T')[0],
+            jenis_tindakan: 'Konseling BK',
+            keterangan_tindakan: ''
+        });
+        const submittingTindakLanjut = ref(false);
+        const siswaHoverPelanggaran = ref(null);
+        let debounceTimerPelanggaran = null;
+
         // Dashboard
         const loadingDashboard = ref(false);
         const kpi = ref({
@@ -1524,18 +2540,7 @@ window.VueAppRegistry.register('#bkApp', {
         const loadingTracer = ref(false);
         const tracerData    = ref({ kuliah: 0, pekerjaan: 0, total: 0 });
 
-        // PDSS
-        const loadingPdss   = ref(false);
-        const pdssData      = ref([]);
-        const pdssSearch    = ref('');
-        const filteredPdss  = computed(() => {
-            if (!pdssSearch.value) return pdssData.value;
-            const q = pdssSearch.value.toLowerCase();
-            return pdssData.value.filter(s =>
-                (s.nama_lengkap || '').toLowerCase().includes(q) ||
-                (s.nisn || '').includes(q)
-            );
-        });
+
 
         // Jurnal / Kasus
         const loadingKasus      = ref(false);
@@ -1568,6 +2573,47 @@ window.VueAppRegistry.register('#bkApp', {
                 (k.status_kasus       || '').toLowerCase().includes(q)
             );
         });
+        // ─── Pelanggaran Computed ───────────────────────────
+        const masterRulesFiltered = computed(() => {
+            return pelanggaranMasterList.value;
+        });
+
+        const filteredCatatanPelanggaran = computed(() => {
+            if (!catatanListSearch.value.trim()) return pelanggaranCatatanList.value;
+            const q = catatanListSearch.value.toLowerCase();
+            return pelanggaranCatatanList.value.filter(c =>
+                (c.nama_siswa || '').toLowerCase().includes(q) ||
+                (c.nisn || '').includes(q) ||
+                (c.nama_kelas || '').toLowerCase().includes(q) ||
+                (c.nama_pelanggaran || '').toLowerCase().includes(q) ||
+                (c.kategori || '').toLowerCase().includes(q) ||
+                (c.catatan_keterangan || '').toLowerCase().includes(q)
+            );
+        });
+
+        const filteredSanksiBuku = computed(() => {
+            let list = pelanggaranSanksiList.value;
+            if (sanksiStatus.value) {
+                const fs = sanksiStatus.value;
+                list = list.filter(item => {
+                    if (fs === 'Aman') return item.total_poin < 25;
+                    if (fs === 'Wali Kelas') return item.total_poin >= 25 && item.total_poin < 50;
+                    if (fs === 'SP 1') return item.total_poin >= 50 && item.total_poin < 75;
+                    if (fs === 'SP 2') return item.total_poin >= 75 && item.total_poin < 100;
+                    if (fs === 'SP 3') return item.total_poin >= 100;
+                    return true;
+                });
+            }
+            if (sanksiSearch.value.trim()) {
+                const q = sanksiSearch.value.toLowerCase();
+                list = list.filter(item =>
+                    (item.nama_lengkap || '').toLowerCase().includes(q) ||
+                    (item.nisn || '').includes(q) ||
+                    (item.nama_kelas || '').toLowerCase().includes(q)
+                );
+            }
+            return list;
+        });
 
         const formKasus = ref({
             id_siswa: '',
@@ -1580,7 +2626,7 @@ window.VueAppRegistry.register('#bkApp', {
         });
 
         // ─── Tab Switch + Lazy Load ──────────────────────────
-        const tabsLoaded = ref({ dashboard: false, penjurusan: false, tracer: false, pdss: false, jurnal: false, prestasi: false });
+        const tabsLoaded = ref({ dashboard: false, penjurusan: false, tracer: false, jurnal: false, prestasi: false, kehadiran: false, pelanggaran: false });
 
         function switchTab(tab) {
             activeTab.value = tab;
@@ -1589,9 +2635,12 @@ window.VueAppRegistry.register('#bkApp', {
                 if (tab === 'dashboard')  loadDashboard();
                 if (tab === 'penjurusan') loadPenjurusan();
                 if (tab === 'tracer')     loadTracer();
-                if (tab === 'pdss')       loadPdss();
                 if (tab === 'jurnal')     { loadKasus(); loadKelasList(); }
                 if (tab === 'prestasi')   { loadPrestasi(); }
+                if (tab === 'kehadiran')  { loadKelasKehadiran(); }
+                if (tab === 'pelanggaran') { switchSubTab(activeSubTab.value); }
+            } else {
+                if (tab === 'pelanggaran') { switchSubTab(activeSubTab.value); }
             }
         }
 
@@ -1754,18 +2803,7 @@ window.VueAppRegistry.register('#bkApp', {
             finally { loadingTracer.value = false; }
         }
 
-        // ─── API: PDSS ───────────────────────────────────────
-        async function loadPdss() {
-            if (_userRole === 'super_admin' && !currentTenantId.value) return;
-            loadingPdss.value = true;
-            try {
-                let url = `${_baseUrl}/api/v1/bk/pdss`;
-                if (currentTenantId.value) url += `?tenant_id=${currentTenantId.value}`;
-                const res = await axios.get(url);
-                if (res.data.success) pdssData.value = res.data.data || [];
-            } catch (e) { console.error('BK PDSS load error', e); }
-            finally { loadingPdss.value = false; }
-        }
+
 
         // ─── API: Kasus List ─────────────────────────────────
         async function loadKasus() {
@@ -2390,6 +3428,739 @@ window.VueAppRegistry.register('#bkApp', {
             });
         }
 
+        // ─── Kehadiran Methods ──────────────────────────────
+        async function loadKelasKehadiran() {
+            if (_userRole === 'super_admin' && !currentTenantId.value) return;
+            try {
+                let url = `${_baseUrl}/api/v1/bk/kelas`;
+                if (currentTenantId.value) url += `?tenant_id=${currentTenantId.value}`;
+                const res = await axios.get(url);
+                if (res.data.success) listKelasKehadiran.value = res.data.data || [];
+            } catch (e) { console.error('loadKelasKehadiran error', e); }
+        }
+
+        async function loadKehadiran() {
+            if (!filterKehadiran.value.tahun_ajaran_id || !filterKehadiran.value.semester || !filterKehadiran.value.kelas_id) {
+                kehadiranData.value = [];
+                originalKehadiranData.value = [];
+                return;
+            }
+            loadingKehadiran.value = true;
+            try {
+                const params = new URLSearchParams();
+                params.set('tahun_ajaran_id', filterKehadiran.value.tahun_ajaran_id);
+                params.set('semester', filterKehadiran.value.semester);
+                params.set('kelas_id', filterKehadiran.value.kelas_id);
+                if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
+                const res = await axios.get(`${_baseUrl}/api/v1/bk/absensi-semester?${params}`);
+                if (res.data.success) {
+                    kehadiranData.value = res.data.data.map(item => ({
+                        ...item,
+                        sakit: parseInt(item.sakit) || 0,
+                        izin: parseInt(item.izin) || 0,
+                        alfa: parseInt(item.alfa) || 0
+                    }));
+                    originalKehadiranData.value = JSON.parse(JSON.stringify(kehadiranData.value));
+                }
+            } catch (e) {
+                console.error('loadKehadiran error', e);
+                Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal mengambil data kehadiran.' });
+            } finally {
+                loadingKehadiran.value = false;
+            }
+        }
+
+        function isCellDirty(siswaId, field) {
+            const orig = originalKehadiranData.value.find(item => item.siswa_id === siswaId);
+            const current = kehadiranData.value.find(item => item.siswa_id === siswaId);
+            if (!orig || !current) return false;
+            return orig[field] !== current[field];
+        }
+
+        function isRowDirty(siswaId) {
+            const current = kehadiranData.value.find(item => item.siswa_id === siswaId);
+            const orig = originalKehadiranData.value.find(item => item.siswa_id === siswaId);
+            if (!current || !orig) return false;
+            return current.sakit !== orig.sakit || current.izin !== orig.izin || current.alfa !== orig.alfa;
+        }
+
+        function setAllEmptyToZero() {
+            kehadiranData.value.forEach(item => {
+                if (item.sakit === null || item.sakit === '') item.sakit = 0;
+                if (item.izin === null || item.izin === '') item.izin = 0;
+                if (item.alfa === null || item.alfa === '') item.alfa = 0;
+            });
+        }
+
+        function incrementAbsen(siswaId, field) {
+            const item = kehadiranData.value.find(s => s.siswa_id === siswaId);
+            if (!item) return;
+            let val = parseInt(item[field]);
+            if (isNaN(val)) val = 0;
+            item[field] = val + 1;
+        }
+
+        function decrementAbsen(siswaId, field) {
+            const item = kehadiranData.value.find(s => s.siswa_id === siswaId);
+            if (!item) return;
+            let val = parseInt(item[field]);
+            if (isNaN(val)) val = 0;
+            if (val > 0) {
+                item[field] = val - 1;
+            } else {
+                item[field] = 0;
+            }
+        }
+
+        async function saveKehadiran() {
+            if (kehadiranData.value.length === 0) return;
+            savingKehadiran.value = true;
+            try {
+                const payload = {
+                    tahun_ajaran_id: filterKehadiran.value.tahun_ajaran_id,
+                    semester: filterKehadiran.value.semester,
+                    kelas_id: filterKehadiran.value.kelas_id,
+                    attendance: kehadiranData.value.map(item => ({
+                        siswa_id: item.siswa_id,
+                        sakit: parseInt(item.sakit) || 0,
+                        izin: parseInt(item.izin) || 0,
+                        alfa: parseInt(item.alfa) || 0
+                    }))
+                };
+                if (currentTenantId.value) payload.tenant_id = currentTenantId.value;
+
+                const res = await axios.post(`${_baseUrl}/api/v1/bk/absensi-semester`, payload, {
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (res.data.success) {
+                    Swal.fire({ icon: 'success', title: 'Sukses', text: res.data.message, timer: 1500, showConfirmButton: false });
+                    originalKehadiranData.value = JSON.parse(JSON.stringify(kehadiranData.value));
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: res.data.error || 'Gagal menyimpan data.' });
+                }
+            } catch (e) {
+                console.error('saveKehadiran error', e);
+                Swal.fire({ icon: 'error', title: 'Gagal', text: e.response?.data?.error || 'Gagal menghubungi server.' });
+            } finally {
+                savingKehadiran.value = false;
+            }
+        }
+
+        function exportKehadiran() {
+            if (!filterKehadiran.value.tahun_ajaran_id || !filterKehadiran.value.semester || !filterKehadiran.value.kelas_id) {
+                Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Pilih filter Tahun Ajaran, Semester, dan Kelas terlebih dahulu.' });
+                return;
+            }
+            const params = new URLSearchParams();
+            params.set('tahun_ajaran_id', filterKehadiran.value.tahun_ajaran_id);
+            params.set('semester', filterKehadiran.value.semester);
+            params.set('kelas_id', filterKehadiran.value.kelas_id);
+            if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
+            window.open(`${_baseUrl}/api/v1/bk/absensi-semester/export?${params.toString()}`, '_blank');
+        }
+
+        function handleFileImportChange(event) {
+            fileImportKehadiran.value = event.target.files[0];
+        }
+
+        async function importKehadiran() {
+            if (!fileImportKehadiran.value) {
+                Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Pilih file yang ingin diimpor terlebih dahulu.' });
+                return;
+            }
+            if (!filterKehadiran.value.tahun_ajaran_id || !filterKehadiran.value.semester || !filterKehadiran.value.kelas_id) {
+                Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Pilih filter Tahun Ajaran, Semester, dan Kelas terlebih dahulu.' });
+                return;
+            }
+            importingKehadiran.value = true;
+            try {
+                const formData = new FormData();
+                formData.append('file', fileImportKehadiran.value);
+                formData.append('tahun_ajaran_id', filterKehadiran.value.tahun_ajaran_id);
+                formData.append('semester', filterKehadiran.value.semester);
+                formData.append('kelas_id', filterKehadiran.value.kelas_id);
+                if (currentTenantId.value) formData.append('tenant_id', currentTenantId.value);
+                
+                const res = await axios.post(`${_baseUrl}/api/v1/bk/absensi-semester/import`, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (res.data.success) {
+                    Swal.fire({ icon: 'success', title: 'Sukses', text: res.data.message });
+                    fileImportKehadiran.value = null;
+                    const fileInput = document.getElementById('file-import-kehadiran');
+                    if (fileInput) fileInput.value = '';
+                    await loadKehadiran();
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: res.data.error || 'Gagal mengimpor data.' });
+                }
+            } catch (e) {
+                console.error(e);
+                const errors = e.response?.data?.errors;
+                const errorText = e.response?.data?.error;
+                const detailsText = e.response?.data?.details;
+
+                if (errors && errors.length > 0) {
+                    let errMsg = `<div class="text-start" style="max-height:200px; overflow-y:auto; font-size: 0.85rem;">`;
+                    errors.forEach(err => { errMsg += `<p class="text-danger mb-1">• ${err}</p>`; });
+                    errMsg += `</div>`;
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Kesalahan Baris Data',
+                        html: errMsg,
+                        width: '460px'
+                    });
+                } else {
+                    let errorHtml = errorText || 'Terjadi kesalahan saat mengimpor file.';
+                    if (detailsText) {
+                        errorHtml += `<div class="mt-2 text-start text-muted fs-8 bg-light p-2 rounded">${detailsText}</div>`;
+                    }
+                    Swal.fire({ 
+                        icon: 'error', 
+                        title: 'Gagal Mengimpor', 
+                        html: errorHtml 
+                    });
+                }
+            } finally {
+                importingKehadiran.value = false;
+            }
+        }
+
+        function handleGridKeydown(event, rowIndex, colName) {
+            const inputs = document.querySelectorAll('.grid-input-number');
+            const totalInputs = inputs.length;
+            if (totalInputs === 0) return;
+
+            const currentEl = document.activeElement;
+            let currentIdx = -1;
+            for (let i = 0; i < totalInputs; i++) {
+                if (inputs[i] === currentEl) {
+                    currentIdx = i;
+                    break;
+                }
+            }
+            if (currentIdx === -1) return;
+
+            const colsPerRow = 3; 
+            let targetIdx = -1;
+
+            if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                targetIdx = currentIdx - colsPerRow;
+            } else if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                targetIdx = currentIdx + colsPerRow;
+            } else if (event.key === 'ArrowLeft') {
+                event.preventDefault();
+                targetIdx = currentIdx - 1;
+            } else if (event.key === 'ArrowRight') {
+                event.preventDefault();
+                targetIdx = currentIdx + 1;
+            } else if (event.key === 'Enter') {
+                event.preventDefault();
+                targetIdx = currentIdx + colsPerRow;
+            }
+
+            if (targetIdx >= 0 && targetIdx < totalInputs) {
+                inputs[targetIdx].focus();
+                inputs[targetIdx].select();
+            }
+        }
+
+        // ─── Pelanggaran & Poin Methods ──────────────────────
+        function switchSubTab(subTab) {
+            activeSubTab.value = subTab;
+            if (subTab === 'p_dashboard') {
+                loadPelanggaranDashboard();
+            } else if (subTab === 'p_input') {
+                loadPelanggaranCatatan();
+                loadPelanggaranMaster();
+            } else if (subTab === 'p_master') {
+                loadPelanggaranMaster();
+            } else if (subTab === 'p_sanksi') {
+                loadPelanggaranSanksi();
+            }
+        }
+
+        async function loadPelanggaranDashboard() {
+            if (_userRole === 'super_admin' && !currentTenantId.value) return;
+            loadingPelanggaranDashboard.value = true;
+            try {
+                let url = `${_baseUrl}/api/v1/bk/pelanggaran/dashboard`;
+                if (currentTenantId.value) url += `?tenant_id=${currentTenantId.value}`;
+                const res = await axios.get(url);
+                if (res.data.success) {
+                    pelanggaranKpi.value = res.data.kpi;
+                    pelanggaranTopStudents.value = res.data.top_students || [];
+                    
+                    nextTick(() => {
+                        renderPelanggaranChart(res.data.chart);
+                    });
+                }
+            } catch (e) {
+                console.error('loadPelanggaranDashboard error', e);
+            } finally {
+                loadingPelanggaranDashboard.value = false;
+            }
+        }
+
+        function renderPelanggaranChart(chartData) {
+            const ctx = document.getElementById('pelanggaranTrendChart');
+            if (!ctx) return;
+            if (pelanggaranChartInstance) {
+                pelanggaranChartInstance.destroy();
+            }
+            if (window.Chart && chartData) {
+                pelanggaranChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: chartData.labels || [],
+                        datasets: [{
+                            label: 'Jumlah Pelanggaran',
+                            data: chartData.data || [],
+                            borderColor: '#7c3aed',
+                            backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { stepSize: 1 }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        async function loadPelanggaranMaster() {
+            if (_userRole === 'super_admin' && !currentTenantId.value) return;
+            loadingPelanggaranMaster.value = true;
+            try {
+                let url = `${_baseUrl}/api/v1/bk/pelanggaran/master`;
+                if (currentTenantId.value) url += `?tenant_id=${currentTenantId.value}`;
+                const res = await axios.get(url);
+                if (res.data.success) {
+                    pelanggaranMasterList.value = res.data.data || [];
+                }
+            } catch (e) {
+                console.error('loadPelanggaranMaster error', e);
+            } finally {
+                loadingPelanggaranMaster.value = false;
+            }
+        }
+
+        function openMasterModal(rule) {
+            if (rule) {
+                masterModal.value.isEdit = true;
+                masterModal.value.form = {
+                    id: rule.id,
+                    kategori: rule.kategori,
+                    nama_pelanggaran: rule.nama_pelanggaran,
+                    bobot_poin: parseInt(rule.bobot_poin) || 5
+                };
+            } else {
+                masterModal.value.isEdit = false;
+                masterModal.value.form = {
+                    id: '',
+                    kategori: 'Ringan',
+                    nama_pelanggaran: '',
+                    bobot_poin: 5
+                };
+            }
+        }
+
+        async function submitMasterRule() {
+            if (!masterModal.value.form.nama_pelanggaran.trim()) {
+                Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Nama pelanggaran wajib diisi.' });
+                return;
+            }
+            if (!masterModal.value.form.bobot_poin || masterModal.value.form.bobot_poin < 1) {
+                Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Bobot poin minimal 1.' });
+                return;
+            }
+            masterModal.value.saving = true;
+            try {
+                const payload = {
+                    kategori: masterModal.value.form.kategori,
+                    nama_pelanggaran: masterModal.value.form.nama_pelanggaran,
+                    bobot_poin: masterModal.value.form.bobot_poin
+                };
+                if (currentTenantId.value) payload.tenant_id = currentTenantId.value;
+
+                let url = `${_baseUrl}/api/v1/bk/pelanggaran/master`;
+                let res;
+                if (masterModal.value.isEdit) {
+                    payload.id = masterModal.value.form.id;
+                    res = await axios.post(`${url}/update`, payload, {
+                        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                } else {
+                    res = await axios.post(url, payload, {
+                        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                }
+
+                if (res.data.success) {
+                    Swal.fire({ icon: 'success', title: 'Sukses', text: res.data.message, timer: 1500, showConfirmButton: false });
+                    openMasterModal(null);
+                    loadPelanggaranMaster();
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: res.data.error || 'Gagal menyimpan aturan.' });
+                }
+            } catch (e) {
+                console.error('submitMasterRule error', e);
+                Swal.fire({ icon: 'error', title: 'Gagal', text: e.response?.data?.error || 'Terjadi kesalahan.' });
+            } finally {
+                masterModal.value.saving = false;
+            }
+        }
+
+        async function deleteMasterRule(id) {
+            const confirmResult = await Swal.fire({
+                title: 'Konfirmasi Hapus',
+                text: 'Apakah Anda yakin ingin menghapus aturan pelanggaran ini?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: 'var(--bk-red)',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Hapus',
+                cancelButtonText: 'Batal'
+            });
+
+            if (confirmResult.isConfirmed) {
+                try {
+                    const payload = { id };
+                    if (currentTenantId.value) payload.tenant_id = currentTenantId.value;
+                    const res = await axios.post(`${_baseUrl}/api/v1/bk/pelanggaran/master/delete`, payload, {
+                        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    if (res.data.success) {
+                        Swal.fire({ icon: 'success', title: 'Sukses', text: res.data.message, timer: 1500, showConfirmButton: false });
+                        loadPelanggaranMaster();
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Gagal', text: res.data.error || 'Gagal menghapus aturan.' });
+                    }
+                } catch (e) {
+                    console.error('deleteMasterRule error', e);
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: e.response?.data?.error || 'Terjadi kesalahan.' });
+                }
+            }
+        }
+
+        function searchSiswaPelanggaranDebounce() {
+            clearTimeout(debounceTimerPelanggaran);
+            const q = pelanggaranSearchSiswa.value.trim();
+            if (q.length < 1) {
+                pelanggaranSiswaOptions.value = [];
+                showPelanggaranSiswaDropdown.value = false;
+                return;
+            }
+            debounceTimerPelanggaran = setTimeout(async () => {
+                loadingSearchPelanggaranSiswa.value = true;
+                showPelanggaranSiswaDropdown.value = true;
+                try {
+                    const params = new URLSearchParams();
+                    params.set('q', q);
+                    if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
+                    params.set('limit', '12');
+                    const res = await axios.get(`${_baseUrl}/api/v1/bk/siswa?${params.toString()}`);
+                    if (res.data.success) {
+                        pelanggaranSiswaOptions.value = res.data.data || [];
+                    }
+                } catch (e) {
+                    console.error('searchSiswaPelanggaranDebounce error', e);
+                    pelanggaranSiswaOptions.value = [];
+                } finally {
+                    loadingSearchPelanggaranSiswa.value = false;
+                }
+            }, 280);
+        }
+
+        function hidePelanggaranDropdownDelay() {
+            setTimeout(() => { showPelanggaranSiswaDropdown.value = false; }, 200);
+        }
+
+        function selectSiswaPelanggaran(s) {
+            selectedPelanggaranSiswa.value = s;
+            formInputPelanggaran.value.siswa_id = s.id;
+            pelanggaranSearchSiswa.value = s.nama_lengkap;
+            pelanggaranSiswaOptions.value = [];
+            showPelanggaranSiswaDropdown.value = false;
+        }
+
+        function clearSiswaPelanggaran() {
+            selectedPelanggaranSiswa.value = {};
+            pelanggaranSearchSiswa.value = '';
+            formInputPelanggaran.value = {
+                id: '',
+                siswa_id: '',
+                pelanggaran_id: '',
+                tanggal_kejadian: new Date().toISOString().split('T')[0],
+                catatan_keterangan: '',
+                foto_bukti: null,
+                existing_foto: null
+            };
+            const fileInput = document.getElementById('input-foto-bukti-file');
+            if (fileInput) fileInput.value = '';
+        }
+
+        function handleFotoUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                if (file.size > 2 * 1024 * 1024) {
+                    Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Ukuran foto maksimal 2MB.' });
+                    event.target.value = '';
+                    return;
+                }
+                formInputPelanggaran.value.foto_bukti = file;
+            }
+        }
+
+        async function submitPelanggaran() {
+            if (!formInputPelanggaran.value.siswa_id) {
+                Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Pilih siswa terlebih dahulu.' });
+                return;
+            }
+            if (!formInputPelanggaran.value.pelanggaran_id) {
+                Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Pilih jenis pelanggaran.' });
+                return;
+            }
+            if (!formInputPelanggaran.value.tanggal_kejadian) {
+                Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Pilih tanggal kejadian.' });
+                return;
+            }
+            submittingPelanggaran.value = true;
+            try {
+                const formData = new FormData();
+                if (formInputPelanggaran.value.id) formData.append('id', formInputPelanggaran.value.id);
+                formData.append('siswa_id', formInputPelanggaran.value.siswa_id);
+                formData.append('pelanggaran_id', formInputPelanggaran.value.pelanggaran_id);
+                formData.append('tanggal_kejadian', formInputPelanggaran.value.tanggal_kejadian);
+                formData.append('catatan_keterangan', formInputPelanggaran.value.catatan_keterangan || '');
+                if (formInputPelanggaran.value.foto_bukti) {
+                    formData.append('foto_bukti', formInputPelanggaran.value.foto_bukti);
+                }
+                if (currentTenantId.value) formData.append('tenant_id', currentTenantId.value);
+
+                let url = `${_baseUrl}/api/v1/bk/pelanggaran/catatan`;
+                if (formInputPelanggaran.value.id) {
+                    url = `${_baseUrl}/api/v1/bk/pelanggaran/catatan/update`;
+                }
+
+                const res = await axios.post(url, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+
+                if (res.data.success) {
+                    Swal.fire({ icon: 'success', title: 'Sukses', text: res.data.message, timer: 1500, showConfirmButton: false });
+                    clearSiswaPelanggaran();
+                    loadPelanggaranCatatan();
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: res.data.error || 'Gagal menyimpan catatan.' });
+                }
+            } catch (e) {
+                console.error('submitPelanggaran error', e);
+                Swal.fire({ icon: 'error', title: 'Gagal', text: e.response?.data?.error || 'Terjadi kesalahan.' });
+            } finally {
+                submittingPelanggaran.value = false;
+            }
+        }
+
+        function editPelanggaran(c) {
+            selectedPelanggaranSiswa.value = {
+                id: c.siswa_id,
+                nama_lengkap: c.nama_siswa,
+                nisn: c.nisn,
+                nama_kelas: c.nama_kelas
+            };
+            formInputPelanggaran.value = {
+                id: c.id,
+                siswa_id: c.siswa_id,
+                pelanggaran_id: c.pelanggaran_id,
+                tanggal_kejadian: c.tanggal_kejadian,
+                catatan_keterangan: c.catatan_keterangan || '',
+                foto_bukti: null,
+                existing_foto: c.foto_bukti || null
+            };
+            const fileInput = document.getElementById('input-foto-bukti-file');
+            if (fileInput) fileInput.value = '';
+        }
+
+        async function deletePelanggaran(id) {
+            const confirmResult = await Swal.fire({
+                title: 'Konfirmasi Hapus',
+                text: 'Apakah Anda yakin ingin menghapus catatan pelanggaran ini?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: 'var(--bk-red)',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Hapus',
+                cancelButtonText: 'Batal'
+            });
+
+            if (confirmResult.isConfirmed) {
+                try {
+                    const payload = { id };
+                    if (currentTenantId.value) payload.tenant_id = currentTenantId.value;
+                    const res = await axios.post(`${_baseUrl}/api/v1/bk/pelanggaran/catatan/delete`, payload, {
+                        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    if (res.data.success) {
+                        Swal.fire({ icon: 'success', title: 'Sukses', text: res.data.message, timer: 1500, showConfirmButton: false });
+                        loadPelanggaranCatatan();
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Gagal', text: res.data.error || 'Gagal menghapus catatan.' });
+                    }
+                } catch (e) {
+                    console.error('deletePelanggaran error', e);
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: e.response?.data?.error || 'Terjadi kesalahan.' });
+                }
+            }
+        }
+
+        async function loadPelanggaranCatatan() {
+            if (_userRole === 'super_admin' && !currentTenantId.value) return;
+            loadingPelanggaranCatatan.value = true;
+            try {
+                let url = `${_baseUrl}/api/v1/bk/pelanggaran/catatan`;
+                if (currentTenantId.value) url += `?tenant_id=${currentTenantId.value}`;
+                const res = await axios.get(url);
+                if (res.data.success) {
+                    pelanggaranCatatanList.value = res.data.data || [];
+                }
+            } catch (e) {
+                console.error('loadPelanggaranCatatan error', e);
+            } finally {
+                loadingPelanggaranCatatan.value = false;
+            }
+        }
+
+        async function loadPelanggaranSanksi() {
+            if (_userRole === 'super_admin' && !currentTenantId.value) return;
+            loadingPelanggaranSanksi.value = true;
+            try {
+                let url = `${_baseUrl}/api/v1/bk/pelanggaran/sanksi`;
+                if (currentTenantId.value) url += `?tenant_id=${currentTenantId.value}`;
+                const res = await axios.get(url);
+                if (res.data.success) {
+                    pelanggaranSanksiList.value = res.data.data || [];
+                }
+            } catch (e) {
+                console.error('loadPelanggaranSanksi error', e);
+            } finally {
+                loadingPelanggaranSanksi.value = false;
+            }
+        }
+
+        async function openSanksiDetail(siswaId) {
+            sanksiDetailModal.value.show = true;
+            sanksiDetailModal.value.total_poin = 0;
+            sanksiDetailModal.value.student = {};
+            sanksiDetailModal.value.violations = [];
+            sanksiDetailModal.value.followUps = [];
+
+            formTindakLanjut.value = {
+                tanggal_tindakan: new Date().toISOString().split('T')[0],
+                jenis_tindakan: 'Konseling BK',
+                keterangan_tindakan: ''
+            };
+
+            try {
+                let url = `${_baseUrl}/api/v1/bk/pelanggaran/sanksi/detail?siswa_id=${siswaId}`;
+                if (currentTenantId.value) url += `&tenant_id=${currentTenantId.value}`;
+                const res = await axios.get(url);
+                if (res.data.success) {
+                    sanksiDetailModal.value.student = res.data.student || {};
+                    sanksiDetailModal.value.total_poin = parseInt(res.data.total_poin) || 0;
+                    sanksiDetailModal.value.violations = res.data.violations || [];
+                    sanksiDetailModal.value.followUps = res.data.follow_ups || [];
+                }
+            } catch (e) {
+                console.error('openSanksiDetail error', e);
+                Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal mengambil detail sanksi siswa.' });
+            }
+        }
+
+        async function submitTindakLanjut(siswaId) {
+            if (!formTindakLanjut.value.tanggal_tindakan) {
+                Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Tanggal tindakan wajib diisi.' });
+                return;
+            }
+            if (!formTindakLanjut.value.jenis_tindakan) {
+                Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Jenis tindakan wajib diisi.' });
+                return;
+            }
+            if (!formTindakLanjut.value.keterangan_tindakan.trim()) {
+                Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Keterangan/hasil tindakan wajib diisi.' });
+                return;
+            }
+
+            submittingTindakLanjut.value = true;
+            try {
+                const payload = {
+                    siswa_id: siswaId,
+                    tanggal_tindakan: formTindakLanjut.value.tanggal_tindakan,
+                    jenis_tindakan: formTindakLanjut.value.jenis_tindakan,
+                    keterangan_tindakan: formTindakLanjut.value.keterangan_tindakan
+                };
+                if (currentTenantId.value) payload.tenant_id = currentTenantId.value;
+
+                const res = await axios.post(`${_baseUrl}/api/v1/bk/pelanggaran/sanksi/tindak-lanjut`, payload, {
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+
+                if (res.data.success) {
+                    Swal.fire({ icon: 'success', title: 'Sukses', text: res.data.message, timer: 1500, showConfirmButton: false });
+                    await openSanksiDetail(siswaId);
+                    loadPelanggaranSanksi();
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: res.data.error || 'Gagal menyimpan catatan.' });
+                }
+            } catch (e) {
+                console.error('submitTindakLanjut error', e);
+                Swal.fire({ icon: 'error', title: 'Gagal', text: e.response?.data?.error || 'Terjadi kesalahan.' });
+            } finally {
+                submittingTindakLanjut.value = false;
+            }
+        }
+
+        function showFotoModal(src) {
+            fotoModal.value.show = true;
+            fotoModal.value.src = src;
+        }
+
+        function getKategoriBadge(kategori) {
+            if (kategori === 'Ringan') return 'badge-secondary';
+            if (kategori === 'Sedang') return 'badge-info';
+            if (kategori === 'Berat') return 'badge-warning';
+            if (kategori === 'Khusus') return 'badge-danger';
+            return 'badge-secondary';
+        }
+
+        function getPoinBadgeClass(poin) {
+            if (poin >= 100) return 'bg-danger text-white';
+            if (poin >= 75) return 'bg-warning text-dark';
+            if (poin >= 50) return 'bg-info text-dark';
+            if (poin >= 25) return 'bg-secondary text-white';
+            return 'bg-success text-white';
+        }
+
+        function formatTanggalIndo(dateStr) {
+            if (!dateStr) return '—';
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
+            return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
         // ─── Init ────────────────────────────────────────────
         onMounted(() => {
             loadDashboard();
@@ -2407,8 +4178,6 @@ window.VueAppRegistry.register('#bkApp', {
             statusStyle,
             // Tracer
             loadingTracer, tracerData,
-            // PDSS
-            loadingPdss, pdssData, pdssSearch, filteredPdss,
             // Jurnal — Rekam Kasus
             loadingKasus, loadingKasusList, kasusList,
             kasusListSearch, filteredKasusList,
@@ -2426,7 +4195,27 @@ window.VueAppRegistry.register('#bkApp', {
             showPrestasiSiswaDropdown, loadingSearchPrestasiSiswa, alertPrestasi, formPrestasi,
             searchSiswaPrestasiDebounce, hidePrestasiDropdownDelay, selectSiswaPrestasi,
             removeSiswaPrestasi, handleFileUpload, submitPrestasi, loadPrestasi, loadGuruList,
-            editPrestasi, deletePrestasi, clearFormPrestasi, userRole, baseUrl, currentTenantId
+            editPrestasi, deletePrestasi, clearFormPrestasi, userRole, baseUrl, currentTenantId,
+            // Kehadiran
+            loadingKehadiran, savingKehadiran, importingKehadiran, filterKehadiran, tahunAjaranList,
+            kehadiranData, listKelasKehadiran, fileImportKehadiran,
+            loadKehadiran, loadKelasKehadiran, isCellDirty, isRowDirty, setAllEmptyToZero,
+            incrementAbsen, decrementAbsen, saveKehadiran, exportKehadiran,
+            handleFileImportChange, importKehadiran, handleGridKeydown,
+            // Pelanggaran & Poin
+            activeSubTab, switchSubTab,
+            loadingPelanggaranDashboard, pelanggaranKpi, pelanggaranTopStudents,
+            loadingPelanggaranMaster, pelanggaranMasterList, masterModal,
+            submittingPelanggaran, pelanggaranSearchSiswa, pelanggaranSiswaOptions,
+            selectedPelanggaranSiswa, loadingSearchPelanggaranSiswa, showPelanggaranSiswaDropdown, siswaHoverPelanggaran,
+            formInputPelanggaran, loadingPelanggaranCatatan, pelanggaranCatatanList, fotoModal,
+            loadingPelanggaranSanksi, pelanggaranSanksiList,
+            loadPelanggaranDashboard, loadPelanggaranMaster, masterRulesFiltered, filteredCatatanPelanggaran, filteredSanksiBuku, openMasterModal,
+            submitMasterRule, deleteMasterRule, searchSiswaPelanggaranDebounce, hidePelanggaranDropdownDelay,
+            selectSiswaPelanggaran, clearSiswaPelanggaran, handleFotoUpload, submitPelanggaran, editPelanggaran, deletePelanggaran,
+            loadPelanggaranCatatan, loadPelanggaranSanksi, showFotoModal, getKategoriBadge,
+            getPoinBadgeClass, formatTanggalIndo, sanksiSearch, sanksiStatus, sanksiDetailModal,
+            formTindakLanjut, submittingTindakLanjut, openSanksiDetail, submitTindakLanjut
         };
     }
 });

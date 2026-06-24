@@ -787,41 +787,6 @@ class BKController extends BaseController {
         }
     }
 
-    // =========================================================================
-    // API: Tab 4 — Siswa Eligible SNBP (Kesiapan PDSS)
-    // GET /api/v1/bk/pdss
-    // =========================================================================
-    public function apiPdss(): void {
-        $tenantId = $this->getSecureTenantId();
-        if (!$tenantId) {
-            $this->jsonResponse(['error' => 'Pilih sekolah terlebih dahulu.'], 400);
-            return;
-        }
-
-        $db = \App\Config\Database::getConnection();
-        try {
-            // Siswa aktif di kelas 12 (id_jenjang tertentu, asumsi jenjang_nama LIKE '%12%' atau sesuai konfigurasi)
-            $stmt = $db->prepare("
-                SELECT s.id, s.nama_lengkap, s.nisn, k.nama_kelas, j.nama_jurusan
-                FROM siswa s
-                LEFT JOIN kelas k ON s.id_kelas = k.id
-                LEFT JOIN jurusan j ON s.id_jurusan = j.id
-                WHERE s.tenant_id = ?
-                  AND s.status = 'Aktif'
-                  AND s.deleted_at IS NULL
-                  AND k.nama_kelas LIKE '%12%'
-                ORDER BY j.nama_jurusan ASC, s.nama_lengkap ASC
-                LIMIT 200
-            ");
-            $stmt->execute([$tenantId]);
-            $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-
-            $this->jsonResponse(['success' => true, 'data' => $data, 'total' => count($data)]);
-        } catch (\Throwable $e) {
-            error_log('[BKController::apiPdss] ' . $e->getMessage());
-            $this->jsonResponse(['error' => 'Gagal memuat data PDSS.'], 500);
-        }
-    }
 
     // =========================================================================
     // API: Tab 2 — List Pilihan Penjurusan
@@ -1788,5 +1753,1445 @@ class BKController extends BaseController {
             $d['status_baru'],    $d['aksi'],            $d['dilakukan_oleh'],
             $d['nama_pelaku'],    $d['catatan'],
         ]);
+    }
+
+    // =========================================================================
+    // API: Ambil Absensi Semester Kehadiran (Tab Kehadiran)
+    // GET /api/v1/bk/absensi-semester?tahun_ajaran_id=X&semester=Y&kelas_id=Z
+    // =========================================================================
+    public function apiGetAbsensiSemester(): void {
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Pilih sekolah terlebih dahulu.'], 400);
+            return;
+        }
+
+        $tahunAjaranId = (int)($_GET['tahun_ajaran_id'] ?? 0);
+        $semester = $this->sanitize($_GET['semester'] ?? '');
+        $kelasId = (int)($_GET['kelas_id'] ?? 0);
+
+        if (!$tahunAjaranId || !$semester || !$kelasId) {
+            $this->jsonResponse(['error' => 'Tahun Ajaran, Semester, dan Kelas wajib dipilih.'], 422);
+            return;
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+            $sql = "SELECT 
+                        s.id AS siswa_id,
+                        s.nama_lengkap,
+                        s.nisn,
+                        s.nis,
+                        COALESCE(a.sakit, 0) AS sakit,
+                        COALESCE(a.izin, 0) AS izin,
+                        COALESCE(a.alfa, 0) AS alfa,
+                        a.id AS absensi_id
+                    FROM siswa s
+                    LEFT JOIN absensi_semester a ON s.id = a.siswa_id 
+                        AND a.tahun_ajaran_id = :tahun_ajaran_id 
+                        AND a.semester = :semester
+                        AND a.tenant_id = :tenant_id_absensi
+                    WHERE s.id_kelas = :kelas_id 
+                      AND s.status = 'Aktif'
+                      AND s.deleted_at IS NULL
+                      AND s.tenant_id = :tenant_id_siswa
+                    ORDER BY s.nama_lengkap ASC";
+            
+            $stmt = $db->prepare($sql);
+            $stmt->execute([
+                'tahun_ajaran_id' => $tahunAjaranId,
+                'semester' => $semester,
+                'kelas_id' => $kelasId,
+                'tenant_id_absensi' => $tenantId,
+                'tenant_id_siswa' => $tenantId
+            ]);
+
+            $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            $this->jsonResponse(['success' => true, 'data' => $data]);
+        } catch (\Throwable $e) {
+            error_log('[BKController::apiGetAbsensiSemester] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal mengambil data kehadiran: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // =========================================================================
+    // API: Simpan Bulk Absensi Semester Kehadiran (Tab Kehadiran)
+    // POST /api/v1/bk/absensi-semester
+    // =========================================================================
+    public function apiSaveAbsensiSemesterBulk(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->jsonResponse(['error' => 'Method not allowed.'], 405);
+            return;
+        }
+
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Pilih sekolah terlebih dahulu.'], 400);
+            return;
+        }
+
+        $body = $this->getJsonInput();
+        $tahunAjaranId = (int)($body['tahun_ajaran_id'] ?? 0);
+        $semester = $this->sanitize($body['semester'] ?? '');
+        $kelasId = (int)($body['kelas_id'] ?? 0);
+        $attendance = $body['attendance'] ?? [];
+
+        if (!$tahunAjaranId || !$semester || !$kelasId) {
+            $this->jsonResponse(['error' => 'Parameter tidak lengkap.'], 422);
+            return;
+        }
+
+        if (!is_array($attendance)) {
+            $this->jsonResponse(['error' => 'Format data kehadiran tidak valid.'], 422);
+            return;
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+            $db->beginTransaction();
+
+            $checkStmt = $db->prepare("
+                SELECT id FROM absensi_semester 
+                WHERE tenant_id = :tenant_id 
+                  AND siswa_id = :siswa_id 
+                  AND tahun_ajaran_id = :tahun_ajaran_id 
+                  AND semester = :semester 
+                LIMIT 1
+            ");
+
+            $insertStmt = $db->prepare("
+                INSERT INTO absensi_semester (
+                    tenant_id, siswa_id, tahun_ajaran_id, semester, sakit, izin, alfa
+                ) VALUES (
+                    :tenant_id, :siswa_id, :tahun_ajaran_id, :semester, :sakit, :izin, :alfa
+                )
+            ");
+
+            $updateStmt = $db->prepare("
+                UPDATE absensi_semester SET 
+                    sakit = :sakit,
+                    izin = :izin,
+                    alfa = :alfa
+                WHERE id = :id
+            ");
+
+            $verifySiswaStmt = $db->prepare("
+                SELECT id FROM siswa 
+                WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL LIMIT 1
+            ");
+
+            foreach ($attendance as $record) {
+                $siswaId = $this->sanitize($record['siswa_id'] ?? '');
+                $sakit = max(0, (int)($record['sakit'] ?? 0));
+                $izin = max(0, (int)($record['izin'] ?? 0));
+                $alfa = max(0, (int)($record['alfa'] ?? 0));
+
+                if (empty($siswaId)) {
+                    continue;
+                }
+
+                $verifySiswaStmt->execute([$siswaId, $tenantId]);
+                if (!$verifySiswaStmt->fetchColumn()) {
+                    throw new \Exception("Siswa dengan ID {$siswaId} tidak terdaftar di sekolah ini.");
+                }
+
+                $checkStmt->execute([
+                    'tenant_id' => $tenantId,
+                    'siswa_id' => $siswaId,
+                    'tahun_ajaran_id' => $tahunAjaranId,
+                    'semester' => $semester
+                ]);
+                $existingId = $checkStmt->fetchColumn();
+
+                if ($existingId) {
+                    $updateStmt->execute([
+                        'sakit' => $sakit,
+                        'izin' => $izin,
+                        'alfa' => $alfa,
+                        'id' => $existingId
+                    ]);
+                } else {
+                    $insertStmt->execute([
+                        'tenant_id' => $tenantId,
+                        'siswa_id' => $siswaId,
+                        'tahun_ajaran_id' => $tahunAjaranId,
+                        'semester' => $semester,
+                        'sakit' => $sakit,
+                        'izin' => $izin,
+                        'alfa' => $alfa
+                    ]);
+                }
+            }
+
+            $db->commit();
+            $this->jsonResponse(['success' => true, 'message' => 'Data kehadiran berhasil disimpan.']);
+        } catch (\Throwable $e) {
+            if (isset($db) && $db->inTransaction()) {
+                $db->rollBack();
+            }
+            error_log('[BKController::apiSaveAbsensiSemesterBulk] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal menyimpan data kehadiran: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // =========================================================================
+    // API: Ekspor Excel Absensi Semester (.xls dengan mso-number-format)
+    // GET /api/v1/bk/absensi-semester/export?tahun_ajaran_id=X&semester=Y&kelas_id=Z
+    // =========================================================================
+    public function apiExportAbsensiSemester(): void {
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            die("Pilih sekolah terlebih dahulu.");
+        }
+
+        $tahunAjaranId = (int)($_GET['tahun_ajaran_id'] ?? 0);
+        $semester = $this->sanitize($_GET['semester'] ?? '');
+        $kelasId = (int)($_GET['kelas_id'] ?? 0);
+
+        if (!$tahunAjaranId || !$semester || !$kelasId) {
+            die("Tahun Ajaran, Semester, dan Kelas wajib dipilih.");
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+
+            // Ambil info nama sekolah, kelas, tahun ajaran untuk header & filename
+            $stmtTenant = $db->prepare("SELECT nama_sekolah FROM tenants WHERE id = ? LIMIT 1");
+            $stmtTenant->execute([$tenantId]);
+            $namaSekolah = $stmtTenant->fetchColumn() ?: "Sekolah";
+
+            $stmtKelas = $db->prepare("SELECT nama_kelas FROM kelas WHERE id = ? AND tenant_id = ? LIMIT 1");
+            $stmtKelas->execute([$kelasId, $tenantId]);
+            $namaKelas = $stmtKelas->fetchColumn() ?: "Kelas";
+
+            $stmtTa = $db->prepare("SELECT tahun_ajaran FROM tahun_ajaran WHERE id = ? AND tenant_id = ? LIMIT 1");
+            $stmtTa->execute([$tahunAjaranId, $tenantId]);
+            $tahunAjaranStr = $stmtTa->fetchColumn() ?: "TahunAjaran";
+
+            $filename = "Absensi_" . str_replace(' ', '_', $namaKelas) . "_" . str_replace('/', '-', $tahunAjaranStr) . "_" . $semester . "_" . date('Ymd_His') . ".xlsx";
+
+            // Query data siswa + absensi
+            $sql = "SELECT 
+                        s.nama_lengkap,
+                        s.nisn,
+                        s.nis,
+                        s.tenant_id,
+                        COALESCE(a.sakit, 0) AS sakit,
+                        COALESCE(a.izin, 0) AS izin,
+                        COALESCE(a.alfa, 0) AS alfa
+                    FROM siswa s
+                    LEFT JOIN absensi_semester a ON s.id = a.siswa_id 
+                        AND a.tahun_ajaran_id = :tahun_ajaran_id 
+                        AND a.semester = :semester
+                        AND a.tenant_id = :tenant_id_absensi
+                    WHERE s.id_kelas = :kelas_id 
+                      AND s.status = 'Aktif'
+                      AND s.deleted_at IS NULL
+                      AND s.tenant_id = :tenant_id_siswa
+                    ORDER BY s.nama_lengkap ASC";
+            
+            $stmt = $db->prepare($sql);
+            $stmt->execute([
+                'tahun_ajaran_id' => $tahunAjaranId,
+                'semester' => $semester,
+                'kelas_id' => $kelasId,
+                'tenant_id_absensi' => $tenantId,
+                'tenant_id_siswa' => $tenantId
+            ]);
+            $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            // Prepare data array for SimpleXLSXGen
+            $excelData = [];
+            $excelData[] = ['REKAPITULASI KEHADIRAN SISWA PER SEMESTER'];
+            $excelData[] = ['Sekolah:', $namaSekolah];
+            $excelData[] = ['Kelas:', $namaKelas];
+            $excelData[] = ['Tahun Ajaran:', $tahunAjaranStr];
+            $excelData[] = ['Semester:', $semester];
+            $excelData[] = []; // Empty separator line
+            
+            $excelData[] = [
+                'UUID Sekolah',
+                'Nama Lengkap',
+                'NISN',
+                'NIS',
+                'Sakit',
+                'Izin',
+                'Tanpa Keterangan (Alfa)'
+            ];
+
+            foreach ($rows as $row) {
+                $excelData[] = [
+                    (string)($row['tenant_id'] ?? ''),
+                    (string)($row['nama_lengkap'] ?? ''),
+                    // SimpleXLSXGen will automatically treat numeric strings as text if type-hinted or simple string, keeping leading zeros
+                    (string)($row['nisn'] ?? ''),
+                    (string)($row['nis'] ?? ''),
+                    (int)($row['sakit'] ?? 0),
+                    (int)($row['izin'] ?? 0),
+                    (int)($row['alfa'] ?? 0)
+                ];
+            }
+
+            \Shuchkin\SimpleXLSXGen::fromArray($excelData)->downloadAs($filename);
+            exit;
+
+        } catch (\Throwable $e) {
+            die("Gagal mengekspor data kehadiran: " . $e->getMessage());
+        }
+    }
+
+    // =========================================================================
+    // API: Impor CSV Absensi Semester Kehadiran (Excel Save As CSV)
+    // POST /api/v1/bk/absensi-semester/import
+    // =========================================================================
+    public function apiImportAbsensiSemester(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->jsonResponse(['error' => 'Method not allowed.'], 405);
+            return;
+        }
+
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Pilih sekolah terlebih dahulu.'], 400);
+            return;
+        }
+
+        $tahunAjaranId = (int)($_POST['tahun_ajaran_id'] ?? 0);
+        $semester = $this->sanitize($_POST['semester'] ?? '');
+        $kelasId = (int)($_POST['kelas_id'] ?? 0);
+
+        if (!$tahunAjaranId || !$semester || !$kelasId) {
+            $this->jsonResponse(['error' => 'Parameter filter (Tahun Ajaran, Semester, Kelas) tidak lengkap.'], 422);
+            return;
+        }
+
+        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+            $this->jsonResponse(['error' => 'File upload tidak ditemukan.'], 400);
+            return;
+        }
+
+        $fileTmp = $_FILES['file']['tmp_name'];
+        $fileName = $_FILES['file']['name'];
+        $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+        if ($fileExt !== 'csv' && $fileExt !== 'xls' && $fileExt !== 'xlsx') {
+            $this->jsonResponse(['error' => 'Format file tidak valid. Unggah berkas Excel (.xlsx, .xls) atau CSV (.csv) hasil ekspor template.'], 400);
+            return;
+        }
+
+        $fileContent = file_get_contents($fileTmp);
+        if ($fileContent === false) {
+            $this->jsonResponse(['error' => 'Gagal membaca berkas yang diunggah.'], 500);
+            return;
+        }
+
+        $isHtml = (stripos($fileContent, '<html') !== false || stripos($fileContent, '<table') !== false);
+        $isXlsx = ($fileExt === 'xlsx');
+        $rows = [];
+        $formatText = 'CSV';
+        $delimiterText = 'N/A';
+
+        if ($isXlsx) {
+            $formatText = 'Excel (.xlsx)';
+            $xlsx = \Shuchkin\SimpleXLSX::parse($fileTmp);
+            if ($xlsx) {
+                $rows = $xlsx->rows();
+            } else {
+                $this->jsonResponse(['error' => 'Gagal membaca berkas Excel (.xlsx): ' . \Shuchkin\SimpleXLSX::parseError()], 400);
+                return;
+            }
+        } elseif ($isHtml) {
+            $formatText = 'Excel Lama (.xls HTML)';
+            $dom = new \DOMDocument();
+            libxml_use_internal_errors(true);
+            $dom->loadHTML($fileContent);
+            libxml_clear_errors();
+
+            $trElements = $dom->getElementsByTagName('tr');
+            foreach ($trElements as $tr) {
+                $cells = [];
+                foreach ($tr->childNodes as $child) {
+                    if ($child->nodeType === XML_ELEMENT_NODE && ($child->nodeName === 'td' || $child->nodeName === 'th')) {
+                        $cells[] = trim($child->nodeValue);
+                    }
+                }
+                if (!empty($cells)) {
+                    $rows[] = $cells;
+                }
+            }
+        } else {
+            $formatText = 'CSV';
+            // Read CSV rows
+            $handle = fopen($fileTmp, 'r');
+            if ($handle) {
+                // Auto-detect delimiter from the first 20 lines
+                $delimiters = [',' => 0, ';' => 0, "\t" => 0];
+                $lineCount = 0;
+                while (($line = fgets($handle)) !== false && $lineCount < 20) {
+                    $lineCount++;
+                    foreach ($delimiters as $del => &$count) {
+                        $count += substr_count($line, $del);
+                    }
+                }
+                $delimiter = ',';
+                $maxCount = 0;
+                foreach ($delimiters as $del => $count) {
+                    if ($count > $maxCount) {
+                        $maxCount = $count;
+                        $delimiter = $del;
+                    }
+                }
+                $delimiterText = $delimiter;
+                rewind($handle);
+
+                while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+                    $rows[] = $row;
+                }
+                fclose($handle);
+            }
+        }
+
+        if (empty($rows)) {
+            $this->jsonResponse(['error' => 'Berkas kosong atau tidak dapat dibaca.'], 400);
+            return;
+        }
+
+        $header = null;
+        $headerRowNumber = 0;
+        $tenantIdx = -1;
+        $nisnIdx = -1;
+        $sakitIdx = -1;
+        $izinIdx = -1;
+        $alfaIdx = -1;
+
+        foreach ($rows as $rNum => $row) {
+            if (empty(array_filter($row))) {
+                continue;
+            }
+
+            // Clean UTF-8 BOM on the first cell of this row if present
+            if (isset($row[0])) {
+                $row[0] = preg_replace('/^[\x{FEFF}\x{200B}]+/u', '', $row[0]);
+            }
+
+            // Normalize cells for comparison
+            $normalizedRow = array_map(function($cell) {
+                return strtolower(trim($cell));
+            }, $row);
+
+            // Let's check if this row contains required header signatures
+            $tempTenantIdx = -1;
+            $tempNisnIdx = -1;
+            $tempSakitIdx = -1;
+            $tempIzinIdx = -1;
+            $tempAlfaIdx = -1;
+
+            foreach ($normalizedRow as $idx => $col) {
+                if (strpos($col, 'uuid') !== false || strpos($col, 'tenant') !== false || strpos($col, 'sekolah') !== false) {
+                    $tempTenantIdx = $idx;
+                } elseif (strpos($col, 'nisn') !== false) {
+                    $tempNisnIdx = $idx;
+                } elseif (strpos($col, 'sakit') !== false) {
+                    $tempSakitIdx = $idx;
+                } elseif (strpos($col, 'izin') !== false) {
+                    $tempIzinIdx = $idx;
+                } elseif (strpos($col, 'alfa') !== false || strpos($col, 'tanpa keterangan') !== false || strpos($col, 'keterangan') !== false) {
+                    $tempAlfaIdx = $idx;
+                }
+            }
+
+            // If we found all required columns, this is the header!
+            if ($tempTenantIdx !== -1 && $tempNisnIdx !== -1 && $tempSakitIdx !== -1 && $tempIzinIdx !== -1 && $tempAlfaIdx !== -1) {
+                $header = $row;
+                $headerRowNumber = $rNum + 1;
+                $tenantIdx = $tempTenantIdx;
+                $nisnIdx = $tempNisnIdx;
+                $sakitIdx = $tempSakitIdx;
+                $izinIdx = $tempIzinIdx;
+                $alfaIdx = $tempAlfaIdx;
+                break;
+            }
+
+            // Stop looking after 20 rows
+            if ($rNum >= 20) {
+                break;
+            }
+        }
+
+        if (!$header) {
+            // Read first 5 lines for debugging
+            $previewLines = [];
+            if (file_exists($fileTmp)) {
+                $f = fopen($fileTmp, 'r');
+                if ($f) {
+                    $lineCount = 0;
+                    while (($line = fgets($f)) !== false && $lineCount < 5) {
+                        $previewLines[] = trim($line);
+                        $lineCount++;
+                    }
+                    fclose($f);
+                }
+            }
+            $previewText = implode("\n", $previewLines);
+            $this->jsonResponse([
+                'error' => 'Header berkas tidak valid.',
+                'details' => 'Kolom yang wajib ada di dalam template: UUID Sekolah, NISN, Sakit, Izin, Tanpa Keterangan (Alfa).<br><br><b>Deteksi Format:</b> ' . htmlspecialchars($formatText) . '<br><b>Deteksi Delimiter:</b> "' . htmlspecialchars($delimiterText) . '"<br><b>5 Baris pertama file Anda:</b><pre class="bg-dark text-white p-2 rounded text-start fs-8 mt-1" style="white-space: pre-wrap; font-family: monospace;">' . htmlspecialchars($previewText) . '</pre>'
+            ], 400);
+            return;
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+            $db->beginTransaction();
+
+            $rowCount = $headerRowNumber;
+            $successCount = 0;
+            $errors = [];
+
+            // Prepared statements
+            $stmtSiswaCheck = $db->prepare("
+                SELECT id, tenant_id FROM siswa 
+                WHERE nisn = :nisn 
+                  AND deleted_at IS NULL 
+                LIMIT 1
+            ");
+
+            $checkAbsensiStmt = $db->prepare("
+                SELECT id FROM absensi_semester 
+                WHERE tenant_id = :tenant_id 
+                  AND siswa_id = :siswa_id 
+                  AND tahun_ajaran_id = :tahun_ajaran_id 
+                  AND semester = :semester 
+                LIMIT 1
+            ");
+
+            $insertStmt = $db->prepare("
+                INSERT INTO absensi_semester (
+                    tenant_id, siswa_id, tahun_ajaran_id, semester, sakit, izin, alfa
+                ) VALUES (
+                    :tenant_id, :siswa_id, :tahun_ajaran_id, :semester, :sakit, :izin, :alfa
+                )
+            ");
+
+            $updateStmt = $db->prepare("
+                UPDATE absensi_semester SET 
+                    sakit = :sakit,
+                    izin = :izin,
+                    alfa = :alfa
+                WHERE id = :id
+            ");
+
+            for ($i = $headerRowNumber; $i < count($rows); $i++) {
+                $row = $rows[$i];
+                $rowCount++;
+                if (empty(array_filter($row))) {
+                    continue;
+                }
+
+                $rowTenantId = isset($row[$tenantIdx]) ? trim($row[$tenantIdx]) : '';
+                // Clean NISN as text
+                $rawNisn = isset($row[$nisnIdx]) ? trim($row[$nisnIdx]) : '';
+                // Excel sometimes formats numbers in scientific notation or with quotes, clean it
+                $rawNisn = preg_replace('/[^0-9]/', '', $rawNisn);
+
+                $sakit = isset($row[$sakitIdx]) ? (int)trim($row[$sakitIdx]) : 0;
+                $izin = isset($row[$izinIdx]) ? (int)trim($row[$izinIdx]) : 0;
+                $alfa = isset($row[$alfaIdx]) ? (int)trim($row[$alfaIdx]) : 0;
+
+                if (empty($rowTenantId)) {
+                    $errors[] = "Baris {$rowCount}: UUID Sekolah tidak boleh kosong.";
+                    continue;
+                }
+                if (strcasecmp($rowTenantId, $tenantId) !== 0) {
+                    $errors[] = "Baris {$rowCount}: UUID Sekolah '{$rowTenantId}' tidak cocok dengan sekolah Anda yang sedang aktif.";
+                    continue;
+                }
+
+                if (empty($rawNisn)) {
+                    $errors[] = "Baris {$rowCount}: NISN tidak boleh kosong.";
+                    continue;
+                }
+
+                // Check student exist by nisn
+                $stmtSiswaCheck->execute([
+                    'nisn' => $rawNisn
+                ]);
+                $siswa = $stmtSiswaCheck->fetch(\PDO::FETCH_ASSOC);
+
+                if (!$siswa) {
+                    $errors[] = "Baris {$rowCount}: Siswa dengan NISN '{$rawNisn}' tidak ditemukan.";
+                    continue;
+                }
+
+                if (strcasecmp($siswa['tenant_id'], $tenantId) !== 0) {
+                    $errors[] = "Baris {$rowCount}: Siswa dengan NISN '{$rawNisn}' terdaftar di sekolah lain.";
+                    continue;
+                }
+
+                $siswaId = $siswa['id'];
+
+                // Check if absensi already exists
+                $checkAbsensiStmt->execute([
+                    'tenant_id' => $tenantId,
+                    'siswa_id' => $siswaId,
+                    'tahun_ajaran_id' => $tahunAjaranId,
+                    'semester' => $semester
+                ]);
+                $existingId = $checkAbsensiStmt->fetchColumn();
+
+                if ($existingId) {
+                    // Update
+                    $updateStmt->execute([
+                        'sakit' => max(0, $sakit),
+                        'izin' => max(0, $izin),
+                        'alfa' => max(0, $alfa),
+                        'id' => $existingId
+                    ]);
+                } else {
+                    // Insert
+                    $insertStmt->execute([
+                        'tenant_id' => $tenantId,
+                        'siswa_id' => $siswaId,
+                        'tahun_ajaran_id' => $tahunAjaranId,
+                        'semester' => $semester,
+                        'sakit' => max(0, $sakit),
+                        'izin' => max(0, $izin),
+                        'alfa' => max(0, $alfa)
+                    ]);
+                }
+
+                $successCount++;
+            }
+
+            if (!empty($errors)) {
+                $db->rollBack();
+                $this->jsonResponse([
+                    'success' => false,
+                    'message' => 'Gagal memproses file. Beberapa baris data tidak valid.',
+                    'errors' => $errors
+                ], 422);
+                return;
+            }
+
+            $db->commit();
+            $this->jsonResponse([
+                'success' => true,
+                'message' => "Berhasil mengimpor {$successCount} data kehadiran siswa."
+            ]);
+
+        } catch (\Throwable $e) {
+            if (isset($db) && $db->inTransaction()) {
+                $db->rollBack();
+            }
+            error_log('[BKController::apiImportAbsensiSemester] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Terjadi kesalahan sistem: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // =========================================================================
+    // STUDENT VIOLATIONS & POINTS (PELANGGARAN & POIN) IMPLEMENTATION
+    // =========================================================================
+
+    /** Helper to get active school year */
+    private function getActiveTahunAjaranId(\PDO $db, string $tenantId): ?int {
+        $stmt = $db->prepare("SELECT id FROM tahun_ajaran WHERE tenant_id = ? AND is_active = 1 AND deleted_at IS NULL LIMIT 1");
+        $stmt->execute([$tenantId]);
+        $id = $stmt->fetchColumn();
+        if ($id) {
+            return (int)$id;
+        }
+        $stmt = $db->prepare("SELECT id FROM tahun_ajaran WHERE tenant_id = ? AND deleted_at IS NULL ORDER BY tahun_ajaran DESC LIMIT 1");
+        $stmt->execute([$tenantId]);
+        $id = $stmt->fetchColumn();
+        return $id ? (int)$id : null;
+    }
+
+    /** GET /api/v1/bk/pelanggaran/dashboard */
+    public function apiGetPelanggaranDashboard(): void {
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
+        }
+        $db = \App\Config\Database::getConnection();
+        $taId = $this->getActiveTahunAjaranId($db, $tenantId);
+        if (!$taId) {
+            $this->jsonResponse(['error' => 'Tahun Ajaran aktif tidak ditemukan.'], 400);
+        }
+
+        try {
+            // 1. KPI Counters
+            $stmt = $db->prepare("
+                SELECT 
+                    SUM(CASE WHEN total_poin >= 100 THEN 1 ELSE 0 END) as sp3_do,
+                    SUM(CASE WHEN total_poin >= 75 AND total_poin < 100 THEN 1 ELSE 0 END) as sp2_skorsing,
+                    SUM(CASE WHEN total_poin >= 50 AND total_poin < 75 THEN 1 ELSE 0 END) as sp1_bk,
+                    SUM(CASE WHEN total_poin >= 25 AND total_poin < 50 THEN 1 ELSE 0 END) as wali_kelas,
+                    COUNT(siswa_id) as total_siswa_melanggar
+                FROM (
+                    SELECT c.siswa_id, SUM(m.bobot_poin) as total_poin
+                    FROM catatan_pelanggaran_siswa c
+                    JOIN master_pelanggaran m ON c.pelanggaran_id = m.id
+                    WHERE c.tenant_id = ? 
+                      AND c.tahun_ajaran_id = ? 
+                      AND c.deleted_at IS NULL
+                      AND m.deleted_at IS NULL
+                    GROUP BY c.siswa_id
+                ) as student_points
+            ");
+            $stmt->execute([$tenantId, $taId]);
+            $counts = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+            $kpi = [
+                'sp3_do' => (int)($counts['sp3_do'] ?? 0),
+                'sp2_skorsing' => (int)($counts['sp2_skorsing'] ?? 0),
+                'sp1_bk' => (int)($counts['sp1_bk'] ?? 0),
+                'wali_kelas' => (int)($counts['wali_kelas'] ?? 0),
+                'total_siswa_melanggar' => (int)($counts['total_siswa_melanggar'] ?? 0),
+            ];
+
+            // 2. Top Violators
+            $stmt = $db->prepare("
+                SELECT 
+                    s.id as siswa_id,
+                    s.nama_lengkap,
+                    s.nisn,
+                    k.nama_kelas,
+                    SUM(m.bobot_poin) as total_poin
+                FROM catatan_pelanggaran_siswa c
+                JOIN siswa s ON c.siswa_id = s.id
+                LEFT JOIN kelas k ON s.id_kelas = k.id
+                JOIN master_pelanggaran m ON c.pelanggaran_id = m.id
+                WHERE c.tenant_id = ? 
+                  AND c.tahun_ajaran_id = ? 
+                  AND c.deleted_at IS NULL
+                  AND s.deleted_at IS NULL
+                  AND m.deleted_at IS NULL
+                GROUP BY s.id, s.nama_lengkap, s.nisn, k.nama_kelas
+                ORDER BY total_poin DESC
+                LIMIT 5
+            ");
+            $stmt->execute([$tenantId, $taId]);
+            $topStudents = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            // 3. Monthly Trends
+            $stmt = $db->prepare("
+                SELECT 
+                    DATE_FORMAT(c.tanggal_kejadian, '%Y-%m') as bulan,
+                    COUNT(c.id) as jumlah_kasus
+                FROM catatan_pelanggaran_siswa c
+                WHERE c.tenant_id = ? 
+                  AND c.tahun_ajaran_id = ? 
+                  AND c.deleted_at IS NULL
+                GROUP BY DATE_FORMAT(c.tanggal_kejadian, '%Y-%m')
+                ORDER BY bulan ASC
+            ");
+            $stmt->execute([$tenantId, $taId]);
+            $trendData = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            $months = [];
+            $countsList = [];
+            $indoMonths = [
+                '01' => 'Januari', '02' => 'Februari', '03' => 'Maret', '04' => 'April',
+                '05' => 'Mei', '06' => 'Juni', '07' => 'Juli', '08' => 'Agustus',
+                '09' => 'September', '10' => 'Oktober', '11' => 'November', '12' => 'Desember'
+            ];
+
+            foreach ($trendData as $row) {
+                $parts = explode('-', $row['bulan']);
+                $year = $parts[0] ?? '';
+                $monthNum = $parts[1] ?? '';
+                $monthName = ($indoMonths[$monthNum] ?? $monthNum) . ' ' . $year;
+                $months[] = $monthName;
+                $countsList[] = (int)$row['jumlah_kasus'];
+            }
+
+            if (empty($months)) {
+                $months = ['Belum ada data'];
+                $countsList = [0];
+            }
+
+            $this->jsonResponse([
+                'success' => true,
+                'kpi' => $kpi,
+                'top_students' => $topStudents,
+                'chart' => [
+                    'labels' => $months,
+                    'datasets' => [
+                        [
+                            'label' => 'Jumlah Pelanggaran',
+                            'data' => $countsList,
+                            'fill' => true,
+                            'borderColor' => '#ef4444',
+                            'backgroundColor' => 'rgba(239, 68, 68, 0.1)',
+                            'tension' => 0.4
+                        ]
+                    ]
+                ]
+            ]);
+
+        } catch (\Throwable $e) {
+            error_log('[BKController::apiGetPelanggaranDashboard] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal memuat dashboard: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /** GET /api/v1/bk/pelanggaran/master */
+    public function apiGetMasterPelanggaran(): void {
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
+        }
+        $db = \App\Config\Database::getConnection();
+
+        try {
+            $stmt = $db->prepare("
+                SELECT id, kategori, nama_pelanggaran, bobot_poin 
+                FROM master_pelanggaran 
+                WHERE tenant_id = ? AND deleted_at IS NULL 
+                ORDER BY kategori ASC, nama_pelanggaran ASC
+            ");
+            $stmt->execute([$tenantId]);
+            $rules = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            $this->jsonResponse(['success' => true, 'data' => $rules]);
+        } catch (\Throwable $e) {
+            error_log('[BKController::apiGetMasterPelanggaran] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal memuat master aturan: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /** POST /api/v1/bk/pelanggaran/master */
+    public function apiStoreMasterPelanggaran(): void {
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
+        }
+        $db = \App\Config\Database::getConnection();
+        $input = $this->getJsonInput();
+
+        $kategori = $this->sanitize($input['kategori'] ?? '');
+        $namaPelanggaran = $this->sanitize($input['nama_pelanggaran'] ?? '');
+        $bobotPoin = (int)($input['bobot_poin'] ?? 0);
+
+        if (!in_array($kategori, ['Ringan', 'Sedang', 'Berat', 'Khusus'], true)) {
+            $this->jsonResponse(['error' => 'Kategori tidak valid.'], 400);
+        }
+        if (empty($namaPelanggaran)) {
+            $this->jsonResponse(['error' => 'Nama pelanggaran wajib diisi.'], 400);
+        }
+        if ($bobotPoin <= 0) {
+            $this->jsonResponse(['error' => 'Bobot poin harus lebih besar dari 0.'], 400);
+        }
+
+        // Generate UUID
+        $uuid = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0x0fff) | 0x4000,
+            mt_rand(0, 0x3fff) | 0x8000,
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+        );
+
+        try {
+            $stmt = $db->prepare("
+                INSERT INTO master_pelanggaran (id, tenant_id, kategori, nama_pelanggaran, bobot_poin)
+                VALUES (?, ?, ?, ?, ?)
+            ");
+            $stmt->execute([$uuid, $tenantId, $kategori, $namaPelanggaran, $bobotPoin]);
+
+            $this->jsonResponse([
+                'success' => true,
+                'message' => 'Aturan pelanggaran berhasil disimpan.',
+                'data' => [
+                    'id' => $uuid,
+                    'kategori' => $kategori,
+                    'nama_pelanggaran' => $namaPelanggaran,
+                    'bobot_poin' => $bobotPoin
+                ]
+            ]);
+        } catch (\Throwable $e) {
+            error_log('[BKController::apiStoreMasterPelanggaran] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal menyimpan aturan: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /** POST /api/v1/bk/pelanggaran/master/update */
+    public function apiUpdateMasterPelanggaran(): void {
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
+        }
+        $db = \App\Config\Database::getConnection();
+        $input = $this->getJsonInput();
+
+        $id = $this->sanitize($input['id'] ?? '');
+        $kategori = $this->sanitize($input['kategori'] ?? '');
+        $namaPelanggaran = $this->sanitize($input['nama_pelanggaran'] ?? '');
+        $bobotPoin = (int)($input['bobot_poin'] ?? 0);
+
+        if (empty($id)) {
+            $this->jsonResponse(['error' => 'ID aturan tidak valid.'], 400);
+        }
+        if (!in_array($kategori, ['Ringan', 'Sedang', 'Berat', 'Khusus'], true)) {
+            $this->jsonResponse(['error' => 'Kategori tidak valid.'], 400);
+        }
+        if (empty($namaPelanggaran)) {
+            $this->jsonResponse(['error' => 'Nama pelanggaran wajib diisi.'], 400);
+        }
+        if ($bobotPoin <= 0) {
+            $this->jsonResponse(['error' => 'Bobot poin harus lebih besar dari 0.'], 400);
+        }
+
+        try {
+            // Verify ownership
+            $stmt = $db->prepare("SELECT 1 FROM master_pelanggaran WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL");
+            $stmt->execute([$id, $tenantId]);
+            if (!$stmt->fetch()) {
+                $this->jsonResponse(['error' => 'Aturan tidak ditemukan atau bukan milik sekolah Anda.'], 404);
+            }
+
+            $stmt = $db->prepare("
+                UPDATE master_pelanggaran 
+                SET kategori = ?, nama_pelanggaran = ?, bobot_poin = ?
+                WHERE id = ? AND tenant_id = ?
+            ");
+            $stmt->execute([$kategori, $namaPelanggaran, $bobotPoin, $id, $tenantId]);
+
+            $this->jsonResponse(['success' => true, 'message' => 'Aturan pelanggaran berhasil diubah.']);
+        } catch (\Throwable $e) {
+            error_log('[BKController::apiUpdateMasterPelanggaran] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal mengubah aturan: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /** POST /api/v1/bk/pelanggaran/master/delete */
+    public function apiDeleteMasterPelanggaran(): void {
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
+        }
+        $db = \App\Config\Database::getConnection();
+        $input = $this->getJsonInput();
+
+        $id = $this->sanitize($input['id'] ?? '');
+
+        if (empty($id)) {
+            $this->jsonResponse(['error' => 'ID aturan tidak valid.'], 400);
+        }
+
+        try {
+            // Verify ownership
+            $stmt = $db->prepare("SELECT 1 FROM master_pelanggaran WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL");
+            $stmt->execute([$id, $tenantId]);
+            if (!$stmt->fetch()) {
+                $this->jsonResponse(['error' => 'Aturan tidak ditemukan atau bukan milik sekolah Anda.'], 404);
+            }
+
+            // Soft-delete
+            $stmt = $db->prepare("
+                UPDATE master_pelanggaran 
+                SET deleted_at = NOW() 
+                WHERE id = ? AND tenant_id = ?
+            ");
+            $stmt->execute([$id, $tenantId]);
+
+            $this->jsonResponse(['success' => true, 'message' => 'Aturan pelanggaran berhasil dihapus.']);
+        } catch (\Throwable $e) {
+            error_log('[BKController::apiDeleteMasterPelanggaran] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal menghapus aturan: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /** GET /api/v1/bk/pelanggaran/catatan */
+    public function apiGetCatatanPelanggaran(): void {
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
+        }
+        $db = \App\Config\Database::getConnection();
+        $taId = $this->getActiveTahunAjaranId($db, $tenantId);
+        if (!$taId) {
+            $this->jsonResponse(['error' => 'Tahun Ajaran aktif tidak ditemukan.'], 400);
+        }
+
+        try {
+            $stmt = $db->prepare("
+                SELECT 
+                    c.id,
+                    c.siswa_id,
+                    c.pelanggaran_id,
+                    c.tanggal_kejadian,
+                    c.catatan_keterangan,
+                    c.foto_bukti,
+                    s.nama_lengkap as nama_siswa,
+                    s.nisn,
+                    k.nama_kelas,
+                    m.kategori,
+                    m.nama_pelanggaran,
+                    m.bobot_poin
+                FROM catatan_pelanggaran_siswa c
+                JOIN siswa s ON c.siswa_id = s.id
+                LEFT JOIN kelas k ON s.id_kelas = k.id
+                JOIN master_pelanggaran m ON c.pelanggaran_id = m.id
+                WHERE c.tenant_id = ? 
+                  AND c.tahun_ajaran_id = ? 
+                  AND c.deleted_at IS NULL
+                ORDER BY c.tanggal_kejadian DESC, c.created_at DESC
+            ");
+            $stmt->execute([$tenantId, $taId]);
+            $records = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            $this->jsonResponse(['success' => true, 'data' => $records]);
+        } catch (\Throwable $e) {
+            error_log('[BKController::apiGetCatatanPelanggaran] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal memuat catatan: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /** POST /api/v1/bk/pelanggaran/catatan */
+    public function apiStoreCatatanPelanggaran(): void {
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
+        }
+        $db = \App\Config\Database::getConnection();
+
+        $siswaId = $this->sanitize($_POST['siswa_id'] ?? '');
+        $pelanggaranId = $this->sanitize($_POST['pelanggaran_id'] ?? '');
+        $tanggalKejadian = $this->sanitize($_POST['tanggal_kejadian'] ?? '');
+        $catatanKeterangan = $this->sanitize($_POST['catatan_keterangan'] ?? '');
+
+        if (empty($siswaId) || empty($pelanggaranId) || empty($tanggalKejadian)) {
+            $this->jsonResponse(['error' => 'Siswa, jenis pelanggaran, dan tanggal kejadian wajib diisi.'], 400);
+        }
+
+        $taId = $this->getActiveTahunAjaranId($db, $tenantId);
+        if (!$taId) {
+            $this->jsonResponse(['error' => 'Tahun Ajaran aktif tidak ditemukan.'], 400);
+        }
+
+        try {
+            // Verify student ownership
+            $stmt = $db->prepare("SELECT id FROM siswa WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL");
+            $stmt->execute([$siswaId, $tenantId]);
+            if (!$stmt->fetch()) {
+                $this->jsonResponse(['error' => 'Siswa tidak ditemukan atau bukan dari sekolah Anda.'], 404);
+            }
+
+            // Verify violation rule ownership
+            $stmt = $db->prepare("SELECT id FROM master_pelanggaran WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL");
+            $stmt->execute([$pelanggaranId, $tenantId]);
+            if (!$stmt->fetch()) {
+                $this->jsonResponse(['error' => 'Aturan pelanggaran tidak ditemukan.'], 404);
+            }
+
+            // Handle file upload
+            $fotoBuktiPath = null;
+            if (isset($_FILES['foto_bukti']) && $_FILES['foto_bukti']['error'] === UPLOAD_ERR_OK) {
+                $fileTmpPath = $_FILES['foto_bukti']['tmp_name'];
+                $fileName = $_FILES['foto_bukti']['name'];
+                $fileSize = $_FILES['foto_bukti']['size'];
+                
+                $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+                $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+                
+                if (!in_array($fileExtension, $allowedExtensions, true)) {
+                    $this->jsonResponse(['error' => 'Format foto tidak didukung. Gunakan JPG, PNG, atau WEBP.'], 400);
+                }
+                
+                if ($fileSize > 2 * 1024 * 1024) {
+                    $this->jsonResponse(['error' => 'Ukuran foto bukti maksimal adalah 2MB.'], 400);
+                }
+                
+                $uploadDir = __DIR__ . '/../../storage/pelanggaran/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+                
+                $newFileName = md5(time() . $fileName) . '.' . $fileExtension;
+                $destPath = $uploadDir . $newFileName;
+                
+                if (move_uploaded_file($fileTmpPath, $destPath)) {
+                    $fotoBuktiPath = 'storage/pelanggaran/' . $newFileName;
+                }
+            }
+
+            // Generate UUID
+            $uuid = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+                mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+                mt_rand(0, 0xffff),
+                mt_rand(0, 0x0fff) | 0x4000,
+                mt_rand(0, 0x3fff) | 0x8000,
+                mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+            );
+
+            $guruPelaporId = $_SESSION['user_id'] ?? null;
+
+            $stmt = $db->prepare("
+                INSERT INTO catatan_pelanggaran_siswa 
+                    (id, tenant_id, siswa_id, tahun_ajaran_id, pelanggaran_id, tanggal_kejadian, catatan_keterangan, guru_pelapor_id, foto_bukti)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            $stmt->execute([
+                $uuid,
+                $tenantId,
+                $siswaId,
+                $taId,
+                $pelanggaranId,
+                $tanggalKejadian,
+                $catatanKeterangan,
+                $guruPelaporId,
+                $fotoBuktiPath
+            ]);
+
+            $this->jsonResponse(['success' => true, 'message' => 'Laporan pelanggaran berhasil disimpan.']);
+
+        } catch (\Throwable $e) {
+            error_log('[BKController::apiStoreCatatanPelanggaran] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal mencatat pelanggaran: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /** GET /api/v1/bk/pelanggaran/sanksi */
+    public function apiGetSanksiBuku(): void {
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
+        }
+        $db = \App\Config\Database::getConnection();
+        $taId = $this->getActiveTahunAjaranId($db, $tenantId);
+        if (!$taId) {
+            $this->jsonResponse(['error' => 'Tahun Ajaran aktif tidak ditemukan.'], 400);
+        }
+
+        try {
+            $stmt = $db->prepare("
+                SELECT 
+                    s.id as siswa_id,
+                    s.nama_lengkap,
+                    s.nisn,
+                    k.nama_kelas,
+                    SUM(m.bobot_poin) as total_poin
+                FROM catatan_pelanggaran_siswa c
+                JOIN siswa s ON c.siswa_id = s.id
+                LEFT JOIN kelas k ON s.id_kelas = k.id
+                JOIN master_pelanggaran m ON c.pelanggaran_id = m.id
+                WHERE c.tenant_id = ? 
+                  AND c.tahun_ajaran_id = ? 
+                  AND c.deleted_at IS NULL
+                  AND s.deleted_at IS NULL
+                  AND m.deleted_at IS NULL
+                GROUP BY s.id, s.nama_lengkap, s.nisn, k.nama_kelas
+                ORDER BY total_poin DESC
+            ");
+            $stmt->execute([$tenantId, $taId]);
+            $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            $results = [];
+            foreach ($rows as $row) {
+                $points = (int)$row['total_poin'];
+                
+                $statusLabel = 'Aman';
+                $statusColor = 'success';
+                $sanksiDetail = 'Tidak ada sanksi aktif.';
+                
+                if ($points >= 100) {
+                    $statusLabel = 'Bahaya (SP 3 / DO)';
+                    $statusColor = 'danger';
+                    $sanksiDetail = 'Surat Peringatan 3 (SP 3) diterbitkan, evaluasi pleno sekolah untuk pengembalian ke Orang Tua.';
+                } elseif ($points >= 75) {
+                    $statusLabel = 'Peringatan 2 (SP 2 / Skorsing)';
+                    $statusColor = 'warning';
+                    $sanksiDetail = 'Surat Peringatan 2 (SP 2) & Skorsing Akademik selama 3 Hari Sekolah.';
+                } elseif ($points >= 50) {
+                    $statusLabel = 'Peringatan 1 (SP 1 / Panggilan Orang Tua)';
+                    $statusColor = 'info';
+                    $sanksiDetail = 'Surat Peringatan 1 (SP 1) diterbitkan & Pemanggilan Orang Tua oleh Guru BK.';
+                } elseif ($points >= 25) {
+                    $statusLabel = 'Peringatan Wali Kelas';
+                    $statusColor = 'secondary';
+                    $sanksiDetail = 'Peringatan persuasif dari Wali Kelas & Pembinaan khusus.';
+                }
+                
+                $results[] = [
+                    'siswa_id' => $row['siswa_id'],
+                    'nama_lengkap' => $row['nama_lengkap'],
+                    'nisn' => $row['nisn'],
+                    'nama_kelas' => $row['nama_kelas'] ?? '-',
+                    'total_poin' => $points,
+                    'status_label' => $statusLabel,
+                    'status_color' => $statusColor,
+                    'sanksi_detail' => $sanksiDetail
+                ];
+            }
+
+            $this->jsonResponse(['success' => true, 'data' => $results]);
+        } catch (\Throwable $e) {
+            error_log('[BKController::apiGetSanksiBuku] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal memuat buku catatan sanksi: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /** POST /api/v1/bk/pelanggaran/catatan/update */
+    public function apiUpdateCatatanPelanggaran(): void {
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
+        }
+        $db = \App\Config\Database::getConnection();
+
+        $id = $this->sanitize($_POST['id'] ?? '');
+        $pelanggaranId = $this->sanitize($_POST['pelanggaran_id'] ?? '');
+        $tanggalKejadian = $this->sanitize($_POST['tanggal_kejadian'] ?? '');
+        $catatanKeterangan = $this->sanitize($_POST['catatan_keterangan'] ?? '');
+
+        if (empty($id) || empty($pelanggaranId) || empty($tanggalKejadian)) {
+            $this->jsonResponse(['error' => 'Data tidak lengkap.'], 400);
+        }
+
+        try {
+            // Verify ownership of the violation report
+            $stmt = $db->prepare("SELECT foto_bukti FROM catatan_pelanggaran_siswa WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL");
+            $stmt->execute([$id, $tenantId]);
+            $existing = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if (!$existing) {
+                $this->jsonResponse(['error' => 'Catatan pelanggaran tidak ditemukan.'], 404);
+            }
+
+            // Verify violation rule ownership
+            $stmt = $db->prepare("SELECT id FROM master_pelanggaran WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL");
+            $stmt->execute([$pelanggaranId, $tenantId]);
+            if (!$stmt->fetch()) {
+                $this->jsonResponse(['error' => 'Aturan pelanggaran tidak ditemukan.'], 404);
+            }
+
+            // Handle file upload if a new one is sent
+            $fotoBuktiPath = $existing['foto_bukti'];
+            if (isset($_FILES['foto_bukti']) && $_FILES['foto_bukti']['error'] === UPLOAD_ERR_OK) {
+                $fileTmpPath = $_FILES['foto_bukti']['tmp_name'];
+                $fileName = $_FILES['foto_bukti']['name'];
+                $fileSize = $_FILES['foto_bukti']['size'];
+                
+                $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+                $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+                
+                if (!in_array($fileExtension, $allowedExtensions, true)) {
+                    $this->jsonResponse(['error' => 'Format foto tidak didukung. Gunakan JPG, PNG, atau WEBP.'], 400);
+                }
+                
+                if ($fileSize > 2 * 1024 * 1024) {
+                    $this->jsonResponse(['error' => 'Ukuran foto bukti maksimal adalah 2MB.'], 400);
+                }
+                
+                $uploadDir = __DIR__ . '/../../storage/pelanggaran/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+                
+                $newFileName = md5(time() . $fileName) . '.' . $fileExtension;
+                $destPath = $uploadDir . $newFileName;
+                
+                if (move_uploaded_file($fileTmpPath, $destPath)) {
+                    // Delete old photo if it exists
+                    if ($existing['foto_bukti'] && file_exists(__DIR__ . '/../../' . $existing['foto_bukti'])) {
+                        @unlink(__DIR__ . '/../../' . $existing['foto_bukti']);
+                    }
+                    $fotoBuktiPath = 'storage/pelanggaran/' . $newFileName;
+                }
+            }
+
+            $stmt = $db->prepare("
+                UPDATE catatan_pelanggaran_siswa 
+                SET pelanggaran_id = ?, tanggal_kejadian = ?, catatan_keterangan = ?, foto_bukti = ?
+                WHERE id = ? AND tenant_id = ?
+            ");
+            $stmt->execute([
+                $pelanggaranId,
+                $tanggalKejadian,
+                $catatanKeterangan,
+                $fotoBuktiPath,
+                $id,
+                $tenantId
+            ]);
+
+            $this->jsonResponse(['success' => true, 'message' => 'Laporan pelanggaran berhasil diperbarui.']);
+        } catch (\Throwable $e) {
+            error_log('[BKController::apiUpdateCatatanPelanggaran] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal memperbarui catatan: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /** POST /api/v1/bk/pelanggaran/catatan/delete */
+    public function apiDeleteCatatanPelanggaran(): void {
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
+        }
+        $db = \App\Config\Database::getConnection();
+
+        // Standard JSON payload
+        $input = json_decode(file_get_contents('php://input'), true);
+        $id = $this->sanitize($input['id'] ?? ($_POST['id'] ?? ''));
+
+        if (empty($id)) {
+            $this->jsonResponse(['error' => 'ID tidak ditemukan.'], 400);
+        }
+
+        try {
+            $stmt = $db->prepare("
+                UPDATE catatan_pelanggaran_siswa 
+                SET deleted_at = CURRENT_TIMESTAMP
+                WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL
+            ");
+            $stmt->execute([$id, $tenantId]);
+
+            if ($stmt->rowCount() > 0) {
+                $this->jsonResponse(['success' => true, 'message' => 'Laporan pelanggaran berhasil dihapus.']);
+            } else {
+                $this->jsonResponse(['error' => 'Data tidak ditemukan atau sudah dihapus.'], 404);
+            }
+        } catch (\Throwable $e) {
+            error_log('[BKController::apiDeleteCatatanPelanggaran] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal menghapus catatan: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /** GET /api/v1/bk/pelanggaran/sanksi/detail */
+    public function apiGetSanksiDetail(): void {
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
+        }
+        $db = \App\Config\Database::getConnection();
+        $taId = $this->getActiveTahunAjaranId($db, $tenantId);
+        if (!$taId) {
+            $this->jsonResponse(['error' => 'Tahun Ajaran aktif tidak ditemukan.'], 400);
+        }
+
+        $siswaId = $this->sanitize($_GET['siswa_id'] ?? '');
+        if (empty($siswaId)) {
+            $this->jsonResponse(['error' => 'Siswa ID tidak boleh kosong.'], 400);
+        }
+
+        try {
+            // 1. Get student basic profile
+            $stmt = $db->prepare("
+                SELECT s.id, s.nama_lengkap, s.nisn, s.nis, k.nama_kelas, j.nama_jurusan
+                FROM siswa s
+                LEFT JOIN kelas k ON s.id_kelas = k.id
+                LEFT JOIN jurusan j ON s.id_jurusan = j.id
+                WHERE s.id = ? AND s.tenant_id = ? AND s.deleted_at IS NULL
+            ");
+            $stmt->execute([$siswaId, $tenantId]);
+            $student = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if (!$student) {
+                $this->jsonResponse(['error' => 'Siswa tidak ditemukan.'], 404);
+            }
+
+            // 2. Get violations timeline
+            $stmt = $db->prepare("
+                SELECT c.id, c.tanggal_kejadian, c.catatan_keterangan, c.foto_bukti,
+                       m.kategori, m.nama_pelanggaran, m.bobot_poin
+                FROM catatan_pelanggaran_siswa c
+                JOIN master_pelanggaran m ON c.pelanggaran_id = m.id
+                WHERE c.siswa_id = ? AND c.tenant_id = ? AND c.tahun_ajaran_id = ? AND c.deleted_at IS NULL
+                ORDER BY c.tanggal_kejadian DESC, c.created_at DESC
+            ");
+            $stmt->execute([$siswaId, $tenantId, $taId]);
+            $violations = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            // 3. Get follow-up logs
+            $stmt = $db->prepare("
+                SELECT t.id, t.tanggal_tindakan, t.jenis_tindakan, t.keterangan_tindakan, u.nama_lengkap as nama_guru
+                FROM tindak_lanjut_sanksi t
+                LEFT JOIN users u ON t.guru_id = u.id
+                WHERE t.siswa_id = ? AND t.tenant_id = ? AND t.tahun_ajaran_id = ? AND t.deleted_at IS NULL
+                ORDER BY t.tanggal_tindakan DESC, t.created_at DESC
+            ");
+            $stmt->execute([$siswaId, $tenantId, $taId]);
+            $followUps = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            // Calculate total points
+            $totalPoints = 0;
+            foreach ($violations as $v) {
+                $totalPoints += (int)$v['bobot_poin'];
+            }
+
+            $this->jsonResponse([
+                'success' => true,
+                'student' => $student,
+                'total_poin' => $totalPoints,
+                'violations' => $violations,
+                'follow_ups' => $followUps
+            ]);
+        } catch (\Throwable $e) {
+            error_log('[BKController::apiGetSanksiDetail] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal memuat detail sanksi: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /** POST /api/v1/bk/pelanggaran/sanksi/tindak-lanjut */
+    public function apiStoreTindakLanjutSanksi(): void {
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
+        }
+        $db = \App\Config\Database::getConnection();
+        $taId = $this->getActiveTahunAjaranId($db, $tenantId);
+        if (!$taId) {
+            $this->jsonResponse(['error' => 'Tahun Ajaran aktif tidak ditemukan.'], 400);
+        }
+
+        // Standard JSON payload
+        $input = json_decode(file_get_contents('php://input'), true);
+        $siswaId = $this->sanitize($input['siswa_id'] ?? ($_POST['siswa_id'] ?? ''));
+        $tanggalTindakan = $this->sanitize($input['tanggal_tindakan'] ?? ($_POST['tanggal_tindakan'] ?? ''));
+        $jenisTindakan = $this->sanitize($input['jenis_tindakan'] ?? ($_POST['jenis_tindakan'] ?? ''));
+        $keteranganTindakan = $this->sanitize($input['keterangan_tindakan'] ?? ($_POST['keterangan_tindakan'] ?? ''));
+
+        if (empty($siswaId) || empty($tanggalTindakan) || empty($jenisTindakan) || empty($keteranganTindakan)) {
+            $this->jsonResponse(['error' => 'Seluruh form tindak lanjut wajib diisi.'], 400);
+        }
+
+        try {
+            // Verify student ownership
+            $stmt = $db->prepare("SELECT id FROM siswa WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL");
+            $stmt->execute([$siswaId, $tenantId]);
+            if (!$stmt->fetch()) {
+                $this->jsonResponse(['error' => 'Siswa tidak ditemukan.'], 404);
+            }
+
+            // Generate UUID
+            $uuid = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+                mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+                mt_rand(0, 0xffff),
+                mt_rand(0, 0x0fff) | 0x4000,
+                mt_rand(0, 0x3fff) | 0x8000,
+                mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+            );
+
+            $guruId = $_SESSION['user_id'] ?? '';
+
+            $stmt = $db->prepare("
+                INSERT INTO tindak_lanjut_sanksi 
+                    (id, tenant_id, siswa_id, tahun_ajaran_id, tanggal_tindakan, jenis_tindakan, keterangan_tindakan, guru_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            $stmt->execute([
+                $uuid,
+                $tenantId,
+                $siswaId,
+                $taId,
+                $tanggalTindakan,
+                $jenisTindakan,
+                $keteranganTindakan,
+                $guruId
+            ]);
+
+            $this->jsonResponse(['success' => true, 'message' => 'Catatan tindak lanjut berhasil disimpan.']);
+        } catch (\Throwable $e) {
+            error_log('[BKController::apiStoreTindakLanjutSanksi] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal menyimpan tindak lanjut: ' . $e->getMessage()], 500);
+        }
     }
 }
