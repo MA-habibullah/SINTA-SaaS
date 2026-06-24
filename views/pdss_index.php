@@ -464,7 +464,7 @@ window.tailwind = { config: { corePlugins: { preflight: false } } };
                                     <button type="button" 
                                             v-for="s in searchResults" 
                                             :key="s.id" 
-                                            @click="selectStudent(s)"
+                                            @mousedown.prevent="selectStudent(s)"
                                             class="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 border-0 border-b border-slate-100 last:border-b-0 flex justify-between items-center bg-transparent cursor-pointer">
                                         <div>
                                             <span class="font-bold text-slate-800">{{ s.nama_lengkap }}</span>
