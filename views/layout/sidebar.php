@@ -119,6 +119,13 @@ if (!empty($roles)) {
                     'url'      => '/SINTA-SaaS/siswa/edit?id=' . $siswaId,
                     'icon'     => 'bi bi-person-bounding-box',
                     'children' => []
+                ],
+                [
+                    'id'       => 40,
+                    'nama_menu'=> 'PDSS & Alumni',
+                    'url'      => '/SINTA-SaaS/pdss/kesiapan',
+                    'icon'     => 'bi bi-database-fill',
+                    'children' => []
                 ]
             ];
 
