@@ -175,10 +175,35 @@ class BukuIndukController extends BaseController {
             $this->jsonResponse(['error' => 'Data siswa tidak ditemukan.'], 404);
         }
         
+        $db = \App\Config\Database::getConnection();
+
+        // Fetch current class name
+        $siswa['nama_kelas'] = '-';
+        if (!empty($siswa['id_kelas'])) {
+            try {
+                $stmtKelas = $db->prepare("SELECT nama_kelas FROM kelas WHERE id = ?");
+                $stmtKelas->execute([$siswa['id_kelas']]);
+                $siswa['nama_kelas'] = $stmtKelas->fetchColumn() ?: '-';
+            } catch (\Throwable $e) {
+                // Ignore
+            }
+        }
+
+        // Fetch tenant/school name
+        $siswa['nama_sekolah'] = '-';
+        if (!empty($siswa['tenant_id'])) {
+            try {
+                $stmtTenant = $db->prepare("SELECT nama_sekolah FROM tenants WHERE id = ?");
+                $stmtTenant->execute([$siswa['tenant_id']]);
+                $siswa['nama_sekolah'] = $stmtTenant->fetchColumn() ?: '-';
+            } catch (\Throwable $e) {
+                // Ignore
+            }
+        }
+
         // Dapatkan nama-nama wilayah (Provinsi, Kota, Kecamatan, Kelurahan) secara human readable jika ada
         if (!empty($siswa['id_kelurahan'])) {
             try {
-                $db = \App\Config\Database::getConnection();
                 $stmt = $db->prepare("
                     SELECT kl.nama_kelurahan, kc.nama_kecamatan, kt.nama_kota, pr.nama_provinsi
                     FROM kelurahan kl
@@ -200,7 +225,130 @@ class BukuIndukController extends BaseController {
                 // Ignore errors
             }
         }
-        
+
+        // Fetch class placement history
+        $riwayatKelas = [];
+        try {
+            $stmtRK = $db->prepare("
+                SELECT * 
+                FROM riwayat_kenaikan_kelas 
+                WHERE siswa_id = :siswa_id 
+                  AND tenant_id = :tenant_id 
+                ORDER BY created_at ASC
+            ");
+            $stmtRK->execute([
+                'siswa_id' => $id,
+                'tenant_id' => $siswa['tenant_id']
+            ]);
+            $riwayatKelas = $stmtRK->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            // Ignore
+        }
+        $siswa['riwayat_kelas'] = $riwayatKelas;
+
+        // Fetch report card grades
+        $nilaiRapor = [];
+        try {
+            $stmtNR = $db->prepare("
+                SELECT dnr.*, mp.nama_mapel, mp.kode_mapel, k.nama_kelas
+                FROM detail_nilai_rapor dnr
+                JOIN mata_pelajaran mp ON dnr.mapel_id = mp.id
+                JOIN kelas k ON dnr.kelas_id = k.id
+                WHERE dnr.siswa_id = :siswa_id 
+                  AND dnr.tenant_id = :tenant_id 
+                  AND dnr.deleted_at IS NULL
+                ORDER BY dnr.tahun_ajaran ASC, dnr.semester ASC, mp.nama_mapel ASC
+            ");
+            $stmtNR->execute([
+                'siswa_id' => $id,
+                'tenant_id' => $siswa['tenant_id']
+            ]);
+            $nilaiRapor = $stmtNR->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            // Ignore
+        }
+        $siswa['nilai_rapor'] = $nilaiRapor;
+
+        // Fetch achievements
+        $prestasi = [];
+        try {
+            $stmtP = $db->prepare("
+                SELECT ps.*, ta.tahun_ajaran
+                FROM prestasi_siswa ps
+                JOIN prestasi_siswa_anggota psa ON ps.id = psa.id_prestasi
+                LEFT JOIN tahun_ajaran ta ON ps.tahun_ajaran_id = ta.id
+                WHERE psa.id_siswa = :siswa_id 
+                  AND ps.tenant_id = :tenant_id 
+                  AND ps.deleted_at IS NULL
+                ORDER BY ps.tanggal_lomba DESC
+            ");
+            $stmtP->execute([
+                'siswa_id' => $id,
+                'tenant_id' => $siswa['tenant_id']
+            ]);
+            $prestasi = $stmtP->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            // Ignore
+        }
+        $siswa['prestasi'] = $prestasi;
+
+        // Fetch violations / BK discipline records
+        $pelanggaran = [];
+        try {
+            $stmtPL = $db->prepare("
+                SELECT cps.*, mp.nama_pelanggaran, mp.bobot_poin, mp.kategori
+                FROM catatan_pelanggaran_siswa cps
+                JOIN master_pelanggaran mp ON cps.pelanggaran_id = mp.id
+                WHERE cps.siswa_id = :siswa_id 
+                  AND cps.tenant_id = :tenant_id 
+                  AND cps.deleted_at IS NULL
+                ORDER BY cps.tanggal_kejadian DESC
+            ");
+            $stmtPL->execute([
+                'siswa_id' => $id,
+                'tenant_id' => $siswa['tenant_id']
+            ]);
+            $pelanggaran = $stmtPL->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            // Ignore
+        }
+        $siswa['pelanggaran'] = $pelanggaran;
+
+        // Fetch tracer study data
+        $tracerKuliah = [];
+        $tracerPekerjaan = [];
+        try {
+            $stmtTK = $db->prepare("
+                SELECT * 
+                FROM riwayat_kuliah 
+                WHERE id_siswa = :siswa_id 
+                  AND tenant_id = :tenant_id
+                ORDER BY tahun_masuk DESC
+            ");
+            $stmtTK->execute([
+                'siswa_id' => $id,
+                'tenant_id' => $siswa['tenant_id']
+            ]);
+            $tracerKuliah = $stmtTK->fetchAll(PDO::FETCH_ASSOC);
+
+            $stmtTP = $db->prepare("
+                SELECT * 
+                FROM riwayat_pekerjaan 
+                WHERE id_siswa = :siswa_id 
+                  AND tenant_id = :tenant_id
+                ORDER BY tahun_mulai DESC
+            ");
+            $stmtTP->execute([
+                'siswa_id' => $id,
+                'tenant_id' => $siswa['tenant_id']
+            ]);
+            $tracerPekerjaan = $stmtTP->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            // Ignore
+        }
+        $siswa['tracer_kuliah'] = $tracerKuliah;
+        $siswa['tracer_pekerjaan'] = $tracerPekerjaan;
+
         $this->jsonResponse($siswa);
     }
 
