@@ -383,7 +383,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="log in recentChanges" :key="log.id" class="fs-8">
+                            <tr v-for="log in paginatedChanges" :key="log.id" class="fs-8">
                                 <td class="text-muted font-monospace">{{ formatDateTime(log.waktu) }}</td>
                                 <td><span class="badge bg-light text-dark border">{{ log.sekolah }}</span></td>
                                 <td class="fw-semibold text-dark">{{ log.nama_siswa }}</td>
@@ -415,6 +415,30 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Pagination for Log Perubahan Siswa -->
+                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3 mt-3 fs-8">
+                    <div class="text-muted">
+                        Menampilkan {{ recentChanges.length > 0 ? (logCurrentPage - 1) * logPerPage + 1 : 0 }} - {{ Math.min(logCurrentPage * logPerPage, recentChanges.length) }} dari {{ recentChanges.length }} log perubahan siswa
+                    </div>
+                    <nav v-if="logTotalPages > 1" aria-label="Navigasi log perubahan">
+                        <ul class="pagination pagination-sm m-0">
+                            <li class="page-item" :class="{ disabled: logCurrentPage === 1 }">
+                                <button class="page-link" @click="logCurrentPage--" type="button" style="cursor: pointer;">
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+                            </li>
+                            <li class="page-item" v-for="page in logTotalPages" :key="page" :class="{ active: logCurrentPage === page }">
+                                <button class="page-link" @click="logCurrentPage = page" type="button" style="cursor: pointer;">{{ page }}</button>
+                            </li>
+                            <li class="page-item" :class="{ disabled: logCurrentPage === logTotalPages }">
+                                <button class="page-link" @click="logCurrentPage++" type="button" style="cursor: pointer;">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </li>
+                        </ul>
+                    </nav>
                 </div>
             </div>
             <?php endif; ?>
@@ -562,7 +586,10 @@
                 npsnAvailable: false,
                 npsnError: '',
                 isSaving: false,
-                editModalInstance: null
+                editModalInstance: null,
+                // Pagination state for logs
+                logCurrentPage: 1,
+                logPerPage: 10
             };
         },
         computed: {
@@ -574,6 +601,14 @@
                            (s.nis && s.nis.toLowerCase().includes(query)) ||
                            (s.nisn && s.nisn.toLowerCase().includes(query));
                 });
+            },
+            logTotalPages() {
+                return Math.ceil(this.recentChanges.length / this.logPerPage);
+            },
+            paginatedChanges() {
+                const start = (this.logCurrentPage - 1) * this.logPerPage;
+                const end = start + this.logPerPage;
+                return this.recentChanges.slice(start, end);
             }
         },
         methods: {
