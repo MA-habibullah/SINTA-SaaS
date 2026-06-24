@@ -173,7 +173,7 @@ class DashboardController extends BaseController {
                 LEFT JOIN tenants t ON l.tenant_id = t.id
                 WHERE {$logWhere}
                 ORDER BY l.created_at DESC
-                LIMIT 50
+                LIMIT 20
             ");
             $stmtLogs->execute($logParams);
             $recentChangesRaw = $stmtLogs->fetchAll(PDO::FETCH_ASSOC) ?: [];
