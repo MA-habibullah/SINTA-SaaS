@@ -3,6 +3,11 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+// Load Composer Autoloader if available
+if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    require_once __DIR__ . '/vendor/autoload.php';
+}
+
 /**
  * Front Controller & Router
  * Entry point untuk semua request aplikasi Dapodik & SPMB
@@ -285,6 +290,86 @@ try {
             $controller->apiDashboard();
             break;
 
+        case '/api/v1/bk/pelanggaran/dashboard':
+            $controller = new App\Controllers\BKController();
+            $controller->apiGetPelanggaranDashboard();
+            break;
+
+        case '/api/v1/bk/pelanggaran/master':
+            $controller = new App\Controllers\BKController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiStoreMasterPelanggaran();
+            } else {
+                $controller->apiGetMasterPelanggaran();
+            }
+            break;
+
+        case '/api/v1/bk/pelanggaran/master/update':
+            $controller = new App\Controllers\BKController();
+            $controller->apiUpdateMasterPelanggaran();
+            break;
+
+        case '/api/v1/bk/pelanggaran/master/delete':
+            $controller = new App\Controllers\BKController();
+            $controller->apiDeleteMasterPelanggaran();
+            break;
+
+        case '/api/v1/bk/pelanggaran/catatan':
+            $controller = new App\Controllers\BKController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiStoreCatatanPelanggaran();
+            } else {
+                $controller->apiGetCatatanPelanggaran();
+            }
+            break;
+
+        case '/api/v1/bk/pelanggaran/catatan/update':
+            $controller = new App\Controllers\BKController();
+            $controller->apiUpdateCatatanPelanggaran();
+            break;
+
+        case '/api/v1/bk/pelanggaran/catatan/delete':
+            $controller = new App\Controllers\BKController();
+            $controller->apiDeleteCatatanPelanggaran();
+            break;
+
+        case '/api/v1/bk/pelanggaran/sanksi':
+            $controller = new App\Controllers\BKController();
+            $controller->apiGetSanksiBuku();
+            break;
+
+        case '/api/v1/bk/pelanggaran/sanksi/detail':
+            $controller = new App\Controllers\BKController();
+            $controller->apiGetSanksiDetail();
+            break;
+
+        case '/api/v1/bk/pelanggaran/sanksi/tindak-lanjut':
+            $controller = new App\Controllers\BKController();
+            $controller->apiStoreTindakLanjutSanksi();
+            break;
+
+        case '/api/v1/bk/absensi-semester':
+            // API: GET list absensi / POST simpan bulk absensi semester (Tab Kehadiran)
+            $controller = new App\Controllers\BKController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveAbsensiSemesterBulk();
+            } else {
+                $controller->apiGetAbsensiSemester();
+            }
+            break;
+
+        case '/api/v1/bk/absensi-semester/export':
+            // API: GET download Excel (.xls) absensi kelas per semester
+            $controller = new App\Controllers\BKController();
+            $controller->apiExportAbsensiSemester();
+            break;
+
+        case '/api/v1/bk/absensi-semester/import':
+            // API: POST upload file CSV absensi kelas per semester
+            $controller = new App\Controllers\BKController();
+            $controller->apiImportAbsensiSemester();
+            break;
+
         case '/api/v1/bk/kasus':
             // API: GET list kasus / POST simpan kasus baru (Tab 5)
             $controller = new App\Controllers\BKController();
@@ -341,10 +426,57 @@ try {
             $controller->apiTracerSummary();
             break;
 
+        case '/bk/kesiapan-pdss':
+            header('Location: /SINTA-SaaS/pdss/kesiapan');
+            exit;
+
+        case '/pdss/kesiapan':
+            $controller = new App\Controllers\PDSSController();
+            $controller->index();
+            break;
+
+        case '/api/v1/pdss/kesiapan':
+            $controller = new App\Controllers\PDSSController();
+            $controller->apiGetKesiapan();
+            break;
+
+        case '/api/v1/pdss/alumni-tracks':
+            $controller = new App\Controllers\PDSSController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveAlumniTrack();
+            } else {
+                $controller->apiGetAlumniTracks();
+            }
+            break;
+
+        case '/api/v1/pdss/alumni-tracks/delete':
+            $controller = new App\Controllers\PDSSController();
+            $controller->apiDeleteAlumniTrack();
+            break;
+
+        case '/api/v1/pdss/target-kampus':
+            $controller = new App\Controllers\PDSSController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveTargetKampus();
+            } else {
+                $controller->apiGetTargetKampus();
+            }
+            break;
+
+        case '/api/v1/pdss/target-kampus/delete':
+            $controller = new App\Controllers\PDSSController();
+            $controller->apiDeleteTargetKampus();
+            break;
+
+        case '/api/v1/pdss/target-kampus/seed':
+            $controller = new App\Controllers\PDSSController();
+            $controller->apiSeedTargetKampus();
+            break;
+
         case '/api/v1/bk/pdss':
-            // API: Daftar siswa eligible SNBP / PDSS (Tab 4)
-            $controller = new App\Controllers\BKController();
-            $controller->apiPdss();
+            // API: Daftar siswa eligible SNBP / PDSS (Tab 4) - Deprecated / Scoped to PDSS Module
+            $controller = new App\Controllers\PDSSController();
+            $controller->apiGetKesiapan();
             break;
 
         case '/api/v1/bk/penjurusan':
