@@ -440,6 +440,11 @@ try {
             $controller->apiGetKesiapan();
             break;
 
+        case '/api/v1/pdss/students/search':
+            $controller = new App\Controllers\PDSSController();
+            $controller->apiSearchStudents();
+            break;
+
         case '/api/v1/pdss/alumni-tracks':
             $controller = new App\Controllers\PDSSController();
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {

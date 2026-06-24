@@ -162,6 +162,54 @@ class PDSSController extends BaseController {
     }
 
     /**
+     * API: Mencari siswa berdasarkan nama/NISN/NIS di sekolah aktif
+     * GET /api/v1/pdss/students/search?q=...
+     */
+    public function apiSearchStudents(): void {
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Pilih sekolah terlebih dahulu.'], 400);
+            return;
+        }
+
+        $query = isset($_GET['q']) ? trim($_GET['q']) : '';
+
+        try {
+            $db = \App\Config\Database::getConnection();
+            
+            $sql = "
+                SELECT id, nama_lengkap, nisn, nis 
+                FROM siswa 
+                WHERE tenant_id = ? 
+                  AND deleted_at IS NULL
+            ";
+            $params = [$tenantId];
+
+            if (!empty($query)) {
+                $sql .= " AND (nama_lengkap LIKE ? OR nisn LIKE ? OR nis LIKE ?)";
+                $searchVal = '%' . $query . '%';
+                $params[] = $searchVal;
+                $params[] = $searchVal;
+                $params[] = $searchVal;
+            }
+
+            $sql .= " ORDER BY nama_lengkap ASC LIMIT 20";
+
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $this->jsonResponse([
+                'success' => true,
+                'data' => $students
+            ]);
+        } catch (\Throwable $e) {
+            error_log('[PDSSController::apiSearchStudents] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal mencari data siswa.'], 500);
+        }
+    }
+
+    /**
      * API: Ambil daftar alumni tracking
      * GET /api/v1/pdss/alumni-tracks
      */
@@ -177,6 +225,7 @@ class PDSSController extends BaseController {
             $stmt = $db->prepare("
                 SELECT 
                     rk.id, 
+                    rk.id_siswa,
                     COALESCE(s.nama_lengkap, rk.nama_alumni) AS nama_alumni, 
                     rk.tahun_masuk, 
                     rk.jenis_kampus,
@@ -221,6 +270,7 @@ class PDSSController extends BaseController {
 
         $input = $this->getJsonInput();
         $id = $this->sanitize($input['id'] ?? '');
+        $idSiswa = $this->sanitize($input['id_siswa'] ?? '');
         $namaAlumni = $this->sanitize($input['nama_alumni'] ?? '');
         $tahunMasuk = (int)($input['tahun_masuk'] ?? 0);
         $jenisKampus = $this->sanitize($input['jenis_kampus'] ?? '');
@@ -228,6 +278,10 @@ class PDSSController extends BaseController {
         $universitasNama = $this->sanitize($input['universitas_nama'] ?? '');
         $jurusanNama = $this->sanitize($input['jurusan_nama'] ?? '');
         $status = $this->sanitize($input['status'] ?? '');
+
+        if (empty($idSiswa)) {
+            $idSiswa = null;
+        }
 
         // Validasi input
         if (empty($namaAlumni) || $tahunMasuk < 1900 || empty($jenisKampus) || empty($jalurMasuk) || empty($universitasNama) || empty($jurusanNama) || empty($status)) {
@@ -257,10 +311,10 @@ class PDSSController extends BaseController {
                     INSERT INTO riwayat_kuliah 
                         (id_siswa, tenant_id, nama_alumni, nama_kampus, jurusan, tahun_masuk, jenis_kampus, jalur_masuk, status_kuliah)
                     VALUES 
-                        (NULL, ?, ?, ?, ?, ?, ?, ?, ?)
+                        (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ");
                 $stmt->execute([
-                    $tenantId, $namaAlumni, $universitasNama, $jurusanNama, $tahunMasuk, $jenisKampus, $jalurMasuk, $statusDb
+                    $idSiswa, $tenantId, $namaAlumni, $universitasNama, $jurusanNama, $tahunMasuk, $jenisKampus, $jalurMasuk, $statusDb
                 ]);
                 $msg = 'Data alumni baru berhasil ditambahkan.';
             } else {
@@ -276,6 +330,7 @@ class PDSSController extends BaseController {
                 $stmt = $db->prepare("
                     UPDATE riwayat_kuliah 
                     SET 
+                        id_siswa = ?,
                         nama_alumni = ?, 
                         tahun_masuk = ?, 
                         jenis_kampus = ?, 
@@ -286,7 +341,7 @@ class PDSSController extends BaseController {
                     WHERE id = ? AND tenant_id = ?
                 ");
                 $stmt->execute([
-                    $namaAlumni, $tahunMasuk, $jenisKampus, $jalurMasuk, $universitasNama, $jurusanNama, $statusDb, $id, $tenantId
+                    $idSiswa, $namaAlumni, $tahunMasuk, $jenisKampus, $jalurMasuk, $universitasNama, $jurusanNama, $statusDb, $id, $tenantId
                 ]);
                 $msg = 'Data alumni berhasil diperbarui.';
             }

@@ -441,9 +441,44 @@ window.tailwind = { config: { corePlugins: { preflight: false } } };
                 <form @submit.prevent="saveAlumniTrack">
                     <div class="p-5 space-y-3.5 text-left">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div>
+                            <div class="relative">
                                 <label for="al_name" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Nama Alumni <span class="text-rose-500">*</span></label>
-                                <input type="text" id="al_name" v-model="modalAlumni.form.nama_alumni" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <div class="relative">
+                                    <input type="text" id="al_name" 
+                                           v-model="modalAlumni.form.nama_alumni" 
+                                           @input="searchStudents"
+                                           @focus="showSearchDropdown = true"
+                                           @blur="hideSearchDropdownWithDelay"
+                                           placeholder="Cari nama / NIS / NISN..."
+                                           autocomplete="off"
+                                           required 
+                                           class="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <span class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center" v-if="searchingStudents">
+                                        <span class="spinner-border spinner-border-sm text-slate-400" role="status" style="width: 12px; height: 12px;"></span>
+                                    </span>
+                                </div>
+                                
+                                <!-- Dropdown Overlay -->
+                                <div v-if="showSearchDropdown && searchResults.length > 0" 
+                                     class="absolute z-[9999] left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                                    <button type="button" 
+                                            v-for="s in searchResults" 
+                                            :key="s.id" 
+                                            @click="selectStudent(s)"
+                                            class="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 border-0 border-b border-slate-100 last:border-b-0 flex justify-between items-center bg-transparent cursor-pointer">
+                                        <div>
+                                            <span class="font-bold text-slate-800">{{ s.nama_lengkap }}</span>
+                                            <span class="text-slate-400 block text-[10px]" v-if="s.nisn || s.nis">
+                                                NISN: {{ s.nisn || '-' }} | NIS: {{ s.nis || '-' }}
+                                            </span>
+                                        </div>
+                                        <span class="badge bg-blue-50 text-blue-600 font-bold px-1.5 py-0.5 rounded text-[9px]">Siswa</span>
+                                    </button>
+                                </div>
+                                <div v-else-if="showSearchDropdown && searchResults.length === 0 && modalAlumni.form.nama_alumni.trim().length >= 2"
+                                     class="absolute z-[9999] left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg p-3 text-center text-xs text-slate-400">
+                                    <i class="bi bi-info-circle me-1"></i> Tidak ada siswa cocok. Tekan Enter untuk simpan nama manual.
+                                </div>
                             </div>
                             <div>
                                 <label for="al_year" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Tahun Masuk Kuliah <span class="text-rose-500">*</span></label>
@@ -676,6 +711,9 @@ window.tailwind = { config: { corePlugins: { preflight: false } } };
                 privacyMask: true,
                 isStudent: _userRole === 'siswa',
                 canWrite: _canWrite,
+                showSearchDropdown: false,
+                searchResults: [],
+                searchingStudents: false,
 
                 // Filter Alumni
                 filterAlumni: {
@@ -690,6 +728,7 @@ window.tailwind = { config: { corePlugins: { preflight: false } } };
                     show: false,
                     form: {
                         id: '',
+                        id_siswa: '',
                         nama_alumni: '',
                         tahun_masuk: new Date().getFullYear(),
                         jenis_kampus: 'Negeri',
@@ -907,24 +946,74 @@ window.tailwind = { config: { corePlugins: { preflight: false } } };
                 }
             },
 
-            // ─── ALUMNI CRUD ─────────────────────────────────────
-            openAlumniModal(alumniRecord = null) {
-                if (alumniRecord) {
-                    this.modalAlumni.form = { ...alumniRecord };
-                } else {
-                    this.modalAlumni.form = {
-                        id: '',
-                        nama_alumni: '',
-                        tahun_masuk: new Date().getFullYear(),
-                        jenis_kampus: 'Negeri',
-                        jalur_masuk: 'SNBP',
-                        universitas_nama: '',
-                        jurusan_nama: '',
-                        status: 'Aktif'
-                    };
-                }
-                this.modalAlumni.show = true;
-            },
+             // ─── ALUMNI CRUD ─────────────────────────────────────
+             openAlumniModal(alumniRecord = null) {
+                 this.searchResults = [];
+                 this.showSearchDropdown = false;
+                 if (alumniRecord) {
+                     this.modalAlumni.form = {
+                         id: alumniRecord.id,
+                         id_siswa: alumniRecord.id_siswa || '',
+                         nama_alumni: alumniRecord.nama_alumni || '',
+                         tahun_masuk: alumniRecord.tahun_masuk,
+                         jenis_kampus: alumniRecord.jenis_campus || alumniRecord.jenis_kampus || 'Negeri',
+                         jalur_masuk: alumniRecord.jalur_masuk || 'SNBP',
+                         universitas_nama: alumniRecord.universitas_nama || '',
+                         jurusan_nama: alumniRecord.jurusan_nama || '',
+                         status: alumniRecord.status || 'Aktif'
+                     };
+                 } else {
+                     this.modalAlumni.form = {
+                         id: '',
+                         id_siswa: '',
+                         nama_alumni: '',
+                         tahun_masuk: new Date().getFullYear(),
+                         jenis_kampus: 'Negeri',
+                         jalur_masuk: 'SNBP',
+                         universitas_nama: '',
+                         jurusan_nama: '',
+                         status: 'Aktif'
+                     };
+                 }
+                 this.modalAlumni.show = true;
+             },
+
+             // ─── STUDENT SEARCH FOR ALUMNI ───────────────────────
+             async searchStudents() {
+                 const query = this.modalAlumni.form.nama_alumni.trim();
+                 if (query.length < 2) {
+                     this.searchResults = [];
+                     this.showSearchDropdown = false;
+                     return;
+                 }
+
+                 this.searchingStudents = true;
+                 try {
+                     const url = this.currentTenantId ? `${_baseUrl}/api/v1/pdss/students/search?q=${encodeURIComponent(query)}&tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/pdss/students/search?q=${encodeURIComponent(query)}`;
+                     const res = await axios.get(url);
+                     if (res.data.success) {
+                         this.searchResults = res.data.data || [];
+                         this.showSearchDropdown = true;
+                     }
+                 } catch (e) {
+                     console.error('Failed searching students', e);
+                 } finally {
+                     this.searchingStudents = false;
+                 }
+             },
+
+             selectStudent(student) {
+                 this.modalAlumni.form.nama_alumni = student.nama_lengkap;
+                 this.modalAlumni.form.id_siswa = student.id;
+                 this.showSearchDropdown = false;
+                 this.searchResults = [];
+             },
+
+             hideSearchDropdownWithDelay() {
+                 setTimeout(() => {
+                     this.showSearchDropdown = false;
+                 }, 200);
+             },
 
             async saveAlumniTrack() {
                 try {
