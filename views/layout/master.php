@@ -25,6 +25,35 @@
     <!-- Axios (API Requests client) -->
     <script src="/SINTA-SaaS/assets/js/axios.min.js" data-turbo-track="reload"></script>
     
+    <!-- Tailwind CSS (Play CDN) with Preflight disabled to prevent conflicts with Bootstrap -->
+    <script data-turbo-track="reload">
+        (function() {
+            const origWarn = console.warn;
+            console.warn = function(...args) {
+                if (typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) return;
+                origWarn.apply(console, args);
+            };
+        })();
+
+        window.tailwind = {
+            config: {
+                corePlugins: {
+                    preflight: false,
+                },
+                theme: {
+                    extend: {
+                        colors: {
+                            'saas-blue': '#2563eb',
+                            'saas-hover': '#1d4ed8',
+                            'saas-light': '#eff6ff',
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+    <script src="/SINTA-SaaS/assets/js/tailwindcss.js" data-turbo-track="reload"></script>
+
     <!-- Hotwire Turbo Drive -->
     <script src="/SINTA-SaaS/assets/js/turbo.es2017-umd.js" defer data-turbo-track="reload"></script>
     

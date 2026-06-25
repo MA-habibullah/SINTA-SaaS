@@ -5,36 +5,7 @@
  */
 ?>
 
-<!-- Load Tailwind CSS CDN and disable preflight to prevent conflict with Bootstrap core styles -->
-<script>
-    // Suppress tailwind CDN production warning in console
-    (function() {
-        const origWarn = console.warn;
-        console.warn = function(...args) {
-            if (typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) return;
-            origWarn.apply(console, args);
-        };
-    })();
 
-    // Configure Tailwind config BEFORE loading tailwindcss.js to avoid race conditions under Turbo
-    window.tailwind = {
-        config: {
-            corePlugins: {
-                preflight: false, // Disable preflight to keep global layout intact
-            },
-            theme: {
-                extend: {
-                    colors: {
-                        'saas-blue': '#2563eb',
-                        'saas-hover': '#1d4ed8',
-                        'saas-light': '#eff6ff',
-                    }
-                }
-            }
-        }
-    };
-</script>
-<script src="/SINTA-SaaS/assets/js/tailwindcss.js"></script>
 
 <style>
     /* Fix Bootstrap collapse conflict with Tailwind CSS Play CDN */

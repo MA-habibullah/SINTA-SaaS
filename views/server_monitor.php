@@ -8,17 +8,7 @@
 // Suppress Tailwind CDN warning + disable preflight agar tidak clash dengan Bootstrap
 ?>
 
-<script>
-(function() {
-    const origWarn = console.warn;
-    console.warn = function(...args) {
-        if (typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) return;
-        origWarn.apply(console, args);
-    };
-})();
-window.tailwind = { config: { corePlugins: { preflight: false } } };
-</script>
-<script src="/SINTA-SaaS/assets/js/tailwindcss.js"></script>
+
 
 <style>
 /* Progress bar gradient animation */

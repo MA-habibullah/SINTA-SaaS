@@ -5,26 +5,7 @@
  */
 ?>
 
-<!-- Load Tailwind CSS CDN and disable preflight to prevent conflict with Bootstrap core styles -->
-<script>
-    (function() {
-        const origWarn = console.warn;
-        console.warn = function(...args) {
-            if (typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) return;
-            origWarn.apply(console, args);
-        };
-    })();
 
-    // Configure Tailwind config BEFORE loading tailwindcss.js to avoid race conditions under Turbo
-    window.tailwind = {
-        config: {
-            corePlugins: {
-                preflight: false,
-            }
-        }
-    };
-</script>
-<script src="/SINTA-SaaS/assets/js/tailwindcss.js"></script>
 
 <style>
     /* Styling khusus monitoring antrean */
