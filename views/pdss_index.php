@@ -1017,7 +1017,8 @@ window.tailwind = { config: { corePlugins: { preflight: false } } };
 
             async saveAlumniTrack() {
                 try {
-                    const res = await axios.post(`${_baseUrl}/api/v1/pdss/alumni-tracks`, this.modalAlumni.form);
+                    const url = this.currentTenantId ? `${_baseUrl}/api/v1/pdss/alumni-tracks?tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/pdss/alumni-tracks`;
+                    const res = await axios.post(url, this.modalAlumni.form);
                     if (res.data.success) {
                         Swal.fire({
                             icon: 'success',
@@ -1049,7 +1050,8 @@ window.tailwind = { config: { corePlugins: { preflight: false } } };
                 if (!confirm.isConfirmed) return;
 
                 try {
-                    const res = await axios.post(`${_baseUrl}/api/v1/pdss/alumni-tracks/delete`, { id: alumniRecord.id });
+                    const url = this.currentTenantId ? `${_baseUrl}/api/v1/pdss/alumni-tracks/delete?tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/pdss/alumni-tracks/delete`;
+                    const res = await axios.post(url, { id: alumniRecord.id });
                     if (res.data.success) {
                         Swal.fire({ icon: 'success', title: 'Terhapus', text: res.data.message, confirmButtonColor: '#2563eb' });
                         this.fetchAlumni();
@@ -1089,7 +1091,8 @@ window.tailwind = { config: { corePlugins: { preflight: false } } };
 
             async saveTargetKampus() {
                 try {
-                    const res = await axios.post(`${_baseUrl}/api/v1/pdss/target-kampus`, this.modalCampus.form);
+                    const url = this.currentTenantId ? `${_baseUrl}/api/v1/pdss/target-kampus?tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/pdss/target-kampus`;
+                    const res = await axios.post(url, this.modalCampus.form);
                     if (res.data.success) {
                         Swal.fire({
                             icon: 'success',
@@ -1121,7 +1124,8 @@ window.tailwind = { config: { corePlugins: { preflight: false } } };
                 if (!confirm.isConfirmed) return;
 
                 try {
-                    const res = await axios.post(`${_baseUrl}/api/v1/pdss/target-kampus/delete`, { id: campusRecord.id });
+                    const url = this.currentTenantId ? `${_baseUrl}/api/v1/pdss/target-kampus/delete?tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/pdss/target-kampus/delete`;
+                    const res = await axios.post(url, { id: campusRecord.id });
                     if (res.data.success) {
                         Swal.fire({ icon: 'success', title: 'Terhapus', text: res.data.message, confirmButtonColor: '#2563eb' });
                         this.fetchCampuses();
@@ -1135,7 +1139,8 @@ window.tailwind = { config: { corePlugins: { preflight: false } } };
             async seedDefaultCampuses() {
                 this.loading = true;
                 try {
-                    const res = await axios.post(`${_baseUrl}/api/v1/pdss/target-kampus/seed`);
+                    const url = this.currentTenantId ? `${_baseUrl}/api/v1/pdss/target-kampus/seed?tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/pdss/target-kampus/seed`;
+                    const res = await axios.post(url);
                     if (res.data.success) {
                         Swal.fire({
                             icon: 'success',
