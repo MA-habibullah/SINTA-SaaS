@@ -349,7 +349,7 @@
                                 <td class="font-monospace"><a :href="'mailto:'+item.email" class="text-decoration-none">{{ item.email }}</a></td>
                                 <td>
                                     <span class="badge bg-light text-secondary border text-capitalize px-2.5 py-1.5 fs-8">
-                                        {{ item.nama_role === 'guru' && (item.is_bk == 1 || item.is_bk === true) ? 'Guru, Guru BK' : (item.nama_role === 'guru_bk' ? 'Guru BK' : (item.nama_role === 'operator_sekolah' ? 'Operator Sekolah' : item.nama_role)) }}
+                                        {{ item.nama_role === 'guru' ? ('Guru' + (item.is_bk == 1 || item.is_bk === true ? ', Guru BK' : '') + (item.is_kesiswaan == 1 || item.is_kesiswaan === true ? ', Kesiswaan' : '')) : (item.nama_role === 'operator_sekolah' ? 'Operator Sekolah' : (item.nama_role === 'guru_bk' ? 'Guru BK' : (item.nama_role === 'kesiswaan' ? 'Kesiswaan' : item.nama_role))) }}
                                     </span>
                                 </td>
                                 <td class="text-center">
@@ -590,14 +590,21 @@
                                     <div class="invalid-feedback">{{ getError('password') }}</div>
                                 </div>
 
-                                <!-- Checkbox Guru BK (hanya muncul saat activeTab === 'guru') -->
+                                <!-- Checkbox Guru BK & Kesiswaan (hanya muncul saat activeTab === 'guru') -->
                                 <div class="col-12 mt-2" v-if="activeTab === 'guru'">
-                                    <div class="form-check">
+                                    <div class="form-check mb-2">
                                         <input id="isBkCheckbox" name="is_bk" class="form-check-input border-slate-300" type="checkbox" v-model="form.is_bk">
                                         <label class="form-check-label fw-semibold fs-8 text-slate-700" for="isBkCheckbox">
                                             Juga bertindak sebagai Guru BK (Bimbingan Konseling)
                                         </label>
                                         <p class="text-muted fs-9 mb-0">Jika dicentang, guru ini akan memiliki peran tambahan sebagai Guru BK dan dapat mengakses modul Bimbingan Konseling.</p>
+                                    </div>
+                                    <div class="form-check">
+                                        <input id="isKesiswaanCheckbox" name="is_kesiswaan" class="form-check-input border-slate-300" type="checkbox" v-model="form.is_kesiswaan">
+                                        <label class="form-check-label fw-semibold fs-8 text-slate-700" for="isKesiswaanCheckbox">
+                                            Juga bertindak sebagai Staf/Guru Kesiswaan
+                                        </label>
+                                        <p class="text-muted fs-9 mb-0">Jika dicentang, guru ini akan memiliki peran tambahan sebagai Kesiswaan dan dapat mengakses serta mengunci modul Ekstrakurikuler.</p>
                                     </div>
                                 </div>
                             </template>
@@ -1578,7 +1585,8 @@
                         nama_lengkap: '', 
                         email: '', 
                         password: '',
-                        is_bk: false
+                        is_bk: false,
+                        is_kesiswaan: false
                     };
                 }
                 if (this.userRole === 'super_admin') {
@@ -1607,7 +1615,8 @@
                     nama_lengkap: item.nama_lengkap,
                     email: item.email,
                     password: '',
-                    is_bk: item.is_bk == 1 || item.is_bk === true
+                    is_bk: item.is_bk == 1 || item.is_bk === true,
+                    is_kesiswaan: item.is_kesiswaan == 1 || item.is_kesiswaan === true
                 };
                 
                 if (this.userRole === 'super_admin') {

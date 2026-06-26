@@ -16,7 +16,7 @@ use PDO;
  */
 class EkskulController extends BaseController {
 
-    private const ALLOWED_ROLES = ['super_admin', 'operator_sekolah', 'guru_pembina', 'guru_bk', 'kepala_sekolah'];
+    private const ALLOWED_ROLES = ['super_admin', 'operator_sekolah', 'guru_pembina', 'guru_bk', 'kepala_sekolah', 'kesiswaan'];
 
     public function __construct() {
         parent::__construct();
@@ -846,13 +846,15 @@ class EkskulController extends BaseController {
             exit;
         }
 
-        $role = $_SESSION['role_name'] ?? '';
-        if ($role !== 'super_admin' && $role !== 'operator_sekolah') {
+        $roles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
+        $canLock = in_array('super_admin', $roles, true) || in_array('operator_sekolah', $roles, true) || in_array('kesiswaan', $roles, true);
+        if (!$canLock) {
             http_response_code(403);
-            echo json_encode(['status' => 'error', 'message' => 'Hanya Admin atau Operator Sekolah yang dapat mengunci data.']);
+            echo json_encode(['status' => 'error', 'message' => 'Hanya Admin, Operator Sekolah, atau Kesiswaan yang dapat mengunci data.']);
             exit;
         }
 
+        $role = $_SESSION['role_name'] ?? '';
         $tenant_id = $_SESSION['tenant_id'];
         if ($role === 'super_admin') {
             $tenant_id = $_POST['tenant_id'] ?? $_GET['tenant_id'] ?? '';
@@ -897,13 +899,15 @@ class EkskulController extends BaseController {
             exit;
         }
 
-        $role = $_SESSION['role_name'] ?? '';
-        if ($role !== 'super_admin' && $role !== 'operator_sekolah') {
+        $roles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
+        $canLock = in_array('super_admin', $roles, true) || in_array('operator_sekolah', $roles, true) || in_array('kesiswaan', $roles, true);
+        if (!$canLock) {
             http_response_code(403);
-            echo json_encode(['status' => 'error', 'message' => 'Hanya Admin atau Operator Sekolah yang dapat mengunci data.']);
+            echo json_encode(['status' => 'error', 'message' => 'Hanya Admin, Operator Sekolah, atau Kesiswaan yang dapat mengunci data.']);
             exit;
         }
 
+        $role = $_SESSION['role_name'] ?? '';
         $tenant_id = $_SESSION['tenant_id'];
         if ($role === 'super_admin') {
             $tenant_id = $_POST['tenant_id'] ?? $_GET['tenant_id'] ?? '';

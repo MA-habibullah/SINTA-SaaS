@@ -1,6 +1,10 @@
 <?php
 $title = "Ekstrakurikuler - Kesiswaan";
 $active_tab = $_GET['tab'] ?? 'master';
+
+// Check if user has lock authority (super_admin, operator_sekolah, or kesiswaan)
+$user_roles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
+$can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sekolah', $user_roles, true) || in_array('kesiswaan', $user_roles, true);
 ?>
 <style>
     /* Styling for Nav Pills to look modern and allow horizontal scroll */
@@ -273,7 +277,7 @@ $active_tab = $_GET['tab'] ?? 'master';
                                 <?= $kunci_anggota ? 'Anggota tidak dapat ditambah atau dikeluarkan (Sudah di-input di Rapot).' : 'Anggota dapat dikelola secara bebas.' ?>
                             </span>
                         </div>
-                        <?php if ($role === 'super_admin' || $role === 'operator_sekolah'): ?>
+                        <?php if ($can_lock): ?>
                             <form action="/SINTA-SaaS/api/v1/ekskul/kunci/anggota" method="POST" class="mb-0">
                                 <input type="hidden" name="ekskul_id" value="<?= htmlspecialchars($selected_ekskul_id) ?>">
                                 <input type="hidden" name="tahun_ajaran_id" value="<?= htmlspecialchars($active_ta['id'] ?? '') ?>">
@@ -491,7 +495,7 @@ $active_tab = $_GET['tab'] ?? 'master';
                                 <?= $kunci_nilai ? 'Nilai, presensi, dan impor berkas telah dikunci (Sudah di-input di Rapot).' : 'Nilai dan presensi dapat diinput atau diimpor secara bebas.' ?>
                             </span>
                         </div>
-                        <?php if ($role === 'super_admin' || $role === 'operator_sekolah'): ?>
+                        <?php if ($can_lock): ?>
                             <form action="/SINTA-SaaS/api/v1/ekskul/kunci/nilai" method="POST" class="mb-0">
                                 <input type="hidden" name="ekskul_id" value="<?= htmlspecialchars($selected_ekskul_id) ?>">
                                 <input type="hidden" name="tahun_ajaran_id" value="<?= htmlspecialchars($active_ta['id'] ?? '') ?>">

@@ -161,7 +161,11 @@ class Pengguna extends Model {
                                  EXISTS(
                                      SELECT 1 FROM user_roles ur 
                                      WHERE ur.user_id = u.id AND ur.role_id = 20
-                                 ) AS is_bk
+                                 ) AS is_bk,
+                                 EXISTS(
+                                     SELECT 1 FROM user_roles ur 
+                                     WHERE ur.user_id = u.id AND ur.role_id = 22
+                                 ) AS is_kesiswaan
                           FROM users u
                           JOIN roles r ON u.role_id = r.id
                           LEFT JOIN tenants t ON u.tenant_id = t.id";
@@ -273,7 +277,11 @@ class Pengguna extends Model {
                            EXISTS(
                                SELECT 1 FROM user_roles ur 
                                WHERE ur.user_id = u.id AND ur.role_id = 20
-                           ) AS is_bk
+                           ) AS is_bk,
+                           EXISTS(
+                               SELECT 1 FROM user_roles ur 
+                               WHERE ur.user_id = u.id AND ur.role_id = 22
+                           ) AS is_kesiswaan
                     FROM users u
                     JOIN roles r ON u.role_id = r.id
                     WHERE u.id = :id";
@@ -494,6 +502,14 @@ class Pengguna extends Model {
                 ]);
             }
 
+            // Jika kategori guru dan dicentang sebagai Kesiswaan (role_id 22)
+            if ($tab === 'guru' && !empty($data['is_kesiswaan'])) {
+                $urStmt->execute([
+                    'user_id' => $userId,
+                    'role_id' => 22
+                ]);
+            }
+
             $this->db->commit();
             return $userId;
         } catch (\Throwable $e) {
@@ -542,7 +558,7 @@ class Pengguna extends Model {
                 ]);
             }
 
-            // Kelola role Guru BK kustom jika tab adalah Guru
+            // Kelola role Guru BK & Kesiswaan kustom jika tab adalah Guru
             if ($tab === 'guru') {
                 if (!empty($data['is_bk'])) {
                     $insertBk = "INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (?, 20)";
@@ -550,6 +566,14 @@ class Pengguna extends Model {
                 } else {
                     $deleteBk = "DELETE FROM user_roles WHERE user_id = ? AND role_id = 20";
                     $this->db->prepare($deleteBk)->execute([$id]);
+                }
+
+                if (!empty($data['is_kesiswaan'])) {
+                    $insertKis = "INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (?, 22)";
+                    $this->db->prepare($insertKis)->execute([$id]);
+                } else {
+                    $deleteKis = "DELETE FROM user_roles WHERE user_id = ? AND role_id = 22";
+                    $this->db->prepare($deleteKis)->execute([$id]);
                 }
             }
 
