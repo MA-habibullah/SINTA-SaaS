@@ -3,6 +3,8 @@
  * View: Dashboard (Child View)
  * Bagian ini dimuat secara dinamis oleh views/layout/master.php di area #main-content.
  */
+$user_roles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
+$isAdminOrSuper = in_array('super_admin', $user_roles, true) || in_array('operator_sekolah', $user_roles, true);
 ?>
 <!-- Area Konten Utama Terbungkus Vue.js App -->
 <div id="dashboardApp">
@@ -104,7 +106,7 @@
     </div>
     <?php endif; ?>
 
-    <?php if ($stats['user_role'] !== 'siswa'): ?>
+    <?php if ($isAdminOrSuper): ?>
     <!-- Tabs Navigation Bar (Vue.js Controlled with Mobile Horizontal Scroll) -->
     <div class="row mb-4">
         <div class="col-12">
@@ -154,6 +156,7 @@
 
     <!-- Tabs Content Panels -->
     <div class="row">
+        <?php if ($isAdminOrSuper): ?>
         <div class="col-12">
             
             <!-- TAB: PROFIL SEKOLAH -->
@@ -443,8 +446,9 @@
             </div>
             <?php endif; ?>
         </div>
+        <?php endif; ?>
 
-        <?php if ($stats['user_role'] !== 'siswa'): ?>
+        <?php if ($isAdminOrSuper): ?>
         <!-- Modal Edit Profil Sekolah -->
         <div class="modal fade" id="modalEditProfil" tabindex="-1" aria-labelledby="modalEditProfilLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
