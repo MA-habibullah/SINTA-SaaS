@@ -157,6 +157,71 @@ try {
             $controller->index();
             break;
 
+        case '/api/v1/ekskul/tambah':
+            $controller = new App\Controllers\EkskulController();
+            $controller->store();
+            break;
+
+        case '/api/v1/ekskul/pembina/tambah':
+            $controller = new App\Controllers\EkskulController();
+            $controller->storePembina();
+            break;
+
+        case '/api/v1/ekskul/edit':
+            $controller = new App\Controllers\EkskulController();
+            $controller->update();
+            break;
+
+        case '/api/v1/ekskul/toggle-status':
+            $controller = new App\Controllers\EkskulController();
+            $controller->toggleStatus();
+            break;
+
+        case '/api/v1/ekskul/pembina/edit':
+            $controller = new App\Controllers\EkskulController();
+            $controller->updatePembina();
+            break;
+
+        case '/api/v1/ekskul/pembina/toggle-status':
+            $controller = new App\Controllers\EkskulController();
+            $controller->togglePembinaStatus();
+            break;
+
+        case '/api/v1/ekskul/anggota/tambah':
+            $controller = new App\Controllers\EkskulController();
+            $controller->addMembers();
+            break;
+
+        case '/api/v1/ekskul/anggota/hapus':
+            $controller = new App\Controllers\EkskulController();
+            $controller->removeMember();
+            break;
+
+        case '/api/v1/ekskul/nilai/simpan':
+            $controller = new App\Controllers\EkskulController();
+            $controller->saveGrades();
+            break;
+
+        case '/api/v1/ekskul/kunci/anggota':
+            $controller = new App\Controllers\EkskulController();
+            $controller->toggleLockAnggota();
+            break;
+
+        case '/api/v1/ekskul/kunci/nilai':
+            $controller = new App\Controllers\EkskulController();
+            $controller->toggleLockNilai();
+            break;
+
+        case '/api/v1/ekskul/nilai/export':
+            $controller = new App\Controllers\EkskulController();
+            $controller->exportGrades();
+            break;
+
+        case '/api/v1/ekskul/nilai/import':
+            $controller = new App\Controllers\EkskulController();
+            $controller->importGrades();
+            break;
+
         case '/dashboard':
             // Panggil DashboardController
             $controller = new App\Controllers\DashboardController();
