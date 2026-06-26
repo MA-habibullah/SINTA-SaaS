@@ -66,13 +66,27 @@ class EkskulController extends BaseController {
         }
 
         // Get Master Ekskul
-        $stmt = $db->prepare("
-            SELECT e.*, u.nama_lengkap as nama_pembina 
-            FROM master_ekskul e
-            LEFT JOIN users u ON e.pembina_id = u.id
-            WHERE e.tenant_id = ? AND e.deleted_at IS NULL
-        ");
-        $stmt->execute([$tenant_id]);
+        $user_id = $_SESSION['user_id'];
+        $roles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
+        $isAdminOrKesiswaan = in_array('super_admin', $roles, true) || in_array('operator_sekolah', $roles, true) || in_array('kesiswaan', $roles, true);
+
+        if ($isAdminOrKesiswaan) {
+            $stmt = $db->prepare("
+                SELECT e.*, u.nama_lengkap as nama_pembina 
+                FROM master_ekskul e
+                LEFT JOIN users u ON e.pembina_id = u.id
+                WHERE e.tenant_id = ? AND e.deleted_at IS NULL
+            ");
+            $stmt->execute([$tenant_id]);
+        } else {
+            $stmt = $db->prepare("
+                SELECT e.*, u.nama_lengkap as nama_pembina 
+                FROM master_ekskul e
+                LEFT JOIN users u ON e.pembina_id = u.id
+                WHERE e.tenant_id = ? AND e.pembina_id = ? AND e.deleted_at IS NULL
+            ");
+            $stmt->execute([$tenant_id, $user_id]);
+        }
         $master_ekskul = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Get Pembina List
@@ -107,6 +121,22 @@ class EkskulController extends BaseController {
             }
             if (empty($selected_ekskul_id)) {
                 $selected_ekskul_id = $master_ekskul[0]['id'];
+            }
+        }
+        if (!empty($selected_ekskul_id) && !$isAdminOrKesiswaan) {
+            $hasAccess = false;
+            foreach ($master_ekskul as $me) {
+                if ($me['id'] === $selected_ekskul_id) {
+                    $hasAccess = true;
+                    break;
+                }
+            }
+            if (!$hasAccess) {
+                if (!empty($master_ekskul)) {
+                    $selected_ekskul_id = $master_ekskul[0]['id'];
+                } else {
+                    $selected_ekskul_id = '';
+                }
             }
         }
         $selected_semester = $_GET['semester'] ?? 'Ganjil';
@@ -632,6 +662,19 @@ class EkskulController extends BaseController {
 
         $db = \App\Config\Database::getConnection();
 
+        $roles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
+        $isAdminOrKesiswaan = in_array('super_admin', $roles, true) || in_array('operator_sekolah', $roles, true) || in_array('kesiswaan', $roles, true);
+
+        if (!$isAdminOrKesiswaan) {
+            $stmtCheckPembina = $db->prepare("SELECT COUNT(*) FROM master_ekskul WHERE id = ? AND pembina_id = ? AND tenant_id = ? AND deleted_at IS NULL");
+            $stmtCheckPembina->execute([$ekskul_id, $_SESSION['user_id'], $tenant_id]);
+            if ((int)$stmtCheckPembina->fetchColumn() === 0) {
+                http_response_code(403);
+                echo json_encode(['status' => 'error', 'message' => 'Anda tidak memiliki hak akses untuk mengelola ekstrakurikuler ini.']);
+                exit;
+            }
+        }
+
         // Check if members lock is active
         $stmtKunci = $db->prepare("SELECT kunci_anggota FROM kunci_ekskul WHERE ekskul_id = ? AND tahun_ajaran_id = ? AND semester = ?");
         $stmtKunci->execute([$ekskul_id, $tahun_ajaran_id, $semester]);
@@ -700,6 +743,19 @@ class EkskulController extends BaseController {
 
         $db = \App\Config\Database::getConnection();
 
+        $roles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
+        $isAdminOrKesiswaan = in_array('super_admin', $roles, true) || in_array('operator_sekolah', $roles, true) || in_array('kesiswaan', $roles, true);
+
+        if (!$isAdminOrKesiswaan) {
+            $stmtCheckPembina = $db->prepare("SELECT COUNT(*) FROM master_ekskul WHERE id = ? AND pembina_id = ? AND tenant_id = ? AND deleted_at IS NULL");
+            $stmtCheckPembina->execute([$ekskul_id, $_SESSION['user_id'], $tenant_id]);
+            if ((int)$stmtCheckPembina->fetchColumn() === 0) {
+                http_response_code(403);
+                echo json_encode(['status' => 'error', 'message' => 'Anda tidak memiliki hak akses untuk mengelola ekstrakurikuler ini.']);
+                exit;
+            }
+        }
+
         // Check if members lock is active
         $stmtMember = $db->prepare("SELECT tahun_ajaran_id FROM anggota_ekskul WHERE id = ?");
         $stmtMember->execute([$membership_id]);
@@ -767,6 +823,19 @@ class EkskulController extends BaseController {
         }
 
         $db = \App\Config\Database::getConnection();
+
+        $roles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
+        $isAdminOrKesiswaan = in_array('super_admin', $roles, true) || in_array('operator_sekolah', $roles, true) || in_array('kesiswaan', $roles, true);
+
+        if (!$isAdminOrKesiswaan) {
+            $stmtCheckPembina = $db->prepare("SELECT COUNT(*) FROM master_ekskul WHERE id = ? AND pembina_id = ? AND tenant_id = ? AND deleted_at IS NULL");
+            $stmtCheckPembina->execute([$ekskul_id, $_SESSION['user_id'], $tenant_id]);
+            if ((int)$stmtCheckPembina->fetchColumn() === 0) {
+                http_response_code(403);
+                echo json_encode(['status' => 'error', 'message' => 'Anda tidak memiliki hak akses untuk mengelola ekstrakurikuler ini.']);
+                exit;
+            }
+        }
 
         // Check if grades lock is active
         $stmtKunci = $db->prepare("SELECT kunci_nilai FROM kunci_ekskul WHERE ekskul_id = ? AND tahun_ajaran_id = ? AND semester = ?");
@@ -962,6 +1031,17 @@ class EkskulController extends BaseController {
 
         $db = \App\Config\Database::getConnection();
 
+        $roles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
+        $isAdminOrKesiswaan = in_array('super_admin', $roles, true) || in_array('operator_sekolah', $roles, true) || in_array('kesiswaan', $roles, true);
+
+        if (!$isAdminOrKesiswaan) {
+            $stmtCheckPembina = $db->prepare("SELECT COUNT(*) FROM master_ekskul WHERE id = ? AND pembina_id = ? AND tenant_id = ? AND deleted_at IS NULL");
+            $stmtCheckPembina->execute([$ekskul_id, $_SESSION['user_id'], $tenant_id]);
+            if ((int)$stmtCheckPembina->fetchColumn() === 0) {
+                die("Anda tidak memiliki hak akses untuk mengunduh nilai ekstrakurikuler ini.");
+            }
+        }
+
         // Get Ekskul name
         $stmtE = $db->prepare("SELECT nama_ekskul FROM master_ekskul WHERE id = ?");
         $stmtE->execute([$ekskul_id]);
@@ -1070,6 +1150,19 @@ class EkskulController extends BaseController {
         }
 
         $db = \App\Config\Database::getConnection();
+
+        $roles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
+        $isAdminOrKesiswaan = in_array('super_admin', $roles, true) || in_array('operator_sekolah', $roles, true) || in_array('kesiswaan', $roles, true);
+
+        if (!$isAdminOrKesiswaan) {
+            $stmtCheckPembina = $db->prepare("SELECT COUNT(*) FROM master_ekskul WHERE id = ? AND pembina_id = ? AND tenant_id = ? AND deleted_at IS NULL");
+            $stmtCheckPembina->execute([$ekskul_id, $_SESSION['user_id'], $tenant_id]);
+            if ((int)$stmtCheckPembina->fetchColumn() === 0) {
+                http_response_code(403);
+                echo json_encode(['status' => 'error', 'message' => 'Anda tidak memiliki hak akses untuk mengelola ekstrakurikuler ini.']);
+                exit;
+            }
+        }
 
         // Check if grades lock is active
         $stmtKunci = $db->prepare("SELECT kunci_nilai FROM kunci_ekskul WHERE ekskul_id = ? AND tahun_ajaran_id = ? AND semester = ?");

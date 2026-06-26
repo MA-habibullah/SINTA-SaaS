@@ -1,9 +1,10 @@
 <?php
 $title = "Ekstrakurikuler - Kesiswaan";
-$active_tab = $_GET['tab'] ?? 'master';
+$user_roles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
+$show_all_tabs = in_array('super_admin', $user_roles, true) || in_array('operator_sekolah', $user_roles, true) || in_array('kesiswaan', $user_roles, true);
+$active_tab = $_GET['tab'] ?? ($show_all_tabs ? 'master' : 'anggota');
 
 // Check if user has lock authority (super_admin, operator_sekolah, or kesiswaan)
-$user_roles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
 $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sekolah', $user_roles, true) || in_array('kesiswaan', $user_roles, true);
 ?>
 <style>
@@ -78,16 +79,19 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
     <!-- Nav Tabs -->
     <div class="mb-4">
         <ul class="nav nav-pills custom-nav-pills" id="ekskulTab" role="tablist">
+            <?php if ($show_all_tabs): ?>
             <li class="nav-item" role="presentation">
                 <button class="nav-link <?= $active_tab === 'master' ? 'active' : '' ?>" id="master-tab" data-bs-toggle="tab" data-bs-target="#master" type="button" role="tab" aria-controls="master" aria-selected="<?= $active_tab === 'master' ? 'true' : 'false' ?>">
                     <i class="bi bi-diagram-3 me-2"></i>Master Ekskul
                 </button>
             </li>
+            <?php endif; ?>
             <li class="nav-item" role="presentation">
                 <button class="nav-link <?= $active_tab === 'anggota' ? 'active' : '' ?>" id="anggota-tab" data-bs-toggle="tab" data-bs-target="#anggota" type="button" role="tab" aria-controls="anggota" aria-selected="<?= $active_tab === 'anggota' ? 'true' : 'false' ?>">
                     <i class="bi bi-people me-2"></i>Kelola Anggota
                 </button>
             </li>
+            <?php if ($show_all_tabs): ?>
             <li class="nav-item" role="presentation">
                 <button class="nav-link <?= $active_tab === 'pembina' ? 'active' : '' ?>" id="pembina-tab" data-bs-toggle="tab" data-bs-target="#pembina" type="button" role="tab" aria-controls="pembina" aria-selected="<?= $active_tab === 'pembina' ? 'true' : 'false' ?>">
                     <i class="bi bi-person-badge me-2"></i>Kelola Pembina
@@ -98,6 +102,7 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
                     <i class="bi bi-journal-text me-2"></i>Jurnal Kegiatan
                 </button>
             </li>
+            <?php endif; ?>
             <li class="nav-item" role="presentation">
                 <button class="nav-link <?= $active_tab === 'nilai' ? 'active' : '' ?>" id="nilai-tab" data-bs-toggle="tab" data-bs-target="#nilai" type="button" role="tab" aria-controls="nilai" aria-selected="<?= $active_tab === 'nilai' ? 'true' : 'false' ?>">
                     <i class="bi bi-check2-circle me-2"></i>Penilaian & Presensi
@@ -110,6 +115,7 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
     <div class="tab-content" id="ekskulTabContent">
         
         <!-- Tab: Master Ekskul -->
+        <?php if ($show_all_tabs): ?>
         <div class="tab-pane fade <?= $active_tab === 'master' ? 'show active' : '' ?>" id="master" role="tabpanel" aria-labelledby="master-tab">
             <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
                 <div class="card-header bg-white border-bottom-0 d-flex justify-content-between align-items-center py-3">
@@ -167,11 +173,12 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
                             </tbody>
                         </table>
                     </div>
-                </div>
             </div>
         </div>
+        <?php endif; ?>
 
         <!-- Tab: Kelola Pembina -->
+        <?php if ($show_all_tabs): ?>
         <div class="tab-pane fade <?= $active_tab === 'pembina' ? 'show active' : '' ?>" id="pembina" role="tabpanel" aria-labelledby="pembina-tab">
             <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
                 <div class="card-header bg-white border-bottom-0 d-flex justify-content-between align-items-center py-3">
@@ -224,6 +231,7 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
                 </div>
             </div>
         </div>
+        <?php endif; ?>
 
         <!-- Tab: Kelola Anggota -->
         <div class="tab-pane fade <?= $active_tab === 'anggota' ? 'show active' : '' ?>" id="anggota" role="tabpanel" aria-labelledby="anggota-tab">
@@ -433,15 +441,17 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
         </div>
 
         <!-- Tab: Jurnal Kegiatan -->
+        <?php if ($show_all_tabs): ?>
         <div class="tab-pane fade <?= $active_tab === 'jurnal' ? 'show active' : '' ?>" id="jurnal" role="tabpanel" aria-labelledby="jurnal-tab">
             <div class="card shadow-sm border-0">
                 <div class="card-body py-5 text-center">
                     <i class="bi bi-tools text-muted mb-3" style="font-size: 3rem;"></i>
                     <h5>Fitur Jurnal Kegiatan Sedang Dibangun</h5>
-                    <p class="text-muted">Tempat pembina mencatat jadwal rutin dan log kegiatan harian ekskul.</p>
+                    <p class="text-muted">Tempat pembina mencatat jadwal rutin and log kegiatan harian ekskul.</p>
                 </div>
             </div>
         </div>
+        <?php endif; ?>
 
         <!-- Tab: Penilaian & Presensi -->
         <div class="tab-pane fade <?= $active_tab === 'nilai' ? 'show active' : '' ?>" id="nilai" role="tabpanel" aria-labelledby="nilai-tab">
