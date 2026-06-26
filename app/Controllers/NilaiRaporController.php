@@ -239,7 +239,7 @@ class NilaiRaporController extends BaseController {
 
     /**
      * GET /api/v1/nilai-rapor/export
-     * Download CSV template for grades input.
+     * Download XLSX template for grades input.
      */
     public function export(): void {
         $db = \App\Config\Database::getConnection();
@@ -329,52 +329,46 @@ class NilaiRaporController extends BaseController {
             $gradesMatrix[$row['siswa_id']][$row['mapel_id']] = $row['nilai_akhir'];
         }
 
-        // Set response headers
-        $cleanKelasName = str_replace(' ', '_', $kelasName);
-        $cleanTahun = str_replace('/', '-', $tahunAjaran);
-        $filename = "format_nilai_{$cleanKelasName}_{$cleanTahun}_{$semester}.csv";
-
-        header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        
-        $output = fopen('php://output', 'w');
+        // Build excel data matrix
+        $excelData = [];
 
         // Build header line: Siswa ID, NISN, Nama Siswa, Subject 1 [ID], Subject 2 [ID]...
         $header = ['Siswa ID', 'NISN', 'Nama Siswa'];
         foreach ($subjects as $sub) {
             $header[] = $sub['nama_mapel'] . " [" . $sub['mapel_id'] . "]";
         }
-        fputcsv($output, $header);
+        $excelData[] = $header;
 
         // Build rows
         foreach ($students as $stu) {
             $nisnVal = $stu['nisn'] ?: $stu['nis'] ?: '-';
-            if ($nisnVal !== '-' && strpos($nisnVal, "'") !== 0) {
-                $nisnVal = "'" . $nisnVal;
-            }
             $row = [
-                $stu['id'],
-                $nisnVal,
-                $stu['nama_lengkap']
+                (string)$stu['id'],
+                (string)$nisnVal,
+                (string)$stu['nama_lengkap']
             ];
             foreach ($subjects as $sub) {
                 if ($this->isReligionSubjectMismatch($stu['agama'] ?? null, $sub['nama_mapel'])) {
                     $row[] = 'N/A';
                 } else {
                     $val = $gradesMatrix[$stu['id']][$sub['mapel_id']] ?? '';
-                    $row[] = $val !== '' ? $val : '';
+                    $row[] = $val !== '' ? (float)$val : '';
                 }
             }
-            fputcsv($output, $row);
+            $excelData[] = $row;
         }
 
-        fclose($output);
+        $cleanKelasName = str_replace(' ', '_', $kelasName);
+        $cleanTahun = str_replace('/', '-', $tahunAjaran);
+        $filename = "format_nilai_{$cleanKelasName}_{$cleanTahun}_{$semester}.xlsx";
+
+        \Shuchkin\SimpleXLSXGen::fromArray($excelData)->downloadAs($filename);
         exit;
     }
 
     /**
      * POST /api/v1/nilai-rapor/import
-     * Upload and parse CSV to upsert grades.
+     * Upload and parse XLSX to upsert grades.
      */
     public function import(): void {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -417,33 +411,24 @@ class NilaiRaporController extends BaseController {
         $fileName = $_FILES['file']['name'];
         $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
 
-        if ($fileExt !== 'csv') {
-            $this->jsonResponse(['error' => 'Format file tidak didukung. Mohon gunakan file CSV (.csv).'], 400);
+        if ($fileExt !== 'xlsx') {
+            $this->jsonResponse(['error' => 'Format file tidak didukung. Mohon gunakan file Excel (.xlsx).'], 400);
             return;
         }
 
-        $handle = fopen($fileTmp, 'r');
-        if (!$handle) {
-            $this->jsonResponse(['error' => 'Gagal membuka file CSV.'], 500);
+        $xlsx = \Shuchkin\SimpleXLSX::parse($fileTmp);
+        if (!$xlsx) {
+            $this->jsonResponse(['error' => 'Gagal membaca berkas Excel (.xlsx): ' . \Shuchkin\SimpleXLSX::parseError()], 400);
             return;
         }
 
-        // Detect delimiter
-        $firstLine = fgets($handle);
-        $delimiter = ',';
-        if (strpos($firstLine, ';') !== false) {
-            $delimiter = ';';
-        }
-        rewind($handle);
-
-        $header = fgetcsv($handle, 1000, $delimiter);
-        if (!$header) {
-            fclose($handle);
-            $this->jsonResponse(['error' => 'File CSV kosong atau tidak valid.'], 400);
+        $rows = $xlsx->rows();
+        if (empty($rows)) {
+            $this->jsonResponse(['error' => 'Berkas Excel kosong atau tidak valid.'], 400);
             return;
         }
 
-        // Remove UTF-8 BOM if present on first element
+        $header = array_shift($rows);
         if (isset($header[0])) {
             $header[0] = preg_replace('/^[\x{FEFF}\x{200B}]+/u', '', $header[0]);
         }
@@ -462,12 +447,9 @@ class NilaiRaporController extends BaseController {
         }
 
         if (empty($mapelCols)) {
-            fclose($handle);
-            $this->jsonResponse(['error' => 'Tidak ditemukan kolom mata pelajaran yang valid dalam file CSV.'], 400);
+            $this->jsonResponse(['error' => 'Tidak ditemukan kolom mata pelajaran yang valid dalam file Excel.'], 400);
             return;
         }
-
-        $db = \App\Config\Database::getConnection();
 
         // Fetch student religion mapping for validation
         $qSiswaList = "SELECT id, agama FROM siswa WHERE id_kelas = :kelas_id AND tenant_id = :tenant_id AND status = 'Aktif' AND deleted_at IS NULL";
@@ -501,7 +483,7 @@ class NilaiRaporController extends BaseController {
         }
 
         $db->beginTransaction();
-        $rowCount = 0;
+        $rowCount = 1; // Since header was row 1
         $successCount = 0;
         try {
             $stmtUpsert = $db->prepare("
@@ -514,20 +496,20 @@ class NilaiRaporController extends BaseController {
                     updated_at = NOW()
             ");
 
-            while (($row = fgetcsv($handle, 1000, $delimiter)) !== false) {
+            foreach ($rows as $row) {
                 $rowCount++;
                 if (empty(array_filter($row))) {
                     continue; // Skip empty rows
                 }
 
-                $siswaId = trim($row[0] ?? '');
+                $siswaId = trim((string)($row[0] ?? ''));
                 if (empty($siswaId)) {
                     continue; // Skip row if no student ID is found
                 }
 
                 // Loop through subject columns and insert values
                 foreach ($mapelCols as $idx => $mapelId) {
-                    $rawVal = isset($row[$idx]) ? trim($row[$idx]) : '';
+                    $rawVal = isset($row[$idx]) ? trim((string)$row[$idx]) : '';
                     if ($rawVal === 'N/A' || $rawVal === 'n/a' || $rawVal === '') {
                         continue; // Skip N/A or empty values
                     }
@@ -554,13 +536,12 @@ class NilaiRaporController extends BaseController {
                 $successCount++;
             }
 
-            fclose($handle);
             $db->commit();
             $this->jsonResponse(['success' => true, 'message' => "Berhasil mengimpor nilai rapor untuk {$successCount} siswa."]);
         } catch (\Throwable $e) {
-            fclose($handle);
             $db->rollBack();
             error_log("Failed importing grades: " . $e->getMessage());
+            $this->jsonResponse(['error' => 'Terjadi kesalahan sistem saat menyimpan data nilai: ' . $e->getMessage()], 500);
         }
     }
 

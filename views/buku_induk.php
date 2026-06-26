@@ -520,14 +520,14 @@
                         <div class="col-12 col-md-3 d-flex gap-2">
                             <button class="btn btn-outline-success btn-sm rounded-3 px-2 py-2 flex-grow-1 fs-8 fw-semibold"
                                     :disabled="!nilaiRapor.kelasId || nilaiRapor.subjects.length === 0"
-                                    @click="exportNilaiRaporCSV"
-                                    title="Unduh Format CSV">
+                                    @click="exportNilaiRaporExcel"
+                                    title="Unduh Format Excel (.xlsx)">
                                 <i class="bi bi-file-earmark-arrow-down me-1"></i> Unduh
                             </button>
                             <button class="btn btn-outline-primary btn-sm rounded-3 px-2 py-2 flex-grow-1 fs-8 fw-semibold"
                                     :disabled="!nilaiRapor.kelasId || nilaiRapor.subjects.length === 0"
                                     @click="showImportGradesModal"
-                                    title="Unggah Nilai CSV">
+                                    title="Unggah Nilai Excel (.xlsx)">
                                 <i class="bi bi-file-earmark-arrow-up me-1"></i> Impor
                             </button>
                         </div>
@@ -659,7 +659,7 @@
                 <div class="modal-header border-bottom py-3">
                     <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2">
                         <i class="bi bi-file-earmark-arrow-up text-primary"></i>
-                        Impor Nilai Rapor (CSV)
+                        Impor Nilai Rapor (Excel)
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -677,10 +677,10 @@
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label for="importNilaiFile" class="form-label fw-semibold text-dark fs-7">Pilih Berkas CSV Format Nilai</label>
-                        <input type="file" id="importNilaiFile" class="form-control rounded-3" accept=".csv" @change="onImportFileChange">
+                        <label for="importNilaiFile" class="form-label fw-semibold text-dark fs-7">Pilih Berkas Excel (.xlsx) Format Nilai</label>
+                        <input type="file" id="importNilaiFile" class="form-control rounded-3" accept=".xlsx" @change="onImportFileChange">
                         <small class="text-muted fs-8 mt-2 d-block">
-                            <i class="bi bi-info-circle me-1"></i>Pastikan format berkas CSV yang diunggah sesuai dengan berkas format unduhan dari kelas ini. Kolom Siswa ID dan Header Kode Mata Pelajaran tidak boleh diubah agar data terpetakan dengan benar.
+                            <i class="bi bi-info-circle me-1"></i>Pastikan format berkas Excel (.xlsx) yang diunggah sesuai dengan berkas format unduhan dari kelas ini. Kolom Siswa ID dan Header Kode Mata Pelajaran tidak boleh diubah agar data terpetakan dengan benar.
                         </small>
                     </div>
                 </div>
@@ -1969,7 +1969,7 @@
                     }
                 });
             },
-            exportNilaiRaporCSV() {
+            exportNilaiRaporExcel() {
                 if (!this.nilaiRapor.kelasId || !this.nilaiRapor.tahunAjaran || !this.nilaiRapor.semester) {
                     this.toast.fire({ icon: 'warning', title: 'Pilih Kelas, Tahun Ajaran, dan Semester terlebih dahulu.' });
                     return;
@@ -1995,7 +1995,7 @@
                     return;
                 }
                 if (!this.importFile) {
-                    this.toast.fire({ icon: 'warning', title: 'Pilih berkas CSV terlebih dahulu.' });
+                    this.toast.fire({ icon: 'warning', title: 'Pilih berkas Excel (.xlsx) terlebih dahulu.' });
                     return;
                 }
 

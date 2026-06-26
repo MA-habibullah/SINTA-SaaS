@@ -1666,11 +1666,11 @@ $baseUrl    = '/SINTA-SaaS';
                     </div>
                     <div class="col-md-12">
                         <div class="card border-0 shadow-sm rounded-3 p-3 bg-light h-100">
-                            <div class="fw-bold fs-7 text-dark mb-1"><i class="bi bi-file-earmark-arrow-up me-2"></i>📥 Impor Kehadiran dari Excel / CSV</div>
-                            <p class="fs-8 text-muted mb-2">Unggah berkas template Excel (.xlsx, .xls) atau CSV (.csv) yang sudah diedit. Pastikan kolom **NISN, Sakit, Izin, Alfa** tetap ada.</p>
+                            <div class="fw-bold fs-7 text-dark mb-1"><i class="bi bi-file-earmark-arrow-up me-2"></i>📥 Impor Kehadiran dari Excel (.xlsx)</div>
+                            <p class="fs-8 text-muted mb-2">Unggah berkas template Excel (.xlsx) yang sudah diedit. Pastikan kolom **UUID Sekolah, NISN, Sakit, Izin, Tanpa Keterangan (Alfa)** tetap ada.</p>
                             <div class="d-flex gap-2 align-items-center">
                                 <label for="file-import-kehadiran" class="visually-hidden">Unggah template kehadiran</label>
-                                <input type="file" id="file-import-kehadiran" name="file_import_kehadiran" @change="handleFileImportChange" class="form-control form-control-sm" accept=".xlsx,.xls,.csv">
+                                <input type="file" id="file-import-kehadiran" name="file_import_kehadiran" @change="handleFileImportChange" class="form-control form-control-sm" accept=".xlsx">
                                 <button class="btn btn-sm btn-success rounded-3 fw-semibold" @click="importKehadiran" :disabled="importingKehadiran" id="btn-proses-impor-kehadiran">
                                     <span v-if="importingKehadiran" class="spinner-border spinner-border-sm me-1"></span>
                                     <i v-else class="bi bi-upload"></i> Impor

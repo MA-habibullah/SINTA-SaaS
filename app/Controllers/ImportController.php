@@ -22,7 +22,7 @@ class ImportController extends BaseController {
     }
 
     /**
-     * API: Import data siswa dari file CSV
+     * API: Import data siswa dari file XLSX
      * POST /api/v1/siswa/import
      */
     public function import(): void {
@@ -39,28 +39,24 @@ class ImportController extends BaseController {
         $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
 
         // Validasi ekstensi
-        if ($fileExt !== 'csv') {
-            $this->jsonResponse(['error' => 'Format file tidak valid. Fitur ini saat ini melayani file CSV (.csv) hasil ekspor Excel.'], 400);
+        if ($fileExt !== 'xlsx') {
+            $this->jsonResponse(['error' => 'Format file tidak valid. Fitur ini saat ini melayani file Excel (.xlsx) hasil ekspor template.'], 400);
         }
 
-        $handle = fopen($fileTmp, 'r');
-        if (!$handle) {
-            $this->jsonResponse(['error' => 'Gagal membuka file untuk dibaca.'], 500);
+        $xlsx = \Shuchkin\SimpleXLSX::parse($fileTmp);
+        if (!$xlsx) {
+            $this->jsonResponse(['error' => 'Gagal membaca berkas Excel (.xlsx): ' . \Shuchkin\SimpleXLSX::parseError()], 400);
         }
 
-        // Auto-detect delimiter (koma vs titik koma)
-        $firstLine = fgets($handle);
-        $delimiter = ',';
-        if (strpos($firstLine, ';') !== false) {
-            $delimiter = ';';
+        $rows = $xlsx->rows();
+        if (empty($rows)) {
+            $this->jsonResponse(['error' => 'Berkas Excel kosong atau tidak valid.'], 400);
         }
-        rewind($handle);
 
         // Ambil baris pertama sebagai Header
-        $header = fgetcsv($handle, 1000, $delimiter);
+        $header = array_shift($rows);
         if (!$header) {
-            fclose($handle);
-            $this->jsonResponse(['error' => 'Berkas CSV kosong atau tidak valid.'], 400);
+            $this->jsonResponse(['error' => 'Berkas Excel kosong atau tidak valid.'], 400);
         }
 
         // Hilangkan UTF-8 BOM jika ada di kolom pertama
@@ -70,7 +66,7 @@ class ImportController extends BaseController {
 
         // Normalisasi nama kolom header (trim & lowercase)
         $header = array_map(function($h) {
-            return strtolower(trim($h));
+            return strtolower(trim((string)$h));
         }, $header);
 
         // Temukan indeks posisi masing-masing kolom yang diharapkan
@@ -96,9 +92,8 @@ class ImportController extends BaseController {
 
         // Validasi kolom wajib
         if ($namaIdx === -1 || $nisnIdx === -1 || $tglLahirIdx === -1 || $emailIdx === -1) {
-            fclose($handle);
             $this->jsonResponse([
-                'error' => 'Kolom header file CSV tidak sesuai dengan format template yang dibutuhkan.',
+                'error' => 'Kolom header file Excel tidak sesuai dengan format template yang dibutuhkan.',
                 'details' => 'Kolom yang wajib ada: Nama Lengkap Siswa, NISN, Tanggal Lahir, Email.'
             ], 400);
         }
@@ -107,14 +102,13 @@ class ImportController extends BaseController {
         $sessionTenantId = $_SESSION['tenant_id'] ?? null;
 
         if ($roleName === 'super_admin' && $npsnIdx === -1) {
-            fclose($handle);
-            $this->jsonResponse(['error' => 'Untuk peran Super Admin, kolom NPSN Sekolah wajib dicantumkan di dalam file CSV.'], 400);
+            $this->jsonResponse(['error' => 'Untuk peran Super Admin, kolom NPSN Sekolah wajib dicantumkan di dalam file Excel.'], 400);
         }
 
         $db = Database::getConnection();
         $db->beginTransaction();
 
-        $rowCount = 0;
+        $rowCount = 1; // Since header was row 1
         $successCount = 0;
         $errors = [];
 
@@ -139,7 +133,7 @@ class ImportController extends BaseController {
                 )
             ");
 
-            while (($row = fgetcsv($handle, 1000, $delimiter)) !== false) {
+            foreach ($rows as $row) {
                 $rowCount++;
                 
                 // Lewati jika seluruh baris kosong
@@ -147,11 +141,17 @@ class ImportController extends BaseController {
                     continue;
                 }
 
-                $rawNpsn = ($npsnIdx !== -1 && isset($row[$npsnIdx])) ? trim($row[$npsnIdx]) : '';
-                $rawNama = isset($row[$namaIdx]) ? trim($row[$namaIdx]) : '';
-                $rawNisn = isset($row[$nisnIdx]) ? trim($row[$nisnIdx]) : '';
-                $rawTglLahir = isset($row[$tglLahirIdx]) ? trim($row[$tglLahirIdx]) : '';
-                $rawEmail = ($emailIdx !== -1 && isset($row[$emailIdx])) ? trim($row[$emailIdx]) : '';
+                $rawNpsn = ($npsnIdx !== -1 && isset($row[$npsnIdx])) ? trim((string)$row[$npsnIdx]) : '';
+                $rawNama = isset($row[$namaIdx]) ? trim((string)$row[$namaIdx]) : '';
+                $rawNisn = isset($row[$nisnIdx]) ? trim((string)$row[$nisnIdx]) : '';
+                $rawTglLahir = isset($row[$tglLahirIdx]) ? trim((string)$row[$tglLahirIdx]) : '';
+                $rawEmail = ($emailIdx !== -1 && isset($row[$emailIdx])) ? trim((string)$row[$emailIdx]) : '';
+
+                // Handle Excel numeric date representation defensively
+                if (is_numeric($rawTglLahir)) {
+                    $unixTimestamp = ($rawTglLahir - 25569) * 86400;
+                    $rawTglLahir = date('Y-m-d', $unixTimestamp);
+                }
 
                 // 1. Validasi Nama Lengkap
                 if (empty($rawNama)) {
@@ -231,8 +231,6 @@ class ImportController extends BaseController {
                 $successCount++;
             }
 
-            fclose($handle);
-
             if (!empty($errors)) {
                 // Batalkan seluruh data jika terdapat kesalahan validasi data baris
                 $db->rollBack();
@@ -250,7 +248,6 @@ class ImportController extends BaseController {
             ]);
 
         } catch (\Throwable $e) {
-            fclose($handle);
             $db->rollBack();
             error_log("Gagal import siswa: " . $e->getMessage());
             $this->jsonResponse(['error' => 'Terjadi kesalahan sistem saat menyimpan data: ' . $e->getMessage()], 500);
@@ -258,27 +255,18 @@ class ImportController extends BaseController {
     }
 
     /**
-     * Download template CSV untuk import siswa
+     * Download template XLSX untuk import siswa
      * GET /api/v1/siswa/import/template
      */
     public function downloadTemplate(): void {
-        // Set header response
-        header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename="template_import_siswa.csv"');
+        $filename = "template_import_siswa.xlsx";
+        $data = [
+            ['NPSN Sekolah', 'Nama Lengkap Siswa', 'NISN', 'Tanggal Lahir', 'Email'],
+            ['10203040', 'Ahmad Dani', '0081234567', '2008-04-12', 'ahmad.dani@example.com'],
+            ['10203040', 'Siti Rahma', '0098765432', '2009-09-21', 'siti.rahma@example.com']
+        ];
         
-        // Output CSV content
-        $output = fopen('php://output', 'w');
-        
-        // Header columns
-        fputcsv($output, ['NPSN Sekolah', 'Nama Lengkap Siswa', 'NISN', 'Tanggal Lahir', 'Email']);
-        
-        // Contoh data baris 1
-        fputcsv($output, ['10203040', 'Ahmad Dani', '0081234567', '2008-04-12', 'ahmad.dani@example.com']);
-        
-        // Contoh data baris 2
-        fputcsv($output, ['10203040', 'Siti Rahma', '0098765432', '2009-09-21', 'siti.rahma@example.com']);
-        
-        fclose($output);
+        \Shuchkin\SimpleXLSXGen::fromArray($data)->downloadAs($filename);
         exit;
     }
 

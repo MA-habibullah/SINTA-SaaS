@@ -2074,82 +2074,17 @@ class BKController extends BaseController {
         $fileName = $_FILES['file']['name'];
         $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
 
-        if ($fileExt !== 'csv' && $fileExt !== 'xls' && $fileExt !== 'xlsx') {
-            $this->jsonResponse(['error' => 'Format file tidak valid. Unggah berkas Excel (.xlsx, .xls) atau CSV (.csv) hasil ekspor template.'], 400);
+        if ($fileExt !== 'xlsx') {
+            $this->jsonResponse(['error' => 'Format file tidak valid. Unggah berkas Excel (.xlsx) hasil ekspor template.'], 400);
             return;
         }
 
-        $fileContent = file_get_contents($fileTmp);
-        if ($fileContent === false) {
-            $this->jsonResponse(['error' => 'Gagal membaca berkas yang diunggah.'], 500);
+        $xlsx = \Shuchkin\SimpleXLSX::parse($fileTmp);
+        if (!$xlsx) {
+            $this->jsonResponse(['error' => 'Gagal membaca berkas Excel (.xlsx): ' . \Shuchkin\SimpleXLSX::parseError()], 400);
             return;
         }
-
-        $isHtml = (stripos($fileContent, '<html') !== false || stripos($fileContent, '<table') !== false);
-        $isXlsx = ($fileExt === 'xlsx');
-        $rows = [];
-        $formatText = 'CSV';
-        $delimiterText = 'N/A';
-
-        if ($isXlsx) {
-            $formatText = 'Excel (.xlsx)';
-            $xlsx = \Shuchkin\SimpleXLSX::parse($fileTmp);
-            if ($xlsx) {
-                $rows = $xlsx->rows();
-            } else {
-                $this->jsonResponse(['error' => 'Gagal membaca berkas Excel (.xlsx): ' . \Shuchkin\SimpleXLSX::parseError()], 400);
-                return;
-            }
-        } elseif ($isHtml) {
-            $formatText = 'Excel Lama (.xls HTML)';
-            $dom = new \DOMDocument();
-            libxml_use_internal_errors(true);
-            $dom->loadHTML($fileContent);
-            libxml_clear_errors();
-
-            $trElements = $dom->getElementsByTagName('tr');
-            foreach ($trElements as $tr) {
-                $cells = [];
-                foreach ($tr->childNodes as $child) {
-                    if ($child->nodeType === XML_ELEMENT_NODE && ($child->nodeName === 'td' || $child->nodeName === 'th')) {
-                        $cells[] = trim($child->nodeValue);
-                    }
-                }
-                if (!empty($cells)) {
-                    $rows[] = $cells;
-                }
-            }
-        } else {
-            $formatText = 'CSV';
-            // Read CSV rows
-            $handle = fopen($fileTmp, 'r');
-            if ($handle) {
-                // Auto-detect delimiter from the first 20 lines
-                $delimiters = [',' => 0, ';' => 0, "\t" => 0];
-                $lineCount = 0;
-                while (($line = fgets($handle)) !== false && $lineCount < 20) {
-                    $lineCount++;
-                    foreach ($delimiters as $del => &$count) {
-                        $count += substr_count($line, $del);
-                    }
-                }
-                $delimiter = ',';
-                $maxCount = 0;
-                foreach ($delimiters as $del => $count) {
-                    if ($count > $maxCount) {
-                        $maxCount = $count;
-                        $delimiter = $del;
-                    }
-                }
-                $delimiterText = $delimiter;
-                rewind($handle);
-
-                while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
-                    $rows[] = $row;
-                }
-                fclose($handle);
-            }
-        }
+        $rows = $xlsx->rows();
 
         if (empty($rows)) {
             $this->jsonResponse(['error' => 'Berkas kosong atau tidak dapat dibaca.'], 400);
@@ -2176,7 +2111,7 @@ class BKController extends BaseController {
 
             // Normalize cells for comparison
             $normalizedRow = array_map(function($cell) {
-                return strtolower(trim($cell));
+                return strtolower(trim((string)$cell));
             }, $row);
 
             // Let's check if this row contains required header signatures
@@ -2219,23 +2154,9 @@ class BKController extends BaseController {
         }
 
         if (!$header) {
-            // Read first 5 lines for debugging
-            $previewLines = [];
-            if (file_exists($fileTmp)) {
-                $f = fopen($fileTmp, 'r');
-                if ($f) {
-                    $lineCount = 0;
-                    while (($line = fgets($f)) !== false && $lineCount < 5) {
-                        $previewLines[] = trim($line);
-                        $lineCount++;
-                    }
-                    fclose($f);
-                }
-            }
-            $previewText = implode("\n", $previewLines);
             $this->jsonResponse([
                 'error' => 'Header berkas tidak valid.',
-                'details' => 'Kolom yang wajib ada di dalam template: UUID Sekolah, NISN, Sakit, Izin, Tanpa Keterangan (Alfa).<br><br><b>Deteksi Format:</b> ' . htmlspecialchars($formatText) . '<br><b>Deteksi Delimiter:</b> "' . htmlspecialchars($delimiterText) . '"<br><b>5 Baris pertama file Anda:</b><pre class="bg-dark text-white p-2 rounded text-start fs-8 mt-1" style="white-space: pre-wrap; font-family: monospace;">' . htmlspecialchars($previewText) . '</pre>'
+                'details' => 'Kolom yang wajib ada di dalam template: UUID Sekolah, NISN, Sakit, Izin, Tanpa Keterangan (Alfa).'
             ], 400);
             return;
         }

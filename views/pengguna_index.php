@@ -415,7 +415,7 @@
             <div class="modal-content border-0 shadow rounded-4">
                 <div class="modal-header border-bottom py-3">
                     <h5 class="modal-title fw-bold text-dark">
-                        <i class="bi bi-file-earmark-excel text-success me-2"></i>Import Siswa via CSV / Excel
+                        <i class="bi bi-file-earmark-excel text-success me-2"></i>Import Siswa via Excel
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -423,17 +423,17 @@
                     <div class="modal-body p-4">
                         <div class="mb-3">
                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                <label for="import_csv_file" class="form-label fw-semibold fs-8 text-muted mb-0">Pilih File CSV <span class="text-danger">*</span></label>
+                                <label for="import_csv_file" class="form-label fw-semibold fs-8 text-muted mb-0">Pilih File Excel (.xlsx) <span class="text-danger">*</span></label>
                                 <a href="/SINTA-SaaS/api/v1/siswa/import/template" class="text-decoration-none fs-9 fw-bold text-success" download>
-                                    <i class="bi bi-download me-1"></i>Download Template CSV
+                                    <i class="bi bi-download me-1"></i>Download Template Excel
                                 </a>
                             </div>
-                            <input id="import_csv_file" name="import_csv_file" type="file" class="form-control rounded-3" ref="importFile" accept=".csv" @change="handleImportFileChange" required>
+                            <input id="import_csv_file" name="import_csv_file" type="file" class="form-control rounded-3" ref="importFile" accept=".xlsx" @change="handleImportFileChange" required>
                         </div>
                         <div class="alert alert-info rounded-3 py-2.5 px-3 fs-9 mb-0">
                             <h6 class="fw-bold fs-9 mb-1"><i class="bi bi-info-circle me-1"></i>Petunjuk Impor:</h6>
                             <ul class="ps-3 mb-0" style="list-style-type: decimal;">
-                                <li>Pastikan file berformat <strong>.csv</strong> (koma atau titik koma).</li>
+                                <li>Pastikan file berformat <strong>.xlsx</strong> (Excel).</li>
                                 <li>Baris pertama harus berisi kolom:
                                     <code class="d-block bg-light p-1 my-1 border rounded text-dark font-monospace">NPSN Sekolah, Nama Lengkap Siswa, NISN, Tanggal Lahir, Email</code>
                                 </li>
@@ -1399,7 +1399,7 @@
             },
             submitImport() {
                 if (!this.importFile) {
-                    Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Silakan pilih berkas CSV terlebih dahulu.' });
+                    Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Silakan pilih berkas Excel (.xlsx) terlebih dahulu.' });
                     return;
                 }
 

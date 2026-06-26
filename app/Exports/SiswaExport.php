@@ -4,6 +4,7 @@ namespace App\Exports;
 
 use App\Config\Database;
 use PDO;
+use Shuchkin\SimpleXLSXGen;
 
 class SiswaExport {
 
@@ -132,137 +133,117 @@ class SiswaExport {
             
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            // Set headers for excel download
-            header("Content-Type: application/vnd.ms-excel");
-            header("Content-Disposition: attachment; filename=export_siswa_" . date('Ymd_His') . ".xls");
-            header("Pragma: no-cache");
-            header("Expires: 0");
+            // Build excel data matrix
+            $excelData = [];
             
-            // Render spreadsheet HTML with number formatting CSS
-            echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
-            echo '<head>';
-            echo '<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />';
-            echo '<style>';
-            echo '  .text-format { mso-number-format: "\@"; }';
-            echo '  table { border-collapse: collapse; }';
-            echo '  th { background-color: #0d6efd; color: #ffffff; font-weight: bold; border: 1px solid #dee2e6; padding: 8px; text-align: center; }';
-            echo '  td { border: 1px solid #dee2e6; padding: 8px; }';
-            echo '</style>';
-            echo '</head>';
-            echo '<body>';
-            echo '<table>';
-            echo '<thead>';
-            echo '<tr>';
-            echo '<th>No</th>';
-            echo '<th>Instansi Sekolah</th>';
-            echo '<th>Nama Lengkap</th>';
-            echo '<th>Nama Panggilan</th>';
-            echo '<th>NISN</th>';
-            echo '<th>NIS</th>';
-            echo '<th>NIK</th>';
-            echo '<th>No. KK</th>';
-            echo '<th>Jenis Kelamin</th>';
-            echo '<th>Tempat Lahir</th>';
-            echo '<th>Tanggal Lahir</th>';
-            echo '<th>Agama</th>';
-            echo '<th>Ukuran Seragam Sekolah</th>';
-            echo '<th>Ukuran Seragam Olahraga</th>';
-            echo '<th>Sekolah Asal</th>';
-            echo '<th>Status</th>';
-            echo '<th>Kelas</th>';
-            echo '<th>Jurusan</th>';
-            echo '<th>Jenjang</th>';
-            echo '<th>Tahun Ajaran</th>';
-            echo '<th>Tahun Angkatan</th>';
-            echo '<th>Pendidikan</th>';
-            echo '<th>Alamat KK</th>';
-            echo '<th>Alamat Domisili</th>';
-            echo '<th>RT</th>';
-            echo '<th>RW</th>';
-            echo '<th>Kode Pos</th>';
-            echo '<th>Provinsi</th>';
-            echo '<th>Kota/Kabupaten</th>';
-            echo '<th>Kecamatan</th>';
-            echo '<th>Kelurahan</th>';
-            echo '<th>Status Tinggal</th>';
-            echo '<th>Email</th>';
-            echo '<th>No. Telp Rumah</th>';
-            echo '<th>No. Telp Siswa</th>';
-            echo '<th>No. Telp Orang Tua</th>';
-            echo '<th>Nama Ayah</th>';
-            echo '<th>NIK Ayah</th>';
-            echo '<th>Nama Ibu</th>';
-            echo '<th>NIK Ibu</th>';
-            echo '<th>Nama Wali</th>';
-            echo '<th>NIK Wali</th>';
-            echo '<th>Penerima KPS</th>';
-            echo '<th>Punya KIP</th>';
-            echo '<th>No. KIP</th>';
-            echo '<th>Jenis Pendaftaran</th>';
-            echo '<th>Jalur Diterima</th>';
-            echo '<th>Tanggal Masuk</th>';
-            echo '</tr>';
-            echo '</thead>';
-            echo '<tbody>';
+            // Header columns
+            $excelData[] = [
+                'No',
+                'Instansi Sekolah',
+                'Nama Lengkap',
+                'Nama Panggilan',
+                'NISN',
+                'NIS',
+                'NIK',
+                'No. KK',
+                'Jenis Kelamin',
+                'Tempat Lahir',
+                'Tanggal Lahir',
+                'Agama',
+                'Ukuran Seragam Sekolah',
+                'Ukuran Seragam Olahraga',
+                'Sekolah Asal',
+                'Status',
+                'Kelas',
+                'Jurusan',
+                'Jenjang',
+                'Tahun Ajaran',
+                'Tahun Angkatan',
+                'Pendidikan',
+                'Alamat KK',
+                'Alamat Domisili',
+                'RT',
+                'RW',
+                'Kode Pos',
+                'Provinsi',
+                'Kota/Kabupaten',
+                'Kecamatan',
+                'Kelurahan',
+                'Status Tinggal',
+                'Email',
+                'No. Telp Rumah',
+                'No. Telp Siswa',
+                'No. Telp Orang Tua',
+                'Nama Ayah',
+                'NIK Ayah',
+                'Nama Ibu',
+                'NIK Ibu',
+                'Nama Wali',
+                'NIK Wali',
+                'Penerima KPS',
+                'Punya KIP',
+                'No. KIP',
+                'Jenis Pendaftaran',
+                'Jalur Diterima',
+                'Tanggal Masuk'
+            ];
             
             $no = 1;
             foreach ($rows as $row) {
-                echo '<tr>';
-                echo '<td>' . $no++ . '</td>';
-                echo '<td>' . htmlspecialchars($row['nama_sekolah_tenant'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['nama_lengkap'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['nama_panggilan'] ?? '') . '</td>';
-                echo '<td class="text-format">' . htmlspecialchars($row['nisn'] ?? '') . '</td>';
-                echo '<td class="text-format">' . htmlspecialchars($row['nis'] ?? '') . '</td>';
-                echo '<td class="text-format">' . htmlspecialchars($row['nik'] ?? '') . '</td>';
-                echo '<td class="text-format">' . htmlspecialchars($row['no_kk'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['jenis_kelamin'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['tempat_lahir'] ?? '') . '</td>';
-                echo '<td class="text-format">' . htmlspecialchars(self::formatTanggalIndo($row['tanggal_lahir'])) . '</td>';
-                echo '<td>' . htmlspecialchars($row['agama'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['ukuran_seragam_sekolah'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['ukuran_seragam_olahraga'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['sekolah_asal'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['status'] ?? '') . '</td>';
-                echo '<td class="text-format">' . htmlspecialchars($row['nama_kelas'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['nama_jurusan'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['nama_jenjang'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['tahun_ajaran'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['tahun_angkatan'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['nama_pendidikan'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['alamat_kk'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['alamat_domisili'] ?? '') . '</td>';
-                echo '<td class="text-format">' . htmlspecialchars($row['rt'] ?? '') . '</td>';
-                echo '<td class="text-format">' . htmlspecialchars($row['rw'] ?? '') . '</td>';
-                echo '<td class="text-format">' . htmlspecialchars($row['kode_pos'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['nama_provinsi'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['nama_kota_alamat'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['nama_kecamatan'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['nama_kelurahan'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['status_tinggal'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['email'] ?? '') . '</td>';
-                echo '<td class="text-format">' . htmlspecialchars($row['no_telepon_rumah'] ?? '') . '</td>';
-                echo '<td class="text-format">' . htmlspecialchars($row['no_telepon_siswa'] ?? '') . '</td>';
-                echo '<td class="text-format">' . htmlspecialchars($row['no_telepon_orang_tua'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['nama_ayah'] ?? '') . '</td>';
-                echo '<td class="text-format">' . htmlspecialchars($row['nik_ayah'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['nama_ibu'] ?? '') . '</td>';
-                echo '<td class="text-format">' . htmlspecialchars($row['nik_ibu'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['nama_wali'] ?? '') . '</td>';
-                echo '<td class="text-format">' . htmlspecialchars($row['nik_wali'] ?? '') . '</td>';
-                echo '<td>' . ($row['penerima_kps'] ? 'Ya' : 'Tidak') . '</td>';
-                echo '<td>' . ($row['punya_kip'] ? 'Ya' : 'Tidak') . '</td>';
-                echo '<td class="text-format">' . htmlspecialchars($row['no_kip'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['jenis_pendaftaran'] ?? '') . '</td>';
-                echo '<td>' . htmlspecialchars($row['jalur_diterima'] ?? '') . '</td>';
-                echo '<td class="text-format">' . htmlspecialchars(self::formatTanggalIndo($row['tanggal_masuk'])) . '</td>';
-                echo '</tr>';
+                $excelData[] = [
+                    $no++,
+                    (string)($row['nama_sekolah_tenant'] ?? ''),
+                    (string)($row['nama_lengkap'] ?? ''),
+                    (string)($row['nama_panggilan'] ?? ''),
+                    (string)($row['nisn'] ?? ''),
+                    (string)($row['nis'] ?? ''),
+                    (string)($row['nik'] ?? ''),
+                    (string)($row['no_kk'] ?? ''),
+                    (string)($row['jenis_kelamin'] ?? ''),
+                    (string)($row['tempat_lahir'] ?? ''),
+                    (string)self::formatTanggalIndo($row['tanggal_lahir']),
+                    (string)($row['agama'] ?? ''),
+                    (string)($row['ukuran_seragam_sekolah'] ?? ''),
+                    (string)($row['ukuran_seragam_olahraga'] ?? ''),
+                    (string)($row['sekolah_asal'] ?? ''),
+                    (string)($row['status'] ?? ''),
+                    (string)($row['nama_kelas'] ?? ''),
+                    (string)($row['nama_jurusan'] ?? ''),
+                    (string)($row['nama_jenjang'] ?? ''),
+                    (string)($row['tahun_ajaran'] ?? ''),
+                    (string)($row['tahun_angkatan'] ?? ''),
+                    (string)($row['nama_pendidikan'] ?? ''),
+                    (string)($row['alamat_kk'] ?? ''),
+                    (string)($row['alamat_domisili'] ?? ''),
+                    (string)($row['rt'] ?? ''),
+                    (string)($row['rw'] ?? ''),
+                    (string)($row['kode_pos'] ?? ''),
+                    (string)($row['nama_provinsi'] ?? ''),
+                    (string)($row['nama_kota_alamat'] ?? ''),
+                    (string)($row['nama_kecamatan'] ?? ''),
+                    (string)($row['nama_kelurahan'] ?? ''),
+                    (string)($row['status_tinggal'] ?? ''),
+                    (string)($row['email'] ?? ''),
+                    (string)($row['no_telepon_rumah'] ?? ''),
+                    (string)($row['no_telepon_siswa'] ?? ''),
+                    (string)($row['no_telepon_orang_tua'] ?? ''),
+                    (string)($row['nama_ayah'] ?? ''),
+                    (string)($row['nik_ayah'] ?? ''),
+                    (string)($row['nama_ibu'] ?? ''),
+                    (string)($row['nik_ibu'] ?? ''),
+                    (string)($row['nama_wali'] ?? ''),
+                    (string)($row['nik_wali'] ?? ''),
+                    ($row['penerima_kps'] ? 'Ya' : 'Tidak'),
+                    ($row['punya_kip'] ? 'Ya' : 'Tidak'),
+                    (string)($row['no_kip'] ?? ''),
+                    (string)($row['jenis_pendaftaran'] ?? ''),
+                    (string)($row['jalur_diterima'] ?? ''),
+                    (string)self::formatTanggalIndo($row['tanggal_masuk'])
+                ];
             }
             
-            echo '</tbody>';
-            echo '</table>';
-            echo '</body>';
-            echo '</html>';
+            $filename = "export_siswa_" . date('Ymd_His') . ".xlsx";
+            SimpleXLSXGen::fromArray($excelData)->downloadAs($filename);
             exit;
             
         } catch (\Throwable $e) {
