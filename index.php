@@ -152,6 +152,11 @@ try {
             $controller->downloadExcel();
             break;
 
+        case '/kesiswaan/ekskul':
+            $controller = new App\Controllers\EkskulController();
+            $controller->index();
+            break;
+
         case '/dashboard':
             // Panggil DashboardController
             $controller = new App\Controllers\DashboardController();
