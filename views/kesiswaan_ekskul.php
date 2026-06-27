@@ -8,19 +8,60 @@ $active_tab = $_GET['tab'] ?? ($show_all_tabs ? 'master' : 'anggota');
 $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sekolah', $user_roles, true) || in_array('kesiswaan', $user_roles, true);
 ?>
 <style>
-    /* Styling for Nav Pills to look modern and allow horizontal scroll */
+    /* Styling for Nav Pills with horizontal scroll */
+    .nav-scroll-wrapper {
+        position: relative;
+    }
+    /* Gradient fade indicators on left/right edges */
+    .nav-scroll-wrapper::before,
+    .nav-scroll-wrapper::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 8px;
+        width: 32px;
+        z-index: 5;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+    }
+    .nav-scroll-wrapper::before {
+        left: 0;
+        background: linear-gradient(to right, rgba(248, 249, 250, 0.95), transparent);
+    }
+    .nav-scroll-wrapper::after {
+        right: 0;
+        background: linear-gradient(to left, rgba(248, 249, 250, 0.95), transparent);
+    }
+    .nav-scroll-wrapper.at-start::before { opacity: 0; }
+    .nav-scroll-wrapper.at-end::after   { opacity: 0; }
+
     .custom-nav-pills {
+        display: flex;
         flex-wrap: nowrap;
         overflow-x: auto;
         overflow-y: hidden;
-        scrollbar-width: none; /* Firefox */
-        -ms-overflow-style: none; /* IE/Edge */
-        padding-bottom: 5px;
+        padding-bottom: 6px;
         gap: 0.5rem;
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+        /* Thin visible scrollbar */
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e1 transparent;
     }
     .custom-nav-pills::-webkit-scrollbar {
-        display: none; /* Chrome/Safari */
+        height: 4px;
     }
+    .custom-nav-pills::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .custom-nav-pills::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border-radius: 50rem;
+    }
+    .custom-nav-pills::-webkit-scrollbar-thumb:hover {
+        background-color: #94a3b8;
+    }
+
     .custom-nav-pills .nav-link {
         border-radius: 50rem;
         padding: 0.6rem 1.25rem;
@@ -30,10 +71,12 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
         border: 1px solid transparent;
         transition: all 0.2s ease;
         white-space: nowrap;
+        flex-shrink: 0;
     }
     .custom-nav-pills .nav-link:hover {
         background-color: #e2e8f0;
         color: #334155;
+        transform: translateY(-1px);
     }
     .custom-nav-pills .nav-link.active {
         background-color: #2563eb;
@@ -78,37 +121,39 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
 
     <!-- Nav Tabs -->
     <div class="mb-4">
-        <ul class="nav nav-pills custom-nav-pills" id="ekskulTab" role="tablist">
-            <?php if ($show_all_tabs): ?>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link <?= $active_tab === 'master' ? 'active' : '' ?>" id="master-tab" data-bs-toggle="tab" data-bs-target="#master" type="button" role="tab" aria-controls="master" aria-selected="<?= $active_tab === 'master' ? 'true' : 'false' ?>">
-                    <i class="bi bi-diagram-3 me-2"></i>Master Ekskul
-                </button>
-            </li>
-            <?php endif; ?>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link <?= $active_tab === 'anggota' ? 'active' : '' ?>" id="anggota-tab" data-bs-toggle="tab" data-bs-target="#anggota" type="button" role="tab" aria-controls="anggota" aria-selected="<?= $active_tab === 'anggota' ? 'true' : 'false' ?>">
-                    <i class="bi bi-people me-2"></i>Kelola Anggota
-                </button>
-            </li>
-            <?php if ($show_all_tabs): ?>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link <?= $active_tab === 'pembina' ? 'active' : '' ?>" id="pembina-tab" data-bs-toggle="tab" data-bs-target="#pembina" type="button" role="tab" aria-controls="pembina" aria-selected="<?= $active_tab === 'pembina' ? 'true' : 'false' ?>">
-                    <i class="bi bi-person-badge me-2"></i>Kelola Pembina
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link <?= $active_tab === 'jurnal' ? 'active' : '' ?>" id="jurnal-tab" data-bs-toggle="tab" data-bs-target="#jurnal" type="button" role="tab" aria-controls="jurnal" aria-selected="<?= $active_tab === 'jurnal' ? 'true' : 'false' ?>">
-                    <i class="bi bi-journal-text me-2"></i>Jurnal Kegiatan
-                </button>
-            </li>
-            <?php endif; ?>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link <?= $active_tab === 'nilai' ? 'active' : '' ?>" id="nilai-tab" data-bs-toggle="tab" data-bs-target="#nilai" type="button" role="tab" aria-controls="nilai" aria-selected="<?= $active_tab === 'nilai' ? 'true' : 'false' ?>">
-                    <i class="bi bi-check2-circle me-2"></i>Penilaian & Presensi
-                </button>
-            </li>
-        </ul>
+        <div class="nav-scroll-wrapper at-start" id="navScrollWrapper">
+            <ul class="nav nav-pills custom-nav-pills" id="ekskulTab" role="tablist">
+                <?php if ($show_all_tabs): ?>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link <?= $active_tab === 'master' ? 'active' : '' ?>" id="master-tab" data-bs-toggle="tab" data-bs-target="#master" type="button" role="tab" aria-controls="master" aria-selected="<?= $active_tab === 'master' ? 'true' : 'false' ?>">
+                        <i class="bi bi-diagram-3 me-2"></i>Master Ekskul
+                    </button>
+                </li>
+                <?php endif; ?>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link <?= $active_tab === 'anggota' ? 'active' : '' ?>" id="anggota-tab" data-bs-toggle="tab" data-bs-target="#anggota" type="button" role="tab" aria-controls="anggota" aria-selected="<?= $active_tab === 'anggota' ? 'true' : 'false' ?>">
+                        <i class="bi bi-people me-2"></i>Kelola Anggota
+                    </button>
+                </li>
+                <?php if ($show_all_tabs): ?>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link <?= $active_tab === 'pembina' ? 'active' : '' ?>" id="pembina-tab" data-bs-toggle="tab" data-bs-target="#pembina" type="button" role="tab" aria-controls="pembina" aria-selected="<?= $active_tab === 'pembina' ? 'true' : 'false' ?>">
+                        <i class="bi bi-person-badge me-2"></i>Kelola Pembina
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link <?= $active_tab === 'jurnal' ? 'active' : '' ?>" id="jurnal-tab" data-bs-toggle="tab" data-bs-target="#jurnal" type="button" role="tab" aria-controls="jurnal" aria-selected="<?= $active_tab === 'jurnal' ? 'true' : 'false' ?>">
+                        <i class="bi bi-journal-text me-2"></i>Jurnal Kegiatan
+                    </button>
+                </li>
+                <?php endif; ?>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link <?= $active_tab === 'nilai' ? 'active' : '' ?>" id="nilai-tab" data-bs-toggle="tab" data-bs-target="#nilai" type="button" role="tab" aria-controls="nilai" aria-selected="<?= $active_tab === 'nilai' ? 'true' : 'false' ?>">
+                        <i class="bi bi-check2-circle me-2"></i>Penilaian & Presensi
+                    </button>
+                </li>
+            </ul>
+        </div>
     </div>
 
     <!-- Tab Content -->
@@ -846,8 +891,31 @@ document.addEventListener('DOMContentLoaded', function () {
             window.history.replaceState({}, '', window.location.pathname + '?' + urlParams.toString());
         });
     });
+
+    // Horizontal scroll gradient indicator logic
+    const navUl      = document.getElementById('ekskulTab');
+    const wrapper    = document.getElementById('navScrollWrapper');
+
+    if (navUl && wrapper) {
+        function updateScrollIndicators() {
+            const { scrollLeft, scrollWidth, clientWidth } = navUl;
+            wrapper.classList.toggle('at-start', scrollLeft <= 4);
+            wrapper.classList.toggle('at-end',   scrollLeft + clientWidth >= scrollWidth - 4);
+        }
+
+        navUl.addEventListener('scroll', updateScrollIndicators, { passive: true });
+        // Run once on load to set initial state
+        updateScrollIndicators();
+
+        // Scroll the active tab into view smoothly
+        const activeBtn = navUl.querySelector('.nav-link.active');
+        if (activeBtn) {
+            activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+    }
 });
 </script>
+
 
 <!-- Modal Edit Pembina -->
 <div class="modal fade" id="editPembinaModal" tabindex="-1" aria-labelledby="editPembinaModalLabel" aria-hidden="true">
