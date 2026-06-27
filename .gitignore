@@ -1,5 +1,6 @@
 # Mengabaikan file konfigurasi database lokal & env
 .env
+app/Config/Database.php
 
 # Mengabaikan folder vendor dependensi backend & node
 /vendor/
