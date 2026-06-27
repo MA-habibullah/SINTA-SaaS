@@ -261,6 +261,7 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
                                 <tr>
                                     <th class="ps-4">Nama Lengkap</th>
                                     <th>Email (Username Login)</th>
+                                    <th>No. Telepon</th>
                                     <th>Status</th>
                                     <th class="text-center pe-4">Aksi</th>
                                 </tr>
@@ -268,13 +269,22 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
                             <tbody>
                                 <?php if(empty($pembina_list)): ?>
                                 <tr>
-                                    <td colspan="4" class="text-center py-4 text-muted">Belum ada data pembina.</td>
+                                    <td colspan="5" class="text-center py-4 text-muted">Belum ada data pembina.</td>
                                 </tr>
                                 <?php else: ?>
                                     <?php foreach($pembina_list as $pembina): ?>
                                     <tr>
                                         <td class="ps-4 fw-bold"><?= htmlspecialchars($pembina['nama_lengkap']) ?></td>
                                         <td><?= htmlspecialchars($pembina['email']) ?></td>
+                                        <td>
+                                            <?php if (!empty($pembina['no_telp'])): ?>
+                                                <a href="tel:<?= htmlspecialchars($pembina['no_telp']) ?>" class="text-decoration-none">
+                                                    <i class="bi bi-telephone-fill text-success me-1"></i><?= htmlspecialchars($pembina['no_telp']) ?>
+                                                </a>
+                                            <?php else: ?>
+                                                <span class="text-muted">—</span>
+                                            <?php endif; ?>
+                                        </td>
                                         <td>
                                             <form action="/SINTA-SaaS/api/v1/ekskul/pembina/toggle-status<?= $is_super_admin ? '?tenant_id=' . urlencode($selected_tenant) : '' ?>" method="POST" class="d-inline">
                                                 <input type="hidden" name="id" value="<?= htmlspecialchars($pembina['id']) ?>">
@@ -285,7 +295,7 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
                                             </form>
                                         </td>
                                         <td class="text-center pe-4">
-                                            <button class="btn btn-sm btn-outline-secondary" title="Edit" data-bs-toggle="modal" data-bs-target="#editPembinaModal" data-id="<?= htmlspecialchars($pembina['id']) ?>" data-nama="<?= htmlspecialchars($pembina['nama_lengkap']) ?>" data-email="<?= htmlspecialchars($pembina['email']) ?>" onclick="populateEditPembina(this)">
+                                            <button class="btn btn-sm btn-outline-secondary" title="Edit" data-bs-toggle="modal" data-bs-target="#editPembinaModal" data-id="<?= htmlspecialchars($pembina['id']) ?>" data-nama="<?= htmlspecialchars($pembina['nama_lengkap']) ?>" data-email="<?= htmlspecialchars($pembina['email']) ?>" data-notelp="<?= htmlspecialchars($pembina['no_telp'] ?? '') ?>" onclick="populateEditPembina(this)">
                                                 <i class="bi bi-pencil"></i> Edit
                                             </button>
                                         </td>
@@ -805,6 +815,13 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
                 <input type="email" name="email" class="form-control" required placeholder="budi.s@sekolah.id">
             </div>
             <div class="mb-3">
+                <label class="form-label fw-bold">No. Telepon <span class="text-muted fw-normal">(Opsional)</span></label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                    <input type="tel" name="no_telp" class="form-control" placeholder="Contoh: 08123456789" maxlength="20">
+                </div>
+            </div>
+            <div class="mb-3">
                 <label class="form-label fw-bold">Password Login</label>
                 <input type="password" name="password" class="form-control" required placeholder="Minimal 6 karakter" autocomplete="new-password" value="">
             </div>
@@ -875,8 +892,9 @@ function populateEditEkskul(button) {
 
 function populateEditPembina(button) {
     document.getElementById('edit_pembina_id_modal').value = button.getAttribute('data-id');
-    document.getElementById('edit_pembina_nama').value = button.getAttribute('data-nama');
-    document.getElementById('edit_pembina_email').value = button.getAttribute('data-email');
+    document.getElementById('edit_pembina_nama').value     = button.getAttribute('data-nama');
+    document.getElementById('edit_pembina_email').value    = button.getAttribute('data-email');
+    document.getElementById('edit_pembina_notelp').value   = button.getAttribute('data-notelp') || '';
     document.getElementById('edit_pembina_password').value = '';
 }
 
@@ -994,6 +1012,13 @@ document.addEventListener('DOMContentLoaded', function () {
             <div class="mb-3">
                 <label class="form-label fw-bold">Email (Untuk Login)</label>
                 <input type="email" name="email" id="edit_pembina_email" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold">No. Telepon <span class="text-muted fw-normal">(Opsional)</span></label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                    <input type="tel" name="no_telp" id="edit_pembina_notelp" class="form-control" placeholder="08123456789" maxlength="20">
+                </div>
             </div>
             <div class="mb-3">
                 <label class="form-label fw-bold">Password Login (Opsional)</label>

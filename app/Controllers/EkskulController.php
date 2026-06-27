@@ -91,7 +91,7 @@ class EkskulController extends BaseController {
 
         // Get Pembina List
         $stmtPembina = $db->prepare("
-            SELECT u.id, u.nama_lengkap, u.email, u.status 
+            SELECT u.id, u.nama_lengkap, u.email, u.no_telp, u.status 
             FROM users u
             JOIN user_roles ur ON u.id = ur.user_id
             JOIN roles r ON ur.role_id = r.id
@@ -368,8 +368,9 @@ class EkskulController extends BaseController {
         }
 
         $nama_lengkap = $_POST['nama_lengkap'] ?? '';
-        $email = $_POST['email'] ?? '';
-        $password = $_POST['password'] ?? '';
+        $email        = $_POST['email'] ?? '';
+        $password     = $_POST['password'] ?? '';
+        $no_telp      = trim($_POST['no_telp'] ?? '');
 
         if (empty($nama_lengkap) || empty($email) || empty($password)) {
             http_response_code(400);
@@ -404,8 +405,8 @@ class EkskulController extends BaseController {
             }
 
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            $stmtUser = $db->prepare("INSERT INTO users (id, tenant_id, role_id, nama_lengkap, email, password) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmtUser->execute([$user_id, $tenant_id, $role_id, $nama_lengkap, $email, $hashed_password]);
+            $stmtUser = $db->prepare("INSERT INTO users (id, tenant_id, role_id, nama_lengkap, email, no_telp, password) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmtUser->execute([$user_id, $tenant_id, $role_id, $nama_lengkap, $email, $no_telp ?: null, $hashed_password]);
 
             if ($role_id) {
                 $stmtUserRole = $db->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
@@ -511,8 +512,9 @@ class EkskulController extends BaseController {
         }
 
         $nama_lengkap = $_POST['nama_lengkap'] ?? '';
-        $email = $_POST['email'] ?? '';
-        $password = $_POST['password'] ?? '';
+        $email        = $_POST['email'] ?? '';
+        $password     = $_POST['password'] ?? '';
+        $no_telp      = trim($_POST['no_telp'] ?? '');
 
         if (empty($nama_lengkap) || empty($email)) {
             http_response_code(400);
@@ -545,11 +547,11 @@ class EkskulController extends BaseController {
         try {
             if (!empty($password)) {
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                $stmt = $db->prepare("UPDATE users SET nama_lengkap = ?, email = ?, password = ? WHERE id = ?");
-                $stmt->execute([$nama_lengkap, $email, $hashed_password, $id]);
+                $stmt = $db->prepare("UPDATE users SET nama_lengkap = ?, email = ?, no_telp = ?, password = ? WHERE id = ?");
+                $stmt->execute([$nama_lengkap, $email, $no_telp ?: null, $hashed_password, $id]);
             } else {
-                $stmt = $db->prepare("UPDATE users SET nama_lengkap = ?, email = ? WHERE id = ?");
-                $stmt->execute([$nama_lengkap, $email, $id]);
+                $stmt = $db->prepare("UPDATE users SET nama_lengkap = ?, email = ?, no_telp = ? WHERE id = ?");
+                $stmt->execute([$nama_lengkap, $email, $no_telp ?: null, $id]);
             }
 
             $successMsg = urlencode('Data Pembina berhasil diperbarui.');
