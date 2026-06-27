@@ -173,9 +173,11 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
                             </tbody>
                         </table>
                     </div>
-            </div>
-        </div>
+                </div><!-- /.card-body -->
+            </div><!-- /.card -->
+        </div><!-- /.tab-pane -->
         <?php endif; ?>
+
 
         <!-- Tab: Kelola Pembina -->
         <?php if ($show_all_tabs): ?>
