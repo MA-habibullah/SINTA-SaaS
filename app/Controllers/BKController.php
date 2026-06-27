@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Core\SessionManager;
+use App\Core\FileCompressor;
 
 /**
  * BimbinganKonselingController (BKController)
@@ -1503,12 +1504,19 @@ class BKController extends BaseController {
                         throw new \Exception("Ukuran berkas {$formKey} melebihi batas 1 MB.");
                     }
 
-                    $newFileName = bin2hex(random_bytes(20)) . '.' . $extension;
-                    $destPath    = $uploadDir . $newFileName;
-
-                    if (!move_uploaded_file($tmpName, $destPath)) {
-                        throw new \Exception("Gagal mengunggah berkas {$formKey}.");
+                    // Kompres dan simpan menggunakan FileCompressor
+                    try {
+                        if ($extension === 'pdf') {
+                            $result = FileCompressor::processPdf($tmpName, $uploadDir, 512 * 1024);
+                        } else {
+                            $result = FileCompressor::compressImage($tmpName, $uploadDir, 1200, 80);
+                        }
+                    } catch (\RuntimeException $e) {
+                        throw new \Exception("Berkas {$formKey}: " . $e->getMessage());
                     }
+
+                    $newFileName = $result['filename'];
+                    $destPath    = $result['path'];
 
                     $newUploadedPaths[] = $destPath;
 
@@ -1720,12 +1728,19 @@ class BKController extends BaseController {
                     throw new \Exception("Ukuran berkas {$formKey} melebihi batas 1 MB.");
                 }
 
-                $newFileName = bin2hex(random_bytes(20)) . '.' . $extension;
-                $destPath    = $uploadDir . $newFileName;
-
-                if (!move_uploaded_file($tmpName, $destPath)) {
-                    throw new \Exception("Gagal mengunggah berkas {$formKey}.");
+                // Kompres dan simpan menggunakan FileCompressor
+                try {
+                    if ($extension === 'pdf') {
+                        $result = FileCompressor::processPdf($tmpName, $uploadDir, 512 * 1024);
+                    } else {
+                        $result = FileCompressor::compressImage($tmpName, $uploadDir, 1200, 80);
+                    }
+                } catch (\RuntimeException $e) {
+                    throw new \Exception("Berkas {$formKey}: " . $e->getMessage());
                 }
+
+                $newFileName = $result['filename'];
+                $destPath    = $result['path'];
 
                 $dbVal = $basePath . $newFileName;
             }
@@ -2710,30 +2725,27 @@ class BKController extends BaseController {
             $fotoBuktiPath = null;
             if (isset($_FILES['foto_bukti']) && $_FILES['foto_bukti']['error'] === UPLOAD_ERR_OK) {
                 $fileTmpPath = $_FILES['foto_bukti']['tmp_name'];
-                $fileName = $_FILES['foto_bukti']['name'];
-                $fileSize = $_FILES['foto_bukti']['size'];
-                
-                $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+                $fileName    = $_FILES['foto_bukti']['name'];
+                $fileSize    = $_FILES['foto_bukti']['size'];
+
+                $fileExtension     = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
                 $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
-                
+
                 if (!in_array($fileExtension, $allowedExtensions, true)) {
                     $this->jsonResponse(['error' => 'Format foto tidak didukung. Gunakan JPG, PNG, atau WEBP.'], 400);
                 }
-                
-                if ($fileSize > 2 * 1024 * 1024) {
-                    $this->jsonResponse(['error' => 'Ukuran foto bukti maksimal adalah 2MB.'], 400);
-                }
-                
+
                 $uploadDir = __DIR__ . '/../../storage/pelanggaran/';
                 if (!is_dir($uploadDir)) {
                     mkdir($uploadDir, 0755, true);
                 }
-                
-                $newFileName = md5(time() . $fileName) . '.' . $fileExtension;
-                $destPath = $uploadDir . $newFileName;
-                
-                if (move_uploaded_file($fileTmpPath, $destPath)) {
+
+                try {
+                    $result      = FileCompressor::compressImage($fileTmpPath, $uploadDir, 1200, 80);
+                    $newFileName = $result['filename'];
                     $fotoBuktiPath = 'storage/pelanggaran/' . $newFileName;
+                } catch (\RuntimeException $e) {
+                    $this->jsonResponse(['error' => 'Gagal memproses foto: ' . $e->getMessage()], 400);
                 }
             }
 
@@ -2908,16 +2920,17 @@ class BKController extends BaseController {
                 if (!is_dir($uploadDir)) {
                     mkdir($uploadDir, 0755, true);
                 }
-                
-                $newFileName = md5(time() . $fileName) . '.' . $fileExtension;
-                $destPath = $uploadDir . $newFileName;
-                
-                if (move_uploaded_file($fileTmpPath, $destPath)) {
-                    // Delete old photo if it exists
+
+                try {
+                    $result      = FileCompressor::compressImage($fileTmpPath, $uploadDir, 1200, 80);
+                    $newFileName = $result['filename'];
+                    // Hapus foto lama
                     if ($existing['foto_bukti'] && file_exists(__DIR__ . '/../../' . $existing['foto_bukti'])) {
                         @unlink(__DIR__ . '/../../' . $existing['foto_bukti']);
                     }
                     $fotoBuktiPath = 'storage/pelanggaran/' . $newFileName;
+                } catch (\RuntimeException $e) {
+                    $this->jsonResponse(['error' => 'Gagal memproses foto: ' . $e->getMessage()], 400);
                 }
             }
 

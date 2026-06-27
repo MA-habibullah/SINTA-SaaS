@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Config\Database;
 use App\Core\SessionManager;
+use App\Core\FileCompressor;
 use App\Helpers\ActivityLogger;
 use PDO;
 
@@ -218,10 +219,17 @@ class SekolahController extends BaseController {
                         @unlink($oldAbsLogo);
                     }
                 }
-                $logoExt = strtolower(pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION));
-                $newLogoName = 'logo_' . bin2hex(random_bytes(10)) . '.' . $logoExt;
-                move_uploaded_file($_FILES['logo']['tmp_name'], $uploadBaseDir . $newLogoName);
-                $logoPath = $relativeDir . $newLogoName;
+                try {
+                    $result      = FileCompressor::compressImage($_FILES['logo']['tmp_name'], $uploadBaseDir, 600, 85);
+                    $newLogoName = $result['filename']; // .webp
+                    $logoPath    = $relativeDir . $newLogoName;
+                } catch (\RuntimeException $e) {
+                    // Fallback: simpan asli jika kompresi gagal
+                    $logoExt     = strtolower(pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION));
+                    $newLogoName = 'logo_' . bin2hex(random_bytes(10)) . '.' . $logoExt;
+                    move_uploaded_file($_FILES['logo']['tmp_name'], $uploadBaseDir . $newLogoName);
+                    $logoPath = $relativeDir . $newLogoName;
+                }
             }
 
             // 4. Proses Upload File Sertifikat Akreditasi
@@ -234,9 +242,23 @@ class SekolahController extends BaseController {
                     }
                 }
                 $sertifExt = strtolower(pathinfo($_FILES['sertifikat_akreditasi']['name'], PATHINFO_EXTENSION));
-                $newSertifName = 'akreditasi_' . bin2hex(random_bytes(10)) . '.' . $sertifExt;
-                move_uploaded_file($_FILES['sertifikat_akreditasi']['tmp_name'], $uploadBaseDir . $newSertifName);
-                $sertifPath = $relativeDir . $newSertifName;
+                try {
+                    if ($sertifExt === 'pdf') {
+                        // PDF: validasi + optimasi ringan (batas 2MB untuk dokumen resmi)
+                        $result        = FileCompressor::processPdf($_FILES['sertifikat_akreditasi']['tmp_name'], $uploadBaseDir, 2 * 1024 * 1024);
+                        $newSertifName = $result['filename'];
+                    } else {
+                        // Gambar sertifikat → WebP
+                        $result        = FileCompressor::compressImage($_FILES['sertifikat_akreditasi']['tmp_name'], $uploadBaseDir, 1600, 80);
+                        $newSertifName = $result['filename'];
+                    }
+                    $sertifPath = $relativeDir . $newSertifName;
+                } catch (\RuntimeException $e) {
+                    // Fallback: simpan asli jika kompresi gagal
+                    $newSertifName = 'akreditasi_' . bin2hex(random_bytes(10)) . '.' . $sertifExt;
+                    move_uploaded_file($_FILES['sertifikat_akreditasi']['tmp_name'], $uploadBaseDir . $newSertifName);
+                    $sertifPath = $relativeDir . $newSertifName;
+                }
             }
 
             // 5. Jalankan Kueri UPDATE dengan Prepared Statement PDO

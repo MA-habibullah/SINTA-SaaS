@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Models\Siswa;
 use App\Core\SessionManager;
+use App\Core\FileCompressor;
 
 class SiswaController extends BaseController {
 
@@ -299,13 +300,22 @@ class SiswaController extends BaseController {
                 mkdir($baseDir, 0755, true);
             }
 
-            // Generate cryptographically-safe hash filename (no original name on disk)
-            $newFileName = bin2hex(random_bytes(20)) . '.' . $fileExtension;
-            $destPath    = $baseDir . $newFileName;
-
-            if (!move_uploaded_file($fileTmpPath, $destPath)) {
-                throw new \Exception('Gagal mengunggah berkas ' . str_replace('_', ' ', $key) . '.');
+            // Kompres dan simpan menggunakan FileCompressor
+            try {
+                if (in_array($fileExtension, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+                    // Gambar: konversi ke WebP dengan resize
+                    $maxWidth = ($key === 'foto_profil') ? 800 : 1200;
+                    $result   = FileCompressor::compressImage($fileTmpPath, $baseDir, $maxWidth, 75);
+                } else {
+                    // PDF: validasi ketat + optimasi ringan (batas 500KB)
+                    $result = FileCompressor::processPdf($fileTmpPath, $baseDir, 500 * 1024);
+                }
+            } catch (\RuntimeException $e) {
+                throw new \Exception('Berkas ' . str_replace('_', ' ', $key) . ': ' . $e->getMessage());
             }
+
+            $newFileName = $result['filename'];
+            $destPath    = $result['path'];
 
             // Track new file for rollback cleanup
             $uploadedPaths[] = $destPath;
