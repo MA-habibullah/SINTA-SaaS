@@ -144,16 +144,37 @@ class EkskulController extends BaseController {
             $selected_semester = 'Ganjil';
         }
         $selected_kelas_id = $_GET['kelas_id'] ?? '';
-        $current_members = [];
-        $available_students = [];
 
         // Get all active classes for dropdown filter
         $stmtKelas = $db->prepare("SELECT id, nama_kelas FROM kelas WHERE tenant_id = ? AND is_active = 1 AND deleted_at IS NULL ORDER BY nama_kelas ASC");
         $stmtKelas->execute([$tenant_id]);
         $kelas_list = $stmtKelas->fetchAll(PDO::FETCH_ASSOC);
 
+        // Pagination for current members
+        $per_page      = 30;
+        $page_anggota  = max(1, (int)($_GET['page_anggota'] ?? 1));
+        $offset_anggota = ($page_anggota - 1) * $per_page;
+
+        // Pagination for available students
+        $page_available  = max(1, (int)($_GET['page_available'] ?? 1));
+        $offset_available = ($page_available - 1) * $per_page;
+
+        $current_members = [];
+        $available_students = [];
+        $total_members   = 0;
+        $total_available = 0;
+
         if (!empty($selected_ekskul_id)) {
-            // Get current members of this ekskul for the active tahun_ajaran and semester
+            // Count total current members
+            $stmtCountMembers = $db->prepare("
+                SELECT COUNT(*) FROM anggota_ekskul ae
+                JOIN siswa s ON ae.siswa_id = s.id
+                WHERE ae.ekskul_id = ? AND ae.tahun_ajaran_id = ? AND ae.semester = ? AND ae.tenant_id = ? AND s.deleted_at IS NULL
+            ");
+            $stmtCountMembers->execute([$selected_ekskul_id, $active_ta_id, $selected_semester, $tenant_id]);
+            $total_members = (int)$stmtCountMembers->fetchColumn();
+
+            // Get paginated current members
             $stmtMembers = $db->prepare("
                 SELECT ae.id as membership_id, s.id as siswa_id, s.nama_lengkap, s.nisn, k.nama_kelas
                 FROM anggota_ekskul ae
@@ -161,42 +182,44 @@ class EkskulController extends BaseController {
                 LEFT JOIN kelas k ON s.id_kelas = k.id
                 WHERE ae.ekskul_id = ? AND ae.tahun_ajaran_id = ? AND ae.semester = ? AND ae.tenant_id = ? AND s.deleted_at IS NULL
                 ORDER BY s.nama_lengkap ASC
+                LIMIT ? OFFSET ?
             ");
-            $stmtMembers->execute([$selected_ekskul_id, $active_ta_id, $selected_semester, $tenant_id]);
+            $stmtMembers->execute([$selected_ekskul_id, $active_ta_id, $selected_semester, $tenant_id, $per_page, $offset_anggota]);
             $current_members = $stmtMembers->fetchAll(PDO::FETCH_ASSOC);
 
-            $queryAvailable = "
-                SELECT s.id as siswa_id, s.nama_lengkap, s.nisn, k.nama_kelas
-                FROM siswa s
-                LEFT JOIN kelas k ON s.id_kelas = k.id
-                WHERE s.tenant_id = :tenant_id 
-                  AND s.status = 'Aktif' 
-                  AND s.deleted_at IS NULL
-                  AND s.id NOT IN (
-                      SELECT siswa_id 
-                      FROM anggota_ekskul 
-                      WHERE ekskul_id = :ekskul_id AND tahun_ajaran_id = :ta_id AND semester = :semester AND tenant_id = :sub_tenant_id
-                  )
-            ";
-            
+            // Build available students query with count
+            $whereAvailable = "s.tenant_id = :tenant_id AND s.status = 'Aktif' AND s.deleted_at IS NULL
+                AND s.id NOT IN (SELECT siswa_id FROM anggota_ekskul WHERE ekskul_id = :ekskul_id AND tahun_ajaran_id = :ta_id AND semester = :semester AND tenant_id = :sub_tenant_id)";
             $paramsAvailable = [
-                'tenant_id' => $tenant_id,
+                'tenant_id'     => $tenant_id,
                 'sub_tenant_id' => $tenant_id,
-                'ekskul_id' => $selected_ekskul_id,
-                'ta_id' => $active_ta_id,
-                'semester' => $selected_semester
+                'ekskul_id'     => $selected_ekskul_id,
+                'ta_id'         => $active_ta_id,
+                'semester'      => $selected_semester
             ];
 
             if (!empty($selected_kelas_id)) {
-                $queryAvailable .= " AND s.id_kelas = :kelas_id";
+                $whereAvailable .= ' AND s.id_kelas = :kelas_id';
                 $paramsAvailable['kelas_id'] = $selected_kelas_id;
             }
 
-            $queryAvailable .= " ORDER BY s.nama_lengkap ASC";
-            $stmtAvailable = $db->prepare($queryAvailable);
-            $stmtAvailable->execute($paramsAvailable);
+            $stmtCountAvail = $db->prepare("SELECT COUNT(*) FROM siswa s LEFT JOIN kelas k ON s.id_kelas = k.id WHERE $whereAvailable");
+            $stmtCountAvail->execute($paramsAvailable);
+            $total_available = (int)$stmtCountAvail->fetchColumn();
+
+            $stmtAvailable = $db->prepare("SELECT s.id as siswa_id, s.nama_lengkap, s.nisn, k.nama_kelas FROM siswa s LEFT JOIN kelas k ON s.id_kelas = k.id WHERE $whereAvailable ORDER BY s.nama_lengkap ASC LIMIT :limit OFFSET :offset_val");
+            // PDO named params workaround for LIMIT/OFFSET
+            foreach ($paramsAvailable as $k => $v) {
+                $stmtAvailable->bindValue(":$k", $v);
+            }
+            $stmtAvailable->bindValue(':limit', $per_page, PDO::PARAM_INT);
+            $stmtAvailable->bindValue(':offset_val', $offset_available, PDO::PARAM_INT);
+            $stmtAvailable->execute();
             $available_students = $stmtAvailable->fetchAll(PDO::FETCH_ASSOC);
         }
+
+        $total_pages_anggota   = $total_members   > 0 ? (int)ceil($total_members   / $per_page) : 1;
+        $total_pages_available = $total_available > 0 ? (int)ceil($total_available / $per_page) : 1;
 
         $nilai_list = [];
         $kunci_anggota = false;
@@ -262,9 +285,18 @@ class EkskulController extends BaseController {
             'available_students' => $available_students,
             'nilai_list' => $nilai_list,
             'kunci_anggota' => $kunci_anggota,
-            'kunci_nilai' => $kunci_nilai
+            'kunci_nilai' => $kunci_nilai,
+            // Pagination
+            'page_anggota' => $page_anggota,
+            'page_available' => $page_available,
+            'per_page' => $per_page,
+            'total_members' => $total_members,
+            'total_available' => $total_available,
+            'total_pages_anggota' => $total_pages_anggota,
+            'total_pages_available' => $total_pages_available,
         ]);
     }
+
 
     /**
      * Menambahkan Ekskul Baru
@@ -304,7 +336,8 @@ class EkskulController extends BaseController {
         $stmt = $db->prepare("INSERT INTO master_ekskul (id, tenant_id, nama_ekskul, kategori, pembina_id) VALUES (UUID(), ?, ?, ?, ?)");
         
         if ($stmt->execute([$tenant_id, $nama_ekskul, $kategori, $pembina_id])) {
-            header("Location: /SINTA-SaaS/kesiswaan/ekskul" . (($_SESSION['role_name'] ?? '') === 'super_admin' ? "?tenant_id={$tenant_id}" : ""));
+            $successMsg = urlencode('Ekskul "' . $nama_ekskul . '" berhasil ditambahkan.');
+            header("Location: /SINTA-SaaS/kesiswaan/ekskul?tab=master&success={$successMsg}" . (($_SESSION['role_name'] ?? '') === 'super_admin' ? "&tenant_id={$tenant_id}" : ""));
             exit;
         } else {
             http_response_code(500);
@@ -380,7 +413,8 @@ class EkskulController extends BaseController {
             }
             
             $db->commit();
-            header("Location: /SINTA-SaaS/kesiswaan/ekskul" . (($_SESSION['role_name'] ?? '') === 'super_admin' ? "?tenant_id={$tenant_id}" : ""));
+            $successMsg = urlencode('Guru Pembina "' . $nama_lengkap . '" berhasil ditambahkan.');
+            header("Location: /SINTA-SaaS/kesiswaan/ekskul?tab=pembina&success={$successMsg}" . (($_SESSION['role_name'] ?? '') === 'super_admin' ? "&tenant_id={$tenant_id}" : ""));
             exit;
         } catch (\Exception $e) {
             $db->rollBack();
@@ -441,7 +475,8 @@ class EkskulController extends BaseController {
         $stmt = $db->prepare("UPDATE master_ekskul SET nama_ekskul = ?, kategori = ?, pembina_id = ? WHERE id = ? AND deleted_at IS NULL");
         
         if ($stmt->execute([$nama_ekskul, $kategori, $pembina_id, $id])) {
-            header("Location: /SINTA-SaaS/kesiswaan/ekskul" . (($_SESSION['role_name'] ?? '') === 'super_admin' ? "?tenant_id={$tenant_id}" : ""));
+            $successMsg = urlencode('Data Ekskul berhasil diperbarui.');
+            header("Location: /SINTA-SaaS/kesiswaan/ekskul?tab=master&success={$successMsg}" . (($_SESSION['role_name'] ?? '') === 'super_admin' ? "&tenant_id={$tenant_id}" : ""));
             exit;
         } else {
             http_response_code(500);
@@ -517,7 +552,8 @@ class EkskulController extends BaseController {
                 $stmt->execute([$nama_lengkap, $email, $id]);
             }
 
-            header("Location: /SINTA-SaaS/kesiswaan/ekskul" . (($_SESSION['role_name'] ?? '') === 'super_admin' ? "?tenant_id={$tenant_id}" : ""));
+            $successMsg = urlencode('Data Pembina berhasil diperbarui.');
+            header("Location: /SINTA-SaaS/kesiswaan/ekskul?tab=pembina&success={$successMsg}" . (($_SESSION['role_name'] ?? '') === 'super_admin' ? "&tenant_id={$tenant_id}" : ""));
             exit;
         } catch (\Exception $e) {
             http_response_code(500);
@@ -706,7 +742,9 @@ class EkskulController extends BaseController {
             }
 
             $db->commit();
-            header("Location: /SINTA-SaaS/kesiswaan/ekskul?tab=anggota&ekskul_id={$ekskul_id}&semester={$semester}" . (($_SESSION['role_name'] ?? '') === 'super_admin' ? "&tenant_id={$tenant_id}" : ""));
+            $count = count($siswa_ids);
+            $successMsg = urlencode("{$count} siswa berhasil ditambahkan sebagai anggota.");
+            header("Location: /SINTA-SaaS/kesiswaan/ekskul?tab=anggota&ekskul_id={$ekskul_id}&semester={$semester}&success={$successMsg}" . (($_SESSION['role_name'] ?? '') === 'super_admin' ? "&tenant_id={$tenant_id}" : ""));
             exit;
         } catch (\Exception $e) {
             $db->rollBack();
@@ -783,7 +821,8 @@ class EkskulController extends BaseController {
 
         $stmt = $db->prepare("DELETE FROM anggota_ekskul WHERE id = ?");
         if ($stmt->execute([$membership_id])) {
-            header("Location: /SINTA-SaaS/kesiswaan/ekskul?tab=anggota&ekskul_id={$ekskul_id}&semester={$semester}" . (($_SESSION['role_name'] ?? '') === 'super_admin' ? "&tenant_id={$tenant_id}" : ""));
+            $successMsg = urlencode('Siswa berhasil dikeluarkan dari ekstrakurikuler.');
+            header("Location: /SINTA-SaaS/kesiswaan/ekskul?tab=anggota&ekskul_id={$ekskul_id}&semester={$semester}&success={$successMsg}" . (($_SESSION['role_name'] ?? '') === 'super_admin' ? "&tenant_id={$tenant_id}" : ""));
             exit;
         } else {
             http_response_code(500);
@@ -895,7 +934,8 @@ class EkskulController extends BaseController {
             }
 
             $db->commit();
-            header("Location: /SINTA-SaaS/kesiswaan/ekskul?tab=nilai&ekskul_id={$ekskul_id}&semester={$semester}" . (($_SESSION['role_name'] ?? '') === 'super_admin' ? "&tenant_id={$tenant_id}" : ""));
+            $successMsg = urlencode('Penilaian & Presensi berhasil disimpan.');
+            header("Location: /SINTA-SaaS/kesiswaan/ekskul?tab=nilai&ekskul_id={$ekskul_id}&semester={$semester}&success={$successMsg}" . (($_SESSION['role_name'] ?? '') === 'super_admin' ? "&tenant_id={$tenant_id}" : ""));
             exit;
         } catch (\Exception $e) {
             $db->rollBack();
@@ -954,7 +994,9 @@ class EkskulController extends BaseController {
             'kunci' => $new_state
         ]);
 
-        header("Location: /SINTA-SaaS/kesiswaan/ekskul?tab=anggota&ekskul_id={$ekskul_id}&semester={$semester}" . ($role === 'super_admin' ? "&tenant_id={$tenant_id}" : ""));
+        $lockLabel = $new_state ? 'Keanggotaan berhasil dikunci.' : 'Kunci keanggotaan berhasil dibuka.';
+        $successMsg = urlencode($lockLabel);
+        header("Location: /SINTA-SaaS/kesiswaan/ekskul?tab=anggota&ekskul_id={$ekskul_id}&semester={$semester}&success={$successMsg}" . ($role === 'super_admin' ? "&tenant_id={$tenant_id}" : ""));
         exit;
     }
 
@@ -1007,7 +1049,9 @@ class EkskulController extends BaseController {
             'kunci' => $new_state
         ]);
 
-        header("Location: /SINTA-SaaS/kesiswaan/ekskul?tab=nilai&ekskul_id={$ekskul_id}&semester={$semester}" . ($role === 'super_admin' ? "&tenant_id={$tenant_id}" : ""));
+        $lockLabel = $new_state ? 'Penilaian berhasil dikunci.' : 'Kunci penilaian berhasil dibuka.';
+        $successMsg = urlencode($lockLabel);
+        header("Location: /SINTA-SaaS/kesiswaan/ekskul?tab=nilai&ekskul_id={$ekskul_id}&semester={$semester}&success={$successMsg}" . ($role === 'super_admin' ? "&tenant_id={$tenant_id}" : ""));
         exit;
     }
 
@@ -1350,9 +1394,9 @@ class EkskulController extends BaseController {
 
             $db->commit();
 
-            $_SESSION['import_success_msg'] = "Berhasil mengimpor penilaian: $successCount siswa diperbarui." . ($skippedCount > 0 ? " ($skippedCount baris dilewati karena siswa tidak terdaftar sebagai anggota ekskul ini)." : "");
-            
-            header("Location: /SINTA-SaaS/kesiswaan/ekskul?tab=nilai&ekskul_id={$ekskul_id}&semester={$semester}" . ($role === 'super_admin' ? "&tenant_id={$tenant_id}" : ""));
+            $importMsg = "Berhasil mengimpor penilaian: $successCount siswa diperbarui." . ($skippedCount > 0 ? " ($skippedCount baris dilewati karena siswa tidak terdaftar sebagai anggota ekskul ini)." : "");
+            $successMsg = urlencode($importMsg);
+            header("Location: /SINTA-SaaS/kesiswaan/ekskul?tab=nilai&ekskul_id={$ekskul_id}&semester={$semester}&success={$successMsg}" . ($role === 'super_admin' ? "&tenant_id={$tenant_id}" : ""));
             exit;
 
         } catch (\Exception $e) {
@@ -1361,5 +1405,95 @@ class EkskulController extends BaseController {
             echo json_encode(['status' => 'error', 'message' => 'Gagal memproses data Excel: ' . $e->getMessage()]);
             exit;
         }
+    }
+
+    /**
+     * Ekspor Rekap Daftar Anggota per Ekskul ke Excel
+     */
+    public function exportMembers() {
+        $tenant_id = $_SESSION['tenant_id'];
+        $role = $_SESSION['role_name'] ?? '';
+        if ($role === 'super_admin' && isset($_GET['tenant_id'])) {
+            $tenant_id = $_GET['tenant_id'];
+        }
+
+        $ekskul_id        = $_GET['ekskul_id'] ?? '';
+        $semester         = $_GET['semester']  ?? 'Ganjil';
+        $tahun_ajaran_id  = $_GET['tahun_ajaran_id'] ?? '';
+
+        if (empty($ekskul_id) || empty($tahun_ajaran_id)) {
+            die('Parameter ekskul_id dan tahun_ajaran_id wajib diisi.');
+        }
+
+        $db = \App\Config\Database::getConnection();
+
+        $roles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
+        $isAdminOrKesiswaan = in_array('super_admin', $roles, true) || in_array('operator_sekolah', $roles, true) || in_array('kesiswaan', $roles, true);
+
+        if (!$isAdminOrKesiswaan) {
+            $stmtCheckPembina = $db->prepare('SELECT COUNT(*) FROM master_ekskul WHERE id = ? AND pembina_id = ? AND tenant_id = ? AND deleted_at IS NULL');
+            $stmtCheckPembina->execute([$ekskul_id, $_SESSION['user_id'], $tenant_id]);
+            if ((int)$stmtCheckPembina->fetchColumn() === 0) {
+                die('Anda tidak memiliki hak akses untuk mengunduh rekap anggota ekstrakurikuler ini.');
+            }
+        }
+
+        // Get Ekskul info
+        $stmtE = $db->prepare('SELECT e.nama_ekskul, u.nama_lengkap as nama_pembina FROM master_ekskul e LEFT JOIN users u ON e.pembina_id = u.id WHERE e.id = ?');
+        $stmtE->execute([$ekskul_id]);
+        $ekskulInfo = $stmtE->fetch(PDO::FETCH_ASSOC);
+        $ekskul_nama  = $ekskulInfo['nama_ekskul']   ?? 'Ekskul';
+        $nama_pembina = $ekskulInfo['nama_pembina']  ?? '-';
+
+        // Get TA name
+        $stmtTa = $db->prepare('SELECT tahun_ajaran FROM tahun_ajaran WHERE id = ?');
+        $stmtTa->execute([$tahun_ajaran_id]);
+        $ta_name = $stmtTa->fetchColumn() ?: 'TA';
+
+        // Get school name
+        $stmtSchool = $db->prepare('SELECT nama_sekolah FROM tenants WHERE id = ?');
+        $stmtSchool->execute([$tenant_id]);
+        $nama_sekolah = $stmtSchool->fetchColumn() ?: '-';
+
+        // Fetch members
+        $stmtMembers = $db->prepare('
+            SELECT s.nisn, s.nama_lengkap, k.nama_kelas, s.jenis_kelamin
+            FROM anggota_ekskul ae
+            JOIN siswa s ON ae.siswa_id = s.id
+            LEFT JOIN kelas k ON s.id_kelas = k.id
+            WHERE ae.ekskul_id = ? AND ae.tahun_ajaran_id = ? AND ae.semester = ? AND ae.tenant_id = ? AND s.deleted_at IS NULL
+            ORDER BY k.nama_kelas ASC, s.nama_lengkap ASC
+        ');
+        $stmtMembers->execute([$ekskul_id, $tahun_ajaran_id, $semester, $tenant_id]);
+        $members = $stmtMembers->fetchAll(PDO::FETCH_ASSOC);
+
+        // Build Excel data
+        $excelData = [];
+        $excelData[] = ['REKAP DAFTAR ANGGOTA EKSTRAKURIKULER'];
+        $excelData[] = ['Sekolah:', $nama_sekolah];
+        $excelData[] = ['Nama Ekskul:', $ekskul_nama];
+        $excelData[] = ['Guru Pembina:', $nama_pembina];
+        $excelData[] = ['Semester:', $semester];
+        $excelData[] = ['Tahun Ajaran:', $ta_name];
+        $excelData[] = ['Total Anggota:', count($members) . ' siswa'];
+        $excelData[] = []; // separator
+        $excelData[] = ['No', 'NISN', 'Nama Lengkap', 'Kelas', 'Jenis Kelamin'];
+
+        $no = 1;
+        foreach ($members as $row) {
+            $excelData[] = [
+                $no++,
+                (string)$row['nisn'],
+                (string)$row['nama_lengkap'],
+                (string)($row['nama_kelas'] ?? 'Tanpa Kelas'),
+                (string)($row['jenis_kelamin'] ?? '-'),
+            ];
+        }
+
+        $cleanName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $ekskul_nama);
+        $filename  = "rekap_anggota_{$cleanName}_{$semester}_{$ta_name}.xlsx";
+
+        \Shuchkin\SimpleXLSXGen::fromArray($excelData)->downloadAs($filename);
+        exit;
     }
 }

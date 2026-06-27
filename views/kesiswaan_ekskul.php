@@ -86,13 +86,33 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
 </style>
 
 <div class="container-fluid py-4">
-    <?php if (isset($_SESSION['import_success_msg'])): ?>
-        <div class="alert alert-success alert-dismissible fade show rounded-3 shadow-sm border-0 mb-4" style="border-left: 4px solid #198754 !important;" role="alert">
-            <i class="bi bi-check-circle-fill me-2 text-success"></i>
-            <?= htmlspecialchars($_SESSION['import_success_msg']); ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <?php
+    // Flash: import msg from session (legacy) or GET success/error
+    $flash_success = null;
+    $flash_error   = null;
+    if (!empty($_SESSION['import_success_msg'])) {
+        $flash_success = $_SESSION['import_success_msg'];
+        unset($_SESSION['import_success_msg']);
+    } elseif (isset($_GET['success']) && $_GET['success'] !== '') {
+        $flash_success = htmlspecialchars($_GET['success']);
+    }
+    if (isset($_GET['error']) && $_GET['error'] !== '') {
+        $flash_error = htmlspecialchars($_GET['error']);
+    }
+    ?>
+    <?php if ($flash_success): ?>
+        <div class="alert alert-success alert-dismissible fade show rounded-3 shadow-sm border-0 mb-4 d-flex align-items-center gap-2" role="alert">
+            <i class="bi bi-check-circle-fill text-success fs-5"></i>
+            <span><?= $flash_success ?></span>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
         </div>
-        <?php unset($_SESSION['import_success_msg']); ?>
+    <?php endif; ?>
+    <?php if ($flash_error): ?>
+        <div class="alert alert-danger alert-dismissible fade show rounded-3 shadow-sm border-0 mb-4 d-flex align-items-center gap-2" role="alert">
+            <i class="bi bi-exclamation-triangle-fill text-danger fs-5"></i>
+            <span><?= $flash_error ?></span>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+        </div>
     <?php endif; ?>
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
         <div>
@@ -366,10 +386,15 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
                     <!-- Left: Current Members -->
                     <div class="col-lg-7 mb-4">
                         <div class="card shadow-sm border-0 rounded-4 overflow-hidden h-100">
-                            <div class="card-header bg-white border-bottom-0 py-3 d-flex justify-content-between align-items-center">
+                            <div class="card-header bg-white border-bottom-0 py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
                                 <h6 class="m-0 font-weight-bold text-primary">
-                                    <i class="bi bi-people-fill me-1"></i> Anggota Saat Ini (<?= count($current_members) ?> Siswa)
+                                    <i class="bi bi-people-fill me-1"></i> Anggota Saat Ini (<?= $total_members ?> Siswa)
                                 </h6>
+                                <?php if (!empty($active_ta) && !empty($selected_ekskul_id)): ?>
+                                <a href="/SINTA-SaaS/api/v1/ekskul/anggota/export?ekskul_id=<?= urlencode($selected_ekskul_id) ?>&semester=<?= urlencode($selected_semester) ?>&tahun_ajaran_id=<?= urlencode($active_ta['id']) ?><?= $is_super_admin ? '&tenant_id=' . urlencode($selected_tenant) : '' ?>" class="btn btn-sm btn-outline-success rounded-3" title="Ekspor rekap anggota ke Excel">
+                                    <i class="bi bi-file-earmark-excel me-1"></i>Ekspor Rekap
+                                </a>
+                                <?php endif; ?>
                             </div>
                             <div class="card-body p-0">
                                 <div class="table-responsive" style="max-height: 450px; overflow-y: auto;">
@@ -412,6 +437,24 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
                                         </tbody>
                                     </table>
                                 </div>
+                                <?php if ($total_pages_anggota > 1): ?>
+                                <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center px-4 py-2">
+                                    <small class="text-muted">Halaman <?= $page_anggota ?> dari <?= $total_pages_anggota ?></small>
+                                    <nav>
+                                        <ul class="pagination pagination-sm mb-0 gap-1">
+                                            <?php if ($page_anggota > 1): ?>
+                                            <li class="page-item"><a class="page-link rounded-2" href="?tab=anggota&ekskul_id=<?= urlencode($selected_ekskul_id) ?>&semester=<?= urlencode($selected_semester) ?>&page_anggota=<?= $page_anggota - 1 ?>&page_available=<?= $page_available ?><?= $is_super_admin ? '&tenant_id=' . urlencode($selected_tenant) : '' ?>"><i class="bi bi-chevron-left"></i></a></li>
+                                            <?php endif; ?>
+                                            <?php for ($p = max(1, $page_anggota - 2); $p <= min($total_pages_anggota, $page_anggota + 2); $p++): ?>
+                                            <li class="page-item <?= $p === $page_anggota ? 'active' : '' ?>"><a class="page-link rounded-2" href="?tab=anggota&ekskul_id=<?= urlencode($selected_ekskul_id) ?>&semester=<?= urlencode($selected_semester) ?>&page_anggota=<?= $p ?>&page_available=<?= $page_available ?><?= $is_super_admin ? '&tenant_id=' . urlencode($selected_tenant) : '' ?>"><?= $p ?></a></li>
+                                            <?php endfor; ?>
+                                            <?php if ($page_anggota < $total_pages_anggota): ?>
+                                            <li class="page-item"><a class="page-link rounded-2" href="?tab=anggota&ekskul_id=<?= urlencode($selected_ekskul_id) ?>&semester=<?= urlencode($selected_semester) ?>&page_anggota=<?= $page_anggota + 1 ?>&page_available=<?= $page_available ?><?= $is_super_admin ? '&tenant_id=' . urlencode($selected_tenant) : '' ?>"><i class="bi bi-chevron-right"></i></a></li>
+                                            <?php endif; ?>
+                                        </ul>
+                                    </nav>
+                                </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -445,7 +488,7 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
                                     <input type="hidden" name="semester" value="<?= htmlspecialchars($selected_semester) ?>">
 
                                     <div class="mb-3">
-                                        <label class="form-label text-muted small fw-bold">PILIH SISWA (<?= count($available_students) ?> Tersedia)</label>
+                                        <label class="form-label text-muted small fw-bold">PILIH SISWA (<?= $total_available ?> Tersedia)</label>
                                         
                                         <!-- Header Actions -->
                                         <div class="d-flex justify-content-between mb-2 small">
@@ -472,6 +515,19 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
                                                 <?php endforeach; ?>
                                             <?php endif; ?>
                                         </div>
+                                        <?php if ($total_pages_available > 1): ?>
+                                        <div class="d-flex justify-content-between align-items-center mt-2">
+                                            <small class="text-muted">Hal. <?= $page_available ?>/<?= $total_pages_available ?></small>
+                                            <div class="d-flex gap-1">
+                                                <?php if ($page_available > 1): ?>
+                                                <a href="?tab=anggota&ekskul_id=<?= urlencode($selected_ekskul_id) ?>&semester=<?= urlencode($selected_semester) ?>&page_anggota=<?= $page_anggota ?>&page_available=<?= $page_available - 1 ?>&kelas_id=<?= urlencode($selected_kelas_id) ?><?= $is_super_admin ? '&tenant_id=' . urlencode($selected_tenant) : '' ?>" class="btn btn-outline-secondary btn-sm py-0 px-2"><i class="bi bi-chevron-left"></i></a>
+                                                <?php endif; ?>
+                                                <?php if ($page_available < $total_pages_available): ?>
+                                                <a href="?tab=anggota&ekskul_id=<?= urlencode($selected_ekskul_id) ?>&semester=<?= urlencode($selected_semester) ?>&page_anggota=<?= $page_anggota ?>&page_available=<?= $page_available + 1 ?>&kelas_id=<?= urlencode($selected_kelas_id) ?><?= $is_super_admin ? '&tenant_id=' . urlencode($selected_tenant) : '' ?>" class="btn btn-outline-secondary btn-sm py-0 px-2"><i class="bi bi-chevron-right"></i></a>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                        <?php endif; ?>
                                     </div>
  
                                     <button type="submit" class="btn btn-success w-100 py-2 rounded-3" <?= empty($available_students) || $kunci_anggota ? 'disabled' : '' ?>>

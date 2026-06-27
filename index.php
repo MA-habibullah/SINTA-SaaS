@@ -222,6 +222,11 @@ try {
             $controller->importGrades();
             break;
 
+        case '/api/v1/ekskul/anggota/export':
+            $controller = new App\Controllers\EkskulController();
+            $controller->exportMembers();
+            break;
+
         case '/dashboard':
             // Panggil DashboardController
             $controller = new App\Controllers\DashboardController();
