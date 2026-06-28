@@ -14,6 +14,12 @@ class Database {
     private string $password = ''; // Sesuaikan dengan password database Anda
     private string $charset = 'utf8mb4';
 
+	//private string $host = 'localhost'; // Biarkan tetap 'localhost'
+    //private string $dbName = 'dapodik_db'; // Sesuaikan dengan nama database yang Anda buat
+    //private string $username = 'admin_dapodik'; // Sesuaikan dengan username database yang Anda buat
+    //private string $password = 'Admin-sma-sinta'; // Masukkan password yang Anda buat tadi
+    //private string $charset = 'utf8mb4'; // Biarkan tetap 'utf8mb4' (standar untuk mendukung emoji/karakter khusus)
+
     /**
      * Get the singleton database connection instance.
      */
