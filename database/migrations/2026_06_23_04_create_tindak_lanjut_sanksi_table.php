@@ -31,7 +31,7 @@ return [
                 INDEX `idx_tl_sanksi_tenant` (`tenant_id`),
                 INDEX `idx_tl_sanksi_siswa` (`siswa_id`),
                 INDEX `idx_tl_sanksi_ta` (`tahun_ajaran_id`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
         ");
         echo "  OK Tabel tindak_lanjut_sanksi berhasil dibuat.\n";
 

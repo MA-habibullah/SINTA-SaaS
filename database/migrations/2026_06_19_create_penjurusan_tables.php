@@ -39,7 +39,7 @@ return [
                 INDEX       `idx_pj_jurusan` (`id_jurusan`),
                 INDEX       `idx_pj_status`  (`status`)
 
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
               COMMENT='Pilihan Penjurusan Mandiri Siswa — dikelola Guru BK';
         ");
         echo "  OK Tabel pilihan_penjurusan berhasil dibuat.\n";
@@ -68,7 +68,7 @@ return [
                 INDEX `idx_log_siswa`    (`id_siswa`),
                 INDEX `idx_log_tenant`   (`tenant_id`)
 
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
               COMMENT='Audit Trail — Riwayat Perubahan Pilihan Penjurusan Siswa';
         ");
         echo "  OK Tabel pilihan_penjurusan_log berhasil dibuat.\n";

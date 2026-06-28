@@ -26,7 +26,7 @@ return [
                 PRIMARY KEY (`id`),
                 CONSTRAINT `fk_master_pelanggaran_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE,
                 INDEX `idx_master_pelanggaran_tenant` (`tenant_id`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
         ");
         echo "  OK Tabel master_pelanggaran berhasil dibuat.\n";
 
@@ -54,7 +54,7 @@ return [
                 INDEX `idx_catatan_pelanggaran_siswa` (`siswa_id`),
                 INDEX `idx_catatan_pelanggaran_ta` (`tahun_ajaran_id`),
                 INDEX `idx_catatan_pelanggaran_rule` (`pelanggaran_id`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
         ");
         echo "  OK Tabel catatan_pelanggaran_siswa berhasil dibuat.\n";
 

@@ -39,7 +39,7 @@ return [
                 INDEX `idx_catatan_guru`   (`id_guru_bk`),
                 INDEX `idx_catatan_status` (`status_kasus`)
 
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
               COMMENT='Jurnal & Rekam Kasus Bimbingan Konseling';
         ");
         echo "  OK Tabel catatan_bk berhasil dibuat.\n";

@@ -11,12 +11,12 @@ return [
         // 1. Buat tabel user_roles
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS `user_roles` (
-                `user_id` CHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+                `user_id` CHAR(36)  NOT NULL,
                 `role_id` INT UNSIGNED NOT NULL,
                 PRIMARY KEY (`user_id`, `role_id`),
                 CONSTRAINT `fk_ur_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
                 CONSTRAINT `fk_ur_role_id` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
               COMMENT='Tabel Junction untuk Multi-Role Pengguna';
         ");
         echo "  OK Tabel user_roles berhasil dibuat.\n";

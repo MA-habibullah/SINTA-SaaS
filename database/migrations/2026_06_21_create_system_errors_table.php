@@ -28,7 +28,7 @@ return [
                 INDEX `idx_se_error_level` (`error_level`),
                 INDEX `idx_se_tenant`      (`tenant_id`),
                 INDEX `idx_se_created`     (`created_at`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
         ");
 
         // 2. Tambah menu Error Monitor di Sistem & Utilitas (parent_id = 13, urutan = 10)

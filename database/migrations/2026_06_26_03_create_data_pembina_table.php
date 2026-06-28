@@ -35,7 +35,7 @@ return [
                 INDEX `idx_data_pembina_tenant` (`tenant_id`),
                 INDEX `idx_data_pembina_user` (`user_id`),
                 UNIQUE KEY `uk_data_pembina_user` (`user_id`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
         ");
         echo "  OK Tabel data_pembina berhasil dibuat.\n";
     },

@@ -36,7 +36,7 @@ return [
             CONSTRAINT `fk_prestasi_tahun_id` FOREIGN KEY (`tahun_ajaran_id`) REFERENCES `tahun_ajaran` (`id`) ON DELETE CASCADE,
             INDEX `idx_prestasi_tenant` (`tenant_id`),
             INDEX `idx_prestasi_tahun` (`tahun_ajaran_id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='Daftar Prestasi Lomba Siswa';");
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Daftar Prestasi Lomba Siswa';");
 
         // 2. Tabel pivot prestasi_siswa_anggota
         $pdo->exec("CREATE TABLE IF NOT EXISTS `prestasi_siswa_anggota` (
@@ -47,7 +47,7 @@ return [
             CONSTRAINT `fk_psa_siswa` FOREIGN KEY (`id_siswa`) REFERENCES `siswa` (`id`) ON DELETE CASCADE,
             INDEX `idx_psa_prestasi` (`id_prestasi`),
             INDEX `idx_psa_siswa` (`id_siswa`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='Relasi Anggota Lomba dengan Siswa';");
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Relasi Anggota Lomba dengan Siswa';");
 
         $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
         echo "  OK Tabel 'prestasi_siswa' dan 'prestasi_siswa_anggota' berhasil dibuat.\n";

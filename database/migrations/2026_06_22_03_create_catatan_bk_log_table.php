@@ -23,7 +23,7 @@ return [
             CONSTRAINT `fk_catatan_bk_log_catatan` FOREIGN KEY (`id_catatan_bk`) REFERENCES `catatan_bk` (`id`) ON DELETE CASCADE,
             INDEX `idx_cb_log_catatan` (`id_catatan_bk`),
             INDEX `idx_cb_log_tenant` (`tenant_id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Audit Trail — Log Riwayat Aktivitas & Penanganan Kasus BK';");
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Audit Trail — Log Riwayat Aktivitas & Penanganan Kasus BK';");
         
         $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
         echo "  OK Tabel 'catatan_bk_log' berhasil dibuat.\n";

@@ -28,7 +28,7 @@ return [
                 CONSTRAINT `fk_master_ekskul_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE,
                 CONSTRAINT `fk_master_ekskul_pembina` FOREIGN KEY (`pembina_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
                 INDEX `idx_master_ekskul_tenant` (`tenant_id`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
         ");
         echo "  OK Tabel master_ekskul berhasil dibuat.\n";
 
@@ -50,7 +50,7 @@ return [
                 INDEX `idx_anggota_ekskul_tenant` (`tenant_id`),
                 INDEX `idx_anggota_ekskul_ekskul` (`ekskul_id`),
                 INDEX `idx_anggota_ekskul_siswa` (`siswa_id`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
         ");
         echo "  OK Tabel anggota_ekskul berhasil dibuat.\n";
 
@@ -71,7 +71,7 @@ return [
                 CONSTRAINT `fk_jurnal_ekskul_master` FOREIGN KEY (`ekskul_id`) REFERENCES `master_ekskul` (`id`) ON DELETE CASCADE,
                 INDEX `idx_jurnal_ekskul_tenant` (`tenant_id`),
                 INDEX `idx_jurnal_ekskul_ekskul` (`ekskul_id`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
         ");
         echo "  OK Tabel jurnal_ekskul berhasil dibuat.\n";
 
@@ -96,7 +96,7 @@ return [
                 INDEX `idx_nilai_ekskul_ekskul` (`ekskul_id`),
                 INDEX `idx_nilai_ekskul_siswa` (`siswa_id`),
                 UNIQUE KEY `uk_nilai_ekskul_siswa_ta` (`ekskul_id`, `siswa_id`, `tahun_ajaran_id`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
         ");
         echo "  OK Tabel nilai_ekskul berhasil dibuat.\n";
 
