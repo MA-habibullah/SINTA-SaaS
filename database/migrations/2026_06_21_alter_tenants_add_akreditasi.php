@@ -8,11 +8,25 @@
 return [
 
     'up' => function (PDO $pdo): void {
+        // Cek dulu apakah kolom akreditasi sudah ada
+        $stmt = $pdo->query("SHOW COLUMNS FROM `tenants` LIKE 'akreditasi'");
+        if ($stmt->fetch()) {
+            echo "  OK Kolom akreditasi sudah ada, skip.\n";
+            return;
+        }
+
+        // Tentukan posisi AFTER secara dinamis
+        $afterCol = 'status_sinkronisasi'; // fallback kolom yang pasti ada
+        $check = $pdo->query("SHOW COLUMNS FROM `tenants` LIKE 'sertifikat_akreditasi'");
+        if ($check->fetch()) {
+            $afterCol = 'sertifikat_akreditasi';
+        }
+
         $pdo->exec("
             ALTER TABLE `tenants`
-            ADD COLUMN `akreditasi` VARCHAR(50) DEFAULT 'A (Unggul)' AFTER `sertifikat_akreditasi`;
+            ADD COLUMN `akreditasi` VARCHAR(50) DEFAULT 'A (Unggul)' AFTER `{$afterCol}`;
         ");
-        echo "  OK Kolom akreditasi berhasil ditambahkan pada tabel tenants.\n";
+        echo "  OK Kolom akreditasi berhasil ditambahkan pada tabel tenants (AFTER {$afterCol}).\n";
     },
 
     'down' => function (PDO $pdo): void {
