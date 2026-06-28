@@ -198,5 +198,100 @@ class ActivityLogController extends BaseController {
         }
     }
 
+    /**
+     * API: Menghapus log aktivitas berdasarkan filter
+     * POST /api/v1/activity-logs/delete
+     */
+    public function deleteLogsApi(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->jsonResponse(['error' => 'Metode request tidak diizinkan.'], 405);
+        }
+
+        $role = $_SESSION['role_name'] ?? '';
+        if ($role !== 'super_admin' && $role !== 'operator_sekolah') {
+            $this->jsonResponse(['error' => 'Akses ditolak.'], 403);
+        }
+
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (!$input) {
+            $this->jsonResponse(['error' => 'Data tidak valid.'], 400);
+        }
+
+        $startDate = $input['startDate'] ?? '';
+        $endDate = $input['endDate'] ?? '';
+        $targetTenant = $input['tenantId'] ?? '';
+
+        if (!$startDate || !$endDate) {
+            $this->jsonResponse(['error' => 'Rentang tanggal harus diisi.'], 400);
+        }
+
+        // RBAC Check for tenant isolation
+        $sessionTenantId = $_SESSION['tenant_id'] ?? null;
+        if ($role === 'operator_sekolah') {
+            $targetTenant = $sessionTenantId; // Force self tenant
+        } else if ($targetTenant === 'self') {
+            $targetTenant = $sessionTenantId;
+        }
+
+        try {
+            $db = Database::getConnection();
+
+            $sql = "DELETE FROM activity_logs WHERE DATE(created_at) BETWEEN ? AND ?";
+            $params = [$startDate, $endDate];
+
+            if ($targetTenant === 'all' && $role === 'super_admin') {
+                // Delete everything in range
+            } elseif ($targetTenant === 'system' && $role === 'super_admin') {
+                $sql .= " AND tenant_id IS NULL";
+            } elseif ($targetTenant !== 'all' && $targetTenant !== '') {
+                // For a specific tenant (including operator_sekolah)
+                $sql .= " AND tenant_id = ?";
+                $params[] = $targetTenant;
+            }
+
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            
+            $deletedRows = $stmt->rowCount();
+
+            // Integritas Audit: Catat tindakan penghapusan ini
+            $infoTarget = ($targetTenant === 'all') ? "Semua Sekolah & Sistem" : (($targetTenant === 'system') ? "Sistem (Global)" : "Sekolah ID: $targetTenant");
+            if ($role === 'operator_sekolah') {
+                $infoTarget = "Sekolah Sendiri";
+            }
+            
+            // Catat log
+            $aktorId = $_SESSION['user_id'] ?? null;
+            $aktorNama = $_SESSION['nama_lengkap'] ?? 'System';
+            $ipAddress = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+
+            $logSql = "INSERT INTO activity_logs (tenant_id, actor_id, actor_name, user_role, action, table_name, record_id, old_data, new_data, ip_address, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+            
+            $logStmt = $db->prepare($logSql);
+            $logStmt->execute([
+                $sessionTenantId,
+                $aktorId,
+                $aktorNama,
+                $role,
+                'DELETE',
+                'activity_logs',
+                null,
+                json_encode(['deleted_rows' => $deletedRows, 'start_date' => $startDate, 'end_date' => $endDate, 'target' => $infoTarget]),
+                null,
+                $ipAddress
+            ]);
+
+            $this->jsonResponse([
+                'success' => true,
+                'message' => "Berhasil menghapus $deletedRows baris log aktivitas."
+            ]);
+
+        } catch (\Throwable $e) {
+            error_log("Failed to delete activity logs: " . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal menghapus log aktivitas.'], 500);
+        }
+    }
+
 }
 

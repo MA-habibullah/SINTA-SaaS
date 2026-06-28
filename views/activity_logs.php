@@ -92,9 +92,12 @@ $userRole = $_SESSION['role_name'] ?? '';
                 </select>
             </div>
 
-            <!-- Total count badge -->
-            <div class="col-md text-md-end text-slate-600 fs-8">
-                Menampilkan <strong class="text-dark">{{ logs.length }}</strong> dari <strong class="text-dark">{{ totalLogs }}</strong> entri
+            <!-- Total count badge & Actions -->
+            <div class="col-md text-md-end text-slate-600 fs-8 d-flex justify-content-md-end align-items-center gap-3">
+                <span>Menampilkan <strong class="text-dark">{{ logs.length }}</strong> dari <strong class="text-dark">{{ totalLogs }}</strong> entri</span>
+                <button class="btn btn-danger btn-sm rounded-3 px-3 py-1.5 fw-semibold shadow-xs" @click="showDeleteModal">
+                    <i class="bi bi-trash3 me-1"></i> Hapus Log
+                </button>
             </div>
         </div>
     </div>
@@ -514,6 +517,90 @@ $userRole = $_SESSION['role_name'] ?? '';
                 });
             };
 
+            // Menampilkan form hapus log
+            const showDeleteModal = () => {
+                let tenantOptionsHtml = '';
+                if (isSuperAdmin.value) {
+                    tenantOptionsHtml = `
+                        <div class="mb-3 text-start">
+                            <label class="form-label fw-semibold fs-8">Pilih Sekolah (Tenant)</label>
+                            <select id="del_tenant_id" class="form-select fs-8">
+                                <option value="all">Semua Sekolah & Sistem (Awas! Global)</option>
+                                <option value="system">Sistem (Super Admin)</option>
+                                ${tenantOptions.value.map(t => `<option value="${t.id}">${escapeHtml(t.nama_sekolah)}</option>`).join('')}
+                            </select>
+                        </div>
+                    `;
+                }
+
+                Swal.fire({
+                    title: '<div class="fs-5 fw-bold text-danger text-start"><i class="bi bi-exclamation-triangle-fill me-2"></i>Hapus Log Aktivitas</div>',
+                    html: `
+                        <div class="text-start fs-8 text-slate-600 mb-3">
+                            Pilih rentang tanggal untuk menghapus data log secara permanen. Tindakan penghapusan ini akan dicatat ke dalam log demi integritas audit.
+                        </div>
+                        ${tenantOptionsHtml}
+                        <div class="row g-2 text-start">
+                            <div class="col-6">
+                                <label class="form-label fw-semibold fs-8">Dari Tanggal</label>
+                                <input type="date" id="del_start_date" class="form-control fs-8" max="${new Date().toISOString().split('T')[0]}">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-semibold fs-8">Sampai Tanggal</label>
+                                <input type="date" id="del_end_date" class="form-control fs-8" value="${new Date().toISOString().split('T')[0]}">
+                            </div>
+                        </div>
+                    `,
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: '<i class="bi bi-trash3 me-1"></i>Hapus Permanen',
+                    cancelButtonText: 'Batal',
+                    preConfirm: () => {
+                        const startDate = document.getElementById('del_start_date').value;
+                        const endDate = document.getElementById('del_end_date').value;
+                        let tenantId = isSuperAdmin.value ? document.getElementById('del_tenant_id').value : 'self';
+
+                        if (!startDate || !endDate) {
+                            Swal.showValidationMessage('Harap isi rentang tanggal.');
+                            return false;
+                        }
+                        if (startDate > endDate) {
+                            Swal.showValidationMessage('Tanggal awal tidak boleh melebihi tanggal akhir.');
+                            return false;
+                        }
+                        return { tenantId, startDate, endDate };
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        submitDeleteLogs(result.value);
+                    }
+                });
+            };
+
+            const submitDeleteLogs = async (data) => {
+                try {
+                    Swal.fire({ title: 'Memproses...', text: 'Menghapus log dari database', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                    const res = await axios.post('/SINTA-SaaS/api/v1/activity-logs/delete', data);
+                    if (res.data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil',
+                            text: res.data.message || 'Log berhasil dihapus.',
+                            confirmButtonColor: '#10b981'
+                        });
+                        currentPage.value = 1;
+                        fetchLogs(); // Reload table
+                    }
+                } catch (err) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal',
+                        text: err.response?.data?.error || 'Gagal menghapus log aktivitas.'
+                    });
+                }
+            };
+
             // Run initial fetch
             onMounted(() => {
                 fetchFilters();
@@ -537,7 +624,8 @@ $userRole = $_SESSION['role_name'] ?? '';
                 onFilterChange,
                 changePage,
                 formatDateTime,
-                showDetail
+                showDetail,
+                showDeleteModal
             };
         }
     });

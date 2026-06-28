@@ -622,6 +622,11 @@ try {
             $controller->fetchApi();
             break;
 
+        case '/api/v1/activity-logs/delete':
+            $controller = new App\Controllers\ActivityLogController();
+            $controller->deleteLogsApi();
+            break;
+
         case '/utilitas/sesi-aktif':
             $controller = new App\Controllers\ActiveSessionController();
             $controller->index();
