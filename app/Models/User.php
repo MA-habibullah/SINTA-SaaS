@@ -19,8 +19,11 @@ class User extends Model {
                     JOIN roles r ON u.role_id = r.id
                     WHERE u.email = :email AND u.tenant_id IS NULL AND u.deleted_at IS NULL";
             $params = ['email' => $email];
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetch() ?: null;
         } else {
-            // User login ke sekolah spesifik
+            // 1. Coba cari user di sekolah spesifik
             $sql = "SELECT u.*, r.nama_role 
                     FROM users u
                     JOIN roles r ON u.role_id = r.id
@@ -29,11 +32,23 @@ class User extends Model {
                 'email' => $email,
                 'tenant_id' => $tenantId
             ];
-        }
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            $user = $stmt->fetch();
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetch() ?: null;
+            if ($user) {
+                return $user;
+            }
+
+            // 2. Jika tidak ditemukan di sekolah tersebut, cari apakah dia Super Admin (Bisa login dari mana saja)
+            $sqlSuper = "SELECT u.*, r.nama_role 
+                         FROM users u
+                         JOIN roles r ON u.role_id = r.id
+                         WHERE u.email = :email AND u.tenant_id IS NULL AND u.deleted_at IS NULL";
+            $stmtSuper = $this->db->prepare($sqlSuper);
+            $stmtSuper->execute(['email' => $email]);
+            return $stmtSuper->fetch() ?: null;
+        }
     }
 
     /**
