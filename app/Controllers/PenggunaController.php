@@ -776,8 +776,8 @@ class PenggunaController extends BaseController {
 
             // Insert siswa
             $siswaId = $this->generateUuidV4();
-            $siswaSql = "INSERT INTO siswa (id, tenant_id, user_id, nisn, nama_lengkap, tanggal_lahir, status) 
-                         VALUES (:id, :tenant_id, :user_id, :nisn, :nama_lengkap, :tanggal_lahir, 'Aktif')";
+            $siswaSql = "INSERT INTO siswa (id, tenant_id, user_id, nisn, nama_lengkap, tanggal_lahir, password, status) 
+                         VALUES (:id, :tenant_id, :user_id, :nisn, :nama_lengkap, :tanggal_lahir, :password, 'Aktif')";
             $siswaStmt = $db->prepare($siswaSql);
             $siswaStmt->execute([
                 'id' => $siswaId,
@@ -785,7 +785,8 @@ class PenggunaController extends BaseController {
                 'user_id' => $userId,
                 'nisn' => $nisn,
                 'nama_lengkap' => $namaLengkap,
-                'tanggal_lahir' => $tanggalLahir
+                'tanggal_lahir' => $tanggalLahir,
+                'password' => $hashedPassword
             ]);
 
             $db->commit();
