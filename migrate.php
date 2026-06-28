@@ -71,19 +71,12 @@ try {
         // Nonaktifkan pemeriksaan foreign key sementara untuk drop aman
         $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
 
-        // Daftar tabel aplikasi kita (berurutan dari anak ke induk untuk drop yang aman)
-        $tables = [
-            'tenant_menu_access',
-            'rincian_alamat', 'dokumen', 'kip', 'kontak', 'orang_tua', 
-            'rincian_pelajar', 'registrasi', 'pengaturan',
-            'kelurahan', 'kecamatan', 'kota', 'provinsi',
-            'angkatan', 'tahun_ajaran', 'program_pengajaran', 'pendidikan', 
-            'mata_pelajaran', 'kelas', 'jurusan', 'jenjang', 
-            'role_menu_access', 'menus', 'pendaftaran_spmb', 
-            'siswa', 'users', 'roles', 'tenants', 'migrations'
-        ];
+        // Ambil semua tabel secara dinamis
+        $stmt = $pdo->query("SHOW TABLES");
+        $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        
         foreach ($tables as $table) {
-            $pdo->exec("DROP TABLE IF EXISTS {$table};");
+            $pdo->exec("DROP TABLE IF EXISTS `{$table}`;");
             echo "Menghapus tabel: {$table}...\n";
         }
 
