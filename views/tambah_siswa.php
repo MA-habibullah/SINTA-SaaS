@@ -814,13 +814,13 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
                 <!-- Status Yatim/Piatu -->
                 <div class="col-md-6">
-                    <label for="status_anak" class="form-label">Status Kependudukan Anak</label>
+                    <label for="status_anak" class="form-label">Status Anak (Yatim/Piatu)</label>
                     <select class="form-select" id="status_anak" name="status_anak" v-model="form.status_anak">
                         <option value="">-- Pilih Status (Opsional) --</option>
+                        <option value="Bukan Yatim/Piatu">Lengkap (Bukan Yatim/Piatu)</option>
                         <option value="Yatim">Yatim (Tidak Ada Ayah)</option>
                         <option value="Piatu">Piatu (Tidak Ada Ibu)</option>
                         <option value="Yatim Piatu">Yatim Piatu (Tidak Ada Orang Tua)</option>
-                        <!-- Opsional fallback -->
                     </select>
                 </div>
 
