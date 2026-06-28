@@ -23,8 +23,6 @@ Thumbs.db
 *.ntvs*
 *.njsproj
 
-# Mengabaikan dependencies Node.js — tidak dibutuhkan di server PHP
-node_modules/
-
 # package-lock.json tetap di-track untuk mengunci versi dependency
 # vendor/ dan composer.lock HARUS di-push untuk shared hosting (tidak ada akses composer)
+# node_modules/ di-push sesuai kebutuhan deployment
