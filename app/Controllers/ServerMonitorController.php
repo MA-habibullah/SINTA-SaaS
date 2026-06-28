@@ -492,15 +492,21 @@ class ServerMonitorController extends BaseController
             $yaml .= "      dhcp4: true\n";
         } else {
             $yaml .= "      dhcp4: false\n";
-            $yaml .= "      addresses: [{$ipv4}]\n";
+            $yaml .= "      addresses:\n";
+            $yaml .= "        - {$ipv4}\n";
             if (!empty($gateway)) {
-                $yaml .= "      routes: [{to: default, via: {$gateway}}]\n";
+                $yaml .= "      routes:\n";
+                $yaml .= "        - to: default\n";
+                $yaml .= "          via: {$gateway}\n";
             }
             if (!empty($dns)) {
                 $dnsList = array_map('trim', explode(',', $dns));
                 $dnsList = array_filter($dnsList);
-                $dnsFormatted = implode(', ', $dnsList);
-                $yaml .= "      nameservers: {addresses: [{$dnsFormatted}]}\n";
+                $yaml .= "      nameservers:\n";
+                $yaml .= "        addresses:\n";
+                foreach ($dnsList as $d) {
+                    $yaml .= "          - {$d}\n";
+                }
             }
         }
 
@@ -522,7 +528,7 @@ class ServerMonitorController extends BaseController
             if ($copyStatus !== 0) {
                 $errorMsg = implode("\n", $copyOutput);
                 $this->jsonResponse([
-                    'error' => "Gagal menyalin konfigurasi ke netplan:\n" . $errorMsg
+                    'error' => "Gagal menyalin konfigurasi ke netplan. Pastikan user web server (www-data) diizinkan menjalankan sudo tanpa password.\nDetail: " . $errorMsg
                 ], 500);
                 return;
             }
@@ -534,7 +540,7 @@ class ServerMonitorController extends BaseController
             if ($applyStatus !== 0) {
                 $errorMsg = implode("\n", $applyOutput);
                 $this->jsonResponse([
-                    'error' => "Gagal menerapkan konfigurasi Netplan:\n" . $errorMsg
+                    'error' => "Gagal menerapkan konfigurasi Netplan. Pastikan user web server (www-data) diizinkan menjalankan sudo tanpa password.\nDetail: " . $errorMsg
                 ], 500);
                 return;
             }
