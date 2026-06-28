@@ -2351,7 +2351,12 @@ class BKController extends BaseController {
         $db = \App\Config\Database::getConnection();
         $taId = $this->getActiveTahunAjaranId($db, $tenantId);
         if (!$taId) {
-            $this->jsonResponse(['error' => 'Tahun Ajaran aktif tidak ditemukan.'], 400);
+            $this->jsonResponse([
+                'success' => true,
+                'kpi' => ['sp3_do' => 0, 'sp2_skorsing' => 0, 'sp1_bk' => 0, 'wali_kelas' => 0, 'total_siswa_melanggar' => 0],
+                'top_students' => [],
+                'chart' => ['labels' => [], 'data' => []]
+            ]);
         }
 
         try {
@@ -2647,7 +2652,7 @@ class BKController extends BaseController {
         $db = \App\Config\Database::getConnection();
         $taId = $this->getActiveTahunAjaranId($db, $tenantId);
         if (!$taId) {
-            $this->jsonResponse(['error' => 'Tahun Ajaran aktif tidak ditemukan.'], 400);
+            $this->jsonResponse(['success' => true, 'data' => []]);
         }
 
         try {
@@ -2794,7 +2799,7 @@ class BKController extends BaseController {
         $db = \App\Config\Database::getConnection();
         $taId = $this->getActiveTahunAjaranId($db, $tenantId);
         if (!$taId) {
-            $this->jsonResponse(['error' => 'Tahun Ajaran aktif tidak ditemukan.'], 400);
+            $this->jsonResponse(['success' => true, 'data' => []]);
         }
 
         try {
@@ -3073,7 +3078,7 @@ class BKController extends BaseController {
         $db = \App\Config\Database::getConnection();
         $taId = $this->getActiveTahunAjaranId($db, $tenantId);
         if (!$taId) {
-            $this->jsonResponse(['error' => 'Tahun Ajaran aktif tidak ditemukan.'], 400);
+            $this->jsonResponse(['success' => true, 'data' => []]);
         }
 
         // Standard JSON payload
