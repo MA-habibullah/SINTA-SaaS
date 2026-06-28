@@ -1527,7 +1527,7 @@ $baseUrl    = '/SINTA-SaaS';
             <div class="row g-3 align-items-end">
                 <div class="col-md-3">
                     <label for="select-ta-kehadiran" class="form-label fw-semibold fs-8 mb-1">Tahun Ajaran</label>
-                    <select id="select-ta-kehadiran" name="ta_kehadiran" class="form-select form-select-sm rounded-3" v-model="filterKehadiran.tahun_ajaran_id" v-if="tahunAjaranList && tahunAjaranList.length">
+                    <select id="select-ta-kehadiran" name="ta_kehadiran" class="form-select form-select-sm rounded-3" v-model="filterKehadiran.tahun_ajaran_id">
                         <option value="">-- Pilih Tahun Ajaran --</option>
                         <option v-for="ta in tahunAjaranList" :key="ta.id" :value="ta.id">
                             {{ ta.tahun_ajaran }} ({{ ta.status === 'Aktif' ? 'Aktif' : 'Non-Aktif' }})
