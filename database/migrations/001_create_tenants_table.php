@@ -20,7 +20,7 @@ return [
             PRIMARY KEY (id),
             INDEX idx_tenant_status (status),
             INDEX idx_tenants_npsn (npsn)
-        ) ENGINE=InnoDB;";
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;";
         
         $pdo->exec($sql);
     },
