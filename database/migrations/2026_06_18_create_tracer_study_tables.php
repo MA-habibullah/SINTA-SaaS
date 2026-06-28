@@ -14,9 +14,9 @@ return [
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS `riwayat_kuliah` (
                 `id`            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                `id_siswa`      VARCHAR(36)  DEFAULT NULL COMMENT 'UUID referensi ke tabel siswa, NULL jika manual input BK',
-                `tenant_id`     VARCHAR(36) NOT NULL COMMENT 'UUID referensi ke tabel tenants',
-                `nama_alumni`   VARCHAR(255) DEFAULT NULL COMMENT 'Diisi jika id_siswa NULL (input manual alumni)',
+                `id_siswa`      VARCHAR(36)  DEFAULT NULL COMMENT 'UUID referensi ke tabel siswa',
+                `tenant_id`     VARCHAR(36)  NOT NULL COMMENT 'UUID referensi ke tabel tenants',
+                `nama_alumni`   VARCHAR(255) DEFAULT NULL,
                 `nama_kampus`   VARCHAR(255) NOT NULL,
                 `fakultas`      VARCHAR(255) DEFAULT NULL,
                 `jurusan`       VARCHAR(255) DEFAULT NULL,
@@ -29,10 +29,8 @@ return [
                 `updated_at`    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
                 INDEX `idx_rk_id_siswa`  (`id_siswa`),
-                INDEX `idx_rk_tenant_id` (`tenant_id`),
-                CONSTRAINT `fk_rk_tenant_id` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-              COMMENT='Tracer Study: Riwayat Pendidikan Tinggi Alumni';
+                INDEX `idx_rk_tenant_id` (`tenant_id`)
+            ) ENGINE=InnoDB COMMENT='Tracer Study: Riwayat Pendidikan Tinggi Alumni';
         ");
 
         // ======================================================
@@ -41,22 +39,20 @@ return [
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS `riwayat_pekerjaan` (
                 `id`                 BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                `id_siswa`           VARCHAR(36)    NOT NULL COMMENT 'UUID referensi ke tabel siswa',
-                `tenant_id`          VARCHAR(36) NOT NULL COMMENT 'UUID referensi ke tabel tenants',
-                `nama_perusahaan`    VARCHAR(255)   NOT NULL,
-                `posisi_jabatan`     VARCHAR(255)   NOT NULL,
-                `pendapatan_bulanan` VARCHAR(100)   DEFAULT NULL,
-                `tahun_mulai`        SMALLINT       NOT NULL,
-                `tahun_selesai`      SMALLINT       DEFAULT NULL,
+                `id_siswa`           VARCHAR(36)  NOT NULL COMMENT 'UUID referensi ke tabel siswa',
+                `tenant_id`          VARCHAR(36)  NOT NULL COMMENT 'UUID referensi ke tabel tenants',
+                `nama_perusahaan`    VARCHAR(255) NOT NULL,
+                `posisi_jabatan`     VARCHAR(255) NOT NULL,
+                `pendapatan_bulanan` VARCHAR(100) DEFAULT NULL,
+                `tahun_mulai`        SMALLINT     NOT NULL,
+                `tahun_selesai`      SMALLINT     DEFAULT NULL,
                 `status_kerja`       ENUM('Kontrak','Tetap','Magang') NOT NULL DEFAULT 'Kontrak',
-                `created_at`         TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                `updated_at`         TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                `created_at`         TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at`         TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
                 INDEX `idx_rp_id_siswa`  (`id_siswa`),
-                INDEX `idx_rp_tenant_id` (`tenant_id`),
-                CONSTRAINT `fk_rp_tenant_id` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-              COMMENT='Tracer Study: Riwayat Karir/Pekerjaan Alumni';
+                INDEX `idx_rp_tenant_id` (`tenant_id`)
+            ) ENGINE=InnoDB COMMENT='Tracer Study: Riwayat Karir/Pekerjaan Alumni';
         ");
 
         // ======================================================
@@ -64,17 +60,16 @@ return [
         // ======================================================
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS `target_kampus` (
-                `id`           CHAR(36) NOT NULL PRIMARY KEY,
-                `tenant_id`    CHAR(36) NOT NULL COMMENT 'UUID referensi ke tabel tenants',
+                `id`           CHAR(36)     NOT NULL PRIMARY KEY,
+                `tenant_id`    CHAR(36)     NOT NULL COMMENT 'UUID referensi ke tabel tenants',
                 `nama_kampus`  VARCHAR(255) NOT NULL,
                 `jenis_kampus` ENUM('Negeri', 'Swasta', 'Kedinasan') NOT NULL,
                 `kuota_target` INT          NOT NULL DEFAULT 0,
                 `created_at`   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 `updated_at`   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-                INDEX `idx_tk_tenant_id` (`tenant_id`),
-                CONSTRAINT `fk_tk_tenant_id` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Master & Target Kuota Kampus per Sekolah';
+                INDEX `idx_tk_tenant_id` (`tenant_id`)
+            ) ENGINE=InnoDB COMMENT='Master & Target Kuota Kampus per Sekolah';
         ");
 
         // Seed Menu PDSS & Alumni (id = 40)
@@ -92,11 +87,11 @@ return [
         $defaultTenant = '00000000-0000-0000-0000-000000000000';
         $pdo->exec("
             INSERT IGNORE INTO role_menu_access (tenant_id, role_id, menu_id) VALUES
-                ('{$defaultTenant}', 1,  40), -- super_admin
-                ('{$defaultTenant}', 2,  40), -- operator_sekolah
-                ('{$defaultTenant}', 3,  40), -- guru
-                ('{$defaultTenant}', 4,  40), -- siswa
-                ('{$defaultTenant}', 20, 40)  -- guru_bk
+                ('{$defaultTenant}', 1,  40),
+                ('{$defaultTenant}', 2,  40),
+                ('{$defaultTenant}', 3,  40),
+                ('{$defaultTenant}', 4,  40),
+                ('{$defaultTenant}', 20, 40)
         ");
 
         // Seed tenant_menu_access for ALL active tenants in DB
@@ -111,8 +106,8 @@ return [
 
         $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
 
-        echo "  OK Tabel riwayat_kuliah berhasil disesuaikan.\n";
-        echo "  OK Tabel riwayat_pekerjaan berhasil disesuaikan.\n";
+        echo "  OK Tabel riwayat_kuliah berhasil dibuat.\n";
+        echo "  OK Tabel riwayat_pekerjaan berhasil dibuat.\n";
         echo "  OK Tabel target_kampus berhasil dibuat.\n";
         echo "  OK Menu PDSS & Alumni berhasil ditambahkan.\n";
     },
@@ -127,6 +122,6 @@ return [
         $pdo->exec("DELETE FROM menus WHERE id = 40;");
         $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
 
-        echo "  ✓ Rollback: Tabel riwayat_kuliah, riwayat_pekerjaan, target_kampus & Menu PDSS & Alumni dihapus.\n";
+        echo "  OK Rollback: Tabel riwayat_kuliah, riwayat_pekerjaan, target_kampus & Menu PDSS dihapus.\n";
     },
 ];
