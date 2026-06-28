@@ -347,7 +347,7 @@ class ServerMonitorController extends BaseController
         $defaultGateways = [];
 
         // 1. Dapatkan default gateway
-        $routeJson = shell_exec('ip -j route show default');
+        $routeJson = shell_exec('timeout 1 ip -j route show default 2>/dev/null');
         if ($routeJson) {
             $routes = json_decode($routeJson, true);
             if (is_array($routes)) {
@@ -373,7 +373,7 @@ class ServerMonitorController extends BaseController
             }
         }
         if (empty($dns)) {
-            $resolvectl = shell_exec('resolvectl dns 2>/dev/null');
+            $resolvectl = shell_exec('timeout 1 resolvectl dns 2>/dev/null');
             if ($resolvectl) {
                 preg_match_all('/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/', $resolvectl, $matches);
                 if (!empty($matches[0])) {
@@ -386,7 +386,7 @@ class ServerMonitorController extends BaseController
         }
 
         // 3. Baca rincian adapter jaringan
-        $addrJson = shell_exec('ip -j addr show');
+        $addrJson = shell_exec('timeout 1 ip -j addr show 2>/dev/null');
         if ($addrJson) {
             $addrList = json_decode($addrJson, true);
             if (is_array($addrList)) {
