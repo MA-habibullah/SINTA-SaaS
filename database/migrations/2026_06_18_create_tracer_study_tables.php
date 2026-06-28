@@ -15,7 +15,7 @@ return [
             CREATE TABLE IF NOT EXISTS `riwayat_kuliah` (
                 `id`            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                 `id_siswa`      VARCHAR(36)  DEFAULT NULL COMMENT 'UUID referensi ke tabel siswa, NULL jika manual input BK',
-                `tenant_id`     VARCHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL COMMENT 'UUID referensi ke tabel tenants',
+                `tenant_id`     VARCHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'UUID referensi ke tabel tenants',
                 `nama_alumni`   VARCHAR(255) DEFAULT NULL COMMENT 'Diisi jika id_siswa NULL (input manual alumni)',
                 `nama_kampus`   VARCHAR(255) NOT NULL,
                 `fakultas`      VARCHAR(255) DEFAULT NULL,
@@ -42,7 +42,7 @@ return [
             CREATE TABLE IF NOT EXISTS `riwayat_pekerjaan` (
                 `id`                 BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                 `id_siswa`           VARCHAR(36)    NOT NULL COMMENT 'UUID referensi ke tabel siswa',
-                `tenant_id`          VARCHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL COMMENT 'UUID referensi ke tabel tenants',
+                `tenant_id`          VARCHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'UUID referensi ke tabel tenants',
                 `nama_perusahaan`    VARCHAR(255)   NOT NULL,
                 `posisi_jabatan`     VARCHAR(255)   NOT NULL,
                 `pendapatan_bulanan` VARCHAR(100)   DEFAULT NULL,
