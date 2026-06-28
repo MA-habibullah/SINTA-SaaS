@@ -211,6 +211,33 @@ $baseUrl   = '/SINTA-SaaS';
             <h6 class="fw-bold mb-3"><i class="bi bi-plus-circle me-2 text-primary"></i>Tambah Riwayat Kuliah</h6>
 
             <div class="row g-3">
+                <div class="col-md-12" v-if="userRole !== 'siswa'">
+                    <label class="form-label fw-semibold fs-7">Nama Alumni (Siswa) <span class="text-danger">*</span></label>
+                    <div class="position-relative">
+                        <input type="text" class="form-control" v-model="formKuliah.nama_alumni"
+                               @input="searchStudents('kuliah')" @focus="showSearchDropdown = true; activeForm = 'kuliah'"
+                               placeholder="Ketik nama atau NISN siswa lulus..." autocomplete="off">
+                        <div v-if="showSearchDropdown && activeForm === 'kuliah' && searchResults.length > 0" 
+                             class="dropdown-menu show w-100 position-absolute overflow-auto shadow-sm" style="max-height: 200px; z-index: 999;">
+                            <button type="button" class="dropdown-item py-2 border-bottom" v-for="s in searchResults" :key="s.id" @mousedown.prevent="selectStudent(s, 'kuliah')">
+                                <div class="fw-bold">{{ s.nama_lengkap }}</div>
+                                <small class="text-muted">NISN: {{ s.nisn || '-' }} | NIS: {{ s.nis || '-' }}</small>
+                            </button>
+                        </div>
+                        <div v-else-if="showSearchDropdown && activeForm === 'kuliah' && searchResults.length === 0 && formKuliah.nama_alumni.trim().length >= 2"
+                             class="dropdown-menu show w-100 position-absolute p-3 text-center text-muted shadow-sm" style="z-index: 999;">
+                            <i class="bi bi-info-circle me-1"></i> Tidak ada siswa cocok.
+                        </div>
+                    </div>
+                    <div v-if="selectedStudent && activeForm === 'kuliah'" class="mt-2 p-2 bg-success bg-opacity-10 border border-success border-opacity-25 rounded d-flex align-items-center gap-2">
+                        <i class="bi bi-check-circle-fill text-success"></i>
+                        <div style="font-size: 0.8rem;">
+                            <span class="d-block fw-bold text-success">{{ selectedStudent.nama_lengkap }}</span>
+                            <span class="text-success text-opacity-75">Siswa Terpilih</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="col-md-6">
                     <label class="form-label fw-semibold fs-7">Nama Kampus <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" v-model="formKuliah.nama_kampus"
@@ -314,6 +341,33 @@ $baseUrl   = '/SINTA-SaaS';
             <h6 class="fw-bold mb-3"><i class="bi bi-plus-circle me-2 text-success"></i>Tambah Riwayat Pekerjaan</h6>
 
             <div class="row g-3">
+                <div class="col-md-12" v-if="userRole !== 'siswa'">
+                    <label class="form-label fw-semibold fs-7">Nama Alumni (Siswa) <span class="text-danger">*</span></label>
+                    <div class="position-relative">
+                        <input type="text" class="form-control" v-model="formPekerjaan.nama_alumni"
+                               @input="searchStudents('pekerjaan')" @focus="showSearchDropdown = true; activeForm = 'pekerjaan'"
+                               placeholder="Ketik nama atau NISN siswa lulus..." autocomplete="off">
+                        <div v-if="showSearchDropdown && activeForm === 'pekerjaan' && searchResults.length > 0" 
+                             class="dropdown-menu show w-100 position-absolute overflow-auto shadow-sm" style="max-height: 200px; z-index: 999;">
+                            <button type="button" class="dropdown-item py-2 border-bottom" v-for="s in searchResults" :key="s.id" @mousedown.prevent="selectStudent(s, 'pekerjaan')">
+                                <div class="fw-bold">{{ s.nama_lengkap }}</div>
+                                <small class="text-muted">NISN: {{ s.nisn || '-' }} | NIS: {{ s.nis || '-' }}</small>
+                            </button>
+                        </div>
+                        <div v-else-if="showSearchDropdown && activeForm === 'pekerjaan' && searchResults.length === 0 && formPekerjaan.nama_alumni.trim().length >= 2"
+                             class="dropdown-menu show w-100 position-absolute p-3 text-center text-muted shadow-sm" style="z-index: 999;">
+                            <i class="bi bi-info-circle me-1"></i> Tidak ada siswa cocok.
+                        </div>
+                    </div>
+                    <div v-if="selectedStudent && activeForm === 'pekerjaan'" class="mt-2 p-2 bg-success bg-opacity-10 border border-success border-opacity-25 rounded d-flex align-items-center gap-2">
+                        <i class="bi bi-check-circle-fill text-success"></i>
+                        <div style="font-size: 0.8rem;">
+                            <span class="d-block fw-bold text-success">{{ selectedStudent.nama_lengkap }}</span>
+                            <span class="text-success text-opacity-75">Siswa Terpilih</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="col-md-6">
                     <label class="form-label fw-semibold fs-7">Nama Perusahaan <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" v-model="formPekerjaan.nama_perusahaan"
@@ -387,6 +441,7 @@ $baseUrl   = '/SINTA-SaaS';
             const riwayatPekerjaan = ref(<?= json_encode($pekerjaan, JSON_UNESCAPED_UNICODE) ?>);
 
             const formKuliah = ref({
+                siswa_id: '', nama_alumni: '',
                 nama_kampus: '', fakultas: '', jurusan: '',
                 tahun_masuk: new Date().getFullYear(),
                 tahun_lulus: null,
@@ -394,29 +449,82 @@ $baseUrl   = '/SINTA-SaaS';
             });
 
             const formPekerjaan = ref({
+                siswa_id: '', nama_alumni: '',
                 nama_perusahaan: '', posisi_jabatan: '', pendapatan_bulanan: '',
                 tahun_mulai: new Date().getFullYear(),
                 tahun_selesai: null,
                 status_kerja: 'Kontrak'
             });
 
+            const userRole = ref('<?= $userRole ?>');
+            const showSearchDropdown = ref(false);
+            const searchResults = ref([]);
+            const searchingStudents = ref(false);
+            const selectedStudent = ref(null);
+            const activeForm = ref('');
+
+            async function searchStudents(formType) {
+                activeForm.value = formType;
+                selectedStudent.value = null;
+                const query = formType === 'kuliah' ? formKuliah.value.nama_alumni : formPekerjaan.value.nama_alumni;
+                if (query.trim().length < 2) {
+                    searchResults.value = [];
+                    showSearchDropdown.value = false;
+                    return;
+                }
+                searchingStudents.value = true;
+                try {
+                    const res = await fetch(`/SINTA-SaaS/api/v1/pdss/students/search?q=${encodeURIComponent(query)}`);
+                    const data = await res.json();
+                    if (data.success) {
+                        searchResults.value = data.data || [];
+                        showSearchDropdown.value = true;
+                    }
+                } catch (e) {
+                    console.error(e);
+                } finally {
+                    searchingStudents.value = false;
+                }
+            }
+
+            function selectStudent(student, formType) {
+                selectedStudent.value = student;
+                if (formType === 'kuliah') {
+                    formKuliah.value.nama_alumni = student.nama_lengkap;
+                    formKuliah.value.siswa_id = student.id;
+                } else {
+                    formPekerjaan.value.nama_alumni = student.nama_lengkap;
+                    formPekerjaan.value.siswa_id = student.id;
+                }
+                showSearchDropdown.value = false;
+                searchResults.value = [];
+            }
+
             function resetKuliah() {
                 formKuliah.value = {
+                    siswa_id: '', nama_alumni: '',
                     nama_kampus: '', fakultas: '', jurusan: '',
                     tahun_masuk: new Date().getFullYear(),
                     tahun_lulus: null, status_kuliah: 'Aktif'
                 };
+                if (activeForm.value === 'kuliah') selectedStudent.value = null;
             }
 
             function resetPekerjaan() {
                 formPekerjaan.value = {
+                    siswa_id: '', nama_alumni: '',
                     nama_perusahaan: '', posisi_jabatan: '', pendapatan_bulanan: '',
                     tahun_mulai: new Date().getFullYear(),
                     tahun_selesai: null, status_kerja: 'Kontrak'
                 };
+                if (activeForm.value === 'pekerjaan') selectedStudent.value = null;
             }
 
             async function submitKuliah() {
+                if (userRole.value !== 'siswa' && !formKuliah.value.siswa_id) {
+                    alertKuliah.value = { msg: 'Silakan cari dan pilih alumni (siswa) terlebih dahulu.', type: 'danger' };
+                    return;
+                }
                 if (!formKuliah.value.nama_kampus.trim()) {
                     alertKuliah.value = { msg: 'Nama kampus wajib diisi.', type: 'danger' };
                     return;
@@ -448,6 +556,10 @@ $baseUrl   = '/SINTA-SaaS';
             }
 
             async function submitPekerjaan() {
+                if (userRole.value !== 'siswa' && !formPekerjaan.value.siswa_id) {
+                    alertPekerjaan.value = { msg: 'Silakan cari dan pilih alumni (siswa) terlebih dahulu.', type: 'danger' };
+                    return;
+                }
                 if (!formPekerjaan.value.nama_perusahaan.trim() || !formPekerjaan.value.posisi_jabatan.trim()) {
                     alertPekerjaan.value = { msg: 'Nama perusahaan dan posisi wajib diisi.', type: 'danger' };
                     return;
