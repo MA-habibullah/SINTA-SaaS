@@ -467,6 +467,15 @@ $tenantList = $data['tenant_list'] ?? [];
                                      class="absolute z-[9999] left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg p-3 text-center text-xs text-slate-400">
                                     <i class="bi bi-info-circle me-1"></i> Tidak ada siswa cocok. Tekan Enter untuk simpan nama manual.
                                 </div>
+
+                                <!-- Konfirmasi Terpilih -->
+                                <div v-if="modalAlumni.selectedStudent" class="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-2 animate-fade-in">
+                                    <i class="bi bi-check-circle-fill text-emerald-500 fs-6"></i>
+                                    <div class="text-[11px] leading-tight">
+                                        <span class="block font-bold text-emerald-800">{{ modalAlumni.selectedStudent.nama_lengkap }}</span>
+                                        <span class="block text-emerald-600">NISN: {{ modalAlumni.selectedStudent.nisn || '-' }} | NIS: {{ modalAlumni.selectedStudent.nis || '-' }}</span>
+                                    </div>
+                                </div>
                             </div>
                             <div>
                                 <label for="al_year" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Tahun Masuk Kuliah <span class="text-rose-500">*</span></label>
@@ -724,7 +733,8 @@ $tenantList = $data['tenant_list'] ?? [];
                         universitas_nama: '',
                         jurusan_nama: '',
                         status: 'Aktif'
-                    }
+                    },
+                    selectedStudent: null
                 },
 
                 // Campus Form Modal state
@@ -962,12 +972,14 @@ $tenantList = $data['tenant_list'] ?? [];
                          jurusan_nama: '',
                          status: 'Aktif'
                      };
+                     this.modalAlumni.selectedStudent = null;
                  }
                  this.modalAlumni.show = true;
              },
 
              // ─── STUDENT SEARCH FOR ALUMNI ───────────────────────
              async searchStudents() {
+                 this.modalAlumni.selectedStudent = null;
                  const query = this.modalAlumni.form.nama_alumni.trim();
                  if (query.length < 2) {
                      this.searchResults = [];
@@ -993,6 +1005,7 @@ $tenantList = $data['tenant_list'] ?? [];
              selectStudent(student) {
                  this.modalAlumni.form.nama_alumni = student.nama_lengkap;
                  this.modalAlumni.form.id_siswa = student.id;
+                 this.modalAlumni.selectedStudent = student;
                  this.showSearchDropdown = false;
                  this.searchResults = [];
              },
