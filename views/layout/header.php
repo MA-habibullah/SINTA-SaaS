@@ -131,4 +131,91 @@ if ($tenantId) {
             setInterval(updateClock, 1000);
         }
     });
+
+    // =========================================================================
+    // GLOBAL FRONTEND TELEMETRY TRACKER
+    // Mengumpulkan error JavaScript, Unhandled Promises, & kegagalan AJAX (Axios)
+    // dan mengirimkannya ke Dashboard Error Monitor secara diam-diam.
+    // =========================================================================
+    (function() {
+        // Jangan melacak jika sedang di halaman error monitor untuk mencegah infinite loop
+        if (window.location.pathname.includes('/error-monitor')) return;
+
+        function logErrorToBackend(errorData) {
+            // Gunakan fetch dengan keepalive atau sendBeacon agar tetap terkirim meskipun halaman ditutup
+            const payload = JSON.stringify(errorData);
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon('/SINTA-SaaS/api/v1/error-monitor/log-client', payload);
+            } else {
+                fetch('/SINTA-SaaS/api/v1/error-monitor/log-client', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: payload,
+                    keepalive: true
+                }).catch(() => {});
+            }
+        }
+
+        // 1. Tangkap JS Runtime Errors
+        window.onerror = function(message, source, lineno, colno, error) {
+            const stackTrace = error && error.stack ? error.stack.split('\n').map(s => s.trim()) : [];
+            logErrorToBackend({
+                type: 'JS_ERROR',
+                message: message,
+                file: source,
+                line: lineno,
+                url: window.location.href,
+                trace: stackTrace
+            });
+            return false; // biarkan default console.error tetap jalan
+        };
+
+        // 2. Tangkap Unhandled Promise Rejections (e.g., Axios gagal tanpa try/catch)
+        window.addEventListener('unhandledrejection', function(event) {
+            let msg = 'Unhandled Promise Rejection';
+            let stack = [];
+            let file = '';
+            
+            if (event.reason) {
+                if (event.reason.message) msg = event.reason.message;
+                else if (typeof event.reason === 'string') msg = event.reason;
+                
+                if (event.reason.stack) {
+                    stack = event.reason.stack.split('\n').map(s => s.trim());
+                }
+                
+                // Deteksi khusus jika ini Axios Error
+                if (event.reason.isAxiosError) {
+                    msg = `[AXIOS API ERROR] Status: ${event.reason.response?.status || 'Network Error'} - ${msg}`;
+                    if (event.reason.config) {
+                        stack.unshift(`Request URL: ${event.reason.config.url}`);
+                    }
+                }
+            }
+            
+            logErrorToBackend({
+                type: 'PROMISE_ERROR',
+                message: msg,
+                file: window.location.href, // sulit mendapatkan file asal di promise, pakai url saja
+                line: 0,
+                url: window.location.href,
+                trace: stack
+            });
+        });
+
+        // 3. Tangkap Vue Global Errors (Jika Vue ada)
+        if (typeof window.Vue !== 'undefined') {
+            window.Vue.config.errorHandler = function(err, vm, info) {
+                logErrorToBackend({
+                    type: 'VUE_ERROR',
+                    message: err.message,
+                    file: window.location.href,
+                    line: 0,
+                    url: window.location.href,
+                    trace: err.stack ? err.stack.split('\n').map(s => s.trim()) : [info]
+                });
+                console.error(err);
+            };
+        }
+    })();
 </script>

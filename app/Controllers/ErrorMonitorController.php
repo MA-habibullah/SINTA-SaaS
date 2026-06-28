@@ -204,4 +204,64 @@ class ErrorMonitorController extends BaseController
             $this->jsonResponse(['error' => 'Gagal menghapus log error.'], 500);
         }
     }
+
+    /**
+     * POST /api/v1/error-monitor/log-client
+     * Endpoint publik bagi frontend (Global Error Tracker) untuk merekam JS/Vue/Axios errors.
+     * Tidak diproteksi auth (agar jika auth gagal di klien, error tetap masuk), 
+     * tetapi dibatasi ukurannya.
+     */
+    public function logClientErrorApi(): void
+    {
+        // 1. Terima raw JSON
+        $raw = file_get_contents('php://input');
+        if (strlen($raw) > 100000) {
+            $this->jsonResponse(['error' => 'Payload too large'], 413);
+        }
+
+        $data = json_decode($raw, true);
+        if (!$data || !isset($data['message'])) {
+            $this->jsonResponse(['error' => 'Invalid data'], 400);
+        }
+
+        try {
+            $db = Database::getConnection();
+            $stmt = $db->prepare("
+                INSERT INTO `system_errors` 
+                    (`id`, `tenant_id`, `error_level`, `message`, `file`, `line`, 
+                     `trace`, `request_url`, `request_method`, `user_agent`, `ip_address`) 
+                VALUES 
+                    (UUID(), :tenant_id, :error_level, :message, :file, :line, 
+                     :trace, :request_url, :request_method, :user_agent, :ip_address)
+            ");
+
+            $tenantId = $_SESSION['tenant_id'] ?? null;
+            if (empty($tenantId) && isset($data['tenant_id'])) {
+                $tenantId = $data['tenant_id'];
+            }
+            if ($tenantId === '') {
+                $tenantId = null;
+            }
+
+            // Sanitasi data
+            $stmt->execute([
+                'tenant_id'      => $tenantId,
+                'error_level'    => substr($data['type'] ?? 'JS_ERROR', 0, 50),
+                'message'        => substr($data['message'], 0, 65535),
+                'file'           => substr($data['file'] ?? '', 0, 500) ?: null,
+                'line'           => isset($data['line']) ? (int)$data['line'] : 0,
+                'trace'          => isset($data['trace']) ? json_encode($data['trace'], JSON_UNESCAPED_SLASHES) : null,
+                'request_url'    => substr($data['url'] ?? $_SERVER['HTTP_REFERER'] ?? '', 0, 1000),
+                'request_method' => 'CLIENT',
+                'user_agent'     => substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 500) ?: null,
+                'ip_address'     => $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0',
+            ]);
+
+            $this->jsonResponse(['success' => true]);
+        } catch (\Throwable $e) {
+            // Abaikan secara diam-diam agar peramban (browser) tidak dipenuhi error jaringan berulang
+            error_log("[Client Error Logger Failed] " . $e->getMessage());
+            $this->jsonResponse(['error' => 'Failed to save'], 500);
+        }
+    }
 }

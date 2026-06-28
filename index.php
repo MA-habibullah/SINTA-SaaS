@@ -789,6 +789,11 @@ try {
             $controller->deleteOne();
             break;
 
+        case '/api/v1/error-monitor/log-client':
+            $controller = new App\Controllers\ErrorMonitorController();
+            $controller->logClientErrorApi();
+            break;
+
         // ================================================================
         // SERVER MONITOR ROUTES — SUPER ADMIN ONLY
         // ================================================================
