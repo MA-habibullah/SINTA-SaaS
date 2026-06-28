@@ -91,7 +91,7 @@ class EkskulController extends BaseController {
 
         // Get Pembina List
         $stmtPembina = $db->prepare("
-            SELECT u.id, u.nama_lengkap, u.email, u.no_telp, u.status 
+            SELECT u.id, u.nama_lengkap, u.email, u.status 
             FROM users u
             JOIN user_roles ur ON u.id = ur.user_id
             JOIN roles r ON ur.role_id = r.id
