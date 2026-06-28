@@ -752,9 +752,8 @@ class PenggunaController extends BaseController {
             $db->beginTransaction();
 
             $userId = $this->generateUuidV4();
-            $rawPassDate = str_replace('-', '', $tanggalLahir); 
-            $rawPass = 'siswa' . $rawPassDate;
-            $hashedPassword = password_hash($rawPass, PASSWORD_ARGON2ID);
+            // Default password menggunakan Tanggal Lahir murni (YYYY-MM-DD)
+            $hashedPassword = password_hash($tanggalLahir, PASSWORD_BCRYPT);
 
             // Insert users
             $userSql = "INSERT INTO users (id, tenant_id, role_id, nama_lengkap, email, password, status) 
@@ -811,7 +810,7 @@ class PenggunaController extends BaseController {
 
             $this->jsonResponse([
                 'success' => true,
-                'message' => 'Registrasi cepat siswa berhasil! Akun telah aktif dengan password default (siswa + Tanggal Lahir).',
+                'message' => 'Registrasi cepat siswa berhasil! Akun telah aktif dengan password default (Sesuai Tanggal Lahir: YYYY-MM-DD).',
                 'siswa_id' => $siswaId
             ], 201);
 
