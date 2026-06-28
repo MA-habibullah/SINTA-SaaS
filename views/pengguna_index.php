@@ -1329,8 +1329,14 @@
             };
         },
         mounted() {
-            this.modalObj = new bootstrap.Modal(document.getElementById('formModal'));
-            this.importModalObj = new bootstrap.Modal(document.getElementById('importModal'));
+            const fmEl = document.getElementById('formModal');
+            if (fmEl) {
+                this.modalObj = new bootstrap.Modal(fmEl);
+            }
+            const imEl = document.getElementById('importModal');
+            if (imEl) {
+                this.importModalObj = new bootstrap.Modal(imEl);
+            }
             const qEl = document.getElementById('quickAddModal');
             if (qEl) {
                 this.quickAddModalObj = new bootstrap.Modal(qEl);

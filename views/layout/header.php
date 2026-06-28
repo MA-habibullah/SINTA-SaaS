@@ -203,8 +203,8 @@ if ($tenantId) {
             });
         });
 
-        // 3. Tangkap Vue Global Errors (Jika Vue ada)
-        if (typeof window.Vue !== 'undefined') {
+        // 3. Tangkap Vue Global Errors (Jika Vue ada dan mendukung global config)
+        if (typeof window.Vue !== 'undefined' && window.Vue.config) {
             window.Vue.config.errorHandler = function(err, vm, info) {
                 logErrorToBackend({
                     type: 'VUE_ERROR',
