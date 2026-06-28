@@ -8,7 +8,7 @@ return [
         // Cek dan tambahkan no_kk
         $stmt = $pdo->query("SHOW COLUMNS FROM siswa LIKE 'no_kk'");
         if (!$stmt->fetch()) {
-            $pdo->exec("ALTER TABLE siswa ADD COLUMN no_kk CHAR(16) DEFAULT NULL AFTER id_kelas");
+            $pdo->exec("ALTER TABLE siswa ADD COLUMN no_kk CHAR(16) DEFAULT NULL AFTER nis");
         }
 
         // Cek dan tambahkan nik
