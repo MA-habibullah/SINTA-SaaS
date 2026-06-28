@@ -272,9 +272,36 @@ HTML;
 
             // Ambil tenant_id dari session jika tersedia
             $tenantId = null;
+            $sessionInfo = [];
             if (session_status() === PHP_SESSION_ACTIVE) {
                 $tenantId = $_SESSION['tenant_id'] ?? null;
+                $sessionInfo = [
+                    'user_id' => $_SESSION['user_id'] ?? null,
+                    'role_name' => $_SESSION['role_name'] ?? null,
+                    'tenant_id' => $tenantId
+                ];
             }
+
+            // Ambil Request Headers & Body (Sanitized)
+            $headers = function_exists('getallheaders') ? getallheaders() : [];
+            if (isset($headers['Authorization'])) $headers['Authorization'] = '***REDACTED***';
+            if (isset($headers['Cookie'])) $headers['Cookie'] = '***REDACTED***';
+            
+            $postData = $_POST;
+            $sensitiveKeys = ['password', 'password_confirmation', 'token', 'secret'];
+            foreach ($sensitiveKeys as $key) {
+                if (isset($postData[$key])) $postData[$key] = '***REDACTED***';
+            }
+
+            $contextData = [
+                'session' => $sessionInfo,
+                'headers' => $headers,
+                'post_data' => $postData,
+                'get_data' => $_GET,
+                'php_version' => PHP_VERSION,
+                'server_software' => $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown'
+            ];
+            $contextJson = json_encode($contextData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
             // Format trace ke JSON
             $traceJson = is_array($trace)
@@ -284,10 +311,10 @@ HTML;
             $stmt = $db->prepare("
                 INSERT INTO `system_errors`
                     (`id`, `tenant_id`, `error_level`, `message`, `file`, `line`,
-                     `trace`, `request_url`, `request_method`, `user_agent`, `ip_address`)
+                     `trace`, `request_url`, `request_method`, `user_agent`, `ip_address`, `context`)
                 VALUES
                     (UUID(), :tenant_id, :error_level, :message, :file, :line,
-                     :trace, :request_url, :request_method, :user_agent, :ip_address)
+                     :trace, :request_url, :request_method, :user_agent, :ip_address, :context)
             ");
 
             $stmt->execute([
@@ -300,7 +327,8 @@ HTML;
                 'request_url'    => substr($requestUrl, 0, 1000),
                 'request_method' => substr($requestMethod, 0, 10),
                 'user_agent'     => $userAgent ?: null,
-                'ip_address'     => $ip,
+                'ip_address'     => substr($ip, 0, 45),
+                'context'        => $contextJson
             ]);
 
         } catch (\Throwable $e) {

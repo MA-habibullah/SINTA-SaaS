@@ -528,6 +528,26 @@
                     traceHtml = `<pre class="bg-dark text-light p-3 rounded-3 mb-0" style="font-size:0.72rem;max-height:280px;overflow-y:auto;">${esc(err.trace)}</pre>`;
                 }
 
+                // Parse Context jika ada
+                let contextHtml = '';
+                if (err.context) {
+                    try {
+                        const ctx = typeof err.context === 'string' ? JSON.parse(err.context) : err.context;
+                        // Format ke string JSON yang rapi
+                        const ctxString = JSON.stringify(ctx, null, 2);
+                        contextHtml = `
+                        <div class="mb-3">
+                            <div class="fs-8 fw-bold text-muted mb-2 text-uppercase d-flex align-items-center gap-1" style="letter-spacing:.5px;">
+                                <i class="bi bi-info-square-fill text-info"></i> Context (Telemetry)
+                            </div>
+                            <pre class="bg-dark text-light p-3 rounded-3 mb-0 font-monospace" style="font-size:0.72rem;max-height:250px;overflow-y:auto;">${esc(ctxString)}</pre>
+                        </div>
+                        `;
+                    } catch (e) {
+                        contextHtml = `<div class="alert alert-warning py-2 fs-8">Gagal memproses detail context.</div>`;
+                    }
+                }
+
                 document.getElementById('modal-trace-body').innerHTML = `
                     <!-- Metadata Row -->
                     <div class="row g-2 mb-3">
@@ -583,6 +603,8 @@
                         </div>
                         ${traceHtml}
                     </div>
+
+                    ${contextHtml}
                 `;
 
                 this._traceModal.show();

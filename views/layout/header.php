@@ -141,6 +141,25 @@ if ($tenantId) {
         // Jangan melacak jika sedang di halaman error monitor untuk mencegah infinite loop
         if (window.location.pathname.includes('/error-monitor')) return;
 
+        function getTelemetryContext(vueVm = null, vueInfo = null) {
+            let connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            let ctx = {
+                url: window.location.href,
+                viewport: `${window.innerWidth}x${window.innerHeight}`,
+                online: navigator.onLine,
+                connection_type: connection ? connection.effectiveType : 'unknown',
+                language: navigator.language,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                time: new Date().toISOString()
+            };
+            if (vueVm) {
+                // Ekstrak info komponen Vue secara dangkal
+                ctx.vue_component = vueVm.$options ? vueVm.$options.name || 'AnonymousComponent' : 'Unknown';
+                ctx.vue_lifecycle = vueInfo || 'unknown';
+            }
+            return ctx;
+        }
+
         function logErrorToBackend(errorData) {
             // Gunakan fetch dengan keepalive atau sendBeacon agar tetap terkirim meskipun halaman ditutup
             const payload = JSON.stringify(errorData);
@@ -165,7 +184,8 @@ if ($tenantId) {
                 file: source,
                 line: lineno,
                 url: window.location.href,
-                trace: stackTrace
+                trace: stackTrace,
+                context: getTelemetryContext()
             });
             return false; // biarkan default console.error tetap jalan
         };
@@ -199,7 +219,8 @@ if ($tenantId) {
                 file: window.location.href, // sulit mendapatkan file asal di promise, pakai url saja
                 line: 0,
                 url: window.location.href,
-                trace: stack
+                trace: stack,
+                context: getTelemetryContext()
             });
         });
 
@@ -212,7 +233,8 @@ if ($tenantId) {
                     file: window.location.href,
                     line: 0,
                     url: window.location.href,
-                    trace: err.stack ? err.stack.split('\n').map(s => s.trim()) : [info]
+                    trace: err.stack ? err.stack.split('\n').map(s => s.trim()) : [info],
+                    context: getTelemetryContext(vm, info)
                 });
                 console.error(err);
             };

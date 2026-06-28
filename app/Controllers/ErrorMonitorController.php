@@ -103,6 +103,7 @@ class ErrorMonitorController extends BaseController
                     e.request_url,
                     e.request_method,
                     e.ip_address,
+                    e.context,
                     e.created_at,
                     t.nama_sekolah
                 FROM `system_errors` e
@@ -229,10 +230,10 @@ class ErrorMonitorController extends BaseController
             $stmt = $db->prepare("
                 INSERT INTO `system_errors` 
                     (`id`, `tenant_id`, `error_level`, `message`, `file`, `line`, 
-                     `trace`, `request_url`, `request_method`, `user_agent`, `ip_address`) 
+                     `trace`, `request_url`, `request_method`, `user_agent`, `ip_address`, `context`) 
                 VALUES 
                     (UUID(), :tenant_id, :error_level, :message, :file, :line, 
-                     :trace, :request_url, :request_method, :user_agent, :ip_address)
+                     :trace, :request_url, :request_method, :user_agent, :ip_address, :context)
             ");
 
             $tenantId = $_SESSION['tenant_id'] ?? null;
@@ -255,6 +256,7 @@ class ErrorMonitorController extends BaseController
                 'request_method' => 'CLIENT',
                 'user_agent'     => substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 500) ?: null,
                 'ip_address'     => $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0',
+                'context'        => isset($data['context']) ? json_encode($data['context'], JSON_UNESCAPED_SLASHES) : null,
             ]);
 
             $this->jsonResponse(['success' => true]);
