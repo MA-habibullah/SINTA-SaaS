@@ -81,7 +81,7 @@ class AuthSiswaController extends BaseController {
             }
 
             // 3. Verifikasi Password
-            if (!password_verify($password, $siswa['password'])) {
+            if (empty($siswa['password']) || !password_verify($password, (string)$siswa['password'])) {
                 $this->jsonResponse(['error' => $genericError], 401);
             }
 
