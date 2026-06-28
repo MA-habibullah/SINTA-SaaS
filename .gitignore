@@ -1,6 +1,9 @@
 # Mengabaikan file konfigurasi database lokal & env
 .env
 
+# Mengabaikan konfigurasi database (berisi credential sensitif)
+/app/Config/Database.php
+
 # Mengabaikan log sampah internal
 *.log
 
