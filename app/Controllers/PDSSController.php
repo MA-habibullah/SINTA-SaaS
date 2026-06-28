@@ -594,7 +594,10 @@ class PDSSController extends BaseController {
     }
 
     private function sanitize(mixed $val): string {
-        if (!is_string($val)) return '';
+        if (is_null($val) || is_array($val) || is_object($val)) {
+            return '';
+        }
+        $val = (string) $val;
         return htmlspecialchars(strip_tags(trim($val)), ENT_QUOTES, 'UTF-8');
     }
 
