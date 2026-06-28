@@ -1438,10 +1438,16 @@
                     this.importLoading = false;
                     if (error.response && error.response.status === 422) {
                         this.importErrors = error.response.data.errors || [];
+                        let errorHtml = 'Beberapa baris data tidak valid:<br><ul style="text-align: left; margin-top: 10px; font-size: 0.85em; max-height: 150px; overflow-y: auto;">';
+                        this.importErrors.forEach(err => {
+                            errorHtml += `<li>${err}</li>`;
+                        });
+                        errorHtml += '</ul>';
+
                         Swal.fire({
                             icon: 'warning',
                             title: 'Import Gagal',
-                            text: error.response.data.message || 'Beberapa baris data tidak valid. Silakan periksa detail kesalahan di bawah.',
+                            html: errorHtml,
                             confirmButtonColor: '#f59e0b'
                         });
                     } else {
