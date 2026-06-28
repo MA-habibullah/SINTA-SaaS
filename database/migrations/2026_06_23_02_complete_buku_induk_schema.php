@@ -11,18 +11,38 @@ return [
         // Disable foreign key checks temporarily during modifications
         $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
 
-        // 1. Lengkapi tabel siswa
-        $pdo->exec("
-            ALTER TABLE `siswa`
-            ADD COLUMN `kewarganegaraan` VARCHAR(50) DEFAULT 'WNI' AFTER `agama`,
-            ADD COLUMN `bahasa_sehari_hari` VARCHAR(50) DEFAULT 'Indonesia' AFTER `kewarganegaraan`,
-            ADD COLUMN `no_ijazah_sebelumnya` VARCHAR(50) DEFAULT NULL AFTER `sekolah_asal`,
-            ADD COLUMN `tanggal_ijazah_sebelumnya` DATE DEFAULT NULL AFTER `no_ijazah_sebelumnya`,
-            ADD COLUMN `lama_belajar_sebelumnya` TINYINT UNSIGNED DEFAULT NULL AFTER `tanggal_ijazah_sebelumnya`,
-            ADD COLUMN `nomor_ijazah_kelulusan` VARCHAR(50) DEFAULT NULL AFTER `tanggal_lulus`,
-            ADD COLUMN `nomor_skl` VARCHAR(50) DEFAULT NULL AFTER `nomor_ijazah_kelulusan`,
-            ADD COLUMN `keterangan_setelah_lulus` TEXT DEFAULT NULL AFTER `nomor_skl`;
-        ");
+        // Cek dan tambah kolom-kolom siswa yang tidak bergantung pada kolom lain
+        $siswaCols = [
+            'kewarganegaraan'           => "ADD COLUMN `kewarganegaraan` VARCHAR(50) DEFAULT 'WNI' AFTER `agama`",
+            'bahasa_sehari_hari'        => "ADD COLUMN `bahasa_sehari_hari` VARCHAR(50) DEFAULT 'Indonesia' AFTER `kewarganegaraan`",
+            'no_ijazah_sebelumnya'      => "ADD COLUMN `no_ijazah_sebelumnya` VARCHAR(50) DEFAULT NULL AFTER `sekolah_asal`",
+            'tanggal_ijazah_sebelumnya' => "ADD COLUMN `tanggal_ijazah_sebelumnya` DATE DEFAULT NULL AFTER `no_ijazah_sebelumnya`",
+            'lama_belajar_sebelumnya'   => "ADD COLUMN `lama_belajar_sebelumnya` TINYINT UNSIGNED DEFAULT NULL AFTER `tanggal_ijazah_sebelumnya`",
+            'nomor_ijazah_kelulusan'    => null, // ditangani di bawah (butuh AFTER kolom dinamis)
+            'nomor_skl'                 => "ADD COLUMN `nomor_skl` VARCHAR(50) DEFAULT NULL AFTER `nomor_ijazah_kelulusan`",
+            'keterangan_setelah_lulus'  => "ADD COLUMN `keterangan_setelah_lulus` TEXT DEFAULT NULL AFTER `nomor_skl`",
+        ];
+
+        foreach ($siswaCols as $col => $sql) {
+            if ($sql === null) continue;
+            $exists = $pdo->query("SHOW COLUMNS FROM `siswa` LIKE '$col'")->fetch();
+            if (!$exists) {
+                try { $pdo->exec("ALTER TABLE `siswa` $sql;"); } catch (\Throwable $e) { /* skip jika kolom referensi belum ada */ }
+            }
+        }
+
+        // Tambah nomor_ijazah_kelulusan dengan posisi AFTER yang dinamis
+        $exists = $pdo->query("SHOW COLUMNS FROM `siswa` LIKE 'nomor_ijazah_kelulusan'")->fetch();
+        if (!$exists) {
+            $afterCol = 'lama_belajar_sebelumnya';
+            if ($pdo->query("SHOW COLUMNS FROM `siswa` LIKE 'tanggal_lulus'")->fetch()) {
+                $afterCol = 'tanggal_lulus';
+            } elseif ($pdo->query("SHOW COLUMNS FROM `siswa` LIKE 'status'")->fetch()) {
+                $afterCol = 'status';
+            }
+            $pdo->exec("ALTER TABLE `siswa` ADD COLUMN `nomor_ijazah_kelulusan` VARCHAR(50) DEFAULT NULL AFTER `{$afterCol}`;");
+        }
+
         echo "  OK Tabel siswa berhasil diperbarui dengan kolom-kolom baru.\n";
 
         // 2. Lengkapi tabel rincian_pelajar
