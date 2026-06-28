@@ -1,10 +1,5 @@
 # Mengabaikan file konfigurasi database lokal & env
 .env
-app/Config/Database.php
-
-# Mengabaikan folder vendor dependensi backend & node
-/vendor/
-/node_modules/
 
 # Mengabaikan log sampah internal
 *.log
@@ -16,7 +11,6 @@ app/Config/Database.php
 
 # Mengabaikan folder scratch untuk file debugging lokal
 /scratch/
-/scratch/implementasi md/
 
 # Mengabaikan file sistem operasi
 .DS_Store
@@ -28,3 +22,11 @@ Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
+
+# Mengabaikan dependencies Node.js (jangan di-push ke repo)
+node_modules/
+package-lock.json
+
+# Mengabaikan dependencies PHP Composer (jangan di-push ke repo)
+vendor/
+composer.lock
