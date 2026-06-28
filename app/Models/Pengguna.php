@@ -494,20 +494,35 @@ class Pengguna extends Model {
                 'role_id' => $roleId
             ]);
 
+            // Fungsi helper untuk mengecek ketersediaan role
+            $checkRoleExist = function($rId) {
+                $st = $this->db->prepare("SELECT COUNT(*) FROM roles WHERE id = ?");
+                $st->execute([$rId]);
+                return $st->fetchColumn() > 0;
+            };
+
             // Jika kategori guru dan dicentang sebagai Guru BK (role_id 20)
             if ($tab === 'guru' && !empty($data['is_bk'])) {
-                $urStmt->execute([
-                    'user_id' => $userId,
-                    'role_id' => 20
-                ]);
+                if ($checkRoleExist(20)) {
+                    $urStmt->execute([
+                        'user_id' => $userId,
+                        'role_id' => 20
+                    ]);
+                } else {
+                    throw new \Exception("Role Guru BK (20) belum tersedia di sistem. Harap jalankan migrasi database.");
+                }
             }
 
             // Jika kategori guru dan dicentang sebagai Kesiswaan (role_id 22)
             if ($tab === 'guru' && !empty($data['is_kesiswaan'])) {
-                $urStmt->execute([
-                    'user_id' => $userId,
-                    'role_id' => 22
-                ]);
+                if ($checkRoleExist(22)) {
+                    $urStmt->execute([
+                        'user_id' => $userId,
+                        'role_id' => 22
+                    ]);
+                } else {
+                    throw new \Exception("Role Kesiswaan (22) belum tersedia di sistem. Harap jalankan migrasi database.");
+                }
             }
 
             $this->db->commit();
@@ -560,17 +575,31 @@ class Pengguna extends Model {
 
             // Kelola role Guru BK & Kesiswaan kustom jika tab adalah Guru
             if ($tab === 'guru') {
+                $checkRoleExist = function($rId) {
+                    $st = $this->db->prepare("SELECT COUNT(*) FROM roles WHERE id = ?");
+                    $st->execute([$rId]);
+                    return $st->fetchColumn() > 0;
+                };
+
                 if (!empty($data['is_bk'])) {
-                    $insertBk = "INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (?, 20)";
-                    $this->db->prepare($insertBk)->execute([$id]);
+                    if ($checkRoleExist(20)) {
+                        $insertBk = "INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (?, 20)";
+                        $this->db->prepare($insertBk)->execute([$id]);
+                    } else {
+                        throw new \Exception("Role Guru BK (20) belum tersedia. Harap jalankan migrasi database.");
+                    }
                 } else {
                     $deleteBk = "DELETE FROM user_roles WHERE user_id = ? AND role_id = 20";
                     $this->db->prepare($deleteBk)->execute([$id]);
                 }
 
                 if (!empty($data['is_kesiswaan'])) {
-                    $insertKis = "INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (?, 22)";
-                    $this->db->prepare($insertKis)->execute([$id]);
+                    if ($checkRoleExist(22)) {
+                        $insertKis = "INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (?, 22)";
+                        $this->db->prepare($insertKis)->execute([$id]);
+                    } else {
+                        throw new \Exception("Role Kesiswaan (22) belum tersedia. Harap jalankan migrasi database.");
+                    }
                 } else {
                     $deleteKis = "DELETE FROM user_roles WHERE user_id = ? AND role_id = 22";
                     $this->db->prepare($deleteKis)->execute([$id]);
