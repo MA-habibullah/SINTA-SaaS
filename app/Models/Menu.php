@@ -11,16 +11,30 @@ class Menu extends Model {
      * Ambil menu terotorisasi untuk sidebar berdasarkan role_name
      */
     public function getSidebarByRoleName(string $roleName): array {
+        $targetTenant = $this->tenantId ?? '00000000-0000-0000-0000-000000000000';
+
+        if ($this->tenantId !== null) {
+            $stmtCount = $this->db->prepare("SELECT COUNT(*) FROM role_menu_access WHERE tenant_id = :tenant_id");
+            $stmtCount->execute(['tenant_id' => $this->tenantId]);
+            if ((int)$stmtCount->fetchColumn() === 0) {
+                // Fallback ke default global jika belum ada kustomisasi tingkat sekolah
+                $targetTenant = '00000000-0000-0000-0000-000000000000';
+            }
+        }
+
         // Query aman menggunakan JOIN dan PDO Prepared Statements (Secure by Design)
-        $sql = "SELECT m.* 
+        $sql = "SELECT DISTINCT m.* 
                 FROM menus m
                 JOIN role_menu_access rma ON m.id = rma.menu_id
                 JOIN roles r ON rma.role_id = r.id
-                WHERE r.nama_role = :role_name
+                WHERE r.nama_role = :role_name AND rma.tenant_id = :tenant_id
                 ORDER BY m.parent_id ASC, m.urutan ASC";
 
         $stmt = $this->db->prepare($sql);
-        $stmt->execute(['role_name' => $roleName]);
+        $stmt->execute([
+            'role_name' => $roleName,
+            'tenant_id' => $targetTenant
+        ]);
         $menus = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         return $this->buildMenuTree($menus);
