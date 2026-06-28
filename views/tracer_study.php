@@ -596,7 +596,9 @@ $baseUrl   = '/SINTA-SaaS';
                 alertKuliah, alertPekerjaan,
                 riwayatKuliah, riwayatPekerjaan,
                 formKuliah, formPekerjaan,
-                submitKuliah, submitPekerjaan
+                submitKuliah, submitPekerjaan,
+                userRole, showSearchDropdown, searchResults, searchingStudents, selectedStudent, activeForm,
+                searchStudents, selectStudent
             };
         }
     });
