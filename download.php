@@ -11,6 +11,7 @@ SessionManager::start();
 // 1. Validasi Login
 if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     http_response_code(401);
+    error_log("DOWNLOAD ERROR 401: Belum login.");
     die("401 Unauthorized: Silakan login terlebih dahulu.");
 }
 
@@ -37,6 +38,7 @@ if (!$isLegacy) {
     $pathParts = explode('/', trim($file, '/'));
     if (count($pathParts) < 4 || $pathParts[0] !== 'uploads') {
         http_response_code(400);
+        error_log("DOWNLOAD ERROR 400: Format path berkas tidak valid: " . $file);
         die("400 Bad Request: Format path berkas tidak valid.");
     }
 
@@ -52,6 +54,7 @@ if (!$isLegacy) {
 
         if (!$siswa || $siswa['id'] !== $siswaId) {
             http_response_code(403);
+            error_log("DOWNLOAD ERROR 403: Siswa mismatch. currentSiswa=" . ($siswa['id'] ?? 'null') . " requestedSiswa=" . $siswaId);
             die("403 Forbidden: Anda tidak memiliki wewenang untuk mengakses berkas ini.");
         }
     } elseif ($roleName !== 'super_admin') {
@@ -59,6 +62,7 @@ if (!$isLegacy) {
         $currentTenantId = SessionManager::getTenantId();
         if (empty($currentTenantId) || $currentTenantId !== $tenantId) {
             http_response_code(403);
+            error_log("DOWNLOAD ERROR 403: Tenant mismatch. currentTenant=" . $currentTenantId . " requestedTenant=" . $tenantId);
             die("403 Forbidden: Anda tidak diizinkan mengakses berkas dari sekolah/tenant lain.");
         }
     }
@@ -107,6 +111,7 @@ if (!$isLegacy) {
 // 4. Periksa Keberadaan File Fisik
 if (!file_exists($filePath)) {
     http_response_code(404);
+    error_log("DOWNLOAD ERROR 404: File tidak ditemukan di server. filePath=" . $filePath);
     die("404 Not Found: Berkas fisik tidak ditemukan di server.");
 }
 
@@ -123,7 +128,9 @@ header('Cache-Control: must-revalidate');
 header('Pragma: public');
 header('Content-Length: ' . filesize($filePath));
 
-ob_clean();
+if (ob_get_level()) {
+    ob_clean();
+}
 flush();
 readfile($filePath);
 exit;
