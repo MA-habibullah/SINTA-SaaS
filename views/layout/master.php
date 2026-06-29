@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($data['title'] ?? ($stats['title'] ?? 'Dapodik & SPMB SaaS')) ?></title>
+    <title><?= htmlspecialchars($data['title'] ?? ($stats['title'] ?? 'SINTA-SaaS SaaS')) ?></title>
     
     <!-- Google Fonts: Plus Jakarta Sans & Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

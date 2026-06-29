@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portal Login Siswa - Dapodik & SPMB SaaS</title>
+    <title>Portal Login Siswa - SINTA-SaaS SaaS</title>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Bootstrap Icons -->
@@ -47,7 +47,7 @@
                 <i class="bi bi-mortarboard-fill text-3xl"></i>
             </div>
             <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">Portal Siswa</h2>
-            <p class="text-slate-500 text-sm mt-1">Dapodik & Penerimaan Siswa Baru Multi-Tenant</p>
+            <p class="text-slate-500 text-sm mt-1">SINTA-SaaS & Penerimaan Siswa Baru Multi-Tenant</p>
         </div>
 
         <!-- Card Container -->

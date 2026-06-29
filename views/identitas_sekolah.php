@@ -28,7 +28,7 @@
             <div class="text-start">
                 <div class="mb-3">
                     <label class="text-muted fs-9 text-uppercase fw-bold d-block mb-1">Subdomain Platform</label>
-                    <span class="fs-8 fw-semibold text-dark font-monospace">https://{{ schoolData.subdomain }}.dapodikspmb.id</span>
+                    <span class="fs-8 fw-semibold text-dark font-monospace">https://{{ schoolData.subdomain }}.sinta-saas.id</span>
                 </div>
                 
                 <div class="mb-3">
@@ -113,7 +113,7 @@
                                :class="{'is-invalid': errors.subdomain}"
                                placeholder="nama-sekolah"
                                required>
-                        <span class="input-group-text bg-light text-muted fs-8 font-monospace rounded-end-3">.dapodikspmb.id</span>
+                        <span class="input-group-text bg-light text-muted fs-8 font-monospace rounded-end-3">.sinta-saas.id</span>
                         <div class="invalid-feedback fs-9" v-if="errors.subdomain">
                             {{ errors.subdomain[0] }}
                         </div>

@@ -19,7 +19,7 @@ $isAdminOrSuper = in_array('super_admin', $user_roles, true) || in_array('operat
                 </div>
                 <div class="flex-shrink-0">
                     <span class="badge bg-primary px-3 py-2 fs-7 rounded-3">
-                        Domain: <?= htmlspecialchars($stats['subdomain']) ?>.dapodikspmb.id
+                        Domain: <?= htmlspecialchars($stats['subdomain']) ?>.sinta-saas.id
                     </span>
                 </div>
             </div>
@@ -186,7 +186,7 @@ $isAdminOrSuper = in_array('super_admin', $user_roles, true) || in_array('operat
                     <div class="col-12 col-md-6 col-lg-4">
                         <div class="p-3 bg-light rounded-3">
                             <div class="info-label text-muted fs-8 fw-semibold mb-1">Subdomain</div>
-                            <div class="info-value fw-bold text-dark">{{ schoolInfo.subdomain }}.dapodikspmb.id</div>
+                            <div class="info-value fw-bold text-dark">{{ schoolInfo.subdomain }}.sinta-saas.id</div>
                         </div>
                     </div>
                     <div class="col-12 col-md-6 col-lg-4">
@@ -530,7 +530,7 @@ $isAdminOrSuper = in_array('super_admin', $user_roles, true) || in_array('operat
                                         required
                                         placeholder="misal: sman1jkt"
                                     >
-                                    <span class="input-group-text rounded-end-3 bg-light text-muted fs-7">.dapodikspmb.id</span>
+                                    <span class="input-group-text rounded-end-3 bg-light text-muted fs-7">.sinta-saas.id</span>
                                 </div>
                                 <div v-if="validationErrors.subdomain" class="text-danger fs-8 mt-1">
                                     {{ validationErrors.subdomain[0] }}

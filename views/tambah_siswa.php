@@ -274,7 +274,7 @@ if ($userRole === 'siswa'):
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-2 pb-2 mb-4 border-bottom">
     <div>
         <h2 class="fw-bold text-dark mb-1"><?= htmlspecialchars($formTitle) ?></h2>
-        <p class="text-muted fs-7">Lengkapi formulir registrasi multi-step di bawah ini sesuai database Dapodik.</p>
+        <p class="text-muted fs-7">Lengkapi formulir registrasi multi-step di bawah ini sesuai database SINTA-SaaS.</p>
     </div>
     <div class="btn-toolbar mb-2 mb-md-0">
         <a href="/SINTA-SaaS/pengguna" class="btn btn-outline-secondary d-flex align-items-center rounded-3 px-3 py-2 fs-7">

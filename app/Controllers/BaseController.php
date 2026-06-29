@@ -18,7 +18,7 @@ class BaseController {
         } else {
             $host = $_SERVER['HTTP_HOST'] ?? '';
             $parts = explode('.', $host);
-            // Jika ada subdomain (misal: sman1jkt.dapodikspmb.id), parts minimal 3
+            // Jika ada subdomain (misal: sman1jkt.sinta-saas.id), parts minimal 3
             if (count($parts) >= 3 && $parts[0] !== 'www') {
                 $subdomain = $parts[0];
             }

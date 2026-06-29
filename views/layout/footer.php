@@ -11,7 +11,7 @@
             <div class="d-flex align-items-center flex-wrap gap-2 text-center text-md-start justify-content-center justify-content-md-start">
                 <span class="text-muted d-inline-flex align-items-center" style="font-size: 0.75rem; letter-spacing: 0.2px;">
                     <i class="bi bi-patch-check-fill text-primary me-2 fs-6"></i>
-                    <span>&copy; 2026 <strong>Dapodik &amp; SPMB Multi&#8209;Tenant SaaS</strong>. Hak Cipta Dilindungi.</span>
+                    <span>&copy; 2026 <strong>SINTA-SaaS Multi&#8209;Tenant SaaS</strong>. Hak Cipta Dilindungi.</span>
                 </span>
             </div>
             

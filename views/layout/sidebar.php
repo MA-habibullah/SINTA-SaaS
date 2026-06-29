@@ -252,7 +252,7 @@ if (!empty($roles)) {
         
         <!-- Sidebar Footer Info (Hidden when collapsed) -->
         <div class="sidebar-footer p-3 border-top border-light text-center">
-            <div class="nav-label fs-9 text-muted fw-bold">DAPODIK PLATFORM</div>
+            <div class="nav-label fs-9 text-muted fw-bold">SINTA PLATFORM</div>
         </div>
 
     </div>

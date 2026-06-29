@@ -10,7 +10,7 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
 
 /**
  * Front Controller & Router
- * Entry point untuk semua request aplikasi Dapodik & SPMB
+ * Entry point untuk semua request aplikasi SINTA-SaaS
  */
 
 // 1. Definisikan Autoloader Kelas PSR-4 Sederhana (Tanpa Composer)

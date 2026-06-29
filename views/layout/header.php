@@ -35,7 +35,7 @@ if ($tenantId) {
         <!-- Brand Logo / Name -->
         <a class="navbar-brand d-flex align-items-center text-decoration-none me-4" href="/SINTA-SaaS/dashboard">
             <i class="bi bi-mortarboard-fill text-primary fs-3 me-2"></i>
-            <span class="fw-extrabold fs-5 text-dark tracking-tight d-none d-sm-inline">DAPODIK <span class="text-primary">SAAS</span></span>
+            <span class="fw-extrabold fs-5 text-dark tracking-tight d-none d-sm-inline">SINTA <span class="text-primary">SAAS</span></span>
         </a>
 
         <!-- Indikator Tenant (Nama Sekolah Aktif) -->

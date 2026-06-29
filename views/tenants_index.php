@@ -168,7 +168,7 @@
                             <div class="d-flex flex-column gap-1">
                                 <div class="d-flex align-items-center gap-1.5">
                                     <span class="badge bg-blue-50 text-blue-700 px-2 py-1 rounded-3 fs-8 font-semibold">
-                                        {{ tenant.subdomain }}.dapodikspmb.id
+                                        {{ tenant.subdomain }}.sinta-saas.id
                                     </span>
                                 </div>
                                 <div v-if="tenant.domain" class="d-flex align-items-center gap-1.5 text-muted fs-8">
@@ -364,7 +364,7 @@
                                                 placeholder="sman1jkt" 
                                                 required
                                             >
-                                            <span class="input-group-text bg-slate-100 border-slate-200 text-slate-500 rounded-end-3 fs-8 fw-medium">.dapodikspmb.id</span>
+                                            <span class="input-group-text bg-slate-100 border-slate-200 text-slate-500 rounded-end-3 fs-8 fw-medium">.sinta-saas.id</span>
                                             <div class="invalid-feedback fs-9">{{ getError('subdomain') }}</div>
                                         </div>
                                         <span class="text-slate-500 fs-9 block mt-1"><i class="bi bi-info-circle me-1"></i>Hanya huruf kecil, angka, dan tanda hubung (-). Tanpa spasi.</span>

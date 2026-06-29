@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Dapodik & SPMB SaaS</title>
+    <title>Login - SINTA-SaaS SaaS</title>
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -88,7 +88,7 @@
             <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary rounded-3 p-3 mb-3">
                 <i class="bi bi-shield-lock-fill fs-2 text-primary"></i>
             </div>
-            <h3 class="fw-bold">Dapodik & SPMB</h3>
+            <h3 class="fw-bold">SINTA-SaaS</h3>
             <p class="text-muted-custom">Platform Sistem Akademik & PPDB Multi-tenant</p>
         </div>
 
