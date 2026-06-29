@@ -4,7 +4,7 @@
 # Cara pakai: bash deploy.sh
 # =============================================================
 
-APP_DIR="/var/www/dapodik"
+APP_DIR="/var/www/SINTA-SaaS"
 DB_CONFIG="$APP_DIR/app/Config/Database.php"
 BACKUP_FILE="/root/Database.php.backup"
 
