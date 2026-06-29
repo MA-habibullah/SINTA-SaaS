@@ -116,9 +116,15 @@ if (!file_exists($filePath)) {
 }
 
 // 5. Kirim Berkas Secara Aman
-$finfo = finfo_open(FILEINFO_MIME_TYPE);
-$mimeType = finfo_file($finfo, $filePath);
-finfo_close($finfo);
+if (function_exists('finfo_open')) {
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mimeType = finfo_file($finfo, $filePath);
+    finfo_close($finfo);
+} elseif (function_exists('mime_content_type')) {
+    $mimeType = mime_content_type($filePath);
+} else {
+    $mimeType = 'application/octet-stream';
+}
 
 header('Content-Description: File Transfer');
 header('Content-Type: ' . $mimeType);

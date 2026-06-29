@@ -186,7 +186,13 @@ class SiswaController extends BaseController {
         $netChange = 0;
 
         foreach ($fileKeys as $key) {
-            if (!isset($_FILES[$key]) || $_FILES[$key]['error'] !== UPLOAD_ERR_OK) {
+            if (!isset($_FILES[$key])) {
+                continue;
+            }
+            if ($_FILES[$key]['error'] !== UPLOAD_ERR_OK) {
+                if ($_FILES[$key]['error'] !== UPLOAD_ERR_NO_FILE) {
+                    $errors[$key] = "Gagal mengunggah {$fieldLabel} (Kode Error: " . $_FILES[$key]['error'] . "). Mungkin ukuran file melebihi batas maksimal server.";
+                }
                 continue;
             }
 
