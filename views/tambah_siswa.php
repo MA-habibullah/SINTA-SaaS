@@ -2269,10 +2269,13 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
             // Helper to get file URL (handles both legacy and new folder format)
             const getFileUrl = (path, fieldName) => {
                 if (!path) return '#';
+                
+                let baseUrl = window.location.pathname.startsWith('/SINTA-SaaS') ? '/SINTA-SaaS' : '';
+                
                 if (path.indexOf('/') !== -1) {
-                    return '/SINTA-SaaS/download.php?file=' + encodeURIComponent(path);
+                    return baseUrl + '/download.php?file=' + encodeURIComponent(path);
                 }
-                return '/SINTA-SaaS/download.php?file=' + encodeURIComponent(path) + 
+                return baseUrl + '/download.php?file=' + encodeURIComponent(path) + 
                        '&tenant=' + encodeURIComponent(form.value.tenant_id || '') + 
                        '&field=' + encodeURIComponent(fieldName);
             };
