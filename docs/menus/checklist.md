@@ -17,3 +17,4 @@ Berikut adalah daftar dokumentasi per menu yang telah dibuat:
 - [x] `13-Manajemen-Kurikulum.md`: Alokasi Mapel, penugasan guru pengajar, duplikasi kurikulum antar semester.
 - [x] `14-Manajemen-Data-Siswa.md`: Dapur pengolahan formulir siswa (5+ tabel relasional), sistem auto-save draft, cascading dropdown geolokasi, dan kompresi pasfoto.
 - [x] `15-Fitur-Utilitas-Massal.md`: Dokumentasi penanganan operasi berskala besar, seperti impor *Excel* dan pengolahan `.zip` untuk *Bulk Upload Photo* profil siswa.
+- [x] `16-Arsitektur-Multi-Event-CBT.md`: Blueprint arsitektur CBT (Computer Based Test) SINTA-SaaS, mencakup *Universal Session Container*, Bento Grid Siswa, Layar Tancap Multi-Event, dan *Redis Priority Queue*.
