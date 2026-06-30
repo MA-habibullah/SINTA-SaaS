@@ -156,6 +156,46 @@ try {
             $controller = new App\Controllers\EkskulController();
             $controller->index();
             break;
+            
+        case '/informasi/pengumuman':
+            $controller = new App\Controllers\PengumumanController();
+            $controller->index();
+            break;
+            
+        case '/informasi/pengumuman/store':
+            $controller = new App\Controllers\PengumumanController();
+            $controller->store();
+            break;
+            
+        case '/informasi/pengumuman/update':
+            $controller = new App\Controllers\PengumumanController();
+            $controller->update();
+            break;
+            
+        case '/informasi/pengumuman/delete':
+            $controller = new App\Controllers\PengumumanController();
+            $controller->delete();
+            break;
+
+        case '/informasi/agenda':
+            $controller = new App\Controllers\AgendaController();
+            $controller->index();
+            break;
+            
+        case '/informasi/agenda/store':
+            $controller = new App\Controllers\AgendaController();
+            $controller->store();
+            break;
+            
+        case '/informasi/agenda/update':
+            $controller = new App\Controllers\AgendaController();
+            $controller->update();
+            break;
+            
+        case '/informasi/agenda/delete':
+            $controller = new App\Controllers\AgendaController();
+            $controller->delete();
+            break;
 
         case '/api/v1/ekskul/tambah':
             $controller = new App\Controllers\EkskulController();

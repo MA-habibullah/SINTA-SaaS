@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Config\Database;
 use App\Core\SessionManager;
+use App\Models\PengumumanModel;
 use PDO;
 
 class DashboardController extends BaseController {
@@ -204,6 +205,10 @@ class DashboardController extends BaseController {
                 ];
             }
 
+            // H. Fetch Pengumuman
+            $pengumumanModel = new PengumumanModel($tenantId);
+            $pengumuman_list = $pengumumanModel->getActiveForUser($_SESSION['role_id'] ?? 0);
+
             // 5. Kemas data untuk disalurkan ke View
             $stats = [
                 'nama_sekolah' => $schoolInfo['nama_sekolah'],
@@ -218,7 +223,8 @@ class DashboardController extends BaseController {
                 'school_info' => $schoolInfo,
                 'siswa_list' => $siswaList,
                 'gtk_list' => $gtkList,
-                'recent_changes' => $recentChanges
+                'recent_changes' => $recentChanges,
+                'pengumuman_list' => $pengumuman_list
             ];
 
             // 6. Muat file Tampilan menggunakan Master Layout

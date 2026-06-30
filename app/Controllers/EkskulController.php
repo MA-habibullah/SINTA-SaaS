@@ -100,14 +100,34 @@ class EkskulController extends BaseController {
         $stmtPembina->execute([$tenant_id]);
         $pembina_list = $stmtPembina->fetchAll(PDO::FETCH_ASSOC);
 
-        // Get Active Tahun Ajaran
-        $stmtTa = $db->prepare("SELECT id, tahun_ajaran FROM tahun_ajaran WHERE tenant_id = ? AND is_active = 1 ORDER BY tahun_ajaran DESC LIMIT 1");
-        $stmtTa->execute([$tenant_id]);
-        $active_ta = $stmtTa->fetch(PDO::FETCH_ASSOC);
-        if (!$active_ta) {
-            $stmtTa = $db->prepare("SELECT id, tahun_ajaran FROM tahun_ajaran WHERE tenant_id = ? ORDER BY tahun_ajaran DESC LIMIT 1");
-            $stmtTa->execute([$tenant_id]);
-            $active_ta = $stmtTa->fetch(PDO::FETCH_ASSOC);
+        // Get All Tahun Ajaran for this tenant
+        $stmtTaList = $db->prepare("SELECT id, tahun_ajaran, is_active FROM tahun_ajaran WHERE tenant_id = ? ORDER BY tahun_ajaran DESC");
+        $stmtTaList->execute([$tenant_id]);
+        $all_tahun_ajaran = $stmtTaList->fetchAll(PDO::FETCH_ASSOC);
+        
+        $global_active_ta = null;
+        foreach ($all_tahun_ajaran as $ta) {
+            if ($ta['is_active'] == 1) {
+                $global_active_ta = $ta;
+                break;
+            }
+        }
+        if (!$global_active_ta && !empty($all_tahun_ajaran)) {
+            $global_active_ta = $all_tahun_ajaran[0];
+        }
+
+        $selected_ta_id = $_GET['tahun_ajaran_id'] ?? ($_POST['tahun_ajaran_id'] ?? ($global_active_ta['id'] ?? null));
+        $is_historical = false;
+        
+        $active_ta = $global_active_ta;
+        if ($selected_ta_id && $global_active_ta && $selected_ta_id !== $global_active_ta['id']) {
+            foreach ($all_tahun_ajaran as $ta) {
+                if ($ta['id'] === $selected_ta_id) {
+                    $active_ta = $ta;
+                    $is_historical = true;
+                    break;
+                }
+            }
         }
         $active_ta_id = $active_ta['id'] ?? null;
 
@@ -277,6 +297,9 @@ class EkskulController extends BaseController {
             'is_super_admin' => ($role === 'super_admin'),
             'role' => $role,
             'active_ta' => $active_ta,
+            'all_tahun_ajaran' => $all_tahun_ajaran,
+            'is_historical' => $is_historical,
+            'selected_ta_id' => $selected_ta_id,
             'kelas_list' => $kelas_list,
             'selected_ekskul_id' => $selected_ekskul_id,
             'selected_kelas_id' => $selected_kelas_id,
@@ -1459,10 +1482,13 @@ class EkskulController extends BaseController {
 
         // Fetch members
         $stmtMembers = $db->prepare('
-            SELECT s.nisn, s.nama_lengkap, k.nama_kelas, s.jenis_kelamin
+            SELECT s.nisn, s.nama_lengkap, k.nama_kelas, s.jenis_kelamin, 
+                   COALESCE(kt.nama_kota, s.tempat_lahir) as tempat_lahir, s.tanggal_lahir, kon.no_telepon_siswa
             FROM anggota_ekskul ae
             JOIN siswa s ON ae.siswa_id = s.id
             LEFT JOIN kelas k ON s.id_kelas = k.id
+            LEFT JOIN kota kt ON s.tempat_lahir = kt.id_kota
+            LEFT JOIN kontak kon ON s.id = kon.id_siswa
             WHERE ae.ekskul_id = ? AND ae.tahun_ajaran_id = ? AND ae.semester = ? AND ae.tenant_id = ? AND s.deleted_at IS NULL
             ORDER BY k.nama_kelas ASC, s.nama_lengkap ASC
         ');
@@ -1479,16 +1505,20 @@ class EkskulController extends BaseController {
         $excelData[] = ['Tahun Ajaran:', $ta_name];
         $excelData[] = ['Total Anggota:', count($members) . ' siswa'];
         $excelData[] = []; // separator
-        $excelData[] = ['No', 'NISN', 'Nama Lengkap', 'Kelas', 'Jenis Kelamin'];
+        $excelData[] = ['No', 'NISN', 'Nama Lengkap', 'Jenis Kelamin', 'Kelas', 'Nama Ekstrakurikuler', 'Tempat Lahir', 'Tanggal Lahir', 'No. HP / Kontak'];
 
         $no = 1;
         foreach ($members as $row) {
             $excelData[] = [
                 $no++,
-                (string)$row['nisn'],
-                (string)$row['nama_lengkap'],
-                (string)($row['nama_kelas'] ?? 'Tanpa Kelas'),
-                (string)($row['jenis_kelamin'] ?? '-'),
+                $row['nisn'],
+                $row['nama_lengkap'],
+                $row['jenis_kelamin'],
+                $row['nama_kelas'] ?? 'Tanpa Kelas',
+                $ekskul_nama,
+                $row['tempat_lahir'] ?? '-',
+                $row['tanggal_lahir'] ? date('d-m-Y', strtotime($row['tanggal_lahir'])) : '-',
+                $row['no_telepon_siswa'] ?? '-'
             ];
         }
 

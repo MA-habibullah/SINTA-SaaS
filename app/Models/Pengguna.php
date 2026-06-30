@@ -89,7 +89,9 @@ class Pengguna extends Model {
                                  u.email, u.status AS user_status, t.nama_sekolah,
                                  ra.alamat_kk, ra.alamat_domisili, ra.rt, ra.rw, ra.kode_pos, ra.id_kelurahan, ra.status_tinggal,
                                  k.email AS kontak_email, k.no_telepon_siswa,
-                                 ot.nik_ibu, ot.nama_ibu, ot.id_tempat_lahir_ibu, ot.tahun_lahir_ibu, ot.pendidikan_ibu, ot.pekerjaan_ibu, ot.penghasilan_ibu, ot.agama_ibu,
+                                 ot.nik_ibu, ot.nama_ibu, ot.id_tempat_lahir_ibu, ot.tanggal_lahir_ibu, ot.pendidikan_ibu, ot.pekerjaan_ibu, ot.penghasilan_ibu, ot.agama_ibu,
+                                 rp.tinggi_badan, rp.berat_badan, rp.lingkar_kepala, rp.golongan_darah, rp.anak_ke, rp.jumlah_saudara, rp.jarak_rumah, rp.transportasi,
+                                 reg.jenis_pendaftaran, reg.jalur_diterima, reg.tanggal_masuk, reg.hobi,
                                  kel.nama_kelas AS nama_kelas, jen.nama_jenjang AS nama_jenjang
                           FROM siswa s
                           LEFT JOIN kota kl_lahir ON s.tempat_lahir = kl_lahir.id_kota
@@ -98,6 +100,8 @@ class Pengguna extends Model {
                           LEFT JOIN rincian_alamat ra ON s.id = ra.id_siswa
                           LEFT JOIN kontak k ON s.id = k.id_siswa
                           LEFT JOIN orang_tua ot ON s.id = ot.id_siswa
+                          LEFT JOIN rincian_pelajar rp ON s.id = rp.id_siswa
+                          LEFT JOIN registrasi reg ON s.id = reg.id_siswa
                           LEFT JOIN kelas kel ON s.id_kelas = kel.id
                           LEFT JOIN jenjang jen ON s.id_jenjang = jen.id";
             $countSql = "SELECT COUNT(*) FROM siswa s 
@@ -165,7 +169,19 @@ class Pengguna extends Model {
                                  EXISTS(
                                      SELECT 1 FROM user_roles ur 
                                      WHERE ur.user_id = u.id AND ur.role_id = 22
-                                 ) AS is_kesiswaan
+                                 ) AS is_kesiswaan,
+                                 EXISTS(
+                                     SELECT 1 FROM user_roles ur 
+                                     WHERE ur.user_id = u.id AND ur.role_id = 23
+                                 ) AS is_humas,
+                                 EXISTS(
+                                     SELECT 1 FROM user_roles ur 
+                                     WHERE ur.user_id = u.id AND ur.role_id = 24
+                                 ) AS is_kurikulum,
+                                 EXISTS(
+                                     SELECT 1 FROM user_roles ur 
+                                     WHERE ur.user_id = u.id AND ur.role_id = 25
+                                 ) AS is_sarpras
                           FROM users u
                           JOIN roles r ON u.role_id = r.id
                           LEFT JOIN tenants t ON u.tenant_id = t.id";
@@ -223,10 +239,15 @@ class Pengguna extends Model {
         if ($tab === 'siswa') {
             foreach ($list as &$row) {
                 $fieldsToCheck = [
-                    'nama_lengkap', 'jenis_kelamin', 'tempat_lahir', 'tanggal_lahir', 'nik', 'no_kk', 'agama', 'sekolah_asal',
+                    'nisn', 'nama_lengkap', 'jenis_kelamin', 'tanggal_lahir', 'tempat_lahir', 
+                    'id_angkatan', 'id_tahun_ajaran', 'id_jenjang', 'id_jurusan', 'id_kelas', 'id_pendidikan',
                     'alamat_kk', 'alamat_domisili', 'rt', 'rw', 'kode_pos', 'id_kelurahan', 'status_tinggal',
                     'kontak_email', 'no_telepon_siswa',
-                    'nik_ibu', 'nama_ibu', 'id_tempat_lahir_ibu', 'tahun_lahir_ibu', 'pendidikan_ibu', 'pekerjaan_ibu', 'penghasilan_ibu', 'agama_ibu'
+                    'tinggi_badan', 'berat_badan', 'lingkar_kepala', 'golongan_darah', 
+                    'anak_ke', 'jumlah_saudara', 'jarak_rumah', 'transportasi',
+                    'nik_ibu', 'nama_ibu', 'id_tempat_lahir_ibu', 'tanggal_lahir_ibu',
+                    'pendidikan_ibu', 'pekerjaan_ibu', 'penghasilan_ibu', 'agama_ibu',
+                    'jenis_pendaftaran', 'jalur_diterima', 'tanggal_masuk', 'hobi'
                 ];
                 $filled = 0;
                 $totalFields = count($fieldsToCheck);
@@ -525,6 +546,30 @@ class Pengguna extends Model {
                 }
             }
 
+            if ($tab === 'guru' && !empty($data['is_humas'])) {
+                if ($checkRoleExist(23)) {
+                    $urStmt->execute(['user_id' => $userId, 'role_id' => 23]);
+                } else {
+                    throw new \Exception("Role Humas (23) belum tersedia di sistem. Harap jalankan migrasi database.");
+                }
+            }
+
+            if ($tab === 'guru' && !empty($data['is_kurikulum'])) {
+                if ($checkRoleExist(24)) {
+                    $urStmt->execute(['user_id' => $userId, 'role_id' => 24]);
+                } else {
+                    throw new \Exception("Role Kurikulum (24) belum tersedia di sistem. Harap jalankan migrasi database.");
+                }
+            }
+
+            if ($tab === 'guru' && !empty($data['is_sarpras'])) {
+                if ($checkRoleExist(25)) {
+                    $urStmt->execute(['user_id' => $userId, 'role_id' => 25]);
+                } else {
+                    throw new \Exception("Role Sarpras (25) belum tersedia di sistem. Harap jalankan migrasi database.");
+                }
+            }
+
             $this->db->commit();
             return $userId;
         } catch (\Throwable $e) {
@@ -603,6 +648,36 @@ class Pengguna extends Model {
                 } else {
                     $deleteKis = "DELETE FROM user_roles WHERE user_id = ? AND role_id = 22";
                     $this->db->prepare($deleteKis)->execute([$id]);
+                }
+
+                if (!empty($data['is_humas'])) {
+                    if ($checkRoleExist(23)) {
+                        $this->db->prepare("INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (?, 23)")->execute([$id]);
+                    } else {
+                        throw new \Exception("Role Humas (23) belum tersedia.");
+                    }
+                } else {
+                    $this->db->prepare("DELETE FROM user_roles WHERE user_id = ? AND role_id = 23")->execute([$id]);
+                }
+
+                if (!empty($data['is_kurikulum'])) {
+                    if ($checkRoleExist(24)) {
+                        $this->db->prepare("INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (?, 24)")->execute([$id]);
+                    } else {
+                        throw new \Exception("Role Kurikulum (24) belum tersedia.");
+                    }
+                } else {
+                    $this->db->prepare("DELETE FROM user_roles WHERE user_id = ? AND role_id = 24")->execute([$id]);
+                }
+
+                if (!empty($data['is_sarpras'])) {
+                    if ($checkRoleExist(25)) {
+                        $this->db->prepare("INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (?, 25)")->execute([$id]);
+                    } else {
+                        throw new \Exception("Role Sarpras (25) belum tersedia.");
+                    }
+                } else {
+                    $this->db->prepare("DELETE FROM user_roles WHERE user_id = ? AND role_id = 25")->execute([$id]);
                 }
             }
 

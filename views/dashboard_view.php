@@ -106,6 +106,59 @@ $isAdminOrSuper = in_array('super_admin', $user_roles, true) || in_array('operat
     </div>
     <?php endif; ?>
 
+    <!-- Papan Pengumuman -->
+    <?php if (!empty($stats['pengumuman_list'])): ?>
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
+                    <h5 class="fw-bold mb-0 text-primary"><i class="bi bi-megaphone-fill me-2"></i>Papan Pengumuman</h5>
+                </div>
+                <div class="card-body">
+                    <div class="accordion accordion-flush" id="accordionPengumuman">
+                        <?php foreach ($stats['pengumuman_list'] as $idx => $pengumuman): ?>
+                            <div class="accordion-item border-bottom mb-2 rounded">
+                                <h2 class="accordion-header" id="heading_<?= $pengumuman['id'] ?>">
+                                    <button class="accordion-button <?= $idx === 0 ? '' : 'collapsed' ?> bg-light rounded" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_<?= $pengumuman['id'] ?>" aria-expanded="<?= $idx === 0 ? 'true' : 'false' ?>" aria-controls="collapse_<?= $pengumuman['id'] ?>">
+                                        <div class="d-flex flex-column">
+                                            <span class="fw-bold text-dark"><?= htmlspecialchars($pengumuman['judul']) ?></span>
+                                            <small class="text-muted mt-1"><i class="bi bi-clock me-1"></i><?= date('d M Y', strtotime($pengumuman['created_at'])) ?> • Oleh: <?= htmlspecialchars($pengumuman['nama_pembuat']) ?></small>
+                                        </div>
+                                    </button>
+                                </h2>
+                                <div id="collapse_<?= $pengumuman['id'] ?>" class="accordion-collapse collapse <?= $idx === 0 ? 'show' : '' ?>" aria-labelledby="heading_<?= $pengumuman['id'] ?>" data-bs-parent="#accordionPengumuman">
+                                    <div class="accordion-body bg-white pt-3">
+                                        <div class="pengumuman-content mb-3" style="font-family: inherit;">
+                                            <?= $pengumuman['isi_pengumuman'] ?>
+                                        </div>
+                                        <?php if ($pengumuman['lampiran_file']): ?>
+                                            <div class="mt-3 p-3 bg-light rounded border">
+                                                <div class="fw-bold mb-2 text-muted fs-7"><i class="bi bi-paperclip me-1"></i>Lampiran:</div>
+                                                <?php 
+                                                    $ext = strtolower(pathinfo($pengumuman['lampiran_file'], PATHINFO_EXTENSION)); 
+                                                    $isImage = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+                                                ?>
+                                                <?php if ($isImage): ?>
+                                                    <div class="text-center mb-2">
+                                                        <img src="/SINTA-SaaS/storage/app/public/<?= htmlspecialchars($pengumuman['lampiran_file']) ?>" class="img-fluid rounded shadow-sm" style="max-height: 400px; cursor: pointer;" onclick="window.open(this.src, '_blank')" alt="Lampiran Pengumuman">
+                                                    </div>
+                                                <?php endif; ?>
+                                                <a href="/SINTA-SaaS/storage/app/public/<?= htmlspecialchars($pengumuman['lampiran_file']) ?>" target="_blank" class="btn btn-sm btn-<?= $isImage ? 'outline-secondary' : 'outline-primary' ?>">
+                                                    <i class="bi <?= $isImage ? 'bi-arrows-fullscreen' : 'bi-file-earmark-text' ?> me-1"></i> <?= $isImage ? 'Buka Gambar Penuh' : 'Buka / Unduh Lampiran' ?>
+                                                </a>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <?php if ($isAdminOrSuper): ?>
     <!-- Tabs Navigation Bar (Vue.js Controlled with Mobile Horizontal Scroll) -->
     <div class="row mb-4">

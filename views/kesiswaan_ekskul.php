@@ -317,7 +317,7 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
             <div class="card shadow-sm border-0 rounded-4 mb-4">
                 <div class="card-body p-4">
                     <div class="row align-items-center">
-                        <div class="col-md-5 mb-3 mb-md-0">
+                        <div class="col-md-4 mb-3 mb-md-0">
                             <label class="form-label fw-bold text-muted small">PILIH EKSTRAKURIKULER</label>
                             <select id="selected_ekskul_selector" class="form-select border-2 border-primary-subtle" onchange="changeEkskulFilter(this.value)">
                                 <option value="">-- Pilih Ekstrakurikuler --</option>
@@ -331,20 +331,29 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
                             </select>
                         </div>
                         <div class="col-md-4 mb-3 mb-md-0">
+                            <label class="form-label fw-bold text-muted small">PILIH TAHUN AJARAN</label>
+                            <select id="selected_ta_selector" class="form-select border-2 border-primary-subtle" onchange="changeTaFilter(this.value)">
+                                <?php foreach($all_tahun_ajaran as $ta): ?>
+                                    <option value="<?= htmlspecialchars($ta['id']) ?>" <?= $selected_ta_id === $ta['id'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($ta['tahun_ajaran']) ?> <?= $ta['is_active'] == 1 ? '(Aktif)' : '' ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3 mb-md-0">
                             <label class="form-label fw-bold text-muted small">PILIH SEMESTER</label>
                             <select id="selected_semester_selector" class="form-select border-2 border-primary-subtle" onchange="changeSemesterFilter(this.value)">
                                 <option value="Ganjil" <?= $selected_semester === 'Ganjil' ? 'selected' : '' ?>>Semester Ganjil</option>
                                 <option value="Genap" <?= $selected_semester === 'Genap' ? 'selected' : '' ?>>Semester Genap</option>
                             </select>
                         </div>
-                        <div class="col-md-3 text-md-end">
-                            <?php if(!empty($active_ta)): ?>
-                                <span class="badge bg-primary px-3 py-2 fs-6 rounded-pill">
-                                    <i class="bi bi-calendar3 me-1"></i> TA: <?= htmlspecialchars($active_ta['tahun_ajaran']) ?>
-                                </span>
-                            <?php endif; ?>
-                        </div>
                     </div>
+                    <?php if (isset($is_historical) && $is_historical): ?>
+                    <div class="alert alert-warning mt-3 mb-0 py-2 d-flex align-items-center">
+                        <i class="bi bi-clock-history fs-5 me-2"></i>
+                        <span>Anda sedang melihat data historis untuk Tahun Ajaran <strong><?= htmlspecialchars($active_ta['tahun_ajaran'] ?? '') ?></strong> Semester <strong><?= htmlspecialchars($selected_semester) ?></strong>.</span>
+                    </div>
+                    <?php endif; ?>
                     <?php if(!empty($selected_ekskul_id)): ?>
                     <hr class="my-3 border-light">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
@@ -573,7 +582,7 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
             <div class="card shadow-sm border-0 rounded-4 mb-4">
                 <div class="card-body p-4">
                     <div class="row align-items-center">
-                        <div class="col-md-5 mb-3 mb-md-0">
+                        <div class="col-md-4 mb-3 mb-md-0">
                             <label class="form-label fw-bold text-muted small">PILIH EKSTRAKURIKULER</label>
                             <select id="selected_ekskul_selector_nilai" class="form-select border-2 border-primary-subtle" onchange="changeEkskulFilterNilai(this.value)">
                                 <option value="">-- Pilih Ekstrakurikuler --</option>
@@ -587,20 +596,29 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
                             </select>
                         </div>
                         <div class="col-md-4 mb-3 mb-md-0">
+                            <label class="form-label fw-bold text-muted small">PILIH TAHUN AJARAN</label>
+                            <select id="selected_ta_selector_nilai" class="form-select border-2 border-primary-subtle" onchange="changeTaFilterNilai(this.value)">
+                                <?php foreach($all_tahun_ajaran as $ta): ?>
+                                    <option value="<?= htmlspecialchars($ta['id']) ?>" <?= $selected_ta_id === $ta['id'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($ta['tahun_ajaran']) ?> <?= $ta['is_active'] == 1 ? '(Aktif)' : '' ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3 mb-md-0">
                             <label class="form-label fw-bold text-muted small">PILIH SEMESTER</label>
                             <select id="selected_semester_selector_nilai" class="form-select border-2 border-primary-subtle" onchange="changeSemesterFilterNilai(this.value)">
                                 <option value="Ganjil" <?= $selected_semester === 'Ganjil' ? 'selected' : '' ?>>Semester Ganjil</option>
                                 <option value="Genap" <?= $selected_semester === 'Genap' ? 'selected' : '' ?>>Semester Genap</option>
                             </select>
                         </div>
-                        <div class="col-md-3 text-md-end">
-                            <?php if(!empty($active_ta)): ?>
-                                <span class="badge bg-primary px-3 py-2 fs-6 rounded-pill">
-                                    <i class="bi bi-calendar3 me-1"></i> TA: <?= htmlspecialchars($active_ta['tahun_ajaran']) ?>
-                                </span>
-                            <?php endif; ?>
-                        </div>
                     </div>
+                    <?php if (isset($is_historical) && $is_historical): ?>
+                    <div class="alert alert-warning mt-3 mb-0 py-2 d-flex align-items-center">
+                        <i class="bi bi-clock-history fs-5 me-2"></i>
+                        <span>Anda sedang melihat data historis untuk Tahun Ajaran <strong><?= htmlspecialchars($active_ta['tahun_ajaran'] ?? '') ?></strong> Semester <strong><?= htmlspecialchars($selected_semester) ?></strong>.</span>
+                    </div>
+                    <?php endif; ?>
                     <?php if(!empty($selected_ekskul_id)): ?>
                     <hr class="my-3 border-light">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
@@ -918,6 +936,13 @@ function changeSemesterFilter(semester) {
     window.location.search = urlParams.toString();
 }
 
+function changeTaFilter(taId) {
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('tab', 'anggota');
+    urlParams.set('tahun_ajaran_id', taId);
+    window.location.search = urlParams.toString();
+}
+
 function changeEkskulFilterNilai(ekskulId) {
     const urlParams = new URLSearchParams(window.location.search);
     urlParams.set('tab', 'nilai');
@@ -935,6 +960,13 @@ function changeSemesterFilterNilai(semester) {
     urlParams.set('tab', 'nilai');
     urlParams.set('semester', semester);
     urlParams.delete('kelas_id');
+    window.location.search = urlParams.toString();
+}
+
+function changeTaFilterNilai(taId) {
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('tab', 'nilai');
+    urlParams.set('tahun_ajaran_id', taId);
     window.location.search = urlParams.toString();
 }
 

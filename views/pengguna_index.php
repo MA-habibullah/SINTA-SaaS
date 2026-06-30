@@ -247,15 +247,15 @@
                                                  aria-valuemin="0"
                                                  aria-valuemax="100"
                                                  :style="{ width: item.persentase_kelengkapan + '%' }"
-                                                 :class="item.persentase_kelengkapan < 50 ? 'bg-red-500' : (item.persentase_kelengkapan < 100 ? 'bg-amber-500' : 'bg-green-500')">
+                                                 :class="item.persentase_kelengkapan < 50 ? 'bg-danger' : (item.persentase_kelengkapan < 100 ? 'bg-warning' : 'bg-success')">
                                             </div>
                                         </div>
                                     </div>
                                 </td>
                                 <td class="text-center">
-                                    <span v-if="item.status === 'Aktif'" class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold">Aktif</span>
-                                    <span v-else-if="item.status === 'Lulus'" class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">Lulus</span>
-                                    <span v-else-if="item.status === 'Pindah'" class="bg-amber-100 text-amber-800 px-2 py-1 rounded text-xs font-semibold">Pindah</span>
+                                    <span v-if="item.status === 'Aktif'" class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Aktif</span>
+                                    <span v-else-if="item.status === 'Lulus'" class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">Lulus</span>
+                                    <span v-else-if="item.status === 'Pindah'" class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1">Pindah</span>
                                     <span v-else class="badge bg-secondary">-</span>
                                 </td>
                                 <td class="text-center">
@@ -349,7 +349,12 @@
                                 <td class="font-monospace"><a :href="'mailto:'+item.email" class="text-decoration-none">{{ item.email }}</a></td>
                                 <td>
                                     <span class="badge bg-light text-secondary border text-capitalize px-2.5 py-1.5 fs-8">
-                                        {{ item.nama_role === 'guru' ? ('Guru' + (item.is_bk == 1 || item.is_bk === true ? ', Guru BK' : '') + (item.is_kesiswaan == 1 || item.is_kesiswaan === true ? ', Kesiswaan' : '')) : (item.nama_role === 'operator_sekolah' ? 'Operator Sekolah' : (item.nama_role === 'guru_bk' ? 'Guru BK' : (item.nama_role === 'kesiswaan' ? 'Kesiswaan' : item.nama_role))) }}
+                                        <span v-if="activeTab === 'guru'">
+                                            {{ item.nama_role === 'guru' ? ('Guru' + (item.is_bk == 1 || item.is_bk === true ? ', Guru BK' : '') + (item.is_kesiswaan == 1 || item.is_kesiswaan === true ? ', Kesiswaan' : '') + (item.is_humas == 1 || item.is_humas === true ? ', Waka HUMAS' : '') + (item.is_kurikulum == 1 || item.is_kurikulum === true ? ', Waka Kurikulum' : '') + (item.is_sarpras == 1 || item.is_sarpras === true ? ', Waka Sarpras' : '')) : (item.nama_role === 'operator_sekolah' ? 'Operator Sekolah' : (item.nama_role === 'guru_bk' ? 'Guru BK' : (item.nama_role === 'kesiswaan' ? 'Kesiswaan' : item.nama_role))) }}
+                                        </span>
+                                        <span v-else>
+                                            {{ item.nama_role }}
+                                        </span>
                                     </span>
                                 </td>
                                 <td class="text-center">
@@ -590,21 +595,51 @@
                                     <div class="invalid-feedback">{{ getError('password') }}</div>
                                 </div>
 
-                                <!-- Checkbox Guru BK & Kesiswaan (hanya muncul saat activeTab === 'guru') -->
-                                <div class="col-12 mt-2" v-if="activeTab === 'guru'">
-                                    <div class="form-check mb-2">
-                                        <input id="isBkCheckbox" name="is_bk" class="form-check-input border-slate-300" type="checkbox" v-model="form.is_bk">
-                                        <label class="form-check-label fw-semibold fs-8 text-slate-700" for="isBkCheckbox">
-                                            Juga bertindak sebagai Guru BK (Bimbingan Konseling)
-                                        </label>
-                                        <p class="text-muted fs-9 mb-0">Jika dicentang, guru ini akan memiliki peran tambahan sebagai Guru BK dan dapat mengakses modul Bimbingan Konseling.</p>
-                                    </div>
-                                    <div class="form-check">
-                                        <input id="isKesiswaanCheckbox" name="is_kesiswaan" class="form-check-input border-slate-300" type="checkbox" v-model="form.is_kesiswaan">
-                                        <label class="form-check-label fw-semibold fs-8 text-slate-700" for="isKesiswaanCheckbox">
-                                            Juga bertindak sebagai Staf/Guru Kesiswaan
-                                        </label>
-                                        <p class="text-muted fs-9 mb-0">Jika dicentang, guru ini akan memiliki peran tambahan sebagai Kesiswaan dan dapat mengakses serta mengunci modul Ekstrakurikuler.</p>
+                                <!-- Checkbox Role Tambahan (hanya muncul saat activeTab === 'guru') -->
+                                <div class="col-12 mt-3" v-if="activeTab === 'guru'">
+                                    <div class="border rounded-3 p-3 bg-light-secondary">
+                                        <h6 class="fw-bold fs-7 text-dark mb-3"><i class="bi bi-person-badge me-2"></i>Peran Tambahan (Opsional)</h6>
+                                        <p class="text-muted fs-8 mb-3">Centang peran di bawah ini jika guru tersebut merangkap jabatan lain.</p>
+                                        
+                                        <div class="form-check mb-3">
+                                            <input id="isBkCheckbox" name="is_bk" class="form-check-input border-slate-300" type="checkbox" v-model="form.is_bk">
+                                            <label class="form-check-label fw-semibold fs-8 text-slate-700" for="isBkCheckbox">
+                                                Guru BK (Bimbingan Konseling)
+                                            </label>
+                                            <p class="text-muted fs-9 mb-0 mt-1">Dapat mengakses modul Bimbingan Konseling.</p>
+                                        </div>
+                                        
+                                        <div class="form-check mb-3">
+                                            <input id="isKesiswaanCheckbox" name="is_kesiswaan" class="form-check-input border-slate-300" type="checkbox" v-model="form.is_kesiswaan">
+                                            <label class="form-check-label fw-semibold fs-8 text-slate-700" for="isKesiswaanCheckbox">
+                                                Staf/Guru Kesiswaan
+                                            </label>
+                                            <p class="text-muted fs-9 mb-0 mt-1">Dapat mengakses dan mengunci modul Ekstrakurikuler.</p>
+                                        </div>
+                                        
+                                        <div class="form-check mb-3">
+                                            <input id="isHumasCheckbox" name="is_humas" class="form-check-input border-slate-300" type="checkbox" v-model="form.is_humas">
+                                            <label class="form-check-label fw-semibold fs-8 text-slate-700" for="isHumasCheckbox">
+                                                Waka HUMAS
+                                            </label>
+                                            <p class="text-muted fs-9 mb-0 mt-1">Dapat mengelola informasi publik dan relasi masyarakat.</p>
+                                        </div>
+                                        
+                                        <div class="form-check mb-3">
+                                            <input id="isKurikulumCheckbox" name="is_kurikulum" class="form-check-input border-slate-300" type="checkbox" v-model="form.is_kurikulum">
+                                            <label class="form-check-label fw-semibold fs-8 text-slate-700" for="isKurikulumCheckbox">
+                                                Waka Kurikulum
+                                            </label>
+                                            <p class="text-muted fs-9 mb-0 mt-1">Dapat mengelola jadwal dan kurikulum sekolah.</p>
+                                        </div>
+                                        
+                                        <div class="form-check mb-0">
+                                            <input id="isSarprasCheckbox" name="is_sarpras" class="form-check-input border-slate-300" type="checkbox" v-model="form.is_sarpras">
+                                            <label class="form-check-label fw-semibold fs-8 text-slate-700" for="isSarprasCheckbox">
+                                                Waka Sarpras
+                                            </label>
+                                            <p class="text-muted fs-9 mb-0 mt-1">Dapat mengelola pendataan sarana dan prasarana sekolah.</p>
+                                        </div>
                                     </div>
                                 </div>
                             </template>
@@ -1598,7 +1633,10 @@
                         email: '', 
                         password: '',
                         is_bk: false,
-                        is_kesiswaan: false
+                        is_kesiswaan: false,
+                        is_humas: false,
+                        is_kurikulum: false,
+                        is_sarpras: false
                     };
                 }
                 if (this.userRole === 'super_admin') {
@@ -1628,7 +1666,10 @@
                     email: item.email,
                     password: '',
                     is_bk: item.is_bk == 1 || item.is_bk === true,
-                    is_kesiswaan: item.is_kesiswaan == 1 || item.is_kesiswaan === true
+                    is_kesiswaan: item.is_kesiswaan == 1 || item.is_kesiswaan === true,
+                    is_humas: item.is_humas == 1 || item.is_humas === true,
+                    is_kurikulum: item.is_kurikulum == 1 || item.is_kurikulum === true,
+                    is_sarpras: item.is_sarpras == 1 || item.is_sarpras === true
                 };
                 
                 if (this.userRole === 'super_admin') {
