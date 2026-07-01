@@ -205,9 +205,20 @@ class DashboardController extends BaseController {
                 ];
             }
 
-            // H. Fetch Pengumuman
+            // Map roleId if missing in session
+            $roleId = $_SESSION['role_id'] ?? null;
+            if ($roleId === null) {
+                $roleName = $_SESSION['role_name'] ?? '';
+                if ($roleName === 'super_admin') $roleId = 1;
+                elseif ($roleName === 'operator_sekolah') $roleId = 2;
+                elseif ($roleName === 'siswa') $roleId = 6;
+                else $roleId = 0;
+            }
+
+            // H. Fetch Pengumuman (Limit 1 for Dashboard)
             $pengumumanModel = new PengumumanModel($tenantId);
-            $pengumuman_list = $pengumumanModel->getActiveForUser($_SESSION['role_id'] ?? 0);
+            $pengumuman_list = $pengumumanModel->getActiveForUser($roleId, 1, 0);
+            $total_pengumuman = $pengumumanModel->countActiveForUser($roleId);
 
             // 5. Kemas data untuk disalurkan ke View
             $stats = [
@@ -224,7 +235,8 @@ class DashboardController extends BaseController {
                 'siswa_list' => $siswaList,
                 'gtk_list' => $gtkList,
                 'recent_changes' => $recentChanges,
-                'pengumuman_list' => $pengumuman_list
+                'pengumuman_list' => $pengumuman_list,
+                'total_pengumuman' => $total_pengumuman
             ];
 
             // 6. Muat file Tampilan menggunakan Master Layout
@@ -237,4 +249,59 @@ class DashboardController extends BaseController {
             die("Terjadi kesalahan pada sistem. Silakan hubungi Administrator.");
         }
     }
+
+    /**
+     * Render the Halaman Arsip Pengumuman
+     */
+    public function pengumumanArsip(): void {
+        SessionManager::start();
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: /SINTA-SaaS/login');
+            exit;
+        }
+
+        $tenantId = $_SESSION['tenant_id'];
+        $roleId = $_SESSION['role_id'] ?? null;
+        if ($roleId === null) {
+            $roleName = $_SESSION['role_name'] ?? '';
+            if ($roleName === 'super_admin') $roleId = 1;
+            elseif ($roleName === 'operator_sekolah') $roleId = 2;
+            elseif ($roleName === 'siswa') $roleId = 6;
+            else $roleId = 0;
+        }
+        
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        if ($page < 1) $page = 1;
+        $limit = 10;
+        $offset = ($page - 1) * $limit;
+        $search = trim($_GET['search'] ?? '');
+        $kategori = trim($_GET['kategori'] ?? '');
+        $tanggal = trim($_GET['tanggal'] ?? '');
+        
+        $pengumumanModel = new \App\Models\PengumumanModel($tenantId);
+        $total = $pengumumanModel->countActiveForUser($roleId, $search, $kategori, $tanggal);
+        $list = $pengumumanModel->getActiveForUser($roleId, $limit, $offset, $search, $kategori, $tanggal);
+        
+        $totalPages = ceil($total / $limit);
+        
+        // Fetch categories for the filter dropdown
+        $kategoriModel = new \App\Models\KategoriPengumumanModel($tenantId);
+        $kategoriList = $kategoriModel->getAll();
+        
+        $data = [
+            'title' => 'Arsip Pengumuman',
+            'pengumuman_list' => $list,
+            'kategori_list' => $kategoriList,
+            'total' => $total,
+            'page' => $page,
+            'limit' => $limit,
+            'total_pages' => $totalPages,
+            'search' => $search,
+            'kategori' => $kategori,
+            'tanggal' => $tanggal
+        ];
+        
+        $this->render('pengumuman_arsip_view', $data);
+    }
 }
+

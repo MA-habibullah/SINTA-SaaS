@@ -106,57 +106,135 @@ $isAdminOrSuper = in_array('super_admin', $user_roles, true) || in_array('operat
     </div>
     <?php endif; ?>
 
-    <!-- Papan Pengumuman -->
+    <!-- Papan Pengumuman (Timeline UI) -->
     <?php if (!empty($stats['pengumuman_list'])): ?>
-    <div class="row mb-4">
+    <div class="row mb-5">
         <div class="col-12">
-            <div class="card border-0 shadow-sm rounded-4">
-                <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
-                    <h5 class="fw-bold mb-0 text-primary"><i class="bi bi-megaphone-fill me-2"></i>Papan Pengumuman</h5>
+            <!-- Header section matching reference image -->
+            <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+                <h4 class="fw-bold mb-0 text-dark d-flex align-items-center" style="font-family: 'Inter', sans-serif;">
+                    <i class="bi bi-megaphone-fill text-dark me-2 fs-3"></i> Pengumuman
+                </h4>
+                <button class="btn btn-info btn-sm text-white fw-bold shadow-sm d-flex align-items-center px-3 rounded-2" onclick="location.reload()">
+                    <i class="bi bi-arrow-repeat me-1 fs-6"></i> Refresh
+                </button>
+            </div>
+            
+            <div class="timeline-container position-relative ps-2">
+                <?php 
+                $currentGroup = '';
+                $bulanIndo = [
+                    '01' => 'Januari', '02' => 'Februari', '03' => 'Maret', '04' => 'April', '05' => 'Mei', '06' => 'Juni',
+                    '07' => 'Juli', '08' => 'Agustus', '09' => 'September', '10' => 'Oktober', '11' => 'November', '12' => 'Desember'
+                ];
+                
+                foreach ($stats['pengumuman_list'] as $idx => $pengumuman): 
+                    $monthNum = date('m', strtotime($pengumuman['created_at']));
+                    $year = date('Y', strtotime($pengumuman['created_at']));
+                    
+                    if ($idx === 0) {
+                        $groupLabel = "Pengumuman Terakhir";
+                    } else {
+                        $groupLabel = $bulanIndo[$monthNum] . " " . $year;
+                    }
+                    
+                    if ($currentGroup !== $groupLabel):
+                        $currentGroup = $groupLabel;
+                ?>
+                <div class="mb-3 position-relative z-2">
+                    <span class="badge px-3 py-2 fs-7 rounded-2 shadow-sm" style="background-color: #0b5ed7; color: white;"><?= $groupLabel ?></span>
                 </div>
-                <div class="card-body">
-                    <div class="accordion accordion-flush" id="accordionPengumuman">
-                        <?php foreach ($stats['pengumuman_list'] as $idx => $pengumuman): ?>
-                            <div class="accordion-item border-bottom mb-2 rounded">
-                                <h2 class="accordion-header" id="heading_<?= $pengumuman['id'] ?>">
-                                    <button class="accordion-button <?= $idx === 0 ? '' : 'collapsed' ?> bg-light rounded" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_<?= $pengumuman['id'] ?>" aria-expanded="<?= $idx === 0 ? 'true' : 'false' ?>" aria-controls="collapse_<?= $pengumuman['id'] ?>">
-                                        <div class="d-flex flex-column">
-                                            <span class="fw-bold text-dark"><?= htmlspecialchars($pengumuman['judul']) ?></span>
-                                            <small class="text-muted mt-1"><i class="bi bi-clock me-1"></i><?= date('d M Y', strtotime($pengumuman['created_at'])) ?> • Oleh: <?= htmlspecialchars($pengumuman['nama_pembuat']) ?></small>
-                                        </div>
-                                    </button>
-                                </h2>
-                                <div id="collapse_<?= $pengumuman['id'] ?>" class="accordion-collapse collapse <?= $idx === 0 ? 'show' : '' ?>" aria-labelledby="heading_<?= $pengumuman['id'] ?>" data-bs-parent="#accordionPengumuman">
-                                    <div class="accordion-body bg-white pt-3">
-                                        <div class="pengumuman-content mb-3" style="font-family: inherit;">
-                                            <?= $pengumuman['isi_pengumuman'] ?>
-                                        </div>
-                                        <?php if ($pengumuman['lampiran_file']): ?>
-                                            <div class="mt-3 p-3 bg-light rounded border">
-                                                <div class="fw-bold mb-2 text-muted fs-7"><i class="bi bi-paperclip me-1"></i>Lampiran:</div>
-                                                <?php 
-                                                    $ext = strtolower(pathinfo($pengumuman['lampiran_file'], PATHINFO_EXTENSION)); 
-                                                    $isImage = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp']);
-                                                ?>
-                                                <?php if ($isImage): ?>
-                                                    <div class="text-center mb-2">
-                                                        <img src="/SINTA-SaaS/storage/app/public/<?= htmlspecialchars($pengumuman['lampiran_file']) ?>" class="img-fluid rounded shadow-sm" style="max-height: 400px; cursor: pointer;" onclick="window.open(this.src, '_blank')" alt="Lampiran Pengumuman">
-                                                    </div>
-                                                <?php endif; ?>
-                                                <a href="/SINTA-SaaS/storage/app/public/<?= htmlspecialchars($pengumuman['lampiran_file']) ?>" target="_blank" class="btn btn-sm btn-<?= $isImage ? 'outline-secondary' : 'outline-primary' ?>">
-                                                    <i class="bi <?= $isImage ? 'bi-arrows-fullscreen' : 'bi-file-earmark-text' ?> me-1"></i> <?= $isImage ? 'Buka Gambar Penuh' : 'Buka / Unduh Lampiran' ?>
-                                                </a>
-                                            </div>
-                                        <?php endif; ?>
+                <?php endif; ?>
+                
+                <div class="d-flex position-relative mb-4">
+                    <!-- Vertical Line (hides on last item if needed, but we keep it simple here) -->
+                    <div class="position-absolute h-100" style="left: 15px; top: 32px; width: 2px; background-color: #dee2e6; z-index: 1;"></div>
+                    
+                    <!-- Icon -->
+                    <div class="flex-shrink-0 z-2 position-relative mt-1" style="width: 32px;">
+                        <div class="bg-primary bg-gradient rounded-circle d-flex align-items-center justify-content-center text-white shadow-sm border border-2 border-white" style="width: 32px; height: 32px;">
+                            <i class="bi bi-envelope-fill fs-7"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Content Card -->
+                    <div class="flex-grow-1 ms-2 ms-sm-3">
+                        <div class="card border border-light-subtle shadow-sm rounded-3">
+                            <div class="card-body p-2 p-md-3">
+                                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-start mb-2 gap-1">
+                                    <h5 class="fw-bold mb-0 text-uppercase" style="color: #0d6efd; font-family: 'Inter', sans-serif; font-size: 0.85rem; line-height: 1.4;">
+                                        <?= htmlspecialchars($pengumuman['judul']) ?>
+                                    </h5>
+                                    <div class="text-muted text-end align-self-end align-self-sm-start" style="font-size: 0.75rem;">
+                                        <i class="bi bi-calendar-event me-1"></i> <?= date('d-m-Y', strtotime($pengumuman['created_at'])) ?> <i class="bi bi-clock ms-1 me-1"></i> <?= date('H:i', strtotime($pengumuman['created_at'])) ?>
                                     </div>
                                 </div>
+                                
+                                <?php if (($_SESSION['role_name'] ?? '') === 'super_admin'): ?>
+                                <div class="mb-2 d-flex flex-wrap gap-1 align-items-center text-muted" style="font-size: 0.7rem;">
+                                    <span><i class="bi bi-person-circle me-1"></i><?= htmlspecialchars($pengumuman['nama_pembuat']) ?></span>
+                                    <span>•</span>
+                                    <span class="badge bg-secondary-subtle text-secondary rounded-pill border px-2 py-1"><i class="bi bi-building me-1"></i><?= htmlspecialchars($pengumuman['nama_sekolah'] ?? 'Global') ?></span>
+                                    <span>•</span>
+                                    <?php 
+                                        $vis = strtolower($pengumuman['visibilitas']);
+                                        $badgeClass = 'bg-primary';
+                                        if ($vis === 'siswa') $badgeClass = 'bg-success';
+                                        elseif ($vis === 'guru') $badgeClass = 'bg-info';
+                                        elseif ($vis === 'private') $badgeClass = 'bg-danger';
+                                    ?>
+                                    <span class="badge <?= $badgeClass ?> text-white rounded-pill px-2 py-1"><i class="bi bi-globe2 me-1"></i> <?= ucfirst($vis) ?></span>
+                                </div>
+                                <?php endif; ?>
+                                
+                                <div class="text-dark mt-2 pengumuman-content text-break" style="font-size: 0.8rem; line-height: 1.5;">
+                                    <?= $pengumuman['isi_pengumuman'] ?>
+                                </div>
+                                
+                                <?php if ($pengumuman['lampiran_file']): ?>
+                                <?php 
+                                    $ext = strtolower(pathinfo($pengumuman['lampiran_file'], PATHINFO_EXTENSION)); 
+                                    $isImage = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+                                ?>
+                                <div class="mt-3 pt-2 border-top">
+                                    <?php if ($isImage): ?>
+                                        <div class="mb-2 rounded-3 overflow-hidden shadow-sm" style="max-height: 150px; cursor: pointer; max-width: 250px;" onclick="window.open('/SINTA-SaaS/storage/app/public/<?= htmlspecialchars($pengumuman['lampiran_file']) ?>', '_blank')">
+                                            <img src="/SINTA-SaaS/storage/app/public/<?= htmlspecialchars($pengumuman['lampiran_file']) ?>" class="w-100 h-100 object-fit-cover hover-zoom" alt="Lampiran Pengumuman">
+                                        </div>
+                                    <?php endif; ?>
+                                    <a href="/SINTA-SaaS/storage/app/public/<?= htmlspecialchars($pengumuman['lampiran_file']) ?>" target="_blank" class="btn btn-primary fw-semibold d-flex d-md-inline-flex justify-content-center align-items-center rounded-3 px-3 py-1 shadow-sm w-100 w-md-auto" style="font-size: 0.8rem; transition: all 0.2s ease;">
+                                        <i class="bi <?= $isImage ? 'bi-image' : 'bi-cloud-download-fill' ?> me-2"></i> 
+                                        <?= $isImage ? 'Lihat Gambar' : 'Unduh Lampiran' ?>
+                                    </a>
+                                </div>
+                                <?php endif; ?>
                             </div>
-                        <?php endforeach; ?>
+                        </div>
                     </div>
                 </div>
+                <?php endforeach; ?>
             </div>
         </div>
+        
+        <?php if (($stats['total_pengumuman'] ?? 0) > count($stats['pengumuman_list'])): ?>
+        <div class="mt-2 mb-4 text-center">
+            <a href="/SINTA-SaaS/pengumuman/arsip" class="btn btn-outline-primary rounded-pill px-4 py-2 fw-semibold shadow-sm hover-shadow" style="transition: all 0.2s ease;">
+                Lihat Semua Pengumuman (<?= $stats['total_pengumuman'] ?>) <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        </div>
+        <?php endif; ?>
     </div>
+    
+    <style>
+        .hover-zoom:hover {
+            transform: scale(1.05);
+            transition: transform 0.3s ease;
+        }
+        .hover-shadow:hover {
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+    </style>
     <?php endif; ?>
 
     <?php if ($isAdminOrSuper): ?>
@@ -504,7 +582,7 @@ $isAdminOrSuper = in_array('super_admin', $user_roles, true) || in_array('operat
         <?php if ($isAdminOrSuper): ?>
         <!-- Modal Edit Profil Sekolah -->
         <div class="modal fade" id="modalEditProfil" tabindex="-1" aria-labelledby="modalEditProfilLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
                 <div class="modal-content border-0 shadow rounded-4">
                     <div class="modal-header border-bottom-0 pb-0">
                         <h5 class="modal-title fw-bold text-dark" id="modalEditProfilLabel">

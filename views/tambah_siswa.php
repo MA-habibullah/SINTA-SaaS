@@ -1659,31 +1659,30 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
         <hr class="my-4">
 
         <!-- Wizard Navigation Controls (Kembali, Lanjut, Simpan) -->
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <button v-show="currentStep > 1" type="button" class="btn btn-outline-secondary rounded-3 px-4 py-2 fs-7 shadow-xs" @click="prevStep">
-                    <i class="bi bi-chevron-left me-2"></i> Kembali
-                </button>
-            </div>
-            <div class="d-flex gap-2">
-                <a v-if="userRole !== 'siswa'" href="/SINTA-SaaS/pengguna" class="btn btn-light rounded-3 px-4 py-2 fs-7">Batal</a>
-                <a v-else href="/SINTA-SaaS/dashboard" class="btn btn-light rounded-3 px-4 py-2 fs-7">Batal</a>
-                
-                <!-- Special Save Button for each step (Edit Mode only, Steps 1-4) -->
-                <button v-if="isEdit && currentStep < 5" type="button" class="btn btn-success rounded-3 px-4 py-2 fs-7 shadow-sm" :disabled="loadingSaveStep" @click="saveCurrentStep(false)">
+        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center mt-4 pt-4 border-top gap-3">
+            <button type="button" class="btn btn-light rounded-3 px-4 py-2 fs-7 shadow-sm border w-100 w-sm-auto order-last order-sm-first" @click="prevStep" v-show="currentStep > 1">
+                <i class="bi bi-chevron-left me-2"></i> Sebelumnya
+            </button>
+            
+            <!-- Batal if step 1 -->
+            <a href="/SINTA-SaaS/siswa" class="btn btn-light rounded-3 px-4 py-2 fs-7 shadow-sm border w-100 w-sm-auto order-last order-sm-first text-center" v-show="currentStep === 1">
+                Batal
+            </a>
+
+            <div class="d-flex flex-column flex-sm-row gap-3 ms-sm-auto w-100 w-sm-auto">
+                <button v-if="isEdit && currentStep < 5" type="button" class="btn btn-success rounded-3 px-4 py-2 fs-7 shadow-sm w-100 w-sm-auto" @click="savePartialStep" :disabled="!isFormValid || loadingSaveStep">
                     <span v-if="loadingSaveStep" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                    <i v-else class="bi bi-check-circle me-2"></i> Simpan Perubahan Step {{ currentStep }}
+                    <i v-else class="bi bi-check-circle me-1"></i> Simpan Step {{ currentStep }}
                 </button>
 
-                <!-- Next Button -->
-                <button v-show="currentStep < 5" type="button" class="btn btn-primary rounded-3 px-4 py-2 fs-7 shadow-sm" @click="nextStep">
+                <button type="button" class="btn btn-primary rounded-3 px-4 py-2 fs-7 shadow-sm w-100 w-sm-auto" @click="nextStep" :disabled="!isFormValid" v-show="currentStep < 5">
                     Lanjut <i class="bi bi-chevron-right ms-2"></i>
                 </button>
                 
                 <!-- Save Button (Step 5 only, or if not Edit Mode, standard save) -->
-                <button v-show="currentStep === 5" type="submit" class="btn btn-success rounded-3 px-4 py-2 fs-7 shadow-sm" :disabled="(isEdit && !isFormValid) || loadingSaveStep">
+                <button v-show="currentStep === 5" type="submit" class="btn btn-success rounded-3 px-4 py-2 fs-7 shadow-sm w-100 w-sm-auto" :disabled="(isEdit && !isFormValid) || loadingSaveStep">
                     <span v-if="loadingSaveStep" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                    <i v-else class="bi bi-save me-2"></i> {{ isEdit ? 'Simpan Perubahan / Update' : 'Simpan Data Siswa' }}
+                    <i v-else class="bi bi-save me-2"></i> {{ isEdit ? 'Simpan / Update' : 'Simpan Data Siswa' }}
                 </button>
             </div>
         </div>
@@ -1692,7 +1691,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
     <!-- Inline Document Viewer Modal -->
     <div class="modal fade" id="documentViewerModal" tabindex="-1" aria-labelledby="documentViewerModalLabel" aria-hidden="true" style="z-index: 1060;">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content rounded-4 border-0 shadow-lg">
                 <div class="modal-header border-bottom px-4">
                     <h6 class="modal-title fw-bold text-dark" id="documentViewerModalLabel">

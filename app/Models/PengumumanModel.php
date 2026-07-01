@@ -15,11 +15,12 @@ class PengumumanModel {
     public function getAll(int $limit = 100, int $offset = 0): array {
         $db = Database::getConnection();
         $whereTenant = ($this->tenantId === null) ? "1=1" : "(p.tenant_id = :tenant_id OR p.tenant_id IS NULL)";
-        $sql = "SELECT p.*, u.nama_lengkap as nama_pembuat, r.nama_role as pembuat_role, t.nama_sekolah 
+        $sql = "SELECT p.*, u.nama_lengkap as nama_pembuat, r.nama_role as pembuat_role, t.nama_sekolah, k.nama_kategori 
                 FROM pengumuman p 
                 JOIN users u ON p.created_by = u.id 
                 JOIN roles r ON u.role_id = r.id
                 LEFT JOIN tenants t ON p.tenant_id = t.id
+                LEFT JOIN kategori_pengumuman k ON p.kategori_id = k.id
                 WHERE $whereTenant 
                 ORDER BY p.created_at DESC 
                 LIMIT :limit OFFSET :offset";
@@ -33,56 +34,125 @@ class PengumumanModel {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    public function getActiveForUser(int $userRoleId): array {
+    public function getActiveForUser(int $userRoleId, int $limit = 100, int $offset = 0, string $searchQuery = '', string $kategoriId = '', string $tanggal = ''): array {
         $db = Database::getConnection();
-        // Public + Role specific logic
-        // We fetch all active announcements where visibilitas = public OR
-        // visibilitas = 'guru' AND role is guru OR
-        // visibilitas = 'siswa' AND role is siswa OR
-        // visibilitas = 'private' AND userRoleId IN (target_roles)
         
-        $whereTenant = ($this->tenantId === null) ? "p.tenant_id IS NULL" : "(p.tenant_id = :tenant_id OR p.tenant_id IS NULL)";
-        $sql = "SELECT p.*, u.nama_lengkap as nama_pembuat, r.nama_role as pembuat_role 
+        $whereTenant = ($this->tenantId === null) ? "1=1" : "(p.tenant_id = :tenant_id OR p.tenant_id IS NULL)";
+        
+        $isAdmin = in_array($userRoleId, [1, 2]) ? 1 : 0;
+        $isGuru = in_array($userRoleId, [3, 20, 21]) ? 1 : 0;
+        $isSiswa = ($userRoleId == 6) ? 1 : 0;
+        
+        $roleCondition = "(:is_admin = 1 OR p.visibilitas = 'public' 
+                          OR (p.visibilitas = 'guru' AND :is_guru = 1) 
+                          OR (p.visibilitas = 'siswa' AND :is_siswa = 1) 
+                          OR (p.visibilitas = 'private' AND p.target_roles LIKE :role_id_like))";
+                          
+        $searchCondition = "";
+        if (!empty($searchQuery)) {
+            $searchCondition .= " AND p.judul LIKE :search ";
+        }
+        if (!empty($kategoriId)) {
+            $searchCondition .= " AND p.kategori_id = :kategori_id ";
+        }
+        if (!empty($tanggal)) {
+            $searchCondition .= " AND DATE(p.created_at) = :tanggal ";
+        }
+        
+        $sql = "SELECT p.*, u.nama_lengkap as nama_pembuat, r.nama_role as pembuat_role, t.nama_sekolah, k.nama_kategori 
                 FROM pengumuman p 
                 JOIN users u ON p.created_by = u.id 
                 JOIN roles r ON u.role_id = r.id
-                WHERE $whereTenant AND p.is_active = 1
-                ORDER BY p.created_at DESC";
+                LEFT JOIN tenants t ON p.tenant_id = t.id
+                LEFT JOIN kategori_pengumuman k ON p.kategori_id = k.id
+                WHERE $whereTenant AND p.is_active = 1 AND $roleCondition $searchCondition
+                ORDER BY p.created_at DESC
+                LIMIT :limit OFFSET :offset";
+                
         $stmt = $db->prepare($sql);
-        $params = [];
+        
         if ($this->tenantId !== null) {
-            $params['tenant_id'] = $this->tenantId;
+            $stmt->bindValue(':tenant_id', $this->tenantId);
         }
-        $stmt->execute($params);
-        $all = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $stmt->bindValue(':is_admin', $isAdmin, PDO::PARAM_INT);
+        $stmt->bindValue(':is_guru', $isGuru, PDO::PARAM_INT);
+        $stmt->bindValue(':is_siswa', $isSiswa, PDO::PARAM_INT);
+        $stmt->bindValue(':role_id_like', '%"' . $userRoleId . '"%');
         
-        $filtered = [];
-        $isAdmin = in_array($userRoleId, [1, 2]); // Super Admin, Operator Sekolah
-        $isGuru = in_array($userRoleId, [3, 20, 21]); // Mapel, BK, Pembina
-        $isSiswa = ($userRoleId == 6);
-        
-        foreach ($all as $p) {
-            $vis = $p['visibilitas'];
-            if ($isAdmin || $vis === 'public') {
-                $filtered[] = $p;
-            } elseif ($vis === 'guru' && $isGuru) {
-                $filtered[] = $p;
-            } elseif ($vis === 'siswa' && $isSiswa) {
-                $filtered[] = $p;
-            } elseif ($vis === 'private' && !empty($p['target_roles'])) {
-                $targets = json_decode($p['target_roles'], true) ?? [];
-                if (in_array((string)$userRoleId, $targets) || in_array($userRoleId, $targets)) {
-                    $filtered[] = $p;
-                }
-            }
+        if (!empty($searchQuery)) {
+            $stmt->bindValue(':search', '%' . $searchQuery . '%');
+        }
+        if (!empty($kategoriId)) {
+            $stmt->bindValue(':kategori_id', $kategoriId);
+        }
+        if (!empty($tanggal)) {
+            $stmt->bindValue(':tanggal', $tanggal);
         }
         
-        return $filtered;
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    public function countActiveForUser(int $userRoleId, string $searchQuery = '', string $kategoriId = '', string $tanggal = ''): int {
+        $db = Database::getConnection();
+        
+        $whereTenant = ($this->tenantId === null) ? "1=1" : "(p.tenant_id = :tenant_id OR p.tenant_id IS NULL)";
+        
+        $isAdmin = in_array($userRoleId, [1, 2]) ? 1 : 0;
+        $isGuru = in_array($userRoleId, [3, 20, 21]) ? 1 : 0;
+        $isSiswa = ($userRoleId == 6) ? 1 : 0;
+        
+        $roleCondition = "(:is_admin = 1 OR p.visibilitas = 'public' 
+                          OR (p.visibilitas = 'guru' AND :is_guru = 1) 
+                          OR (p.visibilitas = 'siswa' AND :is_siswa = 1) 
+                          OR (p.visibilitas = 'private' AND p.target_roles LIKE :role_id_like))";
+                          
+        $searchCondition = "";
+        if (!empty($searchQuery)) {
+            $searchCondition .= " AND p.judul LIKE :search ";
+        }
+        if (!empty($kategoriId)) {
+            $searchCondition .= " AND p.kategori_id = :kategori_id ";
+        }
+        if (!empty($tanggal)) {
+            $searchCondition .= " AND DATE(p.created_at) = :tanggal ";
+        }
+        
+        $sql = "SELECT COUNT(*) as total
+                FROM pengumuman p 
+                WHERE $whereTenant AND p.is_active = 1 AND $roleCondition $searchCondition";
+                
+        $stmt = $db->prepare($sql);
+        
+        if ($this->tenantId !== null) {
+            $stmt->bindValue(':tenant_id', $this->tenantId);
+        }
+        $stmt->bindValue(':is_admin', $isAdmin, PDO::PARAM_INT);
+        $stmt->bindValue(':is_guru', $isGuru, PDO::PARAM_INT);
+        $stmt->bindValue(':is_siswa', $isSiswa, PDO::PARAM_INT);
+        $stmt->bindValue(':role_id_like', '%"' . $userRoleId . '"%');
+        
+        if (!empty($searchQuery)) {
+            $stmt->bindValue(':search', '%' . $searchQuery . '%');
+        }
+        if (!empty($kategoriId)) {
+            $stmt->bindValue(':kategori_id', $kategoriId);
+        }
+        if (!empty($tanggal)) {
+            $stmt->bindValue(':tanggal', $tanggal);
+        }
+        
+        $stmt->execute();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int)($row['total'] ?? 0);
     }
 
     public function findById(string $id): ?array {
         $db = Database::getConnection();
-        $whereTenant = ($this->tenantId === null) ? "tenant_id IS NULL" : "tenant_id = :tenant_id";
+        $whereTenant = ($this->tenantId === null) ? "1=1" : "(tenant_id = :tenant_id OR tenant_id IS NULL)";
         $stmt = $db->prepare("SELECT * FROM pengumuman WHERE id = :id AND $whereTenant");
         $params = ['id' => $id];
         if ($this->tenantId !== null) {
@@ -97,12 +167,13 @@ class PengumumanModel {
         $db = Database::getConnection();
         $stmt = $db->prepare("
             INSERT INTO pengumuman 
-            (id, tenant_id, created_by, judul, isi_pengumuman, lampiran_file, visibilitas, target_roles, is_active)
+            (id, tenant_id, kategori_id, created_by, judul, isi_pengumuman, lampiran_file, visibilitas, target_roles, is_active)
             VALUES 
-            (UUID(), :tenant_id, :created_by, :judul, :isi_pengumuman, :lampiran_file, :visibilitas, :target_roles, :is_active)
+            (UUID(), :tenant_id, :kategori_id, :created_by, :judul, :isi_pengumuman, :lampiran_file, :visibilitas, :target_roles, :is_active)
         ");
         return $stmt->execute([
             'tenant_id'      => array_key_exists('tenant_id', $data) ? $data['tenant_id'] : $this->tenantId,
+            'kategori_id'    => !empty($data['kategori_id']) ? $data['kategori_id'] : null,
             'created_by'     => $data['created_by'],
             'judul'          => $data['judul'],
             'isi_pengumuman' => $data['isi_pengumuman'],
@@ -119,6 +190,7 @@ class PengumumanModel {
         $setTenantClause = "";
         $params = [
             'judul'          => $data['judul'],
+            'kategori_id'    => !empty($data['kategori_id']) ? $data['kategori_id'] : null,
             'isi_pengumuman' => $data['isi_pengumuman'],
             'lampiran_file'  => $data['lampiran_file'] ?? null,
             'visibilitas'    => $data['visibilitas'],
@@ -141,6 +213,7 @@ class PengumumanModel {
             UPDATE pengumuman SET 
                 $setTenantClause
                 judul = :judul, 
+                kategori_id = :kategori_id,
                 isi_pengumuman = :isi_pengumuman, 
                 lampiran_file = :lampiran_file, 
                 visibilitas = :visibilitas, 
@@ -154,7 +227,7 @@ class PengumumanModel {
 
     public function delete(string $id): bool {
         $db = Database::getConnection();
-        $whereTenant = ($this->tenantId === null) ? "tenant_id IS NULL" : "tenant_id = :tenant_id";
+        $whereTenant = ($this->tenantId === null) ? "1=1" : "(tenant_id = :tenant_id OR tenant_id IS NULL)";
         $stmt = $db->prepare("DELETE FROM pengumuman WHERE id = :id AND $whereTenant");
         $params = ['id' => $id];
         if ($this->tenantId !== null) {

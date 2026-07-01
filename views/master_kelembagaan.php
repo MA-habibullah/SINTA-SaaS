@@ -296,7 +296,7 @@
 
     <!-- Reusable Form Modal (Tambah / Edit) -->
     <div class="modal fade" id="formModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content border-0 shadow rounded-4">
                 
                 <div class="modal-header border-bottom py-3">

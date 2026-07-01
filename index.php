@@ -162,6 +162,26 @@ try {
             $controller->index();
             break;
             
+        case '/informasi/pengumuman/kategori/store':
+            $controller = new App\Controllers\PengumumanController();
+            $controller->storeKategori();
+            break;
+            
+        case '/informasi/pengumuman/kategori/update':
+            $controller = new App\Controllers\PengumumanController();
+            $controller->updateKategori();
+            break;
+            
+        case '/informasi/pengumuman/kategori/delete':
+            $controller = new App\Controllers\PengumumanController();
+            $controller->deleteKategori();
+            break;
+            
+        case '/pengumuman/arsip':
+            $controller = new App\Controllers\DashboardController();
+            $controller->pengumumanArsip();
+            break;
+            
         case '/informasi/pengumuman/store':
             $controller = new App\Controllers\PengumumanController();
             $controller->store();

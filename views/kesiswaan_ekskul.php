@@ -768,7 +768,7 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
 
 <!-- Modal Tambah Ekskul -->
 <div class="modal fade" id="tambahEkskulModal" tabindex="-1" aria-labelledby="tambahEkskulModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-dialog-scrollable">
     <div class="modal-content">
       <form action="/SINTA-SaaS/api/v1/ekskul/tambah" method="POST">
           <div class="modal-header">
@@ -813,7 +813,7 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
 
 <!-- Modal Tambah Pembina -->
 <div class="modal fade" id="tambahPembinaModal" tabindex="-1" aria-labelledby="tambahPembinaModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-dialog-scrollable">
     <div class="modal-content">
       <form action="/SINTA-SaaS/api/v1/ekskul/pembina/tambah" method="POST">
           <div class="modal-header">
@@ -855,7 +855,7 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
 
 <!-- Modal Edit Ekskul -->
 <div class="modal fade" id="editEkskulModal" tabindex="-1" aria-labelledby="editEkskulModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-dialog-scrollable">
     <div class="modal-content">
       <form action="/SINTA-SaaS/api/v1/ekskul/edit" method="POST">
           <input type="hidden" name="id" id="edit_ekskul_id">
@@ -1025,7 +1025,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 <!-- Modal Edit Pembina -->
 <div class="modal fade" id="editPembinaModal" tabindex="-1" aria-labelledby="editPembinaModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-dialog-scrollable">
     <div class="modal-content">
       <form action="/SINTA-SaaS/api/v1/ekskul/pembina/edit" method="POST">
           <input type="hidden" name="id" id="edit_pembina_id_modal">
@@ -1068,7 +1068,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 <!-- Modal Import Nilai -->
 <div class="modal fade" id="importGradesModal" tabindex="-1" aria-labelledby="importGradesModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-dialog-scrollable">
     <div class="modal-content">
       <form action="/SINTA-SaaS/api/v1/ekskul/nilai/import" method="POST" enctype="multipart/form-data">
           <input type="hidden" name="ekskul_id" value="<?= htmlspecialchars($selected_ekskul_id) ?>">

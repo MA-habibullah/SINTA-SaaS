@@ -416,7 +416,7 @@
 
     <!-- Modal Import Siswa -->
     <div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content border-0 shadow rounded-4">
                 <div class="modal-header border-bottom py-3">
                     <h5 class="modal-title fw-bold text-dark">
@@ -473,7 +473,7 @@
 
     <!-- Reusable Form Modal (Siswa & Staff Dynamic Modal) -->
     <div class="modal fade" id="formModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
             <div class="modal-content border-0 shadow rounded-4">
                 
                 <div class="modal-header border-bottom py-3">
@@ -662,7 +662,7 @@
 
     <!-- Modal Registrasi Cepat (Quick Add) Siswa -->
     <div class="modal fade" id="quickAddModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content border-0 shadow rounded-4">
                 <div class="modal-header border-bottom py-3">
                     <h5 class="modal-title fw-bold text-dark">
@@ -735,7 +735,7 @@
 
     <!-- Modal Bulk Photo Upload -->
     <div class="modal fade" id="bulkPhotoModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
             <div class="modal-content border-0 shadow rounded-4">
                 <div class="modal-header border-bottom py-3">
                     <h5 class="modal-title fw-bold text-dark">

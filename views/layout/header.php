@@ -39,7 +39,7 @@ if ($tenantId) {
         </a>
 
         <!-- Indikator Tenant (Nama Sekolah Aktif) -->
-        <div class="tenant-indicator d-flex align-items-center bg-light px-3 py-1.5 rounded-pill border me-auto">
+        <div class="tenant-indicator d-none d-sm-flex align-items-center bg-light px-3 py-1.5 rounded-pill border me-auto">
             <i class="bi bi-building-fill text-primary me-2 fs-7"></i>
             <div class="fs-8 fw-semibold text-dark text-truncate" style="max-width: 250px;">
                 <?= htmlspecialchars($namaSekolah) ?> 

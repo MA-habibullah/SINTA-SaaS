@@ -3,11 +3,13 @@
 namespace App\Controllers;
 
 use App\Models\PengumumanModel;
+use App\Models\KategoriPengumumanModel;
 use App\Core\SessionManager;
 use PDO;
 
 class PengumumanController extends BaseController {
     private PengumumanModel $pengumumanModel;
+    private KategoriPengumumanModel $kategoriModel;
 
     public function __construct() {
         parent::__construct();
@@ -21,6 +23,7 @@ class PengumumanController extends BaseController {
         }
         
         $this->pengumumanModel = new PengumumanModel($this->tenantId);
+        $this->kategoriModel = new KategoriPengumumanModel($this->tenantId);
     }
 
     public function index(): void {
@@ -33,9 +36,12 @@ class PengumumanController extends BaseController {
             $tenants = $db->query("SELECT id, nama_sekolah FROM tenants WHERE deleted_at IS NULL ORDER BY nama_sekolah ASC")->fetchAll(\PDO::FETCH_ASSOC);
         }
         
+        $kategoriList = $this->kategoriModel->getAll();
+        
         $this->render('humas/pengumuman', [
             'title' => 'Manajemen Pengumuman',
             'pengumuman' => $data,
+            'kategoriList' => $kategoriList,
             'roleList' => $this->getRolesList(),
             'tenants' => $tenants,
             'isSuperAdmin' => $isSuperAdmin
@@ -55,6 +61,7 @@ class PengumumanController extends BaseController {
         $judul = trim($_POST['judul'] ?? '');
         $isi_pengumuman = trim($_POST['isi_pengumuman'] ?? '');
         $visibilitas = $_POST['visibilitas'] ?? 'public';
+        $kategori_id = $_POST['kategori_id'] ?? '';
         $target_roles = $_POST['target_roles'] ?? [];
         $is_active = isset($_POST['is_active']) ? 1 : 0;
         
@@ -72,6 +79,7 @@ class PengumumanController extends BaseController {
 
         $dataToSave = [
             'created_by' => $_SESSION['user_id'],
+            'kategori_id' => $kategori_id !== '' ? $kategori_id : null,
             'judul' => $judul,
             'isi_pengumuman' => $isi_pengumuman,
             'visibilitas' => $visibilitas,
@@ -100,6 +108,7 @@ class PengumumanController extends BaseController {
         $judul = trim($_POST['judul'] ?? '');
         $isi_pengumuman = trim($_POST['isi_pengumuman'] ?? '');
         $visibilitas = $_POST['visibilitas'] ?? 'public';
+        $kategori_id = $_POST['kategori_id'] ?? '';
         $target_roles = $_POST['target_roles'] ?? [];
         $is_active = isset($_POST['is_active']) ? 1 : 0;
 
@@ -131,6 +140,7 @@ class PengumumanController extends BaseController {
 
         $dataToSave = [
             'judul' => $judul,
+            'kategori_id' => $kategori_id !== '' ? $kategori_id : null,
             'isi_pengumuman' => $isi_pengumuman,
             'visibilitas' => $visibilitas,
             'target_roles' => $target_roles,
@@ -150,6 +160,59 @@ class PengumumanController extends BaseController {
 
         $this->pengumumanModel->update($id, $dataToSave);
 
+        header("Location: /SINTA-SaaS/informasi/pengumuman");
+        exit;
+    }
+    
+    public function storeKategori(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->jsonResponse(['error' => 'Method not allowed'], 405);
+        }
+        
+        $nama_kategori = trim($_POST['nama_kategori'] ?? '');
+        if (empty($nama_kategori)) {
+            $this->redirectWithError("Nama kategori wajib diisi!");
+        }
+        
+        $data = ['nama_kategori' => $nama_kategori];
+        if ($_SESSION['role_name'] === 'super_admin') {
+            $tid = $_POST['tenant_id'] ?? '';
+            $data['tenant_id'] = ($tid === '' || $tid === 'global') ? null : $tid;
+        }
+        
+        $this->kategoriModel->create($data);
+        header("Location: /SINTA-SaaS/informasi/pengumuman");
+        exit;
+    }
+
+    public function updateKategori(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->jsonResponse(['error' => 'Method not allowed'], 405);
+        }
+        
+        $id = $_POST['id'] ?? '';
+        $nama_kategori = trim($_POST['nama_kategori'] ?? '');
+        
+        if (empty($id) || empty($nama_kategori)) {
+            $this->redirectWithError("Data tidak lengkap!");
+        }
+        
+        $this->kategoriModel->update($id, $nama_kategori);
+        header("Location: /SINTA-SaaS/informasi/pengumuman");
+        exit;
+    }
+
+    public function deleteKategori(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->jsonResponse(['error' => 'Method not allowed'], 405);
+        }
+        
+        $id = $_POST['id'] ?? '';
+        if (empty($id)) {
+            $this->redirectWithError("ID Kategori tidak valid!");
+        }
+        
+        $this->kategoriModel->delete($id);
         header("Location: /SINTA-SaaS/informasi/pengumuman");
         exit;
     }

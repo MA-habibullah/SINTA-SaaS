@@ -108,7 +108,7 @@
 
 <!-- Modal Tambah/Edit -->
 <div class="modal fade" id="addAgendaModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <form action="/SINTA-SaaS/informasi/agenda/store" method="POST" enctype="multipart/form-data" id="formAgenda">
             <div class="modal-content">
                 <div class="modal-header">

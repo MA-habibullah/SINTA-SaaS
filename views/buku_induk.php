@@ -412,7 +412,7 @@
 
     <!-- Reusable Copy Kurikulum Modal -->
     <div class="modal fade" id="copyKurikulumModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content border-0 shadow rounded-4">
                 <div class="modal-header border-bottom py-3">
                     <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2">
@@ -654,7 +654,7 @@
 
     <!-- Reusable Import Nilai Modal -->
     <div class="modal fade" id="importNilaiModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content border-0 shadow rounded-4">
                 <div class="modal-header border-bottom py-3">
                     <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2">

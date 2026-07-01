@@ -263,7 +263,7 @@
 
     <!-- Form Modal (Tambah / Edit Sekolah) -->
     <div class="modal fade" id="tenantModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
             <div class="modal-content border-0 shadow-2xl rounded-2xl overflow-hidden bg-white">
                 
                 <!-- Modal Header (Biru SaaS Gradasi) -->
