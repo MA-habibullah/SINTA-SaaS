@@ -106,12 +106,21 @@ if (!empty($roles)) {
                 }
             }
 
-            // Inject URL dinamis untuk menu "Data Diri" (agar URL berisi user_id siswa)
+            // Inject URL dinamis untuk menu siswa:
+            // - "Data Diri" → redirect ke halaman edit profil siswa (dengan user_id)
+            // - "Data Pokok / Core Dapodik" (url=#) → redirect ke halaman profil siswa
             // Menu lainnya tetap berasal dari database (role_menu_access), sehingga
             // konfigurasi di halaman /konfigurasi/akses tetap berlaku.
             foreach ($sidebarMenus as &$menu) {
+                // Inject URL untuk "Data Diri"
                 if (stripos($menu['nama_menu'], 'Data Diri') !== false && !empty($siswaId)) {
                     $menu['url'] = '/SINTA-SaaS/siswa/edit?id=' . $siswaId;
+                }
+                // Inject URL untuk "Data Pokok / Core Dapodik" (parent dengan url=#)
+                // Untuk siswa, tampilkan profil mereka sendiri
+                if ((stripos($menu['nama_menu'], 'Data Pokok') !== false || stripos($menu['nama_menu'], 'Core Dapodik') !== false) && !empty($siswaId)) {
+                    $menu['url'] = '/SINTA-SaaS/siswa/edit?id=' . $siswaId;
+                    $menu['children'] = []; // Hilangkan sub-menu (Pengguna, Master Data, dll tidak relevan untuk siswa)
                 }
                 // Inject URL dinamis juga di children jika ada
                 if (!empty($menu['children'])) {
@@ -124,6 +133,7 @@ if (!empty($roles)) {
                 }
             }
             unset($menu);
+
 
             // Tambahkan menu Tracer Study HANYA jika status siswa adalah 'Lulus'
             // dan menu ini belum ada di $sidebarMenus dari database
