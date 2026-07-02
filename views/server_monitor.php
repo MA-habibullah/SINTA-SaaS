@@ -85,6 +85,14 @@
                     <i class="bi bi-hdd-network-fill me-1"></i> Network Interfaces
                 </button>
             </li>
+            <li class="nav-item">
+                <button type="button" class="px-3 py-2 fw-semibold border-0 bg-transparent position-relative text-decoration-none"
+                   :class="activeTab === 'update' ? 'text-primary border-bottom border-primary border-2' : 'text-muted'"
+                   @click="activeTab = 'update'"
+                   style="cursor:pointer; font-size: 0.9rem; transition: all 0.2s;">
+                    <i class="bi bi-cloud-arrow-down-fill me-1"></i> Update Server
+                </button>
+            </li>
         </ul>
     </div>
 
@@ -417,6 +425,8 @@
                 <span>Total Siswa Terdaftar: <strong class="text-dark">{{ totalSiswa.toLocaleString('id-ID') }}</strong></span>
             </div>
             <div class="text-muted fs-9">Polling setiap 5 detik · Data aktif 15 menit terakhir</div>
+        </div>
+    </div>
     </div><!-- /v-show="activeTab === 'resources'" -->
 
     <!-- ============================================================
@@ -476,6 +486,46 @@
             <div class="col-12 text-center py-5 text-muted fs-8 card border-0 shadow-sm rounded-4" v-if="networkInterfaces.length === 0">
                 <i class="bi bi-wifi-off fs-2 d-block mb-2"></i>
                 Tidak ada adapter jaringan eksternal yang terdeteksi.
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         BAGIAN 4: UPDATE SERVER
+         ============================================================ -->
+    <div v-show="activeTab === 'update'">
+        <div class="card border-0 shadow-sm rounded-4 p-4 mb-4" style="background:#fff;">
+            <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                         style="width:48px;height:48px;background:#fef2f2;">
+                        <i class="bi bi-cloud-arrow-down-fill text-danger fs-4"></i>
+                    </div>
+                    <div>
+                        <h4 class="fw-bold text-dark mb-0 fs-5">Deployment Otomatis</h4>
+                        <div class="text-muted fs-8 mt-1">Mengambil pembaruan terbaru dari repositori dan menjalankan migrasi database.</div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-danger rounded-3 px-4 py-2 fs-7 shadow-sm d-flex align-items-center gap-2"
+                        @click="triggerUpdate" :disabled="isUpdating">
+                    <span v-if="isUpdating" class="spinner-border spinner-border-sm" role="status"></span>
+                    <i v-else class="bi bi-rocket-takeoff-fill"></i>
+                    Jalankan Update Sekarang
+                </button>
+            </div>
+            
+            <div class="bg-dark rounded-3 p-3 overflow-auto font-monospace text-light fs-8" style="height:350px;">
+                <div v-if="!updateLog" class="text-secondary opacity-75">
+                    // Log proses eksekusi deploy.sh akan tampil di sini...<br><br>
+                    <span class="text-warning">⚠️ PERHATIAN KEAMANAN:</span><br>
+                    Untuk menjalankan perintah ini melalui browser (web server),<br>
+                    user web server (seperti <code>www-data</code>) HARUS diberi hak akses eksekusi<br>
+                    script ini melalui konfigurasi <span class="text-white">sudoers</span> tanpa memerlukan password.<br><br>
+                    Tambahkan ini di file sudoers server (jalankan `visudo` via terminal):<br>
+                    <code class="text-info">www-data ALL=(ALL) NOPASSWD: /var/www/SINTA-SaaS/deploy.sh</code><br><br>
+                    Jika tidak dikonfigurasi, perintah update akan terblokir oleh permission server.
+                </div>
+                <pre v-else class="mb-0 text-light" style="white-space: pre-wrap;">{{ updateLog }}</pre>
             </div>
         </div>
     </div>
@@ -591,6 +641,8 @@
                 _pollTimer:   null,
                 _countTimer:  null,
                 activeTab:   'resources',
+                isUpdating:  false,
+                updateLog:   '',
                 showNetworkModal: false,
                 formSubmitting: false,
                 form: {
@@ -651,6 +703,39 @@
         },
 
         methods: {
+            // ─── Update Server ────────────────────────────────────
+            async triggerUpdate() {
+                if (this.isUpdating) return;
+                
+                const confirm = await Swal.fire({
+                    title: 'Jalankan Update Server?',
+                    text: 'Proses ini akan menarik kode terbaru dari GitHub dan menjalankan migrasi database.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Ya, Jalankan!'
+                });
+
+                if (!confirm.isConfirmed) return;
+
+                this.isUpdating = true;
+                this.updateLog = '> Memulai proses update server...\n> Meminta eksekusi bash script... (menunggu respons)\n';
+
+                try {
+                    const res = await axios.post('/SINTA-SaaS/api/v1/super-admin/server-monitor/update-server');
+                    this.updateLog += '\n' + res.data.output + '\n\n> Proses eksekusi script selesai.';
+                    if (res.data.success) {
+                        Swal.fire('Selesai', 'Perintah update berhasil dijalankan. Silakan cek log untuk detailnya.', 'success');
+                    }
+                } catch (err) {
+                    this.updateLog += '\n[ERROR] ' + (err.response?.data?.error || err.message || 'Terjadi kesalahan sistem.');
+                    Swal.fire('Gagal', 'Update gagal dieksekusi. Periksa permission server (sudoers).', 'error');
+                } finally {
+                    this.isUpdating = false;
+                }
+            },
+
             // ─── Polling Lifecycle ────────────────────────────────
             _startPolling() {
                 this._stopPolling(); // Pastikan tidak ada timer ganda

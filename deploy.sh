@@ -4,6 +4,12 @@
 # Cara pakai: bash deploy.sh
 # =============================================================
 
+# Pengecekan Keamanan: Pastikan script berjalan sebagai root
+if [ "$EUID" -ne 0 ]; then
+  echo "Meminta akses Administrator (sudo)..."
+  exec sudo "$0" "$@"
+fi
+
 APP_DIR="/var/www/SINTA-SaaS"
 DB_CONFIG="$APP_DIR/app/Config/Database.php"
 BACKUP_FILE="/root/Database.php.backup"

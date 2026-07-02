@@ -956,6 +956,13 @@ try {
             $controller->saveNetworkConfig();
             break;
 
+        case '/api/v1/super-admin/server-monitor/update-server':
+            // API: Jalankan deploy.sh
+            $controller = new App\Controllers\ServerMonitorController();
+            $controller->updateServer();
+            break;
+
+
         case '/api/v1/super-admin/tenant-menus/fetch':
             // API: Ambil menu & status centang per-sekolah
             $controller = new App\Controllers\SuperAdminController();

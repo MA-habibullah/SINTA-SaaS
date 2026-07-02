@@ -556,4 +556,33 @@ class ServerMonitorController extends BaseController
             ]);
         }
     }
+    /**
+     * POST /api/v1/super-admin/server-monitor/update-server
+     * Menjalankan script deploy.sh untuk update kode & migrasi
+     */
+    public function updateServer(): void
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->jsonResponse(['error' => 'Method not allowed'], 405);
+            return;
+        }
+
+        // Jalankan bash deploy.sh via shell_exec
+        // Perhatian: Ini bergantung pada user web server (misal www-data) yang bisa menjalankan `sudo` tanpa password untuk script ini.
+        $deployScript = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'deploy.sh';
+        
+        if (!file_exists($deployScript)) {
+            $this->jsonResponse(['error' => 'Script deploy.sh tidak ditemukan di ' . escapeshellarg($deployScript)], 404);
+            return;
+        }
+
+        // Eksekusi (kami tambahkan 2>&1 agar error stderr juga tertangkap)
+        $output = shell_exec('sudo bash ' . escapeshellarg($deployScript) . ' 2>&1');
+
+        $this->jsonResponse([
+            'success' => true,
+            'message' => 'Proses update dijalankan.',
+            'output' => $output ?: 'Tidak ada output dari script (atau eksekusi diblokir oleh server permissions).'
+        ]);
+    }
 }
