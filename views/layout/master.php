@@ -93,6 +93,9 @@
     <!-- Bootstrap Icons -->
     <link href="/SINTA-SaaS/assets/css/bootstrap-icons.css" rel="stylesheet" data-turbo-track="reload">
     
+    <!-- jQuery 3.7.0 -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js" data-turbo-track="reload"></script>
+    
     <!-- Bootstrap Bundle with Popper -->
     <script src="/SINTA-SaaS/assets/js/bootstrap.bundle.min.js" data-turbo-track="reload"></script>
     
