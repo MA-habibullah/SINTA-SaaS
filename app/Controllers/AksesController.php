@@ -29,6 +29,63 @@ class AksesController extends BaseController {
     }
 
     /**
+     * Ambil semua tenant (untuk dropdown super admin)
+     */
+    private function getAllTenants(): array {
+        try {
+            $db = \App\Config\Database::getConnection();
+            $stmt = $db->query("SELECT id, nama_sekolah, npsn FROM tenants WHERE status = 'active' ORDER BY nama_sekolah ASC");
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * AJAX: Ambil access map untuk tenant tertentu
+     * GET /api/v1/akses/fetch?tenant_id=X
+     */
+    public function fetchAccessMap(): void {
+        SessionManager::requireLogin();
+        $roleName = $_SESSION['role_name'] ?? '';
+        if ($roleName !== 'super_admin' && $roleName !== 'operator_sekolah') {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Akses ditolak.']);
+            exit;
+        }
+
+        $tenantId = $_GET['tenant_id'] ?? null;
+        if (empty($tenantId)) {
+            echo json_encode(['success' => false, 'error' => 'tenant_id wajib diisi.']);
+            exit;
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+            // Cek apakah tenant ini punya kustomisasi; kalau belum, fallback ke global
+            $stmtCount = $db->prepare("SELECT COUNT(*) FROM role_menu_access WHERE tenant_id = ?");
+            $stmtCount->execute([$tenantId]);
+            $targetTenant = (int)$stmtCount->fetchColumn() > 0 ? $tenantId : '00000000-0000-0000-0000-000000000000';
+
+            $stmt = $db->prepare("SELECT role_id, menu_id FROM role_menu_access WHERE tenant_id = ?");
+            $stmt->execute([$targetTenant]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $map = [];
+            foreach ($rows as $row) {
+                $map[$row['role_id'] . '-' . $row['menu_id']] = true;
+            }
+
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'access_map' => $map, 'is_custom' => ($targetTenant !== '00000000-0000-0000-0000-000000000000')]);
+        } catch (\Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
+    }
+
+    /**
      * Tampilkan Halaman Matriks Kelola Akses Menu
      * GET /konfigurasi/akses
      */
@@ -64,12 +121,13 @@ class AksesController extends BaseController {
         }
 
         $data = [
-            'title' => ($roleName === 'super_admin') ? 'Kelola Akses Menu Sidebar (Global)' : 'Kelola Akses Menu Sekolah',
-            'menus' => $menus,
-            'roles' => $roles,
+            'title'      => ($roleName === 'super_admin') ? 'Kelola Akses Menu Sidebar (Global)' : 'Kelola Akses Menu Sekolah',
+            'menus'      => $menus,
+            'roles'      => $roles,
             'access_map' => $accessMap,
-            'user_nama' => $_SESSION['nama_lengkap'],
-            'user_role' => $_SESSION['role_name']
+            'user_nama'  => $_SESSION['nama_lengkap'],
+            'user_role'  => $_SESSION['role_name'],
+            'tenants'    => ($roleName === 'super_admin') ? $this->getAllTenants() : [],
         ];
 
         $this->render('kelola_akses', $data);
@@ -86,6 +144,18 @@ class AksesController extends BaseController {
         }
 
         $roleName = $_SESSION['role_name'] ?? '';
+
+        // Jika super_admin, gunakan tenant_id dari POST (bisa atur untuk sekolah manapun)
+        // Jika operator_sekolah, gunakan tenant_id dari session (terkunci ke sekolahnya)
+        if ($roleName === 'super_admin') {
+            $targetTenantId = $_POST['target_tenant_id'] ?? null;
+            if (empty($targetTenantId)) {
+                // Tidak ada tenant dipilih = atur global default
+                $targetTenantId = '00000000-0000-0000-0000-000000000000';
+            }
+            // Re-inisialisasi model dengan tenant yang dipilih
+            $this->menuModel = new Menu($targetTenantId === '00000000-0000-0000-0000-000000000000' ? null : $targetTenantId);
+        }
 
         // Ambil input checklist akses
         $accessInput = $_POST['access'] ?? [];

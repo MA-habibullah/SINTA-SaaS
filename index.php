@@ -742,6 +742,12 @@ try {
             $controller->store();
             break;
 
+        case '/api/v1/akses/fetch':
+            // AJAX: Ambil access map untuk tenant tertentu (Super Admin)
+            $controller = new App\Controllers\AksesController();
+            $controller->fetchAccessMap();
+            break;
+
         case '/utilitas/log-aktivitas':
             $controller = new App\Controllers\ActivityLogController();
             $controller->index();
