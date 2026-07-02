@@ -156,6 +156,11 @@
                                     <div class="text-xs font-medium text-slate-500 mt-1 flex items-center gap-1">
                                         <i class="bi bi-person-fill text-slate-400"></i> <?= htmlspecialchars($kasus['sumber_deteksi']) ?>
                                     </div>
+                                    <?php if (!empty($kasus['lampiran_bukti'])): ?>
+                                        <a href="/SINTA-SaaS/<?= htmlspecialchars($kasus['lampiran_bukti']) ?>" target="_blank" class="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 px-2 py-1 rounded-md transition-colors">
+                                            <i class="bi bi-paperclip"></i> Lihat Lampiran
+                                        </a>
+                                    <?php endif; ?>
                                 </td>
                                 <td class="py-4 text-center">
                                     <?php if ($kasus['status_kasus'] === 'Merah'): ?>
@@ -255,9 +260,15 @@
                                 </div>
                             </td>
                             <td class="py-4">
-                                <div class="text-xs font-medium text-slate-500 flex items-center gap-1">
+                                <div class="text-sm font-semibold text-slate-800 line-clamp-2"><?= htmlspecialchars($kasus['deskripsi_kasus']) ?></div>
+                                <div class="text-xs font-medium text-slate-500 mt-1 flex items-center gap-1">
                                     <i class="bi bi-person-fill text-slate-400"></i> <?= htmlspecialchars($kasus['sumber_deteksi']) ?>
                                 </div>
+                                <?php if (!empty($kasus['lampiran_bukti'])): ?>
+                                    <a href="/SINTA-SaaS/<?= htmlspecialchars($kasus['lampiran_bukti']) ?>" target="_blank" class="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 px-2 py-1 rounded-md transition-colors">
+                                        <i class="bi bi-paperclip"></i> Lihat Lampiran
+                                    </a>
+                                <?php endif; ?>
                             </td>
                             <td class="py-4 text-center">
                                 <?php
@@ -292,7 +303,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body px-6 py-5">
-                <form action="/SINTA-SaaS/pembinaan/store" method="POST">
+                <form action="/SINTA-SaaS/pembinaan/store" method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="tenant_id" value="<?= isset($_GET['tenant_id']) ? htmlspecialchars($_GET['tenant_id']) : '' ?>">
                     <div class="mb-4">
                         <label class="form-label text-sm font-semibold text-slate-700">Pilih Guru</label>
@@ -326,6 +337,12 @@
                     <div class="mb-5">
                         <label class="form-label text-sm font-semibold text-slate-700">Deskripsi Singkat Kasus</label>
                         <textarea name="deskripsi_kasus" rows="3" class="form-control border-slate-200 rounded-xl focus:border-blue-500 focus:ring-blue-500" placeholder="Jelaskan secara singkat apa yang terjadi..." required></textarea>
+                    </div>
+                    
+                    <div class="mb-5">
+                        <label class="form-label text-sm font-semibold text-slate-700">Lampiran Bukti <span class="text-xs font-normal text-slate-500">(Opsional)</span></label>
+                        <input type="file" name="lampiran_bukti" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" class="form-control border-slate-200 rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        <div class="form-text text-xs mt-1">Format: JPG, PNG, PDF, DOC. Foto akan dikompres otomatis.</div>
                     </div>
                     
                     <div class="flex gap-2">
@@ -397,7 +414,7 @@ function openEvaluasiModal(monitoringId, sesiId, namaGuru) {
 
 <!-- DataTables CSS & JS for Pagination -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<!-- DataTables CSS/JS -->
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 <style>
@@ -424,7 +441,12 @@ function openEvaluasiModal(monitoringId, sesiId, namaGuru) {
     table.dataTable tbody td { border-bottom: 1px solid #e2e8f0; padding-top: 1rem; padding-bottom: 1rem; }
 </style>
 <script>
-$(document).ready(function() {
+document.addEventListener("turbo:load", function() {
+    if (typeof $ === 'undefined' || typeof $.fn.DataTable === 'undefined') return;
+    
+    // Prevent double initialization
+    if ($.fn.DataTable.isDataTable('#table-kasus-aktif')) return;
+
     const dtConfig = {
         "language": {
             "lengthMenu": "_MENU_ data per halaman",
