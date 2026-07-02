@@ -90,6 +90,7 @@ if (!empty($roles)) {
         
         $sidebarMenus = $buildTree($allMenus);
 
+
         if (in_array('siswa', $roles)) {
             $siswaId = $_SESSION['user_id'] ?? '';
 
@@ -105,42 +106,46 @@ if (!empty($roles)) {
                 }
             }
 
-            $sidebarMenus = [
-                [
-                    'id'       => 1,
-                    'nama_menu'=> 'Dashboard',
-                    'url'      => '/SINTA-SaaS/dashboard',
-                    'icon'     => 'bi bi-grid-fill',
-                    'children' => []
-                ],
-                [
-                    'id'       => 6,
-                    'nama_menu'=> 'Data Diri',
-                    'url'      => '/SINTA-SaaS/siswa/edit?id=' . $siswaId,
-                    'icon'     => 'bi bi-person-bounding-box',
-                    'children' => []
-                ],
-                [
-                    'id'       => 40,
-                    'nama_menu'=> 'PDSS & Alumni',
-                    'url'      => '/SINTA-SaaS/pdss/kesiapan',
-                    'icon'     => 'bi bi-database-fill',
-                    'children' => []
-                ]
-            ];
+            // Inject URL dinamis untuk menu "Data Diri" (agar URL berisi user_id siswa)
+            // Menu lainnya tetap berasal dari database (role_menu_access), sehingga
+            // konfigurasi di halaman /konfigurasi/akses tetap berlaku.
+            foreach ($sidebarMenus as &$menu) {
+                if (stripos($menu['nama_menu'], 'Data Diri') !== false && !empty($siswaId)) {
+                    $menu['url'] = '/SINTA-SaaS/siswa/edit?id=' . $siswaId;
+                }
+                // Inject URL dinamis juga di children jika ada
+                if (!empty($menu['children'])) {
+                    foreach ($menu['children'] as &$child) {
+                        if (stripos($child['nama_menu'], 'Data Diri') !== false && !empty($siswaId)) {
+                            $child['url'] = '/SINTA-SaaS/siswa/edit?id=' . $siswaId;
+                        }
+                    }
+                    unset($child);
+                }
+            }
+            unset($menu);
 
             // Tambahkan menu Tracer Study HANYA jika status siswa adalah 'Lulus'
-            if ($statusSiswa === 'Lulus') {
+            // dan menu ini belum ada di $sidebarMenus dari database
+            $tracerExists = false;
+            foreach ($sidebarMenus as $m) {
+                if (stripos($m['nama_menu'], 'Tracer') !== false) {
+                    $tracerExists = true;
+                    break;
+                }
+            }
+            if ($statusSiswa === 'Lulus' && !$tracerExists) {
                 $sidebarMenus[] = [
                     'id'        => 99,
                     'nama_menu' => 'Tracer Study',
                     'url'       => '/SINTA-SaaS/tracer-study',
                     'icon'      => 'bi bi-mortarboard-fill',
-                    'badge'     => 'BARU',  // Untuk indikator visual di template
+                    'badge'     => 'BARU',
                     'children'  => []
                 ];
             }
         }
+
     } catch (\Throwable $e) {
         error_log("Gagal memuat sidebar dinamis: " . $e->getMessage());
     }
