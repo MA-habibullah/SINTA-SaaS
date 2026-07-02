@@ -110,6 +110,12 @@ class PembinaanController extends BaseController {
             }
             
             $postedTenantId = $_POST['tenant_id'] ?? null;
+            $lampiran_path = null;
+            
+            // Handle file upload
+            if (isset($_FILES['lampiran_bukti']) && $_FILES['lampiran_bukti']['error'] === UPLOAD_ERR_OK) {
+                $lampiran_path = $this->handleLampiranUpload($_FILES['lampiran_bukti']);
+            }
             
             try {
                 // Generate a simple UUID v4 in PHP
@@ -120,8 +126,8 @@ class PembinaanController extends BaseController {
                 );
                 
                 $targetTenantId = $postedTenantId ?: $tenantId;
-                $stmt = $db->prepare("INSERT INTO guru_monitoring (id, tenant_id, guru_id, kategori_masalah, sumber_deteksi, deskripsi_kasus, status_kasus) VALUES (?, ?, ?, ?, ?, ?, 'Merah')");
-                $stmt->execute([$id, $targetTenantId, $guru_id, $kategori_masalah, $sumber_deteksi, $deskripsi_kasus]);
+                $stmt = $db->prepare("INSERT INTO guru_monitoring (id, tenant_id, guru_id, kategori_masalah, sumber_deteksi, deskripsi_kasus, status_kasus, lampiran_bukti) VALUES (?, ?, ?, ?, ?, ?, 'Merah', ?)");
+                $stmt->execute([$id, $targetTenantId, $guru_id, $kategori_masalah, $sumber_deteksi, $deskripsi_kasus, $lampiran_path]);
                 
                 $_SESSION['flash_success'] = 'Kasus pembinaan berhasil ditambahkan (Status Merah).';
             } catch (\PDOException $e) {
@@ -132,6 +138,74 @@ class PembinaanController extends BaseController {
             header('Location: ' . $redirectUrl);
             exit;
         }
+    }
+    
+    private function handleLampiranUpload($file) {
+        $uploadDir = __DIR__ . '/../../storage/uploads/pembinaan/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+        }
+        
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $allowedExt = ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx'];
+        if (!in_array($ext, $allowedExt)) return null;
+        
+        $filename = uniqid('bukti_') . '.' . $ext;
+        $destPath = $uploadDir . $filename;
+        
+        // If it's an image, compress it to be under ~500kb
+        if (in_array($ext, ['jpg', 'jpeg', 'png'])) {
+            $this->compressImage($file['tmp_name'], $destPath, 75);
+        } else {
+            // Document, move normally
+            move_uploaded_file($file['tmp_name'], $destPath);
+        }
+        
+        return 'storage/uploads/pembinaan/' . $filename;
+    }
+    
+    private function compressImage($source, $destination, $quality) {
+        $info = getimagesize($source);
+        if (!$info) return move_uploaded_file($source, $destination);
+        
+        if ($info['mime'] == 'image/jpeg') 
+            $image = imagecreatefromjpeg($source);
+        elseif ($info['mime'] == 'image/png') 
+            $image = imagecreatefrompng($source);
+        else 
+            return move_uploaded_file($source, $destination);
+            
+        // Resize if too large (Max Width 1280px)
+        $width = $info[0];
+        $height = $info[1];
+        if ($width > 1280) {
+            $newWidth = 1280;
+            $newHeight = floor($height * (1280 / $width));
+            $tmpImage = imagecreatetruecolor($newWidth, $newHeight);
+            
+            // Handle transparency for PNG
+            if ($info['mime'] == 'image/png') {
+                imagealphablending($tmpImage, false);
+                imagesavealpha($tmpImage, true);
+                $transparent = imagecolorallocatealpha($tmpImage, 255, 255, 255, 127);
+                imagefilledrectangle($tmpImage, 0, 0, $newWidth, $newHeight, $transparent);
+            }
+            
+            imagecopyresampled($tmpImage, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+            imagedestroy($image);
+            $image = $tmpImage;
+        }
+        
+        if ($info['mime'] == 'image/jpeg') {
+            imagejpeg($image, $destination, $quality);
+        } elseif ($info['mime'] == 'image/png') {
+            // Convert JPEG quality (0-100) to PNG compression level (0-9)
+            $pngQuality = round((100 - $quality) / 10);
+            imagepng($image, $destination, $pngQuality);
+        }
+        
+        imagedestroy($image);
+        return true;
     }
     
     public function jadwalkan_sesi() {
