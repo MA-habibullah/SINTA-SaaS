@@ -108,18 +108,30 @@ $tenants      = $data['tenants'] ?? [];
                         <?php endforeach; ?>
                     </tr>
                 </thead>
-                <tbody>
                     <?php
-                    $no = 1;
-                    foreach ($data['menus'] as $menu):
-                        $isChild = $menu['parent_id'] !== null;
-                        $rowStyle = $isChild ? 'background-color: #fafbfc;' : 'font-weight: 600; background-color: #f8fafc;';
-                    ?>
+                    // Bangun struktur tree: Parent → Children
+                    // agar urutan tampilan identik dengan halaman tenant_menus (gambar 2)
+                    $allMenus  = array_values($data['menus']);
+                    $parents   = array_filter($allMenus, fn($m) => $m['parent_id'] === null);
+                    $childMap  = [];
+                    foreach ($allMenus as $m) {
+                        if ($m['parent_id'] !== null) {
+                            $childMap[$m['parent_id']][] = $m;
+                        }
+                    }
+
+                    // Fungsi helper render satu baris
+                    $renderRow = function(array $menu, bool $isChild) use ($data, &$no) {
+                        $rowStyle = $isChild
+                            ? 'background-color: #fafbfc;'
+                            : 'font-weight: 600; background-color: #f8fafc;';
+                        ?>
                         <tr style="<?= $rowStyle ?>">
                             <td class="text-muted"><?= $no++ ?></td>
                             <td class="<?= $isChild ? 'ps-4' : 'ps-3' ?>">
                                 <?php if ($isChild): ?>
                                     <span class="text-muted ms-3 me-1">└──</span>
+                                    <i class="<?= htmlspecialchars($menu['icon'] ?? 'bi bi-circle') ?> me-1" style="font-size:0.8rem; opacity:0.7;"></i>
                                     <span class="fw-normal text-muted fs-7"><?= htmlspecialchars($menu['nama_menu']) ?></span>
                                 <?php else: ?>
                                     <span class="text-dark fw-bold">
@@ -132,7 +144,7 @@ $tenants      = $data['tenants'] ?? [];
                                 <?= $menu['url'] && $menu['url'] !== '#' ? htmlspecialchars($menu['url']) : '<span class="opacity-50">-</span>' ?>
                             </td>
                             <td>
-                                <?php if ($menu['icon']): ?>
+                                <?php if (!empty($menu['icon'])): ?>
                                     <span class="badge bg-light text-dark border">
                                         <i class="<?= htmlspecialchars($menu['icon']) ?> me-1 text-primary"></i><?= htmlspecialchars($menu['icon']) ?>
                                     </span>
@@ -140,8 +152,7 @@ $tenants      = $data['tenants'] ?? [];
                                     <span class="opacity-50">-</span>
                                 <?php endif; ?>
                             </td>
-
-                            <!-- Render checkboxes for each role in access map matrix -->
+                            <!-- Render checkboxes untuk setiap role -->
                             <?php foreach ($data['roles'] as $role):
                                 $key     = $role['id'] . '-' . $menu['id'];
                                 $checked = isset($data['access_map'][$key]) ? 'checked' : '';
@@ -161,7 +172,18 @@ $tenants      = $data['tenants'] ?? [];
                                 </td>
                             <?php endforeach; ?>
                         </tr>
-                    <?php endforeach; ?>
+                        <?php
+                    };
+
+                    $no = 1;
+                    foreach ($parents as $parent):
+                        $renderRow($parent, false);
+                        // Render children langsung di bawah parentnya
+                        foreach ($childMap[$parent['id']] ?? [] as $child):
+                            $renderRow($child, true);
+                        endforeach;
+                    endforeach;
+                    ?>
                 </tbody>
             </table>
         </div>
