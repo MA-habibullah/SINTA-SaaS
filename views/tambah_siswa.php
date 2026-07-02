@@ -1670,7 +1670,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
             </a>
 
             <div class="d-flex flex-column flex-sm-row gap-3 ms-sm-auto w-100 w-sm-auto">
-                <button v-if="isEdit && currentStep < 5" type="button" class="btn btn-success rounded-3 px-4 py-2 fs-7 shadow-sm w-100 w-sm-auto" @click="savePartialStep" :disabled="!isFormValid || loadingSaveStep">
+                <button v-if="isEdit && currentStep < 5" type="button" class="btn btn-success rounded-3 px-4 py-2 fs-7 shadow-sm w-100 w-sm-auto" @click="saveCurrentStep(false)" :disabled="!isFormValid || loadingSaveStep">
                     <span v-if="loadingSaveStep" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                     <i v-else class="bi bi-check-circle me-1"></i> Simpan Step {{ currentStep }}
                 </button>
