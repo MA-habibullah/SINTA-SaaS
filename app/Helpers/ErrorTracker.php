@@ -246,7 +246,7 @@ HTML;
      * Simpan error ke tabel `system_errors` via PDO.
      * Menggunakan koneksi raw PDO agar aman bahkan saat autoloader belum siap.
      */
-    private static function logToDatabase(
+    public static function logToDatabase(
         string  $level,
         string  $message,
         ?string $file,

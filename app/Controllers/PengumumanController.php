@@ -27,7 +27,14 @@ class PengumumanController extends BaseController {
     }
 
     public function index(): void {
-        $data = $this->pengumumanModel->getAll();
+        $filters = [
+            'search' => $_GET['search'] ?? '',
+            'kategori_id' => $_GET['kategori'] ?? '',
+            'tanggal' => $_GET['tanggal'] ?? '',
+            'tenant_id' => $_GET['tenant'] ?? ''
+        ];
+        
+        $data = $this->pengumumanModel->getAll(100, 0, $filters);
         
         $tenants = [];
         $isSuperAdmin = ($_SESSION['role_name'] === 'super_admin');
@@ -44,7 +51,8 @@ class PengumumanController extends BaseController {
             'kategoriList' => $kategoriList,
             'roleList' => $this->getRolesList(),
             'tenants' => $tenants,
-            'isSuperAdmin' => $isSuperAdmin
+            'isSuperAdmin' => $isSuperAdmin,
+            'filters' => $filters
         ]);
     }
     

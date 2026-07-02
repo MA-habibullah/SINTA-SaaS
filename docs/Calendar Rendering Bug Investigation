@@ -1,0 +1,24 @@
+# Calendar Rendering Bug Investigation
+
+## Plan:
+1. Navigate to login page `http://localhost/SINTA-SaaS/admin`. (Done)
+2. Input credentials (`admin@dapodikspmb.id` / `admin123`) and log in. (Done)
+3. Navigate to agenda page `http://localhost/SINTA-SaaS/informasi/agenda`. (Done)
+4. Capture screenshot and read DOM to check if the calendar is rendered. (Done)
+5. Capture console logs to inspect Javascript errors. (Done)
+6. Diagnose and report findings. (Done)
+
+## Findings:
+1. **Behavior on Direct Load / Reload:** When directly visiting the agenda URL or reloading the page, the calendar renders successfully.
+2. **Behavior on Sidebar Menu Navigation:** When navigating to the agenda page by clicking the link in the sidebar menu (from Dashboard), the calendar does NOT render. The `#calendar` div remains empty and is not present in the interactive DOM tree (height/width of 0).
+3. **Javascript Errors:** There are no relevant Javascript console errors.
+4. **Root Cause:**
+   - SINTA-SaaS uses **Hotwire Turbo Drive** (`/SINTA-SaaS/assets/js/turbo.es2017-umd.js`) for page transitions.
+   - When clicking on menu items, Turbo Drive intercepts the navigation, fetches the new page via AJAX, and swaps the body content. This means a full page reload is not triggered, and the browser's `DOMContentLoaded` event does NOT fire.
+   - The initialization script for the calendar in `agenda_terpadu.php` is wrapped in a `document.addEventListener('DOMContentLoaded', ...)` block.
+   - Since `DOMContentLoaded` doesn't fire on Turbo Drive navigations, the calendar initialization script never runs.
+5. **Solution Recommendation:**
+   - Change `DOMContentLoaded` event listener to `turbo:load` or listen to both:
+     ```javascript
+     document.addEventListener('turbo:load', initializeCalendar);
+     ```

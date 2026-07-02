@@ -3,11 +3,13 @@
 namespace App\Controllers;
 
 use App\Models\AgendaModel;
+use App\Models\KategoriAgendaModel;
 use App\Core\SessionManager;
 use PDO;
 
 class AgendaController extends BaseController {
     private AgendaModel $agendaModel;
+    private KategoriAgendaModel $kategoriModel;
 
     public function __construct() {
         parent::__construct();
@@ -22,24 +24,65 @@ class AgendaController extends BaseController {
         }
         
         $this->agendaModel = new AgendaModel($this->tenantId);
+        $this->kategoriModel = new KategoriAgendaModel($this->tenantId);
     }
 
     public function index(): void {
-        $data = $this->agendaModel->getAll();
-        
-        $tenants = [];
+        $filterMonth = $_GET['month'] ?? date('Y-m');
         $isSuperAdmin = ($_SESSION['role_name'] === 'super_admin');
+        $selectedTenant = $_GET['filter_tenant_id'] ?? '';
+        
+        $db = \App\Config\Database::getConnection();
+        $tenants = [];
         if ($isSuperAdmin) {
-            $db = \App\Config\Database::getConnection();
             $tenants = $db->query("SELECT id, nama_sekolah FROM tenants WHERE deleted_at IS NULL ORDER BY nama_sekolah ASC")->fetchAll(PDO::FETCH_ASSOC);
+        }
+        
+        if ($isSuperAdmin && $selectedTenant === '') {
+            $data = [];
+            $filteredAgenda = [];
+            $upcoming = [];
+            $kategoriList = [];
+            $pics = [];
+        } else {
+            $activeTenantId = $this->tenantId;
+            if ($isSuperAdmin && $selectedTenant !== '') {
+                $activeTenantId = ($selectedTenant === 'global') ? null : $selectedTenant;
+            }
+            
+            $agendaModel = new AgendaModel($activeTenantId);
+            $kategoriModel = new KategoriAgendaModel($activeTenantId);
+            
+            $data = $agendaModel->getAll();
+            $filteredAgenda = array_filter($data, function($row) use ($filterMonth) {
+                $date = $row['waktu_mulai'] ?? $row['tanggal_mulai'];
+                return strpos($date, $filterMonth) === 0;
+            });
+            
+            $upcoming = $agendaModel->getUpcomingAgendas(5);
+            $kategoriList = $kategoriModel->getAll();
+            
+            $whereTenantUsers = ($activeTenantId === null) ? "1=1" : "(tenant_id = :tenant_id OR tenant_id IS NULL)";
+            $stmtUsers = $db->prepare("SELECT id, nama_lengkap FROM users WHERE $whereTenantUsers AND status = 'active' AND deleted_at IS NULL ORDER BY nama_lengkap ASC");
+            if ($activeTenantId !== null) {
+                $stmtUsers->bindValue(':tenant_id', $activeTenantId);
+            }
+            $stmtUsers->execute();
+            $pics = $stmtUsers->fetchAll(PDO::FETCH_ASSOC);
         }
         
         $this->render('sekolah/agenda_terpadu', [
             'title' => 'Agenda & Timeline Sekolah',
             'agenda' => $data,
+            'filteredAgenda' => $filteredAgenda,
+            'filterMonth' => $filterMonth,
+            'upcoming' => $upcoming,
+            'kategoriList' => $kategoriList,
+            'pics' => $pics,
             'roleList' => $this->getRolesList(),
             'tenants' => $tenants,
-            'isSuperAdmin' => $isSuperAdmin
+            'isSuperAdmin' => $isSuperAdmin,
+            'selectedTenant' => $selectedTenant
         ]);
     }
     
@@ -55,6 +98,12 @@ class AgendaController extends BaseController {
 
         $judul = trim($_POST['judul'] ?? '');
         $deskripsi = trim($_POST['deskripsi'] ?? '');
+        $kategori_id = $_POST['kategori_id'] ?? null;
+        $lokasi = trim($_POST['lokasi'] ?? '');
+        $pic_id = $_POST['pic_id'] ?? null;
+        $target_audiens = $_POST['target_audiens'] ?? 'Semua';
+        $waktu_mulai = $_POST['waktu_mulai'] ?? null;
+        $waktu_selesai = $_POST['waktu_selesai'] ?? null;
         $tanggal_mulai = $_POST['tanggal_mulai'] ?? '';
         $tanggal_selesai = $_POST['tanggal_selesai'] ?? '';
         $waktu = $_POST['waktu'] ?? '';
@@ -63,8 +112,21 @@ class AgendaController extends BaseController {
         $visibilitas = $_POST['visibilitas'] ?? 'public';
         $target_roles = $_POST['target_roles'] ?? [];
         
-        if (empty($judul) || empty($tanggal_mulai) || empty($tanggal_selesai)) {
-            $this->redirectWithError("Judul dan Tanggal (Mulai-Selesai) wajib diisi!");
+        // Extract dari waktu_mulai jika form UI menggunakan datetime-local
+        if (empty($tanggal_mulai) && !empty($waktu_mulai)) {
+            $tanggal_mulai = date('Y-m-d', strtotime($waktu_mulai));
+            $waktu = date('H:i:s', strtotime($waktu_mulai));
+        }
+        if (empty($tanggal_selesai)) {
+            if (!empty($waktu_selesai)) {
+                $tanggal_selesai = date('Y-m-d', strtotime($waktu_selesai));
+            } else {
+                $tanggal_selesai = $tanggal_mulai; // Fallback jika tidak diisi
+            }
+        }
+        
+        if (empty($judul) || empty($tanggal_mulai)) {
+            $this->redirectWithError("Judul dan Tanggal Mulai wajib diisi!");
         }
 
         $lampiranPath = null;
@@ -76,14 +138,20 @@ class AgendaController extends BaseController {
         }
 
         $dataToSave = [
-            'created_by' => $_SESSION['user_id'],
-            'judul' => $judul,
-            'deskripsi' => $deskripsi,
-            'tanggal_mulai' => $tanggal_mulai,
-            'tanggal_selesai' => $tanggal_selesai,
-            'waktu' => $waktu,
-            'tipe' => $tipe,
-            'status_kegiatan' => $status_kegiatan,
+            'kategori_id'    => $kategori_id,
+            'lokasi'         => $lokasi,
+            'pic_id'         => $pic_id,
+            'target_audiens' => $target_audiens,
+            'waktu_mulai'    => $waktu_mulai,
+            'waktu_selesai'  => $waktu_selesai,
+            'created_by'     => $_SESSION['user_id'],
+            'judul'          => $judul,
+            'deskripsi'      => $deskripsi,
+            'tanggal_mulai'  => $tanggal_mulai,
+            'tanggal_selesai'=> $tanggal_selesai,
+            'waktu'          => $waktu,
+            'tipe'           => $tipe,
+            'status_kegiatan'=> $status_kegiatan,
             'lampiran_file' => $lampiranPath,
             'visibilitas' => $visibilitas,
             'target_roles' => $target_roles
@@ -108,6 +176,12 @@ class AgendaController extends BaseController {
         $id = $_POST['id'] ?? '';
         $judul = trim($_POST['judul'] ?? '');
         $deskripsi = trim($_POST['deskripsi'] ?? '');
+        $kategori_id = $_POST['kategori_id'] ?? null;
+        $lokasi = trim($_POST['lokasi'] ?? '');
+        $pic_id = $_POST['pic_id'] ?? null;
+        $target_audiens = $_POST['target_audiens'] ?? 'Semua';
+        $waktu_mulai = $_POST['waktu_mulai'] ?? null;
+        $waktu_selesai = $_POST['waktu_selesai'] ?? null;
         $tanggal_mulai = $_POST['tanggal_mulai'] ?? '';
         $tanggal_selesai = $_POST['tanggal_selesai'] ?? '';
         $waktu = $_POST['waktu'] ?? '';
@@ -115,9 +189,22 @@ class AgendaController extends BaseController {
         $status_kegiatan = $_POST['status_kegiatan'] ?? 'Rencana';
         $visibilitas = $_POST['visibilitas'] ?? 'public';
         $target_roles = $_POST['target_roles'] ?? [];
+        
+        // Extract dari waktu_mulai jika form UI menggunakan datetime-local
+        if (empty($tanggal_mulai) && !empty($waktu_mulai)) {
+            $tanggal_mulai = date('Y-m-d', strtotime($waktu_mulai));
+            $waktu = date('H:i:s', strtotime($waktu_mulai));
+        }
+        if (empty($tanggal_selesai)) {
+            if (!empty($waktu_selesai)) {
+                $tanggal_selesai = date('Y-m-d', strtotime($waktu_selesai));
+            } else {
+                $tanggal_selesai = $tanggal_mulai; // Fallback jika tidak diisi
+            }
+        }
 
-        if (empty($id) || empty($judul) || empty($tanggal_mulai) || empty($tanggal_selesai)) {
-            $this->redirectWithError("Data tidak lengkap!");
+        if (empty($id) || empty($judul) || empty($tanggal_mulai)) {
+            $this->redirectWithError("Data tidak lengkap! Judul dan Tanggal Mulai wajib diisi.");
         }
         
         $existing = $this->agendaModel->findById($id);
@@ -142,6 +229,12 @@ class AgendaController extends BaseController {
         }
 
         $dataToSave = [
+            'kategori_id'    => $kategori_id,
+            'lokasi'         => $lokasi,
+            'pic_id'         => $pic_id,
+            'target_audiens' => $target_audiens,
+            'waktu_mulai'    => $waktu_mulai,
+            'waktu_selesai'  => $waktu_selesai,
             'judul' => $judul,
             'deskripsi' => $deskripsi,
             'tanggal_mulai' => $tanggal_mulai,

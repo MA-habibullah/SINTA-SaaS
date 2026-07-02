@@ -39,7 +39,7 @@ SessionManager::start();
 App\Helpers\SessionTracker::track();
 
 // ✅ Global Error Handler: Tangkap semua PHP/SQL error & simpan ke DB system_errors
-App\Helpers\ErrorTracker::register();
+App\Helpers\ErrorTracker::register(true);
 
 // 3. Routing Sederhana
 $request_uri = $_SERVER['REQUEST_URI'];
@@ -88,6 +88,21 @@ try {
     }
 
     switch ($path) {
+        case '/api/v1/log-js-error':
+            $data = json_decode(file_get_contents('php://input'), true);
+            if ($data) {
+                \App\Helpers\ErrorTracker::logToDatabase(
+                    'JS ' . ($data['type'] ?? 'Error'),
+                    $data['message'] ?? 'Unknown JS Error',
+                    $data['source'] ?? 'ClientBrowser',
+                    $data['lineno'] ?? 0,
+                    $data['stack'] ?? 'No stack trace'
+                );
+            }
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true]);
+            exit;
+
         case '/login':
             // Jika sudah login sebagai siswa, langsung lempar ke dashboard
             if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true && ($_SESSION['role_name'] ?? '') === 'siswa') {
@@ -196,6 +211,51 @@ try {
             $controller = new App\Controllers\PengumumanController();
             $controller->delete();
             break;
+            
+        case '/pembinaan':
+            $controller = new App\Controllers\PembinaanController();
+            $controller->index();
+            break;
+            
+        case '/pembinaan/store':
+            $controller = new App\Controllers\PembinaanController();
+            $controller->store();
+            break;
+            
+        case '/pembinaan/jadwal':
+            $controller = new App\Controllers\PembinaanController();
+            $controller->jadwalkan_sesi();
+            break;
+            
+        case '/pembinaan/sesi':
+            $controller = new App\Controllers\PembinaanController();
+            $controller->sesi();
+            break;
+            
+        case '/pembinaan/sesi/simpan':
+            $controller = new App\Controllers\PembinaanController();
+            $controller->simpan_sesi();
+            break;
+            
+        case '/pembinaan/evaluasi':
+            $controller = new App\Controllers\PembinaanController();
+            $controller->evaluasi();
+            break;
+            
+        case '/pembinaan/cetak':
+            $controller = new App\Controllers\PembinaanController();
+            $controller->cetak();
+            break;
+
+        case '/konseling':
+            $controller = new App\Controllers\GuruKonselingController();
+            $controller->index();
+            break;
+            
+        case '/konseling/store':
+            $controller = new App\Controllers\GuruKonselingController();
+            $controller->store();
+            break;
 
         case '/informasi/agenda':
             $controller = new App\Controllers\AgendaController();
@@ -214,6 +274,21 @@ try {
             
         case '/informasi/agenda/delete':
             $controller = new App\Controllers\AgendaController();
+            $controller->delete();
+            break;
+
+        case '/informasi/kategori-agenda/store':
+            $controller = new App\Controllers\KategoriAgendaController();
+            $controller->store();
+            break;
+            
+        case '/informasi/kategori-agenda/update':
+            $controller = new App\Controllers\KategoriAgendaController();
+            $controller->update();
+            break;
+            
+        case '/informasi/kategori-agenda/delete':
+            $controller = new App\Controllers\KategoriAgendaController();
             $controller->delete();
             break;
 

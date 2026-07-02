@@ -12,25 +12,61 @@ class PengumumanModel {
         $this->tenantId = $tenantId;
     }
 
-    public function getAll(int $limit = 100, int $offset = 0): array {
+    public function getAll(int $limit = 100, int $offset = 0, array $filters = []): array {
         $db = Database::getConnection();
-        $whereTenant = ($this->tenantId === null) ? "1=1" : "(p.tenant_id = :tenant_id OR p.tenant_id IS NULL)";
+        
+        // Tenant scope
+        $whereCondition = "1=1";
+        if ($this->tenantId !== null) {
+            $whereCondition .= " AND (p.tenant_id = :scoped_tenant_id OR p.tenant_id IS NULL)";
+        }
+        
+        if (!empty($filters['search'])) {
+            $whereCondition .= " AND p.judul LIKE :search";
+        }
+        if (!empty($filters['kategori_id'])) {
+            $whereCondition .= " AND p.kategori_id = :kategori_id";
+        }
+        if (!empty($filters['tanggal'])) {
+            $whereCondition .= " AND DATE(p.created_at) = :tanggal";
+        }
+        // Specific tenant filter from super admin
+        if (!empty($filters['tenant_id'])) {
+            $whereCondition .= " AND p.tenant_id = :filter_tenant_id";
+        }
+        
         $sql = "SELECT p.*, u.nama_lengkap as nama_pembuat, r.nama_role as pembuat_role, t.nama_sekolah, k.nama_kategori 
                 FROM pengumuman p 
                 JOIN users u ON p.created_by = u.id 
                 JOIN roles r ON u.role_id = r.id
                 LEFT JOIN tenants t ON p.tenant_id = t.id
                 LEFT JOIN kategori_pengumuman k ON p.kategori_id = k.id
-                WHERE $whereTenant 
+                WHERE $whereCondition 
                 ORDER BY p.created_at DESC 
                 LIMIT :limit OFFSET :offset";
+                
         $stmt = $db->prepare($sql);
+        
         if ($this->tenantId !== null) {
-            $stmt->bindValue(':tenant_id', $this->tenantId);
+            $stmt->bindValue(':scoped_tenant_id', $this->tenantId);
         }
+        if (!empty($filters['search'])) {
+            $stmt->bindValue(':search', '%' . $filters['search'] . '%');
+        }
+        if (!empty($filters['kategori_id'])) {
+            $stmt->bindValue(':kategori_id', $filters['kategori_id']);
+        }
+        if (!empty($filters['tanggal'])) {
+            $stmt->bindValue(':tanggal', $filters['tanggal']);
+        }
+        if (!empty($filters['tenant_id'])) {
+            $stmt->bindValue(':filter_tenant_id', $filters['tenant_id']);
+        }
+        
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->execute();
+        
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     

@@ -1,0 +1,18 @@
+# Penyelesaian Desain Ulang UI/UX Manajemen Pengumuman
+
+Semua perubahan pada halaman Manajemen Pengumuman telah diimplementasikan agar identik dengan gaya modern pada halaman Agenda.
+
+## Ringkasan Perubahan
+
+1. **Wadah Utama (Layouting)**
+   Seluruh konten pada menu Pengumuman sekarang dibungkus di dalam area *container* abu-abu terang (`bg-slate-50`) yang membuat tampilan lebih menenangkan mata (eye-soothing).
+2. **Kombinasi Kartu Kaca (Glass-Card)**
+   Menu Daftar Pengumuman dan Manajemen Kategori masing-masing berada di dalam desain kotak `glass-card` melayang (dengan efek *hover-lift*) yang memberikan batas area ruang baca lebih tegas.
+3. **Penyempurnaan Navigasi Tab**
+   Navigasi pergantian panel antara "Daftar Pengumuman" dan "Manajemen Kategori" kini menggunakan bentuk *Pill Buttons* yang bisa digeser (scrollable horizontal) tanpa terlihat memadati area antarmuka atas.
+4. **Desain Tabel (Flat UI)**
+   Kedua tabel kini meminjam skema tabel Kategori pada fitur Agenda, yaitu desain datar tanpa baris timbul, dihiasi efek pergantian warna saat baris diarahkan tetikus (hover), dan tombol aksi (Edit & Hapus) yang dikemas di dalam bujur sangkar mungil dengan batas tipis (*rounded square borders*).
+5. **Paginasi SimpleDataTables**
+   Fitur cari cepat (*live search*), rentang halaman, dan penghitung baris dari `SimpleDatatables` kini menyala dengan sempurna pada kedua belah tabel, memastikan penanganan ribuan data pengumuman tetap ringan dan seragam dengan halaman Agenda.
+
+Silakan muat ulang (*refresh*) *browser* Anda dan periksa menu Manajemen Pengumuman untuk melihat desain modern dan mewah barunya!

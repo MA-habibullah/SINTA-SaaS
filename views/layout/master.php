@@ -5,6 +5,83 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($data['title'] ?? ($stats['title'] ?? 'SINTA-SaaS SaaS')) ?></title>
     
+    <!-- JS Error Tracker: Persists errors to LocalStorage for debugging -->
+    <script data-turbo-track="reload">
+    (function() {
+        const STORAGE_KEY = 'sinta_js_errors';
+        function saveError(type, message, source, lineno, colno, error) {
+            let errors = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            errors.push({
+                type: type, time: new Date().toLocaleTimeString(),
+                message: message, source: source, lineno: lineno,
+                stack: error ? error.stack : ''
+            });
+            if (errors.length > 30) errors = errors.slice(-30);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(errors));
+            showErrorBadge();
+
+            // Send to Backend Error Monitor
+            const payload = JSON.stringify({
+                type: type, message: message, source: source, lineno: lineno, stack: error ? error.stack : ''
+            });
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon('/SINTA-SaaS/api/v1/log-js-error', payload);
+            } else {
+                fetch('/SINTA-SaaS/api/v1/log-js-error', { method: 'POST', body: payload, keepalive: true }).catch(e=>{});
+            }
+        }
+        window.addEventListener('error', function(e) {
+            saveError('Error', e.message, e.filename, e.lineno, e.colno, e.error);
+        });
+        window.addEventListener('unhandledrejection', function(e) {
+            saveError('Promise Rejection', e.reason ? (e.reason.message || e.reason) : 'Unknown', '', 0, 0, e.reason);
+        });
+        function showErrorBadge() {
+            let errors = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            if (errors.length === 0) return;
+            let badge = document.getElementById('js-error-badge');
+            if (!badge) {
+                badge = document.createElement('div');
+                badge.id = 'js-error-badge';
+                badge.style.cssText = 'position:fixed;bottom:20px;left:20px;background:#e11d48;color:white;padding:10px 15px;border-radius:8px;z-index:99999;cursor:pointer;font-family:system-ui,sans-serif;box-shadow:0 10px 15px -3px rgba(0,0,0,0.3);display:flex;align-items:center;gap:12px;font-weight:600;font-size:14px;border:1px solid #be123c;';
+                badge.innerHTML = `⚠️ <span id="js-error-count">${errors.length}</span> JS Errors <span style="font-size:11px;background:rgba(255,255,255,0.25);padding:3px 8px;border-radius:6px;" id="js-error-clear">Clear</span>`;
+                if(document.body) document.body.appendChild(badge);
+                
+                badge.addEventListener('click', function(e) {
+                    if (e.target.id === 'js-error-clear') {
+                        localStorage.removeItem(STORAGE_KEY);
+                        badge.remove();
+                        return;
+                    }
+                    let errList = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+                    let html = '<div style="max-height:60vh;overflow-y:auto;text-align:left;font-family:monospace;font-size:13px;background:#1e293b;color:#f8fafc;padding:15px;border-radius:8px;">';
+                    errList.reverse().forEach(err => {
+                        html += `<div style="margin-bottom:15px;padding-bottom:15px;border-bottom:1px solid #334155;">
+                            <strong style="color:#f87171;">[${err.time}] ${err.type}</strong><br>
+                            <span style="color:#f1f5f9;">${err.message}</span><br>
+                            <small style="color:#94a3b8;">${err.source ? err.source + ':' + err.lineno : ''}</small><br>
+                            <div style="background:#0f172a;padding:10px;margin-top:8px;overflow-x:auto;white-space:pre;color:#a5b4fc;">${err.stack || 'No stack trace'}</div>
+                        </div>`;
+                    });
+                    html += '</div>';
+
+                    if (window.Swal) {
+                        Swal.fire({ title: 'JavaScript Error Log', html: html, width: '800px', confirmButtonText: 'Tutup' });
+                    } else {
+                        let w = window.open('', '_blank', 'width=800,height=600');
+                        w.document.write('<html style="background:#0f172a;color:white;"><body style="font-family:sans-serif;padding:20px;"><h2>JS Errors</h2>' + html + '</body></html>');
+                    }
+                });
+            } else {
+                let cnt = document.getElementById('js-error-count');
+                if(cnt) cnt.innerText = errors.length;
+            }
+        }
+        window.addEventListener('DOMContentLoaded', showErrorBadge);
+        document.addEventListener('turbo:load', showErrorBadge);
+    })();
+    </script>
+
     <!-- Google Fonts: Plus Jakarta Sans & Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

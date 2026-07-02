@@ -1,0 +1,32 @@
+# Implementasi Manajemen Kategori Agenda (CRUD)
+
+Untuk memungkinkan Anda menambah, mengedit, dan menghapus "Kategori Agenda" (sehingga otomatis muncul sebagai pilihan di formulir Tambah/Edit Kegiatan), kita perlu membuat satu halaman manajemen khusus.
+
+## Proposed Changes
+
+### 1. Controller Kategori Agenda
+Akan dibuat file *controller* baru untuk menangani logika bisnis.
+#### [NEW] [KategoriAgendaController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/KategoriAgendaController.php)
+- Menyediakan fungsi `index` untuk menampilkan daftar kategori.
+- Menyediakan fungsi `store` untuk menambah kategori baru.
+- Menyediakan fungsi `update` untuk mengubah nama kategori atau kode warna.
+- Menyediakan fungsi `delete` untuk menghapus kategori (dengan sistem proteksi jika kategori tersebut sedang digunakan oleh suatu kegiatan).
+
+### 2. Antarmuka (View)
+Halaman visual tempat Anda berinteraksi dengan datanya.
+#### [NEW] [kategori_agenda.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/sekolah/kategori_agenda.php)
+- Menampilkan tabel datar Kategori Agenda yang dilengkapi tampilan balok warna (*Color Badge*).
+- Jendela Pop-up (*Modal*) modern untuk form penambahan dan pengeditan kategori, dilengkapi pemilih warna (*Color Picker*) visual.
+- Tombol hapus dengan konfirmasi *SweetAlert*.
+
+### 3. Modifikasi Rute & Navigasi
+Menghubungkan halaman baru dengan sistem navigasi.
+#### [MODIFY] [index.php](file:///C:/xampp/htdocs/SINTA-SaaS/index.php)
+- Menambahkan rute `/informasi/kategori-agenda` beserta _endpoint_ simpan, ubah, dan hapusnya.
+#### [MODIFY] [sidebar.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/layout/sidebar.php)
+- Menambahkan tautan/menu baru bernama **"Kategori Agenda"** tepat di bawah menu "Agenda & Timeline" pada Sidebar sebelah kiri.
+
+## Verification Plan
+1. Menyimpan data kategori baru dan memverifikasi apakah kategori tersebut langsung muncul di *dropdown* Tambah Kegiatan halaman Agenda Utama.
+2. Mengubah warna kategori dan memastikan warna balok Gantt Chart pada halaman Agenda Utama ikut berubah.
+3. Mencoba menghapus kategori untuk memastikan berjalan lancar tanpa bentrokan data.

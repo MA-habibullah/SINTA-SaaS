@@ -15,13 +15,15 @@ class AgendaModel {
     public function getAll(int $limit = 100, int $offset = 0): array {
         $db = Database::getConnection();
         $whereTenant = ($this->tenantId === null) ? "1=1" : "(a.tenant_id = :tenant_id OR a.tenant_id IS NULL)";
-        $sql = "SELECT a.*, u.nama_lengkap as nama_pembuat, r.nama_role as pembuat_role, t.nama_sekolah 
+        $sql = "SELECT a.*, u.nama_lengkap as nama_pembuat, r.nama_role as pembuat_role, t.nama_sekolah, k.nama_kategori, k.kode_warna, pic.nama_lengkap as nama_pic 
                 FROM agenda_sekolah a 
                 JOIN users u ON a.created_by = u.id 
                 JOIN roles r ON u.role_id = r.id
                 LEFT JOIN tenants t ON a.tenant_id = t.id
+                LEFT JOIN kategori_agenda k ON a.kategori_id = k.id
+                LEFT JOIN users pic ON a.pic_id = pic.id
                 WHERE $whereTenant 
-                ORDER BY a.tanggal_mulai DESC, a.waktu DESC 
+                ORDER BY IFNULL(a.waktu_mulai, a.tanggal_mulai) DESC 
                 LIMIT :limit OFFSET :offset";
         $stmt = $db->prepare($sql);
         if ($this->tenantId !== null) {
@@ -29,6 +31,24 @@ class AgendaModel {
         }
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    public function getUpcomingAgendas(int $limit = 5): array {
+        $db = Database::getConnection();
+        $whereTenant = ($this->tenantId === null) ? "1=1" : "(a.tenant_id = :tenant_id OR a.tenant_id IS NULL)";
+        $sql = "SELECT a.*, k.kode_warna 
+                FROM agenda_sekolah a 
+                LEFT JOIN kategori_agenda k ON a.kategori_id = k.id
+                WHERE $whereTenant AND IFNULL(a.waktu_mulai, a.tanggal_mulai) >= CURDATE()
+                ORDER BY IFNULL(a.waktu_mulai, a.tanggal_mulai) ASC 
+                LIMIT :limit";
+        $stmt = $db->prepare($sql);
+        if ($this->tenantId !== null) {
+            $stmt->bindValue(':tenant_id', $this->tenantId);
+        }
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -89,21 +109,27 @@ class AgendaModel {
         $db = Database::getConnection();
         $stmt = $db->prepare("
             INSERT INTO agenda_sekolah 
-            (id, tenant_id, created_by, judul, deskripsi, tanggal_mulai, tanggal_selesai, waktu, tipe, status_kegiatan, visibilitas, target_roles, lampiran_file)
+            (id, tenant_id, kategori_id, lokasi, pic_id, target_audiens, waktu_mulai, waktu_selesai, created_by, judul, deskripsi, tanggal_mulai, tanggal_selesai, waktu, tipe, status_kegiatan, visibilitas, target_roles, lampiran_file)
             VALUES 
-            (UUID(), :tenant_id, :created_by, :judul, :deskripsi, :tanggal_mulai, :tanggal_selesai, :waktu, :tipe, :status_kegiatan, :visibilitas, :target_roles, :lampiran_file)
+            (UUID(), :tenant_id, :kategori_id, :lokasi, :pic_id, :target_audiens, :waktu_mulai, :waktu_selesai, :created_by, :judul, :deskripsi, :tanggal_mulai, :tanggal_selesai, :waktu, :tipe, :status_kegiatan, :visibilitas, :target_roles, :lampiran_file)
         ");
         return $stmt->execute([
             'tenant_id'      => $this->tenantId,
+            'kategori_id'    => $data['kategori_id'] ?? null,
+            'lokasi'         => $data['lokasi'] ?? null,
+            'pic_id'         => $data['pic_id'] ?? null,
+            'target_audiens' => $data['target_audiens'] ?? 'Semua',
+            'waktu_mulai'    => $data['waktu_mulai'] ?? null,
+            'waktu_selesai'  => $data['waktu_selesai'] ?? null,
             'created_by'     => $data['created_by'],
             'judul'          => $data['judul'],
             'deskripsi'      => $data['deskripsi'],
-            'tanggal_mulai'  => $data['tanggal_mulai'],
-            'tanggal_selesai'=> $data['tanggal_selesai'],
+            'tanggal_mulai'  => $data['tanggal_mulai'] ?? null,
+            'tanggal_selesai'=> $data['tanggal_selesai'] ?? null,
             'waktu'          => !empty($data['waktu']) ? $data['waktu'] : null,
             'tipe'           => $data['tipe'] ?? 'Agenda Umum',
             'status_kegiatan'=> $data['status_kegiatan'] ?? 'Rencana',
-            'visibilitas'    => $data['visibilitas'],
+            'visibilitas'    => $data['visibilitas'] ?? 'public',
             'target_roles'   => !empty($data['target_roles']) ? json_encode($data['target_roles']) : null,
             'lampiran_file'  => $data['lampiran_file'] ?? null
         ]);
@@ -114,14 +140,20 @@ class AgendaModel {
         
         $setTenantClause = "";
         $params = [
+            'kategori_id'    => $data['kategori_id'] ?? null,
+            'lokasi'         => $data['lokasi'] ?? null,
+            'pic_id'         => $data['pic_id'] ?? null,
+            'target_audiens' => $data['target_audiens'] ?? 'Semua',
+            'waktu_mulai'    => $data['waktu_mulai'] ?? null,
+            'waktu_selesai'  => $data['waktu_selesai'] ?? null,
             'judul'          => $data['judul'],
             'deskripsi'      => $data['deskripsi'],
-            'tanggal_mulai'  => $data['tanggal_mulai'],
-            'tanggal_selesai'=> $data['tanggal_selesai'],
+            'tanggal_mulai'  => $data['tanggal_mulai'] ?? null,
+            'tanggal_selesai'=> $data['tanggal_selesai'] ?? null,
             'waktu'          => !empty($data['waktu']) ? $data['waktu'] : null,
             'tipe'           => $data['tipe'] ?? 'Agenda Umum',
             'status_kegiatan'=> $data['status_kegiatan'] ?? 'Rencana',
-            'visibilitas'    => $data['visibilitas'],
+            'visibilitas'    => $data['visibilitas'] ?? 'public',
             'target_roles'   => !empty($data['target_roles']) ? json_encode($data['target_roles']) : null,
             'lampiran_file'  => $data['lampiran_file'] ?? null,
             'id'             => $id
@@ -140,6 +172,12 @@ class AgendaModel {
         $stmt = $db->prepare("
             UPDATE agenda_sekolah SET 
                 $setTenantClause
+                kategori_id = :kategori_id,
+                lokasi = :lokasi,
+                pic_id = :pic_id,
+                target_audiens = :target_audiens,
+                waktu_mulai = :waktu_mulai,
+                waktu_selesai = :waktu_selesai,
                 judul = :judul, 
                 deskripsi = :deskripsi, 
                 tanggal_mulai = :tanggal_mulai,
