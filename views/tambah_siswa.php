@@ -1665,7 +1665,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
             </button>
             
             <!-- Batal if step 1 -->
-            <a href="/SINTA-SaaS/siswa" class="btn btn-light rounded-3 px-4 py-2 fs-7 shadow-sm border w-100 w-sm-auto order-last order-sm-first text-center" v-show="currentStep === 1">
+            <a href="/SINTA-SaaS/pengguna" class="btn btn-light rounded-3 px-4 py-2 fs-7 shadow-sm border w-100 w-sm-auto order-last order-sm-first text-center" v-show="currentStep === 1">
                 Batal
             </a>
 
@@ -2459,6 +2459,17 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                     }
                 } catch (err) {
                     console.error(err);
+                    if (err.response?.status === 422 && err.response?.data?.errors) {
+                        errorsList.value = Object.values(err.response.data.errors);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Validasi Gagal',
+                            text: 'Silakan periksa kembali isian form Anda (scroll ke atas untuk detail).',
+                            confirmButtonText: 'OK'
+                        });
+                        return;
+                    }
                     const errMsg = err.response?.data?.error || err.message || 'Gagal menyimpan perubahan.';
                     Swal.fire({
                         icon: 'error',

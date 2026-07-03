@@ -33,3 +33,6 @@ test_*.php
 rename_script.php
 database_export.sql
 SOP_INSTALLATION.*
+
+# Mengabaikan password deploy lokal
+.deploy_pass

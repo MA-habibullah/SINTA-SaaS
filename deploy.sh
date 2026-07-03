@@ -6,8 +6,15 @@
 
 # Pengecekan Keamanan: Pastikan script berjalan sebagai root
 if [ "$EUID" -ne 0 ]; then
-  echo "Meminta akses Administrator (sudo)..."
-  exec sudo "$0" "$@"
+  SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+  if [ -f "$SCRIPT_DIR/.deploy_pass" ]; then
+    echo "Meminta akses Administrator (sudo) menggunakan password tersembunyi..."
+    cat "$SCRIPT_DIR/.deploy_pass" | sudo -S bash "$0" "$@"
+    exit $?
+  else
+    echo "Meminta akses Administrator (sudo)..."
+    exec sudo "$0" "$@"
+  fi
 fi
 
 APP_DIR="/var/www/SINTA-SaaS"

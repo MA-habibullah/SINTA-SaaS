@@ -577,7 +577,7 @@ class ServerMonitorController extends BaseController
         }
 
         // Eksekusi (kami tambahkan 2>&1 agar error stderr juga tertangkap)
-        $output = shell_exec('sudo bash ' . escapeshellarg($deployScript) . ' 2>&1');
+        $output = shell_exec('bash ' . escapeshellarg($deployScript) . ' 2>&1');
 
         $this->jsonResponse([
             'success' => true,
