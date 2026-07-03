@@ -121,6 +121,13 @@
                 </div>
 
                 <div class="table-responsive">
+                    <?php if ($mustSelectTenant): ?>
+                        <div class="text-center py-5">
+                            <i class="bi bi-buildings text-slate-300" style="font-size: 4rem;"></i>
+                            <h4 class="mt-3 text-slate-600 font-bold">Pilih Sekolah Terlebih Dahulu</h4>
+                            <p class="text-slate-500 max-w-md mx-auto">Untuk melihat daftar pengumuman, silakan pilih sekolah (tenant) spesifik pada filter di atas.</p>
+                        </div>
+                    <?php else: ?>
                     <table id="pengumumanTable" class="table w-100 align-middle">
                         <thead>
                             <tr class="text-slate-400 text-xs uppercase tracking-wider font-semibold">
@@ -207,6 +214,7 @@
                             <?php endif; ?>
                         </tbody>
                     </table>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -240,6 +248,13 @@
                     </div>
                 </div>
                 <div class="table-responsive">
+                    <?php if ($mustSelectTenant): ?>
+                        <div class="text-center py-5">
+                            <i class="bi bi-tags text-slate-300" style="font-size: 4rem;"></i>
+                            <h4 class="mt-3 text-slate-600 font-bold">Pilih Sekolah Terlebih Dahulu</h4>
+                            <p class="text-slate-500 max-w-md mx-auto">Untuk melihat dan mengelola kategori, silakan pilih sekolah (tenant) spesifik pada filter di atas.</p>
+                        </div>
+                    <?php else: ?>
                     <table id="kategoriTable" class="table w-100 align-middle">
                         <thead>
                             <tr class="text-slate-400 text-xs uppercase tracking-wider font-semibold">
@@ -280,6 +295,7 @@
                             <?php endif; ?>
                         </tbody>
                     </table>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

@@ -34,16 +34,23 @@ class PengumumanController extends BaseController {
             'tenant_id' => $_GET['tenant'] ?? ''
         ];
         
-        $data = $this->pengumumanModel->getAll(100, 0, $filters);
+        $isSuperAdmin = ($_SESSION['role_name'] === 'super_admin');
+        $mustSelectTenant = false;
+        
+        if ($isSuperAdmin && empty($filters['tenant_id'])) {
+            $data = [];
+            $kategoriList = [];
+            $mustSelectTenant = true;
+        } else {
+            $data = $this->pengumumanModel->getAll(100, 0, $filters);
+            $kategoriList = $this->kategoriModel->getAll($filters);
+        }
         
         $tenants = [];
-        $isSuperAdmin = ($_SESSION['role_name'] === 'super_admin');
         if ($isSuperAdmin) {
             $db = \App\Config\Database::getConnection();
             $tenants = $db->query("SELECT id, nama_sekolah FROM tenants WHERE deleted_at IS NULL ORDER BY nama_sekolah ASC")->fetchAll(\PDO::FETCH_ASSOC);
         }
-        
-        $kategoriList = $this->kategoriModel->getAll($filters);
         
         $this->render('humas/pengumuman', [
             'title' => 'Manajemen Pengumuman',
@@ -52,6 +59,7 @@ class PengumumanController extends BaseController {
             'roleList' => $this->getRolesList(),
             'tenants' => $tenants,
             'isSuperAdmin' => $isSuperAdmin,
+            'mustSelectTenant' => $mustSelectTenant,
             'filters' => $filters
         ]);
     }
