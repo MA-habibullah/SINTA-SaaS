@@ -29,8 +29,12 @@ class KategoriPengumumanModel {
         }
 
         if (!empty($filters['tenant_id'])) {
-            $sql .= " AND k.tenant_id = :filter_tenant_id ";
-            $params['filter_tenant_id'] = $filters['tenant_id'];
+            if ($filters['tenant_id'] === 'global') {
+                $sql .= " AND k.tenant_id IS NULL ";
+            } else {
+                $sql .= " AND k.tenant_id = :filter_tenant_id ";
+                $params['filter_tenant_id'] = $filters['tenant_id'];
+            }
         }
 
         $sql .= " ORDER BY k.nama_kategori ASC";

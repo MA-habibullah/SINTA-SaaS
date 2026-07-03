@@ -105,7 +105,8 @@
                         
                         <?php if ($isSuperAdmin): ?>
                         <select name="tenant" class="form-select shadow-sm rounded-xl border-slate-200 text-sm py-2" style="width: auto; min-width: 140px;">
-                            <option value="">Semua Sekolah</option>
+                            <option value="">Pilih Sekolah...</option>
+                            <option value="global" <?= ($filters['tenant_id'] ?? '') === 'global' ? 'selected' : '' ?>>🌐 Pengumuman Global</option>
                             <?php foreach ($tenants as $t): ?>
                                 <option value="<?= $t['id'] ?>" <?= ($filters['tenant_id'] ?? '') === (string)$t['id'] ? 'selected' : '' ?>><?= htmlspecialchars($t['nama_sekolah']) ?></option>
                             <?php endforeach; ?>
@@ -232,7 +233,8 @@
                         <form method="GET" action="/SINTA-SaaS/informasi/pengumuman" class="d-flex flex-wrap gap-2 m-0" id="filterKategoriForm">
                             <?php if ($isSuperAdmin): ?>
                             <select name="tenant" class="form-select shadow-sm rounded-xl border-slate-200 text-sm py-2" style="width: auto; min-width: 140px;" onchange="document.getElementById('filterKategoriForm').submit()">
-                                <option value="">Semua Sekolah</option>
+                                <option value="">Pilih Sekolah...</option>
+                                <option value="global" <?= ($filters['tenant_id'] ?? '') === 'global' ? 'selected' : '' ?>>🌐 Kategori Global</option>
                                 <?php foreach ($tenants as $t): ?>
                                     <option value="<?= $t['id'] ?>" <?= ($filters['tenant_id'] ?? '') === (string)$t['id'] ? 'selected' : '' ?>><?= htmlspecialchars($t['nama_sekolah']) ?></option>
                                 <?php endforeach; ?>

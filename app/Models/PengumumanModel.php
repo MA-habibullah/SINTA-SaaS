@@ -32,7 +32,11 @@ class PengumumanModel {
         }
         // Specific tenant filter from super admin
         if (!empty($filters['tenant_id'])) {
-            $whereCondition .= " AND p.tenant_id = :filter_tenant_id";
+            if ($filters['tenant_id'] === 'global') {
+                $whereCondition .= " AND p.tenant_id IS NULL";
+            } else {
+                $whereCondition .= " AND p.tenant_id = :filter_tenant_id";
+            }
         }
         
         $sql = "SELECT p.*, u.nama_lengkap as nama_pembuat, r.nama_role as pembuat_role, t.nama_sekolah, k.nama_kategori 
@@ -59,7 +63,7 @@ class PengumumanModel {
         if (!empty($filters['tanggal'])) {
             $stmt->bindValue(':tanggal', $filters['tanggal']);
         }
-        if (!empty($filters['tenant_id'])) {
+        if (!empty($filters['tenant_id']) && $filters['tenant_id'] !== 'global') {
             $stmt->bindValue(':filter_tenant_id', $filters['tenant_id']);
         }
         
