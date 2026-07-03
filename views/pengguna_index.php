@@ -401,8 +401,8 @@
                         <li class="page-item" :class="{disabled: currentPage === 1}">
                             <a class="page-link" href="#" @click.prevent="fetchData(currentPage - 1)">&laquo;</a>
                         </li>
-                        <li class="page-item" v-for="page in totalPages" :key="page" :class="{active: page === currentPage}">
-                            <a class="page-link" href="#" @click.prevent="fetchData(page)">{{ page }}</a>
+                        <li class="page-item" v-for="(page, index) in paginationPages" :key="index" :class="{active: page === currentPage, disabled: page === '...'}">
+                            <a class="page-link" href="#" @click.prevent="page !== '...' && fetchData(page)">{{ page }}</a>
                         </li>
                         <li class="page-item" :class="{disabled: currentPage === totalPages}">
                             <a class="page-link" href="#" @click.prevent="fetchData(currentPage + 1)">&raquo;</a>
@@ -1120,8 +1120,8 @@
                             <li class="page-item" :class="{disabled: currentPage === 1}">
                                 <a class="page-link" href="#" @click.prevent="fetchData(currentPage - 1)">&laquo;</a>
                             </li>
-                            <li class="page-item" v-for="page in totalPages" :key="page" :class="{active: page === currentPage}">
-                                <a class="page-link" href="#" @click.prevent="fetchData(page)">{{ page }}</a>
+                            <li class="page-item" v-for="(page, index) in paginationPages" :key="index" :class="{active: page === currentPage, disabled: page === '...'}">
+                                <a class="page-link" href="#" @click.prevent="page !== '...' && fetchData(page)">{{ page }}</a>
                             </li>
                             <li class="page-item" :class="{disabled: currentPage === totalPages}">
                                 <a class="page-link" href="#" @click.prevent="fetchData(currentPage + 1)">&raquo;</a>
@@ -1407,6 +1407,26 @@
             const month2 = monthNames2[now2.getMonth()];
             const year2 = now2.getFullYear();
             this.printTanggal = `${day2} ${month2} ${year2}`;
+        },
+        computed: {
+            paginationPages() {
+                const current = this.currentPage;
+                const total = this.totalPages;
+                if (total <= 7) {
+                    const pages = [];
+                    for (let i = 1; i <= total; i++) pages.push(i);
+                    return pages;
+                }
+                const pages = [];
+                if (current <= 4) {
+                    pages.push(1, 2, 3, 4, 5, '...', total);
+                } else if (current >= total - 3) {
+                    pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total);
+                } else {
+                    pages.push(1, '...', current - 1, current, current + 1, '...', total);
+                }
+                return pages;
+            }
         },
         methods: {
             switchTab(tabId) {
