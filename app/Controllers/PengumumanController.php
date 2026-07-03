@@ -22,6 +22,11 @@ class PengumumanController extends BaseController {
             die("403 - Forbidden: Anda tidak memiliki akses ke Manajemen Pengumuman.");
         }
         
+        // Super admin tidak boleh dibatasi oleh deteksi subdomain saat melihat daftar global
+        if ($role === 'super_admin') {
+            $this->tenantId = null;
+        }
+        
         $this->pengumumanModel = new PengumumanModel($this->tenantId);
         $this->kategoriModel = new KategoriPengumumanModel($this->tenantId);
     }
