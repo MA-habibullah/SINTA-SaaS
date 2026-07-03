@@ -1,0 +1,34 @@
+# Implementasi Audit Logika Manajemen Pengumuman
+
+Berdasarkan laporan Anda mengenai data yang tertukar antar tenant dan tampilan data yang bercampur, saya telah melakukan audit komprehensif pada _source code_ model dan _controller_ Manajemen Pengumuman. 
+
+## Hasil Audit & Akar Masalah
+
+1. **Kasus "Login Tenant 1 tapi muncul kategori Tenant 2"**:
+   - Berdasarkan aturan di `KategoriPengumumanModel` dan `PengumumanModel`, data yang memiliki `tenant_id = NULL` dianggap sebagai **Data Global**. Data Global ini dirancang agar otomatis muncul di **seluruh sekolah** (Tenant 1, Tenant 2, dst).
+   - Jika Anda melihat "Kategori milik Tenant 2" muncul saat login sebagai Tenant 1, kemungkinan besar kategori tersebut secara tidak sengaja **disimpan sebagai Global** oleh Super Admin (tidak spesifik memilih Tenant 2 di *dropdown* saat pembuatannya).
+
+2. **Kasus "Semua pengumuman tidak muncul di tabel" & "Super Admin wajib klik sekolah dulu"**:
+   - Saat ini, jika Super Admin membuka halaman Pengumuman tanpa memilih filter sekolah, sistem akan melakukan *query* `1=1` (mengambil seluruh data pengumuman dari semua sekolah yang ada). Ini membuat datanya menumpuk dan berisiko gagal _load_ (lambat) jika data sangat banyak, sehingga seolah-olah tidak muncul.
+   - Sesuai permintaan Anda, kita akan mengubah logikanya agar **Super Admin diwajibkan memilih sekolah** terlebih dahulu sebelum data (baik Pengumuman maupun Kategori) ditampilkan di layar.
+
+## Proposed Changes
+
+### App\Controllers
+#### [MODIFY] [PengumumanController.php](file:///c:/xampp/htdocs/SINTA-SaaS/app/Controllers/PengumumanController.php)
+- Menambahkan logika di metode `index()`:
+  - Jika yang login adalah `super_admin` dan `$filters['tenant_id']` kosong, maka jangan panggil metode `getAll()` dari database. Set `$data = []` dan `$kategoriList = []`.
+  - Tambahkan variabel `$mustSelectTenant = true` yang akan dikirim ke *view*.
+
+### Views
+#### [MODIFY] [pengumuman.php](file:///c:/xampp/htdocs/SINTA-SaaS/views/humas/pengumuman.php)
+- Menambahkan status kosong (_empty state_) khusus jika `$mustSelectTenant` bernilai `true`.
+- Jika `true`, tabel tidak akan dirender melainkan menampilkan pesan besar di tengah layar: **"Silakan pilih sekolah (tenant) terlebih dahulu pada filter di atas untuk melihat data."**
+- Berlaku untuk tab **Daftar Pengumuman** dan tab **Manajemen Kategori**.
+
+## User Review Required
+> [!IMPORTANT]
+> - Apakah Anda setuju jika Super Admin baru bisa melihat data (dan mungkin baru diizinkan menambah data) **setelah** mereka secara spesifik memilih tenant dari filter *dropdown* di atas tabel?
+> - Terkait kasus "muncul kategori Tenant 2", silakan cek kolom "Sekolah" di tabel Kategori. Jika tertulis **Global**, berarti solusinya cukup _edit_ kategori tersebut dan ubah sekolahnya spesifik menjadi Tenant 2 agar tidak bocor ke Tenant 1.
+
+Silakan klik **Proceed** jika Anda setuju dengan rencana perombakan logika _controller_ dan tampilan UI ini.
