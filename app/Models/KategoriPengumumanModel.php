@@ -14,19 +14,29 @@ class KategoriPengumumanModel {
         $this->tenantId = $tenantId;
     }
 
-    public function getAll(): array {
-        $sql = "SELECT * FROM kategori_pengumuman WHERE ";
+    public function getAll(array $filters = []): array {
+        $sql = "SELECT k.*, t.nama_sekolah 
+                FROM kategori_pengumuman k 
+                LEFT JOIN tenants t ON k.tenant_id = t.id 
+                WHERE ";
+                
+        $params = [];
         if ($this->tenantId === null) {
-            $sql .= "tenant_id IS NULL OR tenant_id != ''"; // Super admin sees all or global? Actually super admin sees global ones. Let's just say tenant_id IS NULL for global, or matches tenant.
-            // If super admin, maybe return all. Let's return all.
-            $sql = "SELECT * FROM kategori_pengumuman ORDER BY nama_kategori ASC";
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute();
+            $sql .= "1=1 ";
         } else {
-            $sql .= "(tenant_id = :tenant_id OR tenant_id IS NULL) ORDER BY nama_kategori ASC";
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute(['tenant_id' => $this->tenantId]);
+            $sql .= "(k.tenant_id = :scoped_tenant_id OR k.tenant_id IS NULL) ";
+            $params['scoped_tenant_id'] = $this->tenantId;
         }
+
+        if (!empty($filters['tenant_id'])) {
+            $sql .= " AND k.tenant_id = :filter_tenant_id ";
+            $params['filter_tenant_id'] = $filters['tenant_id'];
+        }
+
+        $sql .= " ORDER BY k.nama_kategori ASC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 

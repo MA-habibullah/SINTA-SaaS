@@ -219,9 +219,25 @@
                         <i class="bi bi-tags text-blue-500"></i>
                         Manajemen Kategori
                     </h5>
-                    <button class="btn bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl px-4 py-2 text-sm flex items-center gap-2 transition-colors border-0" data-bs-toggle="modal" data-bs-target="#addKategoriModal">
-                        <i class="bi bi-plus-lg"></i> KATEGORI BARU
-                    </button>
+                    
+                    <div class="flex items-center gap-3 w-full md:w-auto mt-3 md:mt-0">
+                        <form method="GET" action="/SINTA-SaaS/informasi/pengumuman" class="d-flex flex-wrap gap-2 m-0" id="filterKategoriForm">
+                            <?php if ($isSuperAdmin): ?>
+                            <select name="tenant" class="form-select shadow-sm rounded-xl border-slate-200 text-sm py-2" style="width: auto; min-width: 140px;" onchange="document.getElementById('filterKategoriForm').submit()">
+                                <option value="">Semua Sekolah</option>
+                                <?php foreach ($tenants as $t): ?>
+                                    <option value="<?= $t['id'] ?>" <?= ($filters['tenant_id'] ?? '') === (string)$t['id'] ? 'selected' : '' ?>><?= htmlspecialchars($t['nama_sekolah']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <?php endif; ?>
+                            <!-- Preserve active tab state when filtering -->
+                            <input type="hidden" name="tab" value="kategori">
+                        </form>
+
+                        <button class="btn bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl px-4 py-2 text-sm flex items-center gap-2 transition-colors border-0" data-bs-toggle="modal" data-bs-target="#addKategoriModal">
+                            <i class="bi bi-plus-lg"></i> KATEGORI BARU
+                        </button>
+                    </div>
                 </div>
                 <div class="table-responsive">
                     <table id="kategoriTable" class="table w-100 align-middle">
@@ -229,6 +245,7 @@
                             <tr class="text-slate-400 text-xs uppercase tracking-wider font-semibold">
                                 <th class="pb-3 w-16 text-center">No</th>
                                 <th class="pb-3">Nama Kategori</th>
+                                <th class="pb-3 text-center">Sekolah</th>
                                 <th class="text-center pb-3 w-28">Aksi</th>
                             </tr>
                         </thead>
@@ -238,6 +255,13 @@
                                     <tr class="hover:bg-slate-50 transition-colors group">
                                         <td class="py-4 text-center font-medium text-slate-500"><?= $no++ ?></td>
                                         <td class="py-4 font-bold text-slate-700"><?= htmlspecialchars($k['nama_kategori']) ?></td>
+                                        <td class="py-4 text-center">
+                                            <?php if (empty($k['tenant_id'])): ?>
+                                                <span class="text-xs font-semibold px-2 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100"><i class="bi bi-globe"></i> Global</span>
+                                            <?php else: ?>
+                                                <span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200"><i class="bi bi-building"></i> <?= htmlspecialchars($k['nama_sekolah'] ?? 'Unknown') ?></span>
+                                            <?php endif; ?>
+                                        </td>
                                         <td class="py-4 text-center">
                                             <div class="flex justify-center gap-2">
                                                 <button class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-blue-600 hover:bg-blue-50 hover:border-blue-200 flex items-center justify-center transition-colors" onclick='editKategori(<?= json_encode($k) ?>)' title="Edit">
@@ -624,5 +648,17 @@ if (typeof Turbo !== 'undefined') {
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
     initPengumumanTables();
 }
+
+// Preserve active tab based on URL parameter
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const activeTab = urlParams.get('tab');
+    if (activeTab === 'kategori') {
+        const triggerEl = document.querySelector('#kategori-tab');
+        if (triggerEl) {
+            bootstrap.Tab.getInstance(triggerEl)?.show() || new bootstrap.Tab(triggerEl).show();
+        }
+    }
+});
 
 </script>

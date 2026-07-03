@@ -9,6 +9,9 @@ class SessionManager {
      */
     public static function start(): void {
         if (session_status() === PHP_SESSION_NONE) {
+            // Force PHP garbage collection to 30 minutes (1800 seconds) to match our application logic
+            ini_set('session.gc_maxlifetime', '1800');
+            
             // Secure by Design cookie configuration
             $cookieParams = [
                 'lifetime' => 0,                     // Session expires when browser closes

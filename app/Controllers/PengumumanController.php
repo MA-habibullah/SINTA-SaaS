@@ -43,7 +43,7 @@ class PengumumanController extends BaseController {
             $tenants = $db->query("SELECT id, nama_sekolah FROM tenants WHERE deleted_at IS NULL ORDER BY nama_sekolah ASC")->fetchAll(\PDO::FETCH_ASSOC);
         }
         
-        $kategoriList = $this->kategoriModel->getAll();
+        $kategoriList = $this->kategoriModel->getAll($filters);
         
         $this->render('humas/pengumuman', [
             'title' => 'Manajemen Pengumuman',
