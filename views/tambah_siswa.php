@@ -2027,6 +2027,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                     Object.keys(phpData).forEach(key => {
                         if (key in form.value && key !== 'password') {
                             let val = phpData[key] !== null ? phpData[key] : '';
+                            if (val === '0000-00-00') val = '';
                             if (typeof form.value[key] === 'number' && val !== '') {
                                 val = Number(val);
                             }
@@ -2607,6 +2608,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                             Object.keys(localDraft).forEach(key => {
                                 if (key in form.value) {
                                     let val = localDraft[key] !== null ? localDraft[key] : '';
+                                    if (val === '0000-00-00') val = '';
                                     if (typeof form.value[key] === 'number' && val !== '') {
                                         val = Number(val);
                                     }
