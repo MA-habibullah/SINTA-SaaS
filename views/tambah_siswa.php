@@ -1680,7 +1680,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 </button>
                 
                 <!-- Save Button (Step 5 only, or if not Edit Mode, standard save) -->
-                <button v-show="currentStep === 5" type="submit" class="btn btn-success rounded-3 px-4 py-2 fs-7 shadow-sm w-100 w-sm-auto" :disabled="(isEdit && !isFormValid) || loadingSaveStep">
+                <button v-show="currentStep === 5" type="submit" class="btn btn-success rounded-3 px-4 py-2 fs-7 shadow-sm w-100 w-sm-auto" :disabled="loadingSaveStep">
                     <span v-if="loadingSaveStep" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                     <i v-else class="bi bi-save me-2"></i> {{ isEdit ? 'Simpan / Update' : 'Simpan Data Siswa' }}
                 </button>
