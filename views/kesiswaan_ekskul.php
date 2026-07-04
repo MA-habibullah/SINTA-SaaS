@@ -836,7 +836,7 @@ $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sek
                 <label class="form-label fw-bold">No. Telepon <span class="text-muted fw-normal">(Opsional)</span></label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-telephone"></i></span>
-                    <input type="tel" name="no_telp" class="form-control" placeholder="Contoh: 08123456789" maxlength="20">
+                    <input type="tel" name="no_telp" class="form-control" autocomplete="tel" placeholder="Contoh: 08123456789" maxlength="20">
                 </div>
             </div>
             <div class="mb-3">
@@ -1049,7 +1049,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 <label class="form-label fw-bold">No. Telepon <span class="text-muted fw-normal">(Opsional)</span></label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-telephone"></i></span>
-                    <input type="tel" name="no_telp" id="edit_pembina_notelp" class="form-control" placeholder="08123456789" maxlength="20">
+                    <input type="tel" name="no_telp" id="edit_pembina_notelp" class="form-control" autocomplete="tel" placeholder="08123456789" maxlength="20">
                 </div>
             </div>
             <div class="mb-3">
