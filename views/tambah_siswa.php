@@ -826,7 +826,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
                 <!-- Penerima KPS / KKS -->
                 <div class="col-md-6">
-                    <label class="form-label d-block">Penerima KPS / KKS (Keluarga Penerima Sejahtera)</label>
+                    <div class="form-label d-block fw-bold mb-2">Penerima KPS / KKS (Keluarga Penerima Sejahtera)</div>
                     <div class="mt-2">
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="penerima_kps" id="kps_ya" :value="1" v-model.number="form.penerima_kps">
@@ -841,7 +841,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
                 <!-- Punya KIP -->
                 <div class="col-md-6">
-                    <label class="form-label d-block">Memiliki Kartu Indonesia Pintar (KIP)?</label>
+                    <div class="form-label d-block fw-bold mb-2">Memiliki Kartu Indonesia Pintar (KIP)?</div>
                     <div class="mt-2">
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="punya_kip" id="kip_ya" :value="1" v-model.number="form.punya_kip">
@@ -856,7 +856,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
                 <!-- Layak KIP -->
                 <div class="col-md-6">
-                    <label class="form-label d-block">Layak Menerima PIP / KIP?</label>
+                    <div class="form-label d-block fw-bold mb-2">Layak Menerima PIP / KIP?</div>
                     <div class="mt-2">
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="layak_kip" id="layak_ya" :value="1" v-model.number="form.layak_kip">
@@ -1265,7 +1265,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
                 <!-- PAUD Formal -->
                 <div class="col-md-6">
-                    <label class="form-label d-block">Pernah Mengikuti PAUD Formal?</label>
+                    <div class="form-label d-block fw-bold mb-2">Pernah Mengikuti PAUD Formal?</div>
                     <div class="mt-2">
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="paud_formal" id="paud_f_ya" value="1" v-model.number="form.paud_formal">
@@ -1280,7 +1280,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
                 <!-- PAUD Non-Formal -->
                 <div class="col-md-6">
-                    <label class="form-label d-block">Pernah Mengikuti PAUD Non-Formal?</label>
+                    <div class="form-label d-block fw-bold mb-2">Pernah Mengikuti PAUD Non-Formal?</div>
                     <div class="mt-2">
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="paud_non_formal" id="paud_nf_ya" value="1" v-model.number="form.paud_non_formal">
@@ -1374,7 +1374,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                         
                         <!-- 1. Foto Profil -->
                         <div class="col-md-4">
-                            <label class="form-label">Foto Profil Murid</label>
+                            <div class="form-label fw-bold mb-2">Foto Profil Murid</div>
                             <div class="upload-box shadow-xs">
                                 <div v-if="filePreviews.foto_profil || (form.foto_profil && !filesSelected.foto_profil)" class="mb-2">
                                     <img :src="filePreviews.foto_profil ? filePreviews.foto_profil : getFileUrl(form.foto_profil, 'foto_profil')" class="img-thumbnail rounded-3" style="max-height: 80px;">
@@ -1399,7 +1399,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
                         <!-- 2. Berkas KK -->
                         <div class="col-md-4">
-                            <label class="form-label">Kartu Keluarga (KK)</label>
+                            <div class="form-label fw-bold mb-2">Kartu Keluarga (KK)</div>
                             <div class="upload-box shadow-xs">
                                 <div v-if="filePreviews.berkas_kk" class="mb-2">
                                     <img :src="filePreviews.berkas_kk" class="img-thumbnail rounded-3" style="max-height: 80px;">
@@ -1424,7 +1424,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
                         <!-- 3. Berkas Akta Lahir -->
                         <div class="col-md-4">
-                            <label class="form-label">Akta Kelahiran</label>
+                            <div class="form-label fw-bold mb-2">Akta Kelahiran</div>
                             <div class="upload-box shadow-xs">
                                 <div v-if="filePreviews.berkas_akta" class="mb-2">
                                     <img :src="filePreviews.berkas_akta" class="img-thumbnail rounded-3" style="max-height: 80px;">
@@ -1449,7 +1449,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
                         <!-- 4. Ijazah SD -->
                         <div class="col-md-4">
-                            <label class="form-label">Ijazah SD / MI</label>
+                            <div class="form-label fw-bold mb-2">Ijazah SD / MI</div>
                             <div class="upload-box shadow-xs">
                                 <div v-if="filePreviews.berkas_ijazah_sd" class="mb-2">
                                     <img :src="filePreviews.berkas_ijazah_sd" class="img-thumbnail rounded-3" style="max-height: 80px;">
@@ -1474,7 +1474,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
                         <!-- 5. Ijazah SMP -->
                         <div class="col-md-4">
-                            <label class="form-label">Ijazah SMP / MTs</label>
+                            <div class="form-label fw-bold mb-2">Ijazah SMP / MTs</div>
                             <div class="upload-box shadow-xs">
                                 <div v-if="filePreviews.berkas_ijazah_smp" class="mb-2">
                                     <img :src="filePreviews.berkas_ijazah_smp" class="img-thumbnail rounded-3" style="max-height: 80px;">
@@ -1499,7 +1499,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
                         <!-- 6. Ijazah SMA -->
                         <div class="col-md-4">
-                            <label class="form-label">Ijazah SMA / MA (Jika Ada)</label>
+                            <div class="form-label fw-bold mb-2">Ijazah SMA / MA (Jika Ada)</div>
                             <div class="upload-box shadow-xs">
                                 <div v-if="filePreviews.berkas_ijazah_sma" class="mb-2">
                                     <img :src="filePreviews.berkas_ijazah_sma" class="img-thumbnail rounded-3" style="max-height: 80px;">
@@ -1524,7 +1524,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
                         <!-- 7. Berkas Mutasi Masuk -->
                         <div class="col-md-4" v-show="form.jenis_pendaftaran === 'Pindahan'">
-                            <label class="form-label">Surat Mutasi Masuk</label>
+                            <div class="form-label fw-bold mb-2">Surat Mutasi Masuk</div>
                             <div class="upload-box shadow-xs">
                                 <div v-if="filePreviews.berkas_mutasi_masuk" class="mb-2">
                                     <img :src="filePreviews.berkas_mutasi_masuk" class="img-thumbnail rounded-3" style="max-height: 80px;">
@@ -1549,7 +1549,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
                         <!-- 8. Berkas Mutasi Keluar -->
                         <div class="col-md-4" v-show="form.status === 'Pindah'">
-                            <label class="form-label">Surat Mutasi Keluar</label>
+                            <div class="form-label fw-bold mb-2">Surat Mutasi Keluar</div>
                             <div class="upload-box shadow-xs">
                                 <div v-if="filePreviews.berkas_mutasi_keluar" class="mb-2">
                                     <img :src="filePreviews.berkas_mutasi_keluar" class="img-thumbnail rounded-3" style="max-height: 80px;">
@@ -1574,7 +1574,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
                         <!-- 9. Berkas KIP -->
                         <div class="col-md-4" v-show="form.punya_kip == 1">
-                            <label class="form-label">Kartu KIP / PKH (PDF/JPG)</label>
+                            <div class="form-label fw-bold mb-2">Kartu KIP / PKH (PDF/JPG)</div>
                             <div class="upload-box shadow-xs">
                                 <div v-if="filePreviews.berkas_kip" class="mb-2">
                                     <img :src="filePreviews.berkas_kip" class="img-thumbnail rounded-3" style="max-height: 80px;">
@@ -1599,7 +1599,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
                         <!-- 10. Surat Pernyataan Siswa Baru & Orang Tua -->
                         <div class="col-md-4">
-                            <label class="form-label">Surat Pernyataan Baru & Orang Tua</label>
+                            <div class="form-label fw-bold mb-2">Surat Pernyataan Baru & Orang Tua</div>
                             <div class="upload-box shadow-xs" :style="userRole === 'siswa' ? 'cursor: not-allowed; opacity: 0.65;' : ''">
                                 <div v-if="filePreviews.berkas_pernyataan_baru || (form.berkas_pernyataan_baru && !filesSelected.berkas_pernyataan_baru)" class="mb-2">
                                     <img :src="filePreviews.berkas_pernyataan_baru ? filePreviews.berkas_pernyataan_baru : getFileUrl(form.berkas_pernyataan_baru, 'berkas_pernyataan_baru')" class="img-thumbnail rounded-3" style="max-height: 80px;">
@@ -1624,7 +1624,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
                         <!-- 11. Surat Pernyataan TKA -->
                         <div class="col-md-4">
-                            <label class="form-label">Surat Pernyataan TKA</label>
+                            <div class="form-label fw-bold mb-2">Surat Pernyataan TKA</div>
                             <div class="upload-box shadow-xs" :style="userRole === 'siswa' ? 'cursor: not-allowed; opacity: 0.65;' : ''">
                                 <div v-if="filePreviews.berkas_pernyataan_tka || (form.berkas_pernyataan_tka && !filesSelected.berkas_pernyataan_tka)" class="mb-2">
                                     <img :src="filePreviews.berkas_pernyataan_tka ? filePreviews.berkas_pernyataan_tka : getFileUrl(form.berkas_pernyataan_tka, 'berkas_pernyataan_tka')" class="img-thumbnail rounded-3" style="max-height: 80px;">
@@ -2916,6 +2916,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                          style="z-index: 1050; max-height: 280px; display: flex; flex-direction: column;">
                         <div class="p-2 border-bottom bg-light">
                             <input type="text" 
+                                   id="searchQuery"
                                    v-model="searchQuery" 
                                    class="form-control form-control-sm search-input" 
                                    placeholder="Ketik untuk mencari..." 
