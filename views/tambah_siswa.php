@@ -1670,12 +1670,12 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
             </a>
 
             <div class="d-flex flex-column flex-sm-row gap-3 ms-sm-auto w-100 w-sm-auto">
-                <button v-if="isEdit && currentStep < 5" type="button" class="btn btn-success rounded-3 px-4 py-2 fs-7 shadow-sm w-100 w-sm-auto" @click="saveCurrentStep(false)" :disabled="!isFormValid || loadingSaveStep">
+                <button v-if="isEdit && currentStep < 5" type="button" class="btn btn-success rounded-3 px-4 py-2 fs-7 shadow-sm w-100 w-sm-auto" @click="saveCurrentStep(false)" :disabled="loadingSaveStep">
                     <span v-if="loadingSaveStep" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                     <i v-else class="bi bi-check-circle me-1"></i> Simpan Step {{ currentStep }}
                 </button>
 
-                <button type="button" class="btn btn-primary rounded-3 px-4 py-2 fs-7 shadow-sm w-100 w-sm-auto" @click="nextStep" :disabled="!isFormValid" v-show="currentStep < 5">
+                <button type="button" class="btn btn-primary rounded-3 px-4 py-2 fs-7 shadow-sm w-100 w-sm-auto" @click="nextStep" v-show="currentStep < 5">
                     Lanjut <i class="bi bi-chevron-right ms-2"></i>
                 </button>
                 
@@ -2527,184 +2527,16 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
             };
 
             const validateStepHtml5 = (step) => {
-                const formEl = document.getElementById('wizardForm');
-                if (!formEl) return true;
-                
-                const inputs = formEl.querySelectorAll(
-                    `div[data-step="${step}"] input, ` +
-                    `div[data-step="${step}"] select, ` +
-                    `div[data-step="${step}"] textarea`
-                );
-                
-                let isStepValid = true;
-                for (let i = 0; i < inputs.length; i++) {
-                    const input = inputs[i];
-                    if (input.type === 'hidden') continue;
-                    
-                    if (!input.checkValidity()) {
-                        input.reportValidity();
-                        isStepValid = false;
-                        break;
-                    }
-                }
-                return isStepValid;
+                // Bypass HTML5 validation agar bisa lanjut/simpan meskipun data kosong
+                return true;
             };
 
             const validateStep = (step) => {
-                const errs = [];
-                
-                // Do HTML5 validation first
-                const html5Valid = validateStepHtml5(step);
-                if (!html5Valid) {
-                    return false;
-                }
-                
-                if (step === 1) {
-                    if (form.value.nik && (form.value.nik.length !== 16 || !/^\d+$/.test(form.value.nik))) {
-                        errs.push("NIK harus berupa 16 digit angka.");
-                    }
-                    if (form.value.no_kk && (form.value.no_kk.length !== 16 || !/^\d+$/.test(form.value.no_kk))) {
-                        errs.push("No. KK harus berupa 16 digit angka.");
-                    }
-                    if (!form.value.nisn || form.value.nisn.length !== 10 || !/^\d+$/.test(form.value.nisn)) {
-                        errs.push("NISN wajib diisi berupa 10 digit angka.");
-                    }
-                    if (!form.value.nama_lengkap) {
-                        errs.push("Nama Lengkap wajib diisi.");
-                    }
-                    if (!form.value.jenis_kelamin) {
-                        errs.push("Jenis Kelamin wajib dipilih.");
-                    }
-                    if (!form.value.tanggal_lahir) {
-                        errs.push("Tanggal Lahir wajib diisi.");
-                    }
-                    if (!form.value.tempat_lahir) {
-                        errs.push("Tempat Lahir wajib diisi.");
-                    }
-                }
-                
-                if (step === 2) {
-                    if (!form.value.alamat_kk) {
-                        errs.push("Alamat KK wajib diisi.");
-                    }
-                    if (!form.value.alamat_domisili) {
-                        errs.push("Alamat Domisili wajib diisi.");
-                    }
-                    if (!form.value.rt || !/^\d{1,3}$/.test(form.value.rt)) {
-                        errs.push("RT wajib diisi dengan angka (max 3 digit).");
-                    }
-                    if (!form.value.rw || !/^\d{1,3}$/.test(form.value.rw)) {
-                        errs.push("RW wajib diisi dengan angka (max 3 digit).");
-                    }
-                    if (!form.value.kode_pos || form.value.kode_pos.length !== 5 || !/^\d+$/.test(form.value.kode_pos)) {
-                        errs.push("Kode Pos wajib diisi berupa 5 digit angka.");
-                    }
-                    if (!form.value.id_kelurahan) {
-                        errs.push("Wilayah Kelurahan wajib dilengkapi.");
-                    }
-                    if (!form.value.status_tinggal) {
-                        errs.push("Status Tinggal wajib dipilih.");
-                    }
-                    if (!form.value.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email)) {
-                        errs.push("Email wajib diisi dengan format valid.");
-                    }
-                    if (!form.value.no_telepon_siswa || !/^\d{8,13}$/.test(form.value.no_telepon_siswa)) {
-                        errs.push("No. HP Siswa wajib diisi berupa 8-13 digit angka.");
-                    }
-                }
-
-                if (step === 3) {
-                    if (form.value.tinggi_badan === '' || form.value.tinggi_badan < 30) {
-                        errs.push("Tinggi Badan tidak valid.");
-                    }
-                    if (form.value.berat_badan === '' || form.value.berat_badan < 5) {
-                        errs.push("Berat Badan tidak valid.");
-                    }
-                    if (form.value.lingkar_kepala === '' || form.value.lingkar_kepala < 20) {
-                        errs.push("Lingkar Kepala tidak valid.");
-                    }
-                    if (!form.value.golongan_darah) {
-                        errs.push("Golongan Darah wajib dipilih.");
-                    }
-                    if (form.value.anak_ke === '' || form.value.anak_ke < 1) {
-                        errs.push("Anak Ke- wajib diisi.");
-                    }
-                    if (form.value.jumlah_saudara === '' || form.value.jumlah_saudara < 0) {
-                        errs.push("Jumlah Saudara wajib diisi.");
-                    }
-                    if (form.value.jarak_rumah === '' || form.value.jarak_rumah < 1) {
-                        errs.push("Jarak Rumah wajib diisi.");
-                    }
-                    if (!form.value.transportasi) {
-                        errs.push("Alat Transportasi wajib dipilih.");
-                    }
-                    if (form.value.punya_kip == 1 && !form.value.no_kip) {
-                        errs.push("Nomor KIP wajib diisi.");
-                    }
-                    if (form.value.layak_kip == 1 && !form.value.alasan_layak) {
-                        errs.push("Alasan Layak KIP wajib dipilih.");
-                    }
-                }
-
-                if (step === 4) {
-                    if (!form.value.nik_ibu || form.value.nik_ibu.length !== 16 || !/^\d+$/.test(form.value.nik_ibu)) {
-                        errs.push("NIK Ibu wajib diisi berupa 16 digit angka.");
-                    }
-                    if (!form.value.nama_ibu) {
-                        errs.push("Nama Lengkap Ibu wajib diisi.");
-                    }
-                    if (!form.value.id_tempat_lahir_ibu) {
-                        errs.push("Tempat Lahir Ibu wajib dipilih.");
-                    }
-                    if (!form.value.tanggal_lahir_ibu) {
-                        errs.push("Tanggal Lahir Ibu wajib diisi.");
-                    } else {
-                        const year = new Date(form.value.tanggal_lahir_ibu).getFullYear();
-                        if (isNaN(year) || year < 1930 || year > 2020) {
-                            errs.push("Tanggal Lahir Ibu tidak valid (tahun lahir harus di antara 1930 - 2020).");
-                        }
-                    }
-                    if (!form.value.pendidikan_ibu) {
-                        errs.push("Pendidikan Ibu wajib dipilih.");
-                    }
-                    if (!form.value.pekerjaan_ibu) {
-                        errs.push("Pekerjaan Ibu wajib dipilih.");
-                    }
-                    if (!form.value.penghasilan_ibu) {
-                        errs.push("Penghasilan Ibu wajib dipilih.");
-                    }
-                    if (!form.value.agama_ibu) {
-                        errs.push("Agama Ibu wajib dipilih.");
-                    }
-
-                    if (form.value.nik_ayah && (form.value.nik_ayah.length !== 16 || !/^\d+$/.test(form.value.nik_ayah))) {
-                        errs.push("NIK Ayah harus berupa 16 digit angka.");
-                    }
-                    if (form.value.nik_wali && (form.value.nik_wali.length !== 16 || !/^\d+$/.test(form.value.nik_wali))) {
-                        errs.push("NIK Wali harus berupa 16 digit angka.");
-                    }
-                }
-
-                if (step === 5) {
-                    if (!form.value.jenis_pendaftaran) {
-                        errs.push("Jenis Pendaftaran wajib dipilih.");
-                    }
-                    if (userRole.value !== 'siswa' && !form.value.jalur_diterima) {
-                        errs.push("Jalur Diterima wajib dipilih.");
-                    }
-                    if (!form.value.tanggal_masuk) {
-                        errs.push("Tanggal Masuk wajib diisi.");
-                    }
-                    if (!form.value.hobi) {
-                        errs.push("Hobi wajib diisi.");
-                    }
-                    // Form keluar/mutasi bersifat OPSIONAL dan hanya untuk Admin/Super Admin.
-                    // Siswa tidak mengisi form ini sehingga tidak divalidasi di sini.
-                }
-
-                errorsList.value = errs;
-                return errs.length === 0;
+                // Bypass validasi frontend sesuai permintaan (siswa tidak wajib isi semua data untuk lanjut/simpan)
+                errorsList.value = [];
+                return true;
             };
+
 
             const nextStep = async () => {
                 if (validateStep(currentStep.value)) {

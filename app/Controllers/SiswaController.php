@@ -857,9 +857,7 @@ class SiswaController extends BaseController {
                 $errors['nama_lengkap'] = 'Nama lengkap tidak boleh melebihi 255 karakter.';
             }
 
-            if (empty($data['jenis_kelamin'])) {
-                $errors['jenis_kelamin'] = 'Jenis kelamin wajib dipilih.';
-            } elseif (!in_array($data['jenis_kelamin'], ['L', 'P'])) {
+            if (!empty($data['jenis_kelamin']) && !in_array($data['jenis_kelamin'], ['L', 'P'])) {
                 $errors['jenis_kelamin'] = 'Pilihan jenis kelamin tidak valid.';
             }
 
@@ -901,34 +899,20 @@ class SiswaController extends BaseController {
 
         // --- LANGKAH 2: DETAIL ALAMAT & KONTAK ---
         if ($currentStep === 2 || $currentStep === null) {
-            if (empty($data['alamat_kk'])) {
-                $errors['alamat_kk'] = 'Alamat sesuai KK wajib diisi.';
+            if (!empty($data['rt']) && !preg_match('/^[0-9]{1,3}$/', $data['rt'])) {
+                $errors['rt'] = 'RT harus berupa angka (max 3 digit).';
             }
-            if (empty($data['alamat_domisili'])) {
-                $errors['alamat_domisili'] = 'Alamat domisili wajib diisi.';
+            if (!empty($data['rw']) && !preg_match('/^[0-9]{1,3}$/', $data['rw'])) {
+                $errors['rw'] = 'RW harus berupa angka (max 3 digit).';
             }
-            if (empty($data['rt']) || !preg_match('/^[0-9]{1,3}$/', $data['rt'])) {
-                $errors['rt'] = 'RT wajib diisi dengan angka (max 3 digit).';
-            }
-            if (empty($data['rw']) || !preg_match('/^[0-9]{1,3}$/', $data['rw'])) {
-                $errors['rw'] = 'RW wajib diisi dengan angka (max 3 digit).';
-            }
-            if (empty($data['kode_pos']) || !preg_match('/^[0-9]{5}$/', $data['kode_pos'])) {
+            if (!empty($data['kode_pos']) && !preg_match('/^[0-9]{5}$/', $data['kode_pos'])) {
                 $errors['kode_pos'] = 'Kode pos harus berupa 5 digit angka.';
             }
-            if (empty($data['id_kelurahan'])) {
-                $errors['id_kelurahan'] = 'Kelurahan wajib dipilih.';
-            }
-            if (empty($data['status_tinggal'])) {
-                $errors['status_tinggal'] = 'Status tinggal wajib dipilih.';
-            }
-            if (empty($data['email'])) {
-                $errors['email'] = 'Email wajib diisi.';
-            } elseif (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            if (!empty($data['email']) && !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
                 $errors['email'] = 'Format email tidak valid.';
             }
-            if (empty($data['no_telepon_siswa']) || !preg_match('/^[0-9]{8,13}$/', $data['no_telepon_siswa'])) {
-                $errors['no_telepon_siswa'] = 'No. HP siswa wajib diisi (8-13 digit angka).';
+            if (!empty($data['no_telepon_siswa']) && !preg_match('/^[0-9]{8,13}$/', $data['no_telepon_siswa'])) {
+                $errors['no_telepon_siswa'] = 'No. HP siswa harus berupa angka (8-13 digit angka).';
             }
             if (!empty($data['no_telepon_orang_tua']) && !preg_match('/^[0-9]{8,15}$/', $data['no_telepon_orang_tua'])) {
                 $errors['no_telepon_orang_tua'] = 'No. HP orang tua harus berupa angka valid (8-15 digit).';
@@ -937,55 +921,32 @@ class SiswaController extends BaseController {
 
         // --- LANGKAH 3: KONDISI FISIK, RIWAYAT & KESEJAHTERAAN ---
         if ($currentStep === 3 || $currentStep === null) {
-            if (!isset($data['tinggi_badan']) || $data['tinggi_badan'] === '' || $data['tinggi_badan'] < 30) {
-                $errors['tinggi_badan'] = 'Tinggi badan wajib diisi minimal 30 cm.';
+            if (isset($data['tinggi_badan']) && $data['tinggi_badan'] !== '' && $data['tinggi_badan'] < 30) {
+                $errors['tinggi_badan'] = 'Tinggi badan tidak valid.';
             }
-            if (!isset($data['berat_badan']) || $data['berat_badan'] === '' || $data['berat_badan'] < 5) {
-                $errors['berat_badan'] = 'Berat badan wajib diisi minimal 5 kg.';
+            if (isset($data['berat_badan']) && $data['berat_badan'] !== '' && $data['berat_badan'] < 5) {
+                $errors['berat_badan'] = 'Berat badan tidak valid.';
             }
-            if (!isset($data['lingkar_kepala']) || $data['lingkar_kepala'] === '' || $data['lingkar_kepala'] < 20) {
-                $errors['lingkar_kepala'] = 'Lingkar kepala wajib diisi minimal 20 cm.';
+            if (isset($data['lingkar_kepala']) && $data['lingkar_kepala'] !== '' && $data['lingkar_kepala'] < 20) {
+                $errors['lingkar_kepala'] = 'Lingkar kepala tidak valid.';
             }
-            if (empty($data['golongan_darah'])) {
-                $errors['golongan_darah'] = 'Golongan darah wajib dipilih.';
+            if (isset($data['anak_ke']) && $data['anak_ke'] !== '' && $data['anak_ke'] < 1) {
+                $errors['anak_ke'] = 'Kolom anak ke- minimal 1.';
             }
-            if (!isset($data['anak_ke']) || $data['anak_ke'] === '' || $data['anak_ke'] < 1) {
-                $errors['anak_ke'] = 'Kolom anak ke- wajib diisi minimal 1.';
+            if (isset($data['jumlah_saudara']) && $data['jumlah_saudara'] !== '' && $data['jumlah_saudara'] < 0) {
+                $errors['jumlah_saudara'] = 'Jumlah saudara kandung minimal 0.';
             }
-            if (!isset($data['jumlah_saudara']) || $data['jumlah_saudara'] === '' || $data['jumlah_saudara'] < 0) {
-                $errors['jumlah_saudara'] = 'Jumlah saudara kandung wajib diisi.';
-            }
-            if (!isset($data['jarak_rumah']) || $data['jarak_rumah'] === '' || $data['jarak_rumah'] < 1) {
-                $errors['jarak_rumah'] = 'Jarak rumah ke sekolah wajib diisi.';
-            }
-            if (empty($data['transportasi'])) {
-                $errors['transportasi'] = 'Alat transportasi wajib dipilih.';
-            }
-            
-            if (isset($data['punya_kip']) && $data['punya_kip'] == 1) {
-                if (empty($data['no_kip'])) {
-                    $errors['no_kip'] = 'Nomor KIP wajib diisi jika Anda memilih Ya pada Memiliki KIP.';
-                }
-            }
-            if (isset($data['layak_kip']) && $data['layak_kip'] == 1 && empty($data['alasan_layak'])) {
-                $errors['alasan_layak'] = 'Alasan layak KIP wajib diisi.';
+            if (isset($data['jarak_rumah']) && $data['jarak_rumah'] !== '' && $data['jarak_rumah'] < 1) {
+                $errors['jarak_rumah'] = 'Jarak rumah ke sekolah minimal 1.';
             }
         }
 
         // --- LANGKAH 4: DATA ORANG TUA & WALI ---
         if ($currentStep === 4 || $currentStep === null) {
-            if (empty($data['nik_ibu']) || !preg_match('/^[0-9]{16}$/', $data['nik_ibu'])) {
-                $errors['nik_ibu'] = 'NIK Ibu kandung wajib berupa 16 digit angka.';
+            if (!empty($data['nik_ibu']) && !preg_match('/^[0-9]{16}$/', $data['nik_ibu'])) {
+                $errors['nik_ibu'] = 'NIK Ibu kandung harus berupa 16 digit angka.';
             }
-            if (empty($data['nama_ibu'])) {
-                $errors['nama_ibu'] = 'Nama Ibu kandung wajib diisi.';
-            }
-            if (empty($data['id_tempat_lahir_ibu'])) {
-                $errors['id_tempat_lahir_ibu'] = 'Tempat lahir Ibu kandung wajib dipilih.';
-            }
-            if (empty($data['tanggal_lahir_ibu'])) {
-                $errors['tanggal_lahir_ibu'] = 'Tanggal lahir Ibu kandung wajib diisi.';
-            } else {
+            if (!empty($data['tanggal_lahir_ibu'])) {
                 $d = \DateTime::createFromFormat('Y-m-d', $data['tanggal_lahir_ibu']);
                 if (!$d || $d->format('Y-m-d') !== $data['tanggal_lahir_ibu']) {
                     $errors['tanggal_lahir_ibu'] = 'Format tanggal lahir Ibu kandung tidak valid.';
@@ -996,19 +957,7 @@ class SiswaController extends BaseController {
                     }
                 }
             }
-            if (empty($data['pendidikan_ibu'])) {
-                $errors['pendidikan_ibu'] = 'Pendidikan Ibu kandung wajib dipilih.';
-            }
-            if (empty($data['pekerjaan_ibu'])) {
-                $errors['pekerjaan_ibu'] = 'Pekerjaan Ibu kandung wajib dipilih.';
-            }
-            if (empty($data['penghasilan_ibu'])) {
-                $errors['penghasilan_ibu'] = 'Penghasilan Ibu kandung wajib dipilih.';
-            }
-            if (empty($data['agama_ibu'])) {
-                $errors['agama_ibu'] = 'Agama Ibu kandung wajib dipilih.';
-            }
-
+            
             if (!empty($data['nik_ayah']) && !preg_match('/^[0-9]{16}$/', $data['nik_ayah'])) {
                 $errors['nik_ayah'] = 'NIK Ayah harus berupa 16 digit angka.';
             }
@@ -1019,27 +968,8 @@ class SiswaController extends BaseController {
 
         // --- LANGKAH 5: REGISTRASI & BERKAS DOKUMEN ---
         if ($currentStep === 5 || $currentStep === null) {
-            if (empty($data['jenis_pendaftaran'])) {
-                $errors['jenis_pendaftaran'] = 'Jenis pendaftaran wajib dipilih.';
-            }
-            
+            // Bypass empty validations
             $roleName = $_SESSION['role_name'] ?? '';
-            if ($roleName !== 'siswa') {
-                if (empty($data['jalur_diterima'])) {
-                    $errors['jalur_diterima'] = 'Jalur diterima wajib dipilih.';
-                }
-            }
-
-            if (empty($data['tanggal_masuk'])) {
-                $errors['tanggal_masuk'] = 'Tanggal masuk wajib diisi.';
-            }
-            if (empty($data['hobi'])) {
-                $errors['hobi'] = 'Hobi wajib diisi.';
-            }
-
-            // Validasi Data Keluar hanya untuk Admin/Super Admin.
-            // Form keluar/mutasi TIDAK ditampilkan ke siswa, sehingga tidak wajib diisi oleh siswa.
-            // Admin tetap diwajibkan mengisi jika mengubah status menjadi bukan 'Aktif'.
             if ($roleName !== 'siswa' && isset($data['status']) && $data['status'] !== 'Aktif') {
                 if (empty($data['keluar_karena'])) {
                     $errors['keluar_karena'] = 'Alasan keluar wajib dipilih karena status siswa bukan Aktif.';
