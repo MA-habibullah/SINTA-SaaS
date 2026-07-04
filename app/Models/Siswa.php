@@ -211,7 +211,7 @@ class Siswa extends Model {
                     $setParts[] = "`$col` = :$col";
                     
                     $nullableCols = [
-                        'nisn', 'nis', 'tempat_lahir', 'id_angkatan', 'id_tahun_ajaran', 
+                        'nisn', 'nis', 'nama_lengkap', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'id_angkatan', 'id_tahun_ajaran', 
                         'id_pendidikan', 'id_jenjang', 'id_jurusan', 'id_kelas', 'nama_wali', 'kontak_wali',
                         'nik', 'no_kk', 'nama_panggilan', 'agama', 'ukuran_seragam_sekolah', 'ukuran_seragam_olahraga',
                         'sekolah_asal',
