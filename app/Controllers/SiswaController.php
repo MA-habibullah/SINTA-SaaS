@@ -1024,11 +1024,6 @@ class SiswaController extends BaseController {
             }
             
             $roleName = $_SESSION['role_name'] ?? '';
-            if ($roleName !== 'siswa') {
-                if (empty($data['jalur_diterima'])) {
-                    $errors['jalur_diterima'] = 'Jalur diterima wajib dipilih.';
-                }
-            }
 
             if (empty($data['tanggal_masuk'])) {
                 $errors['tanggal_masuk'] = 'Tanggal masuk wajib diisi.';

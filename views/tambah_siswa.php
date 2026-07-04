@@ -1238,8 +1238,8 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
                 <!-- Jalur Diterima -->
                 <div class="col-md-6" v-if="userRole !== 'siswa'">
-                    <label for="jalur_diterima" class="form-label">Jalur Pendaftaran / Diterima <span class="text-danger">*</span></label>
-                    <select class="form-select" id="jalur_diterima" name="jalur_diterima" v-model="form.jalur_diterima" :required="userRole !== 'siswa'">
+                    <label for="jalur_diterima" class="form-label">Jalur Pendaftaran / Diterima</label>
+                    <select class="form-select" id="jalur_diterima" name="jalur_diterima" v-model="form.jalur_diterima">
                         <option value="" disabled>-- Pilih Jalur --</option>
                         <option value="Zonasi">Zonasi</option>
                         <option value="Afirmasi">Afirmasi</option>
@@ -2013,7 +2013,6 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 if (!f.agama_ibu) return false;
                 // Step 5 required
                 if (!f.jenis_pendaftaran) return false;
-                if (!f.jalur_diterima) return false;
                 if (!f.tanggal_masuk) return false;
                 if (!f.hobi) return false;
                 // Form keluar tidak wajib dan tidak ditampilkan ke siswa
