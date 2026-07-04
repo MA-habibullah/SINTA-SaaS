@@ -832,10 +832,14 @@ class SiswaController extends BaseController {
         foreach ($data as $key => $value) {
             if (is_string($value)) {
                 $val = trim($value);
-                if ($key === 'ukuran_seragam_sekolah' || $key === 'ukuran_seragam_olahraga') {
-                    $val = strtoupper($val);
+                if ($val === '') {
+                    $sanitized[$key] = null;
+                } else {
+                    if ($key === 'ukuran_seragam_sekolah' || $key === 'ukuran_seragam_olahraga') {
+                        $val = strtoupper($val);
+                    }
+                    $sanitized[$key] = $val;
                 }
-                $sanitized[$key] = $val;
             } else {
                 $sanitized[$key] = $value;
             }
