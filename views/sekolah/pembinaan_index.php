@@ -108,6 +108,15 @@
             </h5>
         </div>
         
+        <?php if (empty($kasusAktif)): ?>
+            <div class="text-center py-12">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 mb-4">
+                    <i class="bi bi-emoji-smile text-3xl text-emerald-400"></i>
+                </div>
+                <h6 class="font-bold text-slate-500 m-0">Luar Biasa!</h6>
+                <p class="text-sm text-slate-400 mt-1 mb-0">Tidak ada kasus peringatan aktif saat ini. Kinerja sekolah stabil.</p>
+            </div>
+        <?php else: ?>
         <div class="table-responsive">
             <table id="table-kasus-aktif" class="table w-100 align-middle">
                 <thead>
@@ -120,17 +129,6 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                    <?php if (empty($kasusAktif)): ?>
-                        <tr>
-                            <td colspan="5" class="text-center py-12">
-                                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 mb-4">
-                                    <i class="bi bi-emoji-smile text-3xl text-emerald-400"></i>
-                                </div>
-                                <h6 class="font-bold text-slate-500 m-0">Luar Biasa!</h6>
-                                <p class="text-sm text-slate-400 mt-1 mb-0">Tidak ada kasus peringatan aktif saat ini. Kinerja sekolah stabil.</p>
-                            </td>
-                        </tr>
-                    <?php else: ?>
                         <?php foreach ($kasusAktif as $kasus): ?>
                             <tr class="hover:bg-slate-50 transition-colors group">
                                 <td class="py-4">
@@ -158,21 +156,20 @@
                                     </div>
                                     <?php if (!empty($kasus['lampiran_bukti'])): ?>
                                         <a href="/SINTA-SaaS/<?= htmlspecialchars($kasus['lampiran_bukti']) ?>" target="_blank" class="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 px-2 py-1 rounded-md transition-colors">
-                                            <i class="bi bi-paperclip"></i> Lihat Lampiran
+                                            <i class="bi bi-paperclip"></i> Lampiran File
                                         </a>
                                     <?php endif; ?>
                                 </td>
                                 <td class="py-4 text-center">
                                     <?php if ($kasus['status_kasus'] === 'Merah'): ?>
-                                        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 bg-red-50 text-xs font-semibold text-red-600">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-red-600"></span>
-                                            Sedang Berjalan
+                                        <div class="inline-flex flex-col items-center">
+                                            <span class="badge bg-red-100 text-red-700 px-3 py-1.5 rounded-full border border-red-200"><i class="bi bi-exclamation-octagon-fill me-1"></i> Perlu Pembinaan</span>
+                                            <?php if (!empty($kasus['sesi_id'])): ?>
+                                                <span class="text-xs text-blue-600 font-semibold mt-1"><i class="bi bi-calendar-check"></i> Sesi Terjadwal</span>
+                                            <?php endif; ?>
                                         </div>
                                     <?php elseif ($kasus['status_kasus'] === 'Kuning'): ?>
-                                        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-yellow-200 bg-yellow-50 text-xs font-semibold text-yellow-600">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>
-                                            Masa Pemantauan
-                                        </div>
+                                        <span class="badge bg-yellow-100 text-yellow-700 px-3 py-1.5 rounded-full border border-yellow-200"><i class="bi bi-hourglass-split me-1"></i> Sedang Dipantau</span>
                                     <?php endif; ?>
                                 </td>
                                 <td class="py-4 text-center">
@@ -202,10 +199,10 @@
                                 </td>
                             </tr>
                         <?php endforeach; ?>
-                    <?php endif; ?>
                 </tbody>
             </table>
         </div>
+        <?php endif; ?>
     </div>
     
     <!-- Riwayat Kasus Selesai (Hijau) -->
