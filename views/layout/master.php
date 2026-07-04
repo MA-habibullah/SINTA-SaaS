@@ -161,13 +161,16 @@
                     }
                     const statusText = status || 'Network / Timeout Error';
                     const data = error.response ? error.response.data : 'Tidak ada data payload';
-                    console.error(
-                        '%c[AXIOS API ERROR] Status: ' + statusText, 
-                        'background: #dc2626; color: white; font-size: 14px; font-weight: bold; padding: 4px; border-radius: 4px;',
-                        '\nPayload Response:', data,
-                        '\nRequest Config:', error.config
-                    );
-                    alert('API Error: ' + statusText + '\n(Periksa Developer Console Chrome untuk detail data payload)');
+                    
+                    if (status !== 422) {
+                        console.error(
+                            '%c[AXIOS API ERROR] Status: ' + statusText, 
+                            'background: #dc2626; color: white; font-size: 14px; font-weight: bold; padding: 4px; border-radius: 4px;',
+                            '\nPayload Response:', data,
+                            '\nRequest Config:', error.config
+                        );
+                        alert('API Error: ' + statusText + '\n(Periksa Developer Console Chrome untuk detail data payload)');
+                    }
                     return Promise.reject(error);
                 }
             );
