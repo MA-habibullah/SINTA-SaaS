@@ -2457,7 +2457,6 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                         throw new Error(response.data.error || 'Terjadi kesalahan sistem.');
                     }
                 } catch (err) {
-                    console.error(err);
                     if (err.response?.status === 422 && err.response?.data?.errors) {
                         errorsList.value = Object.values(err.response.data.errors);
                         window.scrollTo({ top: 0, behavior: 'smooth' });
