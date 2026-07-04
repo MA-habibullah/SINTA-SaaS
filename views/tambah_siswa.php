@@ -931,7 +931,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                             <input type="text" class="form-control text-uppercase" id="nama_ayah" name="nama_ayah" v-model="form.nama_ayah" placeholder="Nama lengkap tanpa gelar">
                         </div>
                         <div class="col-md-6">
-                            <label for="id_tempat_lahir_ayah" class="form-label">Tempat Lahir Ayah</label>
+                            <div class="form-label mb-2 fw-bold">Tempat Lahir Ayah</div>
                             <searchable-select 
                                 id="id_tempat_lahir_ayah" 
                                 name="id_tempat_lahir_ayah" 
@@ -1031,7 +1031,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                             <input type="text" class="form-control text-uppercase" id="nama_ibu" name="nama_ibu" v-model="form.nama_ibu" placeholder="Nama lengkap tanpa gelar" :required="activeParentTab === 'mother'">
                         </div>
                         <div class="col-md-6">
-                            <label for="id_tempat_lahir_ibu" class="form-label">Tempat Lahir Ibu <span class="text-danger">*</span></label>
+                            <div class="form-label mb-2 fw-bold">Tempat Lahir Ibu <span class="text-danger">*</span></div>
                             <searchable-select 
                                 id="id_tempat_lahir_ibu" 
                                 name="id_tempat_lahir_ibu" 
@@ -1132,7 +1132,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                             <input type="text" class="form-control text-uppercase" id="nama_wali" name="nama_wali" v-model="form.nama_wali" placeholder="Nama lengkap tanpa gelar">
                         </div>
                         <div class="col-md-6">
-                            <label for="id_tempat_lahir_wali" class="form-label">Tempat Lahir Wali</label>
+                            <div class="form-label mb-2 fw-bold">Tempat Lahir Wali</div>
                             <searchable-select 
                                 id="id_tempat_lahir_wali" 
                                 name="id_tempat_lahir_wali" 
@@ -2916,7 +2916,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                          style="z-index: 1050; max-height: 280px; display: flex; flex-direction: column;">
                         <div class="p-2 border-bottom bg-light">
                             <input type="text" 
-                                   id="searchQuery"
+                                   :id="'searchQuery_' + $.uid"
                                    v-model="searchQuery" 
                                    class="form-control form-control-sm search-input" 
                                    placeholder="Ketik untuk mencari..." 

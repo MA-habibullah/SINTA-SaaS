@@ -50,7 +50,7 @@ if ($tenantId) {
         <!-- Global Search Bar -->
         <div class="search-bar-container d-none d-lg-block me-3">
             <i class="bi bi-search search-bar-icon"></i>
-            <input type="text" class="form-control form-control-sm search-bar-input" placeholder="Cari data pokok...">
+            <input type="text" class="form-control form-control-sm search-bar-input" id="globalSearchBar" placeholder="Cari data pokok...">
         </div>
     </div>
 
