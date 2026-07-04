@@ -677,6 +677,7 @@ class SiswaController extends BaseController {
 
         if (!empty($errors)) {
             if ($isAjax) {
+                http_response_code(422);
                 header('Content-Type: application/json');
                 echo json_encode(['success' => false, 'errors' => $errors]);
                 exit;
@@ -867,7 +868,13 @@ class SiswaController extends BaseController {
                 $errors['jenis_kelamin'] = 'Pilihan jenis kelamin tidak valid.';
             }
 
-            if (!empty($data['nisn'])) {
+            if (empty($data['nik'])) {
+                $errors['nik'] = 'NIK wajib diisi.';
+            }
+
+            if (empty($data['nisn'])) {
+                $errors['nisn'] = 'NISN wajib diisi.';
+            } else {
                 if (!preg_match('/^[0-9]{10}$/', $data['nisn'])) {
                     $errors['nisn'] = 'NISN harus berupa 10 digit angka.';
                 } elseif (!$this->siswaModel->isNisnUnique($data['nisn'], $excludeId)) {
@@ -883,11 +890,29 @@ class SiswaController extends BaseController {
                 }
             }
 
-            if (!empty($data['tanggal_lahir'])) {
+            if (empty($data['agama'])) {
+                $errors['agama'] = 'Agama wajib dipilih.';
+            }
+
+            if (empty($data['tempat_lahir'])) {
+                $errors['tempat_lahir'] = 'Tempat lahir wajib diisi.';
+            }
+
+            if (empty($data['tanggal_lahir'])) {
+                $errors['tanggal_lahir'] = 'Tanggal lahir wajib diisi.';
+            } else {
                 $d = \DateTime::createFromFormat('Y-m-d', $data['tanggal_lahir']);
                 if (!$d || $d->format('Y-m-d') !== $data['tanggal_lahir']) {
                     $errors['tanggal_lahir'] = 'Format tanggal lahir tidak valid (gunakan format YYYY-MM-DD).';
                 }
+            }
+
+            if (empty($data['sekolah_asal'])) {
+                $errors['sekolah_asal'] = 'Sekolah asal wajib diisi.';
+            }
+
+            if (empty($data['kewarganegaraan'])) {
+                $errors['kewarganegaraan'] = 'Kewarganegaraan wajib dipilih.';
             }
 
             if (!empty($data['kontak_wali'])) {
@@ -1048,17 +1073,7 @@ class SiswaController extends BaseController {
                 }
             }
         }
-        // Toleransi validasi (Bypass required checks) khusus untuk Edit Data (Admin/Siswa) dan Simpan Draft (Step)
-        // Hal ini untuk memastikan form tidak error saat Admin hanya ingin ubah password, 
-        // atau saat Siswa menyimpan sebagian data tanpa melengkapi seluruh form.
-        if ($excludeId !== null || $currentStep !== null) {
-            foreach ($errors as $key => $msg) {
-                // Jika pesannya mengandung kata 'wajib' atau 'minimal' dan datanya kosong, abaikan error tersebut
-                if ((stripos($msg, 'wajib') !== false || stripos($msg, 'minimal') !== false) && (!isset($data[$key]) || $data[$key] === '')) {
-                    unset($errors[$key]);
-                }
-            }
-        }
+
 
         return $errors;
     }
