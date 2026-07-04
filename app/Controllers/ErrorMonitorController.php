@@ -261,9 +261,9 @@ class ErrorMonitorController extends BaseController
 
             $this->jsonResponse(['success' => true]);
         } catch (\Throwable $e) {
-            // Abaikan secara diam-diam agar peramban (browser) tidak dipenuhi error jaringan berulang
+            // Kembalikan 200 OK agar peramban (browser) tidak mencetak log merah 500 (Internal Server Error)
             error_log("[Client Error Logger Failed] " . $e->getMessage());
-            $this->jsonResponse(['error' => 'Failed to save'], 500);
+            $this->jsonResponse(['error' => 'Failed to save'], 200);
         }
     }
 }
