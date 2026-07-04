@@ -31,6 +31,8 @@
             }
         }
         window.addEventListener('error', function(e) {
+            // Ignore CORS "Script error." (usually from browser extensions or adblockers)
+            if (e.message === 'Script error.' && e.lineno === 0) return;
             saveError('Error', e.message, e.filename, e.lineno, e.colno, e.error);
         });
         window.addEventListener('unhandledrejection', function(e) {
