@@ -372,7 +372,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
     </div>
 
     <!-- Standard HTML Form -->
-    <form id="wizardForm" action="<?= htmlspecialchars($actionUrl) ?>" method="POST" enctype="multipart/form-data" @submit.prevent="submitFullForm">
+    <form id="wizardForm" action="<?= htmlspecialchars($actionUrl) ?>" method="POST" enctype="multipart/form-data" @submit.prevent="submitFullForm" novalidate>
         
         <!-- ID Siswa (Wajib untuk Mode Edit) -->
         <?php if ($isEdit): ?>
@@ -2470,6 +2470,8 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                         });
                         return;
                     }
+                    // Full validation check removed to allow partial updates in edit mode.
+                    // The backend will handle necessary validations.
                     const errMsg = err.response?.data?.error || err.message || 'Gagal menyimpan perubahan.';
                     Swal.fire({
                         icon: 'error',
