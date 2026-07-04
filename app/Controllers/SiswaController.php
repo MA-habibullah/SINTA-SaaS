@@ -677,7 +677,6 @@ class SiswaController extends BaseController {
 
         if (!empty($errors)) {
             if ($isAjax) {
-                http_response_code(422);
                 header('Content-Type: application/json');
                 echo json_encode(['success' => false, 'errors' => $errors]);
                 exit;

@@ -2453,21 +2453,16 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                     } else if (response.data && response.data.errors) {
                         errorsList.value = Object.values(response.data.errors);
                         window.scrollTo({ top: 0, behavior: 'smooth' });
-                    } else {
-                        throw new Error(response.data.error || 'Terjadi kesalahan sistem.');
-                    }
-                } catch (err) {
-                    if (err.response?.status === 422 && err.response?.data?.errors) {
-                        errorsList.value = Object.values(err.response.data.errors);
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
                         Swal.fire({
                             icon: 'warning',
                             title: 'Validasi Gagal',
                             text: 'Silakan periksa kembali isian form Anda (scroll ke atas untuk detail).',
                             confirmButtonText: 'OK'
                         });
-                        return;
+                    } else {
+                        throw new Error(response.data.error || 'Terjadi kesalahan sistem.');
                     }
+                } catch (err) {
                     // Full validation check removed to allow partial updates in edit mode.
                     // The backend will handle necessary validations.
                     const errMsg = err.response?.data?.error || err.message || 'Gagal menyimpan perubahan.';
