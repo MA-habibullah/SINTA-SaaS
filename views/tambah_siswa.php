@@ -526,7 +526,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 <!-- Status Siswa -->
                 <div class="col-md-6">
                     <label for="status" class="form-label">Status Siswa <span class="text-danger">*</span></label>
-                    <select class="form-select" id="status" name="status" v-model="form.status" required>
+                    <select class="form-select" id="status" name="status" v-model="form.status" required :disabled="!['super_admin', 'operator_sekolah'].includes(userRole)">
                         <option value="Aktif">Aktif</option>
                         <option value="Lulus">Lulus</option>
                         <option value="Pindah">Pindah</option>
