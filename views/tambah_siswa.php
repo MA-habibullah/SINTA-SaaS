@@ -2385,6 +2385,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
                     // Append files if on Step 5 or isFullSubmit
                     if (currentStep.value === 5 || isFullSubmit) {
+                        let totalSize = 0;
                         const fileInputs = [
                             'foto_profil', 'berkas_kk', 'berkas_akta', 'berkas_ijazah_sd', 
                             'berkas_ijazah_smp', 'berkas_ijazah_sma', 'berkas_mutasi_masuk', 
@@ -2395,8 +2396,14 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                             const inputElement = document.querySelector(`input[name="${key}"]`);
                             if (inputElement && inputElement.files && inputElement.files[0]) {
                                 formData.append(key, inputElement.files[0]);
+                                totalSize += inputElement.files[0].size;
                             }
                         });
+
+                        // Cek total payload file di sisi client (mencegah error Nginx 413 / Connection Drop yang dibaca Axios sbg Network Error)
+                        if (totalSize > 7.5 * 1024 * 1024) { // Batas aman 7.5 MB (asumsi server default post_max_size = 8MB)
+                            throw new Error("Total ukuran dokumen yang Anda pilih (" + (totalSize/(1024*1024)).toFixed(1) + " MB) terlalu besar. Batas maksimal server adalah 8MB. Silakan kompres ukuran file Anda atau unggah satu per satu.");
+                        }
                     }
 
                     // Send to backend via Axios
@@ -2416,11 +2423,8 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                                 text: response.data.message || 'Data siswa berhasil diperbarui secara penuh!',
                                 confirmButtonText: 'OK'
                             }).then(() => {
-                                if (userRole.value === 'siswa') {
-                                    window.location.href = '/SINTA-SaaS/dashboard';
-                                } else {
-                                    window.location.href = '/SINTA-SaaS/pengguna';
-                                }
+                                // Reload halaman saja agar tetap di halaman edit/tambah siswa sesuai instruksi
+                                window.location.reload();
                             });
                         } else {
                             // Update file names in form state if returned
