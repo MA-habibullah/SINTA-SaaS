@@ -3595,9 +3595,9 @@ window.VueAppRegistry.register('#bkApp', {
                 }
             } catch (e) {
                 console.error(e);
-                const errors = (e.response && e.response.data && e.response.data.error)s;
+                const errors = (e.response && e.response.data && e.response.data.errors);
                 const errorText = (e.response && e.response.data && e.response.data.error);
-                const detailsText = e.response?.data?.details;
+                const detailsText = (e.response && e.response.data && e.response.data.details);
 
                 if (errors && errors.length > 0) {
                     let errMsg = `<div class="text-start" style="max-height:200px; overflow-y:auto; font-size: 0.85rem;">`;
