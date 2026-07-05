@@ -170,6 +170,7 @@
                             placeholder="Contoh: 0054231901" 
                             maxlength="10" 
                             v-model="form.nisn"
+                            autocomplete="username"
                             required
                         >
                     </div>

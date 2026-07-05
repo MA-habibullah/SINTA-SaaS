@@ -288,12 +288,12 @@
             const endDate = ref('');
             const searchQuery = ref('');
             
-            const onlinePerPage = ref(25);
+            const onlinePerPage = ref(10);
             const onlinePage = ref(1);
 
             const auditStartDate = ref('');
             const auditEndDate = ref('');
-            const auditPerPage = ref(25);
+            const auditPerPage = ref(10);
             const auditPage = ref(1);
 
             // Computed property for filtering
