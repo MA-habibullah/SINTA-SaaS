@@ -48,13 +48,9 @@ if (!$isLegacy) {
 
     // Check RBAC & Tenant
     if ($roleName === 'siswa') {
-        $stmt = $db->prepare("SELECT id FROM siswa WHERE user_id = :user_id LIMIT 1");
-        $stmt->execute(['user_id' => $userId]);
-        $siswa = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$siswa || $siswa['id'] !== $siswaId) {
+        if ($userId !== $siswaId) {
             http_response_code(403);
-            error_log("DOWNLOAD ERROR 403: Siswa mismatch. currentSiswa=" . ($siswa['id'] ?? 'null') . " requestedSiswa=" . $siswaId);
+            error_log("DOWNLOAD ERROR 403: Siswa mismatch. sessionSiswa=" . $userId . " requestedSiswa=" . $siswaId);
             die("403 Forbidden: Anda tidak memiliki wewenang untuk mengakses berkas ini.");
         }
     } elseif ($roleName !== 'super_admin') {
@@ -85,7 +81,7 @@ if (!$isLegacy) {
             FROM siswa s 
             LEFT JOIN rincian_pelajar rp ON s.id = rp.id_siswa
             LEFT JOIN dokumen d ON s.id = d.id_siswa
-            WHERE s.user_id = :user_id 
+            WHERE s.id = :user_id 
               AND (rp.foto_profil = :file OR d.berkas_kk = :file OR d.berkas_akta = :file OR d.berkas_ijazah_sd = :file OR d.berkas_ijazah_smp = :file OR d.berkas_ijazah_sma = :file OR d.berkas_mutasi_masuk = :file OR d.berkas_mutasi_keluar = :file OR d.berkas_kip = :file)
             LIMIT 1
         ");
