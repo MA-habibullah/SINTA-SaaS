@@ -1,0 +1,61 @@
+# Implementation Plan: Dukungan Multi-OS dan Browser Lawas (Android 6+)
+
+Rencana ini bertujuan untuk menyelesaikan masalah *compatibility* (*SyntaxError: Unexpected token '.'*) yang dialami pengguna Android versi lawas (target: minimal Android 6) dan perangkat *legacy* lainnya. Perbaikan ini **100% aman**, tidak akan mengubah logika bisnis PHP maupun *database*, dan murni berfokus pada lapisan JavaScript *frontend*.
+
+## Bagaimana Permasalahan Ini Terjadi dan Mengapa Android 6 Menjadi Tantangan?
+Sistem Anda saat ini dibangun menggunakan pendekatan hibrida: PHP untuk *backend* dan *inline JavaScript* (Vue.js via CDN) untuk interaktivitas *frontend*.
+Masalah utamanya adalah **browser pada perangkat Android 6 (biasanya Chrome versi 49 ke bawah) sama sekali tidak mengerti sintaks JavaScript era 2020 ke atas**. 
+- Ketika peramban Android 6 melihat sintaks `?.` (*Optional Chaining*), peramban mengira itu adalah kesalahan ketik, lalu menolak membaca seluruh halaman (sehingga halaman jadi *blank* atau tombol tidak bisa diklik).
+- Begitu juga dengan `tailwindcss.js` (Tailwind Play CDN). Script ini adalah "mesin" raksasa yang berjalan di *browser* untuk merender CSS. Mesin ini ditulis menggunakan JavaScript super modern yang langsung *crash* ketika dijalankan di Android lama.
+
+## Rekomendasi Solusi Terbaik Tanpa Mengubah Arsitektur Produksi
+
+Untuk mengatasi masalah ini **tanpa merombak kode PHP yang sudah stabil**, kita akan menggunakan tiga lapis perlindungan:
+
+1. **Refaktor Sintaks (Manual Transpiling):** Kita akan membedah seluruh *file* `.php` dan menghapus semua sintaks masa depan seperti `?.` dan `??`, lalu menuliskannya kembali dengan gaya klasik (ES6/ES5) yang dikenali oleh semua *browser* sejak tahun 2015.
+2. **Suntikan Polyfill (Jembatan Fitur):** Beberapa *browser* lawas tidak memiliki fungsi JavaScript bawaan seperti `Promise.allSettled`, `fetch`, atau `Array.includes`. Kita akan menyuntikkan satu baris skrip *Polyfill* global (sebuah *library* penyelamat) di `master.php` yang secara otomatis menutupi kekurangan *browser* lawas tanpa memengaruhi *browser* modern.
+3. **Kompilasi CSS Statis (Membunuh Tailwind CDN):** Kita akan me-render seluruh desain situs menjadi satu *file* `.css` murni yang super cepat dan sangat "bodoh" (sehingga bisa dibaca oleh *browser* purba apa pun) untuk menggantikan `tailwindcss.js`.
+
+---
+
+## Proposed Changes
+
+Perubahan akan difokuskan pada lapisan *views* (tampilan) tanpa menyentuh *Controllers* atau *Models*.
+
+### 1. Refaktor Sintaks JavaScript (Optional Chaining)
+
+**Contoh Perubahan:**
+- *Dari:* `err.response?.data?.error`
+- *Menjadi:* `(err.response && err.response.data && err.response.data.error)`
+
+**Daftar File yang Akan Direfaktorisasi:**
+#### [MODIFY] views/tambah_siswa.php
+#### [MODIFY] views/server_monitor.php
+#### [MODIFY] views/sekolah_profil.php
+#### [MODIFY] views/pdss_index.php
+#### [MODIFY] views/master_kelembagaan.php
+#### [MODIFY] views/master_bk.php
+*(dan semua file view lainnya yang mengandung sintaks tidak kompatibel)*
+
+---
+
+### 2. Menyuntikkan Polyfill Global & Mengganti Tailwind CDN
+
+Kita akan menambahkan library `core-js` (pengganti Polyfill.io yang lebih aman) untuk menjembatani fungsi modern di Android 6, serta mengganti Tailwind CDN dengan CSS statis.
+
+#### [NEW] public/assets/css/tailwind.css
+*(File statis baru hasil kompilasi lokal)*
+
+#### [MODIFY] views/layout/master.php
+- **Menghapus** `<script src="/SINTA-SaaS/assets/js/tailwindcss.js"></script>`
+- **Menambahkan** `<link rel="stylesheet" href="/SINTA-SaaS/assets/css/tailwind.css">`
+- **Menambahkan** `<script src="https://unpkg.com/core-js-bundle@3.37.1/minified.js"></script>` di tag `<head>` (agar dimuat paling awal).
+
+---
+
+## Verification Plan
+
+### Manual Verification
+1. Membuka *website* menggunakan Emulator Android 6.0 (Marshmallow) atau Safari 10 (iOS 10).
+2. Memastikan tidak ada *SyntaxError* yang muncul di *Developer Console*.
+3. Menguji *login*, manipulasi data siswa, dan *wizard* pendaftaran untuk memastikan sistem berjalan lancar di lingkungan lawas.

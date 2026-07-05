@@ -1,0 +1,45 @@
+# Implementation Plan: Audit Keamanan Log Sesi Aktif
+
+## Analisis & Pendapat Ahli
+Mencatat jejak audit (*Audit Trail*) untuk aktivitas *login* dan *logout* adalah **praktik terbaik (best practice)** dalam keamanan perangkat lunak (*cybersecurity*) untuk memantau aktivitas yang mencurigakan (seperti *login* dari IP tidak dikenal di luar jam kerja).
+
+Saran saya, **kita tidak perlu mengubah struktur data utama (tabel Users, Siswa, dll)** atau membuat tabel baru. Kita cukup **menggunakan tabel `activity_logs`** yang sudah Anda miliki (yang selama ini dipakai oleh `ActivityLogger`). Ini sangat aman, cepat, dan 100% mematuhi aturan Anda untuk "fokus ke halaman Monitoring Sesi tanpa mengganggu data inti lainnya".
+
+## Proposed Changes
+
+---
+### 1. Pencatatan Event Login & Logout (Tanpa Merusak Data Lain)
+
+> [!WARNING]
+> **Production Safety Note:** Mengingat `LoginController.php` dan `AuthSiswaController.php` sudah berada di tahap produksi, modifikasi akan dilakukan dengan **sangat hati-hati dan minimalis**. Kami hanya akan menyisipkan 1 baris kode panggilan `ActivityLogger::record()` dalam blok `try...catch` (atau dipastikan metode log tidak akan pernah menggagalkan proses login utama meskipun pencatatan gagal). Struktur logika otentikasi utama sama sekali tidak akan disentuh.
+
+#### [MODIFY] `app/Controllers/LoginController.php`
+- **Saat Login Sukses**: Memanggil `ActivityLogger::record('LOGIN', 'users', $user['id'])` sebelum *redirect*.
+- **Saat Logout**: Memanggil `ActivityLogger::record('LOGOUT', 'users', $_SESSION['user_id'])` sebelum sesi dihancurkan.
+
+#### [MODIFY] `app/Controllers/AuthSiswaController.php`
+- **Saat Login Sukses**: Memanggil `ActivityLogger::record('LOGIN', 'siswa', $siswa['id'])` sebelum *redirect*.
+- **Saat Logout**: Memanggil `ActivityLogger::record('LOGOUT', 'siswa', $_SESSION['user_id'])` sebelum sesi dihancurkan.
+
+---
+### 2. Membangun API Audit Trail
+
+#### [MODIFY] `app/Controllers/ActiveSessionController.php`
+- Membuat API baru (contoh: `fetchAuditApi()`) yang khusus melakukan `SELECT` dari tabel `activity_logs` di mana `action` adalah `LOGIN` atau `LOGOUT`.
+- API ini akan mereturn JSON berisi waktu, siapa yang login/logout, alamat IP, dan jabatannya (Peran).
+
+---
+### 3. Pembaruan Halaman (Fokus UI Monitoring Sesi)
+
+#### [MODIFY] `views/active_sessions.php`
+Kita akan mempertahankan grafik dan tabel Riwayat Sesi (1 Hari) yang sudah bagus tadi, dan menambahkan **blok baru (Tabel Audit)**:
+- **Tabel Baru: "Log Jejak Keamanan (Login/Logout)"**.
+- Tabel ini secara visual menampilkan daftar pergerakan masuk dan keluar secara kronologis (mirip log server).
+- Tabel ini akan memiliki *badge* warna: Hijau untuk LOGIN, Abu-abu untuk LOGOUT.
+
+## Verification Plan
+1. Melakukan uji coba *Login* dan *Logout* dengan akun admin atau siswa untuk memastikan otentikasi berjalan lancar tanpa terganggu oleh fitur log.
+2. Membuka halaman **Monitoring Sesi & Analitik** dan memverifikasi bahwa aktivitas barusan langsung muncul di Tabel Jejak Keamanan beserta stempel waktu dan IP yang tepat.
+
+> [!IMPORTANT]
+> Saya telah menambahkan pengamanan khusus untuk kode di tahap produksi. Jika Anda sudah merasa yakin dengan perlindungan ini, silakan klik **Proceed** dan saya akan mengeksekusi secara hati-hati.
