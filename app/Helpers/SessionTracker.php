@@ -25,6 +25,13 @@ class SessionTracker {
             return;
         }
 
+        // --- LAZY CLEANUP TRIGGER (5% probability) ---
+        // Membantu membersihkan sesi kedaluwarsa secara otomatis
+        // dan mencatatnya sebagai SYSTEM_TIMEOUT di activity_logs.
+        if (rand(1, 100) <= 5) {
+            \App\Core\SessionManager::cleanupStaleSessions();
+        }
+
         // Ambil IP Address (antisipasi proxy header spoofing)
         $ipAddress = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
         if (strpos($ipAddress, ',') !== false) {

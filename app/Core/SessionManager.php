@@ -169,4 +169,50 @@ class SessionManager {
             }
         }
     }
+
+    /**
+     * Lazy Cleanup: Sweep active_sessions for timeouts (e.g., closed browser or idle)
+     * and log them as SYSTEM_TIMEOUT in activity_logs.
+     */
+    public static function cleanupStaleSessions(): void {
+        try {
+            $db = \App\Config\Database::getConnection();
+            $timeout = 1800; // 30 Menit
+
+            // Ambil semua sesi yang sudah kedaluwarsa
+            $stmt = $db->prepare("SELECT id, user_id, tenant_id FROM active_sessions WHERE last_activity < DATE_SUB(NOW(), INTERVAL ? SECOND)");
+            $stmt->execute([$timeout]);
+            $staleSessions = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            if (empty($staleSessions)) {
+                return;
+            }
+
+            // Catat masing-masing ke activity_logs
+            $insertStmt = $db->prepare("
+                INSERT INTO `activity_logs` (
+                    `id`, `tenant_id`, `table_name`, `record_id`, `action`, `user_id`, `ip_address`, `user_agent`, `created_at`
+                ) VALUES (
+                    UUID(), :tenant_id, 'users', :record_id, 'SYSTEM_TIMEOUT', :user_id, '127.0.0.1', 'System Auto Cleanup', NOW()
+                )
+            ");
+
+            foreach ($staleSessions as $session) {
+                try {
+                    $insertStmt->execute([
+                        'tenant_id' => $session['tenant_id'],
+                        'record_id' => $session['user_id'], // Target record is the user
+                        'user_id'   => $session['user_id']
+                    ]);
+                } catch (\Throwable $e) {}
+            }
+
+            // Hapus dari active_sessions
+            $deleteStmt = $db->prepare("DELETE FROM active_sessions WHERE last_activity < DATE_SUB(NOW(), INTERVAL ? SECOND)");
+            $deleteStmt->execute([$timeout]);
+
+        } catch (\Throwable $e) {
+            error_log("Failed to run SessionManager::cleanupStaleSessions: " . $e->getMessage());
+        }
+    }
 }

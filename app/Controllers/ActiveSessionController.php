@@ -55,6 +55,10 @@ class ActiveSessionController extends BaseController {
         $startDate = $_GET['start_date'] ?? '';
         $endDate = $_GET['end_date'] ?? '';
 
+        // --- LAZY CLEANUP TRIGGER (100% probability when loading dashboard) ---
+        // Bersihkan sesi usang dan catat sebagai SYSTEM_TIMEOUT ke activity_logs
+        \App\Core\SessionManager::cleanupStaleSessions();
+
         try {
             $db = Database::getConnection();
 
