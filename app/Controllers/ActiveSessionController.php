@@ -101,7 +101,7 @@ class ActiveSessionController extends BaseController {
             $onlineUsers = $stmtOnline->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
             // ==========================================
-            // 2. QUERY: Tren Login Harian/Waktu (Berdasarkan timeframe)
+            // 2. QUERY: Tren Sesi Pengguna Unik (Berdasarkan timeframe dari active_sessions)
             // ==========================================
             $chartParams = [];
             $groupBy = "s.tanggal_login";
@@ -135,7 +135,7 @@ class ActiveSessionController extends BaseController {
             $sqlChart = "
                 SELECT 
                     {$selectGroup}, 
-                    COUNT(DISTINCT s.user_id) AS total_logins
+                    COUNT(DISTINCT s.user_id) AS total_users
                 FROM active_sessions s
                 WHERE {$chartWhere}
                 GROUP BY {$groupBy}
@@ -146,10 +146,59 @@ class ActiveSessionController extends BaseController {
             $stmtChart->execute($chartParams);
             $chartData = $stmtChart->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
+            // ==========================================
+            // 3. QUERY: Tren Login & Logout (Berdasarkan timeframe dari activity_logs)
+            // ==========================================
+            $auditParams = [];
+            $auditGroupBy = "DATE(al.created_at)";
+            $auditSelectGroup = "DATE(al.created_at) AS label";
+            $auditWhere = "al.action IN ('LOGIN', 'LOGOUT')";
+            $auditOrderBy = "MIN(al.created_at)";
+
+            if ($timeframe === '30_minutes') {
+                $auditWhere .= " AND al.created_at >= NOW() - INTERVAL 30 MINUTE";
+                $auditGroupBy = "DATE_FORMAT(al.created_at, '%H:%i')";
+                $auditSelectGroup = "DATE_FORMAT(al.created_at, '%H:%i') AS label";
+            } elseif ($timeframe === '1_hour') {
+                $auditWhere .= " AND al.created_at >= NOW() - INTERVAL 1 HOUR";
+                $auditGroupBy = "DATE_FORMAT(al.created_at, '%H:%i')";
+                $auditSelectGroup = "DATE_FORMAT(al.created_at, '%H:%i') AS label";
+            } elseif ($timeframe === '1_day') {
+                $auditWhere .= " AND al.created_at >= NOW() - INTERVAL 1 DAY";
+                $auditGroupBy = "DATE_FORMAT(al.created_at, '%H:00')";
+                $auditSelectGroup = "DATE_FORMAT(al.created_at, '%H:00') AS label";
+            } elseif ($timeframe === '15_days') {
+                $auditWhere .= " AND al.created_at >= DATE_SUB(CURDATE(), INTERVAL 15 DAY)";
+            } else {
+                // Default 30_days
+                $auditWhere .= " AND al.created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
+            }
+
+            if (!$isSuperAdmin) {
+                $auditWhere .= " AND al.tenant_id = :tenant_id";
+                $auditParams['tenant_id'] = $tenantId;
+            }
+
+            $sqlAuditChart = "
+                SELECT 
+                    {$auditSelectGroup}, 
+                    SUM(CASE WHEN al.action = 'LOGIN' THEN 1 ELSE 0 END) AS total_logins,
+                    SUM(CASE WHEN al.action = 'LOGOUT' THEN 1 ELSE 0 END) AS total_logouts
+                FROM activity_logs al
+                WHERE {$auditWhere}
+                GROUP BY {$auditGroupBy}
+                ORDER BY {$auditOrderBy} ASC
+            ";
+
+            $stmtAuditChart = $db->prepare($sqlAuditChart);
+            $stmtAuditChart->execute($auditParams);
+            $auditChartData = $stmtAuditChart->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
             $this->jsonResponse([
                 'success' => true,
                 'online_users' => $onlineUsers,
-                'chart_data' => $chartData
+                'chart_data' => $chartData,
+                'audit_chart_data' => $auditChartData
             ]);
         } catch (\Throwable $e) {
             error_log("Failed to fetch sessions data: " . $e->getMessage());

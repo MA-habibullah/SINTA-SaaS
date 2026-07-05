@@ -19,7 +19,7 @@
         <div class="card border-0 rounded-4 shadow-sm p-4 h-100" style="background-color: #ffffff;">
             <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
                 <h5 class="fw-bold text-dark mb-0">
-                    <i class="bi bi-graph-up text-primary me-2"></i> Tren Login
+                    <i class="bi bi-graph-up text-primary me-2"></i> Tren Sesi & Aktivitas
                 </h5>
                 <select class="form-select form-select-sm w-auto rounded-3" v-model="chartTimeframe" @change="fetchData">
                     <option value="30_minutes">30 Menit Terakhir</option>
@@ -275,6 +275,7 @@
             const onlineUsers = ref([]);
             const auditLogs = ref([]);
             const chartRawData = ref([]);
+            const auditChartRawData = ref([]);
             const loading = ref(false);
             const loadingAudit = ref(false);
             const cleaning = ref(false);
@@ -370,6 +371,7 @@
                     if (response.data && response.data.success) {
                         onlineUsers.value = response.data.online_users;
                         chartRawData.value = response.data.chart_data;
+                        auditChartRawData.value = response.data.audit_chart_data || [];
                         onlinePage.value = 1;
                         
                         // Render or update chart
@@ -413,48 +415,100 @@
                     myChart.destroy();
                 }
 
-                // If empty data, show placeholder
-                if (chartRawData.value.length === 0) {
-                    return;
+                // If empty data, provide dummy labels to draw empty chart grid
+                if (chartRawData.value.length === 0 && auditChartRawData.value.length === 0) {
+                    chartRawData.value = [];
+                    auditChartRawData.value = [];
                 }
 
-                // Map data labels and values
-                const labels = chartRawData.value.map(d => {
-                    const label = d.label || d.tanggal_login;
+                // Get all labels from both arrays and sort them
+                const labelSet = new Set();
+                chartRawData.value.forEach(d => labelSet.add(d.label || d.tanggal_login));
+                auditChartRawData.value.forEach(d => labelSet.add(d.label));
+                let allLabels = Array.from(labelSet).sort();
+
+                // formatting labels for display
+                const displayLabels = allLabels.map(label => {
                     if (chartTimeframe.value === '30_days' || chartTimeframe.value === '15_days') {
-                        const parts = label.split('-');
+                        const parts = (label || '').split('-');
                         if (parts.length >= 3) {
                             return `${parts[2]}/${parts[1]}`; // format DD/MM
                         }
                     }
-                    return label; 
+                    return label || ''; 
                 });
-                const values = chartRawData.value.map(d => d.total_logins);
+
+                // Map data labels and values
+                const uniqueUsersValues = allLabels.map(l => {
+                    const row = chartRawData.value.find(d => (d.label || d.tanggal_login) === l);
+                    return row ? row.total_users : 0;
+                });
+                const loginValues = allLabels.map(l => {
+                    const row = auditChartRawData.value.find(d => d.label === l);
+                    return row ? row.total_logins : 0;
+                });
+                const logoutValues = allLabels.map(l => {
+                    const row = auditChartRawData.value.find(d => d.label === l);
+                    return row ? row.total_logouts : 0;
+                });
 
                 myChart = new Chart(ctx, {
                     type: 'line',
                     data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Pengguna Unik Login',
-                            data: values,
-                            borderColor: '#2563eb',
-                            backgroundColor: 'rgba(37, 99, 235, 0.05)',
-                            borderWidth: 2.5,
-                            fill: true,
-                            tension: 0.35,
-                            pointBackgroundColor: '#2563eb',
-                            pointBorderColor: '#ffffff',
-                            pointHoverRadius: 6,
-                            pointHoverBackgroundColor: '#1d4ed8'
-                        }]
+                        labels: displayLabels.length > 0 ? displayLabels : ['(Belum ada aktivitas)'],
+                        datasets: [
+                            {
+                                label: 'Pengguna Unik',
+                                data: uniqueUsersValues.length > 0 ? uniqueUsersValues : [0],
+                                borderColor: '#2563eb', // Bootstrap Primary Blue
+                                backgroundColor: 'rgba(37, 99, 235, 0.05)',
+                                borderWidth: 2.5,
+                                fill: true,
+                                tension: 0.35,
+                                pointBackgroundColor: '#2563eb',
+                                pointBorderColor: '#ffffff',
+                                pointHoverRadius: 6,
+                                pointHoverBackgroundColor: '#1d4ed8'
+                            },
+                            {
+                                label: 'Aktivitas Login',
+                                data: loginValues.length > 0 ? loginValues : [0],
+                                borderColor: '#198754', // Bootstrap Success
+                                backgroundColor: 'rgba(25, 135, 84, 0.05)',
+                                borderWidth: 2.5,
+                                fill: true,
+                                tension: 0.35,
+                                pointBackgroundColor: '#198754',
+                                pointBorderColor: '#ffffff',
+                                pointHoverRadius: 6,
+                                pointHoverBackgroundColor: '#146c43'
+                            },
+                            {
+                                label: 'Aktivitas Logout',
+                                data: logoutValues.length > 0 ? logoutValues : [0],
+                                borderColor: '#6c757d', // Bootstrap Secondary
+                                backgroundColor: 'rgba(108, 117, 125, 0.05)',
+                                borderWidth: 2.5,
+                                fill: true,
+                                tension: 0.35,
+                                pointBackgroundColor: '#6c757d',
+                                pointBorderColor: '#ffffff',
+                                pointHoverRadius: 6,
+                                pointHoverBackgroundColor: '#5c636a'
+                            }
+                        ]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
                             legend: {
-                                display: false
+                                display: true,
+                                position: 'top',
+                                labels: {
+                                    usePointStyle: true,
+                                    boxWidth: 8
+                                }
                             },
                             tooltip: {
                                 mode: 'index',
