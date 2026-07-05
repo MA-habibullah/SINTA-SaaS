@@ -100,6 +100,11 @@ class AuthSiswaController extends BaseController {
             $_SESSION['is_first_login'] = (bool)$siswa['is_first_login'];
             $_SESSION['last_activity'] = time();
 
+            // Audit Trail: Record LOGIN
+            try {
+                \App\Helpers\ActivityLogger::record('LOGIN', 'siswa', $siswa['id']);
+            } catch (\Throwable $e) {}
+
             $this->jsonResponse([
                 'success' => true,
                 'message' => 'Login berhasil.',
@@ -200,6 +205,14 @@ class AuthSiswaController extends BaseController {
      * GET /siswa/logout
      */
     public function logout(): void {
+        // Audit Trail: Record LOGOUT before session is destroyed
+        try {
+            $userId = $_SESSION['user_id'] ?? 'unknown';
+            if ($userId !== 'unknown') {
+                \App\Helpers\ActivityLogger::record('LOGOUT', 'siswa', $userId);
+            }
+        } catch (\Throwable $e) {}
+
         SessionManager::logout();
         header('Location: /SINTA-SaaS/login');
         exit;

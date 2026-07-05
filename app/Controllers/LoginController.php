@@ -66,6 +66,11 @@ class LoginController extends BaseController {
 
         // Password cocok! Inisialisasi session aman
         SessionManager::login($user);
+        
+        // Audit Trail: Record LOGIN
+        try {
+            \App\Helpers\ActivityLogger::record('LOGIN', 'users', $user['id']);
+        } catch (\Throwable $e) {}
 
         // Kirim respon sukses beserta data profil ringkas (tanpa password)
         $this->jsonResponse([
@@ -85,6 +90,14 @@ class LoginController extends BaseController {
      * Handle Logout Request
      */
     public function logout(): void {
+        // Audit Trail: Record LOGOUT before session is destroyed
+        try {
+            $userId = $_SESSION['user_id'] ?? 'unknown';
+            if ($userId !== 'unknown') {
+                \App\Helpers\ActivityLogger::record('LOGOUT', 'users', $userId);
+            }
+        } catch (\Throwable $e) {}
+
         SessionManager::logout();
         // Redirect langsung ke halaman login setelah menghancurkan session
         header('Location: /SINTA-SaaS/login');

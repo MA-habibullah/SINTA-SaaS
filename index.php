@@ -778,6 +778,16 @@ try {
             $controller->fetchDataApi();
             break;
 
+        case '/api/v1/sessions/audit':
+            $controller = new App\Controllers\ActiveSessionController();
+            $controller->fetchAuditApi();
+            break;
+
+        case '/api/v1/sessions/audit/retention':
+            $controller = new App\Controllers\ActiveSessionController();
+            $controller->deleteAuditRetentionApi();
+            break;
+
         case '/api/v1/sessions/retention':
             $controller = new App\Controllers\ActiveSessionController();
             $controller->deleteRetentionApi();
