@@ -134,6 +134,7 @@
             }
         };
     </script>
+    <script src="https://unpkg.com/core-js-bundle@3.37.1/minified.js"></script>
     <script src="/SINTA-SaaS/assets/js/tailwindcss.js" data-turbo-track="reload"></script>
 
     <!-- Hotwire Turbo Drive -->

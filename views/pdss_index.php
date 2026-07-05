@@ -1031,7 +1031,7 @@ $tenantList = $data['tenant_list'] ?? [];
                         this.fetchAlumni();
                     }
                 } catch (e) {
-                    const msg = e.response?.data?.error || 'Gagal menyimpan data alumni.';
+                    const msg = (e.response && e.response.data && e.response.data.error) || 'Gagal menyimpan data alumni.';
                     Swal.fire({ icon: 'error', title: 'Gagal', text: msg, confirmButtonColor: '#2563eb' });
                 }
             },
@@ -1058,7 +1058,7 @@ $tenantList = $data['tenant_list'] ?? [];
                         this.fetchAlumni();
                     }
                 } catch (e) {
-                    const msg = e.response?.data?.error || 'Gagal menghapus data.';
+                    const msg = (e.response && e.response.data && e.response.data.error) || 'Gagal menghapus data.';
                     Swal.fire({ icon: 'error', title: 'Gagal', text: msg, confirmButtonColor: '#2563eb' });
                 }
             },
@@ -1105,7 +1105,7 @@ $tenantList = $data['tenant_list'] ?? [];
                         this.fetchCampuses();
                     }
                 } catch (e) {
-                    const msg = e.response?.data?.error || 'Gagal menyimpan target kampus.';
+                    const msg = (e.response && e.response.data && e.response.data.error) || 'Gagal menyimpan target kampus.';
                     Swal.fire({ icon: 'error', title: 'Gagal', text: msg, confirmButtonColor: '#2563eb' });
                 }
             },
@@ -1132,7 +1132,7 @@ $tenantList = $data['tenant_list'] ?? [];
                         this.fetchCampuses();
                     }
                 } catch (e) {
-                    const msg = e.response?.data?.error || 'Gagal menghapus data.';
+                    const msg = (e.response && e.response.data && e.response.data.error) || 'Gagal menghapus data.';
                     Swal.fire({ icon: 'error', title: 'Gagal', text: msg, confirmButtonColor: '#2563eb' });
                 }
             },
@@ -1152,7 +1152,7 @@ $tenantList = $data['tenant_list'] ?? [];
                         this.fetchCampuses();
                     }
                 } catch (e) {
-                    const msg = e.response?.data?.error || 'Gagal melakukan seeding data target kampus.';
+                    const msg = (e.response && e.response.data && e.response.data.error) || 'Gagal melakukan seeding data target kampus.';
                     Swal.fire({ icon: 'error', title: 'Gagal', text: msg, confirmButtonColor: '#2563eb' });
                 } finally {
                     this.loading = false;
@@ -1165,8 +1165,8 @@ $tenantList = $data['tenant_list'] ?? [];
 // Super Admin tenant filter
 <?php if ($userRole === 'super_admin'): ?>
 (function() {
-    document.getElementById('btn-apply-tenant')?.addEventListener('click', function() {
-        const tid = document.getElementById('sa-tenant-select')?.value || '';
+    let btn = document.getElementById('btn-apply-tenant'); if(btn) btn.addEventListener('click', function() {
+        const tid = (document.getElementById('sa-tenant-select') ? document.getElementById('sa-tenant-select').value : null) || '';
         const url = new URL(window.location.href);
         if (tid) { url.searchParams.set('tenant_id', tid); }
         else { url.searchParams.delete('tenant_id'); }

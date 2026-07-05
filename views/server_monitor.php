@@ -109,30 +109,30 @@
                     <div>
                         <div class="fs-9 text-muted fw-semibold text-uppercase" style="letter-spacing:.6px;">CPU Load Avg</div>
                         <div class="fw-bold mt-1" style="font-size:1.8rem;line-height:1;"
-                             :style="{ color: usageColor(metrics.cpu?.usage_percent) }">
-                            <span v-if="metrics.cpu?.available">{{ metrics.cpu.usage_percent }}%</span>
+                             :style="{ color: usageColor((metrics.cpu && metrics.cpu.usage_percent)) }">
+                            <span v-if="(metrics.cpu && metrics.cpu.available)">{{ metrics.cpu.usage_percent }}%</span>
                             <span v-else class="fs-6 text-muted fw-semibold">N/A</span>
                         </div>
                     </div>
                     <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
                          style="width:48px;height:48px;"
-                         :style="{ background: usageBgColor(metrics.cpu?.usage_percent) }">
-                        <i class="bi bi-cpu-fill fs-4" :style="{ color: usageColor(metrics.cpu?.usage_percent) }"></i>
+                         :style="{ background: usageBgColor((metrics.cpu && metrics.cpu.usage_percent)) }">
+                        <i class="bi bi-cpu-fill fs-4" :style="{ color: usageColor((metrics.cpu && metrics.cpu.usage_percent)) }"></i>
                     </div>
                 </div>
                 <div class="progress rounded-pill mb-2" style="height:6px;background:#f1f5f9;">
                     <div class="progress-bar rounded-pill progress-bar-anim"
                          role="progressbar"
                          aria-label="CPU Load Average"
-                         :aria-valuenow="metrics.cpu?.usage_percent || 0"
+                         :aria-valuenow="(metrics.cpu && metrics.cpu.usage_percent) || 0"
                          aria-valuemin="0"
                          aria-valuemax="100"
-                         :style="{ width: (metrics.cpu?.usage_percent || 0) + '%', background: usageColor(metrics.cpu?.usage_percent) }">
+                         :style="{ width: ((metrics.cpu && metrics.cpu.usage_percent) || 0) + '%', background: usageColor((metrics.cpu && metrics.cpu.usage_percent)) }">
                     </div>
                 </div>
                 <div class="d-flex justify-content-between" style="font-size:0.7rem;color:#94a3b8;">
-                    <span>Load: {{ metrics.cpu?.load_1 }} / {{ metrics.cpu?.load_5 }} / {{ metrics.cpu?.load_15 }}</span>
-                    <span>{{ metrics.cpu?.cpu_count }} Core</span>
+                    <span>Load: {{ (metrics.cpu && metrics.cpu.load_1) }} / {{ (metrics.cpu && metrics.cpu.load_5) }} / {{ (metrics.cpu && metrics.cpu.load_1)5 }}</span>
+                    <span>{{ (metrics.cpu && metrics.cpu.cpu_count) }} Core</span>
                 </div>
             </div>
         </div>
@@ -144,30 +144,30 @@
                     <div>
                         <div class="fs-9 text-muted fw-semibold text-uppercase" style="letter-spacing:.6px;">Memory (RAM)</div>
                         <div class="fw-bold mt-1" style="font-size:1.8rem;line-height:1;"
-                             :style="{ color: usageColor(metrics.ram?.usage_percent) }">
-                            <span v-if="metrics.ram?.available">{{ metrics.ram.usage_percent }}%</span>
+                             :style="{ color: usageColor((metrics.ram && metrics.ram.usage_percent)) }">
+                            <span v-if="(metrics.ram && metrics.ram.available)">{{ metrics.ram.usage_percent }}%</span>
                             <span v-else class="fs-6 text-muted fw-semibold">N/A</span>
                         </div>
                     </div>
                     <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
                          style="width:48px;height:48px;"
-                         :style="{ background: usageBgColor(metrics.ram?.usage_percent) }">
-                        <i class="bi bi-memory fs-4" :style="{ color: usageColor(metrics.ram?.usage_percent) }"></i>
+                         :style="{ background: usageBgColor((metrics.ram && metrics.ram.usage_percent)) }">
+                        <i class="bi bi-memory fs-4" :style="{ color: usageColor((metrics.ram && metrics.ram.usage_percent)) }"></i>
                     </div>
                 </div>
                 <div class="progress rounded-pill mb-2" style="height:6px;background:#f1f5f9;">
                     <div class="progress-bar rounded-pill progress-bar-anim"
                          role="progressbar"
                          aria-label="Memory RAM Usage"
-                         :aria-valuenow="metrics.ram?.usage_percent || 0"
+                         :aria-valuenow="(metrics.ram && metrics.ram.usage_percent) || 0"
                          aria-valuemin="0"
                          aria-valuemax="100"
-                         :style="{ width: (metrics.ram?.usage_percent || 0) + '%', background: usageColor(metrics.ram?.usage_percent) }">
+                         :style="{ width: ((metrics.ram && metrics.ram.usage_percent) || 0) + '%', background: usageColor((metrics.ram && metrics.ram.usage_percent)) }">
                     </div>
                 </div>
                 <div class="d-flex justify-content-between" style="font-size:0.7rem;color:#94a3b8;">
-                    <span>Dipakai: {{ metrics.ram?.used_gb }} GB</span>
-                    <span>Total: {{ metrics.ram?.total_gb }} GB</span>
+                    <span>Dipakai: {{ (metrics.ram && metrics.ram.used_gb) }} GB</span>
+                    <span>Total: {{ (metrics.ram && metrics.ram.total_gb) }} GB</span>
                 </div>
             </div>
         </div>
@@ -179,30 +179,30 @@
                     <div>
                         <div class="fs-9 text-muted fw-semibold text-uppercase" style="letter-spacing:.6px;">Main Disk</div>
                         <div class="fw-bold mt-1" style="font-size:1.8rem;line-height:1;"
-                             :style="{ color: usageColor(metrics.disk?.usage_percent) }">
-                            <span v-if="metrics.disk?.available">{{ metrics.disk.usage_percent }}%</span>
+                             :style="{ color: usageColor((metrics.disk && metrics.disk.usage_percent)) }">
+                            <span v-if="(metrics.disk && metrics.disk.available)">{{ metrics.disk.usage_percent }}%</span>
                             <span v-else class="fs-6 text-muted fw-semibold">N/A</span>
                         </div>
                     </div>
                     <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
                          style="width:48px;height:48px;"
-                         :style="{ background: usageBgColor(metrics.disk?.usage_percent) }">
-                        <i class="bi bi-hdd-fill fs-4" :style="{ color: usageColor(metrics.disk?.usage_percent) }"></i>
+                         :style="{ background: usageBgColor((metrics.disk && metrics.disk.usage_percent)) }">
+                        <i class="bi bi-hdd-fill fs-4" :style="{ color: usageColor((metrics.disk && metrics.disk.usage_percent)) }"></i>
                     </div>
                 </div>
                 <div class="progress rounded-pill mb-2" style="height:6px;background:#f1f5f9;">
                     <div class="progress-bar rounded-pill progress-bar-anim"
                          role="progressbar"
                          aria-label="Disk Space Usage"
-                         :aria-valuenow="metrics.disk?.usage_percent || 0"
+                         :aria-valuenow="(metrics.disk && metrics.disk.usage_percent) || 0"
                          aria-valuemin="0"
                          aria-valuemax="100"
-                         :style="{ width: (metrics.disk?.usage_percent || 0) + '%', background: usageColor(metrics.disk?.usage_percent) }">
+                         :style="{ width: ((metrics.disk && metrics.disk.usage_percent) || 0) + '%', background: usageColor((metrics.disk && metrics.disk.usage_percent)) }">
                     </div>
                 </div>
                 <div class="d-flex justify-content-between" style="font-size:0.7rem;color:#94a3b8;">
-                    <span>Dipakai: {{ metrics.disk?.used_gb }} GB</span>
-                    <span>Total: {{ metrics.disk?.total_gb }} GB</span>
+                    <span>Dipakai: {{ (metrics.disk && metrics.disk.used_gb) }} GB</span>
+                    <span>Total: {{ (metrics.disk && metrics.disk.total_gb) }} GB</span>
                 </div>
             </div>
         </div>
@@ -214,7 +214,7 @@
                     <div>
                         <div class="fs-9 text-muted fw-semibold text-uppercase" style="letter-spacing:.6px;">Server Uptime</div>
                         <div class="fw-bold mt-1 text-dark" style="font-size:1.2rem;line-height:1.3;">
-                            {{ metrics.uptime?.human || 'N/A' }}
+                            {{ (metrics.uptime && metrics.uptime.human) || 'N/A' }}
                         </div>
                     </div>
                     <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
@@ -729,7 +729,7 @@
                         Swal.fire('Selesai', 'Perintah update berhasil dijalankan. Silakan cek log untuk detailnya.', 'success');
                     }
                 } catch (err) {
-                    this.updateLog += '\n[ERROR] ' + (err.response?.data?.error || err.message || 'Terjadi kesalahan sistem.');
+                    this.updateLog += '\n[ERROR] ' + ((err.response && err.response.data && err.response.data.error) || err.message || 'Terjadi kesalahan sistem.');
                     Swal.fire('Gagal', 'Update gagal dieksekusi. Periksa permission server (sudoers).', 'error');
                 } finally {
                     this.isUpdating = false;
@@ -776,7 +776,7 @@
                         this.countdown = 5;
                     }
                 } catch (err) {
-                    console.error('[ServerMonitor] Fetch error:', err?.message);
+                    console.error('[ServerMonitor] Fetch error:', (err && err.message));
                     // Tidak menampilkan Swal agar tidak spam setiap 5 detik
                 } finally {
                     this.loading = false;
@@ -855,7 +855,7 @@
                     }
                 } catch (err) {
                     console.error('[ServerMonitor] Save error:', err);
-                    const errMsg = err.response?.data?.error || err.message || 'Terjadi kesalahan koneksi server.';
+                    const errMsg = (err.response && err.response.data && err.response.data.error) || err.message || 'Terjadi kesalahan koneksi server.';
                     Swal.fire({
                         icon: 'error',
                         title: 'Gagal Menyimpan',

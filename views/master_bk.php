@@ -2722,7 +2722,7 @@ window.VueAppRegistry.register('#bkApp', {
                 };
                 if (res.data.success) loadPenjurusan();
             } catch (err) {
-                alertPenjurusan.value = { msg: '❌ ' + (err.response?.data?.error || 'Koneksi gagal.'), type: 'danger' };
+                alertPenjurusan.value = { msg: '❌ ' + ((err.response && err.response.data && err.response.data.error) || 'Koneksi gagal.'), type: 'danger' };
             }
         }
 
@@ -2765,7 +2765,7 @@ window.VueAppRegistry.register('#bkApp', {
                 };
                 if (res.data.success) loadPenjurusan();
             } catch (err) {
-                alertPenjurusan.value = { msg: '❌ ' + (err.response?.data?.error || 'Koneksi gagal.'), type: 'danger' };
+                alertPenjurusan.value = { msg: '❌ ' + ((err.response && err.response.data && err.response.data.error) || 'Koneksi gagal.'), type: 'danger' };
             } finally {
                 loadingOverride.value = false;
             }
@@ -2786,7 +2786,7 @@ window.VueAppRegistry.register('#bkApp', {
                 };
                 if (res.data.success) loadPenjurusan();
             } catch (err) {
-                alertPenjurusan.value = { msg: '❌ ' + (err.response?.data?.error || 'Koneksi gagal.'), type: 'danger' };
+                alertPenjurusan.value = { msg: '❌ ' + ((err.response && err.response.data && err.response.data.error) || 'Koneksi gagal.'), type: 'danger' };
             }
         }
 
@@ -2922,7 +2922,7 @@ window.VueAppRegistry.register('#bkApp', {
                 Swal.fire({
                     icon: 'error',
                     title: 'Kesalahan',
-                    text: err.response?.data?.error || 'Koneksi ke server gagal.',
+                    text: (err.response && err.response.data && err.response.data.error) || 'Koneksi ke server gagal.',
                     confirmButtonColor: 'var(--bk-primary)'
                 });
             }
@@ -2996,7 +2996,7 @@ window.VueAppRegistry.register('#bkApp', {
                     Swal.fire({
                         icon: 'error',
                         title: 'Koneksi Gagal',
-                        text: err.response?.data?.error || 'Gagal menghubungi server.',
+                        text: (err.response && err.response.data && err.response.data.error) || 'Gagal menghubungi server.',
                         confirmButtonColor: 'var(--bk-primary)'
                     });
                 }
@@ -3095,7 +3095,7 @@ window.VueAppRegistry.register('#bkApp', {
                 Swal.fire({
                     icon: 'error',
                     title: 'Kesalahan',
-                    text: err.response?.data?.error || 'Koneksi ke server gagal.',
+                    text: (err.response && err.response.data && err.response.data.error) || 'Koneksi ke server gagal.',
                     confirmButtonColor: 'var(--bk-primary)'
                 });
             }
@@ -3302,7 +3302,7 @@ window.VueAppRegistry.register('#bkApp', {
                 Swal.fire({
                     icon: 'error',
                     title: 'Kesalahan',
-                    text: err.response?.data?.error || 'Koneksi ke server gagal.',
+                    text: (err.response && err.response.data && err.response.data.error) || 'Koneksi ke server gagal.',
                     confirmButtonColor: 'var(--bk-primary)'
                 });
             } finally {
@@ -3385,7 +3385,7 @@ window.VueAppRegistry.register('#bkApp', {
                     Swal.fire({
                         icon: 'error',
                         title: 'Kesalahan',
-                        text: err.response?.data?.error || 'Koneksi ke server gagal.',
+                        text: (err.response && err.response.data && err.response.data.error) || 'Koneksi ke server gagal.',
                         confirmButtonColor: 'var(--bk-primary)'
                     });
                 }
@@ -3540,7 +3540,7 @@ window.VueAppRegistry.register('#bkApp', {
                 }
             } catch (e) {
                 console.error('saveKehadiran error', e);
-                Swal.fire({ icon: 'error', title: 'Gagal', text: e.response?.data?.error || 'Gagal menghubungi server.' });
+                Swal.fire({ icon: 'error', title: 'Gagal', text: (e.response && e.response.data && e.response.data.error) || 'Gagal menghubungi server.' });
             } finally {
                 savingKehadiran.value = false;
             }
@@ -3595,8 +3595,8 @@ window.VueAppRegistry.register('#bkApp', {
                 }
             } catch (e) {
                 console.error(e);
-                const errors = e.response?.data?.errors;
-                const errorText = e.response?.data?.error;
+                const errors = (e.response && e.response.data && e.response.data.error)s;
+                const errorText = (e.response && e.response.data && e.response.data.error);
                 const detailsText = e.response?.data?.details;
 
                 if (errors && errors.length > 0) {
@@ -3818,7 +3818,7 @@ window.VueAppRegistry.register('#bkApp', {
                 }
             } catch (e) {
                 console.error('submitMasterRule error', e);
-                Swal.fire({ icon: 'error', title: 'Gagal', text: e.response?.data?.error || 'Terjadi kesalahan.' });
+                Swal.fire({ icon: 'error', title: 'Gagal', text: (e.response && e.response.data && e.response.data.error) || 'Terjadi kesalahan.' });
             } finally {
                 masterModal.value.saving = false;
             }
@@ -3851,7 +3851,7 @@ window.VueAppRegistry.register('#bkApp', {
                     }
                 } catch (e) {
                     console.error('deleteMasterRule error', e);
-                    Swal.fire({ icon: 'error', title: 'Gagal', text: e.response?.data?.error || 'Terjadi kesalahan.' });
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: (e.response && e.response.data && e.response.data.error) || 'Terjadi kesalahan.' });
                 }
             }
         }
@@ -3969,7 +3969,7 @@ window.VueAppRegistry.register('#bkApp', {
                 }
             } catch (e) {
                 console.error('submitPelanggaran error', e);
-                Swal.fire({ icon: 'error', title: 'Gagal', text: e.response?.data?.error || 'Terjadi kesalahan.' });
+                Swal.fire({ icon: 'error', title: 'Gagal', text: (e.response && e.response.data && e.response.data.error) || 'Terjadi kesalahan.' });
             } finally {
                 submittingPelanggaran.value = false;
             }
@@ -4022,7 +4022,7 @@ window.VueAppRegistry.register('#bkApp', {
                     }
                 } catch (e) {
                     console.error('deletePelanggaran error', e);
-                    Swal.fire({ icon: 'error', title: 'Gagal', text: e.response?.data?.error || 'Terjadi kesalahan.' });
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: (e.response && e.response.data && e.response.data.error) || 'Terjadi kesalahan.' });
                 }
             }
         }
@@ -4127,7 +4127,7 @@ window.VueAppRegistry.register('#bkApp', {
                 }
             } catch (e) {
                 console.error('submitTindakLanjut error', e);
-                Swal.fire({ icon: 'error', title: 'Gagal', text: e.response?.data?.error || 'Terjadi kesalahan.' });
+                Swal.fire({ icon: 'error', title: 'Gagal', text: (e.response && e.response.data && e.response.data.error) || 'Terjadi kesalahan.' });
             } finally {
                 submittingTindakLanjut.value = false;
             }
@@ -4224,8 +4224,8 @@ window.VueAppRegistry.register('#bkApp', {
 // Super Admin tenant filter
 <?php if ($userRole === 'super_admin'): ?>
 (function() {
-    document.getElementById('btn-apply-tenant')?.addEventListener('click', function() {
-        const tid = document.getElementById('sa-tenant-select')?.value || '';
+    let btn = document.getElementById('btn-apply-tenant'); if(btn) btn.addEventListener('click', function() {
+        const tid = (document.getElementById('sa-tenant-select') ? document.getElementById('sa-tenant-select').value : null) || '';
         const url = new URL(window.location.href);
         if (tid) { url.searchParams.set('tenant_id', tid); }
         else { url.searchParams.delete('tenant_id'); }

@@ -2469,10 +2469,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                     }
                 } catch (err) {
                     // Full validation check removed to allow partial updates in edit mode.
-                    // The backend will handle necessary validations.
-                    let errMsg = err.response?.data?.error || err.message || 'Gagal menyimpan perubahan.';
-                    
-                    // Specific handling for 413 Payload Too Large
+                    let errMsg = (err.response && err.response.data && err.response.data.error) || err.message || 'Gagal menyimpan perubahan.';
                     if (err.response && err.response.status === 413) {
                         errMsg = "Total ukuran semua dokumen yang Anda unggah secara bersamaan terlalu besar dan ditolak oleh server (Batas maksimal server terlampaui). Silakan unggah dokumen satu per satu secara bertahap, lalu klik 'Simpan / Update'.";
                     }
@@ -2869,7 +2866,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                     if (isOpen.value) {
                         searchQuery.value = '';
                         setTimeout(() => {
-                            const input = containerRef.value?.querySelector('.search-input');
+                            const input = containerRef.value && containerRef.value.querySelector('.search-input');
                             if (input) input.focus();
                         }, 50);
                     }

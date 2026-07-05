@@ -674,7 +674,7 @@
                         Swal.fire({
                             icon: 'error',
                             title: 'Gagal Menyimpan',
-                            text: err.response?.data?.error || err.message || 'Terjadi kesalahan sistem saat menyimpan.'
+                            text: (err.response && err.response.data && err.response.data.error) || err.message || 'Terjadi kesalahan sistem saat menyimpan.'
                         });
                     }
                 } finally {

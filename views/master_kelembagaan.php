@@ -571,7 +571,7 @@
                         this.loading     = false;
                     }).catch(err => {
                         this.loading = false;
-                        this.toast.fire({ icon: 'error', title: err.response?.data?.error || 'Gagal memuat data dari server.' });
+                        this.toast.fire({ icon: 'error', title: (err.response && err.response.data && err.response.data.error) || 'Gagal memuat data dari server.' });
                     });
             },
             // Ambil opsi relasi untuk modal form Kelas
@@ -688,7 +688,7 @@
                              this.errors = err.response.data.errors;
                              this.toast.fire({ icon: 'error', title: 'Silakan periksa input form Anda.' });
                          } else {
-                             this.toast.fire({ icon: 'error', title: err.response?.data?.error || 'Gagal menyimpan data.' });
+                             this.toast.fire({ icon: 'error', title: (err.response && err.response.data && err.response.data.error) || 'Gagal menyimpan data.' });
                          }
                      });
             },
@@ -710,7 +710,7 @@
                                  this.fetchData(this.currentPage);
                              })
                              .catch(err => {
-                                 this.toast.fire({ icon: 'error', title: err.response?.data?.error || 'Gagal menghapus.' });
+                                 this.toast.fire({ icon: 'error', title: (err.response && err.response.data && err.response.data.error) || 'Gagal menghapus.' });
                              });
                     }
                 });
