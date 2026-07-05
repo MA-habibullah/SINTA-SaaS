@@ -42,33 +42,29 @@ class SessionTracker {
         // Ambil User Agent dan potong jika melebihi 255 karakter
         $userAgent = substr($_SERVER['HTTP_USER_AGENT'] ?? 'Unknown', 0, 255);
         
-        $today = date('Y-m-d');
-        $now = date('Y-m-d H:i:s');
-
         try {
             $db = Database::getConnection();
 
             // Lakukan Upsert Harian menggunakan MySQL ON DUPLICATE KEY UPDATE
             // (Lebih hemat 1 roundtrip kueri daripada melakukan cek SELECT lalu INSERT/UPDATE terpisah)
+            // Fix Timezone: Menggunakan CURDATE() dan NOW() secara langsung di database untuk mencegah desinkronisasi zona waktu antara PHP dan MySQL
             $stmt = $db->prepare("
                 INSERT INTO `active_sessions` (
                     `id`, `user_id`, `tenant_id`, `ip_address`, `user_agent`, `tanggal_login`, `last_activity`
                 ) VALUES (
-                    UUID(), :user_id, :tenant_id, :ip_address, :user_agent, :tanggal_login, :last_activity
+                    UUID(), :user_id, :tenant_id, :ip_address, :user_agent, CURDATE(), NOW()
                 )
                 ON DUPLICATE KEY UPDATE 
                     `ip_address` = VALUES(`ip_address`),
                     `user_agent` = VALUES(`user_agent`),
-                    `last_activity` = VALUES(`last_activity`)
+                    `last_activity` = NOW()
             ");
 
             $stmt->execute([
                 'user_id'       => $userId,
                 'tenant_id'     => $tenantId,
                 'ip_address'    => $ipAddress,
-                'user_agent'    => $userAgent,
-                'tanggal_login' => $today,
-                'last_activity' => $now
+                'user_agent'    => $userAgent
             ]);
         } catch (\Throwable $e) {
             // Cybersecurity best practice: kegagalan tracking log tidak boleh

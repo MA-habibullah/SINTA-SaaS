@@ -177,11 +177,11 @@ class SessionManager {
     public static function cleanupStaleSessions(): void {
         try {
             $db = \App\Config\Database::getConnection();
-            $timeout = 1800; // 30 Menit
+            $timeoutSeconds = 1800; // 30 Menit
 
-            // Ambil semua sesi yang sudah kedaluwarsa
+            // Ambil semua sesi yang sudah kedaluwarsa (berbasis timezone Database)
             $stmt = $db->prepare("SELECT id, user_id, tenant_id FROM active_sessions WHERE last_activity < DATE_SUB(NOW(), INTERVAL ? SECOND)");
-            $stmt->execute([$timeout]);
+            $stmt->execute([$timeoutSeconds]);
             $staleSessions = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
             if (empty($staleSessions)) {
@@ -200,16 +200,16 @@ class SessionManager {
             foreach ($staleSessions as $session) {
                 try {
                     $insertStmt->execute([
-                        'tenant_id' => $session['tenant_id'],
-                        'record_id' => $session['user_id'], // Target record is the user
-                        'user_id'   => $session['user_id']
+                        'tenant_id'  => $session['tenant_id'],
+                        'record_id'  => $session['user_id'], // Target record is the user
+                        'user_id'    => $session['user_id']
                     ]);
                 } catch (\Throwable $e) {}
             }
 
             // Hapus dari active_sessions
             $deleteStmt = $db->prepare("DELETE FROM active_sessions WHERE last_activity < DATE_SUB(NOW(), INTERVAL ? SECOND)");
-            $deleteStmt->execute([$timeout]);
+            $deleteStmt->execute([$timeoutSeconds]);
 
         } catch (\Throwable $e) {
             error_log("Failed to run SessionManager::cleanupStaleSessions: " . $e->getMessage());
