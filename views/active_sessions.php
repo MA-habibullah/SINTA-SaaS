@@ -147,6 +147,7 @@
                 <div class="d-flex align-items-center gap-2">
                     <span class="fs-8 text-muted">Tampilkan</span>
                     <select class="form-select form-select-sm w-auto rounded-3" v-model="onlinePerPage" @change="onlinePage = 1">
+                        <option :value="10">10</option>
                         <option :value="25">25</option>
                         <option :value="50">50</option>
                         <option :value="100">100</option>
@@ -250,6 +251,7 @@
                 <div class="d-flex align-items-center gap-2">
                     <span class="fs-8 text-muted">Tampilkan</span>
                     <select class="form-select form-select-sm w-auto rounded-3" v-model="auditPerPage" @change="auditPage = 1">
+                        <option :value="10">10</option>
                         <option :value="25">25</option>
                         <option :value="50">50</option>
                         <option :value="100">100</option>
