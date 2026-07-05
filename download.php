@@ -110,9 +110,18 @@ if (!$isLegacy) {
 
 // 4. Periksa Keberadaan File Fisik
 if (!file_exists($filePath)) {
-    http_response_code(404);
-    error_log("DOWNLOAD ERROR 404: File tidak ditemukan di server. filePath=" . $filePath);
-    die("404 Not Found: Berkas fisik tidak ditemukan di server.");
+    // Return a friendly SVG placeholder instead of 404 to avoid browser console errors
+    // This SVG will be rendered perfectly in both <img> tags and <iframe> for PDFs.
+    http_response_code(200);
+    header('Content-Type: image/svg+xml; charset=utf-8');
+    echo '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="100%" height="100%">
+        <rect width="100%" height="100%" fill="#f8f9fa"/>
+        <path d="M185.146 127.146a.5.5 0 1 0-.708.708L189.293 145l-4.855 4.854a.5.5 0 0 0 .708.708L190 145.707l4.854 4.855a.5.5 0 0 0 .708-.708L190.707 145l4.855-4.854a.5.5 0 0 0-.708-.708L190 144.293l-4.854-4.855z" fill="#dc3545" transform="scale(1.5) translate(-40, -50)"/>
+        <path d="M196 150V136.5L189.5 130H181a2 2 0 0 0-2 2v20a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2zM189.5 134.5A1.5 1.5 0 0 0 191 136h3V150a1 1 0 0 1-1 1H181a1 1 0 0 1-1-1V132a1 1 0 0 1 1-1h6.5v3.5z" fill="#dc3545" transform="scale(1.5) translate(-40, -50)"/>
+        <text x="50%" y="60%" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="bold" fill="#dc3545" text-anchor="middle">Berkas Tidak Ditemukan</text>
+        <text x="50%" y="70%" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#6c757d" text-anchor="middle">Silakan unggah ulang berkas fisik Anda.</text>
+    </svg>';
+    exit;
 }
 
 // 5. Kirim Berkas Secara Aman
