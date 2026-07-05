@@ -131,7 +131,7 @@
                     </div>
                 </div>
                 <div class="d-flex justify-content-between" style="font-size:0.7rem;color:#94a3b8;">
-                    <span>Load: {{ (metrics.cpu && metrics.cpu.load_1) }} / {{ (metrics.cpu && metrics.cpu.load_5) }} / {{ (metrics.cpu && metrics.cpu.load_1)5 }}</span>
+                    <span>Load: {{ (metrics.cpu && metrics.cpu.load_1) }} / {{ (metrics.cpu && metrics.cpu.load_5) }} / {{ (metrics.cpu && metrics.cpu.load_15) }}</span>
                     <span>{{ (metrics.cpu && metrics.cpu.cpu_count) }} Core</span>
                 </div>
             </div>
