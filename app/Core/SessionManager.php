@@ -191,9 +191,9 @@ class SessionManager {
             // Catat masing-masing ke activity_logs
             $insertStmt = $db->prepare("
                 INSERT INTO `activity_logs` (
-                    `id`, `tenant_id`, `table_name`, `record_id`, `action`, `user_id`, `ip_address`, `user_agent`, `created_at`
+                    `id`, `tenant_id`, `user_role`, `table_name`, `record_id`, `action`, `user_id`, `ip_address`, `created_at`
                 ) VALUES (
-                    UUID(), :tenant_id, 'users', :record_id, 'SYSTEM_TIMEOUT', :user_id, '127.0.0.1', 'System Auto Cleanup', NOW()
+                    UUID(), :tenant_id, 'system', 'users', :record_id, 'SYSTEM_TIMEOUT', :user_id, '127.0.0.1', NOW()
                 )
             ");
 
