@@ -6,6 +6,6 @@
     "tailwindcss": "^3.4.19"
   },
   "scripts": {
-    "build": "tailwindcss -i input.css -o public/assets/css/tailwind.css --minify"
+    "build": "node node_modules/tailwindcss/lib/cli.js -i input.css -o assets/css/tailwind.css --minify"
   }
 }

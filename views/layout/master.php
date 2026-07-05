@@ -135,7 +135,7 @@
         };
     </script>
     <script src="https://unpkg.com/core-js-bundle@3.37.1/minified.js"></script>
-    <link rel="stylesheet" href="/SINTA-SaaS/public/assets/css/tailwind.css">
+    <link rel="stylesheet" href="/SINTA-SaaS/assets/css/tailwind.css">
 
     <!-- Hotwire Turbo Drive -->
     <script src="/SINTA-SaaS/assets/js/turbo.es2017-umd.js" defer data-turbo-track="reload"></script>
