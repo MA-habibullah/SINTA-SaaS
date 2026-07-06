@@ -156,7 +156,7 @@ class ActiveSessionController extends BaseController {
             $auditParams = [];
             $auditGroupBy = "DATE(al.created_at)";
             $auditSelectGroup = "DATE(al.created_at) AS label";
-            $auditWhere = "al.action IN ('LOGIN', 'LOGOUT')";
+            $auditWhere = "al.action IN ('LOGIN', 'LOGOUT', 'SYSTEM_TIMEOUT')";
             $auditOrderBy = "MIN(al.created_at)";
 
             if ($timeframe === '30_minutes') {
@@ -295,7 +295,7 @@ class ActiveSessionController extends BaseController {
         try {
             $db = Database::getConnection();
             
-            $where = "al.action IN ('LOGIN', 'LOGOUT')";
+            $where = "al.action IN ('LOGIN', 'LOGOUT', 'SYSTEM_TIMEOUT')";
             $params = [];
 
             if (!$isSuperAdmin) {
@@ -366,7 +366,7 @@ class ActiveSessionController extends BaseController {
             $db = Database::getConnection();
 
             // 2. Bangun klausa WHERE & Parameter hapus
-            $where = "action IN ('LOGIN', 'LOGOUT') AND DATE(created_at) <= :date_limit";
+            $where = "action IN ('LOGIN', 'LOGOUT', 'SYSTEM_TIMEOUT') AND DATE(created_at) <= :date_limit";
             $params = ['date_limit' => $dateLimit];
 
             if (!$isSuperAdmin) {

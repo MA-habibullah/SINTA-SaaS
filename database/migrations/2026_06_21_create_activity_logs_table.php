@@ -16,7 +16,7 @@ return [
                 `tenant_id` CHAR(36) DEFAULT NULL,
                 `user_id` CHAR(36) DEFAULT NULL,
                 `user_role` VARCHAR(50) NOT NULL,
-                `action` ENUM('INSERT', 'UPDATE', 'DELETE') NOT NULL,
+                `action` VARCHAR(50) NOT NULL,
                 `table_name` VARCHAR(100) NOT NULL,
                 `record_id` VARCHAR(36) NOT NULL,
                 `old_data` JSON DEFAULT NULL,

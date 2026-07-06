@@ -144,6 +144,14 @@ class AuthAdminController extends BaseController {
      * GET /api/v1/auth/logout
      */
     public function logout(): void {
+        // Audit Trail: Record LOGOUT before session is destroyed
+        try {
+            $userId = $_SESSION['admin']['id'] ?? $_SESSION['user_id'] ?? 'unknown';
+            if ($userId !== 'unknown') {
+                \App\Helpers\ActivityLogger::record('LOGOUT', 'users', $userId);
+            }
+        } catch (\Throwable $e) {}
+
         SessionManager::logout();
         header('Location: /SINTA-SaaS/admin');
         exit;

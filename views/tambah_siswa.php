@@ -1637,7 +1637,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                                 <input v-if="userRole !== 'siswa'" type="file" name="berkas_pernyataan_tka" accept="image/*,application/pdf" @change="onFileSelected($event, 'berkas_pernyataan_tka')">
                             </div>
                             <div class="form-text text-warning fw-semibold mt-1" style="font-size: 0.75rem;">
-                                <i class="bi bi-info-circle-fill"></i> Hanya diisi ketika sudah kelas 12.
+                                <i class="bi bi-info-circle-fill"></i> File TKA Hanya diisi ketika sudah kelas 12.
                             </div>
                             <div v-if="form.berkas_pernyataan_tka && !filesSelected.berkas_pernyataan_tka" class="upload-status-bar">
                                 <span class="status-text">
