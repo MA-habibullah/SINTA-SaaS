@@ -249,7 +249,7 @@
                         Swal.fire({
                             icon: 'error',
                             title: 'Gagal Menyimpan',
-                            text: err.response?.data?.error || err.message || 'Terjadi kesalahan sistem.'
+                            text: (err && err.response && err.response.data && err.response.data.error) || err.message || 'Terjadi kesalahan sistem.'
                         });
                     }
                 } finally {

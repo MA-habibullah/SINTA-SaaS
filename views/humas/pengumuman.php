@@ -674,7 +674,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (activeTab === 'kategori') {
         const triggerEl = document.querySelector('#kategori-tab');
         if (triggerEl) {
-            bootstrap.Tab.getInstance(triggerEl)?.show() || new bootstrap.Tab(triggerEl).show();
+            var _tabInst = bootstrap.Tab.getInstance(triggerEl); if (_tabInst) { _tabInst.show(); } else { new bootstrap.Tab(triggerEl).show(); }
         }
     }
 });

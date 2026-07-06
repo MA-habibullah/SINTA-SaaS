@@ -389,7 +389,7 @@ $userRole = $_SESSION['role_name'] ?? '';
                         Swal.fire({
                             icon: 'error',
                             title: 'Gagal Memuat Data',
-                            text: err.response?.data?.error || err.message || 'Terjadi kesalahan sistem.'
+                            text: (err && err.response && err.response.data && err.response.data.error) || err.message || 'Terjadi kesalahan sistem.'
                         });
                     }
                 } finally {
@@ -596,7 +596,7 @@ $userRole = $_SESSION['role_name'] ?? '';
                     Swal.fire({
                         icon: 'error',
                         title: 'Gagal',
-                        text: err.response?.data?.error || 'Gagal menghapus log aktivitas.'
+                        text: (err && err.response && err.response.data && err.response.data.error) || 'Gagal menghapus log aktivitas.'
                     });
                 }
             };

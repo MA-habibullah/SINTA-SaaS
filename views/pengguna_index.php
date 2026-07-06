@@ -1582,7 +1582,7 @@
                     this.loading = false;
                 }).catch(err => {
                     this.loading = false;
-                    this.toast.fire({ icon: 'error', title: err.response?.data?.error || 'Gagal memuat data dari server.' });
+                    this.toast.fire({ icon: 'error', title: (err && err.response && err.response.data && err.response.data.error) || 'Gagal memuat data dari server.' });
                 });
             },
             fetchTenants() {
@@ -1720,7 +1720,7 @@
                               this.errors = err.response.data.errors;
                               this.toast.fire({ icon: 'error', title: 'Silakan periksa input form Anda.' });
                           } else {
-                              this.toast.fire({ icon: 'error', title: err.response?.data?.error || 'Gagal menyimpan data.' });
+                              this.toast.fire({ icon: 'error', title: (err && err.response && err.response.data && err.response.data.error) || 'Gagal menyimpan data.' });
                           }
                       });
             },
@@ -1742,7 +1742,7 @@
                                   this.fetchData(this.currentPage);
                               })
                              .catch(err => {
-                                  this.toast.fire({ icon: 'error', title: err.response?.data?.error || 'Gagal menghapus.' });
+                                  this.toast.fire({ icon: 'error', title: (err && err.response && err.response.data && err.response.data.error) || 'Gagal menghapus.' });
                               });
                     }
                 });
@@ -1763,7 +1763,7 @@
                           this.toast.fire({ icon: 'success', title: res.data.message });
                       })
                      .catch(err => {
-                          this.toast.fire({ icon: 'error', title: err.response?.data?.error || 'Gagal mengubah status.' });
+                          this.toast.fire({ icon: 'error', title: (err && err.response && err.response.data && err.response.data.error) || 'Gagal mengubah status.' });
                           this.fetchData(this.currentPage); // Reset switch state
                       });
             },
@@ -1811,7 +1811,7 @@
                         this.aksiListKelas = res.data.data || [];
                     })
                     .catch(err => {
-                        this.toast.fire({ icon: 'error', title: err.response?.data?.error || 'Gagal memuat daftar kelas.' });
+                        this.toast.fire({ icon: 'error', title: (err && err.response && err.response.data && err.response.data.error) || 'Gagal memuat daftar kelas.' });
                     });
             },
             onAksiKelasAsalChange() {
@@ -1838,7 +1838,7 @@
                     })
                     .catch(err => {
                         this.aksiLoading = false;
-                        this.toast.fire({ icon: 'error', title: err.response?.data?.error || 'Gagal memuat daftar siswa.' });
+                        this.toast.fire({ icon: 'error', title: (err && err.response && err.response.data && err.response.data.error) || 'Gagal memuat daftar siswa.' });
                     });
             },
             toggleAksiSelectAll() {
@@ -1867,7 +1867,7 @@
 
                 Swal.fire({
                     title: 'Konfirmasi Naikkan Kelas',
-                    html: `Anda akan menaikkan <b>${this.aksiSelectedIds.length} siswa</b><br>dari <b>${kelasAsal?.nama_kelas || '-'}</b> → <b>${kelasTujuan?.nama_kelas || '-'}</b><br>Tahun Ajaran: <b>${this.aksiTahunAjaran}</b>`,
+                    html: `Anda akan menaikkan <b>${this.aksiSelectedIds.length} siswa</b><br>dari <b>${(kelasAsal && kelasAsal.nama_kelas) || '-'}</b> → <b>${(kelasTujuan && kelasTujuan.nama_kelas) || '-'}</b><br>Tahun Ajaran: <b>${this.aksiTahunAjaran}</b>`,
                     icon: 'question',
                     showCancelButton: true,
                     confirmButtonColor: '#2563eb',
@@ -1898,7 +1898,7 @@
                         })
                         .catch(err => {
                             this.aksiSubmitLoading = false;
-                            Swal.fire({ icon: 'error', title: 'Gagal', text: err.response?.data?.error || 'Terjadi kesalahan.', confirmButtonColor: '#ef4444' });
+                            Swal.fire({ icon: 'error', title: 'Gagal', text: (err && err.response && err.response.data && err.response.data.error) || 'Terjadi kesalahan.', confirmButtonColor: '#ef4444' });
                         });
                 });
             },
@@ -1941,7 +1941,7 @@
                         })
                         .catch(err => {
                             this.aksiSubmitLoading = false;
-                            Swal.fire({ icon: 'error', title: 'Gagal', text: err.response?.data?.error || 'Terjadi kesalahan.', confirmButtonColor: '#ef4444' });
+                            Swal.fire({ icon: 'error', title: 'Gagal', text: (err && err.response && err.response.data && err.response.data.error) || 'Terjadi kesalahan.', confirmButtonColor: '#ef4444' });
                         });
                 });
             },
@@ -1984,7 +1984,7 @@
                             this.quickAddErrors = err.response.data.errors || {};
                             this.toast.fire({ icon: 'error', title: 'Silakan periksa input form registrasi cepat Anda.' });
                         } else {
-                            this.toast.fire({ icon: 'error', title: err.response?.data?.error || 'Gagal meregistrasikan siswa.' });
+                            this.toast.fire({ icon: 'error', title: (err && err.response && err.response.data && err.response.data.error) || 'Gagal meregistrasikan siswa.' });
                         }
                     });
             },

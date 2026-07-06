@@ -276,7 +276,7 @@
                                 </code>
                                 <span class="badge text-warning-emphasis fw-semibold flex-shrink-0"
                                       style="background:#fefce8;border:1px solid #fde68a;font-size:0.68rem;">
-                                    L.{{ err.line ?? '?' }}
+                                    L.{{ err.line || '?' }}
                                 </span>
                             </div>
                         </td>
@@ -454,8 +454,8 @@
 
                     this.errors      = data.data              || [];
                     this.stats       = data.stats             || [];
-                    this.totalErrors = data.pagination?.total || 0;
-                    this.totalPages  = data.pagination?.pages || 1;
+                    this.totalErrors = (data && data.pagination && data.pagination.total) || 0;
+                    this.totalPages  = (data && data.pagination && data.pagination.pages) || 1;
                 } catch {
                     Swal.fire({
                         icon: 'error',
@@ -479,10 +479,10 @@
 
                 // Isi subtitle
                 document.getElementById('modal-trace-subtitle').textContent =
-                    `${err.error_level} — ${this.shortenPath(err.file)} (Baris ${err.line ?? '?'})`;
+                    `${err.error_level} — ${this.shortenPath(err.file)} (Baris ${err.line || '?'})`;
 
                 // Build HTML konten modal secara Vanilla JS (aman dari XSS via escapeHtml)
-                const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+                const esc = (s) => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
                 let traceHtml = '';
                 try {
@@ -591,7 +591,7 @@
                         <div class="rounded-3 p-3 d-flex align-items-center gap-3 flex-wrap" style="background:#f0f9ff;border:1px solid #bae6fd;">
                             <code class="text-primary flex-grow-1" style="font-size:0.78rem;word-break:break-all;">${esc(err.file)}</code>
                             <span class="badge fw-bold flex-shrink-0" style="background:#fefce8;color:#854d0e;border:1px solid #fde68a;font-size:0.78rem;">
-                                Baris ${esc(err.line ?? '?')}
+                                Baris ${esc(err.line || '?')}
                             </span>
                         </div>
                     </div>

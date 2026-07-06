@@ -583,7 +583,7 @@
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Gagal Membersihkan',
-                                text: err.response?.data?.error || err.message || 'Terjadi kesalahan sistem.'
+                                text: (err && err.response && err.response.data && err.response.data.error) || err.message || 'Terjadi kesalahan sistem.'
                             });
                         } finally {
                             cleaning.value = false;
@@ -617,7 +617,7 @@
                             }
                         } catch (err) {
                             console.error(err);
-                            Swal.fire('Gagal Membersihkan', err.response?.data?.error || err.message, 'error');
+                            Swal.fire('Gagal Membersihkan', (err && err.response && err.response.data && err.response.data.error) || err.message, 'error');
                         } finally {
                             cleaning.value = false;
                         }

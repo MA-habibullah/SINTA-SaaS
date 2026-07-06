@@ -441,7 +441,7 @@
                     Swal.fire({
                         icon: 'error',
                         title: 'Gagal Memasukkan Antrean',
-                        text: err.response?.data?.error || err.message || 'Terjadi kesalahan sistem.'
+                        text: (err && err.response && err.response.data && err.response.data.error) || err.message || 'Terjadi kesalahan sistem.'
                     });
                 } finally {
                     dispatching.value = false;
@@ -478,7 +478,7 @@
                     Swal.fire({
                         icon: 'error',
                         title: 'Gagal Memicu Worker',
-                        text: err.response?.data?.error || err.message || 'Terjadi kesalahan sistem saat memproses antrean.'
+                        text: (err && err.response && err.response.data && err.response.data.error) || err.message || 'Terjadi kesalahan sistem saat memproses antrean.'
                     });
                 } finally {
                     runningWorker.value = false;
@@ -507,7 +507,7 @@
                     Swal.fire({
                         icon: 'error',
                         title: 'Gagal Memproses Ulang',
-                        text: err.response?.data?.error || err.message || 'Terjadi kesalahan sistem.'
+                        text: (err && err.response && err.response.data && err.response.data.error) || err.message || 'Terjadi kesalahan sistem.'
                     });
                 }
             };
@@ -545,7 +545,7 @@
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Gagal Menghapus',
-                                text: err.response?.data?.error || err.message || 'Terjadi kesalahan sistem.'
+                                text: (err && err.response && err.response.data && err.response.data.error) || err.message || 'Terjadi kesalahan sistem.'
                             });
                         }
                     }

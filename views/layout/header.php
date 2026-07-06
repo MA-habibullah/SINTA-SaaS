@@ -206,7 +206,7 @@ if ($tenantId) {
                 
                 // Deteksi khusus jika ini Axios Error
                 if (event.reason.isAxiosError) {
-                    msg = `[AXIOS API ERROR] Status: ${event.reason.response?.status || 'Network Error'} - ${msg}`;
+                    msg = `[AXIOS API ERROR] Status: ${(event.reason.response && event.reason.response.status) || 'Network Error'} - ${msg}`;
                     if (event.reason.config) {
                         stack.unshift(`Request URL: ${event.reason.config.url}`);
                     }
