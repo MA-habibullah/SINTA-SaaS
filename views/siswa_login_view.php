@@ -36,6 +36,10 @@
     <style>
         [v-cloak] { display: none !important; }
     </style>
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/SINTA-SaaS/favicon.ico">
+    <link rel="shortcut icon" type="image/x-icon" href="/SINTA-SaaS/favicon.ico">
+    <link rel="apple-touch-icon" href="/SINTA-SaaS/apple-touch-icon.png">
 </head>
 <body class="bg-gradient-to-tr from-slate-50 via-slate-100 to-blue-50/50 min-h-screen flex items-center justify-center p-4">
 
