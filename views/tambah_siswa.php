@@ -2354,38 +2354,37 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 errorsList.value = [];
 
                 try {
-                    const formData = new FormData();
                     const studentId = '<?= htmlspecialchars($idSiswa) ?>';
-                    formData.append('id', studentId);
                     
+                    // --- GATHER FIELDS ---
+                    const baseFormData = new FormData();
+                    baseFormData.append('id', studentId);
                     if (!isFullSubmit) {
-                        formData.append('current_step', currentStep.value);
+                        baseFormData.append('current_step', currentStep.value);
                     }
-
-                    // Collect fields to send
+                    
                     if (isFullSubmit) {
-                        // Send all steps fields
                         for (let s = 1; s <= 5; s++) {
                             const fields = getFieldsForStep(s);
                             fields.forEach(field => {
                                 if (form.value[field] !== undefined && form.value[field] !== null) {
-                                    formData.append(field, form.value[field]);
+                                    baseFormData.append(field, form.value[field]);
                                 }
                             });
                         }
                     } else {
-                        // Send only current step fields
                         const fields = getFieldsForStep(currentStep.value);
                         fields.forEach(field => {
                             if (form.value[field] !== undefined && form.value[field] !== null) {
-                                formData.append(field, form.value[field]);
+                                baseFormData.append(field, form.value[field]);
                             }
                         });
                     }
 
-                    // Append files if on Step 5 or isFullSubmit
+                    // --- GATHER FILES ---
+                    let filesToUpload = [];
+                    let totalSize = 0;
                     if (currentStep.value === 5 || isFullSubmit) {
-                        let totalSize = 0;
                         const fileInputs = [
                             'foto_profil', 'berkas_kk', 'berkas_akta', 'berkas_ijazah_sd', 
                             'berkas_ijazah_smp', 'berkas_ijazah_sma', 'berkas_mutasi_masuk', 
@@ -2395,59 +2394,91 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                         fileInputs.forEach(key => {
                             const inputElement = document.querySelector(`input[name="${key}"]`);
                             if (inputElement && inputElement.files && inputElement.files[0]) {
-                                formData.append(key, inputElement.files[0]);
+                                filesToUpload.push({ key: key, file: inputElement.files[0] });
                                 totalSize += inputElement.files[0].size;
                             }
                         });
+                    }
 
-                        // Cek total payload file di sisi client (mencegah error Nginx 413 / Connection Drop yang dibaca Axios sbg Network Error)
-                        if (totalSize > 7.5 * 1024 * 1024) { // Batas aman 7.5 MB (asumsi server default post_max_size = 8MB)
-                            throw new Error("Total ukuran dokumen yang Anda pilih (" + (totalSize/(1024*1024)).toFixed(1) + " MB) terlalu besar. Batas maksimal server adalah 8MB. Silakan kompres ukuran file Anda atau unggah satu per satu.");
+                    // Validation if sending multiple large files (though sequential prevents 522, individual file still can't exceed PHP limit)
+                    if (filesToUpload.length > 0) {
+                        let singleOversize = filesToUpload.find(f => f.file.size > 8 * 1024 * 1024);
+                        if (singleOversize) {
+                            throw new Error("Ukuran satu dokumen melebihi 8MB. Silakan kompres file tersebut.");
                         }
                     }
 
-                    // Send to backend via Axios
-                    const response = await axios.post('/SINTA-SaaS/siswa/update', formData, {
-                        headers: {
-                            'Content-Type': 'multipart/form-data',
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    });
+                    let finalResponse = null;
+                    let fileUpdates = {};
 
-                    if (response.data && response.data.success) {
+                    // OPTION 1: No files, or just 1 file -> Send all at once (Classic)
+                    if (filesToUpload.length <= 1) {
+                        if (filesToUpload.length === 1) {
+                            baseFormData.append(filesToUpload[0].key, filesToUpload[0].file);
+                        }
+                        
+                        finalResponse = await axios.post('/SINTA-SaaS/siswa/update', baseFormData, {
+                            headers: { 'Content-Type': 'multipart/form-data', 'X-Requested-With': 'XMLHttpRequest' }
+                        });
+                        
+                        if (finalResponse.data && finalResponse.data.files) {
+                            Object.assign(fileUpdates, finalResponse.data.files);
+                        }
+                    } 
+                    // OPTION 2: Multiple files -> Send sequentially to prevent 522 Connection Timed Out
+                    else {
+                        // 1. Send Base Data first
+                        finalResponse = await axios.post('/SINTA-SaaS/siswa/update', baseFormData, {
+                            headers: { 'Content-Type': 'multipart/form-data', 'X-Requested-With': 'XMLHttpRequest' }
+                        });
+
+                        if (finalResponse.data && finalResponse.data.success) {
+                            // 2. Loop and send each file one by one
+                            for (let i = 0; i < filesToUpload.length; i++) {
+                                let fData = new FormData();
+                                fData.append('id', studentId);
+                                fData.append(filesToUpload[i].key, filesToUpload[i].file);
+
+                                let fResponse = await axios.post('/SINTA-SaaS/siswa/update', fData, {
+                                    headers: { 'Content-Type': 'multipart/form-data', 'X-Requested-With': 'XMLHttpRequest' }
+                                });
+                                
+                                if (fResponse.data && fResponse.data.files) {
+                                    Object.assign(fileUpdates, fResponse.data.files);
+                                }
+                            }
+                        }
+                    }
+
+                    // --- PROCESS RESPONSE ---
+                    if (finalResponse.data && finalResponse.data.success) {
                         if (isFullSubmit) {
                             localStorage.removeItem('siswa_form_draft');
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Pembaruan Berhasil',
-                                text: response.data.message || 'Data siswa berhasil diperbarui secara penuh!',
+                                text: finalResponse.data.message || 'Data siswa berhasil diperbarui secara penuh!',
                                 confirmButtonText: 'OK'
                             }).then(() => {
-                                // Reload halaman saja agar tetap di halaman edit/tambah siswa sesuai instruksi
                                 window.location.reload();
                             });
                         } else {
-                            // Update file names in form state if returned
-                            if (response.data.files) {
-                                Object.keys(response.data.files).forEach(key => {
-                                    if (response.data.files[key]) {
-                                        form.value[key] = response.data.files[key];
-                                    }
-                                });
-                            }
+                            // Update file names in form state
+                            Object.keys(fileUpdates).forEach(key => {
+                                if (fileUpdates[key]) form.value[key] = fileUpdates[key];
+                            });
 
-                            // Clear selected files state since they are now saved on the server
+                            // Clear selected files state
                             if (currentStep.value === 5) {
                                 Object.keys(filesSelected.value).forEach(key => {
                                     filesSelected.value[key] = '';
                                 });
                             }
 
-                            // Show premium SweetAlert2 Toast for partial save success
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Simpan Step Berhasil',
-                                text: response.data.message || `Data Step ${currentStep.value} berhasil disimpan ke database!`,
+                                text: finalResponse.data.message || `Data Step ${currentStep.value} berhasil disimpan ke database!`,
                                 toast: true,
                                 position: 'top-end',
                                 showConfirmButton: false,
@@ -2455,8 +2486,8 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                                 timerProgressBar: true
                             });
                         }
-                    } else if (response.data && response.data.errors) {
-                        errorsList.value = Object.values(response.data.errors);
+                    } else if (finalResponse.data && finalResponse.data.errors) {
+                        errorsList.value = Object.values(finalResponse.data.errors);
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                         Swal.fire({
                             icon: 'warning',
@@ -2465,13 +2496,14 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                             confirmButtonText: 'OK'
                         });
                     } else {
-                        throw new Error(response.data.error || 'Terjadi kesalahan sistem.');
+                        throw new Error(finalResponse.data?.error || 'Terjadi kesalahan sistem.');
                     }
                 } catch (err) {
-                    // Full validation check removed to allow partial updates in edit mode.
                     let errMsg = (err.response && err.response.data && err.response.data.error) || err.message || 'Gagal menyimpan perubahan.';
                     if (err.response && err.response.status === 413) {
-                        errMsg = "Total ukuran semua dokumen yang Anda unggah secara bersamaan terlalu besar dan ditolak oleh server (Batas maksimal server terlampaui). Silakan unggah dokumen satu per satu secara bertahap, lalu klik 'Simpan / Update'.";
+                        errMsg = "Total ukuran dokumen terlalu besar dan ditolak oleh server. Silakan unggah satu per satu.";
+                    } else if (err.response && (err.response.status === 522 || err.response.status === 524)) {
+                        errMsg = "Koneksi terputus (Timeout) saat memproses file. Jangan khawatir, file Anda sedang diunggah secara perlahan. Jika gagal, silakan coba unggah satu per satu.";
                     }
 
                     Swal.fire({
