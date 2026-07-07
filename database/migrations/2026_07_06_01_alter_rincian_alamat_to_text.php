@@ -8,7 +8,7 @@
  */
 
 try {
-    $pdo = \App\Core\Database::getInstance()->getConnection();
+    $pdo = \App\Config\Database::getConnection();
     
     echo "Memulai migrasi: Mengubah tipe kolom alamat pada rincian_alamat...\n";
 
