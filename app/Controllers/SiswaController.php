@@ -417,7 +417,15 @@ class SiswaController extends BaseController {
         // Validate uploaded files (TUGAS 2: size and format check)
         $this->validateUploadedFiles($tenantId, [], $errors);
 
+        $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') || isset($_POST['ajax']);
+
         if (!empty($errors)) {
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'errors' => $errors]);
+                exit;
+            }
+
             $db = \App\Config\Database::getConnection();
             $provinces = $db->query("SELECT id_provinsi, nama_provinsi FROM provinsi ORDER BY nama_provinsi ASC")->fetchAll(\PDO::FETCH_ASSOC);
             $cities = $db->query("SELECT id_kota, nama_kota FROM kota ORDER BY nama_kota ASC")->fetchAll(\PDO::FETCH_ASSOC);
@@ -458,6 +466,17 @@ class SiswaController extends BaseController {
             // Clear draft session after successful creation
             unset($_SESSION['siswa_draft']);
 
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Data siswa berhasil ditambahkan.',
+                    'id' => $siswaId,
+                    'files' => $uploadResult['files'] ?? []
+                ]);
+                exit;
+            }
+
             $this->redirectWithSuccess('Data siswa berhasil ditambahkan.', '/SINTA-SaaS/pengguna');
         } catch (\Throwable $e) {
             if ($db->inTransaction()) {
@@ -470,6 +489,14 @@ class SiswaController extends BaseController {
                 }
             }
             error_log("Gagal tambah siswa: " . $e->getMessage());
+            
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                http_response_code(500);
+                echo json_encode(['success' => false, 'error' => 'Terjadi kegagalan sistem saat menyimpan data: ' . $e->getMessage()]);
+                exit;
+            }
+
             $this->redirectWithError('Terjadi kegagalan sistem saat menyimpan data: ' . $e->getMessage(), '/SINTA-SaaS/pengguna');
         }
     }

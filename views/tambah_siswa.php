@@ -2354,7 +2354,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 errorsList.value = [];
 
                 try {
-                    const studentId = '<?= htmlspecialchars($idSiswa) ?>';
+                    let studentId = '<?= htmlspecialchars($idSiswa) ?>';
                     
                     // --- GATHER FIELDS ---
                     const baseFormData = new FormData();
@@ -2417,8 +2417,8 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                             baseFormData.append(filesToUpload[0].key, filesToUpload[0].file);
                         }
                         
-                        finalResponse = await axios.post('/SINTA-SaaS/siswa/update', baseFormData, {
-                            headers: { 'Content-Type': 'multipart/form-data', 'X-Requested-With': 'XMLHttpRequest' }
+                        finalResponse = await axios.post(isEdit.value ? '/SINTA-SaaS/siswa/update' : '/SINTA-SaaS/siswa/simpan', baseFormData, {
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
                         });
                         
                         if (finalResponse.data && finalResponse.data.files) {
@@ -2428,24 +2428,33 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                     // OPTION 2: Multiple files -> Send sequentially to prevent 522 Connection Timed Out
                     else {
                         // 1. Send Base Data first
-                        finalResponse = await axios.post('/SINTA-SaaS/siswa/update', baseFormData, {
-                            headers: { 'Content-Type': 'multipart/form-data', 'X-Requested-With': 'XMLHttpRequest' }
+                        finalResponse = await axios.post(isEdit.value ? '/SINTA-SaaS/siswa/update' : '/SINTA-SaaS/siswa/simpan', baseFormData, {
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
                         });
 
                         if (finalResponse.data && finalResponse.data.success) {
+                            if (!isEdit.value && finalResponse.data.id) {
+                                studentId = finalResponse.data.id;
+                            }
                             // 2. Loop and send each file one by one
                             for (let i = 0; i < filesToUpload.length; i++) {
                                 let fData = new FormData();
                                 fData.append('id', studentId);
+                                if (!isFullSubmit) {
+                                    fData.append('current_step', currentStep.value);
+                                }
                                 fData.append(filesToUpload[i].key, filesToUpload[i].file);
 
                                 let fResponse = await axios.post('/SINTA-SaaS/siswa/update', fData, {
-                                    headers: { 'Content-Type': 'multipart/form-data', 'X-Requested-With': 'XMLHttpRequest' }
+                                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
                                 });
                                 
                                 if (fResponse.data && fResponse.data.files) {
                                     Object.assign(fileUpdates, fResponse.data.files);
                                 }
+                                
+                                // Delay 500ms between uploads to prevent Cloudflare rate limits / Network Error
+                                await new Promise(r => setTimeout(r, 500));
                             }
                         }
                     }
@@ -2456,11 +2465,15 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                             localStorage.removeItem('siswa_form_draft');
                             Swal.fire({
                                 icon: 'success',
-                                title: 'Pembaruan Berhasil',
-                                text: finalResponse.data.message || 'Data siswa berhasil diperbarui secara penuh!',
+                                title: isEdit.value ? 'Pembaruan Berhasil' : 'Pendaftaran Berhasil',
+                                text: finalResponse.data.message || 'Data siswa berhasil disimpan secara penuh!',
                                 confirmButtonText: 'OK'
                             }).then(() => {
-                                window.location.reload();
+                                if (!isEdit.value) {
+                                    window.location.href = '/SINTA-SaaS/pengguna';
+                                } else {
+                                    window.location.reload();
+                                }
                             });
                         } else {
                             // Update file names in form state
@@ -2518,11 +2531,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
             };
 
             const submitFullForm = () => {
-                if (isEdit.value) {
-                    saveCurrentStep(true);
-                } else {
-                    document.getElementById('wizardForm').submit();
-                }
+                saveCurrentStep(true);
             };
 
             const cancelMutasi = () => {
