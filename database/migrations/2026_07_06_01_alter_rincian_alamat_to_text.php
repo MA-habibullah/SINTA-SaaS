@@ -7,20 +7,29 @@
  * saat orang tua mendaftarkan alamat yang panjang.
  */
 
-try {
-    $pdo = \App\Config\Database::getConnection();
-    
-    echo "Memulai migrasi: Mengubah tipe kolom alamat pada rincian_alamat...\n";
+return [
+    'up' => function (PDO $pdo): void {
+        echo "Memulai migrasi: Mengubah tipe kolom alamat pada rincian_alamat...\n";
 
-    // Ubah kolom alamat_kk dan alamat_domisili menjadi TEXT
-    $sql = "ALTER TABLE rincian_alamat 
-            MODIFY alamat_kk TEXT NOT NULL COMMENT 'Alamat Kartu Keluarga',
-            MODIFY alamat_domisili TEXT NULL COMMENT 'Alamat Domisili'";
-            
-    $pdo->exec($sql);
+        // Ubah kolom alamat_kk dan alamat_domisili menjadi TEXT
+        $sql = "ALTER TABLE rincian_alamat 
+                MODIFY alamat_kk TEXT NOT NULL COMMENT 'Alamat Kartu Keluarga',
+                MODIFY alamat_domisili TEXT NULL COMMENT 'Alamat Domisili'";
+                
+        $pdo->exec($sql);
 
-    echo "Migrasi berhasil: Kolom alamat berhasil diperbesar menjadi TEXT!\n";
-    
-} catch (PDOException $e) {
-    echo "Migrasi gagal: " . $e->getMessage() . "\n";
-}
+        echo "Migrasi berhasil: Kolom alamat berhasil diperbesar menjadi TEXT!\n";
+    },
+
+    'down' => function (PDO $pdo): void {
+        echo "Memulai rollback: Mengembalikan tipe kolom alamat menjadi VARCHAR(100)...\n";
+        
+        $sql = "ALTER TABLE rincian_alamat 
+                MODIFY alamat_kk VARCHAR(100) NOT NULL COMMENT 'Alamat Kartu Keluarga',
+                MODIFY alamat_domisili VARCHAR(100) NULL COMMENT 'Alamat Domisili'";
+                
+        $pdo->exec($sql);
+        
+        echo "Rollback berhasil: Kolom alamat dikembalikan ke VARCHAR(100)!\n";
+    },
+];
