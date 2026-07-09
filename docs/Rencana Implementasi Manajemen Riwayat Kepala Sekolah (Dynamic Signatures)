@@ -1,0 +1,58 @@
+# Rencana Implementasi: Manajemen Riwayat Kepala Sekolah (Dynamic Signatures)
+
+## Latar Belakang Masalah
+Saat ini, data Kepala Sekolah (Nama dan NIP) disimpan secara kaku di dalam tabel `tenants`. Jika terjadi pergantian Kepala Sekolah (misal: di pertengahan semester), mengubah nama di tabel `tenants` akan membuat **seluruh rapor sejarah/lama ikut berubah**, yang mana menyalahi aturan legalitas dokumen.
+
+**Kasus Spesifik Anda:**
+- Kelas 12 Lulus: 18 Mei 2026 (Harus ditandatangani Kepsek Lama).
+- Pergantian Kepsek: 1 Juni 2026.
+- Kelas 10 & 11 Terima Rapor: 20 Juni 2026 (Harus ditandatangani Kepsek Baru).
+
+## Solusi yang Direkomendasikan: *Time-Travel Signature Architecture*
+Daripada menyimpan data Kepala Sekolah secara manual per-tahun ajaran (yang akan merepotkan admin), solusi terbaik standar *Enterprise* adalah menggunakan sistem **Riwayat Masa Jabatan (Tenure-based History)** dikombinasikan dengan **Tanggal Pengesahan Dokumen**.
+
+### Cara Kerja:
+1. Kita membuat tabel `riwayat_kepala_sekolah` yang mencatat *Kapan menjabat* (Tanggal Mulai) dan *Kapan berakhir* (Tanggal Selesai).
+2. Saat mencetak Rapor atau Transkrip, UI akan meminta/menerima input **"Tanggal Cetak Rapor"**.
+3. Sistem akan melihat tanggal cetak tersebut, lalu mencari siapa Kepala Sekolah yang menjabat tepat pada tanggal itu.
+   - Cetak Rapor Kelas 12 (Tanggal 18 Mei 2026) -> Sistem mendeteksi Kepsek Lama.
+   - Cetak Rapor Kelas 10 (Tanggal 20 Juni 2026) -> Sistem mendeteksi Kepsek Baru.
+
+---
+
+## Proposed Changes (Langkah Teknis)
+
+### 1. Struktur Database Baru
+#### [NEW] Migration `create_riwayat_kepala_sekolah_table`
+- Membuat tabel `riwayat_kepala_sekolah`:
+  - `id` (UUID)
+  - `tenant_id` (Relasi ke tabel tenants)
+  - `nama_kepsek` (VARCHAR)
+  - `nip_kepsek` (VARCHAR)
+  - `status_plt` (BOOLEAN - Jika Plt/Pelaksana Tugas)
+  - `tanggal_mulai` (DATE)
+  - `tanggal_selesai` (DATE, NULL jika masih menjabat)
+
+### 2. Penyesuaian Endpoint Cetak
+#### [MODIFY] [BukuIndukController.php](file:///c:/xampp/htdocs/SINTA-SaaS/app/Controllers/BukuIndukController.php)
+- Mengubah fungsi `printRapotSemester()` dan `printTranskripNilai()` agar menerima parameter `tanggal_cetak` dari URL (contoh: `&tanggal_cetak=2026-05-18`).
+- Menambahkan fungsi *helper* `getKepsekAtDate($tenantId, $tanggalCetak)` yang akan melakukan *query* ke `riwayat_kepala_sekolah`.
+- Data yang dilempar ke *View* tidak lagi mengambil dari `tenant_info['nama_kepsek']` melainkan dari hasil fungsi di atas.
+
+### 3. Penyesuaian Tampilan (UI) Master Sekolah
+Admin harus memiliki antarmuka untuk menambahkan riwayat ini.
+#### [NEW] Fitur di Pengaturan Sekolah (Kelembagaan)
+- Menambahkan tabel/daftar **"Riwayat Kepala Sekolah"** di menu Kelembagaan.
+- Form untuk menambah Kepsek baru (Sistem otomatis menutup `tanggal_selesai` Kepsek sebelumnya ke H-1 saat Kepsek baru menjabat).
+
+### 4. Update Form Cetak Rapor (UI)
+#### [MODIFY] [views/buku_induk.php](file:///c:/xampp/htdocs/SINTA-SaaS/views/buku_induk.php)
+- Saat mengklik "Cetak Rapor", akan muncul modal kecil / atau ada *input* kalender untuk memilih **"Tanggal Tertera pada Rapor"**. (Default: hari ini).
+
+---
+
+> [!TIP]
+> **Keuntungan Solusi Ini:** Anda tidak perlu repot-repot menyinkronkan data tiap tahun ajaran atau semester. Cukup input data masa jabatan Kepala Sekolah **satu kali saja**, dan semua pencetakan dokumen di masa lalu maupun masa depan (Transkrip, Rapor, Surat Keterangan Lulus) akan selalu 100% akurat dan valid secara hukum.
+
+## User Review Required
+Apakah Anda setuju dengan pendekatan **Riwayat Jabatan berdasarkan Tanggal Dokumen** ini? Jika ya, saya akan segera mengeksekusi pembuatan tabel dan logikanya agar cetak rapor Anda sempurna.

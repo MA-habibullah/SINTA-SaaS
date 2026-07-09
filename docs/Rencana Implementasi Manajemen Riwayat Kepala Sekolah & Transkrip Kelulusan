@@ -1,0 +1,43 @@
+# Rencana Implementasi: Manajemen Riwayat Kepala Sekolah & Transkrip Kelulusan
+
+## Latar Belakang & Revisi
+Sesuai instruksi terbaru, pengaturan **Riwayat Kepala Sekolah** tidak akan diletakkan di menu Kelembagaan, melainkan langsung di dalam halaman **Buku Induk**. Selain itu, fitur **Tanggal Cetak** akan dikhususkan pada saat *action* Cetak Buku Induk / Cetak Rapor / Cetak Transkrip dilakukan (misalnya melalui *Modal Pop-up*), bukan sebagai *filter* global di tabel.
+
+## 1. Pemindahan Form Riwayat Kepala Sekolah ke Buku Induk
+Kita akan menambahkan sebuah tab baru di halaman Buku Induk khusus untuk mengelola riwayat Kepala Sekolah.
+
+### [MODIFY] `views/buku_induk.php`
+- Menambahkan tab navigasi baru: **"Riwayat Kepsek"** di samping tab "Buku Induk Siswa" dan "Statistik".
+- Menambahkan *Section/Card* baru yang berisi tabel daftar `riwayat_kepala_sekolah`.
+- Menambahkan tombol dan Modal "Tambah Riwayat Kepsek" (Input: Nama Kepsek, NIP Kepsek, Tanggal Mulai, Tanggal Selesai).
+
+### [MODIFY] `app/Controllers/BukuIndukController.php`
+- Menambahkan *endpoint* (API) untuk `getRiwayatKepsek()`, `storeRiwayatKepsek()`, dan `deleteRiwayatKepsek()` guna melayani form Vue.js di *frontend*.
+
+## 2. Refaktor "Tanggal Cetak" ke Menu Cetak (Modal)
+Saat ini input tanggal cetak berada di filter global. Kita akan pindahkan agar lebih logis.
+
+### [MODIFY] `views/buku_induk.php`
+- Menghapus input `tanggal_cetak` dari baris pencarian global.
+- Mengubah tombol "Cetak Rapor" yang langsung membuka *tab baru* menjadi membuka **Modal "Konfirmasi Cetak Dokumen"** terlebih dahulu.
+- Di dalam Modal ini, pengguna akan diminta memilih:
+  1. Jenis Dokumen (Semester Ganjil / Genap / Transkrip Kelulusan).
+  2. Tanggal yang tertera di dokumen (Tanggal Cetak).
+- Setelah klik "Cetak", barulah sistem membuka *tab baru* PDF Rapor/Transkrip.
+
+## 3. Implementasi Transkrip Kelulusan
+Kelas 12 memerlukan satu dokumen yang merangkum seluruh nilai dari Semester 1 hingga 6 beserta Nilai Ujian Sekolah.
+
+### [NEW] `views/print_transkrip_merdeka.php`
+- Membuat antarmuka *print-ready* yang merangkum matriks nilai.
+- Terdiri dari Identitas Siswa, Tabel Nilai Semester 1-6, Nilai Rata-Rata, Nilai Ujian Sekolah, dan Keputusan Kelulusan.
+
+### [MODIFY] `app/Controllers/BukuIndukController.php`
+- Menambahkan metode `printTranskripNilai()` (sudah disiapkan, tinggal dimaksimalkan).
+- Metode ini akan menarik nilai agregat (*pivot*) dari tabel `detail_nilai_rapor` khusus untuk `siswa_id` terkait.
+
+---
+
+> [!IMPORTANT]
+> **User Review Required**
+> Dengan perubahan ini, *flow* pencetakan dokumen akan sedikit berubah: Guru/Admin tidak langsung mendapat PDF saat klik "Cetak", melainkan muncul *Pop-up* untuk memilih **Tanggal Cetak** terlebih dahulu demi keakuratan nama Kepala Sekolah. Apakah alur (flow) melalui Modal Pop-up ini sudah sesuai dengan ekspektasi Anda?
