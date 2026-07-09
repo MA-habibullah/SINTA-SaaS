@@ -1,0 +1,50 @@
+# Implementation Plan: Digitalisasi Data Buku Induk (Penyempurnaan)
+
+Berdasarkan analisis sebelumnya, ada beberapa field di lembar Buku Induk fisik yang belum di-digitalisasi ke dalam sistem *database* SINTA-SaaS. Plan ini bertujuan untuk menambahkan kolom-kolom tersebut ke *database* dan memperbarui seluruh antarmuka (UI) terkait.
+
+## 1. Analisis Kebutuhan
+
+Field yang saat ini masih berupa titik-titik (belum masuk DB):
+1. **Rincian Saudara**: Saudara Tiri, Saudara Angkat.
+2. **Mutasi Masuk**: Nama Sekolah asal mutasi, Dari Tingkat/Kelas, No. Surat Keterangan Pindah.
+3. **Mutasi Keluar**: Tingkat/Kelas yang ditinggalkan, Diterima di Tingkat (sekolah baru).
+4. **Kesehatan Historis (6 Semester)**: Tinggi, Berat, Pendengaran, Penglihatan, Gigi.
+
+## 2. Pembaruan Database (Migrations)
+
+- **`rincian_pelajar`**: Tambah kolom `saudara_tiri` (INT), `saudara_angkat` (INT).
+- **`registrasi`**: Tambah kolom `sekolah_asal_mutasi`, `pindah_dari_tingkat`, `pindah_no_surat`, `tingkat_ditinggalkan`, `diterima_di_tingkat` (semua VARCHAR).
+- **Create Table `kesehatan_siswa`**: Membuat tabel baru untuk mencatat riwayat kesehatan per semester. Kolom: `id`, `tenant_id`, `siswa_id`, `semester` (1-6), `tinggi_badan`, `berat_badan`, `pendengaran`, `pengelihatan`, `gigi`, `tahun_ajaran`.
+
+## 3. Pembaruan Model (`Siswa.php`)
+
+- Memperbarui fungsi `saveOrUpdateSubTables` agar bisa menangani *insert/update* field baru di `rincian_pelajar` dan `registrasi`.
+- Karena fungsi `findFullById()` menggunakan `SELECT *`, data-data mutasi dan saudara otomatis akan ter- *fetch*.
+- Menambahkan fungsi baru `getKesehatan($siswa_id)` dan fungsi simpan kesehatan (khusus tabel kesehatan).
+
+## 4. Pembaruan Antarmuka (UI) Tambah/Edit Siswa
+
+**`views/tambah_siswa.php`**:
+- Menambahkan form *input* "Jumlah Saudara Tiri" dan "Jumlah Saudara Angkat" di tab **Data Pribadi/Keluarga**.
+- Menambahkan form *input* khusus untuk "Siswa Pindahan (Mutasi Masuk)" di tab **Registrasi & Mutasi**.
+- Menambahkan form *input* untuk "Mutasi Keluar" di tab yang sama.
+- Menambahkan tab baru khusus **Data Kesehatan (Per Semester)** di dalam *form edit*, di mana guru dapat menginput data Tinggi, Berat, dll dari Semester 1 hingga 6.
+
+## 5. Pembaruan Halaman Buku Induk (`buku_induk.php`)
+
+- Memperbarui modal detail siswa (`#siswaDetailModal`) agar dapat menampilkan informasi Saudara Tiri/Angkat, detail mutasi lengkap, serta menampilkan riwayat kesehatan 6 semester.
+
+## 6. Pembaruan Halaman Cetak (`print_rapot.php`)
+
+- Memetakan field baru ke layout cetak (contoh: mengganti `.......` di saudara tiri menjadi variabel `$saudaraTiri`).
+- Menarik data `kesehatan_siswa` dari *controller* dan menampilkan nilainya di tabel Tinggi/Berat Badan dan Kondisi Kesehatan. Jika data kosong, sistem akan secara otomatis kembali menggunakan format titik-titik (untuk diisi manual).
+
+## Open Questions
+> [!IMPORTANT]
+> Untuk tabel Kesehatan, saya mendesainnya dengan 6 *row* statis (Semester 1 sampai 6) menyesuaikan dengan format Buku Induk yang Anda berikan. Jika siswa belum sampai di semester tertentu, baris akan tetap dibuat tapi dikosongkan. Apakah *approach* ini sudah sesuai keinginan Anda?
+
+## Verification Plan
+1. Jalankan migrasi database.
+2. Tambah / Edit seorang siswa, isi data mutasi, saudara tiri, dan isi data kesehatannya untuk 2 semester.
+3. Cetak Buku Induk siswa tersebut, pastikan tabel kesehatan terisi angka yang diinput (dan sisanya tetap titik-titik).
+4. Buka Modal Detail Buku Induk untuk melihat rekaman visual datanya.
