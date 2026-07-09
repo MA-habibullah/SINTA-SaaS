@@ -740,19 +740,19 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 <!-- Tinggi Badan -->
                 <div class="col-md-4">
                     <label for="tinggi_badan" class="form-label">Tinggi Badan (cm) <span class="text-danger">*</span></label>
-                    <input type="number" class="form-control" id="tinggi_badan" name="tinggi_badan" v-model.number="form.tinggi_badan" min="30" max="250" required>
+                    <input type="number" class="form-control" id="tinggi_badan" name="tinggi_badan" v-model.number="form.tinggi_badan" min="30" max="255" required>
                 </div>
 
                 <!-- Berat Badan -->
                 <div class="col-md-4">
                     <label for="berat_badan" class="form-label">Berat Badan (kg) <span class="text-danger">*</span></label>
-                    <input type="number" class="form-control" id="berat_badan" name="berat_badan" v-model.number="form.berat_badan" min="5" max="200" required>
+                    <input type="number" class="form-control" id="berat_badan" name="berat_badan" v-model.number="form.berat_badan" min="5" max="255" required>
                 </div>
 
                 <!-- Lingkar Kepala -->
                 <div class="col-md-4">
                     <label for="lingkar_kepala" class="form-label">Lingkar Kepala (cm) <span class="text-danger">*</span></label>
-                    <input type="number" class="form-control" id="lingkar_kepala" name="lingkar_kepala" v-model.number="form.lingkar_kepala" min="20" max="100" required>
+                    <input type="number" class="form-control" id="lingkar_kepala" name="lingkar_kepala" v-model.number="form.lingkar_kepala" min="20" max="255" required>
                 </div>
 
                 <!-- Golongan Darah -->
@@ -770,13 +770,13 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 <!-- Anak Ke- -->
                 <div class="col-md-4">
                     <label for="anak_ke" class="form-label">Anak Ke- (Dalam Silsilah) <span class="text-danger">*</span></label>
-                    <input type="number" class="form-control" id="anak_ke" name="anak_ke" v-model.number="form.anak_ke" min="1" max="20" required>
+                    <input type="number" class="form-control" id="anak_ke" name="anak_ke" v-model.number="form.anak_ke" min="1" max="255" required>
                 </div>
 
                 <!-- Jumlah Saudara Kandung -->
                 <div class="col-md-4">
                     <label for="jumlah_saudara" class="form-label">Jumlah Saudara Kandung <span class="text-danger">*</span></label>
-                    <input type="number" class="form-control" id="jumlah_saudara" name="jumlah_saudara" v-model.number="form.jumlah_saudara" min="0" max="25" required>
+                    <input type="number" class="form-control" id="jumlah_saudara" name="jumlah_saudara" v-model.number="form.jumlah_saudara" min="0" max="255" required>
                 </div>
 
                 <!-- Penyakit yang Pernah Diderita -->
@@ -794,7 +794,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 <!-- Jarak Rumah ke Sekolah -->
                 <div class="col-md-6">
                     <label for="jarak_rumah" class="form-label">Jarak Rumah ke Sekolah (Meter) <span class="text-danger">*</span></label>
-                    <input type="number" class="form-control" id="jarak_rumah" name="jarak_rumah" v-model.number="form.jarak_rumah" placeholder="Contoh: 1500" min="1" required>
+                    <input type="number" class="form-control" id="jarak_rumah" name="jarak_rumah" v-model.number="form.jarak_rumah" placeholder="Contoh: 1500" min="1" max="65535" required>
                 </div>
 
                 <!-- Transportasi -->
@@ -1992,13 +1992,13 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 if (!f.email) return false;
                 if (!f.no_telepon_siswa) return false;
                 // Step 3 required
-                if (f.tinggi_badan === '' || f.tinggi_badan < 30) return false;
-                if (f.berat_badan === '' || f.berat_badan < 5) return false;
-                if (f.lingkar_kepala === '' || f.lingkar_kepala < 20) return false;
+                if (f.tinggi_badan === '' || f.tinggi_badan < 30 || f.tinggi_badan > 255) return false;
+                if (f.berat_badan === '' || f.berat_badan < 5 || f.berat_badan > 255) return false;
+                if (f.lingkar_kepala === '' || f.lingkar_kepala < 20 || f.lingkar_kepala > 255) return false;
                 if (!f.golongan_darah) return false;
-                if (f.anak_ke === '' || f.anak_ke < 1) return false;
-                if (f.jumlah_saudara === '' || f.jumlah_saudara < 0) return false;
-                if (f.jarak_rumah === '' || f.jarak_rumah < 1) return false;
+                if (f.anak_ke === '' || f.anak_ke < 1 || f.anak_ke > 255) return false;
+                if (f.jumlah_saudara === '' || f.jumlah_saudara < 0 || f.jumlah_saudara > 255) return false;
+                if (f.jarak_rumah === '' || f.jarak_rumah < 1 || f.jarak_rumah > 65535) return false;
                 if (!f.transportasi) return false;
                 if (f.punya_kip == 1 && !f.no_kip) return false;
                 if (f.layak_kip == 1 && !f.alasan_layak) return false;
