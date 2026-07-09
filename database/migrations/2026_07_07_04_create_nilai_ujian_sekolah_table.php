@@ -10,7 +10,7 @@ return [
             `id` CHAR(36) NOT NULL,
             `tenant_id` CHAR(36) NOT NULL,
             `id_siswa` CHAR(36) NOT NULL,
-            `id_mata_pelajaran` CHAR(36) NOT NULL,
+            `id_mata_pelajaran` INT UNSIGNED NOT NULL,
             `nilai_ujian` DECIMAL(5,2) DEFAULT NULL,
             `tahun_ajaran` VARCHAR(20) NOT NULL,
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
