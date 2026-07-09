@@ -2439,6 +2439,14 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                             // 2. Loop and send each file one by one
                             for (let i = 0; i < filesToUpload.length; i++) {
                                 let fData = new FormData();
+                                
+                                // Copy base fields so backend validation passes
+                                for (let [k, v] of baseFormData.entries()) {
+                                    if (k !== 'id' && k !== 'current_step') {
+                                        fData.append(k, v);
+                                    }
+                                }
+                                
                                 fData.append('id', studentId);
                                 if (!isFullSubmit) {
                                     fData.append('current_step', currentStep.value);
@@ -2449,8 +2457,12 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
                                 });
                                 
-                                if (fResponse.data && fResponse.data.files) {
-                                    Object.assign(fileUpdates, fResponse.data.files);
+                                if (fResponse.data && fResponse.data.success) {
+                                    if (fResponse.data.files) {
+                                        Object.assign(fileUpdates, fResponse.data.files);
+                                    }
+                                } else {
+                                    console.error("Gagal mengunggah file " + filesToUpload[i].key, fResponse.data);
                                 }
                                 
                                 // Delay 500ms between uploads to prevent Cloudflare rate limits / Network Error
