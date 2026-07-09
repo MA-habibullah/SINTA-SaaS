@@ -994,24 +994,36 @@ class SiswaController extends BaseController {
         if ($currentStep === 3 || $currentStep === null) {
             if (!isset($data['tinggi_badan']) || $data['tinggi_badan'] === '' || $data['tinggi_badan'] < 30) {
                 $errors['tinggi_badan'] = 'Tinggi badan wajib diisi minimal 30 cm.';
+            } elseif ($data['tinggi_badan'] > 255) {
+                $errors['tinggi_badan'] = 'Tinggi badan maksimal 255 cm.';
             }
             if (!isset($data['berat_badan']) || $data['berat_badan'] === '' || $data['berat_badan'] < 5) {
                 $errors['berat_badan'] = 'Berat badan wajib diisi minimal 5 kg.';
+            } elseif ($data['berat_badan'] > 255) {
+                $errors['berat_badan'] = 'Berat badan maksimal 255 kg.';
             }
             if (!isset($data['lingkar_kepala']) || $data['lingkar_kepala'] === '' || $data['lingkar_kepala'] < 20) {
                 $errors['lingkar_kepala'] = 'Lingkar kepala wajib diisi minimal 20 cm.';
+            } elseif ($data['lingkar_kepala'] > 255) {
+                $errors['lingkar_kepala'] = 'Lingkar kepala maksimal 255 cm.';
             }
             if (empty($data['golongan_darah'])) {
                 $errors['golongan_darah'] = 'Golongan darah wajib dipilih.';
             }
             if (!isset($data['anak_ke']) || $data['anak_ke'] === '' || $data['anak_ke'] < 1) {
                 $errors['anak_ke'] = 'Kolom anak ke- wajib diisi minimal 1.';
+            } elseif ($data['anak_ke'] > 255) {
+                $errors['anak_ke'] = 'Kolom anak ke- maksimal 255.';
             }
             if (!isset($data['jumlah_saudara']) || $data['jumlah_saudara'] === '' || $data['jumlah_saudara'] < 0) {
                 $errors['jumlah_saudara'] = 'Jumlah saudara kandung wajib diisi.';
+            } elseif ($data['jumlah_saudara'] > 255) {
+                $errors['jumlah_saudara'] = 'Jumlah saudara kandung maksimal 255.';
             }
             if (!isset($data['jarak_rumah']) || $data['jarak_rumah'] === '' || $data['jarak_rumah'] < 1) {
                 $errors['jarak_rumah'] = 'Jarak rumah ke sekolah wajib diisi.';
+            } elseif ($data['jarak_rumah'] > 65535) {
+                $errors['jarak_rumah'] = 'Jarak rumah ke sekolah maksimal 65535 meter.';
             }
             if (empty($data['transportasi'])) {
                 $errors['transportasi'] = 'Alat transportasi wajib dipilih.';
