@@ -1,0 +1,48 @@
+# Implementasi Cetak Rapor Akademik Per Semester & Transkrip Nilai Akhir (Dinamis Berdasarkan Kurikulum)
+
+Fitur `cetak-rapot-semester` memerlukan penanganan khusus karena sistem pendidikan di Indonesia menggunakan kurikulum yang berbeda-beda. Desain dan komponen rapor akan sangat bergantung pada jenis kurikulum yang digunakan (KTSP, K-13, atau Kurikulum Merdeka) serta tingkat kelas siswa (10, 11, atau 12).
+
+## Analisis & Desain (Kurikulum Merdeka)
+Berdasarkan file *mockup* pada folder `scratch/Desain laporan hasil capaian peserta didik kurikulum merdeka`, komponen yang dibutuhkan:
+1. **Rapor Semester Ganjil/Genap**: Dibagi menjadi **A. Identitas**, **B. Intrakurikuler** (mencantumkan Nilai Akhir, Capaian Pembelajaran, dan KKTP), **C. Projek Penguatan Profil Pelajar Pancasila (P5)**, **D. Ekstrakurikuler**, **E. Prestasi**, dan **F. Ketidakhadiran**.
+2. **Transkrip Nilai Akhir (Semester 6)**: Menampilkan matriks kompleks yang menggabungkan seluruh nilai semester 1 s.d. 6 untuk **Kelompok Mata Pelajaran Umum** dan **Kelompok Pilihan**, serta ditambah dengan **Nilai Ujian Sekolah**.
+
+## Solusi Rapor Dinamis (*Dynamic View Router*)
+Karena sistem akan menampung lintas kurikulum, saya akan membuat fungsi Rapor secara dinamis:
+1. Saat guru/admin mencetak rapor, sistem akan mengecek *database* kurikulum apa yang digunakan oleh siswa di semester tersebut.
+2. Jika siswa menggunakan Kurikulum Merdeka, sistem akan otomatis memuat file `print_rapot_merdeka.php` (yang akan kita desain sesuai dengan gambar JPEG yang Anda miliki).
+3. Jika menggunakan Kurikulum yang lain (KTSP/K-13), sistem akan memuat *template* standar `print_rapot_standar.php` yang bisa Anda sesuaikan lagi ke depannya tanpa merusak desain Kurikulum Merdeka.
+4. Pada akhir masa studi (Kelas 12), terdapat fitur cetak Transkrip Nilai Akhir, di mana sistem akan menyatukan nilai dari semester 1 s.d. 6 beserta Nilai Ujian Sekolah.
+
+## Proposed Changes
+
+### 1. Struktur Database Tambahan
+Untuk mendukung Transkrip Nilai Akhir kelas 12, kita membutuhkan tabel untuk menyimpan *Nilai Ujian Sekolah*.
+#### [NEW] Migration `create_nilai_ujian_sekolah_table`
+- Membuat tabel `nilai_ujian_sekolah` (id, tenant_id, id_siswa, id_mata_pelajaran, nilai_ujian, tahun_ajaran).
+
+### 2. Router (`index.php`)
+#### [MODIFY] [index.php](file:///c:/xampp/htdocs/SINTA-SaaS/index.php)
+- Menambahkan *case* `/cetak-rapot-semester` untuk mencetak rapor satu semester.
+- Menambahkan *case* `/cetak-transkrip-nilai` untuk mencetak Transkrip Kelulusan (Semester 1-6 + Ujian).
+
+### 3. Controller (`app/Controllers/BukuIndukController.php`)
+#### [MODIFY] [BukuIndukController.php](file:///c:/xampp/htdocs/SINTA-SaaS/app/Controllers/BukuIndukController.php)
+- **`printRapotSemester()`**: Mengeksekusi pengecekan otomatis *Kurikulum* pada semester terkait, memuat nilai-nilai, dan secara dinamis me-`require` view `print_rapot_merdeka.php` atau `print_rapot_standar.php`.
+- **`printTranskripNilai()`**: (Khusus Kelas 12) Mengeksekusi pengecekan otomatis *Kurikulum* kelulusan, melakukan *pivot query* (rekapitulasi semester 1-6), digabungkan dengan `nilai_ujian_sekolah`, dan me-`require` view `print_transkrip_merdeka.php` atau standar.
+
+### 4. Dynamic Views (Template Rapor)
+#### [NEW] [print_rapot_merdeka.php](file:///c:/xampp/htdocs/SINTA-SaaS/views/print_rapot_merdeka.php)
+- File *view* khusus yang didesain menggunakan HTML & CSS Print untuk meniru struktur layout *Semester 1 Ganjil.jpeg* yang Anda unggah.
+#### [NEW] [print_rapot_standar.php](file:///c:/xampp/htdocs/SINTA-SaaS/views/print_rapot_standar.php)
+- Template default apabila kurikulum siswa bukan Merdeka (contoh: KTSP/K13).
+#### [NEW] [print_transkrip_merdeka.php](file:///c:/xampp/htdocs/SINTA-SaaS/views/print_transkrip_merdeka.php)
+- Layout *wide* (landscape/portrait dinamis) untuk mencetak matriks tabel raksasa *Transkrip Nilai Akhir halaman 1.jpeg*.
+#### [NEW] [print_transkrip_standar.php](file:///c:/xampp/htdocs/SINTA-SaaS/views/print_transkrip_standar.php)
+- Template transkrip default untuk selain Kurikulum Merdeka.
+
+## Verification Plan
+1. Membuat tabel baru untuk Nilai Ujian Sekolah.
+2. Membangun *Controller* dan membuat struktur HTML + CSS dari foto yang Anda sediakan.
+3. Mencoba mencetak salah satu siswa pada *Buku Induk* sebagai pratinjau.
+4. Mengecek pratinjau matriks *Transkrip Akhir* di kelas 12.
