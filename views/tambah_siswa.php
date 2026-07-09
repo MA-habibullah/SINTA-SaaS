@@ -2484,7 +2484,15 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                                 if (!isEdit.value) {
                                     window.location.href = '/SINTA-SaaS/pengguna';
                                 } else {
-                                    window.location.reload();
+                                    // Tetap di halaman dan step yang sama (jangan reload ke step 1)
+                                    Object.keys(fileUpdates).forEach(key => {
+                                        if (fileUpdates[key]) form.value[key] = fileUpdates[key];
+                                    });
+                                    if (currentStep.value === 5) {
+                                        Object.keys(filesSelected.value).forEach(key => {
+                                            filesSelected.value[key] = '';
+                                        });
+                                    }
                                 }
                             });
                         } else {
