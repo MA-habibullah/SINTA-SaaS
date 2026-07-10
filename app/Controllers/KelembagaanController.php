@@ -166,7 +166,7 @@ class KelembagaanController extends BaseController {
         // Validasi input server-side
         $errors = $this->validateInput($module, $input, $id);
         if (!empty($errors)) {
-            $this->jsonResponse(['errors' => $errors], 422);
+            $this->jsonResponse(['success' => false, 'errors' => $errors], 200);
         }
 
         try {

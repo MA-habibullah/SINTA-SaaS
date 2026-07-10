@@ -104,9 +104,9 @@
                     <select class="form-select form-select-sm rounded-3" v-model="filterStatus" @change="fetchData(1)">
                         <option value="">📋 Semua Status</option>
                         <option value="Aktif">Aktif</option>
-                        <option value="Lulus">Alumni / Lulus</option>
-                        <option value="Pindah">Siswa Pindah</option>
-                        <option value="Keluar">Siswa Keluar</option>
+                        <option value="Lulus">Lulus</option>
+                        <option value="Pindah">Pindah</option>
+                        <option value="Keluar">Keluar</option>
                     </select>
                 </div>
 
@@ -215,8 +215,9 @@
                         <li class="page-item" :class="{disabled: currentPage === 1}">
                             <a class="page-link" href="#" @click.prevent="fetchData(currentPage - 1)">&laquo;</a>
                         </li>
-                        <li class="page-item" v-for="page in totalPages" :key="page" :class="{active: page === currentPage}">
-                            <a class="page-link" href="#" @click.prevent="fetchData(page)">{{ page }}</a>
+                        <li class="page-item" v-for="(page, idx) in paginationPages" :key="idx" 
+                            :class="{active: page === currentPage, disabled: page === '...'}">
+                            <a class="page-link" href="#" @click.prevent="page !== '...' ? fetchData(page) : null">{{ page }}</a>
                         </li>
                         <li class="page-item" :class="{disabled: currentPage === totalPages}">
                             <a class="page-link" href="#" @click.prevent="fetchData(currentPage + 1)">&raquo;</a>
@@ -287,10 +288,18 @@
 
                     <!-- Actions -->
                     <div class="col-12 col-md-3 d-flex gap-2">
-                        <button class="btn btn-outline-primary btn-sm rounded-3 px-3 py-2 w-100 fs-8 fw-semibold"
-                                :disabled="!kurikulum.kelasId"
-                                @click="showCopyModal">
-                            <i class="bi bi-copy me-1"></i> Salin dari Kelas Lain
+                        <button class="btn btn-outline-primary btn-sm rounded-3 px-3 py-2 w-50 fs-8 fw-semibold"
+                                :disabled="!kurikulum.kelasId || isLockedKurikulum == 1"
+                                @click="showCopyModal"
+                                title="Salin dari Kelas Lain">
+                            <i class="bi bi-copy me-1"></i> Salin
+                        </button>
+                        <button v-if="userRole === 'super_admin' || userRole === 'operator_sekolah'"
+                                :class="['btn btn-sm rounded-3 px-2 py-2 w-50 fs-8 fw-semibold', isLockedKurikulum == 1 ? 'btn-danger' : 'btn-outline-secondary']"
+                                :disabled="!kurikulum.tahunAjaran || !kurikulum.semester"
+                                @click="toggleLock('kurikulum')">
+                            <i :class="isLockedKurikulum == 1 ? 'bi bi-lock-fill' : 'bi bi-unlock-fill'"></i>
+                            {{ isLockedKurikulum == 1 ? 'Terkunci' : 'Kunci' }}
                         </button>
                     </div>
 
@@ -401,7 +410,9 @@
                     <button class="btn btn-light rounded-3 px-4 py-2 fs-7 fw-semibold" @click="loadKurikulumMapping">
                         Reset Perubahan
                     </button>
-                    <button class="btn btn-primary rounded-3 px-4 py-2 fs-7 fw-semibold d-inline-flex align-items-center gap-2" @click="saveKurikulum">
+                    <button class="btn btn-primary rounded-3 px-4 py-2 fs-7 fw-semibold d-inline-flex align-items-center gap-2" 
+                            @click="saveKurikulum"
+                            :disabled="isLockedKurikulum == 1">
                         <i class="bi bi-save2"></i> Simpan Seting Kurikulum
                     </button>
                 </div>
@@ -516,19 +527,26 @@
                             </select>
                         </div>
 
-                        <!-- Actions (Import/Export) -->
+                        <!-- Actions (Import/Export & Lock) -->
                         <div class="col-12 col-md-3 d-flex gap-2">
                             <button class="btn btn-outline-success btn-sm rounded-3 px-2 py-2 flex-grow-1 fs-8 fw-semibold"
                                     :disabled="!nilaiRapor.kelasId || nilaiRapor.subjects.length === 0"
                                     @click="exportNilaiRaporExcel"
                                     title="Unduh Format Excel (.xlsx)">
-                                <i class="bi bi-file-earmark-arrow-down me-1"></i> Unduh
+                                <i class="bi bi-file-earmark-arrow-down"></i>
                             </button>
                             <button class="btn btn-outline-primary btn-sm rounded-3 px-2 py-2 flex-grow-1 fs-8 fw-semibold"
-                                    :disabled="!nilaiRapor.kelasId || nilaiRapor.subjects.length === 0"
+                                    :disabled="!nilaiRapor.kelasId || nilaiRapor.subjects.length === 0 || isLockedNilai == 1"
                                     @click="showImportGradesModal"
                                     title="Unggah Nilai Excel (.xlsx)">
-                                <i class="bi bi-file-earmark-arrow-up me-1"></i> Impor
+                                <i class="bi bi-file-earmark-arrow-up"></i>
+                            </button>
+                            <button v-if="userRole === 'super_admin' || userRole === 'operator_sekolah'"
+                                    :class="['btn btn-sm rounded-3 px-2 py-2 flex-grow-1 fs-8 fw-semibold', isLockedNilai == 1 ? 'btn-danger' : 'btn-outline-secondary']"
+                                    :disabled="!nilaiRapor.tahunAjaran || !nilaiRapor.semester"
+                                    @click="toggleLock('nilai')"
+                                    :title="isLockedNilai == 1 ? 'Terkunci' : 'Kunci'">
+                                <i :class="isLockedNilai == 1 ? 'bi bi-lock-fill' : 'bi bi-unlock-fill'"></i>
                             </button>
                         </div>
 
@@ -600,12 +618,15 @@
                                         <th style="width: 50px; vertical-align: middle;">No</th>
                                         <th style="width: 120px; vertical-align: middle;">NISN</th>
                                         <th style="min-width: 200px; vertical-align: middle;" class="text-start">Nama Siswa</th>
+                                        <th style="width: 130px; vertical-align: middle;">Tahun Ajaran</th>
+                                        <th style="width: 100px; vertical-align: middle;">Semester</th>
                                         <th v-for="sub in nilaiRapor.subjects" :key="sub.mapel_id" class="text-center" style="min-width: 100px;">
                                             <div class="fw-bold text-truncate" style="max-width: 150px;" :title="sub.nama_mapel">
                                                 {{ sub.nama_mapel }}
                                             </div>
                                             <small class="text-muted font-monospace fs-9" style="font-weight: normal;">{{ sub.kode_mapel }}</small>
                                         </th>
+                                        <th style="width: 80px; vertical-align: middle;">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -613,6 +634,8 @@
                                         <td class="text-center text-muted">{{ sIdx + 1 }}</td>
                                         <td class="text-center font-monospace">{{ student.nisn || student.nis || '-' }}</td>
                                         <td class="fw-bold text-dark">{{ student.nama_lengkap }}</td>
+                                        <td class="text-center text-muted fs-8">{{ nilaiRapor.tahunAjaran }}</td>
+                                        <td class="text-center text-muted fs-8">{{ nilaiRapor.semester }}</td>
                                         
                                         <!-- Dynamic subject value inputs -->
                                         <td v-for="sub in nilaiRapor.subjects" :key="sub.mapel_id" class="p-1">
@@ -622,9 +645,17 @@
                                                    step="0.01" 
                                                    class="form-control form-control-sm text-center fw-semibold border-0 bg-light-subtle py-1"
                                                    :placeholder="isReligionMismatch(student.agama, sub.nama_mapel) ? 'N/A' : '-'"
-                                                   :disabled="isReligionMismatch(student.agama, sub.nama_mapel)"
+                                                   :disabled="isReligionMismatch(student.agama, sub.nama_mapel) || isLockedNilai == 1"
                                                    :class="{'bg-secondary-subtle text-muted': isReligionMismatch(student.agama, sub.nama_mapel)}"
                                                    v-model.number="nilaiRapor.grades[student.id][sub.mapel_id]">
+                                        </td>
+                                        <td class="text-center align-middle">
+                                            <button type="button" class="btn btn-sm btn-outline-danger border-0 rounded-circle" 
+                                                    title="Hapus Nilai Siswa Ini" 
+                                                    :disabled="isLockedNilai == 1"
+                                                    @click="confirmDeleteGrades(student)">
+                                                <i class="bi bi-trash3"></i>
+                                            </button>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -640,8 +671,12 @@
                         <button class="btn btn-light rounded-3 px-4 py-2 fs-7 fw-semibold" @click="loadNilaiRaporGrid">
                             Reset Perubahan
                         </button>
-                        <button class="btn btn-primary rounded-3 px-4 py-2 fs-7 fw-semibold d-inline-flex align-items-center gap-2" @click="saveNilaiRapor">
-                            <i class="bi bi-save2"></i> Simpan Perubahan Nilai
+                        <button class="btn btn-primary rounded-3 px-4 py-2 fs-7 fw-semibold d-inline-flex align-items-center gap-2" 
+                                @click="saveNilaiRapor"
+                                :disabled="isLockedNilai == 1 || nilaiRapor.isSaving">
+                            <span v-if="nilaiRapor.isSaving" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            <i v-else class="bi bi-save2"></i> 
+                            {{ nilaiRapor.isSaving ? 'Menyimpan...' : 'Simpan Perubahan Nilai' }}
                         </button>
                     </div>
                 </div>
@@ -650,6 +685,260 @@
 
         </div>
 
+    </div>
+
+    <!-- Tab Cetak Buku Induk -->
+    <div v-show="mainActiveTab === 'cetak_buku_induk'" class="animate-fade-in">
+        <div class="card border-0 shadow-sm rounded-4 mb-4" style="background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);">
+            <div class="card-body p-3 p-md-4">
+                <div class="row g-3 align-items-end">
+                    <!-- Tahun Ajaran -->
+                    <div class="col-12 col-md-3">
+                        <label class="form-label fw-bold text-dark fs-8 mb-1">Tahun Ajaran</label>
+                        <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle" v-model="filterTahunAjaranCetak" @change="loadMatrixData">
+                            <option value="">-- Semua Tahun Ajaran --</option>
+                            <option v-for="t in masterNilaiRapor?.tahun_ajaran || []" :key="t.id || t.tahun_ajaran" :value="t.tahun_ajaran">{{ t.tahun_ajaran }}</option>
+                        </select>
+                    </div>
+                    <!-- Kelas -->
+                    <div class="col-12 col-md-3">
+                        <label class="form-label fw-bold text-dark fs-8 mb-1">Filter Kelas</label>
+                        <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle" v-model="filterKelas" @change="loadMatrixData">
+                            <option value="">-- Semua Kelas --</option>
+                            <option v-for="k in kelasOptions" :key="k.id" :value="k.id">{{ k.nama_kelas || k.nama }}</option>
+                        </select>
+                    </div>
+                    <!-- Status -->
+                    <div class="col-12 col-md-3">
+                        <label class="form-label fw-bold text-dark fs-8 mb-1">Status Siswa</label>
+                        <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle" v-model="filterStatus" @change="loadMatrixData">
+                            <option value="">-- Semua Status --</option>
+                            <option value="Aktif">Aktif</option>
+                            <option value="Lulus">Lulus</option>
+                            <option value="Pindah">Pindah</option>
+                            <option value="Drop Out">Drop Out</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <button class="btn btn-primary btn-sm rounded-3 w-100 fs-8" @click="loadMatrixData">Tampilkan</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="loadingMatrix" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="text-muted mt-2 fs-7">Memuat matriks cetak buku induk...</p>
+        </div>
+        <div v-else class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle mb-0 fs-8 text-nowrap">
+                        <thead class="bg-light text-center">
+                            <tr>
+                                <th rowspan="2" class="align-middle" style="width: 40px;">NO</th>
+                                <th rowspan="2" class="align-middle">NISN</th>
+                                <th rowspan="2" class="align-middle">Nama Siswa</th>
+                                <th rowspan="2" class="align-middle">Tahun Masuk</th>
+                                <th rowspan="2" class="align-middle">Identitas Siswa</th>
+                                <th rowspan="2" class="align-middle">Transkrip Nilai</th>
+                                <th v-for="n in matrixMaxYears" :key="'year-'+n" colspan="3" class="align-middle bg-primary text-white">
+                                    Tahun Ke-{{ n }}
+                                </th>
+                            </tr>
+                            <tr>
+                                <template v-for="n in matrixMaxYears" :key="'sub-'+n">
+                                    <th class="bg-light border-start">Kelas</th>
+                                    <th class="bg-light">Semester 1</th>
+                                    <th class="bg-light">Semester 2</th>
+                                </template>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-if="matrixData.length === 0">
+                                <td :colspan="6 + (matrixMaxYears * 3)" class="text-center text-muted py-4">Data tidak ditemukan.</td>
+                            </tr>
+                            <tr v-for="(siswa, idx) in matrixData" :key="siswa.id">
+                                <td class="text-center text-muted">{{ idx + 1 }}</td>
+                                <td class="text-center">{{ siswa.nisn || '-' }}</td>
+                                <td class="fw-bold text-dark">{{ siswa.nama_lengkap }}</td>
+                                <td class="text-center">{{ siswa.tahun_masuk || '-' }}</td>
+                                <td class="text-center">
+                                    <button @click="openPrintModal('/SINTA-SaaS/cetak-buku-induk?id=' + siswa.id, 'Cetak Buku Induk')" class="btn btn-outline-dark btn-sm rounded-3 py-1 px-2 fs-8 fw-semibold" title="Cetak Identitas Siswa">
+                                        <i class="bi bi-printer me-1"></i> Cetak
+                                    </button>
+                                </td>
+                                <td class="text-center">
+                                    <button @click="openPrintModal('/SINTA-SaaS/cetak-transkrip-nilai?id=' + siswa.id, 'Transkrip Kelulusan')" class="btn btn-success btn-sm rounded-3 py-1 px-2 fs-8 fw-semibold" title="Cetak Transkrip Kelulusan">
+                                        <i class="bi bi-award me-1"></i> Transkrip
+                                    </button>
+                                </td>
+                                
+                                <template v-for="n in matrixMaxYears" :key="'td-'+n">
+                                    <!-- Jika n <= jumlah history tahun -->
+                                    <template v-if="n <= siswa.years.length">
+                                        <td class="text-center fw-semibold text-primary bg-light border-start">{{ siswa.years[n-1].nama_kelas || '-' }}</td>
+                                        <td class="text-center">
+                                            <button v-if="siswa.years[n-1].has_ganjil || siswa.years[n-1].tahun_ajaran !== '-'" @click="openPrintModal('/SINTA-SaaS/cetak-rapot-semester?id=' + siswa.id + '&semester=Ganjil&ta=' + encodeURIComponent(siswa.years[n-1].tahun_ajaran), 'Rapor Semester Ganjil (' + siswa.years[n-1].tahun_ajaran + ')')" class="btn btn-primary btn-sm rounded-3 py-1 px-2 fs-8">
+                                                <i class="bi bi-printer"></i>
+                                            </button>
+                                            <span v-else class="text-muted">-</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <button v-if="siswa.years[n-1].has_genap || siswa.years[n-1].tahun_ajaran !== '-'" @click="openPrintModal('/SINTA-SaaS/cetak-rapot-semester?id=' + siswa.id + '&semester=Genap&ta=' + encodeURIComponent(siswa.years[n-1].tahun_ajaran), 'Rapor Semester Genap (' + siswa.years[n-1].tahun_ajaran + ')')" class="btn btn-primary btn-sm rounded-3 py-1 px-2 fs-8">
+                                                <i class="bi bi-printer"></i>
+                                            </button>
+                                            <span v-else class="text-muted">-</span>
+                                        </td>
+                                    </template>
+                                    <template v-else>
+                                        <td class="text-center bg-light text-muted border-start">-</td>
+                                        <td class="text-center text-muted">-</td>
+                                        <td class="text-center text-muted">-</td>
+                                    </template>
+                                </template>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Riwayat Kepsek Tab -->
+    <div v-show="mainActiveTab === 'riwayat_kepsek'" class="card border-0 shadow-sm rounded-4 animate-fade-in">
+        <div class="card-body p-3 p-md-4">
+            
+            <div v-if="userRole === 'super_admin' && !filterTenantId" class="py-5 text-center bg-white rounded-4 border-0">
+                <i class="bi bi-building text-secondary display-4 d-block mb-3"></i>
+                <h5 class="fw-bold text-dark">Pilih Sekolah Terlebih Dahulu</h5>
+                <p class="text-muted fs-7 mx-auto" style="max-width: 480px;">
+                    Silakan pilih Sekolah terlebih dahulu pada filter "Pilih Sekolah" di atas untuk mengelola Riwayat Kepala Sekolah.
+                </p>
+            </div>
+            
+            <div v-else>
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-clock-history text-primary me-2"></i>Riwayat Kepala Sekolah</h5>
+                    <button class="btn btn-primary btn-sm rounded-3 px-3" @click="showTambahKepsek">
+                        <i class="bi bi-plus-lg me-1"></i> Tambah Riwayat
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Sekolah</th>
+                            <th>Nama Kepala Sekolah</th>
+                            <th>NIP</th>
+                            <th>Status</th>
+                            <th>Tanggal Mulai</th>
+                            <th>Tanggal Selesai</th>
+                            <th class="text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="k in riwayatKepsek" :key="k.id">
+                            <td class="text-muted"><small><i class="bi bi-building me-1"></i>{{ selectedTenantName }}</small></td>
+                            <td class="fw-bold">{{ k.nama_kepsek }}</td>
+                            <td>{{ k.nip_kepsek || '-' }}</td>
+                            <td>
+                                <span class="badge" :class="k.status_plt == 1 ? 'bg-warning text-dark' : 'bg-success'">
+                                    {{ k.status_plt == 1 ? 'Plt / Pjs' : 'Definitif' }}
+                                </span>
+                            </td>
+                            <td>{{ k.tanggal_mulai }}</td>
+                            <td>
+                                <span v-if="k.tanggal_selesai">{{ k.tanggal_selesai }}</span>
+                                <span v-else class="badge bg-primary">Masih Menjabat</span>
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-secondary me-1" @click="editKepsek(k)"><i class="bi bi-pencil"></i></button>
+                                <button class="btn btn-sm btn-outline-danger" @click="hapusKepsek(k.id)"><i class="bi bi-trash"></i></button>
+                            </td>
+                        </tr>
+                        <tr v-if="!riwayatKepsek.length">
+                            <td colspan="7" class="text-center text-muted py-4">Belum ada riwayat kepala sekolah tercatat.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            </div> <!-- End of v-else -->
+        </div>
+    </div>
+
+    <!-- Modal Riwayat Kepsek -->
+    <div class="modal fade" id="modalRiwayatKepsek" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-bottom py-3">
+                    <h5 class="modal-title fw-bold text-dark">{{ modalKepsekTitle }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nama Kepala Sekolah</label>
+                        <input type="text" class="form-control" v-model="formKepsek.nama_kepsek" placeholder="Contoh: Drs. H. Ahmad, M.Pd">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">NIP</label>
+                        <input type="text" class="form-control" v-model="formKepsek.nip_kepsek" placeholder="Boleh kosong jika non-PNS">
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="statusPlt" v-model="formKepsek.status_plt" :true-value="1" :false-value="0">
+                            <label class="form-check-label fw-semibold" for="statusPlt">Status Plt. (Pelaksana Tugas)</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label fw-semibold">Tanggal Mulai</label>
+                            <input type="date" class="form-control" v-model="formKepsek.tanggal_mulai">
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label fw-semibold">Tanggal Selesai</label>
+                            <input type="date" class="form-control" v-model="formKepsek.tanggal_selesai">
+                            <small class="text-muted fs-8">Kosongkan jika masih menjabat</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top p-3 bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-primary px-4" @click="saveKepsek">Simpan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Konfirmasi Cetak Dokumen -->
+    <div class="modal fade" id="modalCetakDokumen" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-bottom py-3">
+                    <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2">
+                        <i class="bi bi-printer text-primary"></i> Cetak Dokumen
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-muted fs-7 mb-4">Silakan tentukan tanggal yang akan tertera pada dokumen. Sistem akan otomatis menyesuaikan nama Kepala Sekolah yang menjabat pada tanggal tersebut.</p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Jenis Dokumen</label>
+                        <input type="text" class="form-control bg-light" readonly :value="printModal.title">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Tanggal Cetak Dokumen</label>
+                        <input type="date" class="form-control" v-model="printModal.tanggalCetak">
+                    </div>
+                </div>
+                <div class="modal-footer border-top p-3 bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-primary px-4" @click="executePrint">Cetak Sekarang</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Reusable Import Nilai Modal -->
@@ -902,7 +1191,7 @@
                                                             </div>
                                                             <div class="col-md-6">
                                                                 <span class="text-muted d-block mb-0.5">Susunan Keluarga</span>
-                                                                <span class="text-dark">Anak Ke-{{ selectedSiswa.anak_ke || '1' }} dari {{ selectedSiswa.jumlah_saudara || '0' }} bersaudara</span>
+                                                                <span class="text-dark">Anak Ke-{{ selectedSiswa.anak_ke || '1' }} dari {{ selectedSiswa.jumlah_saudara || '0' }} bersaudara ({{ selectedSiswa.saudara_tiri || '0' }} tiri, {{ selectedSiswa.saudara_angkat || '0' }} angkat)</span>
                                                             </div>
                                                             <div class="col-md-6">
                                                                 <span class="text-muted d-block mb-0.5">Transportasi ke Sekolah / Jarak Rumah</span>
@@ -915,6 +1204,33 @@
                                                             <div class="col-md-6">
                                                                 <span class="text-muted d-block mb-0.5">Kelainan Jasmani</span>
                                                                 <span class="text-dark text-danger fw-semibold">{{ selectedSiswa.kelainan_jasmani || 'Tidak Ada' }}</span>
+                                                            </div>
+                                                            <div class="col-12 mt-3" v-if="selectedSiswa.kesehatan && Object.keys(selectedSiswa.kesehatan).length > 0">
+                                                                <span class="text-muted d-block fw-bold mb-2"><i class="bi bi-activity text-danger me-1"></i>Riwayat Kesehatan (Per Semester)</span>
+                                                                <div class="table-responsive">
+                                                                    <table class="table table-bordered table-sm fs-9 text-center">
+                                                                        <thead class="table-light">
+                                                                            <tr>
+                                                                                <th>Sem</th>
+                                                                                <th>Tinggi (cm)</th>
+                                                                                <th>Berat (kg)</th>
+                                                                                <th>Pendengaran</th>
+                                                                                <th>Pengelihatan</th>
+                                                                                <th>Gigi</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            <tr v-for="(kes, sem) in selectedSiswa.kesehatan" :key="sem">
+                                                                                <td class="fw-bold">{{ sem }}</td>
+                                                                                <td>{{ kes.tinggi_badan || '-' }}</td>
+                                                                                <td>{{ kes.berat_badan || '-' }}</td>
+                                                                                <td>{{ kes.pendengaran || '-' }}</td>
+                                                                                <td>{{ kes.pengelihatan || '-' }}</td>
+                                                                                <td>{{ kes.gigi || '-' }}</td>
+                                                                            </tr>
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1146,8 +1462,8 @@
                                                         <td class="fw-bold text-primary">{{ h.nama_kelas_tujuan || '-' }}</td>
                                                         <td>{{ h.nama_pelaku || '-' }}</td>
                                                         <td>
-                                                            <span class="badge rounded-pill" :class="h.jenis_aksi === 'naik_kelas' ? 'bg-success-subtle text-success' : 'bg-primary-subtle text-primary'">
-                                                                {{ h.jenis_aksi === 'naik_kelas' ? 'Naik Kelas' : 'Lulus' }}
+                                                            <span class="badge rounded-pill" :class="h.jenis_aksi === 'naik_kelas' ? 'bg-success-subtle text-success' : (h.jenis_aksi === 'penempatan_awal' ? 'bg-info-subtle text-info' : 'bg-primary-subtle text-primary')">
+                                                                {{ h.jenis_aksi === 'naik_kelas' ? 'Naik Kelas' : (h.jenis_aksi === 'penempatan_awal' ? 'Penempatan Awal' : 'Lulus') }}
                                                             </span>
                                                         </td>
                                                         <td class="text-start">{{ h.catatan || '-' }}</td>
@@ -1385,6 +1701,25 @@
                                                         Non-Formal: {{ selectedSiswa.paud_non_formal == 1 ? 'Ya' : 'Tidak' }}
                                                     </span>
                                                 </div>
+                                                <div class="col-12" v-if="selectedSiswa.jenis_pendaftaran === 'Pindahan'">
+                                                    <div class="p-3 border rounded bg-white">
+                                                        <span class="text-muted d-block mb-2 fw-bold text-primary"><i class="bi bi-box-arrow-in-right me-1"></i>Data Mutasi Masuk (Siswa Pindahan)</span>
+                                                        <div class="row g-2 fs-9">
+                                                            <div class="col-6">
+                                                                <span class="text-muted d-block mb-0.5">Asal Sekolah Mutasi</span>
+                                                                <span class="text-dark fw-bold">{{ selectedSiswa.sekolah_asal_mutasi || '-' }}</span>
+                                                            </div>
+                                                            <div class="col-6">
+                                                                <span class="text-muted d-block mb-0.5">Pindah dari Tingkat</span>
+                                                                <span class="text-dark fw-bold">{{ selectedSiswa.pindah_dari_tingkat || '-' }}</span>
+                                                            </div>
+                                                            <div class="col-12 mt-2">
+                                                                <span class="text-muted d-block mb-0.5">Surat Keterangan Pindah</span>
+                                                                <span class="text-dark fw-bold">{{ selectedSiswa.pindah_no_surat || '-' }}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                                 <div class="col-6">
                                                     <span class="text-muted d-block mb-0.5">Hobi / Kegemaran</span>
                                                     <span class="text-dark fw-semibold">{{ selectedSiswa.hobi || '-' }}</span>
@@ -1417,6 +1752,14 @@
                                                 <div class="col-12">
                                                     <span class="text-muted d-block mb-0.5">Alasan Keluar / Nomor SKP</span>
                                                     <span class="text-dark fw-semibold">{{ selectedSiswa.alasan_keluar || '-' }} (SKP: {{ selectedSiswa.nomor_skp || '-' }})</span>
+                                                </div>
+                                                <div class="col-6" v-if="selectedSiswa.keluar_karena === 'Mutasi'">
+                                                    <span class="text-muted d-block mb-0.5">Tingkat Ditinggalkan</span>
+                                                    <span class="text-dark fw-bold">{{ selectedSiswa.tingkat_ditinggalkan || '-' }}</span>
+                                                </div>
+                                                <div class="col-6" v-if="selectedSiswa.keluar_karena === 'Mutasi'">
+                                                    <span class="text-muted d-block mb-0.5">Diterima di Tingkat</span>
+                                                    <span class="text-dark fw-bold">{{ selectedSiswa.diterima_di_tingkat || '-' }}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1536,7 +1879,7 @@
                 </div>
                 
                 <div class="modal-footer border-top bg-light py-2.5 rounded-bottom-4">
-                    <button type="button" class="btn btn-light rounded-3 fs-8 px-4" data-bs-dismiss="modal">Tutup</button>
+                    <button type="button" class="btn btn-light rounded-3 fs-8 px-4 border" data-bs-dismiss="modal">Tutup</button>
                 </div>
 
             </div>
@@ -1652,11 +1995,22 @@
     window.VueAppRegistry.register('#bukuIndukApp', {
         data() {
             return {
+                tanggalCetak: new Date().toISOString().split('T')[0],
+                printModal: {
+                    title: '',
+                    url: '',
+                    tanggalCetak: new Date().toISOString().split('T')[0]
+                },
+                riwayatKepsek: [],
+                formKepsek: { id: '', nama_kepsek: '', nip_kepsek: '', tanggal_mulai: '', tanggal_selesai: '', status_plt: 0 },
+                modalKepsekTitle: 'Tambah Riwayat Kepsek',
                 mainActiveTab: 'buku_induk_siswa',
                 mainTabs: [
                     { id: 'buku_induk_siswa', name: 'Buku Induk Siswa', icon: 'bi bi-person-lines-fill' },
                     { id: 'seting_kurikulum', name: 'Seting Kurikulum', icon: 'bi bi-gear-wide-connected' },
-                    { id: 'input_nilai_rapor', name: 'Input Nilai Rapor', icon: 'bi bi-journal-check' }
+                    { id: 'input_nilai_rapor', name: 'Input Nilai Rapor', icon: 'bi bi-journal-check' },
+                    { id: 'cetak_buku_induk', name: 'Cetak Buku Induk', icon: 'bi bi-printer-fill' },
+                    { id: 'riwayat_kepsek', name: 'Riwayat Kepsek', icon: 'bi bi-clock-history' }
                 ],
                 userRole: '<?php echo htmlspecialchars($user_role ?? ""); ?>',
                 listTenants: <?php echo json_encode($tenantList ?? []); ?>,
@@ -1664,6 +2018,7 @@
                 kelasOptions: <?php echo json_encode($kelasList ?? []); ?>,
                 filterKelas: '',
                 filterStatus: '',
+                filterTahunAjaranCetak: '',
                 listData: [],
                 currentPage: 1,
                 totalPages: 1,
@@ -1714,6 +2069,16 @@
                 detailModalObj: null,
                 searchTimeout: null,
                 
+                // Kunci Akademik State
+                isLockedKurikulum: 0,
+                isLockedNilai: 0,
+
+                // Cetak Matrix State
+                matrixData: [],
+                matrixMaxYears: 0,
+                loadingMatrix: false,
+                
+                
                 dokumenFields: [
                     { key: 'berkas_kk', label: 'Kartu Keluarga (KK)' },
                     { key: 'berkas_akta', label: 'Akta Kelahiran' },
@@ -1739,8 +2104,23 @@
             this.copyModalObj = new bootstrap.Modal(document.getElementById('copyKurikulumModal'));
             this.importModalObj = new bootstrap.Modal(document.getElementById('importNilaiModal'));
             this.fetchData(1);
+            this.fetchRiwayatKepsek();
         },
         computed: {
+            paginationPages() {
+                const current = this.currentPage;
+                const total = this.totalPages;
+                if (total <= 7) {
+                    return Array.from({ length: total }, (_, i) => i + 1);
+                }
+                if (current <= 3) {
+                    return [1, 2, 3, 4, '...', total - 1, total];
+                }
+                if (current >= total - 2) {
+                    return [1, 2, '...', total - 3, total - 2, total - 1, total];
+                }
+                return [1, '...', current - 1, current, current + 1, '...', total];
+            },
             selectedTenantName() {
                 if (!this.filterTenantId) return '';
                 const t = this.listTenants.find(t => t.id === this.filterTenantId);
@@ -1807,12 +2187,245 @@
             }
         },
         methods: {
+            openPrintModal(url, title) {
+                this.printModal.url = url;
+                this.printModal.title = title;
+                new bootstrap.Modal(document.getElementById('modalCetakDokumen')).show();
+            },
+            executePrint() {
+                const finalUrl = this.printModal.url + '&tanggal_cetak=' + this.printModal.tanggalCetak;
+                window.open(finalUrl, '_blank');
+                bootstrap.Modal.getInstance(document.getElementById('modalCetakDokumen')).hide();
+            },
+            async fetchRiwayatKepsek() {
+                try {
+                    let url = '/SINTA-SaaS/api/v1/riwayat-kepsek';
+                    if (this.filterTenantId) {
+                        url += '?filter_tenant_id=' + encodeURIComponent(this.filterTenantId);
+                    }
+                    const res = await fetch(url);
+                    const json = await res.json();
+                    if (json.success) {
+                        this.riwayatKepsek = json.data;
+                    } else {
+                        this.riwayatKepsek = [];
+                    }
+                } catch (e) {
+                    console.error(e);
+                    this.riwayatKepsek = [];
+                }
+            },
+            showTambahKepsek() {
+                this.formKepsek = { id: '', nama_kepsek: '', nip_kepsek: '', tanggal_mulai: '', tanggal_selesai: '', status_plt: 0 };
+                this.modalKepsekTitle = 'Tambah Riwayat Kepsek';
+                new bootstrap.Modal(document.getElementById('modalRiwayatKepsek')).show();
+            },
+            editKepsek(item) {
+                this.formKepsek = { ...item };
+                this.modalKepsekTitle = 'Edit Riwayat Kepsek';
+                new bootstrap.Modal(document.getElementById('modalRiwayatKepsek')).show();
+            },
+            async saveKepsek() {
+                try {
+                    const fd = new FormData();
+                    for (let k in this.formKepsek) {
+                        fd.append(k, this.formKepsek[k]);
+                    }
+                    if (this.filterTenantId) {
+                        fd.append('filter_tenant_id', this.filterTenantId);
+                    }
+                    const res = await fetch('/SINTA-SaaS/api/v1/riwayat-kepsek', { method: 'POST', body: fd });
+                    const json = await res.json();
+                    if (json.success) {
+                        this.toast.fire({ icon: 'success', title: 'Berhasil menyimpan riwayat' });
+                        bootstrap.Modal.getInstance(document.getElementById('modalRiwayatKepsek')).hide();
+                        this.fetchRiwayatKepsek();
+                    } else {
+                        Swal.fire('Gagal', json.error, 'error');
+                    }
+                } catch (e) {
+                    Swal.fire('Error', 'Terjadi kesalahan sistem', 'error');
+                }
+            },
+            async hapusKepsek(id) {
+                const conf = await Swal.fire({
+                    title: 'Hapus Riwayat?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, Hapus'
+                });
+                if (!conf.isConfirmed) return;
+                try {
+                    const bodyData = { id: id };
+                    if (this.filterTenantId) {
+                        bodyData.filter_tenant_id = this.filterTenantId;
+                    }
+                    const res = await fetch('/SINTA-SaaS/api/v1/riwayat-kepsek', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(bodyData)
+                    });
+                    const json = await res.json();
+                    if (json.success) {
+                        this.toast.fire({ icon: 'success', title: 'Berhasil dihapus' });
+                        this.fetchRiwayatKepsek();
+                    } else {
+                        Swal.fire('Gagal', json.error, 'error');
+                    }
+                } catch (e) {
+                    Swal.fire('Error', 'Terjadi kesalahan sistem', 'error');
+                }
+            },
+            async confirmDeleteGrades(student) {
+                if (!student) return;
+                const conf = await Swal.fire({
+                    title: 'Hapus Nilai Siswa?',
+                    html: `Apakah Anda yakin ingin menghapus seluruh rekaman nilai rapor <b>${student.nama_lengkap}</b> pada Kelas, Tahun Ajaran, dan Semester ini?<br><br>
+                           <span class="text-danger fs-8">
+                           <i class="bi bi-info-circle-fill me-1"></i>
+                           Siswa hanya akan dihapus dari tabel ini jika ia tidak terdaftar secara resmi di kelas ini.
+                           </span>`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Ya, Hapus Nilainya',
+                    cancelButtonText: 'Batal'
+                });
+                if (!conf.isConfirmed) return;
+
+                Swal.fire({
+                    title: 'Menghapus Nilai...',
+                    allowOutsideClick: false,
+                    didOpen: () => { Swal.showLoading(); }
+                });
+
+                try {
+                    const fd = new FormData();
+                    fd.append('siswa_id', student.id);
+                    fd.append('kelas_id', this.nilaiRapor.kelasId);
+                    fd.append('tahun_ajaran', this.nilaiRapor.tahunAjaran);
+                    fd.append('semester', this.nilaiRapor.semester);
+                    
+                    if (this.filterTenantId) {
+                        fd.append('tenant_id', this.filterTenantId);
+                    }
+                    const res = await fetch('/SINTA-SaaS/api/v1/nilai-rapor/delete-siswa', { method: 'POST', body: fd });
+                    const json = await res.json();
+                    
+                    if (res.ok && json.success) {
+                        Swal.fire('Berhasil', json.message, 'success');
+                        this.loadNilaiRaporGrid();
+                    } else {
+                        Swal.fire('Gagal', json.error || 'Terjadi kesalahan saat menghapus.', 'error');
+                    }
+                } catch (e) {
+                    console.error(e);
+                    Swal.fire('Error', 'Terjadi kesalahan sistem.', 'error');
+                }
+            },
+            async fetchLockStatus(type) {
+                let tahun = '', semester = '';
+                if (type === 'kurikulum') {
+                    tahun = this.kurikulum.tahunAjaran;
+                    semester = this.kurikulum.semester;
+                } else if (type === 'nilai') {
+                    tahun = this.nilaiRapor.tahunAjaran;
+                    semester = this.nilaiRapor.semester;
+                }
+                
+                if (!tahun || !semester) {
+                    if (type === 'kurikulum') this.isLockedKurikulum = 0;
+                    if (type === 'nilai') this.isLockedNilai = 0;
+                    return;
+                }
+                
+                try {
+                    const res = await fetch(`/SINTA-SaaS/api/v1/kunci_akademik?tahun_ajaran=${encodeURIComponent(tahun)}&semester=${encodeURIComponent(semester)}&filter_tenant_id=${encodeURIComponent(this.filterTenantId)}`);
+                    const data = await res.json();
+                    if (type === 'kurikulum') {
+                        this.isLockedKurikulum = data.is_locked_kurikulum || 0;
+                    } else if (type === 'nilai') {
+                        this.isLockedNilai = data.is_locked_nilai || 0;
+                    }
+                } catch (e) {
+                    console.error('Failed to fetch lock status', e);
+                }
+            },
+            async toggleLock(type) {
+                let currentStatus = type === 'kurikulum' ? this.isLockedKurikulum : this.isLockedNilai;
+                let newStatus = currentStatus ? 0 : 1;
+                
+                if (newStatus === 0) {
+                    const confirm = await Swal.fire({
+                        title: 'Buka Kunci?',
+                        text: 'Pastikan Anda sudah melakukan koordinasi dengan kurikulum sebelum membuka kunci ini!',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Ya, Buka Kunci',
+                        cancelButtonText: 'Batal'
+                    });
+                    if (!confirm.isConfirmed) return;
+                }
+
+                let tahun = type === 'kurikulum' ? this.kurikulum.tahunAjaran : this.nilaiRapor.tahunAjaran;
+                let semester = type === 'kurikulum' ? this.kurikulum.semester : this.nilaiRapor.semester;
+
+                try {
+                    const res = await fetch(`/SINTA-SaaS/api/v1/kunci_akademik/toggle`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            tahun_ajaran: tahun,
+                            semester: semester,
+                            type: type,
+                            status: newStatus,
+                            filter_tenant_id: this.filterTenantId
+                        })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        this.toast.fire({ icon: 'success', title: data.message });
+                        if (type === 'kurikulum') this.isLockedKurikulum = newStatus;
+                        else this.isLockedNilai = newStatus;
+                    } else {
+                        Swal.fire('Gagal', data.error || 'Terjadi kesalahan', 'error');
+                    }
+                } catch (e) {
+                    Swal.fire('Gagal', 'Koneksi ke server terputus.', 'error');
+                }
+            },
+            async loadMatrixData() {
+                if (this.userRole === 'super_admin' && !this.filterTenantId) {
+                    this.matrixData = [];
+                    return;
+                }
+                
+                this.loadingMatrix = true;
+                
+                // Pastikan masterNilaiRapor.tahun_ajaran sudah dimuat agar dropdown Tahun Ajaran terisi
+                if (!this.masterNilaiRapor || !this.masterNilaiRapor.tahun_ajaran || this.masterNilaiRapor.tahun_ajaran.length === 0) {
+                    this.fetchNilaiRaporMaster(false); // fetch without replacing active tab state
+                }
+
+                try {
+                    const res = await fetch(`/SINTA-SaaS/api/v1/buku_induk/matrix_cetak?kelas_id=${encodeURIComponent(this.filterKelas)}&status=${encodeURIComponent(this.filterStatus)}&filter_tenant_id=${encodeURIComponent(this.filterTenantId)}&tahun_ajaran=${encodeURIComponent(this.filterTahunAjaranCetak)}`);
+                    const data = await res.json();
+                    this.matrixMaxYears = data.max_years || 0;
+                    this.matrixData = data.data || [];
+                } catch (e) {
+                    console.error('Failed to load matrix data', e);
+                } finally {
+                    this.loadingMatrix = false;
+                }
+            },
             switchMainTab(tabId) {
                 this.mainActiveTab = tabId;
                 if (tabId === 'seting_kurikulum') {
                     this.fetchKurikulumMaster();
                 } else if (tabId === 'input_nilai_rapor') {
                     this.fetchNilaiRaporMaster();
+                } else if (tabId === 'cetak_buku_induk') {
+                    if (this.matrixData.length === 0) {
+                        this.loadMatrixData();
+                    }
                 } else {
                     this.fetchData(1);
                 }
@@ -1859,6 +2472,8 @@
                     this.nilaiRapor.grades = {};
                     return;
                 }
+                
+                this.fetchLockStatus('nilai');
 
                 this.loadingNilaiRapor = true;
                 const params = {
@@ -2048,6 +2663,8 @@
                     this.fetchKurikulumMaster();
                 } else if (this.mainActiveTab === 'input_nilai_rapor') {
                     this.fetchNilaiRaporMaster();
+                } else if (this.mainActiveTab === 'riwayat_kepsek') {
+                    this.fetchRiwayatKepsek();
                 } else {
                     this.fetchData(1);
                 }
@@ -2093,6 +2710,7 @@
                     return;
                 }
                 
+                this.fetchLockStatus('kurikulum');
                 this.loadingKurikulum = true;
                 const params = {
                     kelas_id: this.kurikulum.kelasId,

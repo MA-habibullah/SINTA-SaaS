@@ -493,6 +493,43 @@ class PenggunaController extends BaseController {
     }
 
     /**
+     * API: Mengambil daftar tahun ajaran untuk filter di panel Naikkan Kelas / Luluskan
+     * Method: GET
+     * Params: tenant_id (optional for super_admin)
+     */
+    public function apiTahunAjaran(): void {
+        header('Content-Type: application/json');
+        try {
+            $role = $_SESSION['role_name'] ?? '';
+            $tenantId = $_GET['tenant_id'] ?? null;
+            
+            if ($role !== 'super_admin' || empty($tenantId)) {
+                $tenantId = SessionManager::getTenantId();
+            }
+
+            if (empty($tenantId)) {
+                echo json_encode(['success' => false, 'message' => 'Tenant ID tidak valid.', 'data' => []]);
+                return;
+            }
+
+            $sql = "SELECT id, tahun_ajaran FROM tahun_ajaran WHERE tenant_id = :tenant_id AND is_active = 1 ORDER BY tahun_ajaran DESC";
+            $db = \App\Config\Database::getConnection();
+            $stmt = $db->prepare($sql);
+            $stmt->execute(['tenant_id' => $tenantId]);
+            $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Data tahun ajaran berhasil diambil',
+                'data' => $data
+            ]);
+        } catch (\Throwable $e) {
+            error_log("apiTahunAjaran error: " . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Terjadi kesalahan.', 'data' => []]);
+        }
+    }
+
+    /**
      * API: Ambil daftar siswa aktif berdasarkan kelas (untuk tabel checklist)
      * GET /api/v1/pengguna/aksi/siswa?kelas_id=&tenant_id=
      */

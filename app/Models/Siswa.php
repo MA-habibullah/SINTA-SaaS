@@ -10,6 +10,61 @@ class Siswa extends Model {
     /**
      * Ambil semua data siswa aktif di tenant/sekolah yang sedang login
      */
+    public function getStatistikKewarganegaraan(): array {
+        $stmt = $this->db->prepare("SELECT kewarganegaraan, COUNT(*) as jumlah FROM siswa WHERE tenant_id = ? AND deleted_at IS NULL GROUP BY kewarganegaraan");
+        $stmt->execute([$this->tenantId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get data kesehatan per semester
+     */
+    public function getKesehatanSiswa(string $idSiswa): array {
+        $stmt = $this->db->prepare("SELECT * FROM kesehatan_siswa WHERE siswa_id = ? AND tenant_id = ? ORDER BY semester ASC");
+        $stmt->execute([$idSiswa, $this->tenantId]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $kesehatan = [];
+        foreach ($rows as $row) {
+            $kesehatan[$row['semester']] = $row;
+        }
+        return $kesehatan;
+    }
+
+    /**
+     * Save data kesehatan per semester
+     */
+    public function saveKesehatanSiswa(string $idSiswa, array $kesehatanData): void {
+        foreach ($kesehatanData as $semester => $data) {
+            // Check if exists
+            $stmt = $this->db->prepare("SELECT id FROM kesehatan_siswa WHERE siswa_id = ? AND semester = ? AND tenant_id = ?");
+            $stmt->execute([$idSiswa, $semester, $this->tenantId]);
+            $exists = $stmt->fetchColumn();
+
+            $tinggi = !empty($data['tinggi_badan']) ? (int) $data['tinggi_badan'] : null;
+            $berat = !empty($data['berat_badan']) ? (int) $data['berat_badan'] : null;
+            $pendengaran = !empty($data['pendengaran']) ? $data['pendengaran'] : null;
+            $pengelihatan = !empty($data['pengelihatan']) ? $data['pengelihatan'] : null;
+            $gigi = !empty($data['gigi']) ? $data['gigi'] : null;
+
+            if ($exists) {
+                // Update
+                $update = $this->db->prepare("UPDATE kesehatan_siswa SET tinggi_badan=?, berat_badan=?, pendengaran=?, pengelihatan=?, gigi=? WHERE id=?");
+                $update->execute([$tinggi, $berat, $pendengaran, $pengelihatan, $gigi, $exists]);
+            } else {
+                if ($tinggi || $berat || $pendengaran || $pengelihatan || $gigi) {
+                    $dataBytes = random_bytes(16);
+                    $dataBytes[6] = chr(ord($dataBytes[6]) & 0x0f | 0x40);
+                    $dataBytes[8] = chr(ord($dataBytes[8]) & 0x3f | 0x80);
+                    $idKs = vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($dataBytes), 4));
+                    
+                    $insert = $this->db->prepare("INSERT INTO kesehatan_siswa (id, tenant_id, siswa_id, semester, tinggi_badan, berat_badan, pendengaran, pengelihatan, gigi) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $insert->execute([$idKs, $this->tenantId, $idSiswa, $semester, $tinggi, $berat, $pendengaran, $pengelihatan, $gigi]);
+                }
+            }
+        }
+    }
+
     public function findAll(): array {
         $sql = "SELECT * FROM siswa WHERE tenant_id = :tenant_id AND deleted_at IS NULL ORDER BY nama_lengkap ASC";
         $stmt = $this->db->prepare($sql);
@@ -333,6 +388,8 @@ class Siswa extends Model {
                     'jarak_rumah' => (int) ($data['jarak_rumah'] ?? 0),
                     'transportasi' => $data['transportasi'] ?? 'Lainnya',
                     'jumlah_saudara' => (int) ($data['jumlah_saudara'] ?? 0),
+                    'saudara_tiri' => (int) ($data['saudara_tiri'] ?? 0),
+                    'saudara_angkat' => (int) ($data['saudara_angkat'] ?? 0),
                     'penyakit_yang_diderita' => !empty($data['penyakit_yang_diderita']) ? $data['penyakit_yang_diderita'] : null,
                     'foto_profil' => !empty($data['foto_profil']) ? $data['foto_profil'] : null,
                     'kelainan_jasmani' => !empty($data['kelainan_jasmani']) ? $data['kelainan_jasmani'] : 'Tidak Ada'
@@ -416,6 +473,11 @@ class Siswa extends Model {
                     'keluar_karena' => !empty($data['keluar_karena']) ? $data['keluar_karena'] : null,
                     'tanggal_keluar' => !empty($data['tanggal_keluar']) ? $data['tanggal_keluar'] : null,
                     'alasan_keluar' => !empty($data['alasan_keluar']) ? $data['alasan_keluar'] : null,
+                    'sekolah_asal_mutasi' => !empty($data['sekolah_asal_mutasi']) ? $data['sekolah_asal_mutasi'] : null,
+                    'pindah_dari_tingkat' => !empty($data['pindah_dari_tingkat']) ? $data['pindah_dari_tingkat'] : null,
+                    'pindah_no_surat' => !empty($data['pindah_no_surat']) ? $data['pindah_no_surat'] : null,
+                    'tingkat_ditinggalkan' => !empty($data['tingkat_ditinggalkan']) ? $data['tingkat_ditinggalkan'] : null,
+                    'diterima_di_tingkat' => !empty($data['diterima_di_tingkat']) ? $data['diterima_di_tingkat'] : null,
                     'sekolah_tujuan' => !empty($data['sekolah_tujuan']) ? $data['sekolah_tujuan'] : null,
                     'nomor_skp' => !empty($data['nomor_skp']) ? $data['nomor_skp'] : null
                 ]

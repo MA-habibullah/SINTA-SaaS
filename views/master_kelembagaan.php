@@ -675,6 +675,11 @@
                 axios.post('/SINTA-SaaS/api/v1/kelembagaan/simpan', payload)
                      .then(res => {
                          this.submitLoading = false;
+                         if (res.data.success === false && res.data.errors) {
+                             this.errors = res.data.errors;
+                             this.toast.fire({ icon: 'error', title: 'Silakan periksa input form Anda.' });
+                             return;
+                         }
                          this.modalObj.hide();
                          this.toast.fire({ icon: 'success', title: res.data.message });
                          this.fetchData(this.isEditMode ? this.currentPage : 1);

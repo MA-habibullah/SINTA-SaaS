@@ -114,7 +114,7 @@ class AgendaModel {
             (UUID(), :tenant_id, :kategori_id, :lokasi, :pic_id, :target_audiens, :waktu_mulai, :waktu_selesai, :created_by, :judul, :deskripsi, :tanggal_mulai, :tanggal_selesai, :waktu, :tipe, :status_kegiatan, :visibilitas, :target_roles, :lampiran_file)
         ");
         return $stmt->execute([
-            'tenant_id'      => $this->tenantId,
+            'tenant_id'      => array_key_exists('tenant_id', $data) ? $data['tenant_id'] : $this->tenantId,
             'kategori_id'    => $data['kategori_id'] ?? null,
             'lokasi'         => $data['lokasi'] ?? null,
             'pic_id'         => $data['pic_id'] ?? null,

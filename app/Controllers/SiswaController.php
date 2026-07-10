@@ -459,6 +459,9 @@ class SiswaController extends BaseController {
             $input['file_sizes'] = $uploadResult['sizes'];
 
             $this->siswaModel->create($input);
+            if (isset($_POST['kesehatan']) && is_array($_POST['kesehatan'])) {
+                $this->siswaModel->saveKesehatanSiswa($siswaId, $_POST['kesehatan']);
+            }
             \App\Helpers\ActivityLogger::record('INSERT', 'siswa', $siswaId, null, $input);
 
             $db->commit();
@@ -559,10 +562,13 @@ class SiswaController extends BaseController {
         $cities          = $db->query("SELECT id_kota, nama_kota FROM kota ORDER BY nama_kota ASC")->fetchAll(\PDO::FETCH_ASSOC);
         $academicOptions = $this->getAcademicOptions($tenantId);
 
+        $kesehatan = $this->siswaModel->getKesehatanSiswa($id);
+
         // Sertakan status siswa ke view agar form dapat menampilkan READ-ONLY mode
         $data = [
             'title'           => 'Edit Data Siswa',
             'siswa'           => $siswa,
+            'kesehatan'       => $kesehatan,
             'siswa_status'    => $siswa['status'] ?? 'Aktif', // Digunakan view untuk state lock UI
             'user_nama'       => $_SESSION['nama_lengkap'],
             'user_role'       => $_SESSION['role_name'],
@@ -754,6 +760,9 @@ class SiswaController extends BaseController {
             }
 
             $this->siswaModel->update($id, $input);
+            if (isset($_POST['kesehatan']) && is_array($_POST['kesehatan'])) {
+                $this->siswaModel->saveKesehatanSiswa($id, $_POST['kesehatan']);
+            }
             \App\Helpers\ActivityLogger::record('UPDATE', 'siswa', $id, $siswa, $input);
 
             // ----------------------------------------------------------------

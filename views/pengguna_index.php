@@ -894,7 +894,10 @@
                 <!-- Tahun Ajaran -->
                 <div class="col-12" :class="aksiMode === 'promote' ? 'col-md-2' : (userRole === 'super_admin' ? 'col-md-5' : 'col-md-7')">
                     <label for="nk-tahun" class="aksi-label"><i class="bi bi-calendar3 me-1"></i> Tahun Ajaran <span class="text-danger">*</span></label>
-                    <input id="nk-tahun" name="nk_tahun" type="text" class="form-control form-control-sm rounded-3" v-model="aksiTahunAjaran" placeholder="2024/2025">
+                    <select id="nk-tahun" name="nk_tahun" class="form-select form-select-sm rounded-3 fw-semibold text-dark" v-model="aksiTahunAjaran">
+                        <option value="" disabled>-- Pilih --</option>
+                        <option v-for="ta in tahunAjaranList" :key="ta.id" :value="ta.tahun_ajaran">{{ ta.tahun_ajaran }}</option>
+                    </select>
                 </div>
             </div>
             <!-- Catatan -->
@@ -956,6 +959,7 @@
                                 <th style="width:40px;"><input id="nk-table-select-all" name="nk_table_select_all" aria-label="Pilih semua baris siswa" class="form-check-input" type="checkbox" v-model="aksiSelectAll" @change="toggleAksiSelectAll"></th>
                                 <th>No</th>
                                 <th>Nama Lengkap</th>
+                                <th>Tahun Ajaran</th>
                                 <th>NISN</th>
                                 <th>NIS</th>
                                 <th>Kelas Saat Ini</th>
@@ -967,6 +971,7 @@
                                 <td><input :id="'nk_select_siswa_' + s.id" :name="'nk_select_siswa_' + s.id" aria-label="Pilih baris siswa" class="form-check-input" type="checkbox" :value="s.id" v-model="aksiSelectedIds" @change="onAksiCheckboxChange"></td>
                                 <td class="text-muted">{{ i + 1 }}</td>
                                 <td class="fw-semibold">{{ s.nama_lengkap }}</td>
+                                <td><span class="badge bg-light text-dark border">{{ s.tahun_ajaran || '-' }}</span></td>
                                 <td><span class="badge bg-light text-dark border">{{ s.nisn || '-' }}</span></td>
                                 <td><span class="badge bg-light text-dark border">{{ s.nis || '-' }}</span></td>
                                 <td><span class="badge" :style="aksiMode === 'promote' ? 'background:#dbeafe;color:#1e40af;' : 'background:#d1fae5;color:#065f46;'">{{ s.nama_kelas }}</span></td>
@@ -1333,6 +1338,7 @@
                 aksiKelasAsalId: '',
                 aksiKelasTujuanId: '',
                 aksiTahunAjaran: '',
+                tahunAjaranList: [],
                 aksiCatatan: '',
                 aksiListKelas: [],
                 aksiListSiswa: [],
@@ -1389,15 +1395,11 @@
             }
             
             this.fetchKelas();
+            this.fetchTahunAjaran();
             this.fetchData(1);
             if (this.userRole === 'super_admin') {
                 this.fetchTenants();
             }
-            // Hitung tahun ajaran default
-            const now = new Date();
-            const y = now.getFullYear();
-            const m = now.getMonth() + 1; // 1-indexed
-            this.aksiTahunAjaran = m >= 7 ? `${y}/${y+1}` : `${y-1}/${y}`;
 
             // Init print metadata
             this.printTempat = 'Jombang';
@@ -1607,9 +1609,34 @@
                     console.error("Gagal mengambil data kelas:", err);
                 });
             },
+            fetchTahunAjaran() {
+                let tenantId = '';
+                if (this.userRole === 'super_admin') {
+                    tenantId = this.aksiTenantId;
+                }
+                if (!tenantId && this.userRole === 'super_admin') {
+                    this.tahunAjaranList = [];
+                    this.aksiTahunAjaran = '';
+                    return;
+                }
+
+                axios.get('/SINTA-SaaS/api/v1/pengguna/tahun-ajaran', {
+                    params: { tenant_id: tenantId }
+                }).then(res => {
+                    this.tahunAjaranList = res.data.data || [];
+                    if (this.tahunAjaranList.length > 0) {
+                        this.aksiTahunAjaran = this.tahunAjaranList[0].tahun_ajaran;
+                    } else {
+                        this.aksiTahunAjaran = '';
+                    }
+                }).catch(err => {
+                    console.error("Gagal mengambil data tahun ajaran:", err);
+                });
+            },
             onFilterTenantChange() {
                 this.filterKelas = '';
                 this.fetchKelas();
+                this.fetchTahunAjaran();
                 this.fetchData(1);
             },
             resetFilters() {
@@ -1619,6 +1646,7 @@
                     this.filterTenantId = '';
                 }
                 this.fetchKelas();
+                this.fetchTahunAjaran();
                 this.fetchData(1);
             },
             debounceSearch() {
@@ -1796,8 +1824,11 @@
                 this.aksiSelectAll = false;
                 if (this.aksiTenantId) {
                     this.fetchAksiKelas();
+                    this.fetchTahunAjaran();
                 } else {
                     this.aksiListKelas = [];
+                    this.tahunAjaranList = [];
+                    this.aksiTahunAjaran = '';
                 }
             },
             fetchAksiKelas() {

@@ -945,10 +945,11 @@ class Pengguna extends Model {
      */
     public function getSiswaByKelas(int $idKelas, string $tenantId): array {
         $sql = "SELECT s.id, s.nama_lengkap, s.nisn, s.nis,
-                       k.nama_kelas, j.nama_jenjang
+                       k.nama_kelas, j.nama_jenjang, ta.tahun_ajaran
                 FROM siswa s
                 LEFT JOIN kelas k ON s.id_kelas = k.id
                 LEFT JOIN jenjang j ON s.id_jenjang = j.id
+                LEFT JOIN tahun_ajaran ta ON s.id_tahun_ajaran = ta.id
                 WHERE s.tenant_id = :tenant_id
                   AND s.id_kelas = :id_kelas
                   AND s.status = 'Aktif'
@@ -986,10 +987,12 @@ class Pengguna extends Model {
 
         if (empty($validRows)) return 0;
 
-        // Nama kelas tujuan (untuk snapshot)
-        $kelasStmt = $this->db->prepare("SELECT nama_kelas FROM kelas WHERE id = ? LIMIT 1");
+        // Nama kelas tujuan & jenjang tujuan (untuk snapshot dan update jenjang)
+        $kelasStmt = $this->db->prepare("SELECT nama_kelas, id_jenjang FROM kelas WHERE id = ? LIMIT 1");
         $kelasStmt->execute([$idKelasTujuan]);
-        $namaKelasTujuan = $kelasStmt->fetchColumn() ?: '';
+        $kelasTujuanRow = $kelasStmt->fetch(PDO::FETCH_ASSOC);
+        $namaKelasTujuan = $kelasTujuanRow['nama_kelas'] ?? '';
+        $idJenjangTujuan = $kelasTujuanRow['id_jenjang'] ?? null;
 
         $tahunAjaran   = $auditData['tahun_ajaran']   ?? '';
         $dilakukanOleh = $auditData['dilakukan_oleh'] ?? '';
@@ -999,16 +1002,18 @@ class Pengguna extends Model {
         try {
             $this->db->beginTransaction();
 
-            $updateSql = "UPDATE siswa SET id_kelas = :id_kelas_tujuan
+            $updateSql = "UPDATE siswa SET id_kelas = :id_kelas_tujuan, id_jenjang = :id_jenjang_tujuan
                           WHERE id = :id AND tenant_id = :tenant_id AND deleted_at IS NULL";
             $updateStmt = $this->db->prepare($updateSql);
 
             $insertSql = "INSERT INTO riwayat_kenaikan_kelas
                             (tenant_id, siswa_id, jenis_aksi, id_kelas_asal, id_kelas_tujuan,
+                             id_jenjang_asal, id_jenjang_tujuan,
                              nama_kelas_asal, nama_kelas_tujuan, tahun_ajaran,
                              dilakukan_oleh, nama_pelaku, catatan)
                           VALUES
                             (:tenant_id, :siswa_id, 'naik_kelas', :id_kelas_asal, :id_kelas_tujuan,
+                             :id_jenjang_asal, :id_jenjang_tujuan,
                              :nama_kelas_asal, :nama_kelas_tujuan, :tahun_ajaran,
                              :dilakukan_oleh, :nama_pelaku, :catatan)";
             $insertStmt = $this->db->prepare($insertSql);
@@ -1016,15 +1021,18 @@ class Pengguna extends Model {
             $count = 0;
             foreach ($validRows as $row) {
                 $updateStmt->execute([
-                    'id_kelas_tujuan' => $idKelasTujuan,
-                    'id'              => $row['id'],
-                    'tenant_id'       => $tenantId
+                    'id_kelas_tujuan'   => $idKelasTujuan,
+                    'id_jenjang_tujuan' => $idJenjangTujuan,
+                    'id'                => $row['id'],
+                    'tenant_id'         => $tenantId
                 ]);
                 $insertStmt->execute([
                     'tenant_id'          => $tenantId,
                     'siswa_id'           => $row['id'],
                     'id_kelas_asal'      => $row['id_kelas'],
                     'id_kelas_tujuan'    => $idKelasTujuan,
+                    'id_jenjang_asal'    => $row['id_jenjang_asal'],
+                    'id_jenjang_tujuan'  => $idJenjangTujuan,
                     'nama_kelas_asal'    => $row['nama_kelas_asal'],
                     'nama_kelas_tujuan'  => $namaKelasTujuan,
                     'tahun_ajaran'       => $tahunAjaran,
@@ -1056,7 +1064,7 @@ class Pengguna extends Model {
 
         // Sanitasi: pastikan hanya siswa yang benar-benar milik tenant ini
         $placeholders = implode(',', array_fill(0, count($siswaIds), '?'));
-        $checkSql = "SELECT id, id_kelas,
+        $checkSql = "SELECT id, id_kelas, id_jenjang AS id_jenjang_asal,
                             (SELECT nama_kelas FROM kelas WHERE id = siswa.id_kelas LIMIT 1) AS nama_kelas_asal
                      FROM siswa
                      WHERE id IN ({$placeholders})
@@ -1084,10 +1092,12 @@ class Pengguna extends Model {
 
             $insertSql = "INSERT INTO riwayat_kenaikan_kelas
                             (tenant_id, siswa_id, jenis_aksi, id_kelas_asal, id_kelas_tujuan,
+                             id_jenjang_asal, id_jenjang_tujuan,
                              nama_kelas_asal, nama_kelas_tujuan, tahun_ajaran,
                              dilakukan_oleh, nama_pelaku, catatan)
                           VALUES
                             (:tenant_id, :siswa_id, 'lulus', :id_kelas_asal, NULL,
+                             :id_jenjang_asal, NULL,
                              :nama_kelas_asal, NULL, :tahun_ajaran,
                              :dilakukan_oleh, :nama_pelaku, :catatan)";
             $insertStmt = $this->db->prepare($insertSql);
@@ -1099,6 +1109,7 @@ class Pengguna extends Model {
                     'tenant_id'      => $tenantId,
                     'siswa_id'       => $row['id'],
                     'id_kelas_asal'  => $row['id_kelas'],
+                    'id_jenjang_asal'=> $row['id_jenjang_asal'],
                     'nama_kelas_asal'=> $row['nama_kelas_asal'],
                     'tahun_ajaran'   => $tahunAjaran,
                     'dilakukan_oleh' => $dilakukanOleh,

@@ -36,7 +36,11 @@
             saveError('Error', e.message, e.filename, e.lineno, e.colno, e.error);
         });
         window.addEventListener('unhandledrejection', function(e) {
-            saveError('Promise Rejection', e.reason ? (e.reason.message || e.reason) : 'Unknown', '', 0, 0, e.reason);
+            let msg = e.reason ? (e.reason.message || e.reason) : 'Unknown';
+            // Ignore Axios Cancel / DOMException AbortError which are normal during page navigation or debounced requests
+            if (typeof msg === 'string' && (msg.toLowerCase().includes('user aborted a request') || msg.toLowerCase() === 'canceled')) return;
+            
+            saveError('Promise Rejection', msg, '', 0, 0, e.reason);
         });
         function showErrorBadge() {
             let errors = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');

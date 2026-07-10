@@ -1583,7 +1583,8 @@ $baseUrl    = '/SINTA-SaaS';
                             <thead class="table-light">
                                 <tr>
                                     <th>Siswa</th>
-                                    <th>NISN</th>
+                                    <th>NIS / NISN</th>
+                                    <th class="text-center">L/P</th>
                                     <th>Kelas</th>
                                     <th class="text-center" style="width: 80px;">Sakit (S)</th>
                                     <th class="text-center" style="width: 80px;">Izin (I)</th>
@@ -1596,7 +1597,12 @@ $baseUrl    = '/SINTA-SaaS';
                                     <td>
                                         <div class="fw-bold text-dark">{{ s.nama_lengkap }}</div>
                                     </td>
-                                    <td><span class="text-muted">{{ s.nisn || '-' }}</span></td>
+                                    <td>
+                                        <span class="text-dark">{{ s.nis || '-' }}</span> / <span class="text-muted">{{ s.nisn || '-' }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="text-secondary fw-semibold">{{ s.jenis_kelamin === 'Laki-Laki' ? 'L' : (s.jenis_kelamin === 'Perempuan' ? 'P' : '-') }}</span>
+                                    </td>
                                     <td>
                                         <span class="badge bg-light text-primary border rounded-3">{{ s.nama_kelas || '-' }}</span>
                                         <span v-if="isRowDirty(s.siswa_id)" class="badge bg-primary text-white ms-1" style="font-size:0.65rem;">Belum Disimpan</span>

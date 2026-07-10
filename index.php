@@ -373,6 +373,12 @@ try {
             $controller->index();
             break;
 
+        case '/api/v1/nilai-rapor/delete-siswa':
+            // API: Hapus nilai siswa dari tabel matriks nilai rapor
+            $controller = new App\Controllers\NilaiRaporController();
+            $controller->deleteSiswaGradesApi();
+            break;
+
         case '/api/v1/buku-induk':
             $controller = new App\Controllers\BukuIndukController();
             $controller->fetchApi();
@@ -381,6 +387,21 @@ try {
         case '/api/v1/buku-induk/detail':
             $controller = new App\Controllers\BukuIndukController();
             $controller->fetchDetailApi();
+            break;
+
+        case '/api/v1/buku_induk/matrix_cetak':
+            $controller = new App\Controllers\BukuIndukController();
+            $controller->fetchCetakMatrixApi();
+            break;
+
+        case '/api/v1/kunci_akademik':
+            $controller = new App\Controllers\KunciAkademikController();
+            $controller->getStatus();
+            break;
+
+        case '/api/v1/kunci_akademik/toggle':
+            $controller = new App\Controllers\KunciAkademikController();
+            $controller->toggle();
             break;
 
         case '/api/v1/kurikulum':
@@ -417,9 +438,35 @@ try {
             $controller->import();
             break;
 
+        case '/api/v1/riwayat-kepsek':
+            $controller = new App\Controllers\BukuIndukController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->storeRiwayatKepsek();
+            } elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+                $controller->deleteRiwayatKepsek();
+            } else {
+                $controller->getRiwayatKepsek();
+            }
+            break;
+
         case '/cetak-rapot':
             $controller = new App\Controllers\BukuIndukController();
             $controller->printRapot();
+            break;
+
+        case '/cetak-buku-induk':
+            $controller = new App\Controllers\BukuIndukController();
+            $controller->printBukuInduk();
+            break;
+
+        case '/cetak-rapot-semester':
+            $controller = new App\Controllers\BukuIndukController();
+            $controller->printRapotSemester();
+            break;
+
+        case '/cetak-transkrip-nilai':
+            $controller = new App\Controllers\BukuIndukController();
+            $controller->printTranskripNilai();
             break;
 
         case '/cetak-rapot-kelas':
@@ -461,6 +508,12 @@ try {
             // Panggil SiswaController - Proses Hapus (Soft Delete)
             $controller = new App\Controllers\SiswaController();
             $controller->delete();
+            break;
+
+        case '/api/v1/siswa/delete':
+            // API: Hapus Siswa (Soft Delete) via AJAX
+            $controller = new App\Controllers\BukuIndukController();
+            $controller->deleteSiswaApi();
             break;
 
         // ================================================================
@@ -1067,6 +1120,12 @@ try {
             // API: Ambil daftar kelas untuk dropdown panel Naikkan Kelas & Luluskan Siswa
             $controller = new App\Controllers\PenggunaController();
             $controller->getKelasAksiApi();
+            break;
+
+        case '/api/v1/pengguna/tahun-ajaran':
+            // API: Ambil daftar tahun ajaran untuk filter aksi
+            $controller = new App\Controllers\PenggunaController();
+            $controller->apiTahunAjaran();
             break;
 
         case '/api/v1/pengguna/aksi/siswa':

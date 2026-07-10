@@ -151,6 +151,13 @@ class KurikulumController extends BaseController {
             $this->jsonResponse(['status' => 'error', 'message' => 'Tenant ID tidak terdeteksi.'], 400);
             return;
         }
+        // Periksa apakah kurikulum terkunci
+        $stmtLock = $db->prepare("SELECT is_locked_kurikulum FROM kunci_akademik WHERE tenant_id = ? AND tahun_ajaran = ? AND semester = ?");
+        $stmtLock->execute([$tenantId, $tahunAjaran, $semester]);
+        if ($stmtLock->fetchColumn()) {
+            $this->jsonResponse(['status' => 'error', 'message' => 'Gagal menyimpan. Seting Kurikulum pada Tahun Ajaran & Semester ini telah dikunci oleh administrator.'], 403);
+            return;
+        }
         $db->beginTransaction();
         try {
             // 1. Delete existing mapping for the target scope
@@ -226,6 +233,13 @@ class KurikulumController extends BaseController {
 
         if (!$tenantId) {
             $this->jsonResponse(['status' => 'error', 'message' => 'Tenant ID tidak terdeteksi.'], 400);
+            return;
+        }
+        // Periksa apakah kurikulum terkunci
+        $stmtLock = $db->prepare("SELECT is_locked_kurikulum FROM kunci_akademik WHERE tenant_id = ? AND tahun_ajaran = ? AND semester = ?");
+        $stmtLock->execute([$tenantId, $tahunAjaran, $semester]);
+        if ($stmtLock->fetchColumn()) {
+            $this->jsonResponse(['status' => 'error', 'message' => 'Gagal menyalin. Seting Kurikulum pada Tahun Ajaran & Semester ini telah dikunci oleh administrator.'], 403);
             return;
         }
         $db->beginTransaction();

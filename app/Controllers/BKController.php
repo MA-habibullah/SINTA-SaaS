@@ -1797,6 +1797,7 @@ class BKController extends BaseController {
                         s.nama_lengkap,
                         s.nisn,
                         s.nis,
+                        s.jenis_kelamin,
                         COALESCE(a.sakit, 0) AS sakit,
                         COALESCE(a.izin, 0) AS izin,
                         COALESCE(a.alfa, 0) AS alfa,
@@ -1990,6 +1991,8 @@ class BKController extends BaseController {
                         s.nama_lengkap,
                         s.nisn,
                         s.nis,
+                        s.jenis_kelamin,
+                        s.agama,
                         s.tenant_id,
                         COALESCE(a.sakit, 0) AS sakit,
                         COALESCE(a.izin, 0) AS izin,
@@ -2029,6 +2032,8 @@ class BKController extends BaseController {
                 'Nama Lengkap',
                 'NISN',
                 'NIS',
+                'Jenis Kelamin',
+                'Agama',
                 'Sakit',
                 'Izin',
                 'Tanpa Keterangan (Alfa)'
@@ -2041,6 +2046,8 @@ class BKController extends BaseController {
                     // SimpleXLSXGen will automatically treat numeric strings as text if type-hinted or simple string, keeping leading zeros
                     (string)($row['nisn'] ?? ''),
                     (string)($row['nis'] ?? ''),
+                    (string)($row['jenis_kelamin'] ?? ''),
+                    (string)($row['agama'] ?? ''),
                     (int)($row['sakit'] ?? 0),
                     (int)($row['izin'] ?? 0),
                     (int)($row['alfa'] ?? 0)

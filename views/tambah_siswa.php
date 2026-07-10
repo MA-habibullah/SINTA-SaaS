@@ -12,6 +12,7 @@ $actionUrl = $isEdit ? '/SINTA-SaaS/siswa/update' : '/SINTA-SaaS/siswa/simpan';
 $formTitle = $isEdit ? 'Edit Data Siswa' : 'Tambah Siswa Baru';
 $idSiswa = $isEdit ? ($data['siswa']['id'] ?? '') : '';
 $siswaFullData = $isEdit ? $data['siswa'] : [];
+$kesehatanData = $isEdit ? ($data['kesehatan'] ?? []) : [];
 ?>
 
 <style>
@@ -892,6 +893,35 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 </div>
 
             </div>
+
+            <!-- ==================== KESEHATAN PER SEMESTER ==================== -->
+            <div class="mt-4 border-top pt-4">
+                <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-heart-pulse-fill me-2 text-danger"></i>Riwayat Kesehatan (Per Semester)</h6>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm align-middle fs-9">
+                        <thead class="table-light text-center">
+                            <tr>
+                                <th>Semester</th>
+                                <th style="width: 15%">Tinggi (cm)</th>
+                                <th style="width: 15%">Berat (kg)</th>
+                                <th>Pendengaran</th>
+                                <th>Pengelihatan</th>
+                                <th>Kondisi Gigi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="sem in 6" :key="sem">
+                                <td class="text-center fw-bold">{{ sem }}</td>
+                                <td><input type="number" class="form-control form-control-sm" :name="`kesehatan[${sem}][tinggi_badan]`" v-model="form.kesehatan[sem].tinggi_badan" min="0"></td>
+                                <td><input type="number" class="form-control form-control-sm" :name="`kesehatan[${sem}][berat_badan]`" v-model="form.kesehatan[sem].berat_badan" min="0"></td>
+                                <td><input type="text" class="form-control form-control-sm" :name="`kesehatan[${sem}][pendengaran]`" v-model="form.kesehatan[sem].pendengaran" placeholder="Normal/Kurang"></td>
+                                <td><input type="text" class="form-control form-control-sm" :name="`kesehatan[${sem}][pengelihatan]`" v-model="form.kesehatan[sem].pengelihatan" placeholder="Normal/Minus"></td>
+                                <td><input type="text" class="form-control form-control-sm" :name="`kesehatan[${sem}][gigi]`" v-model="form.kesehatan[sem].gigi" placeholder="Bersih/Berlubang"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
         <!-- ==================== LANGKAH 4: DATA ORANG TUA / WALI ==================== -->
@@ -1235,6 +1265,25 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                         <option value="Kembali Sekolah">Kembali Sekolah</option>
                     </select>
                 </div>
+                
+                <!-- Mutasi Masuk Fields -->
+                <div class="col-12 border p-3 bg-light rounded" v-if="form.jenis_pendaftaran === 'Pindahan'">
+                    <h6 class="fw-bold mb-3"><i class="bi bi-box-arrow-in-right me-2"></i>Data Asal Pindahan</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="sekolah_asal_mutasi" class="form-label">Nama Sekolah Asal Mutasi</label>
+                            <input type="text" class="form-control" id="sekolah_asal_mutasi" name="sekolah_asal_mutasi" v-model="form.sekolah_asal_mutasi" placeholder="Contoh: SMPN 1 Jakarta">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="pindah_dari_tingkat" class="form-label">Pindah dari Tingkat/Kelas</label>
+                            <input type="text" class="form-control" id="pindah_dari_tingkat" name="pindah_dari_tingkat" v-model="form.pindah_dari_tingkat" placeholder="Contoh: VII">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="pindah_no_surat" class="form-label">Nomor Surat Keterangan Pindah</label>
+                            <input type="text" class="form-control" id="pindah_no_surat" name="pindah_no_surat" v-model="form.pindah_no_surat" placeholder="Masukkan nomor surat">
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Jalur Diterima -->
                 <div class="col-md-6" v-if="userRole !== 'siswa'">
@@ -1338,6 +1387,14 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                                 <label for="nomor_skp" class="form-label">Nomor Surat Keterangan Pindah (SKP)</label>
                                 <input type="text" class="form-control" id="nomor_skp" name="nomor_skp" v-model="form.nomor_skp" placeholder="Masukkan nomor SKP">
                             </div>
+                            <div class="col-md-6" v-if="form.keluar_karena === 'Mutasi'">
+                                <label for="tingkat_ditinggalkan" class="form-label">Tingkat/Kelas yang ditinggalkan</label>
+                                <input type="text" class="form-control" id="tingkat_ditinggalkan" name="tingkat_ditinggalkan" v-model="form.tingkat_ditinggalkan" placeholder="Contoh: VII">
+                            </div>
+                            <div class="col-md-6" v-if="form.keluar_karena === 'Mutasi'">
+                                <label for="diterima_di_tingkat" class="form-label">Diterima di Tingkat (Sekolah Tujuan)</label>
+                                <input type="text" class="form-control" id="diterima_di_tingkat" name="diterima_di_tingkat" v-model="form.diterima_di_tingkat" placeholder="Contoh: VII">
+                            </div>
 
                             <!-- Fields for Lulus -->
                             <div class="col-md-4" v-if="form.keluar_karena === 'Lulus'">
@@ -1370,6 +1427,12 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 <!-- UPLOAD AREA DOKUMEN DAN FOTO PROFIL -->
                 <div class="col-12 mt-4">
                     <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-cloud-upload-fill me-2"></i>Upload Berkas & Dokumen Pendukung (PDF/JPG, Max 500 KB)</h6>
+                    <div class="alert alert-info border-info-subtle bg-info-subtle py-2 fs-8 mb-3 d-flex align-items-center">
+                        <i class="bi bi-info-circle-fill fs-5 text-info me-3"></i>
+                        <div>
+                            <strong>Penting:</strong> Harap upload 1 file lalu klik <strong>Simpan</strong>, dan ulangi proses tersebut untuk meng-upload file berikutnya satu per satu.
+                        </div>
+                    </div>
                     <div class="row g-3">
                         
                         <!-- 1. Foto Profil -->
@@ -1858,6 +1921,8 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 golongan_darah: '',
                 anak_ke: '',
                 jumlah_saudara: '',
+                saudara_tiri: '',
+                saudara_angkat: '',
                 penyakit_yang_diderita: '',
                 jarak_rumah: '',
                 transportasi: '',
@@ -1919,6 +1984,11 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 keluar_karena: '',
                 tanggal_keluar: '',
                 alasan_keluar: '',
+                sekolah_asal_mutasi: '',
+                pindah_dari_tingkat: '',
+                pindah_no_surat: '',
+                tingkat_ditinggalkan: '',
+                diterima_di_tingkat: '',
                 sekolah_tujuan: '',
                 nomor_skp: '',
                 nomor_ijazah_kelulusan: '',
@@ -1935,7 +2005,17 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 berkas_mutasi_keluar: '',
                 berkas_kip: '',
                 berkas_pernyataan_baru: '',
-                berkas_pernyataan_tka: ''
+                berkas_pernyataan_tka: '',
+
+                // Kesehatan Per Semester
+                kesehatan: {
+                    1: { tinggi_badan: '', berat_badan: '', pendengaran: '', pengelihatan: '', gigi: '' },
+                    2: { tinggi_badan: '', berat_badan: '', pendengaran: '', pengelihatan: '', gigi: '' },
+                    3: { tinggi_badan: '', berat_badan: '', pendengaran: '', pengelihatan: '', gigi: '' },
+                    4: { tinggi_badan: '', berat_badan: '', pendengaran: '', pengelihatan: '', gigi: '' },
+                    5: { tinggi_badan: '', berat_badan: '', pendengaran: '', pengelihatan: '', gigi: '' },
+                    6: { tinggi_badan: '', berat_badan: '', pendengaran: '', pengelihatan: '', gigi: '' }
+                }
             });
 
             // Map kota ke options untuk searchable dropdown
@@ -2049,6 +2129,19 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                     }
                     if (form.value.id_kecamatan) {
                         fetchKelurahan(form.value.id_kecamatan, false);
+                    }
+                    
+                    const kesehatanPhp = <?= json_encode($kesehatanData) ?>;
+                    if (kesehatanPhp && Object.keys(kesehatanPhp).length > 0) {
+                        for (let sem in kesehatanPhp) {
+                            if (form.value.kesehatan[sem]) {
+                                form.value.kesehatan[sem].tinggi_badan = kesehatanPhp[sem].tinggi_badan !== null ? kesehatanPhp[sem].tinggi_badan : '';
+                                form.value.kesehatan[sem].berat_badan = kesehatanPhp[sem].berat_badan !== null ? kesehatanPhp[sem].berat_badan : '';
+                                form.value.kesehatan[sem].pendengaran = kesehatanPhp[sem].pendengaran || '';
+                                form.value.kesehatan[sem].pengelihatan = kesehatanPhp[sem].pengelihatan || '';
+                                form.value.kesehatan[sem].gigi = kesehatanPhp[sem].gigi || '';
+                            }
+                        }
                     }
                 }
             };
@@ -2304,7 +2397,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                     ],
                     3: [
                         'tinggi_badan', 'berat_badan', 'lingkar_kepala', 'golongan_darah',
-                        'anak_ke', 'jumlah_saudara', 'penyakit_yang_diderita', 'jarak_rumah',
+                        'anak_ke', 'jumlah_saudara', 'saudara_tiri', 'saudara_angkat', 'penyakit_yang_diderita', 'jarak_rumah',
                         'transportasi', 'status_anak', 'penerima_kps', 'punya_kip',
                         'layak_kip', 'no_kip', 'alasan_layak', 'kelainan_jasmani'
                     ],
@@ -2322,7 +2415,8 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                     5: [
                         'jenis_pendaftaran', 'jalur_diterima', 'tanggal_masuk', 'paud_formal',
                         'paud_non_formal', 'hobi', 'keluar_karena', 'tanggal_keluar', 'alasan_keluar', 'status',
-                        'sekolah_tujuan', 'nomor_skp', 'nomor_ijazah_kelulusan', 'nomor_skl', 'keterangan_setelah_lulus'
+                        'sekolah_tujuan', 'nomor_skp', 'nomor_ijazah_kelulusan', 'nomor_skl', 'keterangan_setelah_lulus',
+                        'sekolah_asal_mutasi', 'pindah_dari_tingkat', 'pindah_no_surat', 'tingkat_ditinggalkan', 'diterima_di_tingkat'
                     ]
                 };
                 return stepFields[step] || [];
@@ -2379,6 +2473,19 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                                 baseFormData.append(field, form.value[field]);
                             }
                         });
+                    }
+
+                    // --- GATHER KESEHATAN DATA (STEP 3) ---
+                    if (isFullSubmit || currentStep.value === 3) {
+                        if (form.value.kesehatan) {
+                            for (let sem in form.value.kesehatan) {
+                                for (let key in form.value.kesehatan[sem]) {
+                                    if (form.value.kesehatan[sem][key] !== undefined && form.value.kesehatan[sem][key] !== null) {
+                                        baseFormData.append(`kesehatan[${sem}][${key}]`, form.value.kesehatan[sem][key]);
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     // --- GATHER FILES ---
@@ -2782,6 +2889,12 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
             // --- INITIALIZATION ---
             onMounted(async () => {
+                const storedStep = sessionStorage.getItem('siswa_current_step');
+                if (storedStep) {
+                    currentStep.value = parseInt(storedStep);
+                    sessionStorage.removeItem('siswa_current_step');
+                }
+                
                 await fetchProvinces();
                 await fetchAllCities();
                 if (userRole.value === 'super_admin') {

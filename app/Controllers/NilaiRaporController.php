@@ -75,14 +75,40 @@ class NilaiRaporController extends BaseController {
         // 2. Get students in this class
         $qSiswa = "SELECT s.id, s.nama_lengkap, s.nisn, s.nis, s.agama
                    FROM siswa s
-                   WHERE s.id_kelas = :kelas_id
-                     AND s.tenant_id = :tenant_id
-                     AND s.status = 'Aktif'
+                   WHERE s.tenant_id = :tenant_id
+                     AND (s.status = 'Aktif' OR s.status = 'Lulus' OR s.status = 'Pindah' OR s.status = 'Drop Out' OR s.status = 'Keluar')
                      AND s.deleted_at IS NULL
+                     AND (
+                         (
+                             s.id_kelas = :kelas_id1
+                             AND :tahun_ajaran3 >= COALESCE(
+                                 (SELECT MAX(tahun_ajaran) FROM riwayat_kenaikan_kelas WHERE siswa_id = s.id),
+                                 (SELECT tahun_ajaran FROM tahun_ajaran WHERE id = s.id_tahun_ajaran LIMIT 1)
+                             )
+                         )
+                         OR s.id IN (
+                             SELECT siswa_id FROM detail_nilai_rapor 
+                             WHERE kelas_id = :kelas_id2 
+                               AND tahun_ajaran = :tahun_ajaran1 
+                               AND semester = :semester 
+                               AND deleted_at IS NULL
+                         )
+                         OR s.id IN (
+                             SELECT siswa_id FROM riwayat_kenaikan_kelas 
+                             WHERE id_kelas_asal = :kelas_id3 
+                               AND :tahun_ajaran2 = CONCAT(CAST(LEFT(tahun_ajaran, 4) AS UNSIGNED) - 1, '/', CAST(RIGHT(tahun_ajaran, 4) AS UNSIGNED) - 1)
+                         )
+                     )
                    ORDER BY s.nama_lengkap ASC";
         $stmtSiswa = $db->prepare($qSiswa);
         $stmtSiswa->execute([
-            'kelas_id' => $kelasId,
+            'kelas_id1' => $kelasId,
+            'kelas_id2' => $kelasId,
+            'kelas_id3' => $kelasId,
+            'tahun_ajaran1' => $tahunAjaran,
+            'tahun_ajaran2' => $tahunAjaran,
+            'tahun_ajaran3' => $tahunAjaran,
+            'semester' => $semester,
             'tenant_id' => $tenantId
         ]);
         $students = $stmtSiswa->fetchAll(PDO::FETCH_ASSOC);
@@ -190,6 +216,14 @@ class NilaiRaporController extends BaseController {
             $subjectsMap[$sub['mapel_id']] = $sub['nama_mapel'];
         }
 
+        // Periksa apakah input nilai terkunci
+        $stmtLock = $db->prepare("SELECT is_locked_nilai FROM kunci_akademik WHERE tenant_id = ? AND tahun_ajaran = ? AND semester = ?");
+        $stmtLock->execute([$tenantId, $tahunAjaran, $semester]);
+        if ($stmtLock->fetchColumn()) {
+            $this->jsonResponse(['status' => 'error', 'message' => 'Gagal menyimpan. Input Nilai Rapor pada Tahun Ajaran & Semester ini telah dikunci oleh administrator.'], 403);
+            return;
+        }
+
         $db->beginTransaction();
         try {
             $stmtUpsert = $db->prepare("
@@ -198,8 +232,10 @@ class NilaiRaporController extends BaseController {
                 VALUES 
                     (:tenant_id, :siswa_id, :kelas_id, :tahun_ajaran, :semester, :mapel_id, :nilai_akhir)
                 ON DUPLICATE KEY UPDATE 
+                    kelas_id = VALUES(kelas_id),
                     nilai_akhir = VALUES(nilai_akhir), 
-                    updated_at = NOW()
+                    updated_at = NOW(),
+                    deleted_at = NULL
             ");
 
             foreach ($grades as $entry) {
@@ -590,5 +626,53 @@ class NilaiRaporController extends BaseController {
         }
 
         return $studentReligionKey !== $subjectReligionKey;
+    }
+
+    public function deleteSiswaGradesApi(): void {
+        header('Content-Type: application/json');
+        try {
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new \Exception("Method not allowed.");
+            }
+
+            $siswaId = $_POST['siswa_id'] ?? '';
+            $kelasId = $_POST['kelas_id'] ?? '';
+            $tahunAjaran = $_POST['tahun_ajaran'] ?? '';
+            $semester = $_POST['semester'] ?? '';
+
+            if (!$siswaId || !$kelasId || !$tahunAjaran || !$semester) {
+                throw new \Exception("Parameter tidak lengkap.");
+            }
+
+            $role = $_SESSION['role_name'] ?? '';
+            if ($role !== 'super_admin' && $role !== 'admin') {
+                throw new \Exception("Anda tidak memiliki akses.");
+            }
+
+            $tenantId = \App\Core\SessionManager::getTenantId();
+            if ($role === 'super_admin' && empty($tenantId)) {
+                $tenantId = $_POST['tenant_id'] ?? '';
+            }
+            if (!$tenantId) {
+                throw new \Exception("Sekolah belum dipilih.");
+            }
+
+            $db = \App\Config\Database::getConnection();
+
+            // Kita akan melakukan soft delete pada semua nilai rapor siswa ini di kelas, tahun ajaran, dan semester tertentu
+            $stmt = $db->prepare("UPDATE detail_nilai_rapor SET deleted_at = NOW() WHERE siswa_id = ? AND kelas_id = ? AND tahun_ajaran = ? AND semester = ? AND tenant_id = ? AND deleted_at IS NULL");
+            $stmt->execute([$siswaId, $kelasId, $tahunAjaran, $semester, $tenantId]);
+
+            // Jika nilai berhasil dihapus, student otomatis akan hilang dari grid jika mereka tidak terdaftar resmi di kelas tersebut (berdasarkan filter BukuIndukController / getGrid)
+            echo json_encode([
+                'success' => true,
+                'message' => 'Nilai rapor untuk siswa tersebut pada filter ini berhasil dihapus.'
+            ]);
+        } catch (\Throwable $e) {
+            echo json_encode([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }
