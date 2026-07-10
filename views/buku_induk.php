@@ -34,10 +34,9 @@
                         </span>
                     </div>
                 </div>
-                <div class="col-12 col-md-5">
+                <div class="col-12 col-md-4">
                     <select class="form-select form-select-sm rounded-3 shadow-none"
-                            v-model="filterTenantId"
-                            @change="onFilterTenantChange"
+                            v-model="tempFilterTenantId"
                             id="sa-filter-sekolah-bukuinduk"
                             name="filter_tenant_id"
                             style="border:1.5px solid #bfdbfe;">
@@ -47,7 +46,12 @@
                         </option>
                     </select>
                 </div>
-                <div class="col-12 col-md-4">
+                <div class="col-12 col-md-auto">
+                    <button type="button" class="btn btn-primary btn-sm rounded-3 px-3 shadow-sm w-100" @click="applyTenantFilter">
+                        <i class="bi bi-funnel-fill me-1"></i> Terapkan Filter
+                    </button>
+                </div>
+                <div class="col-12 col-md-3">
                     <div v-if="filterTenantId" class="d-flex align-items-center gap-2">
                         <span class="fs-8 text-muted">Menampilkan data milik:</span>
                         <span class="fw-semibold text-primary fs-8">{{ selectedTenantName }}</span>
@@ -2014,6 +2018,7 @@
                 ],
                 userRole: '<?php echo htmlspecialchars($user_role ?? ""); ?>',
                 listTenants: <?php echo json_encode($tenantList ?? []); ?>,
+                tempFilterTenantId: '',
                 filterTenantId: '', 
                 kelasOptions: <?php echo json_encode($kelasList ?? []); ?>,
                 filterKelas: '',
@@ -2656,6 +2661,10 @@
                 const k = this.masterNilaiRapor.kelas.find(x => x.id == kelasId);
                 return k ? k.nama_kelas : '';
             },
+            applyTenantFilter() {
+                this.filterTenantId = this.tempFilterTenantId;
+                this.onFilterTenantChange();
+            },
             onFilterTenantChange() {
                 // Ambil daftar kelas yang sesuai dengan tenant terpilih (untuk Super Admin)
                 this.filterKelas = '';
@@ -2666,6 +2675,8 @@
                     this.fetchNilaiRaporMaster();
                 } else if (this.mainActiveTab === 'riwayat_kepsek') {
                     this.fetchRiwayatKepsek();
+                } else if (this.mainActiveTab === 'cetak_buku_induk') {
+                    this.loadMatrixData();
                 } else {
                     this.fetchData(1);
                 }

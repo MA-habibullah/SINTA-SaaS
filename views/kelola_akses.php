@@ -44,15 +44,20 @@ $tenants      = $data['tenants'] ?? [];
             <label for="tenantSelectorAkses" class="form-label fw-bold text-dark mb-2">
                 <i class="bi bi-buildings text-primary me-2"></i>Target Pengaturan Akses
             </label>
-            <select id="tenantSelectorAkses" class="form-select rounded-3 py-2">
-                <option value="">— Global Default (Berlaku untuk semua sekolah yang belum dikustomisasi) —</option>
-                <?php foreach ($tenants as $tenant): ?>
-                    <option value="<?= htmlspecialchars($tenant['id']) ?>">
-                        <?= htmlspecialchars($tenant['nama_sekolah']) ?>
-                        <?= !empty($tenant['npsn']) ? '(NPSN: ' . htmlspecialchars($tenant['npsn']) . ')' : '' ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
+            <div class="d-flex gap-2">
+                <select id="tenantSelectorAkses" class="form-select rounded-3 py-2">
+                    <option value="">— Global Default (Berlaku untuk semua sekolah yang belum dikustomisasi) —</option>
+                    <?php foreach ($tenants as $tenant): ?>
+                        <option value="<?= htmlspecialchars($tenant['id']) ?>">
+                            <?= htmlspecialchars($tenant['nama_sekolah']) ?>
+                            <?= !empty($tenant['npsn']) ? '(NPSN: ' . htmlspecialchars($tenant['npsn']) . ')' : '' ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <button type="button" id="btnTerapkanFilterAkses" class="btn btn-primary rounded-3 text-nowrap px-3">
+                    <i class="bi bi-funnel me-1"></i> Terapkan Filter
+                </button>
+            </div>
         </div>
         <div class="col-12 col-md-5">
             <div id="tenantBadge" class="d-none">
@@ -233,12 +238,13 @@ document.addEventListener('turbo:load', function () {
     const tenantBadge   = document.getElementById('tenantBadge');
     const tenantBadgeText = document.getElementById('tenantBadgeText');
     const loadingBadge  = document.getElementById('loadingBadge');
+    const btnTerapkanFilter = document.getElementById('btnTerapkanFilterAkses');
 
-    if (!tenantSelector) return; // bukan super admin, stop
+    if (!tenantSelector || !btnTerapkanFilter) return; // bukan super admin, stop
 
-    tenantSelector.addEventListener('change', function () {
-        const selectedTenantId = this.value;
-        const selectedText     = this.options[this.selectedIndex].text;
+    btnTerapkanFilter.addEventListener('click', function () {
+        const selectedTenantId = tenantSelector.value;
+        const selectedText     = tenantSelector.options[tenantSelector.selectedIndex].text;
 
         // Simpan tenant_id ke hidden input
         targetTenantInput.value = selectedTenantId;
