@@ -2193,6 +2193,7 @@
                 new bootstrap.Modal(document.getElementById('modalCetakDokumen')).show();
             },
             executePrint() {
+                if (document.activeElement) document.activeElement.blur();
                 const finalUrl = this.printModal.url + '&tanggal_cetak=' + this.printModal.tanggalCetak;
                 window.open(finalUrl, '_blank');
                 bootstrap.Modal.getInstance(document.getElementById('modalCetakDokumen')).hide();
@@ -3098,6 +3099,13 @@
 
                 return studentReligionKey !== subjectReligionKey;
             }
+        }
+    });
+
+    // Fix for WAI-ARIA accessibility error: Blocked aria-hidden on an element because its descendant retained focus
+    document.addEventListener('hide.bs.modal', function() {
+        if (document.activeElement) {
+            document.activeElement.blur();
         }
     });
 }
