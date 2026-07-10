@@ -1945,6 +1945,58 @@
                         });
                 });
             },
+            submitTinggalKelas() {
+                if (this.aksiSelectedIds.length === 0) {
+                    this.toast.fire({ icon: 'warning', title: 'Pilih minimal satu siswa.' }); return;
+                }
+                if (!this.aksiKelasTujuanId) {
+                    this.toast.fire({ icon: 'warning', title: 'Pilih kelas tujuan.' }); return;
+                }
+                if (!this.aksiTahunAjaran) {
+                    this.toast.fire({ icon: 'warning', title: 'Isi tahun ajaran.' }); return;
+                }
+
+                const kelasAsal = this.aksiListKelas.find(k => k.id == this.aksiKelasAsalId);
+                const kelasTujuan = this.aksiListKelas.find(k => k.id == this.aksiKelasTujuanId);
+
+                Swal.fire({
+                    title: 'Konfirmasi Tinggal Kelas',
+                    html: `Anda akan menetapkan tinggal kelas untuk <b>${this.aksiSelectedIds.length} siswa</b><br>dari <b>${(kelasAsal && kelasAsal.nama_kelas) || '-'}</b> &#10145; <b>${(kelasTujuan && kelasTujuan.nama_kelas) || '-'}</b><br>Tahun Ajaran: <b>${this.aksiTahunAjaran}</b>`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: 'Ya, Tetapkan!',
+                    cancelButtonText: 'Batal'
+                }).then(result => {
+                    if (!result.isConfirmed) return;
+                    this.aksiSubmitLoading = true;
+                    const payload = {
+                        siswa_ids: this.aksiSelectedIds,
+                        kelas_tujuan: this.aksiKelasTujuanId,
+                        tahun_ajaran: this.aksiTahunAjaran,
+                        catatan: this.aksiCatatan
+                    };
+                    if (this.userRole === 'super_admin') payload.tenant_id = this.aksiTenantId;
+
+                    axios.post('/SINTA-SaaS/api/v1/pengguna/aksi/tinggal-kelas', payload)
+                        .then(res => {
+                            this.aksiSubmitLoading = false;
+                            Swal.fire({ icon: 'success', title: 'Berhasil!', text: res.data.message, confirmButtonColor: '#10b981' });
+                            this.aksiKelasAsalId = '';
+                            this.aksiKelasTujuanId = '';
+                            this.aksiListSiswa = [];
+                            this.aksiSelectedIds = [];
+                            this.aksiSelectAll = false;
+                            this.aksiCatatan = '';
+                        })
+                        .catch(err => {
+                            this.aksiSubmitLoading = false;
+                            const msg = err.response && err.response.data.error ? err.response.data.error : err.message;
+                            Swal.fire({ icon: 'error', title: 'Gagal', text: msg, confirmButtonColor: '#ef4444' });
+                        });
+                });
+            },
             submitLuluskan() {
                 if (this.aksiSelectedIds.length === 0) {
                     this.toast.fire({ icon: 'warning', title: 'Pilih minimal satu siswa.' }); return;
