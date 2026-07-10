@@ -234,7 +234,38 @@ $isAdminOrSuper = in_array('super_admin', $user_roles, true) || in_array('operat
             box-shadow: 0 8px 15px rgba(0,0,0,0.1);
             transform: translateY(-2px);
         }
-    </style>
+        /* Navigation Tabs Styling */
+    .scrollable-nav-tabs {
+        padding-bottom: 5px;
+        border-bottom: none;
+    }
+    .scrollable-nav-tabs::-webkit-scrollbar {
+        height: 4px;
+    }
+    .scrollable-nav-tabs::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border-radius: 4px;
+    }
+    .nav-tabs-wrapper .nav-link {
+        font-size: 14px;
+        color: #475569;
+        background-color: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        border-radius: 0;
+        font-weight: 600;
+        padding: 10px 16px;
+        transition: all 0.2s ease-in-out;
+    }
+    .nav-tabs-wrapper .nav-link:hover {
+        color: #2563eb;
+    }
+    .nav-tabs-wrapper .nav-link.active {
+        color: #2563eb !important;
+        background-color: transparent !important;
+        border-bottom: 2px solid #2563eb !important;
+    }
+</style>
     <?php endif; ?>
 
     <?php if ($isAdminOrSuper): ?>

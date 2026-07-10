@@ -24,6 +24,37 @@
 
 /* fs-9 compat */
 .fs-9 { font-size: 0.72rem !important; }
+/* Navigation Tabs Styling (Matches Manajemen Pengguna) */
+.scrollable-nav-tabs {
+    padding-bottom: 5px;
+    border-bottom: none;
+}
+.scrollable-nav-tabs::-webkit-scrollbar {
+    height: 4px;
+}
+.scrollable-nav-tabs::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 4px;
+}
+.nav-tabs-wrapper .nav-link {
+    font-size: 14px;
+    color: #475569;
+    background-color: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    font-weight: 600;
+    padding: 10px 16px;
+    transition: all 0.2s ease-in-out;
+}
+.nav-tabs-wrapper .nav-link:hover {
+    color: #2563eb;
+}
+.nav-tabs-wrapper .nav-link.active {
+    color: #2563eb !important;
+    background-color: transparent !important;
+    border-bottom: 2px solid #2563eb !important;
+}
 </style>
 
 <!-- ================================================================
@@ -67,33 +98,34 @@
     </div>
 
     <!-- NAVIGATION TABS -->
-    <div class="border-bottom mb-4">
-        <ul class="nav nav-tabs border-0 flex gap-4">
-            <li class="nav-item">
-                <button type="button" class="px-3 py-2 fw-semibold border-0 bg-transparent position-relative text-decoration-none"
-                   :class="activeTab === 'resources' ? 'text-primary border-bottom border-primary border-2' : 'text-muted'"
-                   @click="activeTab = 'resources'"
-                   style="cursor:pointer; font-size: 0.9rem; transition: all 0.2s;">
-                    <i class="bi bi-cpu-fill me-1"></i> Resource Monitor
-                </button>
-            </li>
-            <li class="nav-item">
-                <button type="button" class="px-3 py-2 fw-semibold border-0 bg-transparent position-relative text-decoration-none"
-                   :class="activeTab === 'network' ? 'text-primary border-bottom border-primary border-2' : 'text-muted'"
-                   @click="activeTab = 'network'"
-                   style="cursor:pointer; font-size: 0.9rem; transition: all 0.2s;">
-                    <i class="bi bi-hdd-network-fill me-1"></i> Network Interfaces
-                </button>
-            </li>
-            <li class="nav-item">
-                <button type="button" class="px-3 py-2 fw-semibold border-0 bg-transparent position-relative text-decoration-none"
-                   :class="activeTab === 'update' ? 'text-primary border-bottom border-primary border-2' : 'text-muted'"
-                   @click="activeTab = 'update'"
-                   style="cursor:pointer; font-size: 0.9rem; transition: all 0.2s;">
-                    <i class="bi bi-cloud-arrow-down-fill me-1"></i> Update Server
-                </button>
-            </li>
-        </ul>
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-2 bg-white rounded-4">
+            <div class="nav-tabs-wrapper">
+                <ul class="nav nav-tabs border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-3 px-2">
+                    <li class="nav-item">
+                        <button type="button" class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition"
+                           :class="{active: activeTab === 'resources'}"
+                           @click="activeTab = 'resources'">
+                            <i class="bi bi-cpu-fill me-2 fs-6"></i>Resource Monitor
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button type="button" class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition"
+                           :class="{active: activeTab === 'network'}"
+                           @click="activeTab = 'network'">
+                            <i class="bi bi-hdd-network-fill me-2 fs-6"></i>Network Interfaces
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button type="button" class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition"
+                           :class="{active: activeTab === 'update'}"
+                           @click="activeTab = 'update'">
+                            <i class="bi bi-cloud-arrow-down-fill me-2 fs-6"></i>Update Server
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
     </div>
 
     <div v-show="activeTab === 'resources'">

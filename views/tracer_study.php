@@ -27,27 +27,36 @@ $baseUrl   = '/SINTA-SaaS';
         border: none;
     }
 
-    .tracer-tab-btn {
-        padding: 0.65rem 1.4rem;
-        border-radius: 0.75rem;
+    /* Navigation Tabs Styling */
+    .scrollable-nav-tabs {
+        padding-bottom: 5px;
+        border-bottom: none;
+    }
+    .scrollable-nav-tabs::-webkit-scrollbar {
+        height: 4px;
+    }
+    .scrollable-nav-tabs::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border-radius: 4px;
+    }
+    .nav-tabs-wrapper .nav-link {
+        font-size: 14px;
+        color: #475569;
+        background-color: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        border-radius: 0;
         font-weight: 600;
-        font-size: 0.875rem;
-        border: 2px solid var(--tracer-border);
-        background: transparent;
-        color: #64748b;
-        transition: all 0.2s ease;
-        cursor: pointer;
+        padding: 10px 16px;
+        transition: all 0.2s ease-in-out;
     }
-    .tracer-tab-btn.active-tab {
-        background: var(--tracer-blue);
-        border-color: var(--tracer-blue);
-        color: #fff;
-        box-shadow: 0 4px 12px rgba(37,99,235,0.2);
+    .nav-tabs-wrapper .nav-link:hover {
+        color: #2563eb;
     }
-    .tracer-tab-btn:hover:not(.active-tab) {
-        border-color: var(--tracer-blue);
-        color: var(--tracer-blue);
-        background: #eff6ff;
+    .nav-tabs-wrapper .nav-link.active {
+        color: #2563eb !important;
+        background-color: transparent !important;
+        border-bottom: 2px solid #2563eb !important;
     }
 
     .tracer-badge {
@@ -142,17 +151,29 @@ $baseUrl   = '/SINTA-SaaS';
     <!-- ================================================================
          TAB NAVIGATION
     ================================================================ -->
-    <div class="d-flex gap-2 mb-4 flex-wrap">
-        <button class="tracer-tab-btn" :class="{'active-tab': activeTab === 'kuliah'}"
-                @click="activeTab = 'kuliah'" id="tab-kuliah">
-            <i class="bi bi-mortarboard me-1"></i> Riwayat Kuliah
-            <span class="badge bg-primary ms-1 rounded-pill">{{ riwayatKuliah.length }}</span>
-        </button>
-        <button class="tracer-tab-btn" :class="{'active-tab': activeTab === 'pekerjaan'}"
-                @click="activeTab = 'pekerjaan'" id="tab-pekerjaan">
-            <i class="bi bi-briefcase me-1"></i> Riwayat Pekerjaan
-            <span class="badge bg-success ms-1 rounded-pill">{{ riwayatPekerjaan.length }}</span>
-        </button>
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-2 bg-white rounded-4">
+            <div class="nav-tabs-wrapper">
+                <ul class="nav nav-tabs border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-3 px-2">
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" 
+                                :class="{active: activeTab === 'kuliah'}"
+                                @click="activeTab = 'kuliah'" id="tab-kuliah">
+                            <i class="bi bi-mortarboard me-2 fs-6"></i> Riwayat Kuliah
+                            <span class="badge bg-primary ms-1 rounded-pill">{{ riwayatKuliah.length }}</span>
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" 
+                                :class="{active: activeTab === 'pekerjaan'}"
+                                @click="activeTab = 'pekerjaan'" id="tab-pekerjaan">
+                            <i class="bi bi-briefcase me-2 fs-6"></i> Riwayat Pekerjaan
+                            <span class="badge bg-success ms-1 rounded-pill">{{ riwayatPekerjaan.length }}</span>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
     </div>
 
     <!-- ================================================================

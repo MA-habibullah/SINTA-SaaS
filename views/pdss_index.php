@@ -29,6 +29,68 @@ $tenantList = $data['tenant_list'] ?? [];
     border-bottom: 2px solid #2563eb !important;
 }
 [v-cloak] { display: none !important; }
+    /* Navigation Tabs Styling */
+    .scrollable-nav-tabs {
+        padding-bottom: 5px;
+        border-bottom: none;
+    }
+    .scrollable-nav-tabs::-webkit-scrollbar {
+        height: 4px;
+    }
+    .scrollable-nav-tabs::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border-radius: 4px;
+    }
+    .nav-tabs-wrapper .nav-link {
+        font-size: 14px;
+        color: #475569;
+        background-color: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        border-radius: 0;
+        font-weight: 600;
+        padding: 10px 16px;
+        transition: all 0.2s ease-in-out;
+    }
+    .nav-tabs-wrapper .nav-link:hover {
+        color: #2563eb;
+    }
+    .nav-tabs-wrapper .nav-link.active {
+        color: #2563eb !important;
+        background-color: transparent !important;
+        border-bottom: 2px solid #2563eb !important;
+    }
+    /* Navigation Tabs Styling */
+    .scrollable-nav-tabs {
+        padding-bottom: 5px;
+        border-bottom: none;
+    }
+    .scrollable-nav-tabs::-webkit-scrollbar {
+        height: 4px;
+    }
+    .scrollable-nav-tabs::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border-radius: 4px;
+    }
+    .nav-tabs-wrapper .nav-link {
+        font-size: 14px;
+        color: #475569;
+        background-color: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        border-radius: 0;
+        font-weight: 600;
+        padding: 10px 16px;
+        transition: all 0.2s ease-in-out;
+    }
+    .nav-tabs-wrapper .nav-link:hover {
+        color: #2563eb;
+    }
+    .nav-tabs-wrapper .nav-link.active {
+        color: #2563eb !important;
+        background-color: transparent !important;
+        border-bottom: 2px solid #2563eb !important;
+    }
 </style>
 
 <!-- Super Admin: Pilih Sekolah Terlebih Dahulu -->
@@ -81,30 +143,31 @@ $tenantList = $data['tenant_list'] ?? [];
     </div>
 
     <!-- TABS NAVIGATION -->
-    <div class="border-b border-slate-200 mb-6">
-        <ul class="flex flex-wrap -mb-px text-sm font-medium text-center gap-2">
-            <li>
-                <button @click="activeTab = 'kesiapan'" 
-                        class="inline-flex items-center gap-2 px-4 py-2.5 border-b-2 border-transparent bg-transparent font-semibold text-slate-500 hover:text-slate-700 transition"
-                        :class="{'tab-active': activeTab === 'kesiapan'}">
-                    <i class="bi bi-award-fill"></i> Kesiapan & Eligibilitas Siswa
-                </button>
-            </li>
-            <li>
-                <button @click="activeTab = 'tracking'" 
-                        class="inline-flex items-center gap-2 px-4 py-2.5 border-b-2 border-transparent bg-transparent font-semibold text-slate-500 hover:text-slate-700 transition"
-                        :class="{'tab-active': activeTab === 'tracking'}">
-                    <i class="bi bi-mortarboard-fill"></i> Tracking Alumni & Rekam Kampus
-                </button>
-            </li>
-            <li>
-                <button @click="activeTab = 'config'" 
-                        class="inline-flex items-center gap-2 px-4 py-2.5 border-b-2 border-transparent bg-transparent font-semibold text-slate-500 hover:text-slate-700 transition"
-                        :class="{'tab-active': activeTab === 'config'}">
-                    <i class="bi bi-gear-fill"></i> Konfigurasi Target Kampus
-                </button>
-            </li>
-        </ul>
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-2 bg-white rounded-4">
+            <div class="nav-tabs-wrapper">
+                <ul class="nav nav-tabs border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-3 px-2">
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'kesiapan'}"
+                                @click="activeTab = 'kesiapan'">
+                            <i class="bi bi-award-fill me-2 fs-6"></i> Kesiapan & Eligibilitas Siswa
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'tracking'}"
+                                @click="activeTab = 'tracking'">
+                            <i class="bi bi-mortarboard-fill me-2 fs-6"></i> Tracking Alumni & Rekam Kampus
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'config'}"
+                                @click="activeTab = 'config'">
+                            <i class="bi bi-gear-fill me-2 fs-6"></i> Konfigurasi Target Kampus
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
     </div>
 
     <!-- MAIN SECTIONS -->

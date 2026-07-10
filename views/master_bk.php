@@ -289,6 +289,37 @@ $baseUrl    = '/SINTA-SaaS';
     .grid-input-number {
         -moz-appearance: textfield;
     }
+    /* Navigation Tabs Styling */
+    .scrollable-nav-tabs {
+        padding-bottom: 5px;
+        border-bottom: none;
+    }
+    .scrollable-nav-tabs::-webkit-scrollbar {
+        height: 4px;
+    }
+    .scrollable-nav-tabs::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border-radius: 4px;
+    }
+    .nav-tabs-wrapper .nav-link {
+        font-size: 14px;
+        color: #475569;
+        background-color: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        border-radius: 0;
+        font-weight: 600;
+        padding: 10px 16px;
+        transition: all 0.2s ease-in-out;
+    }
+    .nav-tabs-wrapper .nav-link:hover {
+        color: #2563eb;
+    }
+    .nav-tabs-wrapper .nav-link.active {
+        color: #2563eb !important;
+        background-color: transparent !important;
+        border-bottom: 2px solid #2563eb !important;
+    }
 </style>
 
 <!-- Page Header -->
@@ -336,36 +367,55 @@ $baseUrl    = '/SINTA-SaaS';
 <div id="bkApp" v-cloak>
 
     <!-- ═══ HORIZONTAL TAB NAVIGATION ═══════════════════════════ -->
-    <div class="bk-tabs mb-4" id="bk-tab-nav">
-        <button class="bk-tab-btn" :class="{'active': activeTab === 'dashboard'}"
-                @click="switchTab('dashboard')" id="tab-dashboard">
-            <i class="bi bi-speedometer2"></i> Dashboard
-        </button>
-        <button class="bk-tab-btn" :class="{'active': activeTab === 'penjurusan'}"
-                @click="switchTab('penjurusan')" id="tab-tab-penjurusan">
-            <i class="bi bi-diagram-3"></i> Penjurusan Mandiri
-        </button>
-        <button class="bk-tab-btn" :class="{'active': activeTab === 'tracer'}"
-                @click="switchTab('tracer')" id="tab-tracer">
-            <i class="bi bi-mortarboard"></i> Tracer Study
-        </button>
-
-        <button class="bk-tab-btn" :class="{'active': activeTab === 'jurnal'}"
-                @click="switchTab('jurnal')" id="tab-jurnal">
-            <i class="bi bi-journal-text"></i> Rekam Kasus & Jurnal
-        </button>
-        <button class="bk-tab-btn" :class="{'active': activeTab === 'prestasi'}"
-                @click="switchTab('prestasi')" id="tab-prestasi">
-            <i class="bi bi-trophy"></i> Prestasi Siswa
-        </button>
-        <button class="bk-tab-btn" :class="{'active': activeTab === 'kehadiran'}"
-                @click="switchTab('kehadiran')" id="tab-kehadiran">
-            <i class="bi bi-calendar-check"></i> Kehadiran Semester
-        </button>
-        <button class="bk-tab-btn" :class="{'active': activeTab === 'pelanggaran'}"
-                @click="switchTab('pelanggaran')" id="tab-pelanggaran">
-            <i class="bi bi-shield-exclamation"></i> Tata Tertib & Poin
-        </button>
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-2 bg-white rounded-4">
+            <div class="nav-tabs-wrapper">
+                <ul class="nav nav-tabs border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-3 px-2">
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'dashboard'}"
+                                @click="switchTab('dashboard')" id="tab-dashboard">
+                            <i class="bi bi-speedometer2 me-2 fs-6"></i> Dashboard
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'penjurusan'}"
+                                @click="switchTab('penjurusan')" id="tab-tab-penjurusan">
+                            <i class="bi bi-diagram-3 me-2 fs-6"></i> Penjurusan Mandiri
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'tracer'}"
+                                @click="switchTab('tracer')" id="tab-tracer">
+                            <i class="bi bi-mortarboard me-2 fs-6"></i> Tracer Study
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'jurnal'}"
+                                @click="switchTab('jurnal')" id="tab-jurnal">
+                            <i class="bi bi-journal-text me-2 fs-6"></i> Rekam Kasus & Jurnal
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'prestasi'}"
+                                @click="switchTab('prestasi')" id="tab-prestasi">
+                            <i class="bi bi-trophy me-2 fs-6"></i> Prestasi Siswa
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'kehadiran'}"
+                                @click="switchTab('kehadiran')" id="tab-kehadiran">
+                            <i class="bi bi-calendar-check me-2 fs-6"></i> Kehadiran Semester
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'pelanggaran'}"
+                                @click="switchTab('pelanggaran')" id="tab-pelanggaran">
+                            <i class="bi bi-shield-exclamation me-2 fs-6"></i> Tata Tertib & Poin
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════

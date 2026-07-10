@@ -40,6 +40,37 @@
         box-shadow: 0 4px 15px rgba(37,99,235,0.25);
         color: white !important;
     }
+    /* Navigation Tabs Styling */
+    .scrollable-nav-tabs {
+        padding-bottom: 5px;
+        border-bottom: none;
+    }
+    .scrollable-nav-tabs::-webkit-scrollbar {
+        height: 4px;
+    }
+    .scrollable-nav-tabs::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border-radius: 4px;
+    }
+    .nav-tabs-wrapper .nav-link {
+        font-size: 14px;
+        color: #475569;
+        background-color: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        border-radius: 0;
+        font-weight: 600;
+        padding: 10px 16px;
+        transition: all 0.2s ease-in-out;
+    }
+    .nav-tabs-wrapper .nav-link:hover {
+        color: #2563eb;
+    }
+    .nav-tabs-wrapper .nav-link.active {
+        color: #2563eb !important;
+        background-color: transparent !important;
+        border-bottom: 2px solid #2563eb !important;
+    }
 </style>
 
 <div class="container-fluid py-4 bg-slate-50 min-h-screen font-sans">
@@ -68,19 +99,23 @@
     <?php endif; ?>
 
     <!-- Navigation Pills -->
-    <div class="glass-card rounded-3xl p-2 mb-6 shadow-sm border border-white flex justify-between items-center gap-4 flex-wrap">
-        <ul class="nav nav-pills flex-nowrap overflow-x-auto hide-scrollbar m-0" id="pengumumanTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active flex items-center gap-2" id="pengumuman-tab" data-bs-toggle="pill" data-bs-target="#pengumuman-content" type="button" role="tab">
-                    <i class="bi bi-megaphone-fill"></i> Daftar Pengumuman
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link flex items-center gap-2" id="kategori-tab" data-bs-toggle="pill" data-bs-target="#kategori-content" type="button" role="tab">
-                    <i class="bi bi-tags-fill"></i> Manajemen Kategori
-                </button>
-            </li>
-        </ul>
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-2 bg-white rounded-4">
+            <div class="nav-tabs-wrapper">
+                <ul class="nav nav-tabs border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-3 px-2" id="pengumumanTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition active" id="pengumuman-tab" data-bs-toggle="pill" data-bs-target="#pengumuman-content" type="button" role="tab">
+                            <i class="bi bi-megaphone-fill me-2 fs-6"></i> Daftar Pengumuman
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" id="kategori-tab" data-bs-toggle="pill" data-bs-target="#kategori-content" type="button" role="tab">
+                            <i class="bi bi-tags-fill me-2 fs-6"></i> Manajemen Kategori
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
     </div>
 
     <div class="tab-content" id="pengumumanTabsContent">
