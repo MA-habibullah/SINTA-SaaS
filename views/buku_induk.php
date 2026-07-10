@@ -1466,8 +1466,8 @@
                                                         <td class="fw-bold text-primary">{{ h.nama_kelas_tujuan || '-' }}</td>
                                                         <td>{{ h.nama_pelaku || '-' }}</td>
                                                         <td>
-                                                            <span class="badge rounded-pill" :class="h.jenis_aksi === 'naik_kelas' ? 'bg-success-subtle text-success' : (h.jenis_aksi === 'penempatan_awal' ? 'bg-info-subtle text-info' : 'bg-primary-subtle text-primary')">
-                                                                {{ h.jenis_aksi === 'naik_kelas' ? 'Naik Kelas' : (h.jenis_aksi === 'penempatan_awal' ? 'Penempatan Awal' : 'Lulus') }}
+                                                            <span class="badge rounded-pill" :class="h.jenis_aksi === 'naik_kelas' ? 'bg-success-subtle text-success' : (h.jenis_aksi === 'penempatan_awal' ? 'bg-info-subtle text-info' : (h.jenis_aksi === 'tinggal_kelas' ? 'bg-danger-subtle text-danger' : 'bg-primary-subtle text-primary'))">
+                                                                {{ h.jenis_aksi === 'naik_kelas' ? 'Naik Kelas' : (h.jenis_aksi === 'penempatan_awal' ? 'Penempatan Awal' : (h.jenis_aksi === 'tinggal_kelas' ? 'Tinggal Kelas' : 'Lulus')) }}
                                                             </span>
                                                         </td>
                                                         <td class="text-start">{{ h.catatan || '-' }}</td>
