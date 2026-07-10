@@ -1,36 +1,24 @@
 <?php
-require_once __DIR__ . '/../../app/Config/Database.php';
-
-class AddTinggalKelasEnum {
-    public function up() {
-        $db = \App\Config\Database::getConnection();
-        
+/**
+ * Migration: Add 'tinggal_kelas' to enum riwayat_kenaikan_kelas
+ */
+return [
+    'up' => function (PDO $pdo): void {
         try {
-            // Update enum riwayat_kenaikan_kelas
             $sql = "ALTER TABLE riwayat_kenaikan_kelas MODIFY COLUMN jenis_aksi enum('naik_kelas','lulus','tinggal_kelas','penempatan_awal') NOT NULL;";
-            $db->exec($sql);
-            echo "Migration successful: Added 'tinggal_kelas' to enum riwayat_kenaikan_kelas.jenis_aksi\n";
+            $pdo->exec($sql);
+            echo "  OK Enum 'tinggal_kelas' berhasil ditambahkan.\n";
         } catch (PDOException $e) {
-            echo "Migration failed: " . $e->getMessage() . "\n";
+            echo "  Gagal: " . $e->getMessage() . "\n";
         }
-    }
-
-    public function down() {
-        $db = \App\Config\Database::getConnection();
-        
+    },
+    'down' => function (PDO $pdo): void {
         try {
-            // Rollback enum
             $sql = "ALTER TABLE riwayat_kenaikan_kelas MODIFY COLUMN jenis_aksi enum('naik_kelas','lulus','penempatan_awal') NOT NULL;";
-            $db->exec($sql);
-            echo "Rollback successful: Removed 'tinggal_kelas' from enum riwayat_kenaikan_kelas.jenis_aksi\n";
+            $pdo->exec($sql);
+            echo "  OK Enum 'tinggal_kelas' berhasil dihapus.\n";
         } catch (PDOException $e) {
-            echo "Rollback failed: " . $e->getMessage() . "\n";
+            echo "  Gagal: " . $e->getMessage() . "\n";
         }
     }
-}
-
-// Execute migration if run directly
-if (php_sapi_name() === 'cli') {
-    $migration = new AddTinggalKelasEnum();
-    $migration->up();
-}
+];
