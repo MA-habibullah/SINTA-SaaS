@@ -632,6 +632,61 @@ class PenggunaController extends BaseController {
         }
     }
 
+    public function tinggalKelasApi(): void {
+        $roleName = $_SESSION['role_name'] ?? '';
+
+        if (!in_array($roleName, ['super_admin', 'operator_sekolah'])) {
+            $this->jsonResponse(['error' => 'Akses ditolak. Fitur ini hanya untuk Super Admin dan Admin Sekolah.'], 403);
+            return;
+        }
+
+        $body = json_decode(file_get_contents('php://input'), true) ?? [];
+
+        $siswaIds    = $body['siswa_ids']    ?? [];
+        $kelasTujuan = $body['kelas_tujuan'] ?? '';
+        $tahunAjaran = trim($body['tahun_ajaran'] ?? '');
+        $catatan     = trim($body['catatan'] ?? '');
+
+        $tenantId = ($roleName === 'super_admin') ? ($body['tenant_id'] ?? '') : ($_SESSION['tenant_id'] ?? '');
+
+        if (empty($siswaIds) || !is_array($siswaIds)) {
+            $this->jsonResponse(['error' => 'Pilih minimal satu siswa.'], 400);
+            return;
+        }
+        if (empty($kelasTujuan)) {
+            $this->jsonResponse(['error' => 'Pilih kelas tujuan.'], 400);
+            return;
+        }
+        if (empty($tahunAjaran)) {
+            $this->jsonResponse(['error' => 'Pilih tahun ajaran.'], 400);
+            return;
+        }
+        if (empty($tenantId)) {
+            $this->jsonResponse(['error' => 'Tenant ID tidak ditemukan.'], 400);
+            return;
+        }
+
+        $auditData = [
+            'tahun_ajaran'   => $tahunAjaran,
+            'dilakukan_oleh' => $_SESSION['user_id'] ?? 'System',
+            'nama_pelaku'    => $_SESSION['nama_lengkap'] ?? 'System User',
+            'catatan'        => $catatan
+        ];
+
+        try {
+            $model = new \App\Models\Pengguna();
+            $count = $model->tinggalKelas($siswaIds, (int)$kelasTujuan, $tenantId, $auditData);
+
+            $this->jsonResponse([
+                'success' => true,
+                'message' => "{$count} siswa berhasil diproses tinggal kelas dan riwayat telah dicatat."
+            ]);
+        } catch (\Throwable $e) {
+            error_log("tinggalKelasApi error: " . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal memproses tinggal kelas: ' . $e->getMessage()], 500);
+        }
+    }
+
     /**
      * API: Eksekusi Luluskan Siswa massal
      * POST /api/v1/pengguna/aksi/luluskan

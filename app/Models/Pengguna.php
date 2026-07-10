@@ -974,7 +974,7 @@ class Pengguna extends Model {
 
         // Sanitasi: pastikan hanya siswa yang benar-benar milik tenant ini
         $placeholders = implode(',', array_fill(0, count($siswaIds), '?'));
-        $checkSql = "SELECT id, id_kelas,
+        $checkSql = "SELECT id, id_kelas, id_jenjang AS id_jenjang_asal,
                             (SELECT nama_kelas FROM kelas WHERE id = siswa.id_kelas LIMIT 1) AS nama_kelas_asal
                      FROM siswa
                      WHERE id IN ({$placeholders})
@@ -1032,6 +1032,86 @@ class Pengguna extends Model {
                     'id_kelas_asal'      => $row['id_kelas'],
                     'id_kelas_tujuan'    => $idKelasTujuan,
                     'id_jenjang_asal'    => $row['id_jenjang_asal'],
+                    'id_jenjang_tujuan'  => $idJenjangTujuan,
+                    'nama_kelas_asal'    => $row['nama_kelas_asal'],
+                    'nama_kelas_tujuan'  => $namaKelasTujuan,
+                    'tahun_ajaran'       => $tahunAjaran,
+                    'dilakukan_oleh'     => $dilakukanOleh,
+                    'nama_pelaku'        => $namaPelaku,
+                    'catatan'            => $catatan
+                ]);
+                $count++;
+            }
+
+            $this->db->commit();
+            return $count;
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
+    }
+
+    public function tinggalKelas(array $siswaIds, int $idKelasTujuan, string $tenantId, array $auditData): int {
+        if (empty($siswaIds)) return 0;
+
+        $placeholders = implode(',', array_fill(0, count($siswaIds), '?'));
+        $checkSql = "SELECT id, id_kelas, id_jenjang AS id_jenjang_asal,
+                            (SELECT nama_kelas FROM kelas WHERE id = siswa.id_kelas LIMIT 1) AS nama_kelas_asal
+                     FROM siswa
+                     WHERE id IN ({$placeholders})
+                       AND tenant_id = ?
+                       AND status = 'Aktif'
+                       AND deleted_at IS NULL";
+        $checkStmt = $this->db->prepare($checkSql);
+        $checkStmt->execute([...$siswaIds, $tenantId]);
+        $validRows = $checkStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($validRows)) return 0;
+
+        $kelasStmt = $this->db->prepare("SELECT nama_kelas, id_jenjang FROM kelas WHERE id = ? LIMIT 1");
+        $kelasStmt->execute([$idKelasTujuan]);
+        $kelasTujuanRow = $kelasStmt->fetch(PDO::FETCH_ASSOC);
+        $namaKelasTujuan = $kelasTujuanRow['nama_kelas'] ?? '';
+        $idJenjangTujuan = $kelasTujuanRow['id_jenjang'] ?? null;
+
+        $tahunAjaran   = $auditData['tahun_ajaran']   ?? '';
+        $dilakukanOleh = $auditData['dilakukan_oleh'] ?? '';
+        $namaPelaku    = $auditData['nama_pelaku']    ?? '';
+        $catatan       = $auditData['catatan']        ?? null;
+
+        try {
+            $this->db->beginTransaction();
+
+            $updateSql = "UPDATE siswa SET id_kelas = :id_kelas_tujuan, id_jenjang = :id_jenjang_tujuan
+                          WHERE id = :id AND tenant_id = :tenant_id AND deleted_at IS NULL";
+            $updateStmt = $this->db->prepare($updateSql);
+
+            $insertSql = "INSERT INTO riwayat_kenaikan_kelas
+                            (tenant_id, siswa_id, jenis_aksi, id_kelas_asal, id_kelas_tujuan,
+                             id_jenjang_asal, id_jenjang_tujuan,
+                             nama_kelas_asal, nama_kelas_tujuan, tahun_ajaran,
+                             dilakukan_oleh, nama_pelaku, catatan)
+                          VALUES
+                            (:tenant_id, :siswa_id, 'tinggal_kelas', :id_kelas_asal, :id_kelas_tujuan,
+                             :id_jenjang_asal, :id_jenjang_tujuan,
+                             :nama_kelas_asal, :nama_kelas_tujuan, :tahun_ajaran,
+                             :dilakukan_oleh, :nama_pelaku, :catatan)";
+            $insertStmt = $this->db->prepare($insertSql);
+
+            $count = 0;
+            foreach ($validRows as $row) {
+                $updateStmt->execute([
+                    'id_kelas_tujuan'   => $idKelasTujuan,
+                    'id_jenjang_tujuan' => $idJenjangTujuan,
+                    'id'                => $row['id'],
+                    'tenant_id'         => $tenantId
+                ]);
+                $insertStmt->execute([
+                    'tenant_id'          => $tenantId,
+                    'siswa_id'           => $row['id'],
+                    'id_kelas_asal'      => $row['id_kelas'],
+                    'id_kelas_tujuan'    => $idKelasTujuan,
+                    'id_jenjang_asal'    => $row['id_jenjang_asal'] ?? null,
                     'id_jenjang_tujuan'  => $idJenjangTujuan,
                     'nama_kelas_asal'    => $row['nama_kelas_asal'],
                     'nama_kelas_tujuan'  => $namaKelasTujuan,

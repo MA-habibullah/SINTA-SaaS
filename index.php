@@ -1140,6 +1140,12 @@ try {
             $controller->naikkanKelasApi();
             break;
 
+        case '/api/v1/pengguna/aksi/tinggal-kelas':
+            // API: Eksekusi tinggal kelas siswa massal
+            $controller = new App\Controllers\PenggunaController();
+            $controller->tinggalKelasApi();
+            break;
+
         case '/api/v1/pengguna/aksi/luluskan':
             // API: Eksekusi kelulusan siswa massal
             $controller = new App\Controllers\PenggunaController();

@@ -858,6 +858,11 @@
                 <label class="btn btn-outline-success btn-sm rounded-2 border-0 px-3 fw-semibold py-1.5 fs-8" for="mode-graduate">
                     <i class="bi bi-mortarboard-fill me-1"></i>Kelulusan Siswa
                 </label>
+
+                <input type="radio" class="btn-check" name="promotemode" id="mode-retain" value="retain" v-model="aksiMode" @change="aksiSelectedIds = []; aksiSelectAll = false; aksiKelasTujuanId = '';">
+                <label class="btn btn-outline-danger btn-sm rounded-2 border-0 px-3 fw-semibold py-1.5 fs-8" for="mode-retain">
+                    <i class="bi bi-arrow-repeat me-1"></i>Tinggal Kelas
+                </label>
             </div>
         </div>
 
@@ -882,17 +887,18 @@
                     </select>
                 </div>
 
-                <!-- Filter Kelas Tujuan (hanya untuk mode promote) -->
-                <div class="col-12 col-md-3" v-if="aksiMode === 'promote'">
+                <!-- Filter Kelas Tujuan (promote & retain) -->
+                <div class="col-12 col-md-3" v-if="['promote', 'retain'].includes(aksiMode)">
                     <label for="nk-kelas-tujuan" class="aksi-label"><i class="bi bi-door-closed me-1"></i> Kelas Tujuan <span class="text-danger">*</span></label>
                     <select id="nk-kelas-tujuan" name="nk_kelas_tujuan" class="form-select form-select-sm rounded-3" v-model="aksiKelasTujuanId" :disabled="!aksiKelasAsalId">
                         <option value="">-- Pilih Kelas Tujuan --</option>
-                        <option v-for="k in aksiListKelas.filter(k => k.id != aksiKelasAsalId)" :key="k.id" :value="k.id">{{ k.nama_jenjang }} &ndash; {{ k.nama_kelas }}</option>
+                        <option v-if="aksiMode === 'promote'" v-for="k in aksiListKelas.filter(k => k.id != aksiKelasAsalId)" :key="k.id" :value="k.id">{{ k.nama_jenjang }} &ndash; {{ k.nama_kelas }}</option>
+                        <option v-if="aksiMode === 'retain'" v-for="k in aksiListKelas.filter(k => k.nama_jenjang === (aksiListKelas.find(x => x.id == aksiKelasAsalId) || {}).nama_jenjang)" :key="k.id" :value="k.id">{{ k.nama_jenjang }} &ndash; {{ k.nama_kelas }}</option>
                     </select>
                 </div>
 
                 <!-- Tahun Ajaran -->
-                <div class="col-12" :class="aksiMode === 'promote' ? 'col-md-2' : (userRole === 'super_admin' ? 'col-md-5' : 'col-md-7')">
+                <div class="col-12" :class="['promote', 'retain'].includes(aksiMode) ? 'col-md-2' : (userRole === 'super_admin' ? 'col-md-5' : 'col-md-7')">
                     <label for="nk-tahun" class="aksi-label"><i class="bi bi-calendar3 me-1"></i> Tahun Ajaran <span class="text-danger">*</span></label>
                     <select id="nk-tahun" name="nk_tahun" class="form-select form-select-sm rounded-3 fw-semibold text-dark" v-model="aksiTahunAjaran">
                         <option value="" disabled>-- Pilih --</option>
@@ -931,7 +937,7 @@
                             <input id="nk-select-all" name="nk_select_all" class="form-check-input" type="checkbox" v-model="aksiSelectAll" @change="toggleAksiSelectAll">
                             <label class="form-check-label fw-semibold" for="nk-select-all">Pilih Semua ({{ aksiListSiswa.length }} siswa)</label>
                         </div>
-                        <span class="badge rounded-pill" :class="aksiMode === 'promote' ? 'bg-primary' : 'bg-success'" v-if="aksiSelectedIds.length > 0">{{ aksiSelectedIds.length }} dipilih</span>
+                        <span class="badge rounded-pill" :class="aksiMode === 'promote' ? 'bg-primary' : (aksiMode === 'graduate' ? 'bg-success' : 'bg-danger')" v-if="aksiSelectedIds.length > 0">{{ aksiSelectedIds.length }} dipilih</span>
                     </div>
                     <!-- Submit Promotion Button -->
                     <button v-if="aksiMode === 'promote'" class="btn btn-primary btn-sm rounded-3 px-4 fw-semibold" @click="submitNaikkanKelas" :disabled="aksiSubmitLoading || aksiSelectedIds.length === 0 || !aksiKelasTujuanId" id="btn-naikkan">
@@ -944,6 +950,12 @@
                         <span v-if="aksiSubmitLoading" class="spinner-border spinner-border-sm me-1"></span>
                         <i class="bi bi-mortarboard me-1" v-else></i>
                         Luluskan Siswa Terpilih
+                    </button>
+                    <!-- Submit Retain Button -->
+                    <button v-if="aksiMode === 'retain'" class="btn btn-danger btn-sm rounded-3 px-4 fw-semibold border-0" @click="submitTinggalKelas" :disabled="aksiSubmitLoading || aksiSelectedIds.length === 0 || !aksiKelasTujuanId" id="btn-tinggal">
+                        <span v-if="aksiSubmitLoading" class="spinner-border spinner-border-sm me-1"></span>
+                        <i class="bi bi-arrow-repeat me-1" v-else></i>
+                        Tetapkan Tinggal Kelas
                     </button>
                 </div>
 
@@ -967,14 +979,14 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="(s, i) in aksiListSiswa" :key="s.id" :class="{'table-primary bg-opacity-10': aksiSelectedIds.includes(s.id) && aksiMode === 'promote', 'table-success bg-opacity-10': aksiSelectedIds.includes(s.id) && aksiMode === 'graduate'}">
+                            <tr v-for="(s, i) in aksiListSiswa" :key="s.id" :class="{'table-primary bg-opacity-10': aksiSelectedIds.includes(s.id) && aksiMode === 'promote', 'table-success bg-opacity-10': aksiSelectedIds.includes(s.id) && aksiMode === 'graduate', 'table-danger bg-opacity-10': aksiSelectedIds.includes(s.id) && aksiMode === 'retain'}">
                                 <td><input :id="'nk_select_siswa_' + s.id" :name="'nk_select_siswa_' + s.id" aria-label="Pilih baris siswa" class="form-check-input" type="checkbox" :value="s.id" v-model="aksiSelectedIds" @change="onAksiCheckboxChange"></td>
                                 <td class="text-muted">{{ i + 1 }}</td>
                                 <td class="fw-semibold">{{ s.nama_lengkap }}</td>
                                 <td><span class="badge bg-light text-dark border">{{ s.tahun_ajaran || '-' }}</span></td>
                                 <td><span class="badge bg-light text-dark border">{{ s.nisn || '-' }}</span></td>
                                 <td><span class="badge bg-light text-dark border">{{ s.nis || '-' }}</span></td>
-                                <td><span class="badge" :style="aksiMode === 'promote' ? 'background:#dbeafe;color:#1e40af;' : 'background:#d1fae5;color:#065f46;'">{{ s.nama_kelas }}</span></td>
+                                <td><span class="badge" :style="aksiMode === 'promote' ? 'background:#dbeafe;color:#1e40af;' : (aksiMode === 'graduate' ? 'background:#d1fae5;color:#065f46;' : 'background:#fee2e2;color:#991b1b;')">{{ s.nama_kelas }}</span></td>
                                 <td class="text-muted">{{ s.nama_jenjang }}</td>
                             </tr>
                         </tbody>
