@@ -541,10 +541,19 @@ try {
         // BIMBINGAN KONSELING (BK) ROUTES
         // Role Guard: super_admin, operator_sekolah, guru_bk (enforced in BKController)
         // ================================================================
-        case '/bk':
-            // Halaman Utama Bimbingan Konseling (5-tab hub)
+        case '/bk/layanan':
             $controller = new App\Controllers\BKController();
-            $controller->index();
+            $controller->layanan();
+            break;
+
+        case '/bk/akademik':
+            $controller = new App\Controllers\BKController();
+            $controller->akademik();
+            break;
+
+        case '/bk/alumni':
+            $controller = new App\Controllers\BKController();
+            $controller->alumni();
             break;
 
         case '/api/v1/bk/dashboard':
@@ -735,6 +744,109 @@ try {
             $controller = new App\Controllers\PDSSController();
             $controller->apiDeleteTargetKampus();
             break;
+
+        // MASTER KAMPUS & PRODI ROUTES
+        case '/api/v1/kampus/template':
+            $controller = new App\Controllers\KampusController();
+            $controller->apiDownloadTemplate();
+            break;
+
+        case '/api/v1/kampus/import':
+            $controller = new App\Controllers\KampusController();
+            $controller->apiImportExcel();
+            break;
+
+        case '/api/v1/kampus':
+            $controller = new App\Controllers\KampusController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveKampus();
+            } else {
+                $controller->apiGetKampus();
+            }
+            break;
+
+        case '/api/v1/kampus/delete':
+            $controller = new App\Controllers\KampusController();
+            $controller->apiDeleteKampus();
+            break;
+
+        case '/api/v1/kampus/prodi':
+            $controller = new App\Controllers\KampusController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveProdi();
+            } else {
+                $controller->apiGetProdi();
+            }
+            break;
+
+        case '/api/v1/kampus/prodi/delete':
+            $controller = new App\Controllers\KampusController();
+            $controller->apiDeleteProdi();
+            break;
+
+        case '/api/v1/kampus/prodi/riwayat':
+            $controller = new App\Controllers\KampusController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveRiwayat();
+            } else {
+                $controller->apiGetRiwayat();
+            }
+            break;
+
+        case '/api/v1/kampus/prodi/riwayat/delete':
+            $controller = new App\Controllers\KampusController();
+            $controller->apiDeleteRiwayat();
+            break;
+
+        case '/api/v1/kampus/jalur':
+            $controller = new App\Controllers\KampusController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveJalurMasuk();
+            } else {
+                $controller->apiGetJalurMasuk();
+            }
+            break;
+
+        case '/api/v1/kampus/jalur/delete':
+            $controller = new App\Controllers\KampusController();
+            $controller->apiDeleteJalurMasuk();
+            break;
+
+        case '/api/v1/kampus/all-prodi':
+            $controller = new App\Controllers\KampusController();
+            $controller->apiGetAllKampusProdi();
+            break;
+
+        case '/api/v1/kampus/flat-list':
+            $controller = new App\Controllers\KampusController();
+            $controller->apiGetMasterKampusProdiFlat();
+            break;
+
+        case '/api/v1/kampus/export-daya-tampung':
+            $controller = new App\Controllers\KampusController();
+            $controller->apiExportDayaTampung();
+            break;
+
+        case '/api/v1/kampus/import-daya-tampung':
+            $controller = new App\Controllers\KampusController();
+            $controller->apiImportDayaTampung();
+            break;
+
+        case '/api/v1/kampus/bulk-delete-riwayat':
+            $controller = new App\Controllers\KampusController();
+            $controller->apiBulkDeleteRiwayat();
+            break;
+
+        case '/api/v1/kampus/export-kampus-prodi':
+            $controller = new App\Controllers\KampusController();
+            $controller->apiExportKampusProdi();
+            break;
+
+        case '/api/v1/kampus/import-kampus-prodi':
+            $controller = new App\Controllers\KampusController();
+            $controller->apiImportKampusProdi();
+            break;
+
 
         case '/api/v1/pdss/target-kampus/seed':
             $controller = new App\Controllers\PDSSController();

@@ -94,7 +94,7 @@ $tenantList = $data['tenant_list'] ?? [];
 </style>
 
 <!-- Super Admin: Pilih Sekolah Terlebih Dahulu -->
-<?php if ($userRole === 'super_admin'): ?>
+<?php if ($userRole === 'super_admin' && empty($is_sub_module)): ?>
 <div class="alert border-0 rounded-2xl p-4 mb-6 flex items-center gap-4 bg-gradient-to-r from-violet-50 to-indigo-50 border border-violet-100 shadow-sm" style="display: flex;">
     <i class="bi bi-funnel-fill text-xl text-violet-600"></i>
     <div class="flex items-center gap-3 flex-wrap w-full">
@@ -120,6 +120,7 @@ $tenantList = $data['tenant_list'] ?? [];
 <!-- Root Vue App Container -->
 <div id="pdssApp" v-cloak class="space-y-6">
 
+    <?php if (empty($is_sub_module)): ?>
     <!-- PAGE HEADER -->
     <div class="flex flex-wrap items-start justify-between gap-4 pt-2 pb-3 mb-6 border-b border-slate-200">
         <div>
@@ -141,30 +142,49 @@ $tenantList = $data['tenant_list'] ?? [];
             </button>
         </div>
     </div>
+    <?php endif; ?>
 
     <!-- TABS NAVIGATION -->
-    <div class="card border-0 shadow-sm rounded-4 mb-4">
+    <?php
+        $allowed_pdss_tabs = $allowed_pdss_tabs ?? ["kesiapan", "tracking", "config"];
+        $hide_pdss_tabs = (!empty($is_sub_module) && count($allowed_pdss_tabs) <= 1);
+    ?>
+    <div class="card border-0 shadow-sm rounded-4 mb-4" <?php if ($hide_pdss_tabs) echo 'style="display:none;"'; ?>>
         <div class="card-body p-2 bg-white rounded-4">
             <div class="nav-tabs-wrapper">
                 <ul class="nav nav-tabs border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-3 px-2">
+                    <?php if(in_array('kesiapan', $allowed_pdss_tabs)): ?>
                     <li class="nav-item">
                         <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'kesiapan'}"
                                 @click="activeTab = 'kesiapan'">
                             <i class="bi bi-award-fill me-2 fs-6"></i> Kesiapan & Eligibilitas Siswa
                         </button>
                     </li>
+                    <?php endif; ?>
+                    <?php if(in_array('tracking', $allowed_pdss_tabs)): ?>
                     <li class="nav-item">
                         <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'tracking'}"
                                 @click="activeTab = 'tracking'">
                             <i class="bi bi-mortarboard-fill me-2 fs-6"></i> Tracking Alumni & Rekam Kampus
                         </button>
                     </li>
+                    <?php endif; ?>
+                    <?php if(in_array('master_kampus', $allowed_pdss_tabs)): ?>
                     <li class="nav-item">
-                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'config'}"
-                                @click="activeTab = 'config'">
-                            <i class="bi bi-gear-fill me-2 fs-6"></i> Konfigurasi Target Kampus
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'master_kampus'}"
+                                @click="activeTab = 'master_kampus'">
+                            <i class="bi bi-buildings-fill me-2 fs-6"></i> Master Kampus & Prodi
                         </button>
                     </li>
+                    <?php endif; ?>
+                    <?php if(in_array('master_jalur', $allowed_pdss_tabs)): ?>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'master_jalur'}"
+                                @click="activeTab = 'master_jalur'">
+                            <i class="bi bi-signpost-split-fill me-2 fs-6"></i> Master Jalur Masuk
+                        </button>
+                    </li>
+                    <?php endif; ?>
                 </ul>
             </div>
         </div>
@@ -475,9 +495,8 @@ $tenantList = $data['tenant_list'] ?? [];
                     </tbody>
                 </table>
             </div>
-        </div>
-
-        <!-- MODAL ADD/EDIT ALUMNI (INLINE GLASSMORPHISM OVERLAY) -->
+              <!-- MODAL ADD/EDIT ALUMNI (INLINE GLASSMORPHISM OVERLAY) -->
+        <Teleport to="body">
         <div v-if="modalAlumni.show" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
             <div class="bg-white border rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in">
                 <!-- Header -->
@@ -498,35 +517,29 @@ $tenantList = $data['tenant_list'] ?? [];
                                     <input type="text" id="al_name" 
                                            v-model="modalAlumni.form.nama_alumni" 
                                            @input="searchStudents"
-                                           @focus="showSearchDropdown = true"
-                                           @blur="hideSearchDropdownWithDelay"
-                                           placeholder="Cari nama / NIS / NISN..."
-                                           autocomplete="off"
+                                           @focus="showSearchDropdown = searchResults.length > 0"
+                                           placeholder="Cari siswa atau ketik nama manual" 
                                            required 
-                                           class="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <span class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center" v-if="searchingStudents">
-                                        <span class="spinner-border spinner-border-sm text-slate-400" role="status" style="width: 12px; height: 12px;"></span>
-                                    </span>
+                                           class="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 pe-8">
+                                    <i class="bi bi-search absolute right-3 top-2.5 text-slate-400"></i>
                                 </div>
                                 
-                                <!-- Dropdown Overlay -->
+                                <!-- Hasil Pencarian Dropdown -->
                                 <div v-if="showSearchDropdown && searchResults.length > 0" 
                                      class="absolute z-[9999] left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                                    <button type="button" 
-                                            v-for="s in searchResults" 
-                                            :key="s.id" 
-                                            @mousedown.prevent="selectStudent(s)"
-                                            class="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 border-0 border-b border-slate-100 last:border-b-0 flex justify-between items-center bg-transparent cursor-pointer">
-                                        <div>
-                                            <span class="font-bold text-slate-800">{{ s.nama_lengkap }}</span>
-                                            <span class="text-slate-400 block text-[10px]" v-if="s.nisn || s.nis">
-                                                NISN: {{ s.nisn || '-' }} | NIS: {{ s.nis || '-' }}
-                                            </span>
-                                        </div>
-                                        <span class="badge bg-blue-50 text-blue-600 font-bold px-1.5 py-0.5 rounded text-[9px]">Siswa</span>
-                                    </button>
+                                    <ul class="m-0 p-1 list-none">
+                                        <li v-for="s in searchResults" :key="s.id" 
+                                            @click="selectStudent(s)"
+                                            class="px-3 py-2 hover:bg-slate-50 cursor-pointer rounded-lg border-b border-slate-50 last:border-0">
+                                            <div class="font-bold text-xs text-slate-800">{{ s.nama_lengkap }}</div>
+                                            <div class="text-[10px] text-slate-500">NISN: {{ s.nisn || '-' }} | NIS: {{ s.nis || '-' }}</div>
+                                        </li>
+                                    </ul>
                                 </div>
-                                <div v-else-if="showSearchDropdown && searchResults.length === 0 && modalAlumni.form.nama_alumni.trim().length >= 2"
+                                <div v-else-if="searchingStudents" class="absolute z-[9999] left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg p-3 text-center text-xs text-slate-400">
+                                    <div class="spinner-border spinner-border-sm text-primary me-2"></div>Mencari...
+                                </div>
+                                <div v-else-if="showSearchDropdown && searchResults.length === 0 && modalAlumni.form.nama_alumni.length >= 2" 
                                      class="absolute z-[9999] left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg p-3 text-center text-xs text-slate-400">
                                     <i class="bi bi-info-circle me-1"></i> Tidak ada siswa cocok. Tekan Enter untuk simpan nama manual.
                                 </div>
@@ -599,150 +612,15 @@ $tenantList = $data['tenant_list'] ?? [];
                 </form>
             </div>
         </div>
+        </Teleport>      </div>
         </template>
     </div>
 
     <!-- TAB 3: KONFIGURASI TARGET KAMPUS -->
-    <div v-show="activeTab === 'config'" class="space-y-6">
-        <div v-if="userRole === 'super_admin' && !currentTenantId" class="bg-amber-50 border border-amber-100 rounded-2xl p-8 text-center shadow-sm">
-            <div class="w-16 h-16 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-4">
-                <i class="bi bi-funnel-fill text-2xl"></i>
-            </div>
-            <h4 class="font-bold text-slate-800 text-base">Pilih Sekolah Terlebih Dahulu</h4>
-            <p class="text-slate-500 text-xs mt-1 max-w-sm mx-auto">Silakan pilih sekolah pada filter di bagian atas halaman untuk menampilkan data.</p>
-        </div>
-        <template v-else>
-            <!-- Config Info Header Card -->
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex flex-wrap items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
-                    <i class="bi bi-building-lock text-lg"></i>
-                </div>
-                <div>
-                    <h4 class="font-bold text-sm text-slate-800">Master Data Target Kampus & Quota</h4>
-                    <p class="text-xs text-slate-500">Isi target penerimaan PTN/PTS/Kedinasan untuk memandu target belajar siswa.</p>
-                </div>
-            </div>
-
-            <!-- Seed & Add buttons for Admin/BK only -->
-            <div v-if="canWrite" class="flex gap-2">
-                <!-- Seeder Button -->
-                <button class="btn btn-outline-primary border rounded-xl px-4 py-2 text-xs font-semibold flex items-center gap-1.5 hover:bg-blue-50"
-                        @click="seedDefaultCampuses" :disabled="loading">
-                    <i class="bi bi-cloud-arrow-down"></i>
-                    Seed Master Kampus
-                </button>
-                <!-- Add Button -->
-                <button class="btn btn-primary rounded-xl px-4 py-2 text-xs font-semibold flex items-center gap-1.5 shadow-sm"
-                        @click="openCampusModal()">
-                    <i class="bi bi-plus-lg"></i>
-                    Tambah Target
-                </button>
-            </div>
-        </div>
-
-        <!-- Campus Grid Table -->
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead>
-                        <tr class="bg-slate-50 border-b border-slate-100 text-xs text-slate-400 font-semibold uppercase">
-                            <th class="ps-6 py-3">#</th>
-                            <th class="py-3">Nama Kampus / Perguruan Tinggi</th>
-                            <th class="py-3 text-center">Jenis Perguruan Tinggi</th>
-                            <th class="py-3 text-center">Target Penerimaan (Siswa)</th>
-                            <th v-if="canWrite" class="py-3 text-end pe-6">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Loading State -->
-                        <tr v-if="loading">
-                            <td colspan="5" class="text-center py-10 text-slate-400 text-xs">
-                                <div class="spinner-border spinner-border-sm text-primary me-2"></div>
-                                Memuat data target kampus...
-                            </td>
-                        </tr>
-                        <!-- Empty State -->
-                        <tr v-else-if="campusData.length === 0">
-                            <td colspan="5" class="text-center py-10 text-slate-400 text-xs">
-                                Belum ada konfigurasi target kampus yang diatur. Silakan klik **Seed Master Kampus** untuk data awal instan.
-                            </td>
-                        </tr>
-                        <!-- Data Rows -->
-                        <tr v-else v-for="(cp, idx) in campusData" :key="cp.id" class="text-sm border-b border-slate-100 hover:bg-slate-50">
-                            <td class="ps-6 py-2.5 text-slate-400 font-bold">{{ idx + 1 }}</td>
-                            <td class="font-bold text-slate-800">{{ cp.nama_kampus }}</td>
-                            <td class="text-center">
-                                <span class="text-xs font-semibold px-2.5 py-0.5 rounded-lg"
-                                      :class="{
-                                          'bg-blue-50 text-blue-700 border border-blue-100': cp.jenis_kampus === 'Negeri',
-                                          'bg-indigo-50 text-indigo-700 border border-indigo-100': cp.jenis_kampus === 'Swasta',
-                                          'bg-amber-50 text-amber-700 border border-amber-100': cp.jenis_kampus === 'Kedinasan'
-                                      }">
-                                    {{ cp.jenis_kampus }}
-                                </span>
-                            </td>
-                            <td class="text-center font-bold text-slate-700">{{ cp.kuota_target }} Siswa</td>
-                            <td v-if="canWrite" class="text-end pe-6">
-                                <div class="d-flex justify-content-end gap-1.5">
-                                    <button class="btn btn-sm btn-light border px-2 py-1 text-slate-600 hover:bg-slate-100 rounded-lg text-xs" @click="openCampusModal(cp)">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-light border px-2 py-1 text-rose-600 hover:bg-rose-50 hover:text-rose-700 rounded-lg text-xs" @click="deleteTargetKampus(cp)">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- MODAL ADD/EDIT TARGET KAMPUS -->
-        <div v-if="modalCampus.show" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-            <div class="bg-white border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in">
-                <!-- Header -->
-                <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                    <h3 class="font-bold text-slate-800 text-base mb-0 flex items-center gap-2">
-                        <i class="bi" :class="modalCampus.form.id ? 'bi-pencil-square text-indigo-500' : 'bi-plus-circle text-blue-500'"></i>
-                        {{ modalCampus.form.id ? 'Edit Target Kampus' : 'Tambah Target Kampus' }}
-                    </h3>
-                    <button class="text-slate-400 hover:text-slate-600 text-xl font-bold bg-transparent border-0" @click="modalCampus.show = false">&times;</button>
-                </div>
-                <!-- Body -->
-                <form @submit.prevent="saveTargetKampus">
-                    <div class="p-5 space-y-3.5 text-left">
-                        <div>
-                            <label for="cp_name" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Nama Kampus <span class="text-rose-500">*</span></label>
-                            <input type="text" id="cp_name" v-model="modalCampus.form.nama_kampus" placeholder="e.g. Universitas Gadjah Mada (UGM)" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label for="cp_type" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Jenis Perguruan Tinggi <span class="text-rose-500">*</span></label>
-                            <select id="cp_type" v-model="modalCampus.form.jenis_kampus" required class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="Negeri">Negeri</option>
-                                <option value="Swasta">Swasta</option>
-                                <option value="Kedinasan">Kedinasan</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="cp_quota" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Target Kuota Penerimaan <span class="text-rose-500">*</span></label>
-                            <input type="number" id="cp_quota" v-model.number="modalCampus.form.kuota_target" required min="0" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                    </div>
-                    <!-- Footer -->
-                    <div class="px-5 py-4 border-t border-slate-100 flex items-center justify-end gap-2 bg-slate-50">
-                        <button type="button" class="btn btn-light border rounded-xl px-4 py-2 text-xs font-semibold text-slate-600" @click="modalCampus.show = false">Batal</button>
-                        <button type="submit" class="btn btn-primary rounded-xl px-4 py-2 text-xs font-semibold flex items-center gap-1">
-                            <i class="bi bi-floppy"></i>
-                            Simpan Perubahan
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        </template>
-    </div>
+    <!-- TAB: MASTER KAMPUS & JALUR -->
+    <template v-if="activeTab === 'master_kampus' || activeTab === 'master_jalur'">
+        <?php include __DIR__ . '/bk/kampus_config_ui.php'; ?>
+    </template>
 
 </div>
 
@@ -757,13 +635,43 @@ $tenantList = $data['tenant_list'] ?? [];
     window.VueAppRegistry.register('#pdssApp', {
         data() {
             return {
+                baseUrl: _baseUrl,
                 currentTenantId: _currentTenantId,
                 userRole: _userRole,
-                activeTab: 'kesiapan',
+                canWrite: _canWrite,
+                activeTab: '<?= $allowed_pdss_tabs[0] ?? "kesiapan" ?>',
                 accreditation: 'A',
                 students: [],
                 alumniData: [],
                 campusData: [],
+                activeConfigTab: 'kampus',
+                listKampus: [],
+                listProdi: [],
+                listRiwayat: [],
+                listJalur: [],
+                loadingKampus: false,
+                importingExcel: false,
+                modalImportExcel: { show: false },
+
+                loadingProdi: false,
+                loadingJalur: false,
+                
+                modalMstKampus: {
+                    show: false,
+                    form: { id: '', nama_kampus: '', kota_kampus: '', alamat_kampus: '', jenis_kampus: 'Negeri' }
+                },
+                modalProdi: {
+                    show: false,
+                    kampus: null,
+                    expandedProdiId: null,
+                    form: { id: '', kampus_id: '', fakultas: '', program_studi: '', jenjang: 'S1' }
+                },
+                formRiwayat: { prodi_id: '', tahun: new Date().getFullYear(), daya_tampung: 0, jumlah_pendaftar: 0 },
+                modalMstJalur: {
+                    show: false,
+                    form: { id: '', nama_jalur: '', kategori: 'Lainnya' }
+                },
+
                 loading: false,
                 quotaPercent: 40,
                 searchStudent: '',
@@ -938,6 +846,179 @@ $tenantList = $data['tenant_list'] ?? [];
         },
 
         methods: {
+            // ==========================================
+            // MASTER KAMPUS & PRODI
+            // ==========================================
+            
+            async importExcelData() {
+                const fileInput = this.$refs.excelFileInput;
+                if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                    Swal.fire({icon: 'warning', title: 'Oops', text: 'Pilih file Excel terlebih dahulu.'});
+                    return;
+                }
+                
+                const file = fileInput.files[0];
+                const formData = new FormData();
+                formData.append('excel_file', file);
+                
+                this.importingExcel = true;
+                try {
+                    const res = await axios.post(`${_baseUrl}/api/v1/kampus/import`, formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                    });
+                    if (res.data.success) {
+                        Swal.fire({
+                            icon: 'success', 
+                            title: 'Berhasil', 
+                            text: res.data.message
+                        });
+                        this.modalImportExcel.show = false;
+                        this.fetchKampus(); // Reload campus list
+                    }
+                } catch(e) {
+                    const msg = (e.response && e.response.data && e.response.data.error) || 'Terjadi kesalahan saat mengunggah.';
+                    Swal.fire({icon: 'error', title: 'Gagal', text: msg});
+                } finally {
+                    this.importingExcel = false;
+                    if(fileInput) fileInput.value = '';
+                }
+            },
+
+            async fetchKampus() {
+                this.loadingKampus = true;
+                try {
+                    const res = await axios.get(`${_baseUrl}/api/v1/kampus`);
+                    if(res.data.success) this.listKampus = res.data.data || [];
+                } catch(e) {} finally { this.loadingKampus = false; }
+            },
+            openKampusModal(k = null) {
+                if(k) {
+                    this.modalMstKampus.form = { ...k };
+                } else {
+                    this.modalMstKampus.form = { id: '', nama_kampus: '', kota_kampus: '', alamat_kampus: '', jenis_kampus: 'Negeri' };
+                }
+                this.modalMstKampus.show = true;
+            },
+            async saveKampus() {
+                try {
+                    const res = await axios.post(`${_baseUrl}/api/v1/kampus`, this.modalMstKampus.form);
+                    if(res.data.success) {
+                        Swal.fire({icon:'success', title:'Tersimpan', text:res.data.message});
+                        this.modalMstKampus.show = false;
+                        this.fetchKampus();
+                    }
+                } catch(e) { Swal.fire({icon:'error', title:'Gagal', text:'Terjadi kesalahan'}); }
+            },
+            async deleteKampus(id) {
+                if(!await Swal.fire({title:'Hapus?', icon:'warning', showCancelButton:true}).then(r=>r.isConfirmed)) return;
+                try {
+                    const res = await axios.post(`${_baseUrl}/api/v1/kampus/delete`, {id});
+                    if(res.data.success) this.fetchKampus();
+                } catch(e) {}
+            },
+            
+            // PRODI
+            async manageProdi(kampus) {
+                this.modalProdi.kampus = kampus;
+                this.modalProdi.form.kampus_id = kampus.id;
+                this.resetFormProdi();
+                this.modalProdi.show = true;
+                this.fetchProdi(kampus.id);
+            },
+            async fetchProdi(kampusId) {
+                this.loadingProdi = true;
+                try {
+                    const res = await axios.get(`${_baseUrl}/api/v1/kampus/prodi?kampus_id=` + kampusId);
+                    if(res.data.success) this.listProdi = res.data.data || [];
+                } catch(e) {} finally { this.loadingProdi = false; }
+            },
+            resetFormProdi() {
+                this.modalProdi.form = { id: '', kampus_id: this.modalProdi.kampus.id, kode_prodi: '', fakultas: '', program_studi: '', jenjang: 'S1', jenis_portofolio: '' };
+            },
+            editProdi(p) {
+                this.modalProdi.form = { ...p };
+            },
+            async saveProdi() {
+                try {
+                    const res = await axios.post(`${_baseUrl}/api/v1/kampus/prodi`, this.modalProdi.form);
+                    if(res.data.success) {
+                        this.resetFormProdi();
+                        this.fetchProdi(this.modalProdi.kampus.id);
+                        this.fetchKampus(); // Update prodi count
+                    }
+                } catch(e) {}
+            },
+            async deleteProdi(id) {
+                if(!confirm('Hapus prodi ini?')) return;
+                try {
+                    const res = await axios.post(`${_baseUrl}/api/v1/kampus/prodi/delete`, {id});
+                    if(res.data.success) {
+                        this.fetchProdi(this.modalProdi.kampus.id);
+                        this.fetchKampus();
+                    }
+                } catch(e) {}
+            },
+            
+            // RIWAYAT KEKETATAN
+            async manageRiwayatProdi(prodi) {
+                if(this.modalProdi.expandedProdiId === prodi.id) {
+                    this.modalProdi.expandedProdiId = null;
+                    return;
+                }
+                this.modalProdi.expandedProdiId = prodi.id;
+                this.formRiwayat = { prodi_id: prodi.id, tahun: new Date().getFullYear(), daya_tampung: 0, jumlah_pendaftar: 0 };
+                this.fetchRiwayat(prodi.id);
+            },
+            async fetchRiwayat(prodiId) {
+                try {
+                    const res = await axios.get(`${_baseUrl}/api/v1/kampus/prodi/riwayat?prodi_id=` + prodiId);
+                    if(res.data.success) this.listRiwayat = res.data.data || [];
+                } catch(e) {}
+            },
+            async saveRiwayat() {
+                try {
+                    const res = await axios.post(`${_baseUrl}/api/v1/kampus/prodi/riwayat`, this.formRiwayat);
+                    if(res.data.success) this.fetchRiwayat(this.formRiwayat.prodi_id);
+                } catch(e) {}
+            },
+            async deleteRiwayat(id) {
+                if(!confirm('Hapus riwayat?')) return;
+                try {
+                    const res = await axios.post(`${_baseUrl}/api/v1/kampus/prodi/riwayat/delete`, {id});
+                    if(res.data.success) this.fetchRiwayat(this.formRiwayat.prodi_id);
+                } catch(e) {}
+            },
+
+            // JALUR MASUK
+            async fetchJalur() {
+                this.loadingJalur = true;
+                try {
+                    const res = await axios.get(`${_baseUrl}/api/v1/kampus/jalur`);
+                    if(res.data.success) this.listJalur = res.data.data || [];
+                } catch(e) {} finally { this.loadingJalur = false; }
+            },
+            openJalurModal(j = null) {
+                if(j) this.modalMstJalur.form = { ...j };
+                else this.modalMstJalur.form = { id: '', nama_jalur: '', kategori: 'Lainnya' };
+                this.modalMstJalur.show = true;
+            },
+            async saveJalur() {
+                try {
+                    const res = await axios.post(`${_baseUrl}/api/v1/kampus/jalur`, this.modalMstJalur.form);
+                    if(res.data.success) {
+                        this.modalMstJalur.show = false;
+                        this.fetchJalur();
+                    }
+                } catch(e) {}
+            },
+            async deleteJalur(id) {
+                if(!confirm('Hapus jalur?')) return;
+                try {
+                    const res = await axios.post(`${_baseUrl}/api/v1/kampus/jalur/delete`, {id});
+                    if(res.data.success) this.fetchJalur();
+                } catch(e) {}
+            },
+
             async refreshAll() {
                 this.loading = true;
                 try {
