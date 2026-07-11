@@ -102,11 +102,22 @@ class BKController extends BaseController {
     // PAGE: Halaman Utama BK (view master_bk)
     // GET /bk
     // =========================================================================
-    public function index(): void {
+    public function layanan(): void {
+        $this->_renderBkHub('layanan');
+    }
+
+    public function akademik(): void {
+        $this->_renderBkHub('akademik');
+    }
+
+    public function alumni(): void {
+        $this->_renderBkHub('alumni');
+    }
+
+    private function _renderBkHub(string $activeGroup): void {
         $tenantId  = $this->getSecureTenantId();
         $roles     = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
         
-        // Cari role terkuat yang diizinkan untuk dikirim ke template view
         $role = 'guru_bk';
         foreach (['super_admin', 'operator_sekolah', 'guru_bk'] as $allowed) {
             if (in_array($allowed, $roles)) {
@@ -116,17 +127,15 @@ class BKController extends BaseController {
         }
         $userNama  = $_SESSION['nama_lengkap'] ?? '';
 
-        // Ambil daftar sekolah untuk dropdown Super Admin
         $tenantList = [];
         if ($role === 'super_admin') {
             try {
                 $db         = \App\Config\Database::getConnection();
                 $tenantList = $db->query("SELECT id, nama_sekolah FROM tenants WHERE deleted_at IS NULL ORDER BY nama_sekolah ASC")
                                  ->fetchAll(\PDO::FETCH_ASSOC);
-            } catch (\Throwable) {}
+            } catch (\Throwable $e) {}
         }
 
-        // Ambil daftar tahun ajaran aktif berdasarkan tenant (sekolah)
         $tahunAjaranList = [];
         if ($tenantId) {
             try {
@@ -137,13 +146,15 @@ class BKController extends BaseController {
             } catch (\Throwable $e) {}
         }
 
-        $this->render('master_bk', [
+        $this->render('bk/hub', [
             'title'             => 'Bimbingan Konseling',
             'user_role'         => $role,
+            'can_write'         => in_array($role, ['guru_bk', 'operator_sekolah', 'super_admin']),
             'user_nama'         => $userNama,
             'tenant_id'         => $tenantId,
             'tenant_list'       => $tenantList,
             'tahun_ajaran_list' => $tahunAjaranList,
+            'active_group'      => $activeGroup,
         ]);
     }
 

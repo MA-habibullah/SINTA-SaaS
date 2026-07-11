@@ -322,6 +322,7 @@ $baseUrl    = '/SINTA-SaaS';
     }
 </style>
 
+<?php if(empty($is_sub_module)): ?>
 <!-- Page Header -->
 <div class="d-flex justify-content-between flex-wrap align-items-center pt-2 pb-3 mb-4 border-bottom">
     <div>
@@ -362,57 +363,72 @@ $baseUrl    = '/SINTA-SaaS';
     </div>
 </div>
 <?php endif; ?>
+<?php endif; ?>
 
 <!-- ─── Vue App Mount ────────────────────────────────────────── -->
 <div id="bkApp" v-cloak>
 
     <!-- ═══ HORIZONTAL TAB NAVIGATION ═══════════════════════════ -->
-    <div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card border-0 shadow-sm rounded-4 mb-4" <?php if(!empty($is_sub_module)) echo 'style="display:none;"'; ?>>
         <div class="card-body p-2 bg-white rounded-4">
             <div class="nav-tabs-wrapper">
                 <ul class="nav nav-tabs border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-3 px-2">
+                    <?php if(!isset($allowed_bk_tabs) || in_array('dashboard', $allowed_bk_tabs)): ?>
                     <li class="nav-item">
                         <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'dashboard'}"
                                 @click="switchTab('dashboard')" id="tab-dashboard">
                             <i class="bi bi-speedometer2 me-2 fs-6"></i> Dashboard
                         </button>
                     </li>
+                    <?php endif; ?>
+                    <?php if(!isset($allowed_bk_tabs) || in_array('penjurusan', $allowed_bk_tabs)): ?>
                     <li class="nav-item">
                         <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'penjurusan'}"
                                 @click="switchTab('penjurusan')" id="tab-tab-penjurusan">
                             <i class="bi bi-diagram-3 me-2 fs-6"></i> Penjurusan Mandiri
                         </button>
                     </li>
+                    <?php endif; ?>
+                    <?php if(!isset($allowed_bk_tabs) || in_array('tracer', $allowed_bk_tabs)): ?>
                     <li class="nav-item">
                         <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'tracer'}"
                                 @click="switchTab('tracer')" id="tab-tracer">
                             <i class="bi bi-mortarboard me-2 fs-6"></i> Tracer Study
                         </button>
                     </li>
+                    <?php endif; ?>
+                    <?php if(!isset($allowed_bk_tabs) || in_array('jurnal', $allowed_bk_tabs)): ?>
                     <li class="nav-item">
                         <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'jurnal'}"
                                 @click="switchTab('jurnal')" id="tab-jurnal">
                             <i class="bi bi-journal-text me-2 fs-6"></i> Rekam Kasus & Jurnal
                         </button>
                     </li>
+                    <?php endif; ?>
+                    <?php if(!isset($allowed_bk_tabs) || in_array('prestasi', $allowed_bk_tabs)): ?>
                     <li class="nav-item">
                         <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'prestasi'}"
                                 @click="switchTab('prestasi')" id="tab-prestasi">
                             <i class="bi bi-trophy me-2 fs-6"></i> Prestasi Siswa
                         </button>
                     </li>
+                    <?php endif; ?>
+                    <?php if(!isset($allowed_bk_tabs) || in_array('kehadiran', $allowed_bk_tabs)): ?>
                     <li class="nav-item">
                         <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'kehadiran'}"
                                 @click="switchTab('kehadiran')" id="tab-kehadiran">
                             <i class="bi bi-calendar-check me-2 fs-6"></i> Kehadiran Semester
                         </button>
                     </li>
+                    <?php endif; ?>
+                    <?php if(!isset($allowed_bk_tabs) || in_array('pelanggaran', $allowed_bk_tabs)): ?>
                     <li class="nav-item">
                         <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'pelanggaran'}"
                                 @click="switchTab('pelanggaran')" id="tab-pelanggaran">
                             <i class="bi bi-shield-exclamation me-2 fs-6"></i> Tata Tertib & Poin
                         </button>
                     </li>
+                    <?php endif; ?>
                 </ul>
             </div>
         </div>
@@ -2511,7 +2527,7 @@ window.VueAppRegistry.register('#bkApp', {
         const baseUrl        = _baseUrl;
 
         // ─── State ──────────────────────────────────────────
-        const activeTab      = ref('dashboard');
+        const activeTab      = ref('<?= $allowed_bk_tabs[0] ?? "dashboard" ?>');
         const currentTenantId= ref(_tenantId);
 
         // ─── Kehadiran State ────────────────────────────────
