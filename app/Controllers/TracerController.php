@@ -116,17 +116,21 @@ class TracerController extends BaseController {
             // Admin mengisi tracer untuk siswa lain → siswa_id dari body, tapi tenant dikunci dari session
             $body    = $this->getJsonInput();
             $siswaId = $this->sanitizeStr($body['siswa_id'] ?? '');
-            if (empty($siswaId)) {
-                $this->jsonResponse(['error' => 'siswa_id wajib diisi.'], 422);
+            $namaAlumni = $this->sanitizeStr($body['nama_alumni'] ?? '');
+            if (empty($siswaId) && empty($namaAlumni)) {
+                $this->jsonResponse(['error' => 'siswa_id atau nama_alumni wajib diisi.'], 422);
             }
         }
 
         $body = $this->getJsonInput();
 
         // --- VALIDASI & SANITASI SERVER-SIDE (mencegah XSS / injection) ---
+        $namaAlumni   = $this->sanitizeStr($body['nama_alumni']   ?? '');
         $namaKampus   = $this->sanitizeStr($body['nama_kampus']   ?? '');
         $fakultas     = $this->sanitizeStr($body['fakultas']      ?? '');
         $jurusan      = $this->sanitizeStr($body['jurusan']       ?? '');
+        $kampusProdiId= !empty($body['kampus_prodi_id']) ? $this->sanitizeStr($body['kampus_prodi_id']) : null;
+        $jalurMasukId = !empty($body['jalur_masuk_id']) ? (int)$body['jalur_masuk_id'] : null;
         $tahunMasuk   = (int)($body['tahun_masuk']  ?? 0);
         $tahunLulus   = !empty($body['tahun_lulus']) ? (int)$body['tahun_lulus'] : null;
         $statusKuliah = $this->sanitizeStr($body['status_kuliah'] ?? 'Aktif');
@@ -150,19 +154,22 @@ class TracerController extends BaseController {
 
             $stmt = $db->prepare("
                 INSERT INTO riwayat_kuliah
-                    (id_siswa, tenant_id, nama_kampus, fakultas, jurusan, tahun_masuk, tahun_lulus, status_kuliah)
+                    (id_siswa, tenant_id, nama_alumni, kampus_prodi_id, jalur_masuk_id, nama_kampus, fakultas, jurusan, tahun_masuk, tahun_lulus, status_kuliah)
                 VALUES
-                    (:id_siswa, :tenant_id, :nama_kampus, :fakultas, :jurusan, :tahun_masuk, :tahun_lulus, :status_kuliah)
+                    (:id_siswa, :tenant_id, :nama_alumni, :kampus_prodi_id, :jalur_masuk_id, :nama_kampus, :fakultas, :jurusan, :tahun_masuk, :tahun_lulus, :status_kuliah)
             ");
             $stmt->execute([
-                'id_siswa'      => $siswaId,
-                'tenant_id'     => $tenantId,
-                'nama_kampus'   => $namaKampus,
-                'fakultas'      => $fakultas ?: null,
-                'jurusan'       => $jurusan  ?: null,
-                'tahun_masuk'   => $tahunMasuk,
-                'tahun_lulus'   => $tahunLulus,
-                'status_kuliah' => $statusKuliah,
+                'id_siswa'        => $siswaId ?: null,
+                'tenant_id'       => $tenantId,
+                'nama_alumni'     => $namaAlumni ?: null,
+                'kampus_prodi_id' => $kampusProdiId,
+                'jalur_masuk_id'  => $jalurMasukId,
+                'nama_kampus'     => $namaKampus,
+                'fakultas'        => $fakultas ?: null,
+                'jurusan'         => $jurusan  ?: null,
+                'tahun_masuk'     => $tahunMasuk,
+                'tahun_lulus'     => $tahunLulus,
+                'status_kuliah'   => $statusKuliah,
             ]);
             $newId = $db->lastInsertId();
             $db->commit();
@@ -208,14 +215,16 @@ class TracerController extends BaseController {
         } else {
             $body    = $this->getJsonInput();
             $siswaId = $this->sanitizeStr($body['siswa_id'] ?? '');
-            if (empty($siswaId)) {
-                $this->jsonResponse(['error' => 'siswa_id wajib diisi.'], 422);
+            $namaAlumni = $this->sanitizeStr($body['nama_alumni'] ?? '');
+            if (empty($siswaId) && empty($namaAlumni)) {
+                $this->jsonResponse(['error' => 'siswa_id atau nama_alumni wajib diisi.'], 422);
             }
         }
 
         $body = $this->getJsonInput();
 
         // --- VALIDASI & SANITASI ---
+        $namaAlumni        = $this->sanitizeStr($body['nama_alumni']        ?? '');
         $namaPerusahaan    = $this->sanitizeStr($body['nama_perusahaan']    ?? '');
         $posisiJabatan     = $this->sanitizeStr($body['posisi_jabatan']     ?? '');
         $pendapatanBulanan = $this->sanitizeStr($body['pendapatan_bulanan'] ?? '');
@@ -243,13 +252,14 @@ class TracerController extends BaseController {
 
             $stmt = $db->prepare("
                 INSERT INTO riwayat_pekerjaan
-                    (id_siswa, tenant_id, nama_perusahaan, posisi_jabatan, pendapatan_bulanan, tahun_mulai, tahun_selesai, status_kerja)
+                    (id_siswa, tenant_id, nama_alumni, nama_perusahaan, posisi_jabatan, pendapatan_bulanan, tahun_mulai, tahun_selesai, status_kerja)
                 VALUES
-                    (:id_siswa, :tenant_id, :nama_perusahaan, :posisi_jabatan, :pendapatan_bulanan, :tahun_mulai, :tahun_selesai, :status_kerja)
+                    (:id_siswa, :tenant_id, :nama_alumni, :nama_perusahaan, :posisi_jabatan, :pendapatan_bulanan, :tahun_mulai, :tahun_selesai, :status_kerja)
             ");
             $stmt->execute([
-                'id_siswa'           => $siswaId,
+                'id_siswa'           => $siswaId ?: null,
                 'tenant_id'          => $tenantId,
+                'nama_alumni'        => $namaAlumni ?: null,
                 'nama_perusahaan'    => $namaPerusahaan,
                 'posisi_jabatan'     => $posisiJabatan,
                 'pendapatan_bulanan' => $pendapatanBulanan ?: null,

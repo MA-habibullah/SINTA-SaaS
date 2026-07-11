@@ -104,6 +104,7 @@ $baseUrl   = '/SINTA-SaaS';
     [v-cloak] { display: none !important; }
 </style>
 
+<?php if (empty($is_sub_module)): ?>
 <!-- Page Header -->
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-2 pb-2 mb-4 border-bottom">
     <div>
@@ -126,6 +127,7 @@ $baseUrl   = '/SINTA-SaaS';
     </div>
     <?php endif; ?>
 </div>
+<?php endif; ?>
 
 <!-- Vue App Mount Point -->
 <div id="tracerApp" v-cloak>
@@ -233,46 +235,69 @@ $baseUrl   = '/SINTA-SaaS';
 
             <div class="row g-3">
                 <div class="col-md-12" v-if="userRole !== 'siswa'">
-                    <label class="form-label fw-semibold fs-7">Nama Alumni (Siswa) <span class="text-danger">*</span></label>
-                    <div class="position-relative">
-                        <input type="text" class="form-control" v-model="formKuliah.nama_alumni"
-                               @input="searchStudents('kuliah')" @focus="showSearchDropdown = true; activeForm = 'kuliah'"
-                               placeholder="Ketik nama atau NISN siswa lulus..." autocomplete="off">
-                        <div v-if="showSearchDropdown && activeForm === 'kuliah' && searchResults.length > 0" 
-                             class="dropdown-menu show w-100 position-absolute overflow-auto shadow-sm" style="max-height: 200px; z-index: 999;">
-                            <button type="button" class="dropdown-item py-2 border-bottom" v-for="s in searchResults" :key="s.id" @mousedown.prevent="selectStudent(s, 'kuliah')">
-                                <div class="fw-bold">{{ s.nama_lengkap }}</div>
-                                <small class="text-muted">NISN: {{ s.nisn || '-' }} | NIS: {{ s.nis || '-' }}</small>
-                            </button>
-                        </div>
-                        <div v-else-if="showSearchDropdown && activeForm === 'kuliah' && searchResults.length === 0 && formKuliah.nama_alumni.trim().length >= 2"
-                             class="dropdown-menu show w-100 position-absolute p-3 text-center text-muted shadow-sm" style="z-index: 999;">
-                            <i class="bi bi-info-circle me-1"></i> Tidak ada siswa cocok.
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label fw-semibold fs-7 mb-0">Nama Alumni (Siswa) <span class="text-danger">*</span></label>
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" id="manualInputKuliah" v-model="formKuliah.is_manual" @change="resetKuliah()">
+                            <label class="form-check-label fs-7" for="manualInputKuliah">Input Alumni Luar Sistem</label>
                         </div>
                     </div>
-                    <div v-if="selectedStudent && activeForm === 'kuliah'" class="mt-2 p-2 bg-success bg-opacity-10 border border-success border-opacity-25 rounded d-flex align-items-center gap-2">
-                        <i class="bi bi-check-circle-fill text-success"></i>
-                        <div style="font-size: 0.8rem;">
-                            <span class="d-block fw-bold text-success">{{ selectedStudent.nama_lengkap }}</span>
-                            <span class="text-success text-opacity-75">Siswa Terpilih</span>
+                    
+                    <div v-if="!formKuliah.is_manual">
+                        <div class="position-relative">
+                            <input type="text" class="form-control" v-model="formKuliah.nama_alumni"
+                                   @input="searchStudents('kuliah')" @focus="showSearchDropdown = true; activeForm = 'kuliah'"
+                                   placeholder="Ketik nama atau NISN siswa lulus..." autocomplete="off">
+                            <div v-if="showSearchDropdown && activeForm === 'kuliah' && searchResults.length > 0" 
+                                 class="dropdown-menu show w-100 position-absolute overflow-auto shadow-sm" style="max-height: 200px; z-index: 999;">
+                                <button type="button" class="dropdown-item py-2 border-bottom" v-for="s in searchResults" :key="s.id" @mousedown.prevent="selectStudent(s, 'kuliah')">
+                                    <div class="fw-bold">{{ s.nama_lengkap }}</div>
+                                    <small class="text-muted">NISN: {{ s.nisn || '-' }} | NIS: {{ s.nis || '-' }}</small>
+                                </button>
+                            </div>
+                            <div v-else-if="showSearchDropdown && activeForm === 'kuliah' && searchResults.length === 0 && formKuliah.nama_alumni.trim().length >= 2"
+                                 class="dropdown-menu show w-100 position-absolute p-3 text-center text-muted shadow-sm" style="z-index: 999;">
+                                <i class="bi bi-info-circle me-1"></i> Tidak ada siswa cocok.
+                            </div>
                         </div>
+                        <div v-if="selectedStudent && activeForm === 'kuliah'" class="mt-2 p-2 bg-success bg-opacity-10 border border-success border-opacity-25 rounded d-flex align-items-center gap-2">
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            <div style="font-size: 0.8rem;">
+                                <span class="d-block fw-bold text-success">{{ selectedStudent.nama_lengkap }}</span>
+                                <span class="text-success text-opacity-75">Siswa Terpilih</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-else>
+                        <input type="text" class="form-control" v-model="formKuliah.nama_alumni" placeholder="Ketik nama alumni secara manual..." autocomplete="off">
+                        <small class="text-muted">Menambahkan data alumni lawas yang tidak terdaftar di sistem.</small>
                     </div>
                 </div>
 
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold fs-7">Nama Kampus <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" v-model="formKuliah.nama_kampus"
-                           placeholder="Universitas Indonesia" id="input-nama-kampus" maxlength="255">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold fs-7">Jalur Masuk</label>
+                    <select class="form-select" v-model="formKuliah.jalur_masuk_id">
+                        <option value="">-- Pilih Jalur --</option>
+                        <option v-for="j in listJalur" :key="j.id" :value="j.id">{{ j.nama_jalur }}</option>
+                    </select>
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold fs-7">Fakultas</label>
-                    <input type="text" class="form-control" v-model="formKuliah.fakultas"
-                           placeholder="Fakultas Teknik" id="input-fakultas" maxlength="255">
+                <div class="col-md-8">
+                    <label class="form-label fw-semibold fs-7">Kampus & Program Studi <span class="text-danger">*</span></label>
+                    <select class="form-select" v-model="formKuliah.kampus_prodi_id" @change="syncKampusData()">
+                        <option value="">-- Pilih dari Pangkalan Data (PDSS) --</option>
+                        <option v-for="p in listKampusProdi" :key="p.prodi_id" :value="p.prodi_id">
+                            {{ p.nama_kampus }} - {{ p.program_studi }} ({{ p.jenjang }})
+                        </option>
+                    </select>
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold fs-7">Jurusan / Program Studi</label>
-                    <input type="text" class="form-control" v-model="formKuliah.jurusan"
-                           placeholder="Teknik Informatika" id="input-jurusan" maxlength="255">
+
+                <div class="col-md-6" v-show="!formKuliah.kampus_prodi_id">
+                    <label class="form-label fw-semibold fs-7">Nama Kampus (Manual) <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" v-model="formKuliah.nama_kampus" placeholder="Ketik jika kampus tidak ada di daftar" maxlength="255">
+                </div>
+                <div class="col-md-6" v-show="!formKuliah.kampus_prodi_id">
+                    <label class="form-label fw-semibold fs-7">Program Studi (Manual)</label>
+                    <input type="text" class="form-control" v-model="formKuliah.jurusan" placeholder="Ketik manual" maxlength="255">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label fw-semibold fs-7">Tahun Masuk <span class="text-danger">*</span></label>
@@ -445,7 +470,7 @@ $baseUrl   = '/SINTA-SaaS';
 
 <script>
 {
-    const { ref, computed } = Vue;
+    const { ref, computed, onMounted } = Vue;
 
     window.VueAppRegistry.register('#tracerApp', {
         setup() {
@@ -457,13 +482,20 @@ $baseUrl   = '/SINTA-SaaS';
             const alertKuliah    = ref({ msg: '', type: 'success' });
             const alertPekerjaan = ref({ msg: '', type: 'success' });
 
-            // Initial data dari PHP
-            const riwayatKuliah    = ref(<?= json_encode($kuliah, JSON_UNESCAPED_UNICODE) ?>);
-            const riwayatPekerjaan = ref(<?= json_encode($pekerjaan, JSON_UNESCAPED_UNICODE) ?>);
+            const riwayatKuliah    = ref([]);
+            const riwayatPekerjaan = ref([]);
+            const listJalur        = ref([]);
+            const listKampusProdi  = ref([]);
 
             const formKuliah = ref({
-                siswa_id: '', nama_alumni: '',
-                nama_kampus: '', fakultas: '', jurusan: '',
+                is_manual: false,
+                siswa_id: '',
+                nama_alumni: '',
+                kampus_prodi_id: '',
+                jalur_masuk_id: '',
+                nama_kampus: '',
+                fakultas: '',
+                jurusan: '',
                 tahun_masuk: new Date().getFullYear(),
                 tahun_lulus: null,
                 status_kuliah: 'Aktif'
@@ -483,6 +515,50 @@ $baseUrl   = '/SINTA-SaaS';
             const searchingStudents = ref(false);
             const selectedStudent = ref(null);
             const activeForm = ref('');
+
+            async function fetchMasterData() {
+                try {
+                    const resJalur = await fetch('/SINTA-SaaS/api/v1/kampus/jalur');
+                    const dataJalur = await resJalur.json();
+                    if(dataJalur.success) listJalur.value = dataJalur.data;
+
+                    const resProdi = await fetch('/SINTA-SaaS/api/v1/kampus/all-prodi');
+                    const dataProdi = await resProdi.json();
+                    if(dataProdi.success) listKampusProdi.value = dataProdi.data;
+                } catch (e) {
+                    console.error("Gagal load master kampus:", e);
+                }
+            }
+
+            async function fetchRiwayat(type) {
+                try {
+                    const res = await fetch(`/SINTA-SaaS/api/v1/tracer/${type}`);
+                    const data = await res.json();
+                    if (data.success) {
+                        if (type === 'kuliah') riwayatKuliah.value = data.data;
+                        else riwayatPekerjaan.value = data.data;
+                    }
+                } catch (e) { console.error(e); }
+            }
+
+            onMounted(() => {
+                fetchMasterData();
+                fetchRiwayat('kuliah');
+                fetchRiwayat('pekerjaan');
+            });
+
+            function syncKampusData() {
+                const p = listKampusProdi.value.find(x => x.prodi_id === formKuliah.value.kampus_prodi_id);
+                if(p) {
+                    formKuliah.value.nama_kampus = p.nama_kampus;
+                    formKuliah.value.jurusan = p.program_studi;
+                    formKuliah.value.fakultas = p.fakultas;
+                } else {
+                    formKuliah.value.nama_kampus = '';
+                    formKuliah.value.jurusan = '';
+                    formKuliah.value.fakultas = '';
+                }
+            }
 
             async function searchStudents(formType) {
                 activeForm.value = formType;
@@ -523,7 +599,9 @@ $baseUrl   = '/SINTA-SaaS';
 
             function resetKuliah() {
                 formKuliah.value = {
+                    is_manual: formKuliah.value.is_manual,
                     siswa_id: '', nama_alumni: '',
+                    kampus_prodi_id: '', jalur_masuk_id: '',
                     nama_kampus: '', fakultas: '', jurusan: '',
                     tahun_masuk: new Date().getFullYear(),
                     tahun_lulus: null, status_kuliah: 'Aktif'
@@ -542,8 +620,8 @@ $baseUrl   = '/SINTA-SaaS';
             }
 
             async function submitKuliah() {
-                if (userRole.value !== 'siswa' && !formKuliah.value.siswa_id) {
-                    alertKuliah.value = { msg: 'Silakan cari dan pilih alumni (siswa) terlebih dahulu.', type: 'danger' };
+                if (userRole.value !== 'siswa' && !formKuliah.value.is_manual && !formKuliah.value.siswa_id) {
+                    alertKuliah.value = { msg: 'Silakan cari dan pilih alumni (siswa) terlebih dahulu. Atau centang "Input Alumni Luar Sistem".', type: 'danger' };
                     return;
                 }
                 if (!formKuliah.value.nama_kampus.trim()) {
@@ -619,7 +697,8 @@ $baseUrl   = '/SINTA-SaaS';
                 formKuliah, formPekerjaan,
                 submitKuliah, submitPekerjaan,
                 userRole, showSearchDropdown, searchResults, searchingStudents, selectedStudent, activeForm,
-                searchStudents, selectStudent
+                searchStudents, selectStudent,
+                listJalur, listKampusProdi, syncKampusData, resetKuliah
             };
         }
     });
