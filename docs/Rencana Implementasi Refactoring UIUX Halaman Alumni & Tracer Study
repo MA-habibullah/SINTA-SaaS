@@ -1,0 +1,39 @@
+# Rencana Implementasi: Refactoring UI/UX Halaman Alumni & Tracer Study
+
+Berdasarkan *screenshot* dan kendala yang Anda sebutkan, permasalahan utamanya adalah tampilnya dua *header* halaman ("Tracer Study" dan "PDSS & Pelacakan Karir") serta dua *filter* Super Admin yang saling bertumpuk akibat pemanggilan dua modul (`tracer_study.php` dan `pdss_index.php`) di satu halaman. 
+
+Untuk memberikan pengalaman pengguna (UI/UX) yang profesional dan rapi, kita harus menggabungkan visualnya seolah-olah itu adalah satu aplikasi tunggal, tanpa harus merusak logika inti Vue.js di masing-masing modul.
+
+## Proposed Changes
+
+### 1. Pembuatan Tata Letak Gabungan (Unified Layout)
+Saya akan membuat sebuah *layout* antarmuka baru khusus untuk halaman ini (`views/bk/alumni_layout.php`), yang akan memiliki fitur:
+- **[NEW] Unified Header**: Hanya akan ada satu judul besar di bagian atas: **Alumni & Tracer Study**.
+- **[NEW] Unified Super Admin Filter**: Filter "Pilih Sekolah" akan digabung menjadi satu di paling atas halaman (sehingga *filter* di tengah-tengah halaman yang membingungkan akan hilang).
+- **[NEW] Unified Tab Navigation**: Kita akan membuat satu set *Nav Tabs* modern yang menyatukan kedua modul:
+   - **Tab 1: Input Portofolio Alumni** *(akan memuat antarmuka Tracer Study)*
+   - **Tab 2: Tracking Data Alumni** *(akan memuat antarmuka Tracking PDSS)*
+
+### 2. Modifikasi Komponen Lama (Safe Hiding)
+Untuk mencegah redundansi visual, kita perlu menyembunyikan *header* dan *filter* bawaan dari `tracer_study.php` dan `pdss_index.php` ketika mereka dipanggil sebagai *sub-module* dari BK.
+- **[MODIFY] `views/tracer_study.php`**: Membungkus area judul dan filter dengan kondisi PHP `if(empty($is_sub_module))` agar tersembunyi saat diakses melalui menu BK.
+- **[MODIFY] `views/pdss_index.php`**: Membungkus area judul dan filter dengan kondisi PHP yang sama.
+
+### 3. Penyesuaian `views/bk/hub.php`
+- **[MODIFY]**: Mengubah alur pemanggilan pada rute `alumni` agar memanggil tata letak gabungan (`alumni_layout.php`) di atas, di mana `tracer_study.php` dan `pdss_index.php` akan dimuat (di-*include*) dengan sangat rapi ke dalam *tab pane* masing-masing.
+
+## Open Questions
+
+> [!TIP]
+> **Penamaan Tab Antarmuka**
+> Apakah Anda setuju jika Tab 1 bernama **"Input Portofolio Alumni"** dan Tab 2 bernama **"Tracking Data Alumni"**? Jika ada penamaan yang lebih sesuai dengan istilah BK di sekolah Anda, mohon beri tahu saya.
+
+> [!NOTE]
+> **Skema Warna / Desain**
+> Secara *default*, saya akan menyesuaikan desain tab ini dengan estetika modern Bootstrap 5 (menggunakan *pills* atau *tabs* bergaris bawah dengan transisi halus). Jika Anda ingin ada penyesuaian warna khusus, saya siap mengaturnya.
+
+## Verification Plan
+1. Menjalankan skrip *refactoring* untuk memodifikasi `tracer_study.php` dan `pdss_index.php`.
+2. Membuat file `alumni_layout.php`.
+3. Memperbarui `views/bk/hub.php`.
+4. Merender hasilnya di antarmuka dan memverifikasi (secara manual/skrip) bahwa kedua *header* lama sudah hilang, digantikan dengan satu *header* dan *Nav Tab* yang bersih.

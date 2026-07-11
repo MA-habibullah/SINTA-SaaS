@@ -1,0 +1,26 @@
+# Walkthrough: Refactoring UI/UX Alumni & Tracer Study
+
+Sesuai dengan rencana yang disetujui, saya telah merombak tata letak halaman **Alumni & Tracer Study** untuk memberikan pengalaman visual (UI/UX) yang jauh lebih profesional dan terpadu.
+
+## Apa Saja yang Berubah?
+
+### 1. Unified Header (Judul Terpadu)
+Sebelumnya, terdapat dua judul halaman yang bertumpuk ("Tracer Study / Portofolio Alumni" dan "PDSS & Pelacakan Karir Alumni"). Kini, keduanya disembunyikan dan digantikan oleh **satu judul utama yang elegan** di bagian paling atas halaman.
+
+### 2. Unified Super Admin Filter
+Filter dropdown "Pilih Sekolah" yang sebelumnya muncul di tengah-tengah halaman (milik PDSS) telah digabungkan dengan filter utama di bagian paling atas halaman. Filter baru ini menggunakan desain *gradient* yang modern dan secara cerdas akan menyinkronkan data untuk kedua modul secara bersamaan melalui parameter URL (`?tenant_id=...`).
+
+### 3. Unified Navigation Tabs (Tab Gabungan)
+Saya telah membuang navigasi *tab* lama yang berserakan dan menyatukan fitur utama ke dalam antarmuka **Bootstrap Pills** yang ramping:
+- **Tab 1: Tracking Data Alumni** (Langsung merender fungsionalitas pencarian dan pengelolaan data alumni dari sistem PDSS).
+- **Tab 2: Input Portofolio Alumni** (Merender secara bersih fitur pengisian riwayat pendidikan dan pekerjaan dari sistem Tracer Study).
+
+Transisi antar-tab menggunakan animasi, dan saya juga menyertakan *script* pemicu `resize` otomatis untuk memastikan grafik atau tabel (Vue.js) yang sebelumnya tersembunyi dapat dirender dengan sempurna saat *tab* diaktifkan.
+
+### 4. Keamanan Arsitektur Vue.js
+Semua ini dilakukan tanpa merombak secara ekstrem file `pdss_index.php` dan `tracer_study.php` (hanya menambahkan kondisi *hide* sederhana ketika dimuat sebagai *sub-module*). Artinya, fitur utama dan reaktivitas data Vue.js tetap **100% aman dan berjalan sebagaimana mestinya**, namun dengan "wajah" baru yang jauh lebih profesional!
+
+---
+> [!TIP]
+> **Cara Verifikasi**
+> Silakan Anda muat ulang (refresh) halaman **Alumni & Tracer Study** pada *browser* Anda. Anda akan langsung melihat tata letak baru yang rapi, bersih, dan profesional tanpa adanya penumpukan judul maupun filter. Coba klik perpindahan antara tab "Tracking Data Alumni" dan "Input Portofolio Alumni" untuk merasakan transisi UX-nya.

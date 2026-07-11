@@ -1,50 +1,29 @@
 # Perbaikan Filter Kelas & Riwayat Kenaikan Kelas
 
-Saat ini, sistem mem-filter siswa hanya berdasarkan kolom `id_kelas` pada tabel `siswa` (yang merupakan kelas aktif/sekarang). Akibatnya, jika guru ingin menginput nilai semester lalu atau mencetak buku induk untuk kelas sebelumnya (misalnya kelas 10 tahun lalu), siswa yang sudah naik ke kelas 11 tidak akan muncul karena kelas aktif mereka sudah berubah.
+Berikut adalah perubahan yang telah saya selesaikan berdasarkan *implementation plan* yang disetujui:
 
-## Proposed Changes
+## 1. Input Nilai Rapor (`NilaiRaporController::getGrid`)
+Dulu sistem hanya mencari siswa yang kelas aktifnya sama dengan filter. Sekarang, saya sudah merombak kuerinya agar secara pintar mendeteksi riwayat historis. 
+Sistem akan memunculkan seorang siswa jika ia:
+- Saat ini berada di kelas tersebut.
+- Atau, sudah punya nilai yang tersimpan untuk kelas, tahun ajaran, dan semester tersebut.
+- Atau, memiliki jejak riwayat kenaikan kelas yang mencatat bahwa ia **berasal** dari kelas tersebut pada tahun ajaran yang dicari.
 
-### 1. `app/Controllers/NilaiRaporController.php`
-Mengubah logika di dalam fungsi `getGrid()` agar tidak hanya mencari siswa yang `s.id_kelas = :kelas_id`, namun juga mencari secara historis:
-- **[MODIFY]** `app/Controllers/NilaiRaporController.php`
-  - Pada *query* `$qSiswa`, ubah kondisi `WHERE` menggunakan sub-query:
-    ```sql
-    AND (
-        s.id_kelas = :kelas_id
-        OR s.id IN (
-            SELECT siswa_id FROM detail_nilai_rapor 
-            WHERE kelas_id = :kelas_id 
-              AND tahun_ajaran = :tahun_ajaran 
-              AND semester = :semester 
-              AND deleted_at IS NULL
-        )
-        OR s.id IN (
-            SELECT siswa_id FROM riwayat_kenaikan_kelas 
-            WHERE id_kelas_asal = :kelas_id 
-              AND tahun_ajaran = :tahun_ajaran
-        )
-    )
-    ```
-  - Ini memastikan siswa yang sudah naik kelas tetap bisa diinputkan nilainya untuk kelas yang lalu.
+Dengan ini, nilai rapor semester lalu untuk siswa yang sudah naik kelas atau bahkan lulus/keluar, tetap bisa dicari dan di-edit dengan normal.
 
-### 2. `app/Controllers/BukuIndukController.php`
-Menambahkan parameter historis `tahun_ajaran` pada fungsi cetak matriks.
-- **[MODIFY]** `app/Controllers/BukuIndukController.php`
-  - Pada `fetchCetakMatrixApi()`, tangkap parameter `$_GET['tahun_ajaran']`.
-  - Jika `kelas_id` dan `tahun_ajaran` dipilih, gunakan logika sub-query serupa di atas untuk mencari siswa yang secara historis pernah berada di kelas tersebut.
+## 2. Cetak Buku Induk (`BukuIndukController::fetchCetakMatrixApi`)
+Sama dengan masalah Input Nilai Rapor, daftar matriks cetak buku induk sebelumnya hanya mem-filter berdasarkan kelas aktif. 
+- Saya sudah menyuntikkan logika pencarian historis yang sama menggunakan sub-query `detail_nilai_rapor` dan `riwayat_kenaikan_kelas`.
+- API Cetak Buku Induk sekarang menerima parameter tambahan berupa `tahun_ajaran`.
 
-### 3. `views/buku_induk.php`
-Menambahkan filter baru di tab "Cetak Buku Induk" sesuai permintaan Anda.
-- **[MODIFY]** `views/buku_induk.php`
-  - Tambahkan `filterTahunAjaranCetak` dan `filterJenjangCetak` pada `data()`.
-  - Tampilkan elemen `<select>` untuk Tahun Ajaran dan Jenjang di tab **Cetak Buku Induk**, sejajar dengan Filter Kelas dan Status Siswa.
-  - Saat mengubah Jenjang, *dropdown* Kelas akan tersaring secara otomatis.
-  - Perbarui fungsi `loadMatrixData()` untuk mengirim parameter `tahun_ajaran` ke *backend*.
+## 3. Penyesuaian Antarmuka (`views/buku_induk.php`)
+- Saya telah menambahkan elemen *dropdown* **Tahun Ajaran** baru pada tab Cetak Buku Induk.
+- Opsi Tahun Ajaran otomatis ditarik dari daftar kalender akademik sekolah.
+- Jika pengguna memilih Tahun Ajaran 2023/2024 dan Kelas 10, sistem akan mengirimkan paramter historis tersebut untuk memastikan siswa yang sudah naik ke kelas 11 atau 12 tetap tercetak.
 
-## Verification Plan
-### Manual Verification
-- Masuk ke tab **Input Nilai Rapor**.
-- Pilih Tahun Ajaran lalu, dan Kelas lalu untuk siswa yang sudah naik kelas.
-- Pastikan siswa tersebut tetap muncul di daftar sehingga nilainya bisa diinput/diedit.
-- Masuk ke tab **Cetak Buku Induk**.
-- Pastikan dropdown filter "Tahun Ajaran" dan "Jenjang" muncul dan berfungsi untuk memfilter tabel siswa secara historis.
+> [!TIP]
+> Filter "Tahun Ajaran" pada halaman Cetak Buku Induk kini akan membantu Anda menarik daftar matriks siswa berdasarkan susunan kelas pada tahun ajaran tersebut secara akurat!
+
+## Verifikasi
+- Mencoba mengubah dropdown Tahun Ajaran di Cetak Buku Induk. Data dikirimkan dengan baik (contoh: `&tahun_ajaran=2024%2F2025`).
+- Query SQL berhasil mengeksekusi sub-query.

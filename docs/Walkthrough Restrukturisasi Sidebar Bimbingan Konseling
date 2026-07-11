@@ -1,0 +1,36 @@
+# Walkthrough: Restrukturisasi Sidebar Bimbingan Konseling
+
+Fitur Bimbingan Konseling dan PDSS & Alumni telah berhasil direstrukturisasi menjadi lebih terorganisir ke dalam **1 Menu Induk** dan **3 Sub-menu** sesuai dengan rencana yang telah disetujui.
+
+## Perubahan yang Telah Dilakukan
+
+### 1. Struktur Database Menu (Sidebar)
+Sebuah *parent menu* baru bernama **BIMBINGAN KONSELING** telah ditambahkan. Menu-menu lama telah dimasukkan sebagai anak (sub-menu) dari parent ini dengan penyesuaian ikon agar terlihat lebih profesional:
+- **Layanan & Kedisiplinan** (`bi-person-badge`)
+- **Kesiapan Akademik & PDSS** (`bi-journal-check`)
+- **Alumni & Tracer Study** (`bi-mortarboard`)
+
+> [!NOTE]
+> Hierarki ini diterapkan langsung melalui sistem Role-Based Access Control (RBAC) pada *Database Migration* sehingga hak akses (Guru BK, Operator, Super Admin) tetap aman dan tidak terganggu.
+
+### 2. URL & Routing yang Lebih Bersih
+URL juga telah disesuaikan agar lebih *SEO-friendly* dan konsisten dengan tata letak foldernya:
+- `/SINTA-SaaS/bk/layanan`
+- `/SINTA-SaaS/bk/akademik`
+- `/SINTA-SaaS/bk/alumni`
+
+### 3. Refactoring Tampilan Modular yang Aman (Safe Modularization)
+Alih-alih merusak logika Vue.js yang sangat kompleks di `master_bk.php` dan `pdss_index.php`, saya menggunakan teknik *Modular View Hub Pattern* melalui PHP (yang sangat aman).
+- Saya membuat sebuah file hub `views/bk/hub.php` yang secara pintar memanggil `master_bk.php`, `pdss_index.php`, dan `tracer_study.php` sesuai dengan URL yang dikunjungi.
+- Saya memasukkan filter PHP ke dalam masing-masing *view* tersebut, sehingga **hanya navtab yang relevan** dengan sub-menu yang diklik yang akan dimunculkan (tab yang lain disembunyikan).
+- Saya juga mengatur agar *default tab* (saat pertama kali halaman dibuka) langsung menuju tab pertama dari masing-masing kategori, sehingga transisinya terasa sangat mulus.
+
+### 4. Dokumentasi Tersimpan
+Sesuai instruksi khusus (*Custom Rules*) Anda, dokumen *Implementation Plan* ini telah saya salin ke dalam folder repositori:
+`[c:\xampp\htdocs\SINTA-SaaS\docs\Implementation_Plan_Revisi_Sidebar_BK.md](file:///c:/xampp/htdocs/SINTA-SaaS/docs/Implementation_Plan_Revisi_Sidebar_BK.md)`
+
+## Cara Memverifikasi
+1. Login ke aplikasi sebagai **Guru BK** atau **Super Admin**.
+2. Perhatikan area sidebar sebelah kiri, klik menu dropdown **BIMBINGAN KONSELING**.
+3. Klik masing-masing dari 3 sub-menu yang muncul.
+4. Pastikan navtabs (tombol navigasi horizontal) yang muncul di layar sudah terpisah secara logis menjadi 3 kelompok seperti yang kita rencanakan.

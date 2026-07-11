@@ -1,0 +1,30 @@
+# Rencana Implementasi: Perbaikan UI/UX Akademik & Bug Tracking Alumni
+
+Saya menemukan penyebab dari kedua masalah yang Anda laporkan. Rencana ini akan mengatasi *bug* di halaman Alumni dan merombak total tata letak (UI/UX) halaman Akademik agar selevel dengan halaman Alumni yang sudah kita perbaiki.
+
+## 1. Perbaikan Bug "Tracking Data Alumni"
+- **Akar Masalah**: Pada saat mengatur *default tab* di file `pdss_index.php`, saya salah mengetik *ID tab* menjadi `alumni`, padahal *ID* yang benar yang didefinisikan oleh sistem Vue.js adalah `tracking`. Karena `alumni` tidak dikenali, sistem jatuh ke tampilan pertama (Kesiapan/Simulasi).
+- **Solusi**: Saya akan memperbaiki logika *default tab* di `pdss_index.php` (line 120+) dari:
+  `const activeTab = ref('<?= ($active_group ?? "akademik") === "alumni" ? "alumni" : "kesiapan" ?>');`
+  menjadi:
+  `const activeTab = ref('<?= ($active_group ?? "akademik") === "alumni" ? "tracking" : "kesiapan" ?>');`
+
+## 2. Refactoring UI/UX Halaman Kesiapan Akademik & PDSS
+Sama seperti yang terjadi sebelumnya, halaman `/bk/akademik` saat ini memuat dua modul sekaligus (`master_bk.php` dan `pdss_index.php`), sehingga terjadi penumpukan *Header* halaman dan *Filter* Super Admin.
+
+### Desain Tata Letak Baru (`views/bk/akademik_layout.php`):
+Saya akan membuat *Unified Layout* (Tata letak terpadu) yang profesional dengan struktur:
+
+- **[NEW] Unified Header**: Judul tunggal "Kesiapan Akademik & PDSS" dengan deskripsi yang rapi.
+- **[NEW] Unified Super Admin Filter**: Filter "Pilih Sekolah" tunggal berdesain *gradient* di bagian paling atas (sama seperti di halaman Alumni).
+- **[NEW] Unified Navigation Tabs**: Untuk merapikan semua fitur tanpa mengorbankan fungsionalitas, kita akan membuat dua *tab* utama (*Bootstrap Pills*):
+  1. **Tab 1: Penjurusan Mandiri** (Akan merender fitur penjurusan dari modul BK)
+  2. **Tab 2: Pangkalan Data & Kesiapan SNBP** (Akan merender modul PDSS).
+     - *Catatan: Saat pengguna mengklik Tab 2, mereka akan melihat sub-tab bawaan PDSS ("Kesiapan & Eligibilitas" dan "Konfigurasi Target Kampus") yang sudah memiliki desain rapi.*
+
+### Penyesuaian `views/bk/hub.php`
+Saya akan memperbarui blok kondisi `elseif ($active_group === 'akademik')` agar memanggil file `akademik_layout.php` yang baru, sembari memastikan `master_bk.php` dan `pdss_index.php` menyembunyikan *header* bawaan mereka saat dimuat.
+
+## Verifikasi
+1. Setelah diterapkan, mengklik "Tracking Data Alumni" di menu Alumni akan langsung membuka tabel data alumni, bukan Simulasi Kelayakan.
+2. Membuka menu "Kesiapan Akademik & PDSS" akan menampilkan UI yang sangat bersih (hanya 1 judul dan 1 filter), dengan tab navigasi yang elegan.
