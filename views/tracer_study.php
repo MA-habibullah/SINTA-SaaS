@@ -520,6 +520,11 @@ $baseUrl   = '/SINTA-SaaS';
             const tenantId       = urlParams.get('tenant_id') || '';
 
             async function fetchMasterData() {
+                if (userRole.value === 'super_admin' && !tenantId) {
+                    listJalur.value = [];
+                    listKampusProdi.value = [];
+                    return;
+                }
                 try {
                     const resJalur = await fetch(`/SINTA-SaaS/api/v1/kampus/jalur?tenant_id=${tenantId}`);
                     const dataJalur = await resJalur.json();
@@ -534,6 +539,11 @@ $baseUrl   = '/SINTA-SaaS';
             }
 
             async function fetchRiwayat(type) {
+                if (userRole.value === 'super_admin' && !tenantId) {
+                    if (type === 'kuliah') riwayatKuliah.value = [];
+                    else riwayatPekerjaan.value = [];
+                    return;
+                }
                 try {
                     const res = await fetch(`/SINTA-SaaS/api/v1/tracer/${type}?tenant_id=${tenantId}`);
                     const data = await res.json();

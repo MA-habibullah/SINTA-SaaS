@@ -1,0 +1,33 @@
+# Pengembangan Fitur Master Kampus & Input Manual Alumni
+
+Sesuai dengan permintaan Anda, sistem manajemen pangkalan data PTN/PTS/Kedinasan (PDSS) serta fitur Tracer Study kini telah mendapatkan pembaruan arsitektur yang cukup besar. Perubahan ini memungkinkan pengelolaan data target kampus yang lebih komprehensif, riwayat keketatan seleksi setiap tahunnya, dan fleksibilitas input alumni di luar sistem.
+
+Berikut ringkasan fitur yang telah selesai diimplementasikan:
+
+## 1. Database & Master Data (Selesai)
+- **Tabel Baru**: Telah dibuat tabel `master_kampus`, `master_kampus_prodi`, `kampus_prodi_riwayat`, dan `master_jalur_masuk`.
+- **Modifikasi Tabel Riwayat**: Kolom pada tabel `riwayat_kuliah` dan `riwayat_pekerjaan` telah disesuaikan agar bisa menyimpan `nama_alumni` secara mandiri tanpa harus terkait langsung dengan akun siswa aktif (`id_siswa` dibuat *nullable*).
+- **Migration**: Skema sudah dijalankan dengan sukses menggunakan file migration `2026_07_11_02_master_kampus_dan_alumni.php`.
+
+## 2. API & Backend (Selesai)
+- **`KampusController.php`**: Controller baru telah ditambahkan untuk menangani semua operasi CRUD (Create, Read, Update, Delete) yang berhubungan dengan Master Kampus, Program Studi, Riwayat Daya Tampung/Pendaftar, dan Master Jalur Masuk.
+- **Pembaruan `TracerController.php`**: Logika untuk menyimpan Riwayat Kuliah dan Riwayat Pekerjaan telah diperbarui. API kini dapat menerima input manual alumni jika opsi "Alumni Luar Sistem" dipilih. 
+- **Integrasi Routing (`index.php`)**: Semua *endpoint* API terbaru telah didaftarkan dan dapat diakses dengan pola awalan `/api/v1/kampus/...`.
+
+## 3. Pembaruan UI/UX (Selesai)
+- **Tab Master Kampus (Kesiapan Akademik & PDSS)**:
+  - Antarmuka "Target Kampus" lama yang sederhana telah diganti total dengan modul **Master Kampus & Prodi** yang jauh lebih profesional (`kampus_config_ui.php`).
+  - Fitur meliputi: Daftar Universitas, Manajemen Fakultas & Prodi (Jenjang D1 hingga Profesi), Manajemen Riwayat Keketatan (Daya Tampung vs Pendaftar per Tahun), serta kelola Kategori Jalur Masuk (SNBP, SNBT, Mandiri, Kedinasan, dll.).
+- **Form Portofolio Alumni (Tracer Study)**:
+  - Telah ditambahkan fitur **Toggle Input Manual**: Admin/Operator BK kini dapat memasukkan nama alumni tahun-tahun sebelumnya secara manual.
+  - **Dropdown Dinamis Kampus & Jalur**: Jika pengguna mengisi data riwayat kuliah, sistem kini menarik data secara dinamis dari tabel Master Kampus. Saat opsi dipilih, bidang Nama Kampus, Fakultas, dan Jurusan akan terisi secara otomatis, yang membantu menjaga konsistensi pangkalan data.
+
+## Panduan Pengujian
+Anda bisa langsung masuk ke aplikasi dan melakukan pengujian pada fitur berikut:
+1. Akses menu **Layanan Kesiapan Akademik & PDSS** -> tab **Konfigurasi Target Kampus**. Coba kelola daftar universitas, tambahkan program studi, dan isi riwayat keketatannya.
+2. Akses menu **Alumni & Tracer Study**. Pada bagian tambah riwayat kuliah, klik tombol aktif **"Input Alumni Luar Sistem"**. Coba ketik nama manual dan pilih kampus beserta jalur masuk melalui *dropdown* dinamis.
+
+> [!TIP]
+> Jika data kampus tidak ditemukan di *dropdown*, Anda tetap bisa mengosongkan *dropdown* tersebut dan mengisi kotak *input* manual yang langsung dimunculkan di bawahnya. Hal ini memberikan fleksibilitas tanpa batas!
+
+Proses pembaruan ini telah menjaga keutuhan data yang sudah *live* di *production*. Semua file lama yang tidak terpengaruh tetap berjalan sebagaimana mestinya.
