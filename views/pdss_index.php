@@ -931,7 +931,8 @@ $tenantList = $data['tenant_list'] ?? [];
                 this.resetFormProdi();
                 this.modalProdi.show = true;
                 this.fetchProdi(kampus.id);
-                 async fetchProdi(kampusId) {
+            },
+            async fetchProdi(kampusId) {
                 this.loadingProdi = true;
                 try {
                     const url = this.currentTenantId ? `${_baseUrl}/api/v1/kampus/prodi?kampus_id=${kampusId}&tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/kampus/prodi?kampus_id=` + kampusId;
@@ -964,7 +965,7 @@ $tenantList = $data['tenant_list'] ?? [];
                     if(res.data.success) {
                         this.fetchProdi(this.modalProdi.kampus.id);
                         this.fetchKampus();
-                    }           }
+                    }
                 } catch(e) {}
             },
             
@@ -977,7 +978,8 @@ $tenantList = $data['tenant_list'] ?? [];
                 this.modalProdi.expandedProdiId = prodi.id;
                 this.formRiwayat = { prodi_id: prodi.id, tahun: new Date().getFullYear(), daya_tampung: 0, jumlah_pendaftar: 0 };
                 this.fetchRiwayat(prodi.id);
-                 async fetchRiwayat(prodiId) {
+            },
+            async fetchRiwayat(prodiId) {
                 try {
                     const url = this.currentTenantId ? `${_baseUrl}/api/v1/kampus/prodi/riwayat?prodi_id=${prodiId}&tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/kampus/prodi/riwayat?prodi_id=` + prodiId;
                     const res = await axios.get(url);
@@ -1035,7 +1037,7 @@ $tenantList = $data['tenant_list'] ?? [];
                     const res = await axios.post(url, {id});
                     if(res.data.success) this.fetchJalur();
                 } catch(e) {}
-            },          },
+            },
 
             async refreshAll() {
                 this.loading = true;
