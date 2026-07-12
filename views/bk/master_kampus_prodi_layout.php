@@ -93,7 +93,7 @@ $tenantId = $_GET['tenant_id'] ?? ($_SESSION['tenant_id'] ?? '');
                             Tidak ada data kampus atau prodi.
                         </td>
                     </tr>
-                    <tr v-for="row in filteredData" :key="row.prodi_id || row.kampus_id" class="transition-colors hover:bg-slate-50/50">
+                    <tr v-for="row in paginatedData" :key="row.prodi_id || row.kampus_id" class="transition-colors hover:bg-slate-50/50">
                         <td class="px-4 py-3 align-middle">
                             <div class="font-bold text-slate-800 text-xs">{{ row.nama_kampus }}</div>
                             <div class="text-[10px] text-slate-500">{{ row.jenis_kampus }} · {{ row.kota_kampus }}</div>
@@ -126,6 +126,39 @@ $tenantId = $_GET['tenant_id'] ?? ($_SESSION['tenant_id'] ?? '');
                     </tr>
                 </tbody>
             </table>
+        </div>
+
+        <!-- Pagination Footer -->
+        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3 px-4 py-3 border-t border-slate-100 bg-slate-50/50">
+            <div class="d-flex align-items-center gap-2">
+                <span class="text-xs text-slate-500 text-muted">Tampilkan:</span>
+                <select class="form-select form-select-sm rounded-3 py-1 text-xs" style="width: 70px;" v-model="perPage" @change="currentPage = 1">
+                    <option v-for="opt in perPageOptions" :key="opt" :value="opt">{{ opt }}</option>
+                </select>
+                <span class="text-xs text-slate-500 text-muted" v-if="filteredData.length > 0">
+                    Menampilkan {{ (currentPage - 1) * perPage + 1 }} - {{ Math.min(currentPage * perPage, filteredData.length) }} dari {{ filteredData.length }} baris
+                </span>
+            </div>
+            <nav v-if="totalPages > 1" aria-label="Navigasi Halaman">
+                <ul class="pagination pagination-sm m-0 gap-1">
+                    <li class="page-item" :class="{disabled: currentPage === 1}">
+                        <button class="page-link rounded-3 border-slate-200 text-slate-600 px-2 py-1 text-xs" @click.prevent="currentPage = 1" :disabled="currentPage === 1">&laquo;</button>
+                    </li>
+                    <li class="page-item" :class="{disabled: currentPage === 1}">
+                        <button class="page-link rounded-3 border-slate-200 text-slate-600 px-2.5 py-1 text-xs" @click.prevent="currentPage--" :disabled="currentPage === 1">&lsaquo;</button>
+                    </li>
+                    <li class="page-item" v-for="page in displayedPages" :key="page" :class="{active: page === currentPage, disabled: page === '...'}">
+                        <button v-if="page !== '...'" class="page-link rounded-3 border-slate-200 px-2.5 py-1 text-xs" :class="page === currentPage ? 'bg-blue-600 border-blue-600 text-white' : 'text-slate-600'" @click.prevent="currentPage = page">{{ page }}</button>
+                        <span v-else class="px-2 py-1 text-slate-400 text-xs">...</span>
+                    </li>
+                    <li class="page-item" :class="{disabled: currentPage === totalPages}">
+                        <button class="page-link rounded-3 border-slate-200 text-slate-600 px-2.5 py-1 text-xs" @click.prevent="currentPage++" :disabled="currentPage === totalPages">&rsaquo;</button>
+                    </li>
+                    <li class="page-item" :class="{disabled: currentPage === totalPages}">
+                        <button class="page-link rounded-3 border-slate-200 text-slate-600 px-2 py-1 text-xs" @click.prevent="currentPage = totalPages" :disabled="currentPage === totalPages">&raquo;</button>
+                    </li>
+                </ul>
+            </nav>
         </div>
     </div>
 
@@ -250,6 +283,10 @@ if (window.VueAppRegistry.register) {
             searchQuery: '',
             filterKampusId: '',
             
+            currentPage: 1,
+            perPage: 10,
+            perPageOptions: [5, 10, 25, 50, 100],
+
             modalImportDayaTampung: { show: false },
             importingDayaTampung: false,
 
@@ -264,6 +301,14 @@ if (window.VueAppRegistry.register) {
                 }
             },
             bulkDeleting: false
+        }
+    },
+    watch: {
+        filterKampusId() {
+            this.currentPage = 1;
+        },
+        searchQuery() {
+            this.currentPage = 1;
         }
     },
     computed: {
@@ -289,6 +334,43 @@ if (window.VueAppRegistry.register) {
                 );
             }
             return data;
+        },
+        totalPages() {
+            return Math.ceil(this.filteredData.length / this.perPage) || 1;
+        },
+        paginatedData() {
+            const start = (this.currentPage - 1) * this.perPage;
+            return this.filteredData.slice(start, start + this.perPage);
+        },
+        displayedPages() {
+            const current = this.currentPage;
+            const last = this.totalPages;
+            const delta = 2;
+            const left = current - delta;
+            const right = current + delta + 1;
+            const range = [];
+            const rangeWithDots = [];
+            let l;
+
+            for (let i = 1; i <= last; i++) {
+                if (i === 1 || i === last || (i >= left && i < right)) {
+                    range.push(i);
+                }
+            }
+
+            for (let i of range) {
+                if (l) {
+                    if (i - l === 2) {
+                        rangeWithDots.push(l + 1);
+                    } else if (i - l > 2) {
+                        rangeWithDots.push('...');
+                    }
+                }
+                rangeWithDots.push(i);
+                l = i;
+            }
+
+            return rangeWithDots;
         },
         uniqueKampusList() {
             const map = new Map();
