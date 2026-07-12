@@ -46,6 +46,9 @@ class TracerController extends BaseController {
 
         $db       = \App\Config\Database::getConnection();
         $tenantId = SessionManager::getTenantId();
+        if (empty($tenantId) && !empty($_GET['tenant_id'])) {
+            $tenantId = trim($_GET['tenant_id']);
+        }
 
         // Super Admin dapat membaca tracer seluruh platform (tanpa filter tenant)
         // Admin Sekolah hanya melihat data dalam tenantnya
@@ -96,6 +99,9 @@ class TracerController extends BaseController {
         $roleName = $_SESSION['role_name'] ?? '';
         $siswaId  = $_SESSION['user_id']   ?? '';
         $tenantId = SessionManager::getTenantId();
+        if (empty($tenantId) && !empty($_GET['tenant_id'])) {
+            $tenantId = trim($_GET['tenant_id']);
+        }
 
         // --- GATEKEEPER: Siswa hanya boleh insert jika statusnya 'Lulus' ---
         if ($roleName === 'siswa') {
@@ -198,6 +204,9 @@ class TracerController extends BaseController {
         $roleName = $_SESSION['role_name'] ?? '';
         $siswaId  = $_SESSION['user_id']   ?? '';
         $tenantId = SessionManager::getTenantId();
+        if (empty($tenantId) && !empty($_GET['tenant_id'])) {
+            $tenantId = trim($_GET['tenant_id']);
+        }
 
         // --- GATEKEEPER ---
         if ($roleName === 'siswa') {
@@ -308,5 +317,75 @@ class TracerController extends BaseController {
     private function sanitizeStr(mixed $value): string {
         if (!is_string($value)) return '';
         return htmlspecialchars(strip_tags(trim($value)), ENT_QUOTES, 'UTF-8');
+    }
+
+    /**
+     * API: Get Riwayat Kuliah (GET)
+     */
+    public function apiGetKuliah(): void {
+        $roleName = $_SESSION['role_name'] ?? '';
+        $siswaId  = $_SESSION['user_id']   ?? '';
+        $tenantId = SessionManager::getTenantId();
+        if (empty($tenantId) && !empty($_GET['tenant_id'])) {
+            $tenantId = trim($_GET['tenant_id']);
+        }
+
+        $db = \App\Config\Database::getConnection();
+
+        if ($roleName === 'siswa') {
+            $stmt = $db->prepare("SELECT * FROM riwayat_kuliah WHERE id_siswa = ? ORDER BY tahun_masuk DESC");
+            $stmt->execute([$siswaId]);
+        } elseif ($tenantId) {
+            $targetId = $_GET['siswa_id'] ?? '';
+            if ($targetId) {
+                $stmt = $db->prepare("SELECT * FROM riwayat_kuliah WHERE id_siswa = ? AND tenant_id = ? ORDER BY tahun_masuk DESC");
+                $stmt->execute([$targetId, $tenantId]);
+            } else {
+                $stmt = $db->prepare("SELECT rk.*, s.nama_lengkap FROM riwayat_kuliah rk JOIN siswa s ON rk.id_siswa = s.id WHERE rk.tenant_id = ? ORDER BY rk.created_at DESC");
+                $stmt->execute([$tenantId]);
+            }
+        } else {
+            $stmt = $db->query("SELECT rk.*, s.nama_lengkap, t.nama_sekolah FROM riwayat_kuliah rk JOIN siswa s ON rk.id_siswa = s.id JOIN tenants t ON rk.tenant_id = t.id ORDER BY rk.created_at DESC LIMIT 200");
+        }
+
+        $this->jsonResponse([
+            'success' => true,
+            'data' => $stmt->fetchAll(\PDO::FETCH_ASSOC)
+        ]);
+    }
+
+    /**
+     * API: Get Riwayat Pekerjaan (GET)
+     */
+    public function apiGetPekerjaan(): void {
+        $roleName = $_SESSION['role_name'] ?? '';
+        $siswaId  = $_SESSION['user_id']   ?? '';
+        $tenantId = SessionManager::getTenantId();
+        if (empty($tenantId) && !empty($_GET['tenant_id'])) {
+            $tenantId = trim($_GET['tenant_id']);
+        }
+
+        $db = \App\Config\Database::getConnection();
+
+        if ($roleName === 'siswa') {
+            $stmt = $db->prepare("SELECT * FROM riwayat_pekerjaan WHERE id_siswa = ? ORDER BY tahun_mulai DESC");
+            $stmt->execute([$siswaId]);
+        } elseif ($tenantId) {
+            $targetId = $_GET['siswa_id'] ?? '';
+            if ($targetId) {
+                $stmt = $db->prepare("SELECT * FROM riwayat_pekerjaan WHERE id_siswa = ? AND tenant_id = ? ORDER BY tahun_mulai DESC");
+                $stmt->execute([$targetId, $tenantId]);
+            } else {
+                $stmt = $db->prepare("SELECT rp.*, s.nama_lengkap FROM riwayat_pekerjaan rp JOIN siswa s ON rp.id_siswa = s.id WHERE rp.tenant_id = ? ORDER BY rp.created_at DESC");
+                $stmt->execute([$tenantId]);
+            }
+        } else {
+            $stmt = $db->query("SELECT rp.*, s.nama_lengkap, t.nama_sekolah FROM riwayat_pekerjaan rp JOIN siswa s ON rp.id_siswa = s.id JOIN tenants t ON rp.tenant_id = t.id ORDER BY rp.created_at DESC LIMIT 200");
+        }
+
+        $this->jsonResponse([
+            'success' => true,
+            'data' => $stmt->fetchAll(\PDO::FETCH_ASSOC)
+        ]);
     }
 }

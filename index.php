@@ -526,15 +526,21 @@ try {
             break;
 
         case '/api/v1/tracer/kuliah':
-            // API: Simpan Riwayat Kuliah (POST, hanya siswa Lulus & admin)
             $controller = new App\Controllers\TracerController();
-            $controller->storeKuliah();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->storeKuliah();
+            } else {
+                $controller->apiGetKuliah();
+            }
             break;
 
         case '/api/v1/tracer/pekerjaan':
-            // API: Simpan Riwayat Pekerjaan (POST, hanya siswa Lulus & admin)
             $controller = new App\Controllers\TracerController();
-            $controller->storePekerjaan();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->storePekerjaan();
+            } else {
+                $controller->apiGetPekerjaan();
+            }
             break;
 
         // ================================================================

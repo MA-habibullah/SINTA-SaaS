@@ -516,13 +516,16 @@ $baseUrl   = '/SINTA-SaaS';
             const selectedStudent = ref(null);
             const activeForm = ref('');
 
+            const urlParams      = new URLSearchParams(window.location.search);
+            const tenantId       = urlParams.get('tenant_id') || '';
+
             async function fetchMasterData() {
                 try {
-                    const resJalur = await fetch('/SINTA-SaaS/api/v1/kampus/jalur');
+                    const resJalur = await fetch(`/SINTA-SaaS/api/v1/kampus/jalur?tenant_id=${tenantId}`);
                     const dataJalur = await resJalur.json();
                     if(dataJalur.success) listJalur.value = dataJalur.data;
 
-                    const resProdi = await fetch('/SINTA-SaaS/api/v1/kampus/all-prodi');
+                    const resProdi = await fetch(`/SINTA-SaaS/api/v1/kampus/all-prodi?tenant_id=${tenantId}`);
                     const dataProdi = await resProdi.json();
                     if(dataProdi.success) listKampusProdi.value = dataProdi.data;
                 } catch (e) {
@@ -532,7 +535,7 @@ $baseUrl   = '/SINTA-SaaS';
 
             async function fetchRiwayat(type) {
                 try {
-                    const res = await fetch(`/SINTA-SaaS/api/v1/tracer/${type}`);
+                    const res = await fetch(`/SINTA-SaaS/api/v1/tracer/${type}?tenant_id=${tenantId}`);
                     const data = await res.json();
                     if (data.success) {
                         if (type === 'kuliah') riwayatKuliah.value = data.data;
@@ -631,7 +634,7 @@ $baseUrl   = '/SINTA-SaaS';
                 loadingKuliah.value = true;
                 alertKuliah.value   = { msg: '', type: 'success' };
                 try {
-                    const res = await fetch('/SINTA-SaaS/api/v1/tracer/kuliah', {
+                    const res = await fetch(`/SINTA-SaaS/api/v1/tracer/kuliah?tenant_id=${tenantId}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                         body: JSON.stringify(formKuliah.value)
@@ -666,7 +669,7 @@ $baseUrl   = '/SINTA-SaaS';
                 loadingPekerjaan.value = true;
                 alertPekerjaan.value   = { msg: '', type: 'success' };
                 try {
-                    const res = await fetch('/SINTA-SaaS/api/v1/tracer/pekerjaan', {
+                    const res = await fetch(`/SINTA-SaaS/api/v1/tracer/pekerjaan?tenant_id=${tenantId}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                         body: JSON.stringify(formPekerjaan.value)

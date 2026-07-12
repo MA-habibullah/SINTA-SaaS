@@ -885,9 +885,14 @@ $tenantList = $data['tenant_list'] ?? [];
             },
 
             async fetchKampus() {
+                if (this.userRole === 'super_admin' && !this.currentTenantId) {
+                    this.listKampus = [];
+                    return;
+                }
                 this.loadingKampus = true;
                 try {
-                    const res = await axios.get(`${_baseUrl}/api/v1/kampus`);
+                    const url = this.currentTenantId ? `${_baseUrl}/api/v1/kampus?tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/kampus`;
+                    const res = await axios.get(url);
                     if(res.data.success) this.listKampus = res.data.data || [];
                 } catch(e) {} finally { this.loadingKampus = false; }
             },
@@ -901,7 +906,8 @@ $tenantList = $data['tenant_list'] ?? [];
             },
             async saveKampus() {
                 try {
-                    const res = await axios.post(`${_baseUrl}/api/v1/kampus`, this.modalMstKampus.form);
+                    const url = this.currentTenantId ? `${_baseUrl}/api/v1/kampus?tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/kampus`;
+                    const res = await axios.post(url, this.modalMstKampus.form);
                     if(res.data.success) {
                         Swal.fire({icon:'success', title:'Tersimpan', text:res.data.message});
                         this.modalMstKampus.show = false;
@@ -912,7 +918,8 @@ $tenantList = $data['tenant_list'] ?? [];
             async deleteKampus(id) {
                 if(!await Swal.fire({title:'Hapus?', icon:'warning', showCancelButton:true}).then(r=>r.isConfirmed)) return;
                 try {
-                    const res = await axios.post(`${_baseUrl}/api/v1/kampus/delete`, {id});
+                    const url = this.currentTenantId ? `${_baseUrl}/api/v1/kampus/delete?tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/kampus/delete`;
+                    const res = await axios.post(url, {id});
                     if(res.data.success) this.fetchKampus();
                 } catch(e) {}
             },
@@ -924,11 +931,11 @@ $tenantList = $data['tenant_list'] ?? [];
                 this.resetFormProdi();
                 this.modalProdi.show = true;
                 this.fetchProdi(kampus.id);
-            },
-            async fetchProdi(kampusId) {
+                 async fetchProdi(kampusId) {
                 this.loadingProdi = true;
                 try {
-                    const res = await axios.get(`${_baseUrl}/api/v1/kampus/prodi?kampus_id=` + kampusId);
+                    const url = this.currentTenantId ? `${_baseUrl}/api/v1/kampus/prodi?kampus_id=${kampusId}&tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/kampus/prodi?kampus_id=` + kampusId;
+                    const res = await axios.get(url);
                     if(res.data.success) this.listProdi = res.data.data || [];
                 } catch(e) {} finally { this.loadingProdi = false; }
             },
@@ -940,7 +947,8 @@ $tenantList = $data['tenant_list'] ?? [];
             },
             async saveProdi() {
                 try {
-                    const res = await axios.post(`${_baseUrl}/api/v1/kampus/prodi`, this.modalProdi.form);
+                    const url = this.currentTenantId ? `${_baseUrl}/api/v1/kampus/prodi?tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/kampus/prodi`;
+                    const res = await axios.post(url, this.modalProdi.form);
                     if(res.data.success) {
                         this.resetFormProdi();
                         this.fetchProdi(this.modalProdi.kampus.id);
@@ -951,11 +959,12 @@ $tenantList = $data['tenant_list'] ?? [];
             async deleteProdi(id) {
                 if(!confirm('Hapus prodi ini?')) return;
                 try {
-                    const res = await axios.post(`${_baseUrl}/api/v1/kampus/prodi/delete`, {id});
+                    const url = this.currentTenantId ? `${_baseUrl}/api/v1/kampus/prodi/delete?tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/kampus/prodi/delete`;
+                    const res = await axios.post(url, {id});
                     if(res.data.success) {
                         this.fetchProdi(this.modalProdi.kampus.id);
                         this.fetchKampus();
-                    }
+                    }           }
                 } catch(e) {}
             },
             
@@ -968,32 +977,39 @@ $tenantList = $data['tenant_list'] ?? [];
                 this.modalProdi.expandedProdiId = prodi.id;
                 this.formRiwayat = { prodi_id: prodi.id, tahun: new Date().getFullYear(), daya_tampung: 0, jumlah_pendaftar: 0 };
                 this.fetchRiwayat(prodi.id);
-            },
-            async fetchRiwayat(prodiId) {
+                 async fetchRiwayat(prodiId) {
                 try {
-                    const res = await axios.get(`${_baseUrl}/api/v1/kampus/prodi/riwayat?prodi_id=` + prodiId);
+                    const url = this.currentTenantId ? `${_baseUrl}/api/v1/kampus/prodi/riwayat?prodi_id=${prodiId}&tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/kampus/prodi/riwayat?prodi_id=` + prodiId;
+                    const res = await axios.get(url);
                     if(res.data.success) this.listRiwayat = res.data.data || [];
                 } catch(e) {}
             },
             async saveRiwayat() {
                 try {
-                    const res = await axios.post(`${_baseUrl}/api/v1/kampus/prodi/riwayat`, this.formRiwayat);
+                    const url = this.currentTenantId ? `${_baseUrl}/api/v1/kampus/prodi/riwayat?tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/kampus/prodi/riwayat`;
+                    const res = await axios.post(url, this.formRiwayat);
                     if(res.data.success) this.fetchRiwayat(this.formRiwayat.prodi_id);
                 } catch(e) {}
             },
             async deleteRiwayat(id) {
                 if(!confirm('Hapus riwayat?')) return;
                 try {
-                    const res = await axios.post(`${_baseUrl}/api/v1/kampus/prodi/riwayat/delete`, {id});
+                    const url = this.currentTenantId ? `${_baseUrl}/api/v1/kampus/prodi/riwayat/delete?tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/kampus/prodi/riwayat/delete`;
+                    const res = await axios.post(url, {id});
                     if(res.data.success) this.fetchRiwayat(this.formRiwayat.prodi_id);
                 } catch(e) {}
             },
 
             // JALUR MASUK
             async fetchJalur() {
+                if (this.userRole === 'super_admin' && !this.currentTenantId) {
+                    this.listJalur = [];
+                    return;
+                }
                 this.loadingJalur = true;
                 try {
-                    const res = await axios.get(`${_baseUrl}/api/v1/kampus/jalur`);
+                    const url = this.currentTenantId ? `${_baseUrl}/api/v1/kampus/jalur?tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/kampus/jalur`;
+                    const res = await axios.get(url);
                     if(res.data.success) this.listJalur = res.data.data || [];
                 } catch(e) {} finally { this.loadingJalur = false; }
             },
@@ -1004,7 +1020,8 @@ $tenantList = $data['tenant_list'] ?? [];
             },
             async saveJalur() {
                 try {
-                    const res = await axios.post(`${_baseUrl}/api/v1/kampus/jalur`, this.modalMstJalur.form);
+                    const url = this.currentTenantId ? `${_baseUrl}/api/v1/kampus/jalur?tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/kampus/jalur`;
+                    const res = await axios.post(url, this.modalMstJalur.form);
                     if(res.data.success) {
                         this.modalMstJalur.show = false;
                         this.fetchJalur();
@@ -1014,10 +1031,11 @@ $tenantList = $data['tenant_list'] ?? [];
             async deleteJalur(id) {
                 if(!confirm('Hapus jalur?')) return;
                 try {
-                    const res = await axios.post(`${_baseUrl}/api/v1/kampus/jalur/delete`, {id});
+                    const url = this.currentTenantId ? `${_baseUrl}/api/v1/kampus/jalur/delete?tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/kampus/jalur/delete`;
+                    const res = await axios.post(url, {id});
                     if(res.data.success) this.fetchJalur();
                 } catch(e) {}
-            },
+            },          },
 
             async refreshAll() {
                 this.loading = true;

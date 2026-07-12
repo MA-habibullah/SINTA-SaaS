@@ -81,6 +81,12 @@ $tenantId = $_GET['tenant_id'] ?? ($_SESSION['tenant_id'] ?? '');
                             <div class="text-xs">Memuat data...</div>
                         </td>
                     </tr>
+                    <tr v-else-if="!tenantId">
+                        <td :colspan="3 + displayYears.length * 2" class="p-8 text-center text-slate-400 text-xs">
+                            <i class="bi bi-funnel fs-3 block mb-2 opacity-50"></i>
+                            Silakan pilih sekolah terlebih dahulu melalui filter di atas.
+                        </td>
+                    </tr>
                     <tr v-else-if="filteredData.length === 0">
                         <td :colspan="3 + displayYears.length * 2" class="p-8 text-center text-slate-400 text-xs">
                             <i class="bi bi-inbox fs-3 block mb-2 opacity-50"></i>
@@ -300,6 +306,11 @@ if (window.VueAppRegistry.register) {
             return riwayat.find(r => parseInt(r.tahun) === parseInt(tahun)) || null;
         },
         async loadData() {
+            if (!this.tenantId) {
+                this.loading = false;
+                this.dataList = [];
+                return;
+            }
             this.loading = true;
             try {
                 const res = await axios.get(`${this.baseUrl}/api/v1/kampus/flat-list?tenant_id=${this.tenantId}`);
