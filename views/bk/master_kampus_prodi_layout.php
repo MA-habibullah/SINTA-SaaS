@@ -262,13 +262,13 @@ if (window.VueAppRegistry.register) {
     },
     computed: {
         displayYears() {
-            // Kumpulkan semua tahun dari seluruh data, ambil 3 terbesar
+            // Kumpulkan semua tahun dari seluruh data, ambil 3 terbesar dengan tahun terbaru di kiri
             const years = new Set();
             this.dataList.forEach(item => {
                 if (item.riwayat) item.riwayat.forEach(r => years.add(r.tahun));
             });
-            const sorted = Array.from(years).sort((a, b) => a - b);
-            return sorted.slice(-3); // 3 tahun terakhir
+            const sorted = Array.from(years).sort((a, b) => b - a);
+            return sorted.slice(0, 3); // 3 tahun terbaru (descending)
         },
         filteredData() {
             let data = this.dataList;
