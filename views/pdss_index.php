@@ -876,8 +876,20 @@ $tenantList = $data['tenant_list'] ?? [];
                         this.fetchKampus(); // Reload campus list
                     }
                 } catch(e) {
+                    if (e.response?.status !== 422) {
+                        console.error(e);
+                    }
                     const msg = (e.response && e.response.data && e.response.data.error) || 'Terjadi kesalahan saat mengunggah.';
-                    Swal.fire({icon: 'error', title: 'Gagal', text: msg});
+                    if (e.response?.status === 422) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Format Template Salah',
+                            text: msg,
+                            confirmButtonColor: '#f8bb86'
+                        });
+                    } else {
+                        Swal.fire({icon: 'error', title: 'Gagal', text: msg});
+                    }
                 } finally {
                     this.importingExcel = false;
                     if(fileInput) fileInput.value = '';

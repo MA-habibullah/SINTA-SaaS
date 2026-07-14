@@ -177,8 +177,8 @@
                         <div class="space-y-3">
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-500 mb-1">Kode Prodi</label>
-                                    <input type="text" v-model="modalProdi.form.kode_prodi" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs">
+                                    <label class="block text-xs font-semibold text-slate-500 mb-1">Kode Prodi <span class="text-rose-500">*</span></label>
+                                    <input type="text" v-model="modalProdi.form.kode_prodi" required class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-500 mb-1">Fakultas</label>

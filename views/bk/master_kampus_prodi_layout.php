@@ -1,6 +1,14 @@
 <?php
 $baseUrl  = '/SINTA-SaaS';
 $tenantId = $_GET['tenant_id'] ?? ($_SESSION['tenant_id'] ?? '');
+$userRoles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
+$canWrite = false;
+foreach ($userRoles as $r) {
+    if (in_array($r, ['operator_sekolah', 'super_admin', 'guru_bk'])) {
+        $canWrite = true;
+        break;
+    }
+}
 ?>
 
 <div id="kampusProdiFlatApp" v-cloak>
@@ -65,6 +73,7 @@ $tenantId = $_GET['tenant_id'] ?? ($_SESSION['tenant_id'] ?? '');
                         <th v-for="y in displayYears" :key="'hdr-'+y" colspan="2" class="px-4 py-2 text-[10px] font-bold text-slate-600 text-center border-l border-slate-100" style="min-width:160px;">
                             {{ y }}
                         </th>
+                        <th v-if="canWrite" rowspan="2" class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider align-middle text-center border-l border-slate-100" style="min-width:120px;">AKSI</th>
                     </tr>
                     <!-- Baris 2: sub-header daya tampung & peminat per tahun -->
                     <tr class="bg-slate-50/40 border-b border-slate-100 text-center">
@@ -76,19 +85,19 @@ $tenantId = $_GET['tenant_id'] ?? ($_SESSION['tenant_id'] ?? '');
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     <tr v-if="loading">
-                        <td :colspan="3 + displayYears.length * 2" class="p-8 text-center text-slate-400">
+                        <td :colspan="3 + displayYears.length * 2 + (canWrite ? 1 : 0)" class="p-8 text-center text-slate-400">
                             <div class="spinner-border spinner-border-sm text-blue-500 mb-2"></div>
                             <div class="text-xs">Memuat data...</div>
                         </td>
                     </tr>
                     <tr v-else-if="!tenantId">
-                        <td :colspan="3 + displayYears.length * 2" class="p-8 text-center text-slate-400 text-xs">
+                        <td :colspan="3 + displayYears.length * 2 + (canWrite ? 1 : 0)" class="p-8 text-center text-slate-400 text-xs">
                             <i class="bi bi-funnel fs-3 block mb-2 opacity-50"></i>
                             Silakan pilih sekolah terlebih dahulu melalui filter di atas.
                         </td>
                     </tr>
                     <tr v-else-if="filteredData.length === 0">
-                        <td :colspan="3 + displayYears.length * 2" class="p-8 text-center text-slate-400 text-xs">
+                        <td :colspan="3 + displayYears.length * 2 + (canWrite ? 1 : 0)" class="p-8 text-center text-slate-400 text-xs">
                             <i class="bi bi-inbox fs-3 block mb-2 opacity-50"></i>
                             Tidak ada data kampus atau prodi.
                         </td>
@@ -123,6 +132,16 @@ $tenantId = $_GET['tenant_id'] ?? ($_SESSION['tenant_id'] ?? '');
                                 <td class="px-3 py-3 text-center text-slate-300 text-[10px]">-</td>
                             </template>
                         </template>
+                        <td v-if="canWrite" class="px-3 py-3 text-center border-l border-slate-100">
+                            <div class="d-flex flex-column gap-1 align-items-center justify-content-center">
+                                <button v-if="row.prodi_id" class="btn btn-xs btn-light border text-rose-600 font-semibold px-2 py-1 rounded-lg text-[10px] w-100" @click="deleteProdi(row.prodi_id, row.program_studi)">
+                                    <i class="bi bi-trash"></i> Hapus Prodi
+                                </button>
+                                <button class="btn btn-xs btn-light border text-slate-700 font-semibold px-2 py-1 rounded-lg text-[10px] w-100" @click="deleteKampus(row.kampus_id, row.nama_kampus)">
+                                    <i class="bi bi-building-x"></i> Hapus Kampus
+                                </button>
+                            </div>
+                        </td>
                     </tr>
                 </tbody>
             </table>
@@ -278,6 +297,7 @@ if (window.VueAppRegistry.register) {
         return {
             baseUrl: '<?= $baseUrl ?>',
             tenantId: '<?= htmlspecialchars($tenantId) ?>',
+            canWrite: <?= json_encode($canWrite) ?>,
             loading: false,
             dataList: [],
             searchQuery: '',
@@ -427,8 +447,24 @@ if (window.VueAppRegistry.register) {
                     if (window.Swal) Swal.fire('Gagal', res.data.error || 'Terjadi kesalahan', 'error');
                 }
             } catch (err) {
-                console.error(err);
-                if (window.Swal) Swal.fire('Error', err.response?.data?.error || 'Terjadi kesalahan sistem', 'error');
+                if (err.response?.status !== 422) {
+                    console.error(err);
+                }
+                const msg = err.response?.data?.error || 'Terjadi kesalahan sistem';
+                if (window.Swal) {
+                    if (err.response?.status === 422) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Format Template Salah',
+                            text: msg,
+                            confirmButtonColor: '#f8bb86'
+                        });
+                    } else {
+                        Swal.fire('Error', msg, 'error');
+                    }
+                } else {
+                    alert(msg);
+                }
             } finally {
                 this.importingDayaTampung = false;
                 if (fileInput) fileInput.value = '';
@@ -486,11 +522,81 @@ if (window.VueAppRegistry.register) {
                     if (window.Swal) Swal.fire('Gagal', res.data.error || 'Terjadi kesalahan', 'error');
                 }
             } catch (err) {
-                console.error(err);
-                if (window.Swal) Swal.fire('Error', err.response?.data?.error || 'Terjadi kesalahan sistem', 'error');
+                if (err.response?.status !== 422) {
+                    console.error(err);
+                }
+                const msg = err.response?.data?.error || 'Terjadi kesalahan sistem';
+                if (window.Swal) {
+                    if (err.response?.status === 422) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Format Template Salah',
+                            text: msg,
+                            confirmButtonColor: '#f8bb86'
+                        });
+                    } else {
+                        Swal.fire('Error', msg, 'error');
+                    }
+                } else {
+                    alert(msg);
+                }
             } finally {
                 this.importingKampusProdi = false;
                 if (fileInput) fileInput.value = '';
+            }
+        },
+        async deleteProdi(id, name) {
+            if (window.Swal) {
+                const conf = await Swal.fire({
+                    title: 'Hapus Program Studi?',
+                    text: `Anda yakin ingin menghapus prodi "${name}"?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, Hapus!',
+                    cancelButtonText: 'Batal',
+                    confirmButtonColor: '#e3342f'
+                });
+                if (!conf.isConfirmed) return;
+            } else {
+                if (!confirm(`Hapus prodi "${name}"?`)) return;
+            }
+            
+            try {
+                const res = await axios.post(`${this.baseUrl}/api/v1/kampus/prodi/delete?tenant_id=${this.tenantId}`, { id });
+                if (res.data.success) {
+                    if (window.Swal) Swal.fire('Terhapus', 'Program studi berhasil dihapus.', 'success');
+                    this.loadData();
+                }
+            } catch (err) {
+                console.error(err);
+                if (window.Swal) Swal.fire('Error', err.response?.data?.error || 'Gagal menghapus prodi', 'error');
+            }
+        },
+        async deleteKampus(id, name) {
+            if (window.Swal) {
+                const conf = await Swal.fire({
+                    title: 'Hapus Kampus?',
+                    text: `Menghapus kampus "${name}" akan menghapus seluruh prodi dan riwayat keketatan di dalamnya secara permanen!`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, Hapus Kampus!',
+                    cancelButtonText: 'Batal',
+                    confirmButtonColor: '#e3342f'
+                });
+                if (!conf.isConfirmed) return;
+            } else {
+                if (!confirm(`Hapus kampus "${name}"? Semua prodi di dalamnya juga akan terhapus!`)) return;
+            }
+            
+            try {
+                const res = await axios.post(`${this.baseUrl}/api/v1/kampus/delete?tenant_id=${this.tenantId}`, { id });
+                if (res.data.success) {
+                    if (window.Swal) Swal.fire('Terhapus', 'Kampus berhasil dihapus.', 'success');
+                    this.loadData();
+                }
+            } catch (err) {
+                console.error(err);
+                if (window.Swal) Swal.fire('Error', err.response?.data?.error || 'Gagal menghapus kampus', 'error');
             }
         }
     },

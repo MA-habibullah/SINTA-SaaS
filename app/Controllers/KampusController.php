@@ -154,8 +154,8 @@ class KampusController extends BaseController
         $jenjang       = $this->sanitizeStr($body['jenjang'] ?? 'S1');
         $portofolio    = $this->sanitizeStr($body['jenis_portofolio'] ?? 'Tidak Ada');
 
-        if (empty($kampus_id) || empty($program_studi)) {
-            $this->jsonResponse(['error' => 'Kampus dan Program Studi wajib diisi.'], 422);
+        if (empty($kampus_id) || empty($program_studi) || empty($kode_prodi)) {
+            $this->jsonResponse(['error' => 'Kampus, Kode Prodi, dan Program Studi wajib diisi.'], 422);
         }
 
         $db = Database::getConnection();
@@ -409,8 +409,8 @@ class KampusController extends BaseController
                     }
                 }
 
-                if (!isset($colMap['nama']) || !isset($colMap['kampus'])) {
-                    throw new \Exception("Format Excel tidak valid. Pastikan ada kolom 'NAMA' (Prodi) dan 'kampus'.");
+                if (!isset($colMap['kode']) || !isset($colMap['nama']) || !isset($colMap['kampus'])) {
+                    throw new \Exception("Format Excel tidak valid. Pastikan ada kolom 'KODE' (Kode Prodi), 'NAMA' (Prodi) dan 'kampus'.");
                 }
 
                 $insertedKampus = 0;
@@ -424,11 +424,15 @@ class KampusController extends BaseController
                     $namaProdi = isset($colMap['nama']) ? trim((string)($row[$colMap['nama']] ?? '')) : '';
                     $namaKampus = isset($colMap['kampus']) ? trim((string)($row[$colMap['kampus']] ?? '')) : '';
                     
-                    if (empty($namaProdi) || empty($namaKampus)) {
+                    if (empty($namaProdi) && empty($namaKampus)) {
                         continue;
                     }
 
-                    $kodeProdi = isset($colMap['kode']) ? trim((string)($row[$colMap['kode']] ?? '')) : null;
+                    $kodeProdi = isset($colMap['kode']) ? trim((string)($row[$colMap['kode']] ?? '')) : '';
+                    if (empty($kodeProdi) || empty($namaProdi) || empty($namaKampus)) {
+                        throw new \Exception("Format Excel tidak valid pada baris " . ($i + 1) . ". Kolom KODE, NAMA, dan Kampus wajib diisi.");
+                    }
+
                     $jenjangRaw = isset($colMap['jenjang']) ? strtolower(trim((string)($row[$colMap['jenjang']] ?? ''))) : 's1';
                     $portofolio = isset($colMap['portofolio']) ? trim((string)($row[$colMap['portofolio']] ?? 'Tidak Ada')) : 'Tidak Ada';
                     $kota = isset($colMap['kota']) ? trim((string)($row[$colMap['kota']] ?? '')) : '';
@@ -459,33 +463,35 @@ class KampusController extends BaseController
                     }
 
                     // 2. Find or create Prodi
+                    $stmtProdi = $db->prepare("
+                        SELECT id FROM master_kampus_prodi 
+                        WHERE kode_prodi = ? AND kampus_id = ?
+                        LIMIT 1
+                    ");
+                    $stmtProdi->execute([$kodeProdi, $kampusId]);
+                    $prodiId = $stmtProdi->fetchColumn();
+
                     $stmtCheckCol = $db->prepare("SHOW COLUMNS FROM `master_kampus_prodi` LIKE 'kode_prodi'");
                     $stmtCheckCol->execute();
                     $hasKodeCol = $stmtCheckCol->fetch() !== false;
 
-                    if ($hasKodeCol) {
-                        $stmtProdi = $db->prepare("SELECT id FROM master_kampus_prodi WHERE kampus_id = ? AND program_studi = ? AND jenjang = ?");
-                        $stmtProdi->execute([$kampusId, $namaProdi, $jenjang]);
-                        $prodiId = $stmtProdi->fetchColumn();
-
-                        if (!$prodiId) {
-                            $prodiId = $this->generateUuidV4();
+                    if (!$prodiId) {
+                        $prodiId = $this->generateUuidV4();
+                        if ($hasKodeCol) {
                             $stmtInsP = $db->prepare("INSERT INTO master_kampus_prodi (id, kampus_id, kode_prodi, fakultas, program_studi, jenjang, jenis_portofolio) VALUES (?, ?, ?, '', ?, ?, ?)");
                             $stmtInsP->execute([$prodiId, $kampusId, $kodeProdi, $namaProdi, $jenjang, $portofolio]);
-                            $insertedProdi++;
                         } else {
-                            $db->prepare("UPDATE master_kampus_prodi SET kode_prodi = ?, jenis_portofolio = ? WHERE id = ?")->execute([$kodeProdi, $portofolio, $prodiId]);
-                        }
-                    } else {
-                        $stmtProdi = $db->prepare("SELECT id FROM master_kampus_prodi WHERE kampus_id = ? AND program_studi = ? AND jenjang = ?");
-                        $stmtProdi->execute([$kampusId, $namaProdi, $jenjang]);
-                        $prodiId = $stmtProdi->fetchColumn();
-
-                        if (!$prodiId) {
-                            $prodiId = $this->generateUuidV4();
                             $stmtInsP = $db->prepare("INSERT INTO master_kampus_prodi (id, kampus_id, fakultas, program_studi, jenjang) VALUES (?, ?, '', ?, ?)");
                             $stmtInsP->execute([$prodiId, $kampusId, $namaProdi, $jenjang]);
-                            $insertedProdi++;
+                        }
+                        $insertedProdi++;
+                    } else {
+                        if ($hasKodeCol) {
+                            $db->prepare("UPDATE master_kampus_prodi SET kode_prodi = ?, program_studi = ?, jenjang = ?, jenis_portofolio = ? WHERE id = ?")
+                               ->execute([$kodeProdi, $namaProdi, $jenjang, $portofolio, $prodiId]);
+                        } else {
+                            $db->prepare("UPDATE master_kampus_prodi SET program_studi = ?, jenjang = ? WHERE id = ?")
+                               ->execute([$namaProdi, $jenjang, $prodiId]);
                         }
                     }
 
@@ -856,8 +862,8 @@ class KampusController extends BaseController
             $colJenjang      = array_search('jenjang',           $header);
             $colPortofolio   = array_search('jenis_portofolio',  $header);
 
-            if ($colNamaKampus === false || $colNamaProdi === false) {
-                throw new \Exception('Kolom wajib (NAMA_KAMPUS, NAMA_PRODI) tidak ditemukan. Kolom terdeteksi: ' . implode(', ', $header));
+            if ($colNamaKampus === false || $colNamaProdi === false || $colKodeProdi === false) {
+                throw new \Exception('Kolom wajib (NAMA_KAMPUS, NAMA_PRODI, KODE_PRODI) tidak ditemukan. Kolom terdeteksi: ' . implode(', ', $header));
             }
 
             $db = Database::getConnection();
@@ -879,7 +885,11 @@ class KampusController extends BaseController
                 $jenjang     = $colJenjang      !== false ? trim((string)($row[$colJenjang]     ?? 'Sarjana')) : 'Sarjana';
                 $portofolio  = $colPortofolio   !== false ? trim((string)($row[$colPortofolio]  ?? 'Tidak Ada')) : 'Tidak Ada';
 
-                if (!$namaKampus || !$namaProdi) continue;
+                if (!$namaKampus && !$namaProdi) continue;
+
+                if (!$namaKampus || !$namaProdi || !$kodeProdi) {
+                    throw new \Exception("Format Excel tidak valid pada baris " . ($i + 1) . ". Kolom NAMA_KAMPUS, NAMA_PRODI, dan KODE_PRODI wajib diisi.");
+                }
 
                 // Upsert Kampus
                 if (!isset($kampusCache[$namaKampus])) {
@@ -908,10 +918,10 @@ class KampusController extends BaseController
                 $stmtFindProdi = $db->prepare("
                     SELECT p.id FROM master_kampus_prodi p
                     JOIN master_kampus k ON k.id = p.kampus_id
-                    WHERE p.kampus_id = ? AND p.program_studi = ? AND k.tenant_id = ?
+                    WHERE k.tenant_id = ? AND p.kode_prodi = ? AND p.kampus_id = ?
                     LIMIT 1
                 ");
-                $stmtFindProdi->execute([$kampusId, $namaProdi, $tenantId]);
+                $stmtFindProdi->execute([$tenantId, $kodeProdi, $kampusId]);
                 $prodiId = $stmtFindProdi->fetchColumn();
 
                 if (!$prodiId) {
@@ -927,10 +937,10 @@ class KampusController extends BaseController
                     $stmtUpdProdi = $db->prepare("
                         UPDATE master_kampus_prodi p
                         JOIN master_kampus k ON k.id = p.kampus_id
-                        SET p.kode_prodi = ?, p.fakultas = ?, p.jenjang = ?, p.jenis_portofolio = ?
+                        SET p.kode_prodi = ?, p.program_studi = ?, p.fakultas = ?, p.jenjang = ?, p.jenis_portofolio = ?
                         WHERE p.id = ? AND k.tenant_id = ?
                     ");
-                    $stmtUpdProdi->execute([$kodeProdi, $fakultas, $jenjang, $portofolio, $prodiId, $tenantId]);
+                    $stmtUpdProdi->execute([$kodeProdi, $namaProdi, $fakultas, $jenjang, $portofolio, $prodiId, $tenantId]);
                     $updated++;
                 }
             }
