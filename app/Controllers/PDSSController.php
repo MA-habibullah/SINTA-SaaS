@@ -37,7 +37,7 @@ class PDSSController extends BaseController {
                 UNIQUE KEY `uk_tenant_mapel` (`tenant_id`, `mapel_id`),
                 CONSTRAINT `fk_pdss_mapel_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE,
                 CONSTRAINT `fk_pdss_mapel_id` FOREIGN KEY (`mapel_id`) REFERENCES `mata_pelajaran` (`id`) ON DELETE CASCADE
-            ) ENGINE=InnoDB;");
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
         } catch (\Throwable $e) {
             error_log('[PDSSController::__construct] failed to create pdss_config_mapel: ' . $e->getMessage());
         }
