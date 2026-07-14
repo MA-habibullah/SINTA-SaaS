@@ -265,8 +265,8 @@ class PDSSController extends BaseController {
                       AND dnr.mapel_id IN ($placeholders)
                       AND (
                         ( (k_grade.nama_kelas LIKE '%12%' OR k_grade.nama_kelas LIKE '%XII%') AND dnr.semester = 'Ganjil' )
-                        OR ( (k_grade.nama_kelas LIKE '%11%' OR k_grade.nama_kelas LIKE '%XI%') AND dnr.semester IN ('Ganjil', 'Genap') )
-                        OR ( (k_grade.nama_kelas LIKE '%10%' OR k_grade.nama_kelas LIKE '%X%') AND dnr.semester IN ('Ganjil', 'Genap') )
+                        OR ( ((k_grade.nama_kelas LIKE '%11%' OR k_grade.nama_kelas LIKE '%XI%') AND k_grade.nama_kelas NOT LIKE '%12%' AND k_grade.nama_kelas NOT LIKE '%XII%') AND dnr.semester IN ('Ganjil', 'Genap') )
+                        OR ( ((k_grade.nama_kelas LIKE '%10%' OR k_grade.nama_kelas LIKE '%X%') AND k_grade.nama_kelas NOT LIKE '%11%' AND k_grade.nama_kelas NOT LIKE '%XI%' AND k_grade.nama_kelas NOT LIKE '%12%' AND k_grade.nama_kelas NOT LIKE '%XII%') AND dnr.semester IN ('Ganjil', 'Genap') )
                       )
                 ) g ON s.id = g.siswa_id
                 WHERE s.tenant_id = ?
