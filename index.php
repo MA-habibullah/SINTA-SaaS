@@ -727,6 +727,26 @@ try {
             }
             break;
 
+        case '/api/v1/pdss/manual-eligible':
+            $controller = new App\Controllers\PDSSController();
+            $controller->apiSaveManualEligible();
+            break;
+
+        case '/api/v1/pdss/lock':
+            $controller = new App\Controllers\PDSSController();
+            $controller->apiToggleLock();
+            break;
+
+        case '/api/v1/pdss/student-grades':
+            $controller = new App\Controllers\PDSSController();
+            $controller->apiGetStudentGrades();
+            break;
+
+        case '/api/v1/pdss/download-leger':
+            $controller = new App\Controllers\PDSSController();
+            $controller->apiDownloadLeger();
+            break;
+
         case '/api/v1/pdss/students/search':
             $controller = new App\Controllers\PDSSController();
             $controller->apiSearchStudents();
