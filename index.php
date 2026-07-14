@@ -718,6 +718,15 @@ try {
             $controller->apiGetKesiapan();
             break;
 
+        case '/api/v1/pdss/config-mapel':
+            $controller = new App\Controllers\PDSSController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSavePdssMapels();
+            } else {
+                $controller->apiGetPdssMapels();
+            }
+            break;
+
         case '/api/v1/pdss/students/search':
             $controller = new App\Controllers\PDSSController();
             $controller->apiSearchStudents();

@@ -25,6 +25,22 @@ class PDSSController extends BaseController {
     public function __construct() {
         parent::__construct();
         SessionManager::requireLogin();
+
+        // Auto-create pdss_config_mapel table if not exists
+        try {
+            $db = \App\Config\Database::getConnection();
+            $db->exec("CREATE TABLE IF NOT EXISTS `pdss_config_mapel` (
+                `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                `tenant_id` CHAR(36) NOT NULL,
+                `mapel_id` INT UNSIGNED NOT NULL,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY `uk_tenant_mapel` (`tenant_id`, `mapel_id`),
+                CONSTRAINT `fk_pdss_mapel_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE,
+                CONSTRAINT `fk_pdss_mapel_id` FOREIGN KEY (`mapel_id`) REFERENCES `mata_pelajaran` (`id`) ON DELETE CASCADE
+            ) ENGINE=InnoDB;");
+        } catch (\Throwable $e) {
+            error_log('[PDSSController::__construct] failed to create pdss_config_mapel: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -98,6 +114,96 @@ class PDSSController extends BaseController {
     }
 
     /**
+     * API: Mendapatkan daftar mapel dan status pilihan untuk PDSS
+     * GET /api/v1/pdss/config-mapel
+     */
+    public function apiGetPdssMapels(): void {
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Pilih sekolah terlebih dahulu.'], 400);
+            return;
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+
+            // Ambil semua mapel aktif
+            $stmtAll = $db->prepare("SELECT id, kode_mapel, nama_mapel FROM mata_pelajaran WHERE tenant_id = ? AND is_active = 1 AND deleted_at IS NULL ORDER BY nama_mapel ASC");
+            $stmtAll->execute([$tenantId]);
+            $allMapels = $stmtAll->fetchAll(PDO::FETCH_ASSOC);
+
+            // Ambil mapel terpilih untuk PDSS
+            $stmtSelected = $db->prepare("SELECT mapel_id FROM pdss_config_mapel WHERE tenant_id = ?");
+            $stmtSelected->execute([$tenantId]);
+            $selectedMapels = $stmtSelected->fetchAll(PDO::FETCH_COLUMN);
+
+            foreach ($allMapels as &$m) {
+                $m['is_selected'] = in_array((int)$m['id'], array_map('intval', $selectedMapels), true);
+            }
+            unset($m);
+
+            $this->jsonResponse([
+                'success' => true,
+                'data' => $allMapels
+            ]);
+        } catch (\Throwable $e) {
+            error_log('[PDSSController::apiGetPdssMapels] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal memuat konfigurasi mapel PDSS.'], 500);
+        }
+    }
+
+    /**
+     * API: Menyimpan daftar mapel pilihan untuk PDSS
+     * POST /api/v1/pdss/config-mapel
+     */
+    public function apiSavePdssMapels(): void {
+        if (!$this->canWrite()) {
+            $this->jsonResponse(['error' => 'Akses ditolak.'], 403);
+            return;
+        }
+
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Tenant ID tidak terdeteksi.'], 400);
+            return;
+        }
+
+        $input = $this->getJsonInput();
+        $mapelIds = $input['mapel_ids'] ?? [];
+
+        if (!is_array($mapelIds)) {
+            $this->jsonResponse(['error' => 'Data mapel tidak valid.'], 422);
+            return;
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+            $db->beginTransaction();
+
+            // 1. Hapus konfigurasi lama
+            $stmtDel = $db->prepare("DELETE FROM pdss_config_mapel WHERE tenant_id = ?");
+            $stmtDel->execute([$tenantId]);
+
+            // 2. Insert yang baru
+            if (!empty($mapelIds)) {
+                $stmtIns = $db->prepare("INSERT INTO pdss_config_mapel (tenant_id, mapel_id) VALUES (?, ?)");
+                foreach ($mapelIds as $mid) {
+                    $stmtIns->execute([$tenantId, (int)$mid]);
+                }
+            }
+
+            $db->commit();
+            $this->jsonResponse(['success' => true, 'message' => 'Konfigurasi mata pelajaran PDSS berhasil disimpan.']);
+        } catch (\Throwable $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            error_log('[PDSSController::apiSavePdssMapels] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal menyimpan konfigurasi mapel PDSS.'], 500);
+        }
+    }
+
+    /**
      * API: Mendapatkan data Kesiapan PDSS & Simulasi Ranking Paralel
      * GET /api/v1/pdss/kesiapan
      */
@@ -116,8 +222,25 @@ class PDSSController extends BaseController {
             $stmtAcc->execute([$tenantId]);
             $accreditation = $stmtAcc->fetchColumn() ?: 'A (Unggul)';
 
-            // 2. Ambil data siswa aktif kelas 12 dengan rekap nilai rata-rata dan kelengkapan
-            $stmt = $db->prepare("
+            // 2. Ambil mapel terpilih untuk PDSS
+            $stmtSelected = $db->prepare("SELECT mapel_id FROM pdss_config_mapel WHERE tenant_id = ?");
+            $stmtSelected->execute([$tenantId]);
+            $pdssMapelIds = $stmtSelected->fetchAll(PDO::FETCH_COLUMN);
+
+            if (empty($pdssMapelIds)) {
+                $this->jsonResponse([
+                    'success' => true,
+                    'accreditation' => $accreditation,
+                    'mapel_not_configured' => true,
+                    'data' => [],
+                    'total_configured_mapels' => 0
+                ]);
+                return;
+            }
+
+            // 3. Ambil data siswa aktif kelas 12 dengan rekap nilai rata-rata 5 semester untuk mapel terpilih
+            $placeholders = implode(',', array_fill(0, count($pdssMapelIds), '?'));
+            $sql = "
                 SELECT 
                     s.id, 
                     s.nama_lengkap, 
@@ -125,22 +248,38 @@ class PDSSController extends BaseController {
                     s.nis, 
                     s.id_jurusan,
                     k.nama_kelas, 
+                    s.id_kelas,
                     j.nama_jurusan,
                     j.kode_jurusan,
-                    COALESCE(AVG(dnr.nilai_akhir), 0) AS rata_rata,
-                    COUNT(dnr.nilai_akhir) AS jumlah_nilai
+                    COALESCE(AVG(g.nilai_akhir), 0) AS rata_rata,
+                    COUNT(g.nilai_akhir) AS jumlah_nilai
                 FROM siswa s
                 LEFT JOIN kelas k ON s.id_kelas = k.id
                 LEFT JOIN jurusan j ON s.id_jurusan = j.id
-                LEFT JOIN detail_nilai_rapor dnr ON s.id = dnr.siswa_id AND dnr.deleted_at IS NULL
+                LEFT JOIN (
+                    SELECT dnr.siswa_id, dnr.nilai_akhir, dnr.mapel_id
+                    FROM detail_nilai_rapor dnr
+                    JOIN kelas k_grade ON dnr.kelas_id = k_grade.id
+                    WHERE dnr.tenant_id = ?
+                      AND dnr.deleted_at IS NULL
+                      AND dnr.mapel_id IN ($placeholders)
+                      AND (
+                        ( (k_grade.nama_kelas LIKE '%12%' OR k_grade.nama_kelas LIKE '%XII%') AND dnr.semester = 'Ganjil' )
+                        OR ( (k_grade.nama_kelas LIKE '%11%' OR k_grade.nama_kelas LIKE '%XI%') AND dnr.semester IN ('Ganjil', 'Genap') )
+                        OR ( (k_grade.nama_kelas LIKE '%10%' OR k_grade.nama_kelas LIKE '%X%') AND dnr.semester IN ('Ganjil', 'Genap') )
+                      )
+                ) g ON s.id = g.siswa_id
                 WHERE s.tenant_id = ?
                   AND s.status = 'Aktif'
                   AND s.deleted_at IS NULL
-                  AND k.nama_kelas LIKE '%12%'
-                GROUP BY s.id, s.nama_lengkap, s.nisn, s.nis, s.id_jurusan, k.nama_kelas, j.nama_jurusan, j.kode_jurusan
+                  AND (k.nama_kelas LIKE '%12%' OR k.nama_kelas LIKE '%XII%')
+                GROUP BY s.id, s.nama_lengkap, s.nisn, s.nis, s.id_jurusan, k.nama_kelas, s.id_kelas, j.nama_jurusan, j.kode_jurusan
                 ORDER BY j.nama_jurusan ASC, rata_rata DESC, s.nama_lengkap ASC
-            ");
-            $stmt->execute([$tenantId]);
+            ";
+
+            $stmt = $db->prepare($sql);
+            $params = array_merge([$tenantId], $pdssMapelIds, [$tenantId]);
+            $stmt->execute($params);
             $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             // Format tipe data hasil query
@@ -153,6 +292,8 @@ class PDSSController extends BaseController {
             $this->jsonResponse([
                 'success' => true,
                 'accreditation' => $accreditation,
+                'mapel_not_configured' => false,
+                'total_configured_mapels' => count($pdssMapelIds),
                 'data' => $students
             ]);
         } catch (\Throwable $e) {

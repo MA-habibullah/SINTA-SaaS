@@ -238,122 +238,205 @@ $tenantList = $data['tenant_list'] ?? [];
             </div>
         </div>
 
-        <!-- Simulation Settings Bar -->
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-            <div class="flex flex-wrap items-center justify-between gap-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
-                        <i class="bi bi-sliders"></i>
+        <!-- ALUR KERJA BK KESIAPAN PDSS (Workflow Cards) -->
+        <div class="grid grid-cols-1 gap-6">
+            
+            <!-- LANGKAH 1: KONFIGURASI MATA PELAJARAN PDSS -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between cursor-pointer" @click="showMapelConfig = !showMapelConfig">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm">1</div>
+                        <div>
+                            <h4 class="font-bold text-sm text-slate-800">Langkah 1: Tentukan Mata Pelajaran untuk PDSS</h4>
+                            <p class="text-xs text-slate-500">Pilih mata pelajaran dari kurikulum yang akan dihitung nilainya selama 5 semester.</p>
+                        </div>
                     </div>
                     <div>
-                        <h4 class="font-bold text-sm text-slate-800">Simulasi Quota SNBP Sekolah</h4>
-                        <p class="text-xs text-slate-500">Sesuaikan kuota paralel berdasarkan akreditasi sekolah saat ini.</p>
+                        <i class="bi" :class="showMapelConfig ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                    </div>
+                </div>
+                
+                <div v-show="showMapelConfig" class="p-6 border-t border-slate-100 animate-fade-in">
+                    <!-- Checkbox Grid -->
+                    <div v-if="loadingMapels" class="text-center py-4 text-slate-400 text-xs">
+                        <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                        Memuat daftar mata pelajaran...
+                    </div>
+                    <div v-else-if="pdssMapels.length === 0" class="text-center py-4 text-slate-400 text-xs">
+                        Belum ada mata pelajaran terdaftar di sekolah ini. Silakan tambahkan di menu Buku Induk.
+                    </div>
+                    <div v-else>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div v-for="mapel in pdssMapels" :key="mapel.id" class="flex items-center gap-2.5 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 transition">
+                                <input type="checkbox" :id="'mapel-'+mapel.id" v-model="mapel.is_selected" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
+                                <label :for="'mapel-'+mapel.id" class="text-xs font-semibold text-slate-700 cursor-pointer select-none">
+                                    {{ mapel.nama_mapel }} <span class="text-[10px] text-slate-400 font-mono">({{ mapel.kode_mapel }})</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-end gap-2 border-t pt-4">
+                            <button class="btn btn-sm btn-light border font-semibold px-4 py-2 rounded-xl text-xs" @click="showMapelConfig = false">
+                                Tutup
+                            </button>
+                            <button class="btn btn-sm btn-primary font-semibold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5" :disabled="savingMapels" @click="savePdssMapels">
+                                <span v-if="savingMapels" class="spinner-border spinner-border-sm me-1"></span>
+                                <i class="bi bi-save"></i> Simpan Pilihan Mapel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LANGKAH 2: SIMULASI KUOTA & FILTER RANKING PARALEL -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-sm">2</div>
+                        <div>
+                            <h4 class="font-bold text-sm text-slate-800">Langkah 2: Atur Kuota Eligible & Filter Nilai Rata-rata 5 Semester</h4>
+                            <p class="text-xs text-slate-500">Sesuaikan persentase kuota berdasarkan akreditasi sekolah dan filter siswa berdasarkan kelas/jurusan.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="p-6 border-t border-slate-100 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <!-- Accreditation Info -->
+                        <div class="bg-slate-50 rounded-xl px-4 py-2 border border-slate-200 flex items-center gap-3">
+                            <span class="text-xs text-slate-500">Akreditasi Sekolah:</span>
+                            <span class="badge bg-blue-600 text-white font-bold py-1 px-2.5 rounded-lg text-xs">{{ accreditation }}</span>
+                            <span class="text-xs text-slate-400 border-l pl-2 font-medium" v-if="accreditation.includes('A')">Kuota Rekomendasi: 40%</span>
+                            <span class="text-xs text-slate-400 border-l pl-2 font-medium" v-else-if="accreditation.includes('B')">Kuota Rekomendasi: 25%</span>
+                            <span class="text-xs text-slate-400 border-l pl-2 font-medium" v-else>Kuota Rekomendasi: 5%</span>
+                        </div>
+
+                        <!-- Quota Selector -->
+                        <div class="flex items-center gap-2">
+                            <label for="quota-select" class="text-xs font-semibold text-slate-600">Kuota SNBP:</label>
+                            <select id="quota-select" v-model="quotaPercent" class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option :value="40">40% (Akreditasi A)</option>
+                                <option :value="25">25% (Akreditasi B)</option>
+                                <option :value="5">5% (Akreditasi C)</option>
+                                <option :value="10">10%</option>
+                                <option :value="15">15%</option>
+                                <option :value="30">30%</option>
+                                <option :value="50">50%</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Live Filters -->
+                    <div class="bg-slate-50/50 p-4 rounded-xl border border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                        <div class="text-xs font-bold text-slate-700">Filter Pencarian & Kriteria:</div>
+                        <div class="flex flex-wrap gap-2 items-center">
+                            <!-- Search Box -->
+                            <div class="position-relative">
+                                <i class="bi bi-search position-absolute text-slate-400 text-xs" style="left: 12px; top: 50%; transform: translateY(-50%);"></i>
+                                <input type="text" v-model="searchStudent" placeholder="Cari nama / NISN..." class="rounded-xl border border-slate-200 pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 w-44">
+                            </div>
+                            
+                            <!-- Class Filter -->
+                            <select v-model="filterClass" class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Semua Kelas</option>
+                                <option v-for="cls in uniqueClasses" :key="cls" :value="cls">{{ cls }}</option>
+                            </select>
+                            
+                            <!-- Major Filter -->
+                            <select v-model="filterMajor" class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Semua Jurusan</option>
+                                <option v-for="maj in uniqueMajors" :key="maj" :value="maj">{{ maj }}</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LANGKAH 3: SIMULASI RANKING PARALEL (TABEL HASIL) -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm">3</div>
+                        <div>
+                            <h4 class="font-bold text-sm text-slate-800">Langkah 3: Tinjau Kelayakan & Ranking Paralel 5 Semester</h4>
+                            <p class="text-xs text-slate-500">Siswa yang masuk kuota (Eligible) akan ditandai dengan warna ungu otomatis.</p>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Accreditation Alert Badge -->
-                <div class="bg-slate-50 rounded-xl px-4 py-2 border border-slate-200 flex items-center gap-3">
-                    <span class="text-xs text-slate-500">Akreditasi:</span>
-                    <span class="badge bg-blue-600 text-white font-bold py-1 px-2.5 rounded-lg text-xs">{{ accreditation }}</span>
-                    <span class="text-xs text-slate-400 border-l pl-2 font-medium" v-if="accreditation.includes('A')">Rekomendasi Quota: 40%</span>
-                    <span class="text-xs text-slate-400 border-l pl-2 font-medium" v-else-if="accreditation.includes('B')">Rekomendasi Quota: 25%</span>
-                    <span class="text-xs text-slate-400 border-l pl-2 font-medium" v-else>Rekomendasi Quota: 5%</span>
-                </div>
-
-                <!-- Custom Quota Selector -->
-                <div class="flex items-center gap-2">
-                    <label for="quota-select" class="text-xs font-semibold text-slate-600">Kuota paralel:</label>
-                    <select id="quota-select" v-model="quotaPercent" class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                        <option :value="40">40% (Akreditasi A)</option>
-                        <option :value="25">25% (Akreditasi B)</option>
-                        <option :value="5">5% (Akreditasi C)</option>
-                        <option :value="10">10%</option>
-                        <option :value="15">15%</option>
-                        <option :value="30">30%</option>
-                        <option :value="50">50%</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <!-- Student Listing & Simulated Ranking -->
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            <div class="px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
-                <div class="font-bold text-slate-800 text-base">
-                    Simulasi Pemetaan Kelayakan
-                </div>
-                <div class="flex gap-2 items-center">
-                    <!-- Search Input -->
-                    <div class="position-relative">
-                        <i class="bi bi-search position-absolute text-slate-400 text-xs" style="left: 12px; top: 50%; transform: translateY(-50%);"></i>
-                        <input type="text" v-model="searchStudent" placeholder="Cari nama / NISN..." class="rounded-xl border border-slate-200 pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 w-44">
+                <!-- Warning if mapel not configured -->
+                <div v-if="mapelNotConfigured" class="p-8 text-center">
+                    <div class="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <i class="bi bi-exclamation-triangle-fill text-2xl"></i>
                     </div>
-                    <!-- Major Filter -->
-                    <select v-model="filterMajor" class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="">Semua Jurusan</option>
-                        <option v-for="maj in uniqueMajors" :key="maj" :value="maj">{{ maj }}</option>
-                    </select>
+                    <h5 class="font-bold text-slate-800 text-sm">Mata Pelajaran PDSS Belum Dikonfigurasi</h5>
+                    <p class="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-4">Silakan klik dan atur mata pelajaran kurikulum yang digunakan untuk PDSS pada Langkah 1 terlebih dahulu.</p>
+                    <button class="btn btn-sm btn-primary font-semibold px-4 py-2 rounded-xl text-xs" @click="showMapelConfig = true">
+                        Buka Langkah 1
+                    </button>
+                </div>
+
+                <!-- Table content -->
+                <div v-else class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-100 text-xs text-slate-400 font-semibold uppercase">
+                                <th class="ps-6 py-3 text-center">Rank</th>
+                                <th class="py-3">Nama Lengkap</th>
+                                <th class="py-3">NISN</th>
+                                <th class="py-3">Kelas</th>
+                                <th class="py-3">Jurusan</th>
+                                <th class="py-3 text-center">Rata-rata Nilai</th>
+                                <th class="py-3 text-center">Kelengkapan (5 Sem)</th>
+                                <th class="py-3 text-center pe-6">Status Kelayakan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Loading State -->
+                            <tr v-if="loading">
+                                <td colspan="8" class="text-center py-10 text-slate-400 text-xs">
+                                    <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                                    Memuat simulasi data siswa...
+                                </td>
+                            </tr>
+                            <!-- Empty State -->
+                            <tr v-else-if="filteredStudents.length === 0">
+                                <td colspan="8" class="text-center py-10 text-slate-400 text-xs">
+                                    Tidak ada data siswa kelas 12 yang terdeteksi dengan kriteria ini.
+                                </td>
+                            </tr>
+                            <!-- Simulated student list -->
+                            <tr v-else v-for="stu in filteredStudents" :key="stu.id" class="text-sm border-b border-slate-100 hover:bg-slate-50">
+                                <td class="text-center font-bold ps-6 py-2.5">
+                                    <span :class="{'text-blue-600': stu.isEligible, 'text-slate-400': !stu.isEligible}">
+                                        #{{ stu.majorRank }}
+                                    </span>
+                                </td>
+                                <td class="font-semibold text-slate-800">{{ stu.nama_lengkap }}</td>
+                                <td class="font-monospace text-xs text-slate-500">{{ stu.nisn || '—' }}</td>
+                                <td class="text-slate-600">{{ stu.nama_kelas || '—' }}</td>
+                                <td class="text-slate-600">{{ stu.nama_jurusan || '—' }}</td>
+                                <td class="text-center font-bold" :class="{'text-slate-800': stu.rata_rata > 0, 'text-slate-300': stu.rata_rata === 0}">
+                                    {{ stu.rata_rata > 0 ? stu.rata_rata.toFixed(2) : '—' }}
+                                </td>
+                                <td class="text-center">
+                                    <span class="text-xs px-2.5 py-1 rounded-full font-semibold"
+                                          :class="stu.jumlah_nilai === (totalConfiguredMapels * 5) ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-amber-50 text-amber-700 border border-amber-100'">
+                                        {{ stu.jumlah_nilai }} / {{ totalConfiguredMapels * 5 }} Nilai
+                                    </span>
+                                </td>
+                                <td class="text-center pe-6">
+                                    <span class="text-xs px-3 py-1.5 rounded-xl font-bold uppercase"
+                                          :class="stu.isEligible ? 'badge-eligible' : 'badge-not-eligible'">
+                                        {{ stu.isEligible ? 'ELIGIBLE' : 'TIDAK ELIGIBLE' }}
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead>
-                        <tr class="bg-slate-50 border-b border-slate-100 text-xs text-slate-400 font-semibold uppercase">
-                            <th class="ps-6 py-3 text-center">Rank</th>
-                            <th class="py-3">Nama Lengkap</th>
-                            <th class="py-3">NISN</th>
-                            <th class="py-3">Kelas</th>
-                            <th class="py-3">Jurusan</th>
-                            <th class="py-3 text-center">Rata-rata Nilai</th>
-                            <th class="py-3 text-center">Kelengkapan</th>
-                            <th class="py-3 text-center pe-6">Status Kelayakan</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Loading State -->
-                        <tr v-if="loading">
-                            <td colspan="8" class="text-center py-10 text-slate-400 text-xs">
-                                <div class="spinner-border spinner-border-sm text-primary me-2"></div>
-                                Memuat simulasi data siswa...
-                            </td>
-                        </tr>
-                        <!-- Empty State -->
-                        <tr v-else-if="filteredStudents.length === 0">
-                            <td colspan="8" class="text-center py-10 text-slate-400 text-xs">
-                                Tidak ada data siswa kelas 12 yang terdeteksi dengan kriteria ini.
-                            </td>
-                        </tr>
-                        <!-- Simulated student list -->
-                        <tr v-else v-for="stu in filteredStudents" :key="stu.id" class="text-sm border-b border-slate-100 hover:bg-slate-50">
-                            <td class="text-center font-bold ps-6 py-2.5">
-                                <span :class="{'text-blue-600': stu.isEligible, 'text-slate-400': !stu.isEligible}">
-                                    #{{ stu.majorRank }}
-                                </span>
-                            </td>
-                            <td class="font-semibold text-slate-800">{{ stu.nama_lengkap }}</td>
-                            <td class="font-monospace text-xs text-slate-500">{{ stu.nisn || '—' }}</td>
-                            <td class="text-slate-600">{{ stu.nama_kelas || '—' }}</td>
-                            <td class="text-slate-600">{{ stu.nama_jurusan || '—' }}</td>
-                            <td class="text-center font-bold" :class="{'text-slate-800': stu.rata_rata > 0, 'text-slate-300': stu.rata_rata === 0}">
-                                {{ stu.rata_rata > 0 ? stu.rata_rata.toFixed(2) : '—' }}
-                            </td>
-                            <td class="text-center">
-                                <span class="text-xs px-2.5 py-1 rounded-full font-semibold"
-                                      :class="stu.jumlah_nilai > 0 ? 'bg-slate-100 text-slate-600' : 'bg-rose-50 text-rose-600 border border-rose-100'">
-                                    {{ stu.jumlah_nilai }} Mata Pelajaran
-                                </span>
-                            </td>
-                            <td class="text-center pe-6">
-                                <span class="text-xs px-3 py-1.5 rounded-xl font-bold uppercase"
-                                      :class="stu.isEligible ? 'badge-eligible' : 'badge-not-eligible'">
-                                    {{ stu.isEligible ? 'ELIGIBLE' : 'TIDAK ELIGIBLE' }}
-                                </span>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
         </div>
         </template>
     </div>
@@ -676,6 +759,13 @@ $tenantList = $data['tenant_list'] ?? [];
                 quotaPercent: 40,
                 searchStudent: '',
                 filterMajor: '',
+                filterClass: '',
+                pdssMapels: [],
+                loadingMapels: false,
+                savingMapels: false,
+                showMapelConfig: false,
+                mapelNotConfigured: false,
+                totalConfiguredMapels: 0,
                 privacyMask: true,
                 isStudent: _userRole === 'siswa',
                 canWrite: _canWrite,
@@ -727,6 +817,14 @@ $tenantList = $data['tenant_list'] ?? [];
                 const set = new Set();
                 this.students.forEach(s => {
                     if (s.nama_jurusan) set.add(s.nama_jurusan);
+                });
+                return Array.from(set).sort();
+            },
+
+            uniqueClasses() {
+                const set = new Set();
+                this.students.forEach(s => {
+                    if (s.nama_kelas) set.add(s.nama_kelas);
                 });
                 return Array.from(set).sort();
             },
@@ -797,14 +895,27 @@ $tenantList = $data['tenant_list'] ?? [];
                 if (this.filterMajor) {
                     list = list.filter(s => s.nama_jurusan === this.filterMajor);
                 }
+                if (this.filterClass) {
+                    list = list.filter(s => s.nama_kelas === this.filterClass);
+                }
                 return list;
             },
 
             // Cohort Stats
             stats() {
                 const totalStudents = this.students.length;
-                const studentsWithGrades = this.students.filter(s => s.rata_rata > 0).length;
-                const completenessRate = totalStudents > 0 ? Math.round((studentsWithGrades / totalStudents) * 100) : 0;
+                let completenessRate = 0;
+                let studentsWithGrades = 0;
+                
+                if (totalStudents > 0 && this.totalConfiguredMapels > 0) {
+                    const totalExpectedGrades = totalStudents * this.totalConfiguredMapels * 5;
+                    const totalActualGrades = this.students.reduce((sum, s) => sum + s.jumlah_nilai, 0);
+                    completenessRate = Math.min(100, Math.round((totalActualGrades / totalExpectedGrades) * 100));
+                    studentsWithGrades = this.students.filter(s => s.jumlah_nilai > 0).length;
+                } else if (totalStudents > 0) {
+                    studentsWithGrades = this.students.filter(s => s.rata_rata > 0).length;
+                    completenessRate = Math.round((studentsWithGrades / totalStudents) * 100);
+                }
                 
                 // Hitung total eligible dari simulasi saat ini
                 const eligibleCount = this.processedStudents.filter(s => s.isEligible).length;
@@ -1056,6 +1167,7 @@ $tenantList = $data['tenant_list'] ?? [];
                 try {
                     await Promise.all([
                         this.fetchKesiapan(),
+                        this.fetchPdssMapels(),
                         this.fetchAlumni(),
                         this.fetchCampuses()
                     ]);
@@ -1078,6 +1190,8 @@ $tenantList = $data['tenant_list'] ?? [];
                     if (res.data.success) {
                         this.students = res.data.data || [];
                         this.accreditation = res.data.accreditation || 'A';
+                        this.mapelNotConfigured = res.data.mapel_not_configured || false;
+                        this.totalConfiguredMapels = res.data.total_configured_mapels || 0;
                         // Auto-set default quota percentage based on accreditation
                         if (this.accreditation.includes('A')) this.quotaPercent = 40;
                         else if (this.accreditation.includes('B')) this.quotaPercent = 25;
@@ -1085,6 +1199,52 @@ $tenantList = $data['tenant_list'] ?? [];
                     }
                 } catch (e) {
                     console.error('Failed fetching PDSS stats', e);
+                }
+            },
+
+            async fetchPdssMapels() {
+                if (this.userRole === 'super_admin' && !this.currentTenantId) {
+                    this.pdssMapels = [];
+                    return;
+                }
+                this.loadingMapels = true;
+                try {
+                    const url = this.currentTenantId ? `${_baseUrl}/api/v1/pdss/config-mapel?tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/pdss/config-mapel`;
+                    const res = await axios.get(url);
+                    if (res.data.success) {
+                        this.pdssMapels = res.data.data || [];
+                    }
+                } catch (e) {
+                    console.error('Failed fetching PDSS mapels', e);
+                } finally {
+                    this.loadingMapels = false;
+                }
+            },
+
+            async savePdssMapels() {
+                const selectedIds = this.pdssMapels.filter(m => m.is_selected).map(m => m.id);
+                this.savingMapels = true;
+                try {
+                    const url = this.currentTenantId ? `${_baseUrl}/api/v1/pdss/config-mapel?tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/pdss/config-mapel`;
+                    const res = await axios.post(url, { mapel_ids: selectedIds });
+                    if (res.data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil',
+                            text: res.data.message
+                        });
+                        this.showMapelConfig = false;
+                        this.fetchKesiapan();
+                    }
+                } catch (e) {
+                    console.error('Failed saving PDSS mapels', e);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal',
+                        text: e.response?.data?.error || 'Gagal menyimpan pilihan mata pelajaran.'
+                    });
+                } finally {
+                    this.savingMapels = false;
                 }
             },
 
