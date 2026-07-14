@@ -202,6 +202,117 @@ $tenantList = $data['tenant_list'] ?? [];
             <p class="text-slate-500 text-xs mt-1 max-w-sm mx-auto">Silakan pilih sekolah pada filter di bagian atas halaman untuk menampilkan data.</p>
         </div>
         <template v-else>
+            <!-- GLOBAL TAHUN AJARAN SELECTOR BAR (BK MANUAL CONTROL) -->
+            <div class="card border-0 shadow-sm rounded-2xl mb-4 bg-white border border-slate-100">
+                <div class="card-body p-4 flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+                            <i class="bi bi-calendar-event text-lg"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-sm text-slate-800 mb-0.5">Tahun Ajaran Evaluasi</h4>
+                            <p class="text-xs text-slate-500 mb-0">Pilih tahun ajaran target untuk mengelola data, kuota, lock, dan leger excel secara manual.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <span class="text-xs font-semibold text-slate-600">Pilih Tahun Ajaran:</span>
+                        <select v-model="filterAcademicYear" class="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-700 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer min-w-[180px]" @change="onAcademicYearChange">
+                            <option value="" disabled>— Pilih Tahun Ajaran —</option>
+                            <option v-for="yr in academicYears" :key="yr.id" :value="yr.id">
+                                {{ yr.tahun_ajaran }} <span v-if="parseInt(yr.is_active) === 1">(Aktif)</span>
+                            </option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STATUS LOCK DATA KESIAPAN (PER LANGKAH) -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <!-- Lock Langkah 1 -->
+                <div class="bg-white rounded-2xl shadow-sm border p-4 flex flex-col justify-between gap-3"
+                     :class="locks[1].is_locked ? 'border-amber-200 bg-amber-50/10' : 'border-slate-100'">
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
+                             :class="locks[1].is_locked ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'">
+                            <i class="bi" :class="locks[1].is_locked ? 'bi-lock-fill' : 'bi-unlock-fill'"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-xs text-slate-800 uppercase tracking-wider mb-0.5">Langkah 1: Mapel</h4>
+                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded" :class="locks[1].is_locked ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'">
+                                {{ locks[1].is_locked ? 'TERKUNCI' : 'TERBUKA' }}
+                            </span>
+                            <p class="text-[10px] text-slate-500 mt-1 mb-0" v-if="locks[1].is_locked">
+                                Dikunci oleh {{ locks[1].locked_by }} pada {{ locks[1].locked_at }}.
+                            </p>
+                        </div>
+                    </div>
+                    <div v-if="canWrite" class="text-end">
+                        <button class="btn btn-xs btn-outline-secondary text-[10px] px-2.5 py-1 rounded-lg"
+                                :class="locks[1].is_locked ? 'border-amber-500 text-amber-600 hover:bg-amber-50' : 'border-slate-200'"
+                                @click="togglePdssLock(1)">
+                            <i class="bi" :class="locks[1].is_locked ? 'bi-unlock-fill' : 'bi-lock-fill'"></i>
+                            {{ locks[1].is_locked ? 'Buka Kunci' : 'Kunci' }}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Lock Langkah 2 -->
+                <div class="bg-white rounded-2xl shadow-sm border p-4 flex flex-col justify-between gap-3"
+                     :class="locks[2].is_locked ? 'border-amber-200 bg-amber-50/10' : 'border-slate-100'">
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
+                             :class="locks[2].is_locked ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'">
+                            <i class="bi" :class="locks[2].is_locked ? 'bi-lock-fill' : 'bi-unlock-fill'"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-xs text-slate-800 uppercase tracking-wider mb-0.5">Langkah 2: Kuota</h4>
+                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded" :class="locks[2].is_locked ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'">
+                                {{ locks[2].is_locked ? 'TERKUNCI' : 'TERBUKA' }}
+                            </span>
+                            <p class="text-[10px] text-slate-500 mt-1 mb-0" v-if="locks[2].is_locked">
+                                Dikunci oleh {{ locks[2].locked_by }} pada {{ locks[2].locked_at }}.
+                            </p>
+                        </div>
+                    </div>
+                    <div v-if="canWrite" class="text-end">
+                        <button class="btn btn-xs btn-outline-secondary text-[10px] px-2.5 py-1 rounded-lg"
+                                :class="locks[2].is_locked ? 'border-amber-500 text-amber-600 hover:bg-amber-50' : 'border-slate-200'"
+                                @click="togglePdssLock(2)">
+                            <i class="bi" :class="locks[2].is_locked ? 'bi-unlock-fill' : 'bi-lock-fill'"></i>
+                            {{ locks[2].is_locked ? 'Buka Kunci' : 'Kunci' }}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Lock Langkah 3 -->
+                <div class="bg-white rounded-2xl shadow-sm border p-4 flex flex-col justify-between gap-3"
+                     :class="locks[3].is_locked ? 'border-amber-200 bg-amber-50/10' : 'border-slate-100'">
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
+                             :class="locks[3].is_locked ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'">
+                            <i class="bi" :class="locks[3].is_locked ? 'bi-lock-fill' : 'bi-unlock-fill'"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-xs text-slate-800 uppercase tracking-wider mb-0.5">Langkah 3: Kelayakan</h4>
+                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded" :class="locks[3].is_locked ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'">
+                                {{ locks[3].is_locked ? 'TERKUNCI' : 'TERBUKA' }}
+                            </span>
+                            <p class="text-[10px] text-slate-500 mt-1 mb-0" v-if="locks[3].is_locked">
+                                Dikunci oleh {{ locks[3].locked_by }} pada {{ locks[3].locked_at }}.
+                            </p>
+                        </div>
+                    </div>
+                    <div v-if="canWrite" class="text-end">
+                        <button class="btn btn-xs btn-outline-secondary text-[10px] px-2.5 py-1 rounded-lg"
+                                :class="locks[3].is_locked ? 'border-amber-500 text-amber-600 hover:bg-amber-50' : 'border-slate-200'"
+                                @click="togglePdssLock(3)">
+                            <i class="bi" :class="locks[3].is_locked ? 'bi-unlock-fill' : 'bi-lock-fill'"></i>
+                            {{ locks[3].is_locked ? 'Buka Kunci' : 'Kunci' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- KPI Row -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex items-center justify-between">
@@ -251,7 +362,10 @@ $tenantList = $data['tenant_list'] ?? [];
                             <p class="text-xs text-slate-500">Pilih mata pelajaran dari kurikulum yang akan dihitung nilainya selama 5 semester.</p>
                         </div>
                     </div>
-                    <div>
+                    <div class="flex items-center gap-2">
+                        <span v-if="locks[1].is_locked" class="bg-amber-100 text-amber-800 text-[10px] font-bold py-1 px-2 rounded-lg flex items-center gap-1 select-none">
+                            <i class="bi bi-lock-fill"></i> TERKUNCI
+                        </span>
                         <i class="bi" :class="showMapelConfig ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
                     </div>
                 </div>
@@ -266,20 +380,66 @@ $tenantList = $data['tenant_list'] ?? [];
                         Belum ada mata pelajaran terdaftar di sekolah ini. Silakan tambahkan di menu Buku Induk.
                     </div>
                     <div v-else>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                            <div v-for="mapel in pdssMapels" :key="mapel.id" class="flex items-center gap-2.5 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 transition">
-                                <input type="checkbox" :id="'mapel-'+mapel.id" v-model="mapel.is_selected" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
-                                <label :for="'mapel-'+mapel.id" class="text-xs font-semibold text-slate-700 cursor-pointer select-none">
-                                    {{ mapel.nama_mapel }} <span class="text-[10px] text-slate-400 font-mono">({{ mapel.kode_mapel }})</span>
-                                </label>
-                            </div>
+                        <!-- Table Grid Semester Mapel (Horizontal Scrollable) -->
+                        <div class="table-responsive mb-4 rounded-xl border border-slate-100 overflow-hidden">
+                            <table class="table table-bordered align-middle text-xs mb-0" style="min-width: 800px;">
+                                <thead class="bg-slate-50 text-center font-bold text-slate-600">
+                                    <tr>
+                                        <th rowspan="2" class="align-middle text-start ps-4" style="min-width: 200px;">Nama Mata Pelajaran</th>
+                                        <th colspan="2" class="py-2 border-l">Kelas X (Tahun I)</th>
+                                        <th colspan="2" class="py-2 border-l">Kelas XI (Tahun II)</th>
+                                        <th colspan="2" class="py-2 border-l">Kelas XII (Tahun III)</th>
+                                    </tr>
+                                    <tr class="bg-slate-100 text-[10px]">
+                                        <th class="py-1 border-l" style="width: 90px;">Semester 1</th>
+                                        <th class="py-1" style="width: 90px;">Semester 2</th>
+                                        <th class="py-1 border-l" style="width: 90px;">Semester 3</th>
+                                        <th class="py-1" style="width: 90px;">Semester 4</th>
+                                        <th class="py-1 border-l" style="width: 90px;">Semester 5</th>
+                                        <th class="py-1" style="width: 90px;">Semester 6</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="mapel in pdssMapels" :key="mapel.id">
+                                        <td class="font-semibold text-slate-700 ps-4">
+                                            {{ mapel.nama_mapel }} 
+                                            <span class="text-[10px] text-slate-400 font-mono">({{ mapel.kode_mapel }})</span>
+                                        </td>
+                                        <!-- Sem 1-6 Checkboxes (Conditional on grades existence) -->
+                                        <td class="text-center py-2 border-l">
+                                            <input v-if="mapel.has_sem_1" type="checkbox" v-model="mapel.sem_1" :disabled="locks[1].is_locked" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
+                                            <span v-else class="text-slate-300 font-bold">—</span>
+                                        </td>
+                                        <td class="text-center py-2">
+                                            <input v-if="mapel.has_sem_2" type="checkbox" v-model="mapel.sem_2" :disabled="locks[1].is_locked" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
+                                            <span v-else class="text-slate-300 font-bold">—</span>
+                                        </td>
+                                        <td class="text-center py-2 border-l">
+                                            <input v-if="mapel.has_sem_3" type="checkbox" v-model="mapel.sem_3" :disabled="locks[1].is_locked" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
+                                            <span v-else class="text-slate-300 font-bold">—</span>
+                                        </td>
+                                        <td class="text-center py-2">
+                                            <input v-if="mapel.has_sem_4" type="checkbox" v-model="mapel.sem_4" :disabled="locks[1].is_locked" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
+                                            <span v-else class="text-slate-300 font-bold">—</span>
+                                        </td>
+                                        <td class="text-center py-2 border-l">
+                                            <input v-if="mapel.has_sem_5" type="checkbox" v-model="mapel.sem_5" :disabled="locks[1].is_locked" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
+                                            <span v-else class="text-slate-300 font-bold">—</span>
+                                        </td>
+                                        <td class="text-center py-2">
+                                            <input v-if="mapel.has_sem_6" type="checkbox" v-model="mapel.sem_6" :disabled="locks[1].is_locked" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
+                                            <span v-else class="text-slate-300 font-bold">—</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                         
                         <div class="flex justify-end gap-2 border-t pt-4">
                             <button class="btn btn-sm btn-light border font-semibold px-4 py-2 rounded-xl text-xs" @click="showMapelConfig = false">
                                 Tutup
                             </button>
-                            <button class="btn btn-sm btn-primary font-semibold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5" :disabled="savingMapels" @click="savePdssMapels">
+                            <button class="btn btn-sm btn-primary font-semibold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5" :disabled="savingMapels || locks[1].is_locked" @click="savePdssMapels">
                                 <span v-if="savingMapels" class="spinner-border spinner-border-sm me-1"></span>
                                 <i class="bi bi-save"></i> Simpan Pilihan Mapel
                             </button>
@@ -298,6 +458,9 @@ $tenantList = $data['tenant_list'] ?? [];
                             <p class="text-xs text-slate-500">Sesuaikan persentase kuota berdasarkan akreditasi sekolah dan filter siswa berdasarkan kelas/jurusan.</p>
                         </div>
                     </div>
+                    <span v-if="locks[2].is_locked" class="bg-amber-100 text-amber-800 text-[10px] font-bold py-1 px-2 rounded-lg flex items-center gap-1 select-none">
+                        <i class="bi bi-lock-fill"></i> TERKUNCI
+                    </span>
                 </div>
                 
                 <div class="p-6 border-t border-slate-100 space-y-4">
@@ -312,17 +475,24 @@ $tenantList = $data['tenant_list'] ?? [];
                         </div>
 
                         <!-- Quota Selector -->
-                        <div class="flex items-center gap-2">
-                            <label for="quota-select" class="text-xs font-semibold text-slate-600">Kuota SNBP:</label>
-                            <select id="quota-select" v-model="quotaPercent" class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <option :value="40">40% (Akreditasi A)</option>
-                                <option :value="25">25% (Akreditasi B)</option>
-                                <option :value="5">5% (Akreditasi C)</option>
-                                <option :value="10">10%</option>
-                                <option :value="15">15%</option>
-                                <option :value="30">30%</option>
-                                <option :value="50">50%</option>
-                            </select>
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <div class="flex items-center gap-2">
+                                <label for="quota-select" class="text-xs font-semibold text-slate-600">Kuota SNBP:</label>
+                                <select id="quota-select" v-model="quotaPercent" :disabled="locks[2].is_locked" class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option :value="40">40% (Akreditasi A - Standar)</option>
+                                    <option :value="45">45% (Akreditasi A + e-Rapor)</option>
+                                    <option :value="25">25% (Akreditasi B - Standar)</option>
+                                    <option :value="30">30% (Akreditasi B + e-Rapor)</option>
+                                    <option :value="5">5% (Akreditasi C - Standar)</option>
+                                    <option :value="10">10% (Akreditasi C + e-Rapor)</option>
+                                    <option :value="15">15%</option>
+                                    <option :value="50">50%</option>
+                                </select>
+                            </div>
+                            <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-600 cursor-pointer select-none">
+                                <input type="checkbox" v-model="useERapor" :disabled="locks[2].is_locked" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                                Menggunakan e-Rapor (+5% Kuota SNBP)
+                            </label>
                         </div>
                     </div>
 
@@ -330,13 +500,37 @@ $tenantList = $data['tenant_list'] ?? [];
                     <div class="bg-slate-50/50 p-4 rounded-xl border border-slate-100 flex flex-wrap items-center justify-between gap-3">
                         <div class="text-xs font-bold text-slate-700">Filter Pencarian & Kriteria:</div>
                         <div class="flex flex-wrap gap-2 items-center">
+                            <!-- Download Leger by Semester Dropdown and Button -->
+                            <div class="flex items-center gap-1 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs">
+                                <span class="text-slate-500 font-medium select-none">Unduh Nilai:</span>
+                                <select v-model="downloadSemester" class="border-0 bg-transparent py-0 px-1 text-xs text-slate-700 font-semibold focus:ring-0 focus:outline-none cursor-pointer">
+                                    <option :value="1">Semester 1</option>
+                                    <option :value="2">Semester 2</option>
+                                    <option :value="3">Semester 3</option>
+                                    <option :value="4">Semester 4</option>
+                                    <option :value="5">Semester 5</option>
+                                    <option :value="6">Semester 6</option>
+                                </select>
+                                <a v-if="!mapelNotConfigured && students.length > 0 && filterAcademicYear" 
+                                   :href="baseUrl + '/api/v1/pdss/download-leger?semester=' + downloadSemester + '&tahun_ajaran_id=' + filterAcademicYear + (currentTenantId ? '&tenant_id=' + currentTenantId : '')" 
+                                   class="btn btn-sm btn-primary rounded-lg px-2.5 py-1 text-xs font-semibold flex items-center gap-1.5 transition ms-2"
+                                   target="_blank">
+                                    <i class="bi bi-file-earmark-excel-fill text-xs text-emerald-400"></i> Unduh
+                                </a>
+                                <button v-else-if="!mapelNotConfigured && students.length > 0"
+                                        class="btn btn-sm btn-secondary rounded-lg px-2.5 py-1 text-xs font-semibold flex items-center gap-1.5 transition ms-2 opacity-50"
+                                        @click="showSelectTaWarning">
+                                    <i class="bi bi-file-earmark-excel-fill text-xs text-slate-400"></i> Unduh
+                                </button>
+                            </div>
+
                             <!-- Search Box -->
                             <div class="position-relative">
                                 <i class="bi bi-search position-absolute text-slate-400 text-xs" style="left: 12px; top: 50%; transform: translateY(-50%);"></i>
                                 <input type="text" v-model="searchStudent" placeholder="Cari nama / NISN..." class="rounded-xl border border-slate-200 pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 w-44">
                             </div>
-                            
-                            <!-- Class Filter -->
+
+                             <!-- Class Filter -->
                             <select v-model="filterClass" class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="">Semua Kelas</option>
                                 <option v-for="cls in uniqueClasses" :key="cls" :value="cls">{{ cls }}</option>
@@ -362,6 +556,9 @@ $tenantList = $data['tenant_list'] ?? [];
                             <p class="text-xs text-slate-500">Siswa yang masuk kuota (Eligible) akan ditandai dengan warna ungu otomatis.</p>
                         </div>
                     </div>
+                    <span v-if="locks[3].is_locked" class="bg-amber-100 text-amber-800 text-[10px] font-bold py-1 px-2 rounded-lg flex items-center gap-1 select-none">
+                        <i class="bi bi-lock-fill"></i> TERKUNCI
+                    </span>
                 </div>
 
                 <!-- Warning if mapel not configured -->
@@ -386,6 +583,7 @@ $tenantList = $data['tenant_list'] ?? [];
                                 <th class="py-3">NISN</th>
                                 <th class="py-3">Kelas</th>
                                 <th class="py-3">Jurusan</th>
+                                <th class="py-3 text-center">Total Nilai</th>
                                 <th class="py-3 text-center">Rata-rata Nilai</th>
                                 <th class="py-3 text-center">Kelengkapan (5 Sem)</th>
                                 <th class="py-3 text-center pe-6">Status Kelayakan</th>
@@ -394,15 +592,15 @@ $tenantList = $data['tenant_list'] ?? [];
                         <tbody>
                             <!-- Loading State -->
                             <tr v-if="loading">
-                                <td colspan="8" class="text-center py-10 text-slate-400 text-xs">
-                                    <div class="spinner-border spinner-border-sm text-primary me-2"></div>
-                                    Memuat simulasi data siswa...
+                                <td colspan="9" class="text-center py-10 text-slate-400 text-xs">
+                                     <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                                     Memuat simulasi data siswa...
                                 </td>
                             </tr>
                             <!-- Empty State -->
                             <tr v-else-if="filteredStudents.length === 0">
-                                <td colspan="8" class="text-center py-10 text-slate-400 text-xs">
-                                    Tidak ada data siswa kelas 12 yang terdeteksi dengan kriteria ini.
+                                <td colspan="9" class="text-center py-10 text-slate-400 text-xs">
+                                     Tidak ada data siswa kelas 12 yang terdeteksi dengan kriteria ini.
                                 </td>
                             </tr>
                             <!-- Simulated student list -->
@@ -412,24 +610,51 @@ $tenantList = $data['tenant_list'] ?? [];
                                         #{{ stu.majorRank }}
                                     </span>
                                 </td>
-                                <td class="font-semibold text-slate-800">{{ stu.nama_lengkap }}</td>
+                                <td>
+                                    <div class="flex items-center gap-2">
+                                        <button class="btn btn-link p-0 text-slate-400 hover:text-indigo-600" title="Audit Detail Nilai Rapor" @click="showAuditModal(stu.id)">
+                                            <i class="bi bi-eye-fill fs-6"></i>
+                                        </button>
+                                        <span class="font-semibold text-slate-800">{{ stu.nama_lengkap }}</span>
+                                    </div>
+                                </td>
                                 <td class="font-monospace text-xs text-slate-500">{{ stu.nisn || '—' }}</td>
                                 <td class="text-slate-600">{{ stu.nama_kelas || '—' }}</td>
                                 <td class="text-slate-600">{{ stu.nama_jurusan || '—' }}</td>
+                                <td class="text-center font-bold text-slate-700">
+                                    {{ stu.total_nilai > 0 ? stu.total_nilai.toFixed(2) : '—' }}
+                                </td>
                                 <td class="text-center font-bold" :class="{'text-slate-800': stu.rata_rata > 0, 'text-slate-300': stu.rata_rata === 0}">
                                     {{ stu.rata_rata > 0 ? stu.rata_rata.toFixed(2) : '—' }}
                                 </td>
                                 <td class="text-center">
                                     <span class="text-xs px-2.5 py-1 rounded-full font-semibold"
-                                          :class="stu.jumlah_nilai === (totalConfiguredMapels * 5) ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-amber-50 text-amber-700 border border-amber-100'">
-                                        {{ stu.jumlah_nilai }} / {{ totalConfiguredMapels * 5 }} Nilai
+                                          :class="stu.jumlah_nilai === totalConfiguredSemesters ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-amber-50 text-amber-700 border border-amber-100'">
+                                        {{ stu.jumlah_nilai }} / {{ totalConfiguredSemesters }} Nilai
                                     </span>
                                 </td>
                                 <td class="text-center pe-6">
-                                    <span class="text-xs px-3 py-1.5 rounded-xl font-bold uppercase"
-                                          :class="stu.isEligible ? 'badge-eligible' : 'badge-not-eligible'">
-                                        {{ stu.isEligible ? 'ELIGIBLE' : 'TIDAK ELIGIBLE' }}
-                                    </span>
+                                    <div class="flex flex-column align-items-center gap-1.5">
+                                        <!-- Status Badge -->
+                                        <span class="text-[10px] px-2.5 py-1 rounded-xl font-bold uppercase block w-100 text-center"
+                                              :class="stu.isEligible ? 'badge-eligible' : 'badge-not-eligible'">
+                                            {{ stu.isEligible ? 'ELIGIBLE' : 'TIDAK ELIGIBLE' }}
+                                            <span v-if="stu.status_eligible !== 'auto'" class="text-[9px] text-slate-400 block font-normal">(BK Manual)</span>
+                                        </span>
+                                        
+                                        <!-- BK Override Actions -->
+                                        <div v-if="!locks[3].is_locked && canWrite" class="flex gap-1">
+                                            <button v-if="stu.status_eligible !== 'eligible'" class="btn btn-success py-0.5 px-1.5 rounded-lg text-[9px] font-bold uppercase border-0 text-white" title="Paksa Eligible" @click="saveManualEligible(stu.id, 'eligible')">
+                                                Eligible
+                                            </button>
+                                            <button v-if="stu.status_eligible !== 'tidak_eligible'" class="btn btn-danger py-0.5 px-1.5 rounded-lg text-[9px] font-bold uppercase border-0 text-white" title="Paksa Tidak Eligible" @click="saveManualEligible(stu.id, 'tidak_eligible')">
+                                                Tidak
+                                            </button>
+                                            <button v-if="stu.status_eligible !== 'auto'" class="btn btn-secondary py-0.5 px-1.5 rounded-lg text-[9px] font-bold uppercase border-0 text-white" title="Reset ke Auto" @click="saveManualEligible(stu.id, 'auto')">
+                                                Auto
+                                            </button>
+                                        </div>
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>
@@ -705,6 +930,101 @@ $tenantList = $data['tenant_list'] ?? [];
         <?php include __DIR__ . '/bk/kampus_config_ui.php'; ?>
     </template>
 
+    <!-- MODAL AUDIT DETAIL NILAI RAPOR -->
+    <Teleport to="body">
+        <div class="modal fade" id="modalAuditGrades" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content border-0 rounded-2xl shadow-lg">
+                    <!-- Header -->
+                    <div class="modal-header border-b border-slate-100 px-6 py-4 flex items-center justify-between">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                                <i class="bi bi-file-earmark-spreadsheet-fill text-sm"></i>
+                            </div>
+                            <div>
+                                <h5 class="modal-title font-bold text-sm text-slate-800">Audit Detail Nilai Rapor</h5>
+                                <p class="text-[10px] text-slate-400 mt-0.5">Detail nilai per mapel & semester yang digunakan untuk PDSS</p>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close text-slate-400 bg-transparent border-0 text-xl font-bold" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    
+                    <!-- Body -->
+                    <div class="modal-body p-6" v-if="auditGrades">
+                        <!-- Student Info Card -->
+                        <div class="bg-slate-50 border border-slate-100 rounded-xl p-4 mb-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div>
+                                <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Nama Lengkap</span>
+                                <span class="text-xs font-bold text-slate-800 block mt-0.5">{{ auditGrades.student.nama_lengkap }}</span>
+                            </div>
+                            <div>
+                                <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">NISN</span>
+                                <span class="text-xs font-semibold text-slate-700 block mt-0.5 font-monospace">{{ auditGrades.student.nisn || '—' }}</span>
+                            </div>
+                            <div>
+                                <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Kelas</span>
+                                <span class="text-xs font-semibold text-slate-700 block mt-0.5">{{ auditGrades.student.nama_kelas || '—' }}</span>
+                            </div>
+                            <div>
+                                <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Jurusan</span>
+                                <span class="text-xs font-semibold text-slate-700 block mt-0.5">{{ auditGrades.student.nama_jurusan || '—' }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Audit Table -->
+                        <div class="table-responsive rounded-xl border border-slate-100 overflow-hidden">
+                            <table class="table table-bordered align-middle text-xs mb-0">
+                                <thead class="bg-slate-50 text-center font-bold text-slate-600">
+                                    <tr>
+                                        <th rowspan="2" class="align-middle text-start ps-4" style="min-width: 180px;">Nama Mapel</th>
+                                        <th colspan="2" class="py-1.5 border-l">Kelas X</th>
+                                        <th colspan="2" class="py-1.5 border-l">Kelas XI</th>
+                                        <th colspan="2" class="py-1.5 border-l">Kelas XII</th>
+                                    </tr>
+                                    <tr class="bg-slate-100 text-[10px]">
+                                        <th class="py-1 border-l">Sem 1</th>
+                                        <th class="py-1">Sem 2</th>
+                                        <th class="py-1 border-l">Sem 3</th>
+                                        <th class="py-1">Sem 4</th>
+                                        <th class="py-1 border-l">Sem 5</th>
+                                        <th class="py-1">Sem 6</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="g in auditGrades.grades" :key="g.mapel_id">
+                                        <td class="font-semibold text-slate-700 ps-4">
+                                            {{ g.nama_mapel }}
+                                            <span class="text-[10px] text-slate-400 font-mono block">({{ g.kode_mapel }})</span>
+                                        </td>
+                                        <!-- Sem 1-6 -->
+                                        <td v-for="sem in [1,2,3,4,5,6]" :key="sem" class="text-center py-2.5">
+                                            <div v-if="g['sem_' + sem].is_configured">
+                                                <span class="font-bold text-slate-800 animate-fade-in" v-if="g['sem_' + sem].nilai !== null">
+                                                    {{ g['sem_' + sem].nilai }}
+                                                </span>
+                                                <span class="text-slate-300" v-else>—</span>
+                                                <span class="text-[9px] text-slate-400 block font-normal mt-0.5" v-if="g['sem_' + sem].tahun_ajaran">
+                                                    {{ g['sem_' + sem].tahun_ajaran }}
+                                                </span>
+                                            </div>
+                                            <div v-else class="bg-slate-50 text-[10px] text-slate-400 py-1 select-none font-medium">
+                                                N/A
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-body p-6 text-center text-slate-400 text-xs py-10" v-else>
+                        <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                        Memuat data nilai audit rapor...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
 </div>
 
 <!-- Vue 3 Interactive Routing & Lifecycle Scripts -->
@@ -766,6 +1086,17 @@ $tenantList = $data['tenant_list'] ?? [];
                 showMapelConfig: false,
                 mapelNotConfigured: false,
                 totalConfiguredMapels: 0,
+                totalConfiguredSemesters: 0,
+                downloadSemester: 1,
+                filterAcademicYear: '',
+                academicYears: [],
+                useERapor: false,
+                locks: {
+                    1: { is_locked: false, locked_by: null, locked_at: null },
+                    2: { is_locked: false, locked_by: null, locked_at: null },
+                    3: { is_locked: false, locked_by: null, locked_at: null }
+                },
+                auditGrades: null,
                 privacyMask: true,
                 isStudent: _userRole === 'siswa',
                 canWrite: _canWrite,
@@ -809,6 +1140,25 @@ $tenantList = $data['tenant_list'] ?? [];
                     }
                 }
             };
+        },
+
+        watch: {
+            useERapor(newVal) {
+                if (!this.locks[2].is_locked) {
+                    let base = 5;
+                    if (this.accreditation.includes('A')) base = 40;
+                    else if (this.accreditation.includes('B')) base = 25;
+                    
+                    this.quotaPercent = newVal ? (base + 5) : base;
+                }
+            },
+            activeTab(newVal) {
+                if (newVal === 'master_kampus') {
+                    this.fetchKampus();
+                } else if (newVal === 'master_jalur') {
+                    this.fetchJalur();
+                }
+            }
         },
 
         computed: {
@@ -868,8 +1218,14 @@ $tenantList = $data['tenant_list'] ?? [];
 
                     group.forEach((stu, index) => {
                         stu.majorRank = index + 1;
-                        // Siswa dinyatakan eligible jika masuk kuota dan memiliki nilai rapor terinput (> 0)
-                        stu.isEligible = (stu.majorRank <= limit) && (stu.rata_rata > 0);
+                        if (stu.status_eligible === 'eligible') {
+                            stu.isEligible = true;
+                        } else if (stu.status_eligible === 'tidak_eligible') {
+                            stu.isEligible = false;
+                        } else {
+                            // Siswa dinyatakan eligible jika masuk kuota dan memiliki nilai rapor terinput (> 0)
+                            stu.isEligible = (stu.majorRank <= limit) && (stu.rata_rata > 0);
+                        }
                         allProcessed.push(stu);
                     });
                 });
@@ -903,22 +1259,23 @@ $tenantList = $data['tenant_list'] ?? [];
 
             // Cohort Stats
             stats() {
-                const totalStudents = this.students.length;
+                const list = this.filteredStudents;
+                const totalStudents = list.length;
                 let completenessRate = 0;
                 let studentsWithGrades = 0;
                 
-                if (totalStudents > 0 && this.totalConfiguredMapels > 0) {
-                    const totalExpectedGrades = totalStudents * this.totalConfiguredMapels * 5;
-                    const totalActualGrades = this.students.reduce((sum, s) => sum + s.jumlah_nilai, 0);
+                if (totalStudents > 0 && this.totalConfiguredSemesters > 0) {
+                    const totalExpectedGrades = totalStudents * this.totalConfiguredSemesters;
+                    const totalActualGrades = list.reduce((sum, s) => sum + s.jumlah_nilai, 0);
                     completenessRate = Math.min(100, Math.round((totalActualGrades / totalExpectedGrades) * 100));
-                    studentsWithGrades = this.students.filter(s => s.jumlah_nilai > 0).length;
+                    studentsWithGrades = list.filter(s => s.jumlah_nilai > 0).length;
                 } else if (totalStudents > 0) {
-                    studentsWithGrades = this.students.filter(s => s.rata_rata > 0).length;
+                    studentsWithGrades = list.filter(s => s.rata_rata > 0).length;
                     completenessRate = Math.round((studentsWithGrades / totalStudents) * 100);
                 }
                 
                 // Hitung total eligible dari simulasi saat ini
-                const eligibleCount = this.processedStudents.filter(s => s.isEligible).length;
+                const eligibleCount = list.filter(s => s.isEligible).length;
 
                 return {
                     totalStudents,
@@ -953,6 +1310,11 @@ $tenantList = $data['tenant_list'] ?? [];
             // Siswa secara paksa tidak bisa mematikan masking
             if (this.isStudent) {
                 this.privacyMask = true;
+            }
+            if (this.activeTab === 'master_kampus') {
+                this.fetchKampus();
+            } else if (this.activeTab === 'master_jalur') {
+                this.fetchJalur();
             }
         },
 
@@ -1185,20 +1547,66 @@ $tenantList = $data['tenant_list'] ?? [];
                     return;
                 }
                 try {
-                    const url = this.currentTenantId ? `${_baseUrl}/api/v1/pdss/kesiapan?tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/pdss/kesiapan`;
+                    let url = this.currentTenantId ? `${_baseUrl}/api/v1/pdss/kesiapan?tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/pdss/kesiapan`;
+                    if (this.filterAcademicYear) {
+                        url += (url.includes('?') ? '&' : '?') + 'tahun_ajaran_id=' + encodeURIComponent(this.filterAcademicYear);
+                    }
                     const res = await axios.get(url);
                     if (res.data.success) {
                         this.students = res.data.data || [];
                         this.accreditation = res.data.accreditation || 'A';
                         this.mapelNotConfigured = res.data.mapel_not_configured || false;
                         this.totalConfiguredMapels = res.data.total_configured_mapels || 0;
-                        // Auto-set default quota percentage based on accreditation
-                        if (this.accreditation.includes('A')) this.quotaPercent = 40;
-                        else if (this.accreditation.includes('B')) this.quotaPercent = 25;
-                        else this.quotaPercent = 5;
+                        this.totalConfiguredSemesters = res.data.total_configured_semesters || 0;
+                        this.academicYears = res.data.years || [];
+                        
+                        // Set default academic year if not chosen
+                        if (!this.filterAcademicYear && this.academicYears.length > 0) {
+                            const active = this.academicYears.find(y => parseInt(y.is_active) === 1);
+                            if (active) this.filterAcademicYear = active.id;
+                            else this.filterAcademicYear = this.academicYears[0].id;
+                        }
+
+                        this.locks = res.data.locks || {
+                            1: { is_locked: false, locked_by: null, locked_at: null },
+                            2: { is_locked: false, locked_by: null, locked_at: null },
+                            3: { is_locked: false, locked_by: null, locked_at: null }
+                        };
+
+                        // Auto-set default quota percentage based on accreditation (draft/unlocked only)
+                        if (!this.locks[2].is_locked) {
+                            let base = 5;
+                            if (this.accreditation.includes('A')) base = 40;
+                            else if (this.accreditation.includes('B')) base = 25;
+                            
+                            this.quotaPercent = this.useERapor ? (base + 5) : base;
+                        }
                     }
                 } catch (e) {
                     console.error('Failed fetching PDSS stats', e);
+                }
+            },
+
+            showSelectTaWarning() {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Pilih Tahun Ajaran',
+                    text: 'Silakan pilih Tahun Ajaran terlebih dahulu sebelum mengunduh leger nilai.',
+                    confirmButtonColor: '#3085d6'
+                });
+            },
+
+            async onAcademicYearChange() {
+                this.loading = true;
+                try {
+                    await Promise.all([
+                        this.fetchKesiapan(),
+                        this.fetchPdssMapels()
+                    ]);
+                } catch (e) {
+                    console.error('Error changing academic year', e);
+                } finally {
+                    this.loading = false;
                 }
             },
 
@@ -1209,7 +1617,10 @@ $tenantList = $data['tenant_list'] ?? [];
                 }
                 this.loadingMapels = true;
                 try {
-                    const url = this.currentTenantId ? `${_baseUrl}/api/v1/pdss/config-mapel?tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/pdss/config-mapel`;
+                    let url = this.currentTenantId ? `${_baseUrl}/api/v1/pdss/config-mapel?tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/pdss/config-mapel`;
+                    if (this.filterAcademicYear) {
+                        url += (url.includes('?') ? '&' : '?') + 'tahun_ajaran_id=' + encodeURIComponent(this.filterAcademicYear);
+                    }
                     const res = await axios.get(url);
                     if (res.data.success) {
                         this.pdssMapels = res.data.data || [];
@@ -1222,11 +1633,20 @@ $tenantList = $data['tenant_list'] ?? [];
             },
 
             async savePdssMapels() {
-                const selectedIds = this.pdssMapels.filter(m => m.is_selected).map(m => m.id);
+                if (this.locks[1].is_locked) return;
+                const configs = this.pdssMapels.map(m => ({
+                    mapel_id: m.id,
+                    sem_1: m.sem_1 ? 1 : 0,
+                    sem_2: m.sem_2 ? 1 : 0,
+                    sem_3: m.sem_3 ? 1 : 0,
+                    sem_4: m.sem_4 ? 1 : 0,
+                    sem_5: m.sem_5 ? 1 : 0,
+                    sem_6: m.sem_6 ? 1 : 0
+                }));
                 this.savingMapels = true;
                 try {
                     const url = this.currentTenantId ? `${_baseUrl}/api/v1/pdss/config-mapel?tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/pdss/config-mapel`;
-                    const res = await axios.post(url, { mapel_ids: selectedIds });
+                    const res = await axios.post(url, { configs, tahun_ajaran_id: this.filterAcademicYear });
                     if (res.data.success) {
                         Swal.fire({
                             icon: 'success',
@@ -1245,6 +1665,87 @@ $tenantList = $data['tenant_list'] ?? [];
                     });
                 } finally {
                     this.savingMapels = false;
+                }
+            },
+
+            async saveManualEligible(siswaId, status) {
+                if (this.locks[3].is_locked) return;
+                try {
+                    const url = this.currentTenantId ? `${_baseUrl}/api/v1/pdss/manual-eligible?tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/pdss/manual-eligible`;
+                    const res = await axios.post(url, { siswa_id: siswaId, status_eligible: status });
+                    if (res.data.success) {
+                        this.fetchKesiapan();
+                    }
+                } catch (e) {
+                    console.error('Failed updating manual eligibility', e);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal',
+                        text: e.response?.data?.error || 'Gagal merubah status kelayakan.'
+                    });
+                }
+            },
+
+            async togglePdssLock(step) {
+                const targetLockState = !this.locks[step].is_locked;
+                const actionText = targetLockState ? 'mengunci' : 'membuka kunci';
+                const confirmText = targetLockState 
+                    ? `Langkah ${step} akan dibekukan.` 
+                    : `Anda akan dapat mengubah Langkah ${step} kembali.`;
+
+                const result = await Swal.fire({
+                    title: `Apakah Anda yakin ingin ${actionText} data Langkah ${step}?`,
+                    text: confirmText,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, Lanjutkan',
+                    cancelButtonText: 'Batal'
+                });
+
+                if (!result.isConfirmed) return;
+
+                try {
+                    const url = this.currentTenantId ? `${_baseUrl}/api/v1/pdss/lock?tenant_id=${this.currentTenantId}` : `${_baseUrl}/api/v1/pdss/lock`;
+                    const res = await axios.post(url, { step: step, is_locked: targetLockState, tahun_ajaran_id: this.filterAcademicYear });
+                    if (res.data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil',
+                            text: `Status penguncian Langkah ${step} berhasil diperbarui.`
+                        });
+                        this.fetchKesiapan();
+                    }
+                } catch (e) {
+                    console.error('Failed toggling PDSS lock', e);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal',
+                        text: e.response?.data?.error || 'Gagal mengubah status penguncian.'
+                    });
+                }
+            },
+
+            async showAuditModal(siswaId) {
+                this.auditGrades = null;
+                const myModal = new bootstrap.Modal(document.getElementById('modalAuditGrades'));
+                myModal.show();
+                
+                try {
+                    const url = this.currentTenantId 
+                        ? `${_baseUrl}/api/v1/pdss/student-grades?siswa_id=${siswaId}&tenant_id=${this.currentTenantId}` 
+                        : `${_baseUrl}/api/v1/pdss/student-grades?siswa_id=${siswaId}`;
+                    const res = await axios.get(url);
+                    if (res.data.success) {
+                        this.auditGrades = res.data;
+                    }
+                } catch (e) {
+                    console.error('Failed fetching audit grades', e);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal',
+                        text: 'Gagal memuat rincian nilai siswa.'
+                    });
+                    myModal.hide();
                 }
             },
 
