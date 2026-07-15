@@ -67,13 +67,30 @@
                     $nilaiAkhir = floatval($g['nilai_akhir'] ?? 0);
                     $jumlahNilai += $nilaiAkhir;
                     $count++;
+
+                    $detail = !empty($g['nilai_detail_json']) ? json_decode($g['nilai_detail_json'], true) : [];
+                    $highest = isset($detail['deskripsi_tertinggi']) && $detail['deskripsi_tertinggi'] !== '' ? $detail['deskripsi_tertinggi'] : '';
+                    $lowest = isset($detail['deskripsi_terendah']) && $detail['deskripsi_terendah'] !== '' ? $detail['deskripsi_terendah'] : '';
+                    
+                    $capaian = '';
+                    if ($highest && $lowest) {
+                        $capaian = "Capaian Tertinggi: " . $highest . "\nCapaian Terendah: " . $lowest;
+                    } elseif ($highest) {
+                        $capaian = "Capaian Tertinggi: " . $highest;
+                    } elseif ($lowest) {
+                        $capaian = "Capaian Terendah: " . $lowest;
+                    } else {
+                        $capaian = "Tercapai dengan baik.";
+                    }
+
+                    $kktp = !empty($g['kkm']) ? floatval($g['kkm']) : '-';
             ?>
             <tr>
                 <td class='text-center'><?= $index + 1 ?></td>
                 <td><?= htmlspecialchars($g['nama_mapel']) ?></td>
                 <td class='text-center'><?= $nilaiAkhir ?></td>
-                <td>Tercapai dengan sangat baik.</td> <!-- Placeholder for Capaian Pembelajaran -->
-                <td class='text-center'>75</td> <!-- Placeholder for KKTP -->
+                <td style="white-space: pre-line; font-size: 9.5pt;"><?= htmlspecialchars($capaian) ?></td>
+                <td class='text-center'><?= $kktp ?></td>
             </tr>
             <?php 
                 endforeach;
