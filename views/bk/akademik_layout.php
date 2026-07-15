@@ -94,13 +94,23 @@ $tenantId   = $tenant_id ?? '';
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="pdss-tab" data-bs-toggle="tab" data-bs-target="#pdss" type="button" role="tab">
-                            <i class="bi bi-database me-2 fs-6"></i> Pangkalan Data (PDSS)
+                        <button class="nav-link" id="kesiapan-tab" data-bs-toggle="tab" data-bs-target="#pdss" type="button" role="tab" onclick="switchVueTab('kesiapan')">
+                            <i class="bi bi-award-fill me-2 fs-6"></i> Kesiapan & Eligibilitas Siswa
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="simulasi-tab" data-bs-toggle="tab" data-bs-target="#pdss" type="button" role="tab" onclick="switchVueTab('simulasi')">
+                            <i class="bi bi-journal-check me-2 fs-6"></i> Simulasi Pilihan Kampus
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="master-kampus-tab" data-bs-toggle="tab" data-bs-target="#master-kampus" type="button" role="tab">
                             <i class="bi bi-building me-2 fs-6"></i> Master Kampus & Prodi
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="master-jalur-tab" data-bs-toggle="tab" data-bs-target="#pdss" type="button" role="tab" onclick="switchVueTab('master_jalur')">
+                            <i class="bi bi-signpost-split-fill me-2 fs-6"></i> Master Jalur Masuk
                         </button>
                     </li>
                 </ul>
@@ -128,7 +138,8 @@ $tenantId   = $tenant_id ?? '';
             <div class="card border-0 shadow-sm rounded-4">
                 <div class="card-body p-4">
                     <?php 
-                        $allowed_pdss_tabs = ['kesiapan', 'master_jalur']; 
+                        $allowed_pdss_tabs = ['kesiapan', 'master_jalur', 'simulasi']; 
+                        $hide_pdss_tabs = true; // Sembunyikan tabs internal PDSS karena sudah naik ke tingkat 1
                         include __DIR__ . '/../pdss_index.php'; 
                     ?>
                 </div>
@@ -150,14 +161,26 @@ $tenantId   = $tenant_id ?? '';
 
 </div>
 
-<!-- Auto-resize fix for Vue apps inside hidden Bootstrap tabs -->
+<!-- Auto-resize & tab sync fix for Vue apps inside Bootstrap tabs -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const pdssTab = document.getElementById('pdss-tab');
-    if (pdssTab) {
-        pdssTab.addEventListener('shown.bs.tab', function () {
-            window.dispatchEvent(new Event('resize'));
-        });
+function switchVueTab(tabName) {
+    if (window.vueApps && window.vueApps['#pdssApp']) {
+        window.vueApps['#pdssApp'].instance.activeTab = tabName;
+    } else {
+        window.targetPendingTab = tabName;
     }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Event listener untuk handle re-layout grafis / peta kelas di Bootstrap tab
+    const triggerElements = ['kesiapan-tab', 'master-jalur-tab', 'simulasi-tab'];
+    triggerElements.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('shown.bs.tab', function () {
+                window.dispatchEvent(new Event('resize'));
+            });
+        }
+    });
 });
 </script>

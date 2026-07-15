@@ -147,7 +147,7 @@ $tenantList = $data['tenant_list'] ?? [];
     <!-- TABS NAVIGATION -->
     <?php
         $allowed_pdss_tabs = $allowed_pdss_tabs ?? ["kesiapan", "tracking", "config"];
-        $hide_pdss_tabs = (!empty($is_sub_module) && count($allowed_pdss_tabs) <= 1);
+        $hide_pdss_tabs = $hide_pdss_tabs ?? (!empty($is_sub_module) && count($allowed_pdss_tabs) <= 1);
     ?>
     <div class="card border-0 shadow-sm rounded-4 mb-4" <?php if ($hide_pdss_tabs) echo 'style="display:none;"'; ?>>
         <div class="card-body p-2 bg-white rounded-4">
@@ -1176,6 +1176,10 @@ $tenantList = $data['tenant_list'] ?? [];
                     siswa: null,
                     saving: false,
                     conflictMsg: '',
+                    searchKampus1: '',
+                    searchKampus2: '',
+                    showDropdown1: false,
+                    showDropdown2: false,
                     form: {
                         kampus_id_1: '', prodi_id_1: '',
                         kampus_id_2: '', prodi_id_2: '',
@@ -1294,6 +1298,18 @@ $tenantList = $data['tenant_list'] ?? [];
                 return allProcessed;
             },
 
+            filteredKampus1() {
+                const search = (this.modalSimulasi.searchKampus1 || '').toLowerCase().trim();
+                if (!search) return this.listKampusFlat;
+                return this.listKampusFlat.filter(c => c.nama_kampus.toLowerCase().includes(search));
+            },
+
+            filteredKampus2() {
+                const search = (this.modalSimulasi.searchKampus2 || '').toLowerCase().trim();
+                if (!search) return this.listKampusFlat;
+                return this.listKampusFlat.filter(c => c.nama_kampus.toLowerCase().includes(search));
+            },
+
             // Filtered Students List (Simulasi)
             filteredStudents() {
                 let list = this.processedStudents;
@@ -1359,6 +1375,10 @@ $tenantList = $data['tenant_list'] ?? [];
         },
 
         mounted() {
+            if (window.targetPendingTab) {
+                this.activeTab = window.targetPendingTab;
+                window.targetPendingTab = null;
+            }
             this.refreshAll();
             // Siswa secara paksa tidak bisa mematikan masking
             if (this.isStudent) {
@@ -2116,7 +2136,7 @@ $tenantList = $data['tenant_list'] ?? [];
 
             async fetchKampusFlatList() {
                 try {
-                    let url = `${_baseUrl}/api/v1/kampus/flat-list`;
+                    let url = `${_baseUrl}/api/v1/kampus`;
                     if (this.currentTenantId) url += `?tenant_id=${this.currentTenantId}`;
                     const res = await axios.get(url);
                     if (res.data.success) {
@@ -2132,12 +2152,15 @@ $tenantList = $data['tenant_list'] ?? [];
                 if (this.listProdiByKampus[kampusId]) return; // Cache hit
 
                 try {
-                    let url = `${_baseUrl}/api/v1/kampus/prodi/list?kampus_id=${kampusId}`;
+                    let url = `${_baseUrl}/api/v1/kampus/prodi?kampus_id=${kampusId}`;
                     if (this.currentTenantId) url += `&tenant_id=${this.currentTenantId}`;
                     const res = await axios.get(url);
                     if (res.data.success) {
-                        // Gunakan reactive Vue set
-                        this.listProdiByKampus[kampusId] = res.data.data;
+                        // Gunakan spread operator agar properti dinamis terdeteksi reaktif oleh Vue
+                        this.listProdiByKampus = {
+                            ...this.listProdiByKampus,
+                            [kampusId]: res.data.data
+                        };
                     }
                 } catch (e) {
                     console.error('Gagal memuat prodi', e);
@@ -2156,9 +2179,31 @@ $tenantList = $data['tenant_list'] ?? [];
                 }
             },
 
+            selectKampus(slot, kampus) {
+                if (slot === 1) {
+                    this.modalSimulasi.form.kampus_id_1 = kampus ? kampus.id : '';
+                    this.modalSimulasi.showDropdown1 = false;
+                    this.onKampusChange(1);
+                } else {
+                    this.modalSimulasi.form.kampus_id_2 = kampus ? kampus.id : '';
+                    this.modalSimulasi.showDropdown2 = false;
+                    this.onKampusChange(2);
+                }
+            },
+
+            getKampusName(kampusId) {
+                if (!kampusId) return '';
+                const k = this.listKampusFlat.find(c => c.id === kampusId);
+                return k ? k.nama_kampus : '';
+            },
+
             openModalSimulasi(siswa) {
                 this.modalSimulasi.siswa = siswa;
                 this.modalSimulasi.conflictMsg = '';
+                this.modalSimulasi.searchKampus1 = '';
+                this.modalSimulasi.searchKampus2 = '';
+                this.modalSimulasi.showDropdown1 = false;
+                this.modalSimulasi.showDropdown2 = false;
                 this.modalSimulasi.form.kampus_id_1 = siswa.kampus_id_1 || '';
                 this.modalSimulasi.form.prodi_id_1 = siswa.prodi_id_1 || '';
                 this.modalSimulasi.form.kampus_id_2 = siswa.kampus_id_2 || '';

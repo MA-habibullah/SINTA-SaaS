@@ -203,6 +203,7 @@
                 </thead>
                 <tbody class="text-xs divide-y divide-slate-100">
                     <tr v-for="s in simulasiData.filter(item => {
+                        if (!item.is_eligible) return false;
                         if (filterSimulasi.search && !item.nama_lengkap.toLowerCase().includes(filterSimulasi.search.toLowerCase()) && !item.nisn.includes(filterSimulasi.search)) return false;
                         if (filterSimulasi.major && item.nama_jurusan !== filterSimulasi.major) return false;
                         if (filterSimulasi.status_konflik === 'konflik' && !item.is_konflik_1 && !item.is_konflik_2) return false;
@@ -224,6 +225,12 @@
                         <td>
                             <div class="font-bold text-slate-800">{{ s.nama_lengkap }}</div>
                             <div class="text-[10px] text-slate-400 font-mono mt-0.5">NISN: {{ s.nisn }}</div>
+                            <!-- Badge Tidak Eligible -->
+                            <span v-if="!s.is_eligible"
+                                  class="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded bg-red-50 text-[9px] text-red-600 border border-red-100 font-bold uppercase tracking-wide">
+                                <i class="bi bi-x-circle-fill"></i> Tidak Eligible
+                                <span v-if="s.status_eligible === 'tidak_eligible'" class="font-normal opacity-70">(BK Manual)</span>
+                            </span>
                         </td>
 
                         <!-- Kelas / Jurusan -->
@@ -295,24 +302,32 @@
                         <!-- Aksi -->
                         <td class="text-right pr-6">
                             <div class="flex items-center justify-end gap-1">
-                                <!-- Isi/Edit Button -->
-                                <button v-if="!simulasiSettings[activeNoSimulasi]?.is_locked"
+
+                                <!-- Badge Tidak Eligible (tidak bisa simulasi) -->
+                                <span v-if="!s.is_eligible"
+                                      class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 text-[10px] text-slate-400 font-semibold cursor-not-allowed"
+                                      title="Siswa ini tidak memenuhi kriteria eligible SNBP">
+                                    <i class="bi bi-lock-fill"></i> Tidak Eligible
+                                </span>
+
+                                <!-- Isi/Edit Button — hanya untuk siswa eligible -->
+                                <button v-if="s.is_eligible && !simulasiSettings[activeNoSimulasi]?.is_locked"
                                         class="btn btn-xs rounded-lg p-1.5 flex items-center justify-center text-slate-600 hover:text-purple-600 hover:bg-slate-50"
                                         title="Isi/Edit Pilihan"
                                         @click="openModalSimulasi(s)">
                                     <i class="bi bi-pencil-square fs-6"></i>
                                 </button>
 
-                                <!-- Upload Bukti (Only Simulasi 3 & Open & Submitted) -->
-                                <button v-if="activeNoSimulasi === 3 && !simulasiSettings[activeNoSimulasi]?.is_locked && s.sudah_isi"
+                                <!-- Upload Bukti (Only Simulasi 3 & Open & Submitted & Eligible) -->
+                                <button v-if="s.is_eligible && activeNoSimulasi === 3 && !simulasiSettings[activeNoSimulasi]?.is_locked && s.sudah_isi"
                                         class="btn btn-xs rounded-lg p-1.5 flex items-center justify-center text-slate-600 hover:text-emerald-600 hover:bg-slate-50"
                                         title="Upload Bukti Pendaftaran"
                                         @click="openModalUploadBukti(s)">
                                     <i class="bi bi-cloud-arrow-up-fill fs-6"></i>
                                 </button>
 
-                                <!-- Delete Pilihan -->
-                                <button v-if="s.sudah_isi && !simulasiSettings[activeNoSimulasi]?.is_locked"
+                                <!-- Delete Pilihan — hanya jika eligible & sudah isi -->
+                                <button v-if="s.is_eligible && s.sudah_isi && !simulasiSettings[activeNoSimulasi]?.is_locked"
                                         class="btn btn-xs rounded-lg p-1.5 flex items-center justify-center text-slate-600 hover:text-red-600 hover:bg-slate-50"
                                         title="Hapus Pilihan"
                                         @click="deleteSimulasi(s)">
@@ -336,7 +351,7 @@
     <!-- ═══ MODAL EDIT/ISI PILIHAN SIMULASI ═══ -->
     <div v-if="modalSimulasi.show" class="modal fade show block" tabindex="-1" style="background: rgba(15, 23, 42, 0.45); z-index: 1050;">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 rounded-2xl shadow-xl bg-white overflow-hidden">
+            <div class="modal-content border-0 rounded-2xl shadow-xl bg-white" style="overflow: visible;">
                 <div class="modal-header border-b border-slate-100 px-6 py-4 flex items-center justify-between">
                     <div class="flex items-center gap-2.5">
                         <div class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
@@ -360,12 +375,52 @@
                     </div>
 
                     <!-- PILIHAN 1 -->
-                    <div>
-                        <label class="form-label text-slate-600 text-xs font-semibold mb-1">Kampus Pilihan 1 <span class="text-red-500">*</span></label>
-                        <select v-model="modalSimulasi.form.kampus_id_1" class="form-select rounded-xl text-xs border-slate-200" @change="onKampusChange(1)">
-                            <option value="">-- Pilih Kampus --</option>
-                            <option v-for="c in listKampusFlat" :key="c.id" :value="c.id">{{ c.nama_kampus }}</option>
-                        </select>
+                    <div class="space-y-1 relative">
+                        <label class="form-label text-slate-600 text-xs font-semibold mb-0 flex items-center justify-between">
+                            <span>Kampus Pilihan 1 <span class="text-red-500">*</span></span>
+                        </label>
+                        
+                        <!-- Custom Searchable Dropdown Button -->
+                        <div class="relative">
+                            <button type="button" 
+                                    @click="modalSimulasi.showDropdown1 = !modalSimulasi.showDropdown1; modalSimulasi.showDropdown2 = false;"
+                                    class="form-select rounded-xl text-xs border-slate-200 w-full text-left bg-white flex items-center justify-between py-2 px-3 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                <span :class="modalSimulasi.form.kampus_id_1 ? 'text-slate-800 font-medium' : 'text-slate-400'">
+                                    {{ getKampusName(modalSimulasi.form.kampus_id_1) || '-- Pilih Kampus --' }}
+                                </span>
+                            </button>
+
+                            <!-- Dropdown List Container -->
+                            <div v-if="modalSimulasi.showDropdown1" 
+                                 class="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg p-2.5 max-h-60 overflow-hidden flex flex-col"
+                                 style="box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);">
+                                <!-- Input Pencarian di dalam Dropdown -->
+                                <div class="relative mb-2">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-slate-400">
+                                        <i class="bi bi-search text-[10px]"></i>
+                                    </span>
+                                    <input type="text" v-model="modalSimulasi.searchKampus1" placeholder="Cari kampus..." 
+                                           class="form-control pl-7 pr-3 py-1.5 rounded-lg text-xs border-slate-200 focus:ring-purple-500 focus:border-purple-500 w-full"
+                                           @click.stop>
+                                </div>
+                                <!-- Scrollable Opsi Kampus -->
+                                <div class="overflow-y-auto flex-1 space-y-0.5 max-h-40">
+                                    <div @click="selectKampus(1, null)"
+                                         class="p-2 hover:bg-slate-50 hover:text-purple-600 rounded-lg cursor-pointer text-xs text-slate-500 italic">
+                                        -- Kosongkan Pilihan --
+                                    </div>
+                                    <div v-for="c in filteredKampus1" :key="c.id" @click="selectKampus(1, c)"
+                                         class="p-2 hover:bg-purple-50 hover:text-purple-600 rounded-lg cursor-pointer text-xs text-slate-700 font-medium flex items-center justify-between"
+                                         :class="modalSimulasi.form.kampus_id_1 === c.id ? 'bg-purple-50 text-purple-600 font-bold' : ''">
+                                        <span>{{ c.nama_kampus }}</span>
+                                        <i v-if="modalSimulasi.form.kampus_id_1 === c.id" class="bi bi-check text-purple-600 text-sm"></i>
+                                    </div>
+                                    <div v-if="filteredKampus1.length === 0" class="p-3 text-center text-slate-400 italic text-xs">
+                                        Kampus tidak ditemukan
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div v-if="modalSimulasi.form.kampus_id_1">
@@ -378,16 +433,56 @@
                         </select>
                     </div>
 
-                    <!-- PILIHAN 2 (OPTIONAL) -->
-                    <div class="border-t border-slate-100 pt-3">
-                        <label class="form-label text-slate-600 text-xs font-semibold mb-1">Kampus Pilihan 2 <small class="text-slate-400 font-normal">(Opsional)</small></label>
-                        <select v-model="modalSimulasi.form.kampus_id_2" class="form-select rounded-xl text-xs border-slate-200" @change="onKampusChange(2)">
-                            <option value="">-- Pilih Kampus --</option>
-                            <option v-for="c in listKampusFlat" :key="c.id" :value="c.id">{{ c.nama_kampus }}</option>
-                        </select>
+                    <!-- PILIHAN 2 (Hanya tampil jika Kampus 1 & Prodi 1 sudah diisi) -->
+                    <div v-if="modalSimulasi.form.kampus_id_1 && modalSimulasi.form.prodi_id_1" class="border-t border-slate-100 pt-3 space-y-1 relative">
+                        <label class="form-label text-slate-600 text-xs font-semibold mb-0 flex items-center justify-between">
+                            <span>Kampus Pilihan 2 <small class="text-slate-400 font-normal">(Opsional)</small></span>
+                        </label>
+                        
+                        <!-- Custom Searchable Dropdown Button -->
+                        <div class="relative">
+                            <button type="button" 
+                                    @click="modalSimulasi.showDropdown2 = !modalSimulasi.showDropdown2; modalSimulasi.showDropdown1 = false;"
+                                    class="form-select rounded-xl text-xs border-slate-200 w-full text-left bg-white flex items-center justify-between py-2 px-3 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                <span :class="modalSimulasi.form.kampus_id_2 ? 'text-slate-800 font-medium' : 'text-slate-400'">
+                                    {{ getKampusName(modalSimulasi.form.kampus_id_2) || '-- Pilih Kampus --' }}
+                                </span>
+                            </button>
+
+                            <!-- Dropdown List Container -->
+                            <div v-if="modalSimulasi.showDropdown2" 
+                                 class="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg p-2.5 max-h-60 overflow-hidden flex flex-col"
+                                 style="box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);">
+                                <!-- Input Pencarian di dalam Dropdown -->
+                                <div class="relative mb-2">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-slate-400">
+                                        <i class="bi bi-search text-[10px]"></i>
+                                    </span>
+                                    <input type="text" v-model="modalSimulasi.searchKampus2" placeholder="Cari kampus..." 
+                                           class="form-control pl-7 pr-3 py-1.5 rounded-lg text-xs border-slate-200 focus:ring-purple-500 focus:border-purple-500 w-full"
+                                           @click.stop>
+                                </div>
+                                <!-- Scrollable Opsi Kampus -->
+                                <div class="overflow-y-auto flex-1 space-y-0.5 max-h-40">
+                                    <div @click="selectKampus(2, null)"
+                                         class="p-2 hover:bg-slate-50 hover:text-purple-600 rounded-lg cursor-pointer text-xs text-slate-500 italic">
+                                        -- Kosongkan Pilihan --
+                                    </div>
+                                    <div v-for="c in filteredKampus2" :key="c.id" @click="selectKampus(2, c)"
+                                         class="p-2 hover:bg-purple-50 hover:text-purple-600 rounded-lg cursor-pointer text-xs text-slate-700 font-medium flex items-center justify-between"
+                                         :class="modalSimulasi.form.kampus_id_2 === c.id ? 'bg-purple-50 text-purple-600 font-bold' : ''">
+                                        <span>{{ c.nama_kampus }}</span>
+                                        <i v-if="modalSimulasi.form.kampus_id_2 === c.id" class="bi bi-check text-purple-600 text-sm"></i>
+                                    </div>
+                                    <div v-if="filteredKampus2.length === 0" class="p-3 text-center text-slate-400 italic text-xs">
+                                        Kampus tidak ditemukan
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div v-if="modalSimulasi.form.kampus_id_2">
+                    <div v-if="modalSimulasi.form.kampus_id_1 && modalSimulasi.form.prodi_id_1 && modalSimulasi.form.kampus_id_2">
                         <label class="form-label text-slate-600 text-xs font-semibold mb-1">Program Studi Pilihan 2 <small class="text-slate-400 font-normal">(Opsional)</small></label>
                         <select v-model="modalSimulasi.form.prodi_id_2" class="form-select rounded-xl text-xs border-slate-200">
                             <option value="">-- Pilih Program Studi --</option>
@@ -404,7 +499,7 @@
                     </div>
                 </div>
 
-                <div class="modal-footer border-t border-slate-100 px-6 py-4 flex items-center justify-end gap-2 bg-slate-50">
+                <div class="modal-footer border-t border-slate-100 px-6 py-4 flex items-center justify-end gap-2 bg-slate-50 rounded-b-2xl">
                     <button type="button" class="btn btn-sm btn-light rounded-xl font-bold px-4" @click="modalSimulasi.show = false">Batal</button>
                     <button type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-4 flex items-center gap-1.5" :disabled="modalSimulasi.saving" @click="submitSimulasi">
                         <span v-if="modalSimulasi.saving" class="spinner-border spinner-border-sm" role="status"></span>

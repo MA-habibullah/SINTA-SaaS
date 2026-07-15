@@ -422,7 +422,19 @@ class PDSSController extends BaseController {
      */
     private function getSemesterLevel(string $className, string $semester): ?int {
         $className = strtoupper($className);
-        $isSemGanjil = strpos(strtolower($semester), 'ganjil') !== false;
+        $semStr = strtolower(trim($semester));
+
+        // === Support format integer langsung (1-6) ===
+        // Jika semester sudah berupa angka (disimpan sebagai '1','2','3','4','5','6')
+        if (is_numeric($semStr)) {
+            $semNum = (int)$semStr;
+            if ($semNum >= 1 && $semNum <= 6) {
+                return $semNum; // langsung kembalikan angka semester
+            }
+        }
+
+        // === Support format string lama: 'Ganjil', 'Genap', 'Semester Ganjil', dst ===
+        $isSemGanjil = strpos($semStr, 'ganjil') !== false || strpos($semStr, 'odd') !== false;
 
         if (strpos($className, '12') !== false || strpos($className, 'XII') !== false) {
             return $isSemGanjil ? 5 : 6;
@@ -2119,11 +2131,52 @@ class PDSSController extends BaseController {
                 }
             }
 
+            // --- LANGKAH 6b: Ambil manual eligible override ---
+            $stmtManual = $db->prepare("SELECT siswa_id, status_eligible FROM pdss_manual_eligible WHERE tenant_id = ?");
+            $stmtManual->execute([$tenantId]);
+            $manualEligibleMap = [];
+            foreach ($stmtManual->fetchAll(PDO::FETCH_ASSOC) as $me) {
+                $manualEligibleMap[$me['siswa_id']] = $me['status_eligible'];
+            }
+
+            // Ambil config kuota eligible per jurusan dari apiGetKesiapan
+            $stmtQuota = $db->prepare("
+                SELECT COUNT(DISTINCT s2.id) * 0.4 AS quota, s2.id_jurusan
+                FROM siswa s2
+                JOIN kelas k2 ON s2.id_kelas = k2.id
+                WHERE s2.tenant_id = ? AND s2.status = 'Aktif' AND s2.deleted_at IS NULL
+                  AND (k2.nama_kelas LIKE '%12%' OR k2.nama_kelas LIKE '%XII%')
+                GROUP BY s2.id_jurusan
+            ");
+            $stmtQuota->execute([$tenantId]);
+            $quotaMap = []; // id_jurusan => quota
+            foreach ($stmtQuota->fetchAll(PDO::FETCH_ASSOC) as $q) {
+                $quotaMap[$q['id_jurusan']] = (int)ceil($q['quota']);
+            }
+
             // --- LANGKAH 7: Susun output akhir ---
-            $output = [];
+            $tempOutput = [];
             foreach ($rankedStudents as $s) {
                 $sid = $s['id'];
                 $sim = $simMap[$sid] ?? null;
+                $jid = $s['id_jurusan'] ?? 'none';
+
+                // Hitung is_eligible dengan mempertimbangkan manual override
+                $manualStatus = $manualEligibleMap[$sid] ?? 'auto';
+                if ($manualStatus === 'eligible') {
+                    $isEligible = true;
+                } elseif ($manualStatus === 'tidak_eligible') {
+                    $isEligible = false;
+                } else {
+                    // Auto: 40% teratas per jurusan
+                    $limit = $quotaMap[$jid] ?? 999;
+                    $isEligible = ($s['rank_eligible'] <= $limit) && ($s['rata_rata'] > 0);
+                }
+
+                // Saring: Hanya siswa lolos eligible yang dimasukkan ke simulasi
+                if (!$isEligible) {
+                    continue;
+                }
 
                 $row = [
                     'siswa_id'      => $sid,
@@ -2133,8 +2186,10 @@ class PDSSController extends BaseController {
                     'nama_kelas'    => $s['nama_kelas'] ?? '-',
                     'nama_jurusan'  => $s['nama_jurusan'] ?? '-',
                     'kode_jurusan'  => $s['kode_jurusan'] ?? '-',
-                    'rank_eligible' => $s['rank_eligible'],
+                    'rank_eligible' => $s['rank_eligible'], // sementara
                     'rata_rata'     => $s['rata_rata'],
+                    'is_eligible'   => true,
+                    'status_eligible' => $manualStatus,
                     'sudah_isi'     => !is_null($sim),
 
                     // Pilihan 1
@@ -2175,8 +2230,25 @@ class PDSSController extends BaseController {
                     }
                 }
 
-                $output[] = $row;
+                $tempOutput[] = $row;
             }
+
+            // Urutkan secara global berdasarkan rata_rata tertinggi ke terendah
+            usort($tempOutput, function($a, $b) {
+                if ($a['rata_rata'] == $b['rata_rata']) {
+                    return strcmp($a['nama_lengkap'], $b['nama_lengkap']);
+                }
+                return $a['rata_rata'] > $b['rata_rata'] ? -1 : 1;
+            });
+
+            // Beri nomor urut rank_eligible baru secara global
+            $rank = 1;
+            foreach ($tempOutput as &$row) {
+                $row['rank_eligible'] = $rank++;
+            }
+            unset($row);
+
+            $output = $tempOutput;
 
             // Stats
             $totalEligible = count($output);
@@ -2222,9 +2294,11 @@ class PDSSController extends BaseController {
         $diisiOleh     = 'Guru BK';
 
         if (empty($siswaId) || !in_array($noSimulasi,[1,2,3])) {
+            error_log("[DEBUG apiSaveSimulasi 422] Data tidak lengkap: siswaId='$siswaId', noSimulasi='$noSimulasi'. Input: " . json_encode($input));
             $this->jsonResponse(['error' => 'Data tidak lengkap.'], 422); return;
         }
         if (empty($kampusId1) || empty($prodiId1)) {
+            error_log("[DEBUG apiSaveSimulasi 422] Pilihan 1 kosong: kampusId1='$kampusId1', prodiId1='$prodiId1'. Input: " . json_encode($input));
             $this->jsonResponse(['error' => 'Pilihan 1 (kampus dan prodi) wajib diisi.'], 422); return;
         }
 
@@ -2236,15 +2310,34 @@ class PDSSController extends BaseController {
                 $tahunAjaranId = $stmtTA->fetchColumn();
             }
 
-            // Cek setting simulasi: harus is_open = 1
+            // Tentukan role pemanggil
+            $currentRoles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
+            $isAdminOrBK  = !empty(array_intersect($currentRoles, ['super_admin', 'operator_sekolah', 'guru_bk']));
+
+            // Cek setting simulasi
             $stmtSetting = $db->prepare("SELECT is_open, is_locked FROM pdss_simulasi_setting WHERE tenant_id = ? AND tahun_ajaran_id = ? AND no_simulasi = ?");
             $stmtSetting->execute([$tenantId, $tahunAjaranId, $noSimulasi]);
             $setting = $stmtSetting->fetch(PDO::FETCH_ASSOC);
+
+            // Jika simulasi sudah dikunci — siapapun tidak boleh ubah
             if ($setting && (int)$setting['is_locked'] === 1) {
                 $this->jsonResponse(['error' => "Simulasi $noSimulasi sudah dikunci. Pilihan tidak dapat diubah."], 400); return;
             }
-            if (!$setting || (int)$setting['is_open'] === 0) {
+
+            // Siswa hanya bisa mengisi jika simulasi sudah dibuka oleh BK
+            // Admin / Guru BK bisa mengisi kapan saja (mereka yang membuka/mengatur)
+            if (!$isAdminOrBK && (!$setting || (int)$setting['is_open'] === 0)) {
                 $this->jsonResponse(['error' => "Simulasi $noSimulasi belum dibuka oleh BK."], 400); return;
+            }
+
+            // Set label diisi_oleh berdasarkan role
+            $userRoleName = $_SESSION['role_name'] ?? '';
+            if (in_array($userRoleName, ['super_admin', 'operator_sekolah'], true)) {
+                $diisiOleh = 'Admin';
+            } elseif ($userRoleName === 'guru_bk') {
+                $diisiOleh = 'Guru BK';
+            } else {
+                $diisiOleh = 'Siswa';
             }
 
             // Ambil snapshot nama kampus & prodi
@@ -2283,19 +2376,19 @@ class PDSSController extends BaseController {
             $db->prepare("
                 INSERT INTO pdss_simulasi
                 (tenant_id, siswa_id, tahun_ajaran_id, no_simulasi, kampus_id_1, prodi_id_1, nama_kampus_1, nama_prodi_1, kampus_id_2, prodi_id_2, nama_kampus_2, nama_prodi_2, catatan_siswa, diisi_oleh, status)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'Guru BK','submitted')
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'submitted')
                 ON DUPLICATE KEY UPDATE
                     kampus_id_1=VALUES(kampus_id_1), prodi_id_1=VALUES(prodi_id_1),
                     nama_kampus_1=VALUES(nama_kampus_1), nama_prodi_1=VALUES(nama_prodi_1),
                     kampus_id_2=VALUES(kampus_id_2), prodi_id_2=VALUES(prodi_id_2),
                     nama_kampus_2=VALUES(nama_kampus_2), nama_prodi_2=VALUES(nama_prodi_2),
-                    catatan_siswa=VALUES(catatan_siswa), diisi_oleh='Guru BK',
+                    catatan_siswa=VALUES(catatan_siswa), diisi_oleh=VALUES(diisi_oleh),
                     status='submitted', updated_at=NOW()
             ")->execute([
                 $tenantId, $siswaId, $tahunAjaranId, $noSimulasi,
                 $kampusId1, $prodiId1, $namKampus1, $namProdi1,
                 $kampusId2 ?: null, $prodiId2 ?: null, $namKampus2, $namProdi2,
-                $catatanSiswa ?: null
+                $catatanSiswa ?: null, $diisiOleh
             ]);
 
             $response = ['success' => true, 'message' => 'Pilihan simulasi berhasil disimpan.'];
