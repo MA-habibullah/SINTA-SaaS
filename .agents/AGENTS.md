@@ -5,3 +5,7 @@ Selalu simpan file percobaan, pengujian (*testing*), atau pengecekan (seperti fi
 
 ## Implementation Plans
 Setiap kali ada rencana implementasi (*implementation plan*) yang telah diselesaikan atau dijalankan, dokumen plan tersebut wajib disimpan atau disalin (secara otomatis) sesuai judul plan perbaikannya dan jangan mengahpus file yang sama tapi copy dengan nama yang berbeda ke dalam folder `C:\xampp\htdocs\SINTA-SaaS\docs`. Hal ini bertujuan sebagai dokumentasi sistem jangka panjang.
+
+## Git Commits and Pushing
+Ketika melakukan push ke repositori GitHub, selalu kelompokkan dan distribusikan perubahan ke dalam commit-commit yang terpisah secara atomik berdasarkan modul, fitur, menu, atau perbaikan bug masing-masing (jangan menggabungkan seluruh perubahan besar ke dalam satu commit tunggal).
+
