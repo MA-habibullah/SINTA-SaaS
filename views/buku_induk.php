@@ -95,11 +95,19 @@
                     </div>
                 </div>
 
+                <!-- Filter Jenjang -->
+                <div class="col-6 col-md-2">
+                    <select class="form-select form-select-sm rounded-3" v-model="filterJenjang">
+                        <option value="">🎓 Semua Jenjang</option>
+                        <option v-for="j in jenjangOptions" :value="j.id" :key="j.id">{{ j.nama_jenjang || j.nama }}</option>
+                    </select>
+                </div>
+
                 <!-- Filter Kelas -->
                 <div class="col-6 col-md-3">
                     <select class="form-select form-select-sm rounded-3" v-model="filterKelas" @change="fetchData(1)">
                         <option value="">🏫 Semua Kelas</option>
-                        <option v-for="k in kelasOptions" :value="k.id" :key="k.id">{{ k.nama_kelas || k.nama }}</option>
+                        <option v-for="k in filteredKelasOptions" :value="k.id" :key="k.id">{{ k.nama_kelas || k.nama }}</option>
                     </select>
                 </div>
 
@@ -254,12 +262,12 @@
                 <div class="row g-3 align-items-end">
                     
                     <!-- Tahun Ajaran -->
-                    <div class="col-12 col-md-3">
+                    <div class="col-12 col-md-2">
                         <label class="form-label fw-bold text-dark fs-8 mb-1">Tahun Ajaran</label>
                         <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle"
                                 v-model="kurikulum.tahunAjaran"
                                 @change="loadKurikulumMapping">
-                            <option value="">-- Pilih Tahun Ajaran --</option>
+                            <option value="">-- Pilih TA --</option>
                             <option v-for="t in masterKurikulum.tahun_ajaran" :key="t.id" :value="t.tahun_ajaran">
                                 {{ t.tahun_ajaran }}
                             </option>
@@ -267,13 +275,25 @@
                     </div>
 
                     <!-- Semester -->
-                    <div class="col-12 col-md-3">
+                    <div class="col-12 col-md-2">
                         <label class="form-label fw-bold text-dark fs-8 mb-1">Semester</label>
                         <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle"
                                 v-model="kurikulum.semester"
                                 @change="loadKurikulumMapping">
                             <option value="Ganjil">Ganjil</option>
                             <option value="Genap">Genap</option>
+                        </select>
+                    </div>
+
+                    <!-- Jenjang -->
+                    <div class="col-12 col-md-2">
+                        <label class="form-label fw-bold text-dark fs-8 mb-1">Jenjang</label>
+                        <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle"
+                                v-model="kurikulum.jenjangId">
+                            <option value="">-- Pilih Jenjang --</option>
+                            <option v-for="j in jenjangOptions" :key="j.id" :value="j.id">
+                                {{ j.nama_jenjang || j.nama }}
+                            </option>
                         </select>
                     </div>
 
@@ -284,7 +304,7 @@
                                 v-model="kurikulum.kelasId"
                                 @change="loadKurikulumMapping">
                             <option value="">-- Pilih Kelas --</option>
-                            <option v-for="k in masterKurikulum.kelas" :key="k.id" :value="k.id">
+                            <option v-for="k in filteredKurikulumKelas" :key="k.id" :value="k.id">
                                 {{ k.nama_kelas || k.nama }}
                             </option>
                         </select>
@@ -495,12 +515,12 @@
                     <div class="row g-3 align-items-end">
                         
                         <!-- Tahun Ajaran -->
-                        <div class="col-12 col-md-3">
+                        <div class="col-12 col-md-2">
                             <label class="form-label fw-bold text-dark fs-8 mb-1">Tahun Ajaran</label>
                             <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle"
                                     v-model="nilaiRapor.tahunAjaran"
                                     @change="loadNilaiRaporGrid">
-                                <option value="">-- Pilih Tahun Ajaran --</option>
+                                <option value="">-- Pilih TA --</option>
                                 <option v-for="t in masterNilaiRapor.tahun_ajaran" :key="t.id" :value="t.tahun_ajaran">
                                     {{ t.tahun_ajaran }}
                                 </option>
@@ -508,13 +528,25 @@
                         </div>
 
                         <!-- Semester -->
-                        <div class="col-12 col-md-3">
+                        <div class="col-12 col-md-2">
                             <label class="form-label fw-bold text-dark fs-8 mb-1">Semester</label>
                             <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle"
                                     v-model="nilaiRapor.semester"
                                     @change="loadNilaiRaporGrid">
                                 <option value="Ganjil">Ganjil</option>
                                 <option value="Genap">Genap</option>
+                            </select>
+                        </div>
+
+                        <!-- Jenjang -->
+                        <div class="col-12 col-md-2">
+                            <label class="form-label fw-bold text-dark fs-8 mb-1">Jenjang</label>
+                            <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle"
+                                    v-model="nilaiRapor.jenjangId">
+                                <option value="">-- Pilih Jenjang --</option>
+                                <option v-for="j in jenjangOptions" :key="j.id" :value="j.id">
+                                    {{ j.nama_jenjang || j.nama }}
+                                </option>
                             </select>
                         </div>
 
@@ -525,7 +557,7 @@
                                     v-model="nilaiRapor.kelasId"
                                     @change="loadNilaiRaporGrid">
                                 <option value="">-- Pilih Kelas --</option>
-                                <option v-for="k in masterNilaiRapor.kelas" :key="k.id" :value="k.id">
+                                <option v-for="k in filteredNilaiRaporKelas" :key="k.id" :value="k.id">
                                     {{ k.nama_kelas || k.nama }}
                                 </option>
                             </select>
@@ -697,11 +729,19 @@
             <div class="card-body p-3 p-md-4">
                 <div class="row g-3 align-items-end">
                     <!-- Tahun Ajaran -->
-                    <div class="col-12 col-md-3">
+                    <div class="col-12 col-md-2">
                         <label class="form-label fw-bold text-dark fs-8 mb-1">Tahun Ajaran</label>
                         <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle" v-model="filterTahunAjaranCetak" @change="loadMatrixData">
-                            <option value="">-- Semua Tahun Ajaran --</option>
+                            <option value="">-- Semua TA --</option>
                             <option v-for="t in masterNilaiRapor?.tahun_ajaran || []" :key="t.id || t.tahun_ajaran" :value="t.tahun_ajaran">{{ t.tahun_ajaran }}</option>
+                        </select>
+                    </div>
+                    <!-- Jenjang -->
+                    <div class="col-12 col-md-2">
+                        <label class="form-label fw-bold text-dark fs-8 mb-1">Filter Jenjang</label>
+                        <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle" v-model="filterJenjang">
+                            <option value="">-- Semua Jenjang --</option>
+                            <option v-for="j in jenjangOptions" :key="j.id" :value="j.id">{{ j.nama_jenjang || j.nama }}</option>
                         </select>
                     </div>
                     <!-- Kelas -->
@@ -709,7 +749,7 @@
                         <label class="form-label fw-bold text-dark fs-8 mb-1">Filter Kelas</label>
                         <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle" v-model="filterKelas" @change="loadMatrixData">
                             <option value="">-- Semua Kelas --</option>
-                            <option v-for="k in kelasOptions" :key="k.id" :value="k.id">{{ k.nama_kelas || k.nama }}</option>
+                            <option v-for="k in filteredKelasOptions" :key="k.id" :value="k.id">{{ k.nama_kelas || k.nama }}</option>
                         </select>
                     </div>
                     <!-- Status -->
@@ -2020,6 +2060,8 @@
                 listTenants: <?php echo json_encode($tenantList ?? []); ?>,
                 tempFilterTenantId: '',
                 filterTenantId: '', 
+                jenjangOptions: <?php echo json_encode($jenjangList ?? []); ?>,
+                filterJenjang: '',
                 kelasOptions: <?php echo json_encode($kelasList ?? []); ?>,
                 filterKelas: '',
                 filterStatus: '',
@@ -2040,6 +2082,7 @@
                 kurikulum: {
                     tahunAjaran: '',
                     semester: 'Ganjil',
+                    jenjangId: '',
                     kelasId: '',
                     groups: []
                 },
@@ -2055,6 +2098,7 @@
                 nilaiRapor: {
                     tahunAjaran: '',
                     semester: 'Ganjil',
+                    jenjangId: '',
                     kelasId: '',
                     subjects: [],
                     students: [],
@@ -2108,6 +2152,13 @@
             this.detailModalObj = new bootstrap.Modal(document.getElementById('detailModal'));
             this.copyModalObj = new bootstrap.Modal(document.getElementById('copyKurikulumModal'));
             this.importModalObj = new bootstrap.Modal(document.getElementById('importNilaiModal'));
+            
+            // Bersihkan data sampah dari tenant lain jika Super Admin belum memilih sekolah
+            if (this.userRole === 'super_admin' && !this.filterTenantId) {
+                this.jenjangOptions = [];
+                this.kelasOptions = [];
+            }
+            
             this.fetchData(1);
             this.fetchRiwayatKepsek();
         },
@@ -2189,6 +2240,37 @@
             totalPoinPelanggaran() {
                 if (!this.selectedSiswa || !this.selectedSiswa.pelanggaran) return 0;
                 return this.selectedSiswa.pelanggaran.reduce((sum, item) => sum + parseInt(item.bobot_poin || 0), 0);
+            },
+            filteredKelasOptions() {
+                if (!this.filterJenjang) {
+                    return this.kelasOptions;
+                }
+                return this.kelasOptions.filter(k => k.id_jenjang == this.filterJenjang);
+            },
+            filteredKurikulumKelas() {
+                if (!this.kurikulum.jenjangId) {
+                    return this.masterKurikulum.kelas;
+                }
+                return this.masterKurikulum.kelas.filter(k => k.id_jenjang == this.kurikulum.jenjangId);
+            },
+            filteredNilaiRaporKelas() {
+                if (!this.nilaiRapor.jenjangId) {
+                    return this.masterNilaiRapor.kelas;
+                }
+                return this.masterNilaiRapor.kelas.filter(k => k.id_jenjang == this.nilaiRapor.jenjangId);
+            }
+        },
+        watch: {
+            filterJenjang(newVal) {
+                this.filterKelas = '';
+                this.fetchData(1);
+                this.loadMatrixData();
+            },
+            'kurikulum.jenjangId'(newVal) {
+                this.kurikulum.kelasId = '';
+            },
+            'nilaiRapor.jenjangId'(newVal) {
+                this.nilaiRapor.kelasId = '';
             }
         },
         methods: {
@@ -2452,6 +2534,7 @@
                     .then(res => {
                         this.masterNilaiRapor.tahun_ajaran = res.data.tahun_ajaran || [];
                         this.masterNilaiRapor.kelas = res.data.kelas || [];
+                        this.jenjangOptions = res.data.jenjang || [];
                         
                         if (this.masterNilaiRapor.tahun_ajaran.length > 0 && !this.nilaiRapor.tahunAjaran) {
                             this.nilaiRapor.tahunAjaran = this.masterNilaiRapor.tahun_ajaran[0].tahun_ajaran;
@@ -2666,9 +2749,11 @@
                 this.onFilterTenantChange();
             },
             onFilterTenantChange() {
-                // Ambil daftar kelas yang sesuai dengan tenant terpilih (untuk Super Admin)
+                // Ambil daftar kelas dan jenjang yang sesuai dengan tenant terpilih (untuk Super Admin)
                 this.filterKelas = '';
+                this.filterJenjang = '';
                 this.fetchKelasOptions(this.filterTenantId || null);
+                this.fetchJenjangOptions(this.filterTenantId || null);
                 if (this.mainActiveTab === 'seting_kurikulum') {
                     this.fetchKurikulumMaster();
                 } else if (this.mainActiveTab === 'input_nilai_rapor') {
@@ -2699,6 +2784,7 @@
                         this.masterKurikulum.tahun_ajaran = res.data.tahun_ajaran || [];
                         this.masterKurikulum.kelas = res.data.kelas || [];
                         this.masterKurikulum.bank_mapel = res.data.bank_mapel || [];
+                        this.jenjangOptions = res.data.jenjang || [];
                         
                         if (this.masterKurikulum.tahun_ajaran.length > 0 && !this.kurikulum.tahunAjaran) {
                             this.kurikulum.tahunAjaran = this.masterKurikulum.tahun_ajaran[0].tahun_ajaran;
@@ -2956,6 +3042,19 @@
                      })
                      .catch(err => {
                          console.error("Gagal memuat filter kelas:", err);
+                     });
+            },
+            fetchJenjangOptions(tenantId = null) {
+                const params = { module: 'jenjang' };
+                if (tenantId) {
+                    params.tenant_id = tenantId;
+                }
+                axios.get('/SINTA-SaaS/api/v1/kelembagaan/options', { params })
+                     .then(res => {
+                         this.jenjangOptions = res.data.data;
+                     })
+                     .catch(err => {
+                         console.error("Gagal memuat filter jenjang:", err);
                      });
             },
             fetchData(page = 1) {

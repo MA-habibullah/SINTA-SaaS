@@ -25,7 +25,7 @@ class BukuIndukController extends BaseController {
         $tenantId = SessionManager::getTenantId();
         
         // Ambil opsi kelas untuk filter dropdown
-        $q = "SELECT id, nama_kelas FROM kelas WHERE is_active = 1 AND deleted_at IS NULL";
+        $q = "SELECT id, nama_kelas, id_jenjang FROM kelas WHERE is_active = 1 AND deleted_at IS NULL";
         if ($tenantId) {
             $q .= " AND tenant_id = :tenant_id";
         }
@@ -37,6 +37,20 @@ class BukuIndukController extends BaseController {
             $stmt->execute();
         }
         $kelasList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Ambil opsi jenjang untuk filter dropdown
+        $qJenjang = "SELECT id, nama_jenjang FROM jenjang WHERE is_active = 1 AND deleted_at IS NULL";
+        if ($tenantId) {
+            $qJenjang .= " AND tenant_id = :tenant_id";
+        }
+        $qJenjang .= " ORDER BY nama_jenjang ASC";
+        $stmtJenjang = $db->prepare($qJenjang);
+        if ($tenantId) {
+            $stmtJenjang->execute(['tenant_id' => $tenantId]);
+        } else {
+            $stmtJenjang->execute();
+        }
+        $jenjangList = $stmtJenjang->fetchAll(PDO::FETCH_ASSOC);
 
         // Ambil opsi sekolah/tenant untuk filter Super Admin
         $tenantList = [];
@@ -50,6 +64,7 @@ class BukuIndukController extends BaseController {
             'user_nama' => $_SESSION['nama_lengkap'],
             'user_role' => $_SESSION['role_name'],
             'kelasList' => $kelasList,
+            'jenjangList' => $jenjangList,
             'tenantList' => $tenantList
         ];
 

@@ -182,15 +182,20 @@ class Kelembagaan extends Model {
         $this->validateTableName($table);
         $isSuperAdmin = ($this->tenantId === null);
         
+        $extraSelect = "";
+        if ($table === 'kelas') {
+            $extraSelect = ", id_jenjang";
+        }
+        
         if ($isSuperAdmin) {
-            $sql = "SELECT id, " . $this->allowedTables[$table]['name_field'] . " AS nama 
+            $sql = "SELECT id, " . $this->allowedTables[$table]['name_field'] . " AS nama {$extraSelect}
                     FROM {$table} 
                     WHERE deleted_at IS NULL AND is_active = 1 
                     ORDER BY nama ASC";
             $stmt = $this->db->prepare($sql);
             $stmt->execute();
         } else {
-            $sql = "SELECT id, " . $this->allowedTables[$table]['name_field'] . " AS nama 
+            $sql = "SELECT id, " . $this->allowedTables[$table]['name_field'] . " AS nama {$extraSelect}
                     FROM {$table} 
                     WHERE tenant_id = :tenant_id AND deleted_at IS NULL AND is_active = 1 
                     ORDER BY nama ASC";

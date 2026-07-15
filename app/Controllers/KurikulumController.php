@@ -58,7 +58,7 @@ class KurikulumController extends BaseController {
         $tahunList = $stmtTahun->fetchAll(PDO::FETCH_ASSOC);
 
         // 2. Get list of Kelas
-        $qKelas = "SELECT id, nama_kelas FROM kelas WHERE is_active = 1";
+        $qKelas = "SELECT id, nama_kelas, id_jenjang FROM kelas WHERE is_active = 1";
         if ($tenantId) {
             $qKelas .= " AND tenant_id = :tenant_id";
         }
@@ -70,6 +70,20 @@ class KurikulumController extends BaseController {
             $stmtKelas->execute();
         }
         $kelasList = $stmtKelas->fetchAll(PDO::FETCH_ASSOC);
+
+        // 2.5 Get list of Jenjang
+        $qJenjang = "SELECT id, nama_jenjang FROM jenjang WHERE is_active = 1";
+        if ($tenantId) {
+            $qJenjang .= " AND tenant_id = :tenant_id";
+        }
+        $qJenjang .= " AND deleted_at IS NULL ORDER BY nama_jenjang ASC";
+        $stmtJenjang = $db->prepare($qJenjang);
+        if ($tenantId) {
+            $stmtJenjang->execute(['tenant_id' => $tenantId]);
+        } else {
+            $stmtJenjang->execute();
+        }
+        $jenjangList = $stmtJenjang->fetchAll(PDO::FETCH_ASSOC);
 
         // 3. Get list of Bank Mapel (Mata Pelajaran)
         $qMapel = "SELECT id, kode_mapel, nama_mapel FROM mata_pelajaran WHERE is_active = 1";
@@ -113,6 +127,7 @@ class KurikulumController extends BaseController {
         $this->jsonResponse([
             'tahun_ajaran' => $tahunList,
             'kelas' => $kelasList,
+            'jenjang' => $jenjangList,
             'bank_mapel' => $mapelList,
             'existing_mapping' => $existingMapping
         ]);
