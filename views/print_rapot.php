@@ -504,7 +504,12 @@
         
         <div class="footer-section">
             <div class="signature-left">
-                <!-- Left column remains empty for spacing alignment -->
+                <?php if (isset($showQrCode) && $showQrCode): ?>
+                    <div style="text-align: center; border: 1px solid #ccc; padding: 5px; border-radius: 4px; display: inline-block; background-color: #fff; width: 85px;">
+                        <span style="font-size: 6px; font-weight: bold; display: block; margin-bottom: 2px; text-transform: uppercase; font-family: sans-serif;">Verifikasi</span>
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=75x75&data=<?= urlencode($urlVerifikasi) ?>" alt="QR Code" style="width: 75px; height: 75px; display: block; margin: 0 auto;">
+                    </div>
+                <?php endif; ?>
             </div>
             <div class="photo-cell">
                 <div class="photo-box"></div>
@@ -513,7 +518,11 @@
                 <div class="signature-container">
                     <div style="margin-bottom: 2px;"><?= htmlspecialchars($tempat) ?>, <?= htmlspecialchars($tanggal) ?></div>
                     <div style="margin-bottom: 0;">Kepala Sekolah</div>
-                    <div class="signature-space"></div>
+                    <?php if (isset($showQrCode) && $showQrCode): ?>
+                        <div style="height: 10px;"></div>
+                    <?php else: ?>
+                        <div class="signature-space"></div>
+                    <?php endif; ?>
                     <div class="bold underline"><?= htmlspecialchars($siswa['nama_kepsek']) ?></div>
                     <?php if (!empty($siswa['pangkat_kepsek'])): ?>
                         <div><?= htmlspecialchars($siswa['pangkat_kepsek']) ?></div>

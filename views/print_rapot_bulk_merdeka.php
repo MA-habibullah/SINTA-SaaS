@@ -161,7 +161,14 @@
             <div class="signature-col"></div>
             <div class="signature-col">
                 <?= htmlspecialchars($siswa['tenant_info']['kabupaten_kota'] ?? 'Kota') ?>, <?= date('j F Y') ?><br>
-                Kepala Sekolah<br><br><br><br>
+                Kepala Sekolah<br>
+                <?php if (isset($showQrCode) && $showQrCode && isset($baseVerifyUrl)): ?>
+                    <div style="text-align: center; margin: 5px 0;">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=<?= urlencode($baseVerifyUrl . $siswa['id']) ?>" alt="QR Code Verifikasi" style="width: 70px; height: 70px; display: inline-block;">
+                    </div>
+                <?php else: ?>
+                    <br><br><br><br>
+                <?php endif; ?>
                 <b><?= htmlspecialchars($siswa['tenant_info']['nama_kepsek'] ?? '-') ?></b><br>
                 NIP. <?= htmlspecialchars($siswa['tenant_info']['nip_kepsek'] ?? '-') ?>
             </div>

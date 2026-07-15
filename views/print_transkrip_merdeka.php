@@ -168,9 +168,17 @@ foreach ($mapelData as $k => $v) {
     </table>
 
     <div class="signature-box">
+        <div class="signature-col" style="text-align: left; padding-left: 20px;">
+            <?php if (isset($showQrCode) && $showQrCode): ?>
+                <div style="text-align: center; border: 1px solid #ccc; padding: 6px; border-radius: 4px; display: inline-block; background-color: #fff;">
+                    <span style="font-size: 7px; font-weight: bold; display: block; margin-bottom: 3px; text-transform: uppercase; font-family: sans-serif;">Verifikasi Dokumen</span>
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=85x85&data=<?= urlencode($urlVerifikasi) ?>" alt="QR Code Verifikasi" style="width: 85px; height: 85px; display: block; margin: 0 auto;">
+                    <span style="font-size: 7px; display: block; margin-top: 3px; color: #555; font-family: sans-serif;">Scan untuk validasi data</span>
+                </div>
+            <?php endif; ?>
+        </div>
         <div class="signature-col"></div>
-        <div class="signature-col"></div>
-        <div class="signature-col">
+        <div class="signature-col" style="text-align: left;">
             <?php
                 $tanggalCetak = $_GET['tanggal_cetak'] ?? date('Y-m-d');
                 $timestamp = strtotime($tanggalCetak);

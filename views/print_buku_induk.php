@@ -521,6 +521,16 @@ $keluarTanggal = (!empty($siswa['tanggal_keluar'])) ? date('d-m-Y', strtotime($s
             </tbody>
         </table>
 
+        <!-- Left-aligned QR Code Verification for Document Legality -->
+        <div style="float: left; margin-top: 30px; margin-left: 20px;">
+            <?php if (isset($showQrCode) && $showQrCode): ?>
+                <div style="text-align: center; border: 1px solid #ccc; padding: 5px; border-radius: 4px; display: inline-block; background-color: #fff; width: 85px;">
+                    <span style="font-size: 6px; font-weight: bold; display: block; margin-bottom: 2px; text-transform: uppercase; font-family: sans-serif;">Verifikasi</span>
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=75x75&data=<?= urlencode($urlVerifikasi) ?>" alt="QR Code" style="width: 75px; height: 75px; display: block; margin: 0 auto;">
+                </div>
+            <?php endif; ?>
+        </div>
+
         <div class="signature-box">
             <div><?= htmlspecialchars($tempat) ?>, <?= htmlspecialchars($tanggal) ?></div>
             <div>Kepala Sekolah</div>

@@ -110,7 +110,14 @@
                 $tglIndo = date('j', $timestamp) . ' ' . $bulan[date('n', $timestamp) - 1] . ' ' . date('Y', $timestamp);
             ?>
             <?= htmlspecialchars($siswa['tenant_info']['kabupaten_kota'] ?? 'Kota') ?>, <?= $tglIndo ?><br>
-            Kepala Sekolah<br><br><br><br><br>
+            Kepala Sekolah<br>
+            <?php if (isset($showQrCode) && $showQrCode): ?>
+                <div style="text-align: center; margin: 5px 0;">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=<?= urlencode($urlVerifikasi) ?>" alt="QR Code Verifikasi" style="width: 70px; height: 70px; display: inline-block;">
+                </div>
+            <?php else: ?>
+                <br><br><br><br><br>
+            <?php endif; ?>
             <?= htmlspecialchars($siswa['tenant_info']['nama_kepsek'] ?? '................................................') ?><br>
             NIP. <?= htmlspecialchars($siswa['tenant_info']['nip_kepsek'] ?? '........................................') ?>
         </div>
