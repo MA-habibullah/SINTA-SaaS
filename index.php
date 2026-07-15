@@ -438,6 +438,11 @@ try {
             $controller->import();
             break;
 
+        case '/api/v1/nilai-rapor/import-validate':
+            $controller = new App\Controllers\NilaiRaporController();
+            $controller->validateExcelImportApi();
+            break;
+
         case '/api/v1/riwayat-kepsek':
             $controller = new App\Controllers\BukuIndukController();
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -447,6 +452,11 @@ try {
             } else {
                 $controller->getRiwayatKepsek();
             }
+            break;
+
+        case '/api/v1/buku-induk/clear-archive':
+            $controller = new App\Controllers\BukuIndukController();
+            $controller->clearArchiveApi();
             break;
 
         case '/cetak-rapot':
@@ -467,6 +477,11 @@ try {
         case '/cetak-transkrip-nilai':
             $controller = new App\Controllers\BukuIndukController();
             $controller->printTranskripNilai();
+            break;
+
+        case '/verify-transkrip':
+            $controller = new App\Controllers\BukuIndukController();
+            $controller->verifyTranskrip();
             break;
 
         case '/cetak-rapot-kelas':

@@ -871,4 +871,233 @@ class NilaiRaporController extends BaseController {
             ]);
         }
     }
+
+    public function validateExcelImportApi(): void {
+        header('Content-Type: application/json');
+        try {
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new \Exception("Method not allowed.");
+            }
+
+            $kelasId = $_POST['kelas_id'] ?? '';
+            $tahunAjaran = $_POST['tahun_ajaran'] ?? '';
+            $semester = $_POST['semester'] ?? '';
+
+            if (empty($kelasId) || empty($tahunAjaran) || empty($semester)) {
+                throw new \Exception("Parameter tidak lengkap.");
+            }
+
+            $db = \App\Config\Database::getConnection();
+            $tenantId = SessionManager::getTenantId();
+            if (!$tenantId && !empty($_POST['tenant_id'])) {
+                $tenantId = $_POST['tenant_id'];
+            }
+            if (!$tenantId && !empty($kelasId)) {
+                $stmtKelasTenant = $db->prepare("SELECT tenant_id FROM kelas WHERE id = :kelas_id LIMIT 1");
+                $stmtKelasTenant->execute(['kelas_id' => $kelasId]);
+                $tenantId = $stmtKelasTenant->fetchColumn() ?: null;
+            }
+
+            if (!$tenantId) {
+                throw new \Exception("Tenant ID tidak terdeteksi.");
+            }
+
+            if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+                throw new \Exception("File tidak terunggah atau terjadi kesalahan upload.");
+            }
+
+            $fileTmp = $_FILES['file']['tmp_name'];
+            $xlsx = \Shuchkin\SimpleXLSX::parse($fileTmp);
+            if (!$xlsx) {
+                throw new \Exception("Gagal membaca berkas Excel: " . \Shuchkin\SimpleXLSX::parseError());
+            }
+
+            $rows = $xlsx->rows();
+            if (empty($rows)) {
+                throw new \Exception("Berkas Excel kosong.");
+            }
+
+            $header = array_shift($rows);
+            if (isset($header[0])) {
+                $header[0] = preg_replace('/^[\x{FEFF}\x{200B}]+/u', '', $header[0]);
+            }
+
+            $mapelCols = []; // index => mapel_id
+            foreach ($header as $idx => $colName) {
+                if ($idx < 3) continue;
+                if (preg_match('/\[([0-9]+)\]/', $colName, $matches)) {
+                    $mapelCols[$idx] = (int)$matches[1];
+                }
+            }
+
+            if (empty($mapelCols)) {
+                throw new \Exception("Kolom mata pelajaran tidak ditemukan dalam file Excel.");
+            }
+
+            // Fetch student database info
+            $qSiswaList = "SELECT id, nama_lengkap, nisn, nis, agama FROM siswa WHERE id_kelas = :kelas_id AND tenant_id = :tenant_id AND status = 'Aktif' AND deleted_at IS NULL";
+            $stmtSiswaList = $db->prepare($qSiswaList);
+            $stmtSiswaList->execute(['kelas_id' => $kelasId, 'tenant_id' => $tenantId]);
+            $studentsMap = [];
+            foreach ($stmtSiswaList->fetchAll(PDO::FETCH_ASSOC) as $s) {
+                $studentsMap[$s['id']] = $s;
+            }
+
+            // Fetch subject names
+            $qMapelNames = "SELECT DISTINCT p.mapel_id, m.nama_mapel 
+                            FROM pemetaan_mapel p
+                            JOIN mata_pelajaran m ON p.mapel_id = m.id
+                            WHERE p.kelas_id = :kelas_id 
+                              AND p.tahun_ajaran = :tahun_ajaran 
+                              AND p.semester = :semester
+                              AND p.tenant_id = :tenant_id
+                              AND p.deleted_at IS NULL
+                              AND m.deleted_at IS NULL";
+            $stmtMapelNames = $db->prepare($qMapelNames);
+            $stmtMapelNames->execute([
+                'kelas_id' => $kelasId,
+                'tahun_ajaran' => $tahunAjaran,
+                'semester' => $semester,
+                'tenant_id' => $tenantId
+            ]);
+            $subjectsMap = [];
+            foreach ($stmtMapelNames->fetchAll(PDO::FETCH_ASSOC) as $sub) {
+                $subjectsMap[$sub['mapel_id']] = $sub['nama_mapel'];
+            }
+
+            $reportRows = [];
+            $totalErrors = 0;
+            $totalWarnings = 0;
+            $totalValid = 0;
+
+            foreach ($rows as $rowIdx => $row) {
+                if (empty(array_filter($row))) {
+                    continue; // skip empty rows
+                }
+
+                $siswaId = trim((string)($row[0] ?? ''));
+                $nisnVal = trim((string)($row[1] ?? ''));
+                $namaVal = trim((string)($row[2] ?? ''));
+
+                if (empty($siswaId)) {
+                    continue;
+                }
+
+                $dbSiswa = $studentsMap[$siswaId] ?? null;
+                $rowErrors = [];
+                $rowWarnings = [];
+
+                if (!$dbSiswa) {
+                    $rowErrors[] = "Siswa dengan ID '{$siswaId}' tidak terdaftar aktif di kelas ini.";
+                } else {
+                    // Check mismatch names / NISN if available
+                    if ($dbSiswa['nisn'] && $nisnVal && $dbSiswa['nisn'] !== $nisnVal) {
+                        $rowWarnings[] = "NISN di Excel ({$nisnVal}) tidak cocok dengan database ({$dbSiswa['nisn']}).";
+                    }
+                }
+
+                $gradesChecked = [];
+                foreach ($mapelCols as $idx => $mapelId) {
+                    $rawVal = isset($row[$idx]) ? trim((string)$row[$idx]) : '';
+                    $mapelName = $subjectsMap[$mapelId] ?? "Mata Pelajaran ID: {$mapelId}";
+                    
+                    if ($rawVal === 'N/A' || $rawVal === 'n/a' || $rawVal === '') {
+                        $gradesChecked[] = [
+                            'mapel_name' => $mapelName,
+                            'value' => 'N/A',
+                            'status' => 'info',
+                            'msg' => 'Dilewati (Kosong/NA)'
+                        ];
+                        continue;
+                    }
+
+                    if (!is_numeric($rawVal)) {
+                        $rowErrors[] = "Nilai '{$rawVal}' pada mapel '{$mapelName}' bukan angka.";
+                        $gradesChecked[] = [
+                            'mapel_name' => $mapelName,
+                            'value' => $rawVal,
+                            'status' => 'error',
+                            'msg' => 'Bukan angka'
+                        ];
+                        continue;
+                    }
+
+                    $val = (float)$rawVal;
+                    if ($val < 0 || $val > 100) {
+                        $rowErrors[] = "Nilai {$val} pada mapel '{$mapelName}' di luar batas 0-100.";
+                        $gradesChecked[] = [
+                            'mapel_name' => $mapelName,
+                            'value' => $val,
+                            'status' => 'error',
+                            'msg' => 'Di luar batas 0-100'
+                        ];
+                        continue;
+                    }
+
+                    // Religion check
+                    if ($dbSiswa) {
+                        $studentReligion = $dbSiswa['agama'] ?? null;
+                        if ($this->isReligionSubjectMismatch($studentReligion, $mapelName)) {
+                            $rowWarnings[] = "Nilai '{$val}' pada '{$mapelName}' diabaikan karena agama siswa '{$studentReligion}' tidak cocok.";
+                            $gradesChecked[] = [
+                                'mapel_name' => $mapelName,
+                                'value' => $val,
+                                'status' => 'warning',
+                                'msg' => 'Beda Agama (Diabaikan)'
+                            ];
+                            continue;
+                        }
+                    }
+
+                    $gradesChecked[] = [
+                        'mapel_name' => $mapelName,
+                        'value' => $val,
+                        'status' => 'valid',
+                        'msg' => 'Valid'
+                    ];
+                }
+
+                $hasError = count($rowErrors) > 0;
+                $hasWarning = count($rowWarnings) > 0;
+
+                if ($hasError) {
+                    $totalErrors++;
+                    $status = 'error';
+                } elseif ($hasWarning) {
+                    $totalWarnings++;
+                    $status = 'warning';
+                } else {
+                    $totalValid++;
+                    $status = 'valid';
+                }
+
+                $reportRows[] = [
+                    'siswa_id' => $siswaId,
+                    'nisn' => $nisnVal,
+                    'nama_lengkap' => $namaVal ?: ($dbSiswa['nama_lengkap'] ?? 'Tidak Diketahui'),
+                    'status' => $status,
+                    'errors' => $rowErrors,
+                    'warnings' => $rowWarnings,
+                    'grades' => $gradesChecked
+                ];
+            }
+
+            echo json_encode([
+                'success' => true,
+                'summary' => [
+                    'total_rows' => count($reportRows),
+                    'valid' => $totalValid,
+                    'warning' => $totalWarnings,
+                    'error' => $totalErrors
+                ],
+                'data' => $reportRows
+            ]);
+        } catch (\Throwable $e) {
+            echo json_encode([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]);
+        }
+        exit;
+    }
 }

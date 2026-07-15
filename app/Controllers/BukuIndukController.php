@@ -9,6 +9,18 @@ class BukuIndukController extends BaseController {
 
     public function __construct() {
         parent::__construct();
+        
+        // Bypass login check for public verification route
+        $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        $project_folder = '/SINTA-SaaS';
+        if (strncasecmp($path, $project_folder, strlen($project_folder)) === 0) {
+            $path = substr($path, strlen($project_folder));
+        }
+        
+        if ($path === '/verify-transkrip') {
+            return;
+        }
+
         SessionManager::requireLogin();
         
         // Cek role yang diperbolehkan
@@ -568,8 +580,21 @@ class BukuIndukController extends BaseController {
         }
         $siswa['beasiswa'] = $beasiswa;
 
-        // Load the print view directly (no layout wrapper)
-        require __DIR__ . '/../../views/print_rapot.php';
+        // QR Code options and parameters
+        $showQrCode = isset($_GET['show_qrcode']) && $_GET['show_qrcode'] == '1';
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https" : "http";
+        $domainName = $_SERVER['HTTP_HOST'];
+        $baseFolder = '';
+        if (strpos($_SERVER['REQUEST_URI'], '/SINTA-SaaS') !== false) {
+            $baseFolder = '/SINTA-SaaS';
+        }
+        $urlVerifikasi = $protocol . "://" . $domainName . $baseFolder . "/verify-transkrip?id=" . $siswa['id'];
+
+        $archiveFilename = "identitas_rapor.html";
+        $this->renderOrGetArchive($siswa['id'], $siswa['tenant_id'], $archiveFilename, function() use ($siswa, $showQrCode, $urlVerifikasi) {
+            // Load the print view directly (no layout wrapper)
+            require __DIR__ . '/../../views/print_rapot.php';
+        });
         exit;
     }
 
@@ -707,8 +732,21 @@ class BukuIndukController extends BaseController {
         }
         $siswa['kesehatan'] = $kesehatan;
 
-        // Load the print view directly
-        require __DIR__ . '/../../views/print_buku_induk.php';
+        // QR Code options and parameters
+        $showQrCode = isset($_GET['show_qrcode']) && $_GET['show_qrcode'] == '1';
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https" : "http";
+        $domainName = $_SERVER['HTTP_HOST'];
+        $baseFolder = '';
+        if (strpos($_SERVER['REQUEST_URI'], '/SINTA-SaaS') !== false) {
+            $baseFolder = '/SINTA-SaaS';
+        }
+        $urlVerifikasi = $protocol . "://" . $domainName . $baseFolder . "/verify-transkrip?id=" . $siswa['id'];
+
+        $archiveFilename = "buku_induk.html";
+        $this->renderOrGetArchive($siswa['id'], $siswa['tenant_id'], $archiveFilename, function() use ($siswa, $showQrCode, $urlVerifikasi, $tempat, $tanggal) {
+            // Load the print view directly
+            require __DIR__ . '/../../views/print_buku_induk.php';
+        });
         exit;
     }
 
@@ -945,14 +983,29 @@ class BukuIndukController extends BaseController {
             }
         }
 
-        // Load correct layout
-        if ($tipePenilaian === 'klasik') {
-            require __DIR__ . '/../../views/print_rapot_ktsp.php';
-        } elseif ($tipePenilaian === 'kompleks') {
-            require __DIR__ . '/../../views/print_rapot_k13.php';
-        } else {
-            require __DIR__ . '/../../views/print_rapot_merdeka.php';
+        // QR Code options and parameters
+        $showQrCode = isset($_GET['show_qrcode']) && $_GET['show_qrcode'] == '1';
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https" : "http";
+        $domainName = $_SERVER['HTTP_HOST'];
+        $baseFolder = '';
+        if (strpos($_SERVER['REQUEST_URI'], '/SINTA-SaaS') !== false) {
+            $baseFolder = '/SINTA-SaaS';
         }
+        $urlVerifikasi = $protocol . "://" . $domainName . $baseFolder . "/verify-transkrip?id=" . $siswa['id'];
+
+        $cleanTa = str_replace(['/', '\\'], '-', $ta);
+        $archiveFilename = "rapor_{$semester}_{$cleanTa}.html";
+
+        $this->renderOrGetArchive($siswa['id'], $siswa['tenant_id'], $archiveFilename, function() use ($siswa, $grades, $tipePenilaian, $namaKurikulum, $sikapK13, $showQrCode, $urlVerifikasi) {
+            // Load correct layout
+            if ($tipePenilaian === 'klasik') {
+                require __DIR__ . '/../../views/print_rapot_ktsp.php';
+            } elseif ($tipePenilaian === 'kompleks') {
+                require __DIR__ . '/../../views/print_rapot_k13.php';
+            } else {
+                require __DIR__ . '/../../views/print_rapot_merdeka.php';
+            }
+        });
         exit;
     }
 
@@ -1009,11 +1062,24 @@ class BukuIndukController extends BaseController {
         
         $siswa['transkrip_grades'] = $gradesRaw;
 
-        if (stripos($kurikulum, 'Merdeka') !== false) {
-            require __DIR__ . '/../../views/print_transkrip_merdeka.php';
-        } else {
-            require __DIR__ . '/../../views/print_transkrip_standar.php';
+        // QR Code options and parameters
+        $showQrCode = isset($_GET['show_qrcode']) && $_GET['show_qrcode'] == '1';
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https" : "http";
+        $domainName = $_SERVER['HTTP_HOST'];
+        $baseFolder = '';
+        if (strpos($_SERVER['REQUEST_URI'], '/SINTA-SaaS') !== false) {
+            $baseFolder = '/SINTA-SaaS';
         }
+        $urlVerifikasi = $protocol . "://" . $domainName . $baseFolder . "/verify-transkrip?id=" . $siswa['id'];
+
+        $archiveFilename = "transkrip.html";
+        $this->renderOrGetArchive($siswa['id'], $siswa['tenant_id'], $archiveFilename, function() use ($siswa, $kurikulum, $showQrCode, $urlVerifikasi) {
+            if (stripos($kurikulum, 'Merdeka') !== false) {
+                require __DIR__ . '/../../views/print_transkrip_merdeka.php';
+            } else {
+                require __DIR__ . '/../../views/print_transkrip_standar.php';
+            }
+        });
         exit;
     }
 
@@ -1109,6 +1175,16 @@ class BukuIndukController extends BaseController {
 
             $studentsData[] = $siswa;
         }
+
+        // QR Code options and parameters
+        $showQrCode = isset($_GET['show_qrcode']) && $_GET['show_qrcode'] == '1';
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https" : "http";
+        $domainName = $_SERVER['HTTP_HOST'];
+        $baseFolder = '';
+        if (strpos($_SERVER['REQUEST_URI'], '/SINTA-SaaS') !== false) {
+            $baseFolder = '/SINTA-SaaS';
+        }
+        $baseVerifyUrl = $protocol . "://" . $domainName . $baseFolder . "/verify-transkrip?id=";
 
         // Load bulk print view directly
         require __DIR__ . '/../../views/print_rapot_bulk.php';
@@ -1520,8 +1596,28 @@ class BukuIndukController extends BaseController {
                     }
                 } catch (\Throwable $e) {}
             }
+            // QR Code options and parameters
+            $showQrCode = isset($_GET['show_qrcode']) && $_GET['show_qrcode'] == '1';
+            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https" : "http";
+            $domainName = $_SERVER['HTTP_HOST'];
+            $baseFolder = '';
+            if (strpos($_SERVER['REQUEST_URI'], '/SINTA-SaaS') !== false) {
+                $baseFolder = '/SINTA-SaaS';
+            }
+            $baseVerifyUrl = $protocol . "://" . $domainName . $baseFolder . "/verify-transkrip?id=";
+
             require __DIR__ . '/../../views/print_rapot_bulk_k13.php';
         } else {
+            // QR Code options and parameters
+            $showQrCode = isset($_GET['show_qrcode']) && $_GET['show_qrcode'] == '1';
+            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https" : "http";
+            $domainName = $_SERVER['HTTP_HOST'];
+            $baseFolder = '';
+            if (strpos($_SERVER['REQUEST_URI'], '/SINTA-SaaS') !== false) {
+                $baseFolder = '/SINTA-SaaS';
+            }
+            $baseVerifyUrl = $protocol . "://" . $domainName . $baseFolder . "/verify-transkrip?id=";
+
             require __DIR__ . '/../../views/print_rapot_bulk_merdeka.php';
         }
         exit;
@@ -1672,6 +1768,123 @@ class BukuIndukController extends BaseController {
                 'success' => false,
                 'error' => $e->getMessage()
             ]);
+        }
+        exit;
+    }
+
+    public function verifyTranskrip(): void {
+        $id = $_GET['id'] ?? '';
+        if (empty($id)) {
+            die("<h1>Bad Request</h1><p>ID siswa tidak valid.</p>");
+        }
+
+        $db = \App\Config\Database::getConnection();
+        
+        $siswaModel = new \App\Models\Siswa(null);
+        $siswa = $siswaModel->findFullById($id);
+
+        if (!$siswa) {
+            die("<h1>Not Found</h1><p>Data siswa tidak ditemukan.</p>");
+        }
+
+        try {
+            $stmtTenant = $db->prepare("SELECT nama_sekolah, npsn, alamat, kecamatan, kabupaten_kota, provinsi, nama_kepsek, nip_kepsek FROM tenants WHERE id = ?");
+            $stmtTenant->execute([$siswa['tenant_id']]);
+            $siswa['tenant_info'] = $stmtTenant->fetch(PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            $siswa['tenant_info'] = [];
+        }
+
+        $gradesRaw = [];
+        try {
+            $stmt = $db->prepare("
+                SELECT d.*, m.nama_mapel, m.kelompok 
+                FROM detail_nilai_rapor d 
+                JOIN mata_pelajaran m ON d.mapel_id = m.id 
+                WHERE d.siswa_id = ? AND d.deleted_at IS NULL 
+                ORDER BY m.kelompok ASC, m.nama_mapel ASC, d.tahun_ajaran ASC, d.semester ASC
+            ");
+            $stmt->execute([$id]);
+            $gradesRaw = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            // Ignore
+        }
+        $siswa['transkrip_grades'] = $gradesRaw;
+
+        require __DIR__ . '/../../views/verify_transkrip.php';
+        exit;
+    }
+
+    private function renderOrGetArchive(string $siswaId, string $tenantId, string $filename, callable $renderCallback): void {
+        $archiveDir = __DIR__ . "/../../storage/archive/{$tenantId}/{$siswaId}";
+        if (!is_dir($archiveDir)) {
+            mkdir($archiveDir, 0777, true);
+        }
+        $filepath = "{$archiveDir}/{$filename}";
+
+        // If archive exists and we are not forcing re-generation, output it directly
+        if (file_exists($filepath) && (!isset($_GET['re_generate']) || $_GET['re_generate'] != '1')) {
+            readfile($filepath);
+            exit;
+        }
+
+        // Otherwise, run the callback to buffer HTML, save it, and output it
+        ob_start();
+        $renderCallback();
+        $html = ob_get_clean();
+
+        // Save to archive
+        file_put_contents($filepath, $html);
+
+        // Output HTML
+        echo $html;
+        exit;
+    }
+
+    public function clearArchiveApi(): void {
+        header('Content-Type: application/json');
+        try {
+            $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+            $siswaId = $input['siswa_id'] ?? '';
+            $semester = $input['semester'] ?? '';
+            $ta = $input['ta'] ?? '';
+            $type = $input['type'] ?? 'rapor'; // 'rapor', 'transkrip', 'buku_induk'
+
+            if (empty($siswaId)) {
+                throw new \Exception("ID Siswa wajib diisi.");
+            }
+
+            $tenantId = SessionManager::getTenantId();
+            if (!$tenantId) {
+                $db = \App\Config\Database::getConnection();
+                $stmt = $db->prepare("SELECT tenant_id FROM siswa WHERE id = ?");
+                $stmt->execute([$siswaId]);
+                $tenantId = $stmt->fetchColumn() ?: null;
+            }
+
+            if (!$tenantId) {
+                throw new \Exception("Sekolah tidak terdeteksi.");
+            }
+
+            $cleanTa = str_replace(['/', '\\'], '-', $ta);
+            $archiveDir = __DIR__ . "/../../storage/archive/{$tenantId}/{$siswaId}";
+            
+            if ($type === 'rapor') {
+                $filename = "rapor_{$semester}_{$cleanTa}.html";
+            } elseif ($type === 'transkrip') {
+                $filename = "transkrip.html";
+            } else {
+                $filename = "buku_induk.html";
+            }
+
+            $filepath = "{$archiveDir}/{$filename}";
+            if (file_exists($filepath)) {
+                unlink($filepath);
+            }
+
+            echo json_encode(['success' => true, 'message' => 'Arsip berhasil dihapus. Rapor akan di-render ulang pada cetak berikutnya.']);
+        } catch (\Throwable $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
         exit;
     }
