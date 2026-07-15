@@ -103,7 +103,7 @@ foreach ($mapelData as $k => $v) {
 <body>
 
     <div class="header">
-        <h2>KEMENTERIAN PENDIDIKAN, KEBUDAYAAN, RISET, DAN TEKNOLOGI</h2>
+        <h2>PEMERINTAH PROVINSI / KABUPATEN / KOTA</h2>
         <h3><?= htmlspecialchars($namaSekolah) ?></h3>
         <p><?= htmlspecialchars($alamatSekolah) ?></p>
         <h3 style="margin-top:15px; text-decoration:underline;">TRANSKRIP NILAI KELULUSAN</h3>
