@@ -1869,4 +1869,613 @@ class PDSSController extends BaseController {
             mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
         );
     }
+
+    // =========================================================================
+    // SIMULASI PEMILIHAN KAMPUS & PRODI
+    // =========================================================================
+
+    /**
+     * API: Ambil setting buka/tutup/kunci tiap fase simulasi
+     * GET /api/v1/pdss/simulasi/setting
+     */
+    public function apiGetSimulasiSetting(): void {
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) { $this->jsonResponse(['error' => 'Pilih sekolah terlebih dahulu.'], 400); return; }
+
+        $tahunAjaranId = $_GET['tahun_ajaran_id'] ?? '';
+        try {
+            $db = \App\Config\Database::getConnection();
+            if (empty($tahunAjaranId)) {
+                $tahunAjaranId = $db->prepare("SELECT id FROM tahun_ajaran WHERE tenant_id = ? ORDER BY is_active DESC, id DESC LIMIT 1");
+                $tahunAjaranId->execute([$tenantId]);
+                $tahunAjaranId = $tahunAjaranId->fetchColumn();
+            }
+
+            $stmt = $db->prepare("SELECT no_simulasi, is_open, is_locked, dibuka_oleh, dibuka_at, dikunci_oleh, dikunci_at FROM pdss_simulasi_setting WHERE tenant_id = ? AND tahun_ajaran_id = ?");
+            $stmt->execute([$tenantId, $tahunAjaranId]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $settings = [1 => ['is_open' => 0, 'is_locked' => 0], 2 => ['is_open' => 0, 'is_locked' => 0], 3 => ['is_open' => 0, 'is_locked' => 0]];
+            foreach ($rows as $r) {
+                $settings[(int)$r['no_simulasi']] = $r;
+            }
+            $this->jsonResponse(['success' => true, 'data' => $settings, 'tahun_ajaran_id' => $tahunAjaranId]);
+        } catch (\Throwable $e) {
+            error_log('[PDSSController::apiGetSimulasiSetting] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal memuat setting simulasi.'], 500);
+        }
+    }
+
+    /**
+     * API: Toggle buka/tutup/kunci fase simulasi
+     * POST /api/v1/pdss/simulasi/setting
+     */
+    public function apiToggleSimulasiSetting(): void {
+        if (!$this->canWrite()) { $this->jsonResponse(['error' => 'Akses ditolak.'], 403); return; }
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) { $this->jsonResponse(['error' => 'Tenant tidak terdeteksi.'], 400); return; }
+
+        $input = $this->getJsonInput();
+        $noSimulasi  = (int)($input['no_simulasi'] ?? 0);
+        $action      = $this->sanitize($input['action'] ?? ''); // 'open' | 'close' | 'lock'
+        $tahunAjaranId = $input['tahun_ajaran_id'] ?? '';
+
+        if (!in_array($noSimulasi, [1,2,3]) || !in_array($action, ['open','close','lock'])) {
+            $this->jsonResponse(['error' => 'Parameter tidak valid.'], 422); return;
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+            if (empty($tahunAjaranId)) {
+                $stmtTA = $db->prepare("SELECT id FROM tahun_ajaran WHERE tenant_id = ? ORDER BY is_active DESC, id DESC LIMIT 1");
+                $stmtTA->execute([$tenantId]);
+                $tahunAjaranId = $stmtTA->fetchColumn();
+            }
+
+            // Sequential lock: simulasi 2 harus kunci sim 1 dulu, sim 3 harus kunci sim 2 dulu
+            if ($action === 'open' && $noSimulasi > 1) {
+                $stmtPrev = $db->prepare("SELECT is_locked FROM pdss_simulasi_setting WHERE tenant_id = ? AND tahun_ajaran_id = ? AND no_simulasi = ?");
+                $stmtPrev->execute([$tenantId, $tahunAjaranId, $noSimulasi - 1]);
+                $prevLocked = $stmtPrev->fetchColumn();
+                if (!$prevLocked) {
+                    $this->jsonResponse(['error' => "Simulasi " . ($noSimulasi-1) . " harus dikunci terlebih dahulu sebelum membuka Simulasi $noSimulasi."], 400);
+                    return;
+                }
+            }
+
+            $userName = \App\Core\SessionManager::getUserNama() ?? 'Unknown';
+            $now = date('Y-m-d H:i:s');
+
+            if ($action === 'open') {
+                $db->prepare("INSERT INTO pdss_simulasi_setting (tenant_id, tahun_ajaran_id, no_simulasi, is_open, is_locked, dibuka_oleh, dibuka_at) VALUES (?,?,?,1,0,?,?) ON DUPLICATE KEY UPDATE is_open=1, is_locked=0, dibuka_oleh=?, dibuka_at=?")
+                   ->execute([$tenantId, $tahunAjaranId, $noSimulasi, $userName, $now, $userName, $now]);
+                $this->jsonResponse(['success' => true, 'message' => "Simulasi $noSimulasi berhasil dibuka."]);
+            } elseif ($action === 'close') {
+                $db->prepare("INSERT INTO pdss_simulasi_setting (tenant_id, tahun_ajaran_id, no_simulasi, is_open, is_locked, ditutup_oleh, ditutup_at) VALUES (?,?,?,0,0,?,?) ON DUPLICATE KEY UPDATE is_open=0, ditutup_oleh=?, ditutup_at=?")
+                   ->execute([$tenantId, $tahunAjaranId, $noSimulasi, $userName, $now, $userName, $now]);
+                $this->jsonResponse(['success' => true, 'message' => "Simulasi $noSimulasi berhasil ditutup."]);
+            } elseif ($action === 'lock') {
+                $db->prepare("INSERT INTO pdss_simulasi_setting (tenant_id, tahun_ajaran_id, no_simulasi, is_open, is_locked, dikunci_oleh, dikunci_at) VALUES (?,?,?,0,1,?,?) ON DUPLICATE KEY UPDATE is_open=0, is_locked=1, dikunci_oleh=?, dikunci_at=?")
+                   ->execute([$tenantId, $tahunAjaranId, $noSimulasi, $userName, $now, $userName, $now]);
+                $this->jsonResponse(['success' => true, 'message' => "Simulasi $noSimulasi berhasil dikunci permanen."]);
+            }
+        } catch (\Throwable $e) {
+            error_log('[PDSSController::apiToggleSimulasiSetting] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal mengubah setting simulasi.'], 500);
+        }
+    }
+
+    /**
+     * API: Ambil daftar siswa eligible + pilihan simulasi + deteksi konflik
+     * GET /api/v1/pdss/simulasi?tahun_ajaran_id=&no_simulasi=
+     */
+    public function apiGetSimulasi(): void {
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) { $this->jsonResponse(['error' => 'Pilih sekolah terlebih dahulu.'], 400); return; }
+
+        $tahunAjaranId = $_GET['tahun_ajaran_id'] ?? '';
+        $noSimulasi    = (int)($_GET['no_simulasi'] ?? 1);
+        if (!in_array($noSimulasi, [1,2,3])) $noSimulasi = 1;
+
+        try {
+            $db = \App\Config\Database::getConnection();
+
+            // Resolve tahun ajaran
+            if (empty($tahunAjaranId)) {
+                $stmtTA = $db->prepare("SELECT id FROM tahun_ajaran WHERE tenant_id = ? ORDER BY is_active DESC, id DESC LIMIT 1");
+                $stmtTA->execute([$tenantId]);
+                $tahunAjaranId = $stmtTA->fetchColumn();
+            }
+            $stmtTaName = $db->prepare("SELECT tahun_ajaran FROM tahun_ajaran WHERE id = ? LIMIT 1");
+            $stmtTaName->execute([$tahunAjaranId]);
+            $selectedTaName = $stmtTaName->fetchColumn() ?: '';
+
+            // --- LANGKAH 1: Ambil siswa eligible cohort (reuse logic dari apiGetKesiapan) ---
+            // Siswa yang memiliki nilai sem 5 di tahun ini ATAU teoritis angkatan ini
+            $stmtSiswa = $db->prepare("
+                SELECT DISTINCT s.id, s.nama_lengkap, s.nisn, s.nis,
+                       s.id_jurusan, k.nama_kelas, j.nama_jurusan, j.kode_jurusan
+                FROM siswa s
+                LEFT JOIN kelas k ON s.id_kelas = k.id
+                LEFT JOIN jurusan j ON s.id_jurusan = j.id
+                LEFT JOIN tahun_ajaran ta ON s.id_tahun_ajaran = ta.id
+                WHERE s.tenant_id = ?
+                  AND s.status = 'Aktif'
+                  AND s.deleted_at IS NULL
+                  AND (
+                      s.id IN (
+                          SELECT DISTINCT dnr.siswa_id FROM detail_nilai_rapor dnr
+                          WHERE dnr.tenant_id = ? AND dnr.semester = 5 AND dnr.tahun_ajaran = ? AND dnr.deleted_at IS NULL
+                      )
+                      OR (
+                          s.id NOT IN (
+                              SELECT DISTINCT dnr2.siswa_id FROM detail_nilai_rapor dnr2
+                              WHERE dnr2.tenant_id = ? AND dnr2.semester = 5 AND dnr2.deleted_at IS NULL
+                          )
+                          AND CONCAT(CAST(SUBSTRING(ta.tahun_ajaran,1,4) AS UNSIGNED)+2,'/',CAST(SUBSTRING(ta.tahun_ajaran,1,4) AS UNSIGNED)+3) = ?
+                          AND (k.nama_kelas LIKE '%12%' OR k.nama_kelas LIKE '%XII%')
+                      )
+                  )
+                ORDER BY j.nama_jurusan ASC, s.nama_lengkap ASC
+            ");
+            $stmtSiswa->execute([$tenantId, $tenantId, $selectedTaName, $tenantId, $selectedTaName]);
+            $siswaList = $stmtSiswa->fetchAll(PDO::FETCH_ASSOC);
+
+            // --- LANGKAH 2: Ambil nilai rata-rata per siswa (simplified) ---
+            // Gunakan rata-rata dari detail_nilai_rapor untuk ranking
+            $stmtNilai = $db->prepare("
+                SELECT dnr.siswa_id, AVG(dnr.nilai) AS rata_rata
+                FROM detail_nilai_rapor dnr
+                WHERE dnr.tenant_id = ? AND dnr.deleted_at IS NULL
+                  AND dnr.semester IN (1,2,3,4,5)
+                GROUP BY dnr.siswa_id
+            ");
+            $stmtNilai->execute([$tenantId]);
+            $nilaiMap = [];
+            foreach ($stmtNilai->fetchAll(PDO::FETCH_ASSOC) as $n) {
+                $nilaiMap[$n['siswa_id']] = (float)$n['rata_rata'];
+            }
+
+            // --- LANGKAH 3: Beri peringkat per jurusan ---
+            $jurusanGroups = [];
+            foreach ($siswaList as $s) {
+                $jid = $s['id_jurusan'] ?? 'none';
+                $jurusanGroups[$jid][] = $s;
+            }
+            $rankedStudents = [];
+            foreach ($jurusanGroups as $jid => $group) {
+                usort($group, function($a, $b) use ($nilaiMap) {
+                    $ra = $nilaiMap[$a['id']] ?? 0;
+                    $rb = $nilaiMap[$b['id']] ?? 0;
+                    return $ra == $rb ? strcmp($a['nama_lengkap'], $b['nama_lengkap']) : ($ra > $rb ? -1 : 1);
+                });
+                $rank = 1;
+                foreach ($group as $s) {
+                    $s['rank_eligible']  = $rank++;
+                    $s['rata_rata']      = round($nilaiMap[$s['id']] ?? 0, 2);
+                    $rankedStudents[]    = $s;
+                }
+            }
+
+            // --- LANGKAH 4: Ambil pilihan simulasi ---
+            $stmtSim = $db->prepare("
+                SELECT ps.*, mk1.nama_kampus AS kampus_nama_1, mp1.program_studi AS prodi_nama_1,
+                       mk2.nama_kampus AS kampus_nama_2, mp2.program_studi AS prodi_nama_2
+                FROM pdss_simulasi ps
+                LEFT JOIN master_kampus mk1 ON ps.kampus_id_1 = mk1.id
+                LEFT JOIN master_kampus_prodi mp1 ON ps.prodi_id_1 = mp1.id
+                LEFT JOIN master_kampus mk2 ON ps.kampus_id_2 = mk2.id
+                LEFT JOIN master_kampus_prodi mp2 ON ps.prodi_id_2 = mp2.id
+                WHERE ps.tenant_id = ? AND ps.tahun_ajaran_id = ? AND ps.no_simulasi = ?
+                  AND ps.deleted_at IS NULL
+            ");
+            $stmtSim->execute([$tenantId, $tahunAjaranId, $noSimulasi]);
+            $simMap = [];
+            foreach ($stmtSim->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $simMap[$row['siswa_id']] = $row;
+            }
+
+            // --- LANGKAH 5: Bangun peta konflik ---
+            // $prodiMap["{kampus_id}_{prodi_id}"] = [ [siswa_id, nama, kelas, rank, jurusan], ... ] sorted by rank ASC
+            $prodiMap = [];
+            foreach ($rankedStudents as $s) {
+                $sid = $s['id'];
+                if (!isset($simMap[$sid])) continue;
+                $sim = $simMap[$sid];
+
+                foreach (['1','2'] as $slot) {
+                    $kid = $sim["kampus_id_$slot"] ?? null;
+                    $pid = $sim["prodi_id_$slot"] ?? null;
+                    if (!$kid || !$pid) continue;
+                    $key = "{$kid}_{$pid}";
+                    $prodiMap[$key][] = [
+                        'siswa_id' => $sid,
+                        'nama'     => $s['nama_lengkap'],
+                        'kelas'    => $s['nama_kelas'] ?? '-',
+                        'rank'     => $s['rank_eligible'],
+                        'jurusan'  => $s['nama_jurusan'] ?? '-',
+                        'slot'     => $slot,
+                    ];
+                }
+            }
+            // Sort setiap prodi group by rank ASC
+            foreach ($prodiMap as &$group) {
+                usort($group, fn($a, $b) => $a['rank'] - $b['rank']);
+            }
+            unset($group);
+
+            // --- LANGKAH 6: Tandai konflik di output ---
+            // Buat index cepat: siswa_id+slot -> key
+            $siswaProdiIndex = []; // siswa_id => ['slot' => key]
+            foreach ($prodiMap as $key => $group) {
+                foreach ($group as $idx => $entry) {
+                    if ($idx > 0) {
+                        // Ini pemilih konflik (bukan rank tertinggi)
+                        $siswaProdiIndex[$entry['siswa_id']][$entry['slot']] = [
+                            'key'         => $key,
+                            'pemilik'     => $group[0], // rank tertinggi
+                        ];
+                    }
+                }
+            }
+
+            // --- LANGKAH 7: Susun output akhir ---
+            $output = [];
+            foreach ($rankedStudents as $s) {
+                $sid = $s['id'];
+                $sim = $simMap[$sid] ?? null;
+
+                $row = [
+                    'siswa_id'      => $sid,
+                    'nama_lengkap'  => $s['nama_lengkap'],
+                    'nisn'          => $s['nisn'],
+                    'nis'           => $s['nis'],
+                    'nama_kelas'    => $s['nama_kelas'] ?? '-',
+                    'nama_jurusan'  => $s['nama_jurusan'] ?? '-',
+                    'kode_jurusan'  => $s['kode_jurusan'] ?? '-',
+                    'rank_eligible' => $s['rank_eligible'],
+                    'rata_rata'     => $s['rata_rata'],
+                    'sudah_isi'     => !is_null($sim),
+
+                    // Pilihan 1
+                    'kampus_id_1'   => $sim['kampus_id_1'] ?? null,
+                    'prodi_id_1'    => $sim['prodi_id_1'] ?? null,
+                    'kampus_nama_1' => $sim['kampus_nama_1'] ?? $sim['nama_kampus_1'] ?? null,
+                    'prodi_nama_1'  => $sim['prodi_nama_1'] ?? $sim['nama_prodi_1'] ?? null,
+
+                    // Pilihan 2
+                    'kampus_id_2'   => $sim['kampus_id_2'] ?? null,
+                    'prodi_id_2'    => $sim['prodi_id_2'] ?? null,
+                    'kampus_nama_2' => $sim['kampus_nama_2'] ?? $sim['nama_kampus_2'] ?? null,
+                    'prodi_nama_2'  => $sim['prodi_nama_2'] ?? $sim['nama_prodi_2'] ?? null,
+
+                    // Bukti (simulasi 3)
+                    'bukti_file'    => $sim['bukti_file'] ?? null,
+                    'bukti_filename'=> $sim['bukti_filename'] ?? null,
+                    'status'        => $sim['status'] ?? null,
+                    'catatan_bk'    => $sim['catatan_bk'] ?? null,
+
+                    // Konflik
+                    'is_konflik_1'  => false,
+                    'konflik_info_1'=> null,
+                    'is_konflik_2'  => false,
+                    'konflik_info_2'=> null,
+                ];
+
+                // Terapkan konflik
+                foreach (['1','2'] as $slot) {
+                    if (isset($siswaProdiIndex[$sid][$slot])) {
+                        $pemilik = $siswaProdiIndex[$sid][$slot]['pemilik'];
+                        $row["is_konflik_$slot"]   = true;
+                        $row["konflik_info_$slot"]  = [
+                            'nama'  => $pemilik['nama'],
+                            'rank'  => $pemilik['rank'],
+                            'kelas' => $pemilik['kelas'],
+                        ];
+                    }
+                }
+
+                $output[] = $row;
+            }
+
+            // Stats
+            $totalEligible = count($output);
+            $sudahIsi      = count(array_filter($output, fn($r) => $r['sudah_isi']));
+            $belumIsi      = $totalEligible - $sudahIsi;
+            $totalKonflik  = count(array_filter($output, fn($r) => $r['is_konflik_1'] || $r['is_konflik_2']));
+
+            $this->jsonResponse([
+                'success'       => true,
+                'data'          => $output,
+                'stats'         => [
+                    'total_eligible' => $totalEligible,
+                    'sudah_isi'      => $sudahIsi,
+                    'belum_isi'      => $belumIsi,
+                    'total_konflik'  => $totalKonflik,
+                ],
+                'tahun_ajaran_id' => $tahunAjaranId,
+            ]);
+        } catch (\Throwable $e) {
+            error_log('[PDSSController::apiGetSimulasi] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal memuat data simulasi.'], 500);
+        }
+    }
+
+    /**
+     * API: Simpan / update pilihan simulasi seorang siswa
+     * POST /api/v1/pdss/simulasi
+     */
+    public function apiSaveSimulasi(): void {
+        if (!$this->canWrite()) { $this->jsonResponse(['error' => 'Akses ditolak.'], 403); return; }
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) { $this->jsonResponse(['error' => 'Tenant tidak terdeteksi.'], 400); return; }
+
+        $input = $this->getJsonInput();
+        $siswaId       = $this->sanitize($input['siswa_id'] ?? '');
+        $tahunAjaranId = $input['tahun_ajaran_id'] ?? '';
+        $noSimulasi    = (int)($input['no_simulasi'] ?? 1);
+        $kampusId1     = $this->sanitize($input['kampus_id_1'] ?? '');
+        $prodiId1      = $this->sanitize($input['prodi_id_1'] ?? '');
+        $kampusId2     = $this->sanitize($input['kampus_id_2'] ?? '');
+        $prodiId2      = $this->sanitize($input['prodi_id_2'] ?? '');
+        $catatanSiswa  = $this->sanitize($input['catatan_siswa'] ?? '');
+        $diisiOleh     = 'Guru BK';
+
+        if (empty($siswaId) || !in_array($noSimulasi,[1,2,3])) {
+            $this->jsonResponse(['error' => 'Data tidak lengkap.'], 422); return;
+        }
+        if (empty($kampusId1) || empty($prodiId1)) {
+            $this->jsonResponse(['error' => 'Pilihan 1 (kampus dan prodi) wajib diisi.'], 422); return;
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+            if (empty($tahunAjaranId)) {
+                $stmtTA = $db->prepare("SELECT id FROM tahun_ajaran WHERE tenant_id = ? ORDER BY is_active DESC, id DESC LIMIT 1");
+                $stmtTA->execute([$tenantId]);
+                $tahunAjaranId = $stmtTA->fetchColumn();
+            }
+
+            // Cek setting simulasi: harus is_open = 1
+            $stmtSetting = $db->prepare("SELECT is_open, is_locked FROM pdss_simulasi_setting WHERE tenant_id = ? AND tahun_ajaran_id = ? AND no_simulasi = ?");
+            $stmtSetting->execute([$tenantId, $tahunAjaranId, $noSimulasi]);
+            $setting = $stmtSetting->fetch(PDO::FETCH_ASSOC);
+            if ($setting && (int)$setting['is_locked'] === 1) {
+                $this->jsonResponse(['error' => "Simulasi $noSimulasi sudah dikunci. Pilihan tidak dapat diubah."], 400); return;
+            }
+            if (!$setting || (int)$setting['is_open'] === 0) {
+                $this->jsonResponse(['error' => "Simulasi $noSimulasi belum dibuka oleh BK."], 400); return;
+            }
+
+            // Ambil snapshot nama kampus & prodi
+            $namKampus1 = $namProdi1 = $namKampus2 = $namProdi2 = null;
+            $stmtK = $db->prepare("SELECT nama_kampus FROM master_kampus WHERE id = ? LIMIT 1");
+            $stmtK->execute([$kampusId1]); $namKampus1 = $stmtK->fetchColumn() ?: null;
+            $stmtP = $db->prepare("SELECT program_studi FROM master_kampus_prodi WHERE id = ? LIMIT 1");
+            $stmtP->execute([$prodiId1]); $namProdi1 = $stmtP->fetchColumn() ?: null;
+            if ($kampusId2 && $prodiId2) {
+                $stmtK2 = $db->prepare("SELECT nama_kampus FROM master_kampus WHERE id = ? LIMIT 1");
+                $stmtK2->execute([$kampusId2]); $namKampus2 = $stmtK2->fetchColumn() ?: null;
+                $stmtP2 = $db->prepare("SELECT program_studi FROM master_kampus_prodi WHERE id = ? LIMIT 1");
+                $stmtP2->execute([$prodiId2]); $namProdi2 = $stmtP2->fetchColumn() ?: null;
+            }
+
+            // --- Conflict check real-time untuk Pilihan 1 ---
+            $conflictWarning = null;
+            $stmtConflict = $db->prepare("
+                SELECT ps.siswa_id, s.nama_lengkap, k.nama_kelas
+                FROM pdss_simulasi ps
+                JOIN siswa s ON ps.siswa_id = s.id
+                LEFT JOIN kelas k ON s.id_kelas = k.id
+                WHERE ps.tenant_id = ? AND ps.tahun_ajaran_id = ? AND ps.no_simulasi = ?
+                  AND ps.kampus_id_1 = ? AND ps.prodi_id_1 = ?
+                  AND ps.siswa_id != ?
+                  AND ps.deleted_at IS NULL
+                LIMIT 1
+            ");
+            $stmtConflict->execute([$tenantId, $tahunAjaranId, $noSimulasi, $kampusId1, $prodiId1, $siswaId]);
+            $existingPicker = $stmtConflict->fetch(PDO::FETCH_ASSOC);
+            if ($existingPicker) {
+                $conflictWarning = "Perhatian: Kampus & Prodi Pilihan 1 ini sudah dipilih oleh {$existingPicker['nama_lengkap']} (Kelas: {$existingPicker['nama_kelas']}). Pilihan Anda tetap tersimpan, namun BK akan mengetahui adanya konflik ini.";
+            }
+
+            // UPSERT
+            $db->prepare("
+                INSERT INTO pdss_simulasi
+                (tenant_id, siswa_id, tahun_ajaran_id, no_simulasi, kampus_id_1, prodi_id_1, nama_kampus_1, nama_prodi_1, kampus_id_2, prodi_id_2, nama_kampus_2, nama_prodi_2, catatan_siswa, diisi_oleh, status)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'Guru BK','submitted')
+                ON DUPLICATE KEY UPDATE
+                    kampus_id_1=VALUES(kampus_id_1), prodi_id_1=VALUES(prodi_id_1),
+                    nama_kampus_1=VALUES(nama_kampus_1), nama_prodi_1=VALUES(nama_prodi_1),
+                    kampus_id_2=VALUES(kampus_id_2), prodi_id_2=VALUES(prodi_id_2),
+                    nama_kampus_2=VALUES(nama_kampus_2), nama_prodi_2=VALUES(nama_prodi_2),
+                    catatan_siswa=VALUES(catatan_siswa), diisi_oleh='Guru BK',
+                    status='submitted', updated_at=NOW()
+            ")->execute([
+                $tenantId, $siswaId, $tahunAjaranId, $noSimulasi,
+                $kampusId1, $prodiId1, $namKampus1, $namProdi1,
+                $kampusId2 ?: null, $prodiId2 ?: null, $namKampus2, $namProdi2,
+                $catatanSiswa ?: null
+            ]);
+
+            $response = ['success' => true, 'message' => 'Pilihan simulasi berhasil disimpan.'];
+            if ($conflictWarning) {
+                $response['warning']          = true;
+                $response['conflict_message'] = $conflictWarning;
+            }
+            $this->jsonResponse($response);
+        } catch (\Throwable $e) {
+            error_log('[PDSSController::apiSaveSimulasi] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal menyimpan pilihan simulasi.'], 500);
+        }
+    }
+
+    /**
+     * API: Hapus pilihan simulasi seorang siswa
+     * POST /api/v1/pdss/simulasi/delete
+     */
+    public function apiDeleteSimulasi(): void {
+        if (!$this->canWrite()) { $this->jsonResponse(['error' => 'Akses ditolak.'], 403); return; }
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) { $this->jsonResponse(['error' => 'Tenant tidak terdeteksi.'], 400); return; }
+
+        $input         = $this->getJsonInput();
+        $siswaId       = $this->sanitize($input['siswa_id'] ?? '');
+        $tahunAjaranId = $input['tahun_ajaran_id'] ?? '';
+        $noSimulasi    = (int)($input['no_simulasi'] ?? 0);
+
+        if (empty($siswaId) || !in_array($noSimulasi,[1,2,3])) {
+            $this->jsonResponse(['error' => 'Parameter tidak valid.'], 422); return;
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+            $db->prepare("UPDATE pdss_simulasi SET deleted_at = NOW() WHERE tenant_id = ? AND siswa_id = ? AND tahun_ajaran_id = ? AND no_simulasi = ?")
+               ->execute([$tenantId, $siswaId, $tahunAjaranId, $noSimulasi]);
+            $this->jsonResponse(['success' => true, 'message' => 'Pilihan simulasi berhasil dihapus.']);
+        } catch (\Throwable $e) {
+            error_log('[PDSSController::apiDeleteSimulasi] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal menghapus pilihan simulasi.'], 500);
+        }
+    }
+
+    /**
+     * API: Upload bukti pemilihan (khusus Simulasi 3)
+     * POST /api/v1/pdss/simulasi/upload-bukti (multipart/form-data)
+     */
+    public function apiUploadBuktiSimulasi(): void {
+        if (!$this->canWrite()) { $this->jsonResponse(['error' => 'Akses ditolak.'], 403); return; }
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) { $this->jsonResponse(['error' => 'Tenant tidak terdeteksi.'], 400); return; }
+
+        $siswaId       = $this->sanitize($_POST['siswa_id'] ?? '');
+        $tahunAjaranId = $_POST['tahun_ajaran_id'] ?? '';
+        $noSimulasi    = (int)($_POST['no_simulasi'] ?? 3);
+
+        if (empty($siswaId)) { $this->jsonResponse(['error' => 'siswa_id wajib diisi.'], 422); return; }
+        if ($noSimulasi !== 3) { $this->jsonResponse(['error' => 'Upload bukti hanya untuk Simulasi 3.'], 422); return; }
+        if (!isset($_FILES['bukti_file']) || $_FILES['bukti_file']['error'] !== UPLOAD_ERR_OK) {
+            $this->jsonResponse(['error' => 'File tidak terdeteksi atau terjadi error upload.'], 422); return;
+        }
+
+        $file     = $_FILES['bukti_file'];
+        $allowed  = ['application/pdf','image/jpeg','image/jpg','image/png'];
+        $ext      = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $maxSize  = 2 * 1024 * 1024; // 2MB
+
+        if (!in_array($file['type'], $allowed) || !in_array($ext, ['pdf','jpg','jpeg','png'])) {
+            $this->jsonResponse(['error' => 'Format file tidak didukung. Gunakan PDF, JPG, atau PNG.'], 422); return;
+        }
+        if ($file['size'] > $maxSize) {
+            $this->jsonResponse(['error' => 'Ukuran file melebihi 2MB.'], 422); return;
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+            if (empty($tahunAjaranId)) {
+                $stmtTA = $db->prepare("SELECT id FROM tahun_ajaran WHERE tenant_id = ? ORDER BY is_active DESC, id DESC LIMIT 1");
+                $stmtTA->execute([$tenantId]);
+                $tahunAjaranId = $stmtTA->fetchColumn();
+            }
+
+            $uploadDir = __DIR__ . "/../../uploads/pdss/simulasi/{$tenantId}/{$tahunAjaranId}/";
+            if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+
+            $newFilename = "sim3_{$siswaId}_" . time() . ".$ext";
+            $destPath    = $uploadDir . $newFilename;
+            $relativePath = "uploads/pdss/simulasi/{$tenantId}/{$tahunAjaranId}/{$newFilename}";
+
+            if (!move_uploaded_file($file['tmp_name'], $destPath)) {
+                $this->jsonResponse(['error' => 'Gagal memindahkan file.'], 500); return;
+            }
+
+            $db->prepare("
+                UPDATE pdss_simulasi
+                SET bukti_file = ?, bukti_filename = ?, bukti_uploaded_at = NOW(), updated_at = NOW()
+                WHERE tenant_id = ? AND siswa_id = ? AND tahun_ajaran_id = ? AND no_simulasi = 3 AND deleted_at IS NULL
+            ")->execute([$relativePath, $file['name'], $tenantId, $siswaId, $tahunAjaranId]);
+
+            $this->jsonResponse(['success' => true, 'message' => 'Bukti berhasil diupload.', 'file_path' => $relativePath, 'filename' => $file['name']]);
+        } catch (\Throwable $e) {
+            error_log('[PDSSController::apiUploadBuktiSimulasi] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal mengupload bukti.'], 500);
+        }
+    }
+
+    /**
+     * API: Export Excel hasil simulasi
+     * GET /api/v1/pdss/simulasi/export?tahun_ajaran_id=&no_simulasi=
+     */
+    public function apiExportSimulasi(): void {
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) { $this->jsonResponse(['error' => 'Pilih sekolah terlebih dahulu.'], 400); return; }
+
+        $tahunAjaranId = $_GET['tahun_ajaran_id'] ?? '';
+        $noSimulasi    = (int)($_GET['no_simulasi'] ?? 1);
+
+        try {
+            $db = \App\Config\Database::getConnection();
+            if (empty($tahunAjaranId)) {
+                $stmtTA = $db->prepare("SELECT id FROM tahun_ajaran WHERE tenant_id = ? ORDER BY is_active DESC, id DESC LIMIT 1");
+                $stmtTA->execute([$tenantId]);
+                $tahunAjaranId = $stmtTA->fetchColumn();
+            }
+            $stmtTaName = $db->prepare("SELECT tahun_ajaran FROM tahun_ajaran WHERE id = ? LIMIT 1");
+            $stmtTaName->execute([$tahunAjaranId]);
+            $taNama = $stmtTaName->fetchColumn() ?: 'unknown';
+
+            // Panggil apiGetSimulasi secara internal (ambil data via method yang sama)
+            // Tapi untuk export kita langsung query sederhana
+            $stmtData = $db->prepare("
+                SELECT s.nama_lengkap, k.nama_kelas, j.nama_jurusan,
+                       ps.kampus_id_1, COALESCE(mk1.nama_kampus, ps.nama_kampus_1) AS kampus_1,
+                       COALESCE(mp1.program_studi, ps.nama_prodi_1) AS prodi_1,
+                       COALESCE(mk2.nama_kampus, ps.nama_kampus_2) AS kampus_2,
+                       COALESCE(mp2.program_studi, ps.nama_prodi_2) AS prodi_2,
+                       ps.bukti_filename, ps.status
+                FROM pdss_simulasi ps
+                JOIN siswa s ON ps.siswa_id = s.id
+                LEFT JOIN kelas k ON s.id_kelas = k.id
+                LEFT JOIN jurusan j ON s.id_jurusan = j.id
+                LEFT JOIN master_kampus mk1 ON ps.kampus_id_1 = mk1.id
+                LEFT JOIN master_kampus_prodi mp1 ON ps.prodi_id_1 = mp1.id
+                LEFT JOIN master_kampus mk2 ON ps.kampus_id_2 = mk2.id
+                LEFT JOIN master_kampus_prodi mp2 ON ps.prodi_id_2 = mp2.id
+                WHERE ps.tenant_id = ? AND ps.tahun_ajaran_id = ? AND ps.no_simulasi = ? AND ps.deleted_at IS NULL
+                ORDER BY j.nama_jurusan, s.nama_lengkap
+            ");
+            $stmtData->execute([$tenantId, $tahunAjaranId, $noSimulasi]);
+            $rows = $stmtData->fetchAll(PDO::FETCH_ASSOC);
+
+            $safeTA = str_replace('/', '-', $taNama);
+            $filename = "simulasi_{$noSimulasi}_ta_{$safeTA}.csv";
+            header('Content-Type: text/csv; charset=UTF-8');
+            header("Content-Disposition: attachment; filename=\"{$filename}\"");
+            header('Pragma: no-cache');
+            echo "\xEF\xBB\xBF"; // BOM UTF-8
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['No','Nama Siswa','Kelas','Jurusan','Kampus Pilihan 1','Prodi Pilihan 1','Kampus Pilihan 2','Prodi Pilihan 2','Bukti Upload','Status']);
+            $no = 1;
+            foreach ($rows as $r) {
+                fputcsv($out, [
+                    $no++,
+                    $r['nama_lengkap'],
+                    $r['nama_kelas'] ?? '-',
+                    $r['nama_jurusan'] ?? '-',
+                    $r['kampus_1'] ?? '-',
+                    $r['prodi_1'] ?? '-',
+                    $r['kampus_2'] ?? '-',
+                    $r['prodi_2'] ?? '-',
+                    $r['bukti_filename'] ?? '-',
+                    $r['status'] ?? '-',
+                ]);
+            }
+            fclose($out);
+            exit;
+        } catch (\Throwable $e) {
+            error_log('[PDSSController::apiExportSimulasi] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal mengekspor data simulasi.'], 500);
+        }
+    }
 }
+

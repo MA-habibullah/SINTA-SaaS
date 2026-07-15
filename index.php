@@ -1311,7 +1311,39 @@ try {
             $controller->logout();
             break;
 
+
+        // =========================================================================
+        // SIMULASI PEMILIHAN KAMPUS & PRODI — PDSS
+        // =========================================================================
+
+        case '/api/v1/pdss/simulasi/setting':
+            $ctrl = new App\Controllers\PDSSController();
+            $_SERVER['REQUEST_METHOD'] === 'POST'
+                ? $ctrl->apiToggleSimulasiSetting()
+                : $ctrl->apiGetSimulasiSetting();
+            break;
+
+        case '/api/v1/pdss/simulasi/delete':
+            (new App\Controllers\PDSSController())->apiDeleteSimulasi();
+            break;
+
+        case '/api/v1/pdss/simulasi/upload-bukti':
+            (new App\Controllers\PDSSController())->apiUploadBuktiSimulasi();
+            break;
+
+        case '/api/v1/pdss/simulasi/export':
+            (new App\Controllers\PDSSController())->apiExportSimulasi();
+            break;
+
+        case '/api/v1/pdss/simulasi':
+            $ctrl = new App\Controllers\PDSSController();
+            $_SERVER['REQUEST_METHOD'] === 'POST'
+                ? $ctrl->apiSaveSimulasi()
+                : $ctrl->apiGetSimulasi();
+            break;
+
         default:
+
             // Jika halaman tidak ditemukan, tampilkan 404
             http_response_code(404);
             if (str_starts_with($path, '/api/')) {

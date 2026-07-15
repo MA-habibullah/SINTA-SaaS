@@ -185,6 +185,12 @@ $tenantList = $data['tenant_list'] ?? [];
                         </button>
                     </li>
                     <?php endif; ?>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'simulasi'}"
+                                @click="activeTab = 'simulasi'" id="tab-btn-simulasi">
+                            <i class="bi bi-journal-check me-2 fs-6"></i> Simulasi Pilihan Kampus
+                        </button>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -930,6 +936,11 @@ $tenantList = $data['tenant_list'] ?? [];
         <?php include __DIR__ . '/bk/kampus_config_ui.php'; ?>
     </template>
 
+    <!-- TAB: SIMULASI PEMILIHAN KAMPUS & PRODI -->
+    <template v-if="activeTab === 'simulasi'">
+        <?php include __DIR__ . '/bk/pdss_simulasi_ui.php'; ?>
+    </template>
+
     <!-- MODAL AUDIT DETAIL NILAI RAPOR -->
     <Teleport to="body">
         <div class="modal fade" id="modalAuditGrades" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
@@ -1138,6 +1149,44 @@ $tenantList = $data['tenant_list'] ?? [];
                         jenis_kampus: 'Negeri',
                         kuota_target: 5
                     }
+                },
+
+                // ============================================================
+                // SIMULASI PEMILIHAN KAMPUS & PRODI
+                // ============================================================
+                activeNoSimulasi: 1,          // Simulasi aktif: 1, 2, atau 3
+                simulasiData: [],             // Daftar siswa + pilihan + peringkat
+                simulasiStats: { total_eligible: 0, sudah_isi: 0, belum_isi: 0, total_konflik: 0 },
+                simulasiSettings: {
+                    1: { is_open: 0, is_locked: 0 },
+                    2: { is_open: 0, is_locked: 0 },
+                    3: { is_open: 0, is_locked: 0 }
+                },
+                loadingSimulasi: false,
+                filterSimulasi: {
+                    search: '',
+                    jurusan_id: '',
+                    status_konflik: '',   // '' | 'konflik' | 'aman'
+                    sudah_isi: ''         // '' | 'sudah' | 'belum'
+                },
+                listKampusFlat: [],           // Daftar kampus untuk dropdown pilihan
+                listProdiByKampus: {},        // { kampus_id: [prodi, ...] }
+                modalSimulasi: {
+                    show: false,
+                    siswa: null,
+                    saving: false,
+                    conflictMsg: '',
+                    form: {
+                        kampus_id_1: '', prodi_id_1: '',
+                        kampus_id_2: '', prodi_id_2: '',
+                        catatan_siswa: ''
+                    }
+                },
+                modalUploadBukti: {
+                    show: false,
+                    siswa: null,
+                    uploading: false,
+                    file: null
                 }
             };
         },
@@ -1157,6 +1206,10 @@ $tenantList = $data['tenant_list'] ?? [];
                     this.fetchKampus();
                 } else if (newVal === 'master_jalur') {
                     this.fetchJalur();
+                } else if (newVal === 'simulasi') {
+                    this.fetchSimulasiSettings();
+                    this.fetchSimulasi();
+                    if (this.listKampusFlat.length === 0) this.fetchKampusFlatList();
                 }
             }
         },
@@ -1994,6 +2047,241 @@ $tenantList = $data['tenant_list'] ?? [];
                 } finally {
                     this.loading = false;
                 }
+            },
+
+            // ============================================================
+            // SIMULASI PEMILIHAN KAMPUS METHODS
+            // ============================================================
+            async fetchSimulasiSettings() {
+                try {
+                    let url = `${_baseUrl}/api/v1/pdss/simulasi/setting?tahun_ajaran_id=${this.filterAcademicYear}`;
+                    if (this.currentTenantId) url += `&tenant_id=${this.currentTenantId}`;
+                    const res = await axios.get(url);
+                    if (res.data.success) {
+                        this.simulasiSettings = res.data.data;
+                    }
+                } catch (e) {
+                    console.error('Gagal memuat setting simulasi', e);
+                }
+            },
+
+            async toggleSimulasiSetting(noSim, action) {
+                const label = action === 'open' ? 'membuka' : (action === 'close' ? 'menutup' : 'mengunci');
+                const confirm = await Swal.fire({
+                    title: 'Apakah Anda yakin?',
+                    text: `Anda akan ${label} pengisian untuk Simulasi ${noSim}.`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#2563eb',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: 'Ya, Lanjutkan'
+                });
+                if (!confirm.isConfirmed) return;
+
+                try {
+                    let url = `${_baseUrl}/api/v1/pdss/simulasi/setting`;
+                    if (this.currentTenantId) url += `?tenant_id=${this.currentTenantId}`;
+                    const res = await axios.post(url, {
+                        no_simulasi: noSim,
+                        action: action,
+                        tahun_ajaran_id: this.filterAcademicYear
+                    });
+                    if (res.data.success) {
+                        Swal.fire({ icon: 'success', title: 'Berhasil', text: res.data.message, confirmButtonColor: '#2563eb' });
+                        this.fetchSimulasiSettings();
+                        this.fetchSimulasi();
+                    }
+                } catch (e) {
+                    const msg = (e.response && e.response.data && e.response.data.error) || 'Gagal mengubah status simulasi.';
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: msg, confirmButtonColor: '#2563eb' });
+                }
+            },
+
+            async fetchSimulasi() {
+                this.loadingSimulasi = true;
+                try {
+                    let url = `${_baseUrl}/api/v1/pdss/simulasi?tahun_ajaran_id=${this.filterAcademicYear}&no_simulasi=${this.activeNoSimulasi}`;
+                    if (this.currentTenantId) url += `&tenant_id=${this.currentTenantId}`;
+                    const res = await axios.get(url);
+                    if (res.data.success) {
+                        this.simulasiData = res.data.data;
+                        this.simulasiStats = res.data.stats;
+                    }
+                } catch (e) {
+                    console.error('Gagal memuat data simulasi', e);
+                } finally {
+                    this.loadingSimulasi = false;
+                }
+            },
+
+            async fetchKampusFlatList() {
+                try {
+                    let url = `${_baseUrl}/api/v1/kampus/flat-list`;
+                    if (this.currentTenantId) url += `?tenant_id=${this.currentTenantId}`;
+                    const res = await axios.get(url);
+                    if (res.data.success) {
+                        this.listKampusFlat = res.data.data;
+                    }
+                } catch (e) {
+                    console.error('Gagal memuat daftar kampus', e);
+                }
+            },
+
+            async fetchProdiByKampus(kampusId) {
+                if (!kampusId) return;
+                if (this.listProdiByKampus[kampusId]) return; // Cache hit
+
+                try {
+                    let url = `${_baseUrl}/api/v1/kampus/prodi/list?kampus_id=${kampusId}`;
+                    if (this.currentTenantId) url += `&tenant_id=${this.currentTenantId}`;
+                    const res = await axios.get(url);
+                    if (res.data.success) {
+                        // Gunakan reactive Vue set
+                        this.listProdiByKampus[kampusId] = res.data.data;
+                    }
+                } catch (e) {
+                    console.error('Gagal memuat prodi', e);
+                }
+            },
+
+            onKampusChange(slot) {
+                const kid = slot === 1 ? this.modalSimulasi.form.kampus_id_1 : this.modalSimulasi.form.kampus_id_2;
+                if (slot === 1) {
+                    this.modalSimulasi.form.prodi_id_1 = '';
+                } else {
+                    this.modalSimulasi.form.prodi_id_2 = '';
+                }
+                if (kid) {
+                    this.fetchProdiByKampus(kid);
+                }
+            },
+
+            openModalSimulasi(siswa) {
+                this.modalSimulasi.siswa = siswa;
+                this.modalSimulasi.conflictMsg = '';
+                this.modalSimulasi.form.kampus_id_1 = siswa.kampus_id_1 || '';
+                this.modalSimulasi.form.prodi_id_1 = siswa.prodi_id_1 || '';
+                this.modalSimulasi.form.kampus_id_2 = siswa.kampus_id_2 || '';
+                this.modalSimulasi.form.prodi_id_2 = siswa.prodi_id_2 || '';
+                this.modalSimulasi.form.catatan_siswa = siswa.catatan_siswa || '';
+
+                if (siswa.kampus_id_1) this.fetchProdiByKampus(siswa.kampus_id_1);
+                if (siswa.kampus_id_2) this.fetchProdiByKampus(siswa.kampus_id_2);
+
+                this.modalSimulasi.show = true;
+            },
+
+            async submitSimulasi() {
+                this.modalSimulasi.saving = true;
+                try {
+                    let url = `${_baseUrl}/api/v1/pdss/simulasi`;
+                    if (this.currentTenantId) url += `?tenant_id=${this.currentTenantId}`;
+                    const payload = {
+                        siswa_id: this.modalSimulasi.siswa.siswa_id,
+                        tahun_ajaran_id: this.filterAcademicYear,
+                        no_simulasi: this.activeNoSimulasi,
+                        ...this.modalSimulasi.form
+                    };
+                    const res = await axios.post(url, payload);
+                    if (res.data.success) {
+                        this.modalSimulasi.show = false;
+                        this.fetchSimulasi();
+
+                        if (res.data.warning) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Disimpan Dengan Peringatan',
+                                text: res.data.conflict_message,
+                                confirmButtonColor: '#eab308'
+                            });
+                        } else {
+                            Swal.fire({ icon: 'success', title: 'Berhasil', text: res.data.message, confirmButtonColor: '#2563eb' });
+                        }
+                    }
+                } catch (e) {
+                    const msg = (e.response && e.response.data && e.response.data.error) || 'Gagal menyimpan pilihan simulasi.';
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: msg, confirmButtonColor: '#2563eb' });
+                } finally {
+                    this.modalSimulasi.saving = false;
+                }
+            },
+
+            async deleteSimulasi(siswa) {
+                const confirm = await Swal.fire({
+                    title: 'Hapus Pilihan?',
+                    text: `Anda akan menghapus pilihan simulasi untuk ${siswa.nama_lengkap}.`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: 'Ya, Hapus'
+                });
+                if (!confirm.isConfirmed) return;
+
+                try {
+                    let url = `${_baseUrl}/api/v1/pdss/simulasi/delete`;
+                    if (this.currentTenantId) url += `?tenant_id=${this.currentTenantId}`;
+                    const res = await axios.post(url, {
+                        siswa_id: siswa.siswa_id,
+                        tahun_ajaran_id: this.filterAcademicYear,
+                        no_simulasi: this.activeNoSimulasi
+                    });
+                    if (res.data.success) {
+                        Swal.fire({ icon: 'success', title: 'Berhasil', text: res.data.message, confirmButtonColor: '#2563eb' });
+                        this.fetchSimulasi();
+                    }
+                } catch (e) {
+                    const msg = (e.response && e.response.data && e.response.data.error) || 'Gagal menghapus pilihan.';
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: msg, confirmButtonColor: '#2563eb' });
+                }
+            },
+
+            openModalUploadBukti(siswa) {
+                this.modalUploadBukti.siswa = siswa;
+                this.modalUploadBukti.file = null;
+                this.$refs.buktiFileInput.value = '';
+                this.modalUploadBukti.show = true;
+            },
+
+            handleFileUpload(event) {
+                this.modalUploadBukti.file = event.target.files[0];
+            },
+
+            async submitUploadBukti() {
+                if (!this.modalUploadBukti.file) {
+                    Swal.fire({ icon: 'warning', title: 'Pilih File', text: 'Silakan pilih file bukti terlebih dahulu.', confirmButtonColor: '#2563eb' });
+                    return;
+                }
+                this.modalUploadBukti.uploading = true;
+                const formData = new FormData();
+                formData.append('siswa_id', this.modalUploadBukti.siswa.siswa_id);
+                formData.append('tahun_ajaran_id', this.filterAcademicYear);
+                formData.append('no_simulasi', 3);
+                formData.append('bukti_file', this.modalUploadBukti.file);
+
+                try {
+                    let url = `${_baseUrl}/api/v1/pdss/simulasi/upload-bukti`;
+                    if (this.currentTenantId) url += `?tenant_id=${this.currentTenantId}`;
+                    const res = await axios.post(url, formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                    });
+                    if (res.data.success) {
+                        this.modalUploadBukti.show = false;
+                        Swal.fire({ icon: 'success', title: 'Berhasil', text: res.data.message, confirmButtonColor: '#2563eb' });
+                        this.fetchSimulasi();
+                    }
+                } catch (e) {
+                    const msg = (e.response && e.response.data && e.response.data.error) || 'Gagal mengupload file bukti.';
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: msg, confirmButtonColor: '#2563eb' });
+                } finally {
+                    this.modalUploadBukti.uploading = false;
+                }
+            },
+
+            exportSimulasi() {
+                let url = `${_baseUrl}/api/v1/pdss/simulasi/export?tahun_ajaran_id=${this.filterAcademicYear}&no_simulasi=${this.activeNoSimulasi}`;
+                if (this.currentTenantId) url += `&tenant_id=${this.currentTenantId}`;
+                window.location.href = url;
             }
         }
     });
