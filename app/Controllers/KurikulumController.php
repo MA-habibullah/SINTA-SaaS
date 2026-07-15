@@ -99,11 +99,12 @@ class KurikulumController extends BaseController {
         }
         $mapelList = $stmtMapel->fetchAll(PDO::FETCH_ASSOC);
 
-        // 4. Fetch existing mapping if filters are provided
+        // 4. Fetch existing mapping and active curriculum if filters are provided
         $existingMapping = [];
         $kelasId = $_GET['kelas_id'] ?? '';
         $tahunAjaran = $_GET['tahun_ajaran'] ?? '';
         $semester = $_GET['semester'] ?? '';
+        $activeKurikulumId = '';
 
         if (!empty($kelasId) && !empty($tahunAjaran) && !empty($semester)) {
             $qExist = "SELECT kelompok_id, mapel_id FROM pemetaan_mapel WHERE kelas_id = :kelas_id AND tahun_ajaran = :tahun_ajaran AND semester = :semester";
@@ -122,14 +123,49 @@ class KurikulumController extends BaseController {
             }
             $stmtExist->execute($params);
             $existingMapping = $stmtExist->fetchAll(PDO::FETCH_ASSOC);
+
+            // Fetch active curriculum for the class and academic year
+            $qActive = "SELECT kurikulum_id FROM kelas_kurikulum WHERE kelas_id = :kelas_id AND tahun_ajaran = :tahun_ajaran";
+            if ($tenantId) {
+                $qActive .= " AND tenant_id = :tenant_id";
+            }
+            $qActive .= " LIMIT 1";
+            $stmtActive = $db->prepare($qActive);
+            $activeParams = [
+                'kelas_id' => $kelasId,
+                'tahun_ajaran' => $tahunAjaran
+            ];
+            if ($tenantId) {
+                $activeParams['tenant_id'] = $tenantId;
+            }
+            $stmtActive->execute($activeParams);
+            $activeKurikulumId = $stmtActive->fetchColumn() ?: '';
         }
+
+        // Fetch dynamic ref_kurikulum options
+        $qRef = "SELECT id, nama_kurikulum, tipe_penilaian FROM ref_kurikulum WHERE is_active = 1";
+        if ($tenantId) {
+            $qRef .= " AND (tenant_id = :tenant_id OR tenant_id IS NULL)";
+        } else {
+            $qRef .= " AND tenant_id IS NULL";
+        }
+        $qRef .= " ORDER BY id ASC";
+        $stmtRef = $db->prepare($qRef);
+        if ($tenantId) {
+            $stmtRef->execute(['tenant_id' => $tenantId]);
+        } else {
+            $stmtRef->execute();
+        }
+        $kurikulumList = $stmtRef->fetchAll(PDO::FETCH_ASSOC);
 
         $this->jsonResponse([
             'tahun_ajaran' => $tahunList,
             'kelas' => $kelasList,
             'jenjang' => $jenjangList,
             'bank_mapel' => $mapelList,
-            'existing_mapping' => $existingMapping
+            'existing_mapping' => $existingMapping,
+            'kurikulum_list' => $kurikulumList,
+            'active_kurikulum_id' => $activeKurikulumId
         ]);
     }
 
@@ -143,6 +179,7 @@ class KurikulumController extends BaseController {
         $kelasId = $input['kelas_id'] ?? '';
         $tahunAjaran = $input['tahun_ajaran'] ?? '';
         $semester = $input['semester'] ?? '';
+        $kurikulumId = $input['kurikulum_id'] ?? '';
         $mappings = $input['mappings'] ?? []; // Expected format: [ ['kelompok_id' => 'Group A', 'mapel_ids' => [1, 2]], ... ]
 
         if (empty($kelasId) || empty($tahunAjaran) || empty($semester)) {
@@ -202,6 +239,24 @@ class KurikulumController extends BaseController {
                         'mapel_id' => $mapelId
                     ]);
                 }
+            }
+
+            // 3. Save active curriculum mapping
+            if (!empty($kurikulumId)) {
+                $stmtDelKur = $db->prepare("DELETE FROM kelas_kurikulum WHERE kelas_id = :kelas_id AND tahun_ajaran = :tahun_ajaran AND tenant_id = :tenant_id");
+                $stmtDelKur->execute([
+                    'kelas_id' => $kelasId,
+                    'tahun_ajaran' => $tahunAjaran,
+                    'tenant_id' => $tenantId
+                ]);
+                
+                $stmtInsKur = $db->prepare("INSERT INTO kelas_kurikulum (tenant_id, kelas_id, tahun_ajaran, kurikulum_id) VALUES (:tenant_id, :kelas_id, :tahun_ajaran, :kurikulum_id)");
+                $stmtInsKur->execute([
+                    'tenant_id' => $tenantId,
+                    'kelas_id' => $kelasId,
+                    'tahun_ajaran' => $tahunAjaran,
+                    'kurikulum_id' => $kurikulumId
+                ]);
             }
 
             $db->commit();

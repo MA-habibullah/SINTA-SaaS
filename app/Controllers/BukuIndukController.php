@@ -887,10 +887,71 @@ class BukuIndukController extends BaseController {
             $siswa['nama_kelas'] = $historicalKelas;
         }
 
-        if (stripos($kurikulum, 'Merdeka') !== false) {
-            require __DIR__ . '/../../views/print_rapot_merdeka.php';
+        // Determine dynamic curriculum
+        $tipePenilaian = 'sederhana'; // default
+        $namaKurikulum = 'Kurikulum Merdeka';
+        try {
+            $kelasIdSiswa = null;
+            if (count($grades) > 0 && !empty($grades[0]['kelas_id'])) {
+                $kelasIdSiswa = $grades[0]['kelas_id'];
+            } else {
+                $kelasIdSiswa = $siswa['id_kelas'];
+            }
+
+            if ($kelasIdSiswa) {
+                $qKelasKur = "SELECT r.nama_kurikulum, r.tipe_penilaian 
+                              FROM kelas_kurikulum kk
+                              JOIN ref_kurikulum r ON kk.kurikulum_id = r.id
+                              WHERE kk.kelas_id = :kelas_id AND kk.tahun_ajaran = :tahun_ajaran AND kk.tenant_id = :tenant_id
+                              LIMIT 1";
+                $stmtKelasKur = $db->prepare($qKelasKur);
+                $stmtKelasKur->execute([
+                    'kelas_id' => $kelasIdSiswa,
+                    'tahun_ajaran' => $ta,
+                    'tenant_id' => $siswa['tenant_id']
+                ]);
+                $kelasKurInfo = $stmtKelasKur->fetch(PDO::FETCH_ASSOC);
+                if ($kelasKurInfo) {
+                    $namaKurikulum = $kelasKurInfo['nama_kurikulum'];
+                    $tipePenilaian = $kelasKurInfo['tipe_penilaian'];
+                } else {
+                    $kurikulumTenant = $tenantInfo['kurikulum'] ?? 'Merdeka';
+                    if (stripos($kurikulumTenant, '13') !== false) {
+                        $tipePenilaian = 'kompleks';
+                        $namaKurikulum = 'Kurikulum 2013 (K-13)';
+                    } elseif (stripos($kurikulumTenant, 'KTSP') !== false || stripos($kurikulumTenant, 'KBK') !== false) {
+                        $tipePenilaian = 'klasik';
+                        $namaKurikulum = 'KTSP';
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // fallback
+        }
+
+        // Fetch K-13 attitude if complex
+        $sikapK13 = [];
+        if ($tipePenilaian === 'kompleks') {
+            try {
+                $qSikap = "SELECT * FROM nilai_sikap_k13 WHERE siswa_id = ? AND tahun_ajaran = ? AND semester = ? LIMIT 1";
+                $stmtSikap = $db->prepare($qSikap);
+                $stmtSikap->execute([$id, $ta, $semester]);
+                $sikapRow = $stmtSikap->fetch(PDO::FETCH_ASSOC);
+                if ($sikapRow) {
+                    $sikapK13[$id] = $sikapRow;
+                }
+            } catch (\Throwable $e) {
+                // skip
+            }
+        }
+
+        // Load correct layout
+        if ($tipePenilaian === 'klasik') {
+            require __DIR__ . '/../../views/print_rapot_ktsp.php';
+        } elseif ($tipePenilaian === 'kompleks') {
+            require __DIR__ . '/../../views/print_rapot_k13.php';
         } else {
-            require __DIR__ . '/../../views/print_rapot_standar.php';
+            require __DIR__ . '/../../views/print_rapot_merdeka.php';
         }
         exit;
     }
@@ -1334,5 +1395,284 @@ class BukuIndukController extends BaseController {
             }
             $this->jsonResponse(['error' => $e->getMessage()], 400);
         }
+    }
+
+    public function printRapotSemesterBulk(): void {
+        $kelasId = $_GET['kelas_id'] ?? '';
+        $semester = $_GET['semester'] ?? '';
+        $ta = $_GET['ta'] ?? '';
+        $tempat = $_GET['tempat'] ?? 'Jombang';
+        $tanggal = $_GET['tanggal'] ?? '';
+
+        if (empty($kelasId) || empty($semester) || empty($ta)) {
+            die("<h1>Bad Request</h1><p>Parameter tidak lengkap.</p>");
+        }
+
+        $tenantId = SessionManager::getTenantId();
+        $db = \App\Config\Database::getConnection();
+
+        // Ambil daftar siswa aktif di kelas ini
+        $query = "SELECT id FROM siswa WHERE id_kelas = :kelas_id AND deleted_at IS NULL AND status = 'Aktif'";
+        $params = ['kelas_id' => $kelasId];
+        if ($tenantId !== null) {
+            $query .= " AND tenant_id = :tenant_id";
+            $params['tenant_id'] = $tenantId;
+        }
+        $query .= " ORDER BY nama_lengkap ASC";
+        $stmt = $db->prepare($query);
+        $stmt->execute($params);
+        $studentIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        if (empty($studentIds)) {
+            die("<h1>Not Found</h1><p>Tidak ada siswa aktif di kelas yang dipilih.</p>");
+        }
+
+        // Ambil info tenant / sekolah
+        try {
+            $stmtTenant = $db->prepare("SELECT * FROM tenants WHERE id = ?");
+            $stmtTenant->execute([$tenantId]);
+            $tenantInfo = $stmtTenant->fetch(PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            $tenantInfo = [];
+        }
+
+        // Ambil data Kepsek saat ini
+        $tanggalCetak = $tanggal ?: date('Y-m-d');
+        $historicalKepsek = $this->getKepsekAtDate($tenantId, $tanggalCetak);
+        if (!empty($historicalKepsek)) {
+            $tenantInfo['nama_kepsek'] = $historicalKepsek['nama_kepsek'];
+            $tenantInfo['nip_kepsek'] = $historicalKepsek['nip_kepsek'];
+        }
+
+        // Dapatkan nama kelas
+        try {
+            $stmtKelas = $db->prepare("SELECT nama_kelas FROM kelas WHERE id = ?");
+            $stmtKelas->execute([$kelasId]);
+            $kelasName = $stmtKelas->fetchColumn() ?: '-';
+        } catch (\Throwable $e) {
+            $kelasName = '-';
+        }
+
+        // Tipe kurikulum kelas
+        $tipePenilaian = 'sederhana';
+        $namaKurikulum = 'Kurikulum Merdeka';
+        try {
+            $qKelasKur = "SELECT r.nama_kurikulum, r.tipe_penilaian 
+                          FROM kelas_kurikulum kk
+                          JOIN ref_kurikulum r ON kk.kurikulum_id = r.id
+                          WHERE kk.kelas_id = :kelas_id AND kk.tahun_ajaran = :tahun_ajaran AND kk.tenant_id = :tenant_id
+                          LIMIT 1";
+            $stmtKelasKur = $db->prepare($qKelasKur);
+            $stmtKelasKur->execute([
+                'kelas_id' => $kelasId,
+                'tahun_ajaran' => $ta,
+                'tenant_id' => $tenantId
+            ]);
+            $kelasKurInfo = $stmtKelasKur->fetch(PDO::FETCH_ASSOC);
+            if ($kelasKurInfo) {
+                $namaKurikulum = $kelasKurInfo['nama_kurikulum'];
+                $tipePenilaian = $kelasKurInfo['tipe_penilaian'];
+            }
+        } catch (\Throwable $e) {}
+
+        $siswaModel = new \App\Models\Siswa($tenantId);
+        $studentsData = [];
+
+        foreach ($studentIds as $id) {
+            $siswa = $siswaModel->findFullById($id);
+            if (!$siswa) continue;
+            $siswa['tenant_info'] = $tenantInfo;
+            $siswa['nama_kelas'] = $kelasName;
+
+            // Fetch grades
+            $grades = [];
+            try {
+                $stmtGrades = $db->prepare("
+                    SELECT d.*, m.nama_mapel, k.nama_kelas 
+                    FROM detail_nilai_rapor d 
+                    JOIN mata_pelajaran m ON d.mapel_id = m.id 
+                    LEFT JOIN kelas k ON d.kelas_id = k.id
+                    WHERE d.siswa_id = ? AND d.semester = ? AND d.tahun_ajaran = ? 
+                    AND d.deleted_at IS NULL 
+                    ORDER BY m.nama_mapel ASC
+                ");
+                $stmtGrades->execute([$id, $semester, $ta]);
+                $grades = $stmtGrades->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Throwable $e) {}
+
+            $siswa['grades'] = $grades;
+            $studentsData[] = $siswa;
+        }
+
+        // Load correct bulk layout
+        if ($tipePenilaian === 'klasik') {
+            require __DIR__ . '/../../views/print_rapot_bulk_ktsp.php';
+        } elseif ($tipePenilaian === 'kompleks') {
+            // Ambil data sikap K-13
+            $sikapK13 = [];
+            foreach ($studentIds as $id) {
+                try {
+                    $stmtSikap = $db->prepare("SELECT * FROM nilai_sikap_k13 WHERE siswa_id = ? AND tahun_ajaran = ? AND semester = ? LIMIT 1");
+                    $stmtSikap->execute([$id, $ta, $semester]);
+                    $sikapRow = $stmtSikap->fetch(PDO::FETCH_ASSOC);
+                    if ($sikapRow) {
+                        $sikapK13[$id] = $sikapRow;
+                    }
+                } catch (\Throwable $e) {}
+            }
+            require __DIR__ . '/../../views/print_rapot_bulk_k13.php';
+        } else {
+            require __DIR__ . '/../../views/print_rapot_bulk_merdeka.php';
+        }
+        exit;
+    }
+
+    public function exportPdssSnbp(): void {
+        $kelasId = $_GET['kelas_id'] ?? '';
+        
+        if (empty($kelasId)) {
+            die("<h1>Bad Request</h1><p>Parameter kelas_id wajib diisi.</p>");
+        }
+
+        $tenantId = SessionManager::getTenantId();
+        $db = \App\Config\Database::getConnection();
+
+        // 1. Get Kelas Name
+        $stmtKelas = $db->prepare("SELECT nama_kelas FROM kelas WHERE id = :id LIMIT 1");
+        $stmtKelas->execute(['id' => $kelasId]);
+        $kelasName = $stmtKelas->fetchColumn() ?: 'Kelas';
+
+        // 2. Get students in this class
+        $qSiswa = "SELECT id, nama_lengkap, nisn, nis FROM siswa 
+                   WHERE id_kelas = :kelas_id AND tenant_id = :tenant_id AND status = 'Aktif' AND deleted_at IS NULL 
+                   ORDER BY nama_lengkap ASC";
+        $stmtSiswa = $db->prepare($qSiswa);
+        $stmtSiswa->execute(['kelas_id' => $kelasId, 'tenant_id' => $tenantId]);
+        $students = $stmtSiswa->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($students)) {
+            die("<h1>Not Found</h1><p>Tidak ada siswa aktif di kelas ini.</p>");
+        }
+
+        // 3. Get all subjects mapped to this class across historical years
+        $qMapel = "SELECT DISTINCT m.id, m.nama_mapel 
+                   FROM detail_nilai_rapor d
+                   JOIN mata_pelajaran m ON d.mapel_id = m.id
+                   WHERE d.kelas_id = :kelas_id AND d.tenant_id = :tenant_id AND d.deleted_at IS NULL
+                   ORDER BY m.nama_mapel ASC";
+        $stmtMapel = $db->prepare($qMapel);
+        $stmtMapel->execute(['kelas_id' => $kelasId, 'tenant_id' => $tenantId]);
+        $subjects = $stmtMapel->fetchAll(PDO::FETCH_ASSOC);
+
+        // 4. Get all grades for these students for semesters 1-5 (Ganjil/Genap)
+        $qGrades = "SELECT d.siswa_id, d.mapel_id, d.semester, d.tahun_ajaran, d.nilai_akhir 
+                    FROM detail_nilai_rapor d
+                    WHERE d.kelas_id = :kelas_id AND d.tenant_id = :tenant_id AND d.deleted_at IS NULL 
+                      AND d.semester IN ('Ganjil', 'Genap')";
+        $stmtGrades = $db->prepare($qGrades);
+        $stmtGrades->execute(['kelas_id' => $kelasId, 'tenant_id' => $tenantId]);
+        $gradesList = $stmtGrades->fetchAll(PDO::FETCH_ASSOC);
+
+        // Group grades
+        $tas = array_unique(array_column($gradesList, 'tahun_ajaran'));
+        sort($tas);
+        $taMap = [];
+        foreach ($tas as $idx => $t) {
+            $taMap[$t] = ($idx * 2) + 1; // 1, 3, 5
+        }
+
+        $gradesMatrix = [];
+        foreach ($gradesList as $row) {
+            $ta = $row['tahun_ajaran'];
+            $sem = strtolower($row['semester']);
+            $baseSem = $taMap[$ta] ?? 1;
+            $smtIdx = (strpos($sem, 'genap') !== false) ? $baseSem + 1 : $baseSem;
+            
+            if ($smtIdx >= 1 && $smtIdx <= 5) {
+                $gradesMatrix[$row['siswa_id']][$row['mapel_id']][$smtIdx] = $row['nilai_akhir'];
+            }
+        }
+
+        // Build Excel Sheet
+        $excelData = [];
+        $header = ['NISN', 'Nama Siswa'];
+        foreach ($subjects as $sub) {
+            for ($i = 1; $i <= 5; $i++) {
+                $header[] = $sub['nama_mapel'] . " (S$i)";
+            }
+        }
+        $excelData[] = $header;
+
+        foreach ($students as $stu) {
+            $row = [
+                (string)($stu['nisn'] ?: $stu['nis'] ?: '-'),
+                (string)$stu['nama_lengkap']
+            ];
+            foreach ($subjects as $sub) {
+                for ($i = 1; $i <= 5; $i++) {
+                    $val = $gradesMatrix[$stu['id']][$sub['id']][$i] ?? '';
+                    $row[] = $val !== '' ? (float)$val : '';
+                }
+            }
+            $excelData[] = $row;
+        }
+
+        $cleanKelasName = str_replace(' ', '_', $kelasName);
+        $filename = "PDSS_SNBP_{$cleanKelasName}_" . date('Y-m-d') . ".xlsx";
+
+        \Shuchkin\SimpleXLSXGen::fromArray($excelData)->downloadAs($filename);
+        exit;
+    }
+
+    public function toggleLockKelasApi(): void {
+        header('Content-Type: application/json');
+        try {
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new \Exception("Method not allowed.");
+            }
+            $input = json_decode(file_get_contents('php://input'), true);
+            $kelasId = $input['kelas_id'] ?? '';
+            $tahunAjaran = $input['tahun_ajaran'] ?? '';
+            $lockStatus = isset($input['lock']) ? (int)$input['lock'] : 0;
+            
+            if (!$kelasId || !$tahunAjaran) {
+                throw new \Exception("Parameter tidak lengkap.");
+            }
+            
+            $role = $_SESSION['role_name'] ?? '';
+            if ($role !== 'super_admin' && $role !== 'admin') {
+                throw new \Exception("Anda tidak memiliki akses.");
+            }
+            
+            $tenantId = SessionManager::getTenantId() ?: ($input['tenant_id'] ?? null);
+            if (!$tenantId) {
+                throw new \Exception("Sekolah tidak terdeteksi.");
+            }
+            
+            $db = \App\Config\Database::getConnection();
+            
+            $stmt = $db->prepare("
+                UPDATE kelas_kurikulum 
+                SET is_locked = :is_locked 
+                WHERE tenant_id = :tenant_id AND kelas_id = :kelas_id AND tahun_ajaran = :tahun_ajaran
+            ");
+            $stmt->execute([
+                'is_locked' => $lockStatus,
+                'tenant_id' => $tenantId,
+                'kelas_id' => $kelasId,
+                'tahun_ajaran' => $tahunAjaran
+            ]);
+            
+            echo json_encode([
+                'success' => true,
+                'message' => $lockStatus ? 'Rombel kelas berhasil dikunci.' : 'Kunci rombel kelas berhasil dibuka.'
+            ]);
+        } catch (\Throwable $e) {
+            echo json_encode([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]);
+        }
+        exit;
     }
 }

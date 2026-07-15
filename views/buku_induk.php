@@ -12,6 +12,10 @@
         
         <!-- Actions (Export Excel/PDF) -->
         <div v-show="mainActiveTab === 'buku_induk_siswa'" class="col-12 col-md-5 d-flex gap-2 justify-content-start justify-content-md-end align-items-center flex-wrap">
+            <button v-if="filterKelas && isKelas12(getKelasName(filterKelas))" class="btn btn-outline-warning text-dark btn-sm rounded-3 px-3 py-2 fs-8 fs-md-7 flex-grow-1 flex-md-grow-0 fw-semibold" 
+                    @click="exportPdssExcel">
+                <i class="bi bi-award-fill me-1"></i> Ekspor PDSS SNBP
+            </button>
             <button class="btn btn-outline-success btn-sm rounded-3 px-3 py-2 fs-8 fs-md-7 flex-grow-1 flex-md-grow-0" 
                     @click="exportExcel">
                 <i class="bi bi-file-earmark-excel me-1"></i> Ekspor Excel
@@ -282,6 +286,7 @@
                                 @change="loadKurikulumMapping">
                             <option value="Ganjil">Ganjil</option>
                             <option value="Genap">Genap</option>
+                            <option v-if="isKelas12(getKelasName(kurikulum.kelasId))" value="Ujian Sekolah">Ujian Sekolah</option>
                         </select>
                     </div>
 
@@ -298,7 +303,7 @@
                     </div>
 
                     <!-- Kelas -->
-                    <div class="col-12 col-md-3">
+                    <div class="col-12 col-md-2">
                         <label class="form-label fw-bold text-dark fs-8 mb-1">Kelas Fisik</label>
                         <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle"
                                 v-model="kurikulum.kelasId"
@@ -310,20 +315,31 @@
                         </select>
                     </div>
 
+                    <!-- Kurikulum -->
+                    <div class="col-12 col-md-2">
+                        <label class="form-label fw-bold text-dark fs-8 mb-1">Kurikulum Kelas</label>
+                        <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle"
+                                v-model="kurikulum.kurikulumId">
+                            <option value="">-- Pilih Kurikulum --</option>
+                            <option v-for="c in kurikulumList" :key="c.id" :value="c.id">
+                                {{ c.nama_kurikulum }}
+                            </option>
+                        </select>
+                    </div>
+
                     <!-- Actions -->
-                    <div class="col-12 col-md-3 d-flex gap-2">
+                    <div class="col-12 col-md-2 d-flex gap-2">
                         <button class="btn btn-outline-primary btn-sm rounded-3 px-3 py-2 w-50 fs-8 fw-semibold"
                                 :disabled="!kurikulum.kelasId || isLockedKurikulum == 1"
                                 @click="showCopyModal"
                                 title="Salin dari Kelas Lain">
-                            <i class="bi bi-copy me-1"></i> Salin
+                            <i class="bi bi-copy"></i>
                         </button>
                         <button v-if="userRole === 'super_admin' || userRole === 'operator_sekolah'"
                                 :class="['btn btn-sm rounded-3 px-2 py-2 w-50 fs-8 fw-semibold', isLockedKurikulum == 1 ? 'btn-danger' : 'btn-outline-secondary']"
                                 :disabled="!kurikulum.tahunAjaran || !kurikulum.semester"
                                 @click="toggleLock('kurikulum')">
                             <i :class="isLockedKurikulum == 1 ? 'bi bi-lock-fill' : 'bi bi-unlock-fill'"></i>
-                            {{ isLockedKurikulum == 1 ? 'Terkunci' : 'Kunci' }}
                         </button>
                     </div>
 
@@ -535,6 +551,7 @@
                                     @change="loadNilaiRaporGrid">
                                 <option value="Ganjil">Ganjil</option>
                                 <option value="Genap">Genap</option>
+                                <option v-if="isKelas12(getKelasName(nilaiRapor.kelasId))" value="Ujian Sekolah">Ujian Sekolah</option>
                             </select>
                         </div>
 
@@ -564,7 +581,7 @@
                         </div>
 
                         <!-- Actions (Import/Export & Lock) -->
-                        <div class="col-12 col-md-3 d-flex gap-2">
+                        <div class="col-12 col-md-4 d-flex gap-2">
                             <button class="btn btn-outline-success btn-sm rounded-3 px-2 py-2 flex-grow-1 fs-8 fw-semibold"
                                     :disabled="!nilaiRapor.kelasId || nilaiRapor.subjects.length === 0"
                                     @click="exportNilaiRaporExcel"
@@ -572,17 +589,26 @@
                                 <i class="bi bi-file-earmark-arrow-down"></i>
                             </button>
                             <button class="btn btn-outline-primary btn-sm rounded-3 px-2 py-2 flex-grow-1 fs-8 fw-semibold"
-                                    :disabled="!nilaiRapor.kelasId || nilaiRapor.subjects.length === 0 || isLockedNilai == 1"
+                                    :disabled="!nilaiRapor.kelasId || nilaiRapor.subjects.length === 0 || isLockedNilai == 1 || isRombelLocked"
                                     @click="showImportGradesModal"
                                     title="Unggah Nilai Excel (.xlsx)">
                                 <i class="bi bi-file-earmark-arrow-up"></i>
                             </button>
-                            <button v-if="userRole === 'super_admin' || userRole === 'operator_sekolah'"
+                            <button v-if="userRole === 'super_admin' || userRole === 'operator_sekolah' || userRole === 'admin'"
                                     :class="['btn btn-sm rounded-3 px-2 py-2 flex-grow-1 fs-8 fw-semibold', isLockedNilai == 1 ? 'btn-danger' : 'btn-outline-secondary']"
                                     :disabled="!nilaiRapor.tahunAjaran || !nilaiRapor.semester"
                                     @click="toggleLock('nilai')"
-                                    :title="isLockedNilai == 1 ? 'Terkunci' : 'Kunci'">
+                                    :title="isLockedNilai == 1 ? 'Terkunci' : 'Kunci Global'">
                                 <i :class="isLockedNilai == 1 ? 'bi bi-lock-fill' : 'bi bi-unlock-fill'"></i>
+                            </button>
+                            <!-- Kunci Rombel Kelas -->
+                            <button v-if="userRole === 'super_admin' || userRole === 'operator_sekolah' || userRole === 'admin'"
+                                    :class="['btn btn-sm rounded-3 px-2 py-2 flex-grow-1 fs-8 fw-semibold', isRombelLocked ? 'btn-danger' : 'btn-outline-danger']"
+                                    :disabled="!nilaiRapor.kelasId || !nilaiRapor.tahunAjaran"
+                                    @click="toggleRombelLock"
+                                    :title="isRombelLocked ? 'Buka Kunci Rombel' : 'Kunci Rombel Kelas'">
+                                <i :class="isRombelLocked ? 'bi bi-shield-lock-fill' : 'bi bi-shield-slash'"></i>
+                                <span class="ms-1 fs-9 d-md-none d-lg-inline">{{ isRombelLocked ? 'Locked' : 'Lock Rombel' }}</span>
                             </button>
                         </div>
 
@@ -656,13 +682,9 @@
                                         <th style="min-width: 200px; vertical-align: middle;" class="text-start">Nama Siswa</th>
                                         <th style="width: 130px; vertical-align: middle;">Tahun Ajaran</th>
                                         <th style="width: 100px; vertical-align: middle;">Semester</th>
-                                        <th v-for="sub in nilaiRapor.subjects" :key="sub.mapel_id" class="text-center" style="min-width: 100px;">
-                                            <div class="fw-bold text-truncate" style="max-width: 150px;" :title="sub.nama_mapel">
-                                                {{ sub.nama_mapel }}
-                                            </div>
-                                            <small class="text-muted font-monospace fs-9" style="font-weight: normal;">{{ sub.kode_mapel }}</small>
-                                        </th>
-                                        <th style="width: 80px; vertical-align: middle;">Aksi</th>
+                                        <th style="width: 150px; vertical-align: middle;">Kurikulum Aktif</th>
+                                        <th style="width: 150px; vertical-align: middle;">Rata-rata Nilai</th>
+                                        <th style="width: 120px; vertical-align: middle;">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -672,26 +694,28 @@
                                         <td class="fw-bold text-dark">{{ student.nama_lengkap }}</td>
                                         <td class="text-center text-muted fs-8">{{ nilaiRapor.tahunAjaran }}</td>
                                         <td class="text-center text-muted fs-8">{{ nilaiRapor.semester }}</td>
-                                        
-                                        <!-- Dynamic subject value inputs -->
-                                        <td v-for="sub in nilaiRapor.subjects" :key="sub.mapel_id" class="p-1">
-                                            <input type="number" 
-                                                   min="0" 
-                                                   max="100" 
-                                                   step="0.01" 
-                                                   class="form-control form-control-sm text-center fw-semibold border-0 bg-light-subtle py-1"
-                                                   :placeholder="isReligionMismatch(student.agama, sub.nama_mapel) ? 'N/A' : '-'"
-                                                   :disabled="isReligionMismatch(student.agama, sub.nama_mapel) || isLockedNilai == 1"
-                                                   :class="{'bg-secondary-subtle text-muted': isReligionMismatch(student.agama, sub.nama_mapel)}"
-                                                   v-model.number="nilaiRapor.grades[student.id][sub.mapel_id]">
+                                        <td class="text-center">
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1 rounded-pill fs-9">
+                                                {{ nilaiRapor.kurikulum.nama_kurikulum || 'Kurikulum Merdeka' }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center fw-bold fs-7" :class="getAverageGrade(student.id) != '-' && parseFloat(getAverageGrade(student.id)) >= 75 ? 'text-success' : 'text-danger'">
+                                            {{ getAverageGrade(student.id) }}
                                         </td>
                                         <td class="text-center align-middle">
-                                            <button type="button" class="btn btn-sm btn-outline-danger border-0 rounded-circle" 
-                                                    title="Hapus Nilai Siswa Ini" 
-                                                    :disabled="isLockedNilai == 1"
-                                                    @click="confirmDeleteGrades(student)">
-                                                <i class="bi bi-trash3"></i>
-                                            </button>
+                                            <div class="d-flex justify-content-center gap-1">
+                                                <button type="button" class="btn btn-sm btn-outline-primary border-0 rounded-circle" 
+                                                        title="Input / Edit Detail Nilai Rapor" 
+                                                        @click="openInputDetailNilaiModal(student)">
+                                                    <i class="bi bi-pencil-square"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger border-0 rounded-circle" 
+                                                        title="Hapus Nilai Siswa Ini" 
+                                                        :disabled="isLockedNilai == 1"
+                                                        @click="confirmDeleteGrades(student)">
+                                                    <i class="bi bi-trash3"></i>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -767,6 +791,24 @@
                         <button class="btn btn-primary btn-sm rounded-3 w-100 fs-8" @click="loadMatrixData">Tampilkan</button>
                     </div>
                 </div>
+                <!-- Bulk Actions -->
+                <div class="row g-3 mt-2 border-top pt-3" v-if="filterKelas">
+                    <div class="col-12 col-md-5 d-flex gap-2 align-items-center">
+                        <label class="form-label fw-bold text-dark fs-8 mb-0 text-nowrap">Cetak Massal Rombel:</label>
+                        <select class="form-select form-select-sm rounded-3" v-model="bulkPrintSemester" style="max-width: 180px;">
+                            <option value="">-- Pilih Semester --</option>
+                            <option value="Ganjil">Ganjil</option>
+                            <option value="Genap">Genap</option>
+                            <option v-if="isKelas12(getKelasName(filterKelas))" value="Ujian Sekolah">Ujian Sekolah</option>
+                        </select>
+                        <button class="btn btn-outline-primary btn-sm rounded-3 px-3 fs-8 text-nowrap" @click="printBulkRapor" :disabled="!bulkPrintSemester">
+                            <i class="bi bi-printer-fill me-1"></i> Rapor Massal
+                        </button>
+                        <button class="btn btn-outline-success btn-sm rounded-3 px-3 fs-8 text-nowrap" @click="printBulkIdentitas">
+                            <i class="bi bi-people-fill me-1"></i> Identitas Massal
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -826,13 +868,16 @@
                                             <button v-if="siswa.years[n-1].has_ganjil || siswa.years[n-1].tahun_ajaran !== '-'" @click="openPrintModal('/SINTA-SaaS/cetak-rapot-semester?id=' + siswa.id + '&semester=Ganjil&ta=' + encodeURIComponent(siswa.years[n-1].tahun_ajaran), 'Rapor Semester Ganjil (' + siswa.years[n-1].tahun_ajaran + ')')" class="btn btn-primary btn-sm rounded-3 py-1 px-2 fs-8">
                                                 <i class="bi bi-printer"></i>
                                             </button>
-                                            <span v-else class="text-muted">-</span>
-                                        </td>
                                         <td class="text-center">
-                                            <button v-if="siswa.years[n-1].has_genap || siswa.years[n-1].tahun_ajaran !== '-'" @click="openPrintModal('/SINTA-SaaS/cetak-rapot-semester?id=' + siswa.id + '&semester=Genap&ta=' + encodeURIComponent(siswa.years[n-1].tahun_ajaran), 'Rapor Semester Genap (' + siswa.years[n-1].tahun_ajaran + ')')" class="btn btn-primary btn-sm rounded-3 py-1 px-2 fs-8">
-                                                <i class="bi bi-printer"></i>
-                                            </button>
-                                            <span v-else class="text-muted">-</span>
+                                            <div class="d-inline-flex gap-1 justify-content-center">
+                                                <button v-if="siswa.years[n-1].has_genap || siswa.years[n-1].tahun_ajaran !== '-'" @click="openPrintModal('/SINTA-SaaS/cetak-rapot-semester?id=' + siswa.id + '&semester=Genap&ta=' + encodeURIComponent(siswa.years[n-1].tahun_ajaran), 'Rapor Semester Genap (' + siswa.years[n-1].tahun_ajaran + ')')" class="btn btn-primary btn-sm rounded-3 py-1 px-2 fs-8">
+                                                    <i class="bi bi-printer"></i>
+                                                </button>
+                                                <button v-if="isKelas12(siswa.years[n-1].nama_kelas)" @click="openPrintModal('/SINTA-SaaS/cetak-rapot-semester?id=' + siswa.id + '&semester=' + encodeURIComponent('Ujian Sekolah') + '&ta=' + encodeURIComponent(siswa.years[n-1].tahun_ajaran), 'Rapor Ujian Sekolah (' + siswa.years[n-1].tahun_ajaran + ')')" class="btn btn-warning btn-sm rounded-3 py-1 px-2 fs-8 text-dark fw-bold" title="Cetak Rapor Ujian Sekolah">
+                                                    US
+                                                </button>
+                                            </div>
+                                            <span v-if="!siswa.years[n-1].has_genap && siswa.years[n-1].tahun_ajaran === '-' && !isKelas12(siswa.years[n-1].nama_kelas)" class="text-muted">-</span>
                                         </td>
                                     </template>
                                     <template v-else>
@@ -1021,6 +1066,211 @@
                     <button type="button" class="btn btn-light rounded-3 fs-8 px-4" data-bs-dismiss="modal">Batal</button>
                     <button type="button" class="btn btn-primary rounded-3 fs-8 px-4" @click="submitImportGrades" :disabled="!importFile">
                         Mulai Impor
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Input Detail Nilai Rapor (Dinamis Multi-Kurikulum) -->
+    <div class="modal fade" id="modalInputDetailNilai" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-bottom py-3 bg-light">
+                    <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2">
+                        <i class="bi bi-pencil-square text-primary"></i>
+                        Detail Nilai Rapor: <span class="text-primary">{{ activeEditSiswa ? activeEditSiswa.nama_lengkap : '' }}</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4" v-if="activeEditSiswa">
+                    
+                    <!-- Info Bar -->
+                    <div class="p-3 bg-primary-subtle border border-primary-subtle rounded-3 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <span class="fs-8 text-secondary d-block fw-semibold text-uppercase">Kurikulum Aktif</span>
+                            <span class="fs-6 text-primary fw-bold">{{ nilaiRapor.kurikulum.nama_kurikulum || 'Kurikulum Merdeka' }}</span>
+                        </div>
+                        <div>
+                            <span class="fs-8 text-secondary d-block fw-semibold text-uppercase">Tahun Ajaran / Semester</span>
+                            <span class="fs-7 text-dark fw-bold">{{ nilaiRapor.tahunAjaran }} - {{ nilaiRapor.semester }}</span>
+                        </div>
+                    </div>
+
+                    <!-- 1. FORM PENILAIAN KLASIK (KTSP / KBK) -->
+                    <div v-if="nilaiRapor.kurikulum.tipe_penilaian === 'klasik'">
+                        <div v-for="sub in nilaiRapor.subjects" :key="sub.mapel_id" class="card border border-secondary-subtle rounded-3 mb-3 shadow-none">
+                            <div class="card-header bg-light py-2 fw-semibold text-dark fs-7 d-flex justify-content-between align-items-center">
+                                <span>{{ sub.nama_mapel }} <small class="text-muted font-monospace fs-9">({{ sub.kode_mapel }})</small></span>
+                                <span class="badge bg-secondary-subtle text-secondary fs-9" v-if="isReligionMismatch(activeEditSiswa.agama, sub.nama_mapel)">N/A (Beda Agama)</span>
+                            </div>
+                            <div class="card-body p-3" v-if="!isReligionMismatch(activeEditSiswa.agama, sub.nama_mapel)">
+                                <div class="row g-3">
+                                    <div class="col-6 col-md-3">
+                                        <label class="form-label fs-8 fw-semibold text-muted mb-1">KKM Mapel</label>
+                                        <input type="number" min="0" max="100" class="form-control form-control-sm" v-model.number="nilaiRapor.grades[activeEditSiswa.id][sub.mapel_id].kkm" :disabled="isLockedNilai == 1">
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <label class="form-label fs-8 fw-semibold text-muted mb-1">Nilai Kognitif</label>
+                                        <input type="number" min="0" max="100" class="form-control form-control-sm text-center fw-bold" v-model.number="nilaiRapor.grades[activeEditSiswa.id][sub.mapel_id].detail.kognitif" :disabled="isLockedNilai == 1">
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <label class="form-label fs-8 fw-semibold text-muted mb-1">Nilai Psikomotorik</label>
+                                        <input type="number" min="0" max="100" class="form-control form-control-sm text-center fw-bold" v-model.number="nilaiRapor.grades[activeEditSiswa.id][sub.mapel_id].detail.psikomotorik" :disabled="isLockedNilai == 1">
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <label class="form-label fs-8 fw-semibold text-muted mb-1">Sikap (Afektif)</label>
+                                        <select class="form-select form-select-sm text-center fw-bold" v-model="nilaiRapor.grades[activeEditSiswa.id][sub.mapel_id].detail.afektif" :disabled="isLockedNilai == 1">
+                                            <option value="">-</option>
+                                            <option value="A">A</option>
+                                            <option value="B">B</option>
+                                            <option value="C">C</option>
+                                            <option value="D">D</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. FORM PENILAIAN KOMPLEKS (KURIKULUM 2013) -->
+                    <div v-else-if="nilaiRapor.kurikulum.tipe_penilaian === 'kompleks'">
+                        <!-- Loop Mapel -->
+                        <div v-for="sub in nilaiRapor.subjects" :key="sub.mapel_id" class="card border border-secondary-subtle rounded-3 mb-3 shadow-none">
+                            <div class="card-header bg-light py-2 fw-semibold text-dark fs-7 d-flex justify-content-between align-items-center">
+                                <span>{{ sub.nama_mapel }} <small class="text-muted font-monospace fs-9">({{ sub.kode_mapel }})</small></span>
+                                <span class="badge bg-secondary-subtle text-secondary fs-9" v-if="isReligionMismatch(activeEditSiswa.agama, sub.nama_mapel)">N/A (Beda Agama)</span>
+                            </div>
+                            <div class="card-body p-3" v-if="!isReligionMismatch(activeEditSiswa.agama, sub.nama_mapel)">
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-md-4">
+                                        <label class="form-label fs-8 fw-semibold text-muted mb-1">KKM Mapel</label>
+                                        <input type="number" min="0" max="100" class="form-control form-control-sm" v-model.number="nilaiRapor.grades[activeEditSiswa.id][sub.mapel_id].kkm" :disabled="isLockedNilai == 1">
+                                    </div>
+                                </div>
+                                <div class="row g-3">
+                                    <!-- KI-3 Pengetahuan -->
+                                    <div class="col-12 col-md-6 border-end border-secondary-subtle pe-md-3">
+                                        <h6 class="fw-bold text-dark fs-8 border-bottom pb-1 mb-2"><i class="bi bi-book text-primary me-1"></i>KI-3: Pengetahuan</h6>
+                                        <div class="row g-2 mb-2">
+                                            <div class="col-6">
+                                                <label class="form-label fs-9 fw-semibold text-muted mb-0">Nilai (0-100)</label>
+                                                <input type="number" min="0" max="100" class="form-control form-control-sm text-center fw-bold text-primary" v-model.number="nilaiRapor.grades[activeEditSiswa.id][sub.mapel_id].detail.pengetahuan_nilai" :disabled="isLockedNilai == 1">
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label fs-9 fw-semibold text-muted mb-0">Predikat</label>
+                                                <input type="text" maxlength="2" class="form-control form-control-sm text-center fw-bold" placeholder="A/B/C/D" v-model="nilaiRapor.grades[activeEditSiswa.id][sub.mapel_id].detail.pengetahuan_predikat" :disabled="isLockedNilai == 1">
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="form-label fs-9 fw-semibold text-muted mb-0">Deskripsi Capaian</label>
+                                            <textarea class="form-control form-control-sm fs-8" rows="2" placeholder="Masukkan deskripsi pengetahuan..." v-model="nilaiRapor.grades[activeEditSiswa.id][sub.mapel_id].detail.pengetahuan_deskripsi" :disabled="isLockedNilai == 1"></textarea>
+                                        </div>
+                                    </div>
+                                    <!-- KI-4 Keterampilan -->
+                                    <div class="col-12 col-md-6 ps-md-3">
+                                        <h6 class="fw-bold text-dark fs-8 border-bottom pb-1 mb-2"><i class="bi bi-tools text-primary me-1"></i>KI-4: Keterampilan</h6>
+                                        <div class="row g-2 mb-2">
+                                            <div class="col-6">
+                                                <label class="form-label fs-9 fw-semibold text-muted mb-0">Nilai (0-100)</label>
+                                                <input type="number" min="0" max="100" class="form-control form-control-sm text-center fw-bold text-success" v-model.number="nilaiRapor.grades[activeEditSiswa.id][sub.mapel_id].detail.keterampilan_nilai" :disabled="isLockedNilai == 1">
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label fs-9 fw-semibold text-muted mb-0">Predikat</label>
+                                                <input type="text" maxlength="2" class="form-control form-control-sm text-center fw-bold" placeholder="A/B/C/D" v-model="nilaiRapor.grades[activeEditSiswa.id][sub.mapel_id].detail.keterampilan_predikat" :disabled="isLockedNilai == 1">
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="form-label fs-9 fw-semibold text-muted mb-0">Deskripsi Capaian</label>
+                                            <textarea class="form-control form-control-sm fs-8" rows="2" placeholder="Masukkan deskripsi keterampilan..." v-model="nilaiRapor.grades[activeEditSiswa.id][sub.mapel_id].detail.keterampilan_deskripsi" :disabled="isLockedNilai == 1"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sikap KI-1 dan KI-2 (Global) -->
+                        <div class="card border border-primary rounded-3 mb-3 shadow-none" style="border-width: 1.5px !important;">
+                            <div class="card-header bg-primary text-white py-2 fw-bold fs-7">
+                                <i class="bi bi-heart-pulse-fill me-1"></i> ASPEK SIKAP SPIRITUAL (KI-1) & SOSIAL (KI-2) GLOBAL
+                            </div>
+                            <div class="card-body p-3">
+                                <div class="row g-3">
+                                    <div class="col-12 col-md-6 border-end border-secondary-subtle pe-md-3">
+                                        <h6 class="fw-bold text-dark fs-8 border-bottom pb-1 mb-2">1. Sikap Spiritual (KI-1)</h6>
+                                        <div class="mb-2">
+                                            <label class="form-label fs-9 fw-semibold text-muted mb-0">Predikat</label>
+                                            <select class="form-select form-select-sm fw-bold" v-model="nilaiRapor.sikapK13[activeEditSiswa.id].predikat_spiritual" :disabled="isLockedNilai == 1">
+                                                <option value="">-</option>
+                                                <option value="Sangat Baik">Sangat Baik</option>
+                                                <option value="Baik">Baik</option>
+                                                <option value="Cukup">Cukup</option>
+                                                <option value="Kurang">Kurang</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="form-label fs-9 fw-semibold text-muted mb-0">Deskripsi Deskriptif</label>
+                                            <textarea class="form-control form-control-sm fs-8" rows="3" placeholder="Deskripsikan sikap spiritual siswa..." v-model="nilaiRapor.sikapK13[activeEditSiswa.id].deskripsi_spiritual" :disabled="isLockedNilai == 1"></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-6 ps-md-3">
+                                        <h6 class="fw-bold text-dark fs-8 border-bottom pb-1 mb-2">2. Sikap Sosial (KI-2)</h6>
+                                        <div class="mb-2">
+                                            <label class="form-label fs-9 fw-semibold text-muted mb-0">Predikat</label>
+                                            <select class="form-select form-select-sm fw-bold" v-model="nilaiRapor.sikapK13[activeEditSiswa.id].predikat_sosial" :disabled="isLockedNilai == 1">
+                                                <option value="">-</option>
+                                                <option value="Sangat Baik">Sangat Baik</option>
+                                                <option value="Baik">Baik</option>
+                                                <option value="Cukup">Cukup</option>
+                                                <option value="Kurang">Kurang</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="form-label fs-9 fw-semibold text-muted mb-0">Deskripsi Deskriptif</label>
+                                            <textarea class="form-control form-control-sm fs-8" rows="3" placeholder="Deskripsikan sikap sosial siswa..." v-model="nilaiRapor.sikapK13[activeEditSiswa.id].deskripsi_sosial" :disabled="isLockedNilai == 1"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. FORM PENILAIAN SEDERHANA (KURIKULUM MERDEKA) -->
+                    <div v-else>
+                        <div v-for="sub in nilaiRapor.subjects" :key="sub.mapel_id" class="card border border-secondary-subtle rounded-3 mb-3 shadow-none">
+                            <div class="card-header bg-light py-2 fw-semibold text-dark fs-7 d-flex justify-content-between align-items-center">
+                                <span>{{ sub.nama_mapel }} <small class="text-muted font-monospace fs-9">({{ sub.kode_mapel }})</small></span>
+                                <span class="badge bg-secondary-subtle text-secondary fs-9" v-if="isReligionMismatch(activeEditSiswa.agama, sub.nama_mapel)">N/A (Beda Agama)</span>
+                            </div>
+                            <div class="card-body p-3" v-if="!isReligionMismatch(activeEditSiswa.agama, sub.nama_mapel)">
+                                <div class="row g-3 mb-2">
+                                    <div class="col-6">
+                                        <label class="form-label fs-8 fw-semibold text-muted mb-1">KKTP (Standar Kelulusan)</label>
+                                        <input type="number" min="0" max="100" class="form-control form-control-sm text-center font-monospace" v-model.number="nilaiRapor.grades[activeEditSiswa.id][sub.mapel_id].kkm" :disabled="isLockedNilai == 1">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label fs-8 fw-semibold text-muted mb-1">Nilai Akhir (Angka)</label>
+                                        <input type="number" min="0" max="100" class="form-control form-control-sm text-center fw-bold text-primary fs-7" v-model.number="nilaiRapor.grades[activeEditSiswa.id][sub.mapel_id].nilai_akhir" :disabled="isLockedNilai == 1">
+                                    </div>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label fs-9 fw-semibold text-muted mb-0">Capaian Kompetensi Tertinggi</label>
+                                        <textarea class="form-control form-control-sm fs-8" rows="2" placeholder="Kompetensi yang sangat dikuasai..." v-model="nilaiRapor.grades[activeEditSiswa.id][sub.mapel_id].detail.deskripsi_tertinggi" :disabled="isLockedNilai == 1"></textarea>
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label fs-9 fw-semibold text-muted mb-0">Capaian Kompetensi Terendah</label>
+                                        <textarea class="form-control form-control-sm fs-8" rows="2" placeholder="Kompetensi yang perlu bimbingan..." v-model="nilaiRapor.grades[activeEditSiswa.id][sub.mapel_id].detail.deskripsi_terendah" :disabled="isLockedNilai == 1"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer border-top bg-light py-2.5 rounded-bottom-4">
+                    <button type="button" class="btn btn-primary rounded-3 fs-8 px-5 fw-bold" data-bs-dismiss="modal">
+                        Selesai Mengisi
                     </button>
                 </div>
             </div>
@@ -2084,8 +2334,10 @@
                     semester: 'Ganjil',
                     jenjangId: '',
                     kelasId: '',
+                    kurikulumId: '',
                     groups: []
                 },
+                kurikulumList: [],
                 masterKurikulum: {
                     tahun_ajaran: [],
                     kelas: [],
@@ -2103,6 +2355,8 @@
                     subjects: [],
                     students: [],
                     grades: {},
+                    kurikulum: { tipe_penilaian: 'sederhana', nama_kurikulum: '' },
+                    sikapK13: {},
                     isSaving: false
                 },
                 masterNilaiRapor: {
@@ -2112,6 +2366,8 @@
                 loadingNilaiRapor: false,
                 importFile: null,
                 importModalObj: null,
+                activeEditSiswa: null,
+                detailNilaiModalObj: null,
                 detailLoading: false,
                 selectedSiswa: null,
                 activeDetailTab: 'identitas',
@@ -2121,6 +2377,8 @@
                 // Kunci Akademik State
                 isLockedKurikulum: 0,
                 isLockedNilai: 0,
+                isRombelLocked: false,
+                bulkPrintSemester: '',
 
                 // Cetak Matrix State
                 matrixData: [],
@@ -2152,6 +2410,7 @@
             this.detailModalObj = new bootstrap.Modal(document.getElementById('detailModal'));
             this.copyModalObj = new bootstrap.Modal(document.getElementById('copyKurikulumModal'));
             this.importModalObj = new bootstrap.Modal(document.getElementById('importNilaiModal'));
+            this.detailNilaiModalObj = new bootstrap.Modal(document.getElementById('modalInputDetailNilai'));
             
             // Bersihkan data sampah dari tenant lain jika Super Admin belum memilih sekolah
             if (this.userRole === 'super_admin' && !this.filterTenantId) {
@@ -2578,16 +2837,47 @@
                     .then(res => {
                         this.nilaiRapor.subjects = res.data.subjects || [];
                         this.nilaiRapor.students = res.data.students || [];
+                        this.nilaiRapor.kurikulum = res.data.kurikulum || { tipe_penilaian: 'sederhana', nama_kurikulum: 'Kurikulum Merdeka' };
+                        this.nilaiRapor.sikapK13 = res.data.sikap_k13 || {};
+                        this.isRombelLocked = res.data.is_rombel_locked || false;
                         const rawGrades = res.data.grades || {};
                         
                         const gradesObj = {};
                         this.nilaiRapor.students.forEach(student => {
                             gradesObj[student.id] = {};
+                            
+                            // Initialize K-13 attitude list for each student if not present
+                            if (!this.nilaiRapor.sikapK13[student.id]) {
+                                this.nilaiRapor.sikapK13[student.id] = {
+                                    predikat_spiritual: '',
+                                    deskripsi_spiritual: '',
+                                    predikat_sosial: '',
+                                    deskripsi_sosial: ''
+                                };
+                            }
+
                             this.nilaiRapor.subjects.forEach(subject => {
-                                const existingVal = (rawGrades[student.id] && rawGrades[student.id][subject.mapel_id] !== undefined)
+                                const rawEntry = (rawGrades[student.id] && rawGrades[student.id][subject.mapel_id])
                                     ? rawGrades[student.id][subject.mapel_id]
-                                    : '';
-                                gradesObj[student.id][subject.mapel_id] = existingVal;
+                                    : null;
+                                
+                                gradesObj[student.id][subject.mapel_id] = {
+                                    nilai_akhir: rawEntry && rawEntry.nilai_akhir !== null ? rawEntry.nilai_akhir : '',
+                                    kkm: rawEntry && rawEntry.kkm !== null ? rawEntry.kkm : '',
+                                    detail: {
+                                        kognitif: rawEntry && rawEntry.detail && rawEntry.detail.kognitif !== undefined ? rawEntry.detail.kognitif : '',
+                                        psikomotorik: rawEntry && rawEntry.detail && rawEntry.detail.psikomotorik !== undefined ? rawEntry.detail.psikomotorik : '',
+                                        afektif: rawEntry && rawEntry.detail && rawEntry.detail.afektif !== undefined ? rawEntry.detail.afektif : '',
+                                        pengetahuan_nilai: rawEntry && rawEntry.detail && rawEntry.detail.pengetahuan_nilai !== undefined ? rawEntry.detail.pengetahuan_nilai : '',
+                                        pengetahuan_predikat: rawEntry && rawEntry.detail && rawEntry.detail.pengetahuan_predikat !== undefined ? rawEntry.detail.pengetahuan_predikat : '',
+                                        pengetahuan_deskripsi: rawEntry && rawEntry.detail && rawEntry.detail.pengetahuan_deskripsi !== undefined ? rawEntry.detail.pengetahuan_deskripsi : '',
+                                        keterampilan_nilai: rawEntry && rawEntry.detail && rawEntry.detail.keterampilan_nilai !== undefined ? rawEntry.detail.keterampilan_nilai : '',
+                                        keterampilan_predikat: rawEntry && rawEntry.detail && rawEntry.detail.keterampilan_predikat !== undefined ? rawEntry.detail.keterampilan_predikat : '',
+                                        keterampilan_deskripsi: rawEntry && rawEntry.detail && rawEntry.detail.keterampilan_deskripsi !== undefined ? rawEntry.detail.keterampilan_deskripsi : '',
+                                        deskripsi_tertinggi: rawEntry && rawEntry.detail && rawEntry.detail.deskripsi_tertinggi !== undefined ? rawEntry.detail.deskripsi_tertinggi : '',
+                                        deskripsi_terendah: rawEntry && rawEntry.detail && rawEntry.detail.deskripsi_terendah !== undefined ? rawEntry.detail.deskripsi_terendah : ''
+                                    }
+                                };
                             });
                         });
                         
@@ -2614,15 +2904,50 @@
                     const studentId = student.id;
                     this.nilaiRapor.subjects.forEach(subject => {
                         const subjectId = subject.mapel_id;
-                        let val = '';
-                        if (this.nilaiRapor.grades[studentId] && this.nilaiRapor.grades[studentId][subjectId] !== undefined) {
-                            val = this.nilaiRapor.grades[studentId][subjectId];
-                        }
+                        const entry = this.nilaiRapor.grades[studentId][subjectId];
                         
+                        let nilaiAkhir = entry.nilai_akhir;
+                        let kkm = entry.kkm;
+                        let detail = {};
+                        
+                        const tipe = this.nilaiRapor.kurikulum.tipe_penilaian;
+                        if (tipe === 'klasik') {
+                            detail = {
+                                kognitif: entry.detail.kognitif,
+                                psikomotorik: entry.detail.psikomotorik,
+                                afektif: entry.detail.afektif
+                            };
+                            // Auto calculate average final grade if not manually set
+                            if (nilaiAkhir === '' && entry.detail.kognitif !== '' && entry.detail.psikomotorik !== '') {
+                                nilaiAkhir = (parseFloat(entry.detail.kognitif) + parseFloat(entry.detail.psikomotorik)) / 2;
+                            }
+                        } else if (tipe === 'kompleks') {
+                            detail = {
+                                pengetahuan_nilai: entry.detail.pengetahuan_nilai,
+                                pengetahuan_predikat: entry.detail.pengetahuan_predikat,
+                                pengetahuan_deskripsi: entry.detail.pengetahuan_deskripsi,
+                                keterampilan_nilai: entry.detail.keterampilan_nilai,
+                                keterampilan_predikat: entry.detail.keterampilan_predikat,
+                                keterampilan_deskripsi: entry.detail.keterampilan_deskripsi
+                            };
+                            // Auto calculate average final grade if not manually set
+                            if (nilaiAkhir === '' && entry.detail.pengetahuan_nilai !== '' && entry.detail.keterampilan_nilai !== '') {
+                                nilaiAkhir = (parseFloat(entry.detail.pengetahuan_nilai) + parseFloat(entry.detail.keterampilan_nilai)) / 2;
+                            }
+                        } else {
+                            // Sederhana (Merdeka)
+                            detail = {
+                                deskripsi_tertinggi: entry.detail.deskripsi_tertinggi,
+                                deskripsi_terendah: entry.detail.deskripsi_terendah
+                            };
+                        }
+
                         gradesPayload.push({
                             siswa_id: studentId,
                             mapel_id: subjectId,
-                            nilai_akhir: val !== '' ? val : null
+                            nilai_akhir: nilaiAkhir !== '' ? nilaiAkhir : null,
+                            kkm: kkm !== '' ? kkm : null,
+                            detail: detail
                         });
                     });
                 });
@@ -2631,7 +2956,8 @@
                     kelas_id: this.nilaiRapor.kelasId,
                     tahun_ajaran: this.nilaiRapor.tahunAjaran,
                     semester: this.nilaiRapor.semester,
-                    grades: gradesPayload
+                    grades: gradesPayload,
+                    sikap_k13: this.nilaiRapor.kurikulum.tipe_penilaian === 'kompleks' ? this.nilaiRapor.sikapK13 : null
                 };
 
                 if (this.userRole === 'super_admin' && this.filterTenantId) {
@@ -2672,6 +2998,37 @@
                             });
                     }
                 });
+            },
+            openInputDetailNilaiModal(student) {
+                this.activeEditSiswa = student;
+                this.detailNilaiModalObj.show();
+            },
+            getAverageGrade(studentId) {
+                if (!this.nilaiRapor.grades[studentId] || this.nilaiRapor.subjects.length === 0) return '-';
+                let total = 0;
+                let count = 0;
+                this.nilaiRapor.subjects.forEach(subject => {
+                    const entry = this.nilaiRapor.grades[studentId][subject.mapel_id];
+                    let val = entry.nilai_akhir;
+                    
+                    // Auto calculate if empty
+                    const tipe = this.nilaiRapor.kurikulum.tipe_penilaian;
+                    if (tipe === 'klasik') {
+                        if (val === '' && entry.detail.kognitif !== '' && entry.detail.psikomotorik !== '') {
+                            val = (parseFloat(entry.detail.kognitif) + parseFloat(entry.detail.psikomotorik)) / 2;
+                        }
+                    } else if (tipe === 'kompleks') {
+                        if (val === '' && entry.detail.pengetahuan_nilai !== '' && entry.detail.keterampilan_nilai !== '') {
+                            val = (parseFloat(entry.detail.pengetahuan_nilai) + parseFloat(entry.detail.keterampilan_nilai)) / 2;
+                        }
+                    }
+                    
+                    if (val !== '' && val !== null) {
+                        total += parseFloat(val);
+                        count++;
+                    }
+                });
+                return count > 0 ? (total / count).toFixed(2) : '-';
             },
             exportNilaiRaporExcel() {
                 if (!this.nilaiRapor.kelasId || !this.nilaiRapor.tahunAjaran || !this.nilaiRapor.semester) {
@@ -2771,6 +3128,7 @@
                     this.masterKurikulum.tahun_ajaran = [];
                     this.masterKurikulum.kelas = [];
                     this.masterKurikulum.bank_mapel = [];
+                    this.kurikulumList = [];
                     this.loadingKurikulum = false;
                     return;
                 }
@@ -2785,6 +3143,7 @@
                         this.masterKurikulum.kelas = res.data.kelas || [];
                         this.masterKurikulum.bank_mapel = res.data.bank_mapel || [];
                         this.jenjangOptions = res.data.jenjang || [];
+                        this.kurikulumList = res.data.kurikulum_list || [];
                         
                         if (this.masterKurikulum.tahun_ajaran.length > 0 && !this.kurikulum.tahunAjaran) {
                             this.kurikulum.tahunAjaran = this.masterKurikulum.tahun_ajaran[0].tahun_ajaran;
@@ -2801,10 +3160,12 @@
             loadKurikulumMapping() {
                 if (this.userRole === 'super_admin' && !this.filterTenantId) {
                     this.kurikulum.groups = [];
+                    this.kurikulum.kurikulumId = '';
                     return;
                 }
                 if (!this.kurikulum.kelasId || !this.kurikulum.tahunAjaran || !this.kurikulum.semester) {
                     this.kurikulum.groups = [];
+                    this.kurikulum.kurikulumId = '';
                     return;
                 }
                 
@@ -2822,6 +3183,9 @@
                 axios.get('/SINTA-SaaS/api/v1/kurikulum', { params })
                     .then(res => {
                         const mapping = res.data.existing_mapping || [];
+                        this.kurikulum.kurikulumId = res.data.active_kurikulum_id || '';
+                        this.kurikulumList = res.data.kurikulum_list || [];
+                        
                         const groupsMap = {};
                         
                         mapping.forEach(row => {
@@ -2844,9 +3208,9 @@
                         
                         if (loadedGroups.length === 0) {
                             loadedGroups.push({
-                                kelompok_id: 'Kelompok A (Umum)',
-                                mapel_ids: [],
-                                searchQuery: ''
+                                        kelompok_id: 'Kelompok A (Umum)',
+                                        mapel_ids: [],
+                                        searchQuery: ''
                             });
                         }
                         
@@ -2898,6 +3262,11 @@
                 if (!kelasId) return '';
                 const k = this.masterKurikulum.kelas.find(x => x.id == kelasId);
                 return k ? k.nama_kelas : '';
+            },
+            isKelas12(className) {
+                if (!className) return false;
+                const normalized = className.toString().trim().toUpperCase();
+                return normalized.startsWith('12') || normalized.startsWith('XII');
             },
             showCopyModal() {
                 this.copySourceKelasId = '';
@@ -2989,6 +3358,7 @@
                     kelas_id: this.kurikulum.kelasId,
                     tahun_ajaran: this.kurikulum.tahunAjaran,
                     semester: this.kurikulum.semester,
+                    kurikulum_id: this.kurikulum.kurikulumId,
                     mappings: cleanMappings
                 };
 
@@ -3138,6 +3508,51 @@
                 } catch(e) {
                     return 'N/A';
                 }
+            },
+            exportPdssExcel() {
+                if (!this.filterKelas) return;
+                window.open(`/SINTA-SaaS/buku-induk/export-pdss-snbp?kelas_id=${this.filterKelas}`, '_blank');
+            },
+            toggleRombelLock() {
+                const targetLock = this.isRombelLocked ? 0 : 1;
+                const statusText = targetLock ? 'mengunci' : 'membuka kunci';
+                
+                Swal.fire({
+                    title: `Apakah Anda yakin?`,
+                    text: `Anda akan ${statusText} penginputan nilai untuk rombel ini pada tahun ajaran terkait.`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Ya, Lanjutkan!',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        axios.post('/SINTA-SaaS/buku-induk/toggle-lock-kelas', {
+                            kelas_id: this.nilaiRapor.kelasId,
+                            tahun_ajaran: this.nilaiRapor.tahunAjaran,
+                            lock: targetLock
+                        }).then(res => {
+                            if (res.data.success) {
+                                this.isRombelLocked = targetLock === 1;
+                                Swal.fire('Berhasil!', res.data.message, 'success');
+                            } else {
+                                Swal.fire('Gagal!', res.data.error || 'Terjadi kesalahan.', 'error');
+                            }
+                        }).catch(err => {
+                            Swal.fire('Gagal!', 'Terjadi kesalahan koneksi server.', 'error');
+                        });
+                    }
+                });
+            },
+            printBulkRapor() {
+                if (!this.filterKelas || !this.bulkPrintSemester) return;
+                const ta = this.filterTahunAjaranCetak || '2025/2026';
+                window.open(`/SINTA-SaaS/buku-induk/print-rapot-semester-bulk?kelas_id=${this.filterKelas}&semester=${this.bulkPrintSemester}&ta=${encodeURIComponent(ta)}`, '_blank');
+            },
+            printBulkIdentitas() {
+                if (!this.filterKelas) return;
+                window.open(`/SINTA-SaaS/buku-induk/print-rapot-kelas?kelas_id=${this.filterKelas}`, '_blank');
             },
             exportExcel() {
                 Swal.fire({
