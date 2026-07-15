@@ -333,13 +333,13 @@ if (window.VueAppRegistry.register) {
     },
     computed: {
         displayYears() {
-            // Kumpulkan semua tahun dari seluruh data, ambil 3 terbesar dengan tahun terbaru di kiri
+            // Kumpulkan semua tahun dari seluruh data, ambil 6 terbesar dengan tahun terbaru di kiri
             const years = new Set();
             this.dataList.forEach(item => {
                 if (item.riwayat) item.riwayat.forEach(r => years.add(r.tahun));
             });
             const sorted = Array.from(years).sort((a, b) => b - a);
-            return sorted.slice(0, 3); // 3 tahun terbaru (descending)
+            return sorted.slice(0, 6); // 6 tahun terbaru (descending)
         },
         filteredData() {
             let data = this.dataList;
