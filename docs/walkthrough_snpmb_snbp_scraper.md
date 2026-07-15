@@ -54,3 +54,14 @@ Saya telah mengimplementasikan seluruh kebutuhan fitur Simulasi Pemilihan Kampus
     - **CSV Prodi:** [snpmb_snbp_prodi.csv](file:///c:/xampp/htdocs/SINTA-SaaS/scratch/snpmb_snbp_prodi.csv)
     - **CSV Historis:** [snpmb_snbp_historis_peminat.csv](file:///c:/xampp/htdocs/SINTA-SaaS/scratch/snpmb_snbp_historis_peminat.csv)
   - Melakukan scraper lengkap untuk 146 PTN secara aman dengan rate limit 200ms per requests.
+
+---
+
+## 6. Integrasi Database Seeder SNBP (CSV-based Migration)
+- **[NEW] [snpmb_snbp_ptn.csv](file:///c:/xampp/htdocs/SINTA-SaaS/database/seeds/snpmb_snbp_ptn.csv)**
+- **[NEW] [snpmb_snbp_prodi.csv](file:///c:/xampp/htdocs/SINTA-SaaS/database/seeds/snpmb_snbp_prodi.csv)**
+- **[NEW] [snpmb_snbp_historis_peminat.csv](file:///c:/xampp/htdocs/SINTA-SaaS/database/seeds/snpmb_snbp_historis_peminat.csv)**
+  - File-file CSV hasil scrape dipindahkan secara permanen ke direktori `database/seeds/` untuk dijadikan dataset awal SINTA-SaaS.
+- **[NEW] [2026_07_15_01_seed_snpmb_snbp_data.php](file:///c:/xampp/htdocs/SINTA-SaaS/database/migrations/2026_07_15_01_seed_snpmb_snbp_data.php)**:
+  - Berkas migrasi database seeder baru yang membaca dataset CSV di atas dan memasukkannya ke database secara batch-insert untuk seluruh sekolah (tenant) aktif.
+  - Seeder dijalankan secara otomatis saat perintah `php migrate.php` dieksekusi.
