@@ -48,6 +48,11 @@ class Kelembagaan extends Model {
             'code_field' => 'tahun_angkatan',
             'name_field' => 'tahun_angkatan',
             'search_cols' => ['tahun_angkatan']
+        ],
+        'kurikulum' => [
+            'code_field' => 'id',
+            'name_field' => 'nama_kurikulum',
+            'search_cols' => ['nama_kurikulum', 'tipe_penilaian']
         ]
     ];
 
@@ -87,13 +92,19 @@ class Kelembagaan extends Model {
                           LEFT JOIN jurusan ju ON k.id_jurusan = ju.id
                           LEFT JOIN tenants t ON k.tenant_id = t.id";
             $whereClause = $isSuperAdmin ? " WHERE 1=1" : " WHERE k.tenant_id = :tenant_id";
+        } elseif ($table === 'kurikulum') {
+            $selectSql = "SELECT k.*, t.nama_sekolah 
+                          FROM ref_kurikulum k
+                          LEFT JOIN tenants t ON k.tenant_id = t.id";
+            $whereClause = $isSuperAdmin ? " WHERE 1=1" : " WHERE (k.tenant_id = :tenant_id OR k.tenant_id IS NULL)";
         } else {
             $selectSql = "SELECT k.*, t.nama_sekolah 
                           FROM {$table} k
                           LEFT JOIN tenants t ON k.tenant_id = t.id";
             $whereClause = $isSuperAdmin ? " WHERE 1=1" : " WHERE k.tenant_id = :tenant_id";
         }
-        $countSql = "SELECT COUNT(*) FROM {$table} k LEFT JOIN tenants t ON k.tenant_id = t.id";
+        $dbTable = ($table === 'kurikulum') ? 'ref_kurikulum' : $table;
+        $countSql = "SELECT COUNT(*) FROM {$dbTable} k LEFT JOIN tenants t ON k.tenant_id = t.id";
 
         // Filter status soft delete
         if ($trashMode) {
@@ -211,13 +222,18 @@ class Kelembagaan extends Model {
     public function findById(string $table, int $id): ?array {
         $this->validateTableName($table);
         $isSuperAdmin = ($this->tenantId === null);
+        $dbTable = ($table === 'kurikulum') ? 'ref_kurikulum' : $table;
         
         if ($isSuperAdmin) {
-            $sql = "SELECT * FROM {$table} WHERE id = :id LIMIT 1";
+            $sql = "SELECT * FROM {$dbTable} WHERE id = :id LIMIT 1";
             $stmt = $this->db->prepare($sql);
             $stmt->execute(['id' => $id]);
         } else {
-            $sql = "SELECT * FROM {$table} WHERE id = :id AND tenant_id = :tenant_id LIMIT 1";
+            if ($table === 'kurikulum') {
+                $sql = "SELECT * FROM ref_kurikulum WHERE id = :id AND (tenant_id = :tenant_id OR tenant_id IS NULL) LIMIT 1";
+            } else {
+                $sql = "SELECT * FROM {$dbTable} WHERE id = :id AND tenant_id = :tenant_id LIMIT 1";
+            }
             $stmt = $this->db->prepare($sql);
             $stmt->execute([
                 'id' => $id,
@@ -234,13 +250,19 @@ class Kelembagaan extends Model {
         $this->validateTableName($table);
         $codeCol = $this->allowedTables[$table]['code_field'];
         $isSuperAdmin = ($this->tenantId === null);
+        $dbTable = ($table === 'kurikulum') ? 'ref_kurikulum' : $table;
         
         if ($isSuperAdmin) {
-            $sql = "SELECT COUNT(*) FROM {$table} 
+            $sql = "SELECT COUNT(*) FROM {$dbTable} 
                     WHERE {$codeCol} = :code AND deleted_at IS NULL";
         } else {
-            $sql = "SELECT COUNT(*) FROM {$table} 
-                    WHERE tenant_id = :tenant_id AND {$codeCol} = :code AND deleted_at IS NULL";
+            if ($table === 'kurikulum') {
+                $sql = "SELECT COUNT(*) FROM ref_kurikulum 
+                        WHERE (tenant_id = :tenant_id OR tenant_id IS NULL) AND {$codeCol} = :code AND deleted_at IS NULL";
+            } else {
+                $sql = "SELECT COUNT(*) FROM {$dbTable} 
+                        WHERE tenant_id = :tenant_id AND {$codeCol} = :code AND deleted_at IS NULL";
+            }
         }
         
         if ($excludeId !== null) {
@@ -287,6 +309,19 @@ class Kelembagaan extends Model {
             $params['id_jurusan'] = (int)$data['id_jurusan'];
             $params['kode_kelas'] = strip_tags(trim($data['kode_kelas']));
             $params['nama_kelas'] = strip_tags(trim($data['nama_kelas']));
+        } elseif ($table === 'kurikulum') {
+            $fields[] = 'nama_kurikulum';
+            $fields[] = 'tipe_penilaian';
+            $fields[] = 'is_active';
+
+            $placeholders[] = ':nama_kurikulum';
+            $placeholders[] = ':tipe_penilaian';
+            $placeholders[] = ':is_active';
+
+            $params['nama_kurikulum'] = strip_tags(trim($data['nama_kurikulum'] ?? $data['nama'] ?? ''));
+            $params['tipe_penilaian'] = strip_tags(trim($data['tipe_penilaian'] ?? 'sederhana'));
+            $params['is_active'] = isset($data['is_active']) ? (int)$data['is_active'] : 1;
+            $params['tenant_id'] = $this->tenantId ?: null;
         } else {
             $meta = $this->allowedTables[$table];
             $codeCol = $meta['code_field'];
@@ -304,9 +339,10 @@ class Kelembagaan extends Model {
             }
         }
 
+        $dbTable = ($table === 'kurikulum') ? 'ref_kurikulum' : $table;
         try {
             $this->db->beginTransaction();
-            $sql = "INSERT INTO {$table} (" . implode(', ', $fields) . ") VALUES (" . implode(', ', $placeholders) . ")";
+            $sql = "INSERT INTO {$dbTable} (" . implode(', ', $fields) . ") VALUES (" . implode(', ', $placeholders) . ")";
             $stmt = $this->db->prepare($sql);
             $stmt->execute($params);
             $lastId = (int)$this->db->lastInsertId();
@@ -323,6 +359,14 @@ class Kelembagaan extends Model {
      */
     public function update(string $table, int $id, array $data): bool {
         $this->validateTableName($table);
+
+        // Security check for system curriculum
+        if ($table === 'kurikulum' && $this->tenantId !== null) {
+            $check = $this->findById($table, $id);
+            if (!$check || $check['tenant_id'] === null) {
+                throw new \InvalidArgumentException("Akses ditolak: Kurikulum sistem/nasional tidak boleh diubah.");
+            }
+        }
 
         $sets = [];
         $params = [
@@ -342,6 +386,14 @@ class Kelembagaan extends Model {
             $params['id_jurusan'] = (int)$data['id_jurusan'];
             $params['kode_kelas'] = strip_tags(trim($data['kode_kelas']));
             $params['nama_kelas'] = strip_tags(trim($data['nama_kelas']));
+        } elseif ($table === 'kurikulum') {
+            $sets[] = "nama_kurikulum = :nama_kurikulum";
+            $sets[] = "tipe_penilaian = :tipe_penilaian";
+            $sets[] = "is_active = :is_active";
+
+            $params['nama_kurikulum'] = strip_tags(trim($data['nama_kurikulum'] ?? $data['nama'] ?? ''));
+            $params['tipe_penilaian'] = strip_tags(trim($data['tipe_penilaian'] ?? 'sederhana'));
+            $params['is_active'] = isset($data['is_active']) ? (int)$data['is_active'] : 1;
         } else {
             $meta = $this->allowedTables[$table];
             $codeCol = $meta['code_field'];
@@ -356,10 +408,11 @@ class Kelembagaan extends Model {
             }
         }
 
+        $dbTable = ($table === 'kurikulum') ? 'ref_kurikulum' : $table;
         try {
             $this->db->beginTransaction();
-            $sql = "UPDATE {$table} SET " . implode(', ', $sets) . " WHERE id = :id AND deleted_at IS NULL";
-            if ($this->tenantId !== null) {
+            $sql = "UPDATE {$dbTable} SET " . implode(', ', $sets) . " WHERE id = :id AND deleted_at IS NULL";
+            if ($this->tenantId !== null && $table !== 'kurikulum') {
                 $sql .= " AND tenant_id = :tenant_id";
             }
             $stmt = $this->db->prepare($sql);
@@ -377,11 +430,24 @@ class Kelembagaan extends Model {
      */
     public function delete(string $table, int $id): bool {
         $this->validateTableName($table);
+
+        // Security check for system curriculum
+        if ($table === 'kurikulum' && $this->tenantId !== null) {
+            $check = $this->findById($table, $id);
+            if (!$check || $check['tenant_id'] === null) {
+                throw new \InvalidArgumentException("Akses ditolak: Kurikulum sistem/nasional tidak boleh dihapus.");
+            }
+        }
+
+        $dbTable = ($table === 'kurikulum') ? 'ref_kurikulum' : $table;
         try {
             $this->db->beginTransaction();
-            $sql = "UPDATE {$table} SET deleted_at = CURRENT_TIMESTAMP WHERE id = :id";
+            $sql = "UPDATE {$dbTable} SET deleted_at = CURRENT_TIMESTAMP WHERE id = :id";
             $params = ['id' => $id];
-            if ($this->tenantId !== null) {
+            if ($this->tenantId !== null && $table !== 'kurikulum') {
+                $sql .= " AND tenant_id = :tenant_id";
+                $params['tenant_id'] = $this->tenantId;
+            } elseif ($this->tenantId !== null && $table === 'kurikulum') {
                 $sql .= " AND tenant_id = :tenant_id";
                 $params['tenant_id'] = $this->tenantId;
             }
@@ -400,11 +466,24 @@ class Kelembagaan extends Model {
      */
     public function restore(string $table, int $id): bool {
         $this->validateTableName($table);
+
+        // Security check for system curriculum
+        if ($table === 'kurikulum' && $this->tenantId !== null) {
+            $check = $this->findById($table, $id);
+            if (!$check || $check['tenant_id'] === null) {
+                throw new \InvalidArgumentException("Akses ditolak: Kurikulum sistem/nasional tidak boleh dipulihkan.");
+            }
+        }
+
+        $dbTable = ($table === 'kurikulum') ? 'ref_kurikulum' : $table;
         try {
             $this->db->beginTransaction();
-            $sql = "UPDATE {$table} SET deleted_at = NULL WHERE id = :id";
+            $sql = "UPDATE {$dbTable} SET deleted_at = NULL WHERE id = :id";
             $params = ['id' => $id];
-            if ($this->tenantId !== null) {
+            if ($this->tenantId !== null && $table !== 'kurikulum') {
+                $sql .= " AND tenant_id = :tenant_id";
+                $params['tenant_id'] = $this->tenantId;
+            } elseif ($this->tenantId !== null && $table === 'kurikulum') {
                 $sql .= " AND tenant_id = :tenant_id";
                 $params['tenant_id'] = $this->tenantId;
             }
@@ -423,15 +502,28 @@ class Kelembagaan extends Model {
      */
     public function toggleStatus(string $table, int $id): bool {
         $this->validateTableName($table);
-        
+
+        // Security check for system curriculum
+        if ($table === 'kurikulum' && $this->tenantId !== null) {
+            $check = $this->findById($table, $id);
+            if (!$check || $check['tenant_id'] === null) {
+                throw new \InvalidArgumentException("Akses ditolak: Status kurikulum sistem/nasional tidak boleh diubah.");
+            }
+        }
+
+        $dbTable = ($table === 'kurikulum') ? 'ref_kurikulum' : $table;
         try {
             $this->db->beginTransaction();
             
             // Ambil status saat ini
-            $sql = "SELECT is_active FROM {$table} WHERE id = :id AND deleted_at IS NULL LIMIT 1";
+            $sql = "SELECT is_active FROM {$dbTable} WHERE id = :id AND deleted_at IS NULL LIMIT 1";
             $params = ['id' => $id];
             if ($this->tenantId !== null) {
-                $sql = "SELECT is_active FROM {$table} WHERE id = :id AND tenant_id = :tenant_id AND deleted_at IS NULL LIMIT 1";
+                if ($table === 'kurikulum') {
+                    $sql = "SELECT is_active FROM ref_kurikulum WHERE id = :id AND (tenant_id = :tenant_id OR tenant_id IS NULL) AND deleted_at IS NULL LIMIT 1";
+                } else {
+                    $sql = "SELECT is_active FROM {$dbTable} WHERE id = :id AND tenant_id = :tenant_id AND deleted_at IS NULL LIMIT 1";
+                }
                 $params['tenant_id'] = $this->tenantId;
             }
             $stmt = $this->db->prepare($sql);
@@ -445,7 +537,7 @@ class Kelembagaan extends Model {
 
             $newStatus = $current['is_active'] ? 0 : 1;
 
-            $updateSql = "UPDATE {$table} SET is_active = :status WHERE id = :id";
+            $updateSql = "UPDATE {$dbTable} SET is_active = :status WHERE id = :id";
             $updateParams = ['status' => $newStatus, 'id' => $id];
             if ($this->tenantId !== null) {
                 $updateSql .= " AND tenant_id = :tenant_id";

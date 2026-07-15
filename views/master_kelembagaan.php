@@ -226,6 +226,49 @@
                             </tr>
                         </template>
 
+                        <!-- Loop Data Kurikulum -->
+                        <template v-else-if="activeTab === 'kurikulum'">
+                            <tr v-for="(item, idx) in listData" :key="item.id" :class="{'table-light-danger text-muted': trashMode}">
+                                <td class="text-muted">{{ (currentPage - 1) * perPage + idx + 1 }}</td>
+                                <td v-if="userRole === 'super_admin'" class="fw-semibold text-secondary">{{ item.nama_sekolah || 'Sistem (Pemerintah)' }}</td>
+                                <td class="fw-bold text-dark">
+                                    {{ item.nama_kurikulum }}
+                                    <span v-if="item.tenant_id === null" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill fs-9 ms-1.5"><i class="bi bi-shield-fill-check me-0.5"></i>Nasional</span>
+                                    <span v-else class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill fs-9 ms-1.5"><i class="bi bi-building me-0.5"></i>Kustom</span>
+                                </td>
+                                <td>
+                                    <span class="badge" :class="item.tipe_penilaian === 'kompleks' ? 'bg-danger-subtle text-danger border border-danger-subtle' : (item.tipe_penilaian === 'klasik' ? 'bg-info-subtle text-info border border-info-subtle' : 'bg-success-subtle text-success border border-success-subtle')">
+                                        {{ item.tipe_penilaian === 'kompleks' ? 'Kompleks (K-13)' : (item.tipe_penilaian === 'klasik' ? 'Klasik (KTSP)' : 'Sederhana (Merdeka)') }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="form-check form-switch d-inline-block" v-if="!trashMode && item.tenant_id !== null">
+                                        <input :id="'status_switch_kur_' + item.id" :name="'status_switch_kur_' + item.id" :aria-label="'Ubah status aktif kurikulum ' + item.nama_kurikulum" class="form-check-input" type="checkbox" role="switch" 
+                                               :checked="item.is_active == 1" @change="toggleStatus(item.id)">
+                                    </div>
+                                    <span v-else-if="item.tenant_id === null" class="badge bg-success rounded-pill px-2 py-1 fs-9">Aktif Bawaan</span>
+                                    <span v-else class="badge bg-danger rounded-pill px-2 py-1 fs-9">Terhapus</span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-inline-flex gap-2" v-if="!trashMode">
+                                        <button class="btn btn-sm btn-outline-secondary rounded-2 px-2 py-1" style="color:#334155; border-color:#94a3b8;" @click="openEditModal(item)" v-if="item.tenant_id !== null">
+                                            <i class="bi bi-pencil-square me-1"></i>Edit
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger rounded-2 px-2 py-1" @click="deleteItem(item.id)" v-if="item.tenant_id !== null">
+                                            <i class="bi bi-trash3 me-1"></i>Hapus
+                                        </button>
+                                        <span v-if="item.tenant_id === null" class="text-muted fs-8"><i class="bi bi-lock-fill"></i> Terkunci</span>
+                                    </div>
+                                    <div class="d-inline-flex gap-2" v-else>
+                                        <button class="btn btn-sm btn-success text-white rounded-2 px-2 py-1" @click="restoreItem(item.id)" v-if="item.tenant_id !== null">
+                                            <i class="bi bi-arrow-counterclockwise me-1"></i>Pulihkan
+                                        </button>
+                                        <span v-else class="text-muted fs-8">-</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+
                         <!-- Loop Data Generik Lainnya -->
                         <template v-else>
                             <tr v-for="(item, idx) in listData" :key="item.id">
@@ -370,6 +413,25 @@
                                 </div>
                             </template>
 
+                            <!-- Form inputs khusus Kurikulum -->
+                            <template v-else-if="activeTab === 'kurikulum'">
+                                <div class="col-12">
+                                    <label for="form_kurikulum_nama" class="form-label fw-semibold fs-8 text-muted mb-1">Nama Kurikulum <span class="text-danger">*</span></label>
+                                    <input id="form_kurikulum_nama" name="nama_kurikulum" type="text" class="form-control rounded-3" :class="{'is-invalid': errors.nama}" v-model="form.nama_kurikulum" placeholder="Contoh: Kurikulum Cambridge" required>
+                                    <div class="invalid-feedback">{{ getError('nama') }}</div>
+                                </div>
+                                <div class="col-12">
+                                    <label for="form_kurikulum_tipe" class="form-label fw-semibold fs-8 text-muted mb-1">Tipe Penilaian / Rapor <span class="text-danger">*</span></label>
+                                    <select id="form_kurikulum_tipe" name="tipe_penilaian" class="form-select rounded-3" :class="{'is-invalid': errors.tipe_penilaian}" v-model="form.tipe_penilaian" required>
+                                        <option value="" disabled>-- Pilih Tipe Penilaian --</option>
+                                        <option value="sederhana">Sederhana (Merdeka - Nilai Akhir & Deskripsi Capaian)</option>
+                                        <option value="klasik">Klasik (KTSP - Kognitif, Psikomotorik, Afektif)</option>
+                                        <option value="kompleks">Kompleks (K-13 - Pengetahuan KI-3 & Keterampilan KI-4)</option>
+                                    </select>
+                                    <div class="invalid-feedback">{{ getError('tipe_penilaian') }}</div>
+                                </div>
+                            </template>
+
                             <!-- Form inputs generik (Jenjang, Jurusan, Mapel, dll) -->
                             <template v-else>
                                 <div class="col-12">
@@ -469,7 +531,8 @@
                     { id: 'pendidikan', name: 'Pendidikan', icon: 'bi bi-award-fill' },
                     { id: 'program_pengajaran', name: 'Program Pengajaran', icon: 'bi bi-journal-text' },
                     { id: 'tahun_ajaran', name: 'Tahun Ajaran', icon: 'bi bi-calendar-check' },
-                    { id: 'angkatan', name: 'Angkatan', icon: 'bi bi-calendar2-range' }
+                    { id: 'angkatan', name: 'Angkatan', icon: 'bi bi-calendar2-range' },
+                    { id: 'kurikulum', name: 'Kurikulum', icon: 'bi bi-gear-wide-connected' }
                 ],
                 activeTab: 'jenjang',
                 userRole: '<?php echo htmlspecialchars($user_role ?? ""); ?>',
@@ -618,6 +681,8 @@
                     this.form = { id_jenjang: '', id_jurusan: '', kode_kelas: '', nama_kelas: '' };
                 } else if (this.activeTab === 'tahun_ajaran' || this.activeTab === 'angkatan') {
                     this.form = { kode: '' };
+                } else if (this.activeTab === 'kurikulum') {
+                    this.form = { nama_kurikulum: '', tipe_penilaian: 'sederhana', is_active: 1 };
                 } else {
                     this.form = { kode: '', nama: '' };
                 }
@@ -645,6 +710,12 @@
                 } else if (this.activeTab === 'tahun_ajaran' || this.activeTab === 'angkatan') {
                     this.form = {
                         kode: this.activeTab === 'tahun_ajaran' ? item.tahun_ajaran : item.tahun_angkatan
+                    };
+                } else if (this.activeTab === 'kurikulum') {
+                    this.form = {
+                        nama_kurikulum: item.nama_kurikulum,
+                        tipe_penilaian: item.tipe_penilaian,
+                        is_active: item.is_active
                     };
                 } else {
                     this.form = {

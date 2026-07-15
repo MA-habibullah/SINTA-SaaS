@@ -322,6 +322,41 @@ class KelembagaanController extends BaseController {
             if (empty($data['nama_kelas'])) {
                 $errors['nama_kelas'] = ['Nama kelas wajib diisi.'];
             }
+        } elseif ($module === 'kurikulum') {
+            $namaKur = trim($data['nama_kurikulum'] ?? $data['nama'] ?? '');
+            if (empty($namaKur)) {
+                $errors['nama'] = ['Nama kurikulum wajib diisi.'];
+            }
+            if (empty($data['tipe_penilaian'])) {
+                $errors['tipe_penilaian'] = ['Tipe penilaian wajib diisi.'];
+            } elseif (!in_array($data['tipe_penilaian'], ['sederhana', 'klasik', 'kompleks'])) {
+                $errors['tipe_penilaian'] = ['Tipe penilaian tidak valid.'];
+            }
+            
+            // Check unique nama_kurikulum per tenant
+            if (!empty($namaKur)) {
+                try {
+                    $db = \App\Config\Database::getConnection();
+                    $tId = SessionManager::getTenantId() ?: ($data['tenant_id'] ?? null);
+                    $sqlUq = "SELECT COUNT(*) FROM ref_kurikulum WHERE nama_kurikulum = ? AND deleted_at IS NULL";
+                    $uqParams = [$namaKur];
+                    if ($tId) {
+                        $sqlUq .= " AND (tenant_id = ? OR tenant_id IS NULL)";
+                        $uqParams[] = $tId;
+                    } else {
+                        $sqlUq .= " AND tenant_id IS NULL";
+                    }
+                    if ($id !== null) {
+                        $sqlUq .= " AND id != ?";
+                        $uqParams[] = $id;
+                    }
+                    $stmtUq = $db->prepare($sqlUq);
+                    $stmtUq->execute($uqParams);
+                    if ($stmtUq->fetchColumn() > 0) {
+                        $errors['nama'] = ['Nama kurikulum tersebut sudah terdaftar.'];
+                    }
+                } catch (\Throwable $e) {}
+            }
         } else {
             // Validasi umum untuk 7 modul lainnya
             if (empty($data['kode'])) {
