@@ -113,8 +113,26 @@ class NilaiRaporController extends BaseController {
         ]);
         $students = $stmtSiswa->fetchAll(PDO::FETCH_ASSOC);
 
-        // 3. Get existing grades
-        $qGrades = "SELECT siswa_id, mapel_id, nilai_akhir 
+        // 3. Get active curriculum for the class
+        $qActive = "SELECT r.nama_kurikulum, r.tipe_penilaian, kk.is_locked 
+                    FROM kelas_kurikulum kk
+                    JOIN ref_kurikulum r ON kk.kurikulum_id = r.id
+                    WHERE kk.kelas_id = :kelas_id AND kk.tahun_ajaran = :tahun_ajaran AND kk.tenant_id = :tenant_id
+                    LIMIT 1";
+        $stmtActive = $db->prepare($qActive);
+        $stmtActive->execute([
+            'kelas_id' => $kelasId,
+            'tahun_ajaran' => $tahunAjaran,
+            'tenant_id' => $tenantId
+        ]);
+        $activeKur = $stmtActive->fetch(PDO::FETCH_ASSOC) ?: [
+            'nama_kurikulum' => 'Kurikulum 2013 (K-13)',
+            'tipe_penilaian' => 'kompleks',
+            'is_locked' => 0
+        ];
+
+        // 4. Get existing grades
+        $qGrades = "SELECT siswa_id, mapel_id, nilai_akhir, kkm, nilai_detail_json 
                     FROM detail_nilai_rapor
                     WHERE kelas_id = :kelas_id
                       AND tahun_ajaran = :tahun_ajaran
@@ -130,24 +148,66 @@ class NilaiRaporController extends BaseController {
         ]);
         $gradesList = $stmtGrades->fetchAll(PDO::FETCH_ASSOC);
 
-        // Structure grades as [siswa_id][mapel_id] => nilai_akhir
+        // Structure grades as [siswa_id][mapel_id] => { nilai_akhir, kkm, detail }
         $gradesMatrix = [];
         foreach ($gradesList as $row) {
             $sId = $row['siswa_id'];
             $mId = $row['mapel_id'];
             $val = $row['nilai_akhir'];
+            $kkm = $row['kkm'];
+            
+            $detail = [];
+            if (!empty($row['nilai_detail_json'])) {
+                $detail = json_decode($row['nilai_detail_json'], true) ?: [];
+            }
             
             if (!isset($gradesMatrix[$sId])) {
                 $gradesMatrix[$sId] = [];
             }
-            // Format to float if not null
-            $gradesMatrix[$sId][$mId] = $val !== null ? (float)$val : null;
+            $gradesMatrix[$sId][$mId] = [
+                'nilai_akhir' => $val !== null ? (float)$val : null,
+                'kkm' => $kkm !== null ? (float)$kkm : null,
+                'detail' => $detail
+            ];
+        }
+
+        // 5. Get existing K-13 attitude grades if applicable
+        $sikapList = new \stdClass(); // Return as empty object if none
+        if ($activeKur['tipe_penilaian'] === 'kompleks') {
+            $qSikap = "SELECT siswa_id, predikat_spiritual, deskripsi_spiritual, predikat_sosial, deskripsi_sosial
+                       FROM nilai_sikap_k13
+                       WHERE tahun_ajaran = :tahun_ajaran
+                         AND semester = :semester
+                         AND tenant_id = :tenant_id";
+            $stmtSikap = $db->prepare($qSikap);
+            $stmtSikap->execute([
+                'tahun_ajaran' => $tahunAjaran,
+                'semester' => $semester,
+                'tenant_id' => $tenantId
+            ]);
+            $sikapRows = $stmtSikap->fetchAll(PDO::FETCH_ASSOC);
+            
+            $sikapArr = [];
+            foreach ($sikapRows as $row) {
+                $sikapArr[$row['siswa_id']] = [
+                    'predikat_spiritual' => $row['predikat_spiritual'] ?: '',
+                    'deskripsi_spiritual' => $row['deskripsi_spiritual'] ?: '',
+                    'predikat_sosial' => $row['predikat_sosial'] ?: '',
+                    'deskripsi_sosial' => $row['deskripsi_sosial'] ?: ''
+                ];
+            }
+            if (!empty($sikapArr)) {
+                $sikapList = $sikapArr;
+            }
         }
 
         $this->jsonResponse([
             'subjects' => $subjects,
             'students' => $students,
-            'grades' => $gradesMatrix
+            'grades' => $gradesMatrix,
+            'kurikulum' => $activeKur,
+            'sikap_k13' => $sikapList,
+            'is_rombel_locked' => ($activeKur['is_locked'] ?? 0) == 1
         ]);
     }
 
@@ -224,16 +284,40 @@ class NilaiRaporController extends BaseController {
             return;
         }
 
+        $stmtLockKelas = $db->prepare("SELECT is_locked FROM kelas_kurikulum WHERE tenant_id = ? AND kelas_id = ? AND tahun_ajaran = ? LIMIT 1");
+        $stmtLockKelas->execute([$tenantId, $kelasId, $tahunAjaran]);
+        if ($stmtLockKelas->fetchColumn() == 1) {
+            $this->jsonResponse(['status' => 'error', 'message' => 'Gagal menyimpan. Input Nilai Rapor untuk kelas ini pada tahun ajaran terkait telah dikunci.'], 403);
+            return;
+        }
+
+        // Ambil nilai lama untuk audit log
+        $qOld = "SELECT siswa_id, mapel_id, nilai_akhir, kkm, nilai_detail_json FROM detail_nilai_rapor 
+                 WHERE tenant_id = :tenant_id AND kelas_id = :kelas_id AND tahun_ajaran = :tahun_ajaran AND semester = :semester AND deleted_at IS NULL";
+        $stmtOld = $db->prepare($qOld);
+        $stmtOld->execute([
+            'tenant_id' => $tenantId,
+            'kelas_id' => $kelasId,
+            'tahun_ajaran' => $tahunAjaran,
+            'semester' => $semester
+        ]);
+        $oldGrades = [];
+        foreach ($stmtOld->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $oldGrades[$row['siswa_id'] . '_' . $row['mapel_id']] = $row;
+        }
+
         $db->beginTransaction();
         try {
             $stmtUpsert = $db->prepare("
                 INSERT INTO detail_nilai_rapor 
-                    (tenant_id, siswa_id, kelas_id, tahun_ajaran, semester, mapel_id, nilai_akhir)
+                    (tenant_id, siswa_id, kelas_id, tahun_ajaran, semester, mapel_id, nilai_akhir, kkm, nilai_detail_json)
                 VALUES 
-                    (:tenant_id, :siswa_id, :kelas_id, :tahun_ajaran, :semester, :mapel_id, :nilai_akhir)
+                    (:tenant_id, :siswa_id, :kelas_id, :tahun_ajaran, :semester, :mapel_id, :nilai_akhir, :kkm, :nilai_detail_json)
                 ON DUPLICATE KEY UPDATE 
                     kelas_id = VALUES(kelas_id),
                     nilai_akhir = VALUES(nilai_akhir), 
+                    kkm = VALUES(kkm),
+                    nilai_detail_json = VALUES(nilai_detail_json),
                     updated_at = NOW(),
                     deleted_at = NULL
             ");
@@ -242,6 +326,12 @@ class NilaiRaporController extends BaseController {
                 $sId = $entry['siswa_id'] ?? '';
                 $mId = $entry['mapel_id'] ?? '';
                 $val = isset($entry['nilai_akhir']) && $entry['nilai_akhir'] !== '' ? $entry['nilai_akhir'] : null;
+                $kkm = isset($entry['kkm']) && $entry['kkm'] !== '' ? $entry['kkm'] : null;
+                
+                $detailVal = null;
+                if (!empty($entry['detail'])) {
+                    $detailVal = json_encode($entry['detail']);
+                }
 
                 if (empty($sId) || empty($mId)) {
                     continue;
@@ -254,6 +344,39 @@ class NilaiRaporController extends BaseController {
                     continue; // Skip saving grade if there is a religion mismatch
                 }
 
+                // Audit logging
+                $oldData = $oldGrades[$sId . '_' . $mId] ?? null;
+                $oldVal = $oldData ? $oldData['nilai_akhir'] : null;
+                $oldKkm = $oldData ? $oldData['kkm'] : null;
+                $oldJson = $oldData ? $oldData['nilai_detail_json'] : null;
+
+                $action = $oldData ? 'UPDATE' : 'INSERT';
+                $isChanged = ($action === 'INSERT') || ($oldVal != $val || $oldKkm != $kkm || $oldJson != $detailVal);
+
+                if ($isChanged) {
+                    $stmtLog = $db->prepare("
+                        INSERT INTO log_nilai_rapor 
+                            (tenant_id, user_id, siswa_id, mapel_id, semester, tahun_ajaran, nilai_lama_json, nilai_baru_json, action)
+                        VALUES 
+                            (:tenant_id, :user_id, :siswa_id, :mapel_id, :semester, :tahun_ajaran, :nilai_lama_json, :nilai_baru_json, :action)
+                    ");
+                    $stmtLog->execute([
+                        'tenant_id' => $tenantId,
+                        'user_id' => $_SESSION['user_id'] ?? 'SYSTEM',
+                        'siswa_id' => $sId,
+                        'mapel_id' => $mId,
+                        'semester' => $semester,
+                        'tahun_ajaran' => $tahunAjaran,
+                        'nilai_lama_json' => $oldData ? json_encode($oldData) : null,
+                        'nilai_baru_json' => json_encode([
+                            'nilai_akhir' => $val,
+                            'kkm' => $kkm,
+                            'nilai_detail_json' => $detailVal
+                        ]),
+                        'action' => $action
+                    ]);
+                }
+
                 $stmtUpsert->execute([
                     'tenant_id' => $tenantId,
                     'siswa_id' => $sId,
@@ -261,8 +384,38 @@ class NilaiRaporController extends BaseController {
                     'tahun_ajaran' => $tahunAjaran,
                     'semester' => $semester,
                     'mapel_id' => $mId,
-                    'nilai_akhir' => $val
+                    'nilai_akhir' => $val,
+                    'kkm' => $kkm,
+                    'nilai_detail_json' => $detailVal
                 ]);
+            }
+
+            // Save K-13 attitude grades if provided
+            $sikapPayload = $input['sikap_k13'] ?? [];
+            if (!empty($sikapPayload) && (is_array($sikapPayload) || is_object($sikapPayload))) {
+                $stmtUpsertSikap = $db->prepare("
+                    INSERT INTO nilai_sikap_k13
+                        (tenant_id, siswa_id, tahun_ajaran, semester, predikat_spiritual, deskripsi_spiritual, predikat_sosial, deskripsi_sosial)
+                    VALUES
+                        (:tenant_id, :siswa_id, :tahun_ajaran, :semester, :pred_spiritual, :desk_spiritual, :pred_sosial, :desk_sosial)
+                    ON DUPLICATE KEY UPDATE
+                        predikat_spiritual = VALUES(predikat_spiritual),
+                        deskripsi_spiritual = VALUES(deskripsi_spiritual),
+                        predikat_sosial = VALUES(predikat_sosial),
+                        deskripsi_sosial = VALUES(deskripsi_sosial)
+                ");
+                foreach ($sikapPayload as $sId => $sData) {
+                    $stmtUpsertSikap->execute([
+                        'tenant_id' => $tenantId,
+                        'siswa_id' => $sId,
+                        'tahun_ajaran' => $tahunAjaran,
+                        'semester' => $semester,
+                        'pred_spiritual' => $sData['predikat_spiritual'] ?? null,
+                        'desk_spiritual' => $sData['deskripsi_spiritual'] ?? null,
+                        'pred_sosial' => $sData['predikat_sosial'] ?? null,
+                        'desk_sosial' => $sData['deskripsi_sosial'] ?? null
+                    ]);
+                }
             }
 
             $db->commit();
@@ -659,9 +812,52 @@ class NilaiRaporController extends BaseController {
 
             $db = \App\Config\Database::getConnection();
 
-            // Kita akan melakukan soft delete pada semua nilai rapor siswa ini di kelas, tahun ajaran, dan semester tertentu
-            $stmt = $db->prepare("UPDATE detail_nilai_rapor SET deleted_at = NOW() WHERE siswa_id = ? AND kelas_id = ? AND tahun_ajaran = ? AND semester = ? AND tenant_id = ? AND deleted_at IS NULL");
-            $stmt->execute([$siswaId, $kelasId, $tahunAjaran, $semester, $tenantId]);
+            // Periksa apakah input nilai terkunci
+            $stmtLock = $db->prepare("SELECT is_locked_nilai FROM kunci_akademik WHERE tenant_id = ? AND tahun_ajaran = ? AND semester = ?");
+            $stmtLock->execute([$tenantId, $tahunAjaran, $semester]);
+            if ($stmtLock->fetchColumn()) {
+                throw new \Exception("Gagal menghapus. Input Nilai Rapor pada Tahun Ajaran & Semester ini telah dikunci oleh administrator.");
+            }
+
+            $stmtLockKelas = $db->prepare("SELECT is_locked FROM kelas_kurikulum WHERE tenant_id = ? AND kelas_id = ? AND tahun_ajaran = ? LIMIT 1");
+            $stmtLockKelas->execute([$tenantId, $kelasId, $tahunAjaran]);
+            if ($stmtLockKelas->fetchColumn() == 1) {
+                throw new \Exception("Gagal menghapus. Input Nilai Rapor untuk kelas ini pada tahun ajaran terkait telah dikunci.");
+            }
+
+            // Ambil data nilai lama sebelum di-soft-delete untuk log audit
+            $stmtOld = $db->prepare("SELECT mapel_id, nilai_akhir, kkm, nilai_detail_json FROM detail_nilai_rapor WHERE siswa_id = ? AND kelas_id = ? AND tahun_ajaran = ? AND semester = ? AND tenant_id = ? AND deleted_at IS NULL");
+            $stmtOld->execute([$siswaId, $kelasId, $tahunAjaran, $semester, $tenantId]);
+            $oldDataList = $stmtOld->fetchAll(PDO::FETCH_ASSOC);
+
+            $db->beginTransaction();
+            try {
+                foreach ($oldDataList as $old) {
+                    $stmtLog = $db->prepare("
+                        INSERT INTO log_nilai_rapor 
+                            (tenant_id, user_id, siswa_id, mapel_id, semester, tahun_ajaran, nilai_lama_json, nilai_baru_json, action)
+                        VALUES 
+                            (:tenant_id, :user_id, :siswa_id, :mapel_id, :semester, :tahun_ajaran, :nilai_lama_json, NULL, 'DELETE')
+                    ");
+                    $stmtLog->execute([
+                        'tenant_id' => $tenantId,
+                        'user_id' => $_SESSION['user_id'] ?? 'SYSTEM',
+                        'siswa_id' => $siswaId,
+                        'mapel_id' => $old['mapel_id'],
+                        'semester' => $semester,
+                        'tahun_ajaran' => $tahunAjaran,
+                        'nilai_lama_json' => json_encode($old)
+                    ]);
+                }
+
+                $stmt = $db->prepare("UPDATE detail_nilai_rapor SET deleted_at = NOW() WHERE siswa_id = ? AND kelas_id = ? AND tahun_ajaran = ? AND semester = ? AND tenant_id = ? AND deleted_at IS NULL");
+                $stmt->execute([$siswaId, $kelasId, $tahunAjaran, $semester, $tenantId]);
+
+                $db->commit();
+            } catch (\Throwable $e) {
+                $db->rollBack();
+                throw $e;
+            }
 
             // Jika nilai berhasil dihapus, student otomatis akan hilang dari grid jika mereka tidak terdaftar resmi di kelas tersebut (berdasarkan filter BukuIndukController / getGrid)
             echo json_encode([
