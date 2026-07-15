@@ -1017,9 +1017,21 @@
                         <input type="text" class="form-control bg-light" readonly :value="printModal.title">
                     </div>
                     
-                    <div class="mb-4">
+                    <div class="mb-3">
                         <label class="form-label fw-semibold">Tanggal Cetak Dokumen</label>
                         <input type="date" class="form-control" v-model="printModal.tanggalCetak">
+                    </div>
+
+                    <!-- Pilihan Menampilkan QR Code -->
+                    <div class="form-check form-switch mb-2" v-if="printModal.url && !printModal.url.includes('print-rapot-kelas')">
+                        <input class="form-check-input" type="checkbox" id="flexSwitchShowQrCode" v-model="printModal.showQrCode">
+                        <label class="form-check-label fw-semibold text-dark fs-8" for="flexSwitchShowQrCode">Tampilkan QR Code Verifikasi</label>
+                    </div>
+
+                    <!-- Pilihan Hapus/Perbarui Arsip Rapor (Re-Generate) -->
+                    <div class="form-check form-switch mb-3" v-if="printModal.url && (printModal.url.includes('cetak-rapot') || printModal.url.includes('cetak-transkrip'))">
+                        <input class="form-check-input" type="checkbox" id="flexSwitchReGenerate" v-model="printModal.reGenerate">
+                        <label class="form-check-label fw-semibold text-danger fs-8" for="flexSwitchReGenerate">Perbarui Arsip Rapor (Ambil Nilai Terbaru)</label>
                     </div>
                 </div>
                 <div class="modal-footer border-top p-3 bg-light rounded-bottom-4">
@@ -1032,7 +1044,7 @@
 
     <!-- Reusable Import Nilai Modal -->
     <div class="modal fade" id="importNilaiModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" :class="importState === 'preview' ? 'modal-lg' : ''">
             <div class="modal-content border-0 shadow rounded-4">
                 <div class="modal-header border-bottom py-3">
                     <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2">
@@ -1042,31 +1054,123 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold text-muted fs-8">Tahun Ajaran & Semester</label>
-                        <div class="p-2.5 bg-light rounded-3 text-dark fw-bold fs-7">
-                            {{ nilaiRapor.tahunAjaran }} - Semester {{ nilaiRapor.semester }}
+                    
+                    <!-- State: Select File -->
+                    <div v-if="importState === 'select'">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-muted fs-8">Tahun Ajaran & Semester</label>
+                            <div class="p-2.5 bg-light rounded-3 text-dark fw-bold fs-7">
+                                {{ nilaiRapor.tahunAjaran }} - Semester {{ nilaiRapor.semester }}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-muted fs-8">Kelas Sasaran (Target)</label>
+                            <div class="p-2.5 bg-light rounded-3 text-primary fw-bold fs-7">
+                                {{ getNilaiRaporKelasName(nilaiRapor.kelasId) }}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="importNilaiFile" class="form-label fw-semibold text-dark fs-7">Pilih Berkas Excel (.xlsx) Format Nilai</label>
+                            <input type="file" id="importNilaiFile" class="form-control rounded-3" accept=".xlsx" @change="onImportFileChange">
+                            <small class="text-muted fs-8 mt-2 d-block">
+                                <i class="bi bi-info-circle me-1"></i>Pastikan format berkas Excel (.xlsx) yang diunggah sesuai dengan berkas format unduhan dari kelas ini. Kolom Siswa ID dan Header Kode Mata Pelajaran tidak boleh diubah agar data terpetakan dengan benar.
+                            </small>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold text-muted fs-8">Kelas Sasaran (Target)</label>
-                        <div class="p-2.5 bg-light rounded-3 text-primary fw-bold fs-7">
-                            {{ getNilaiRaporKelasName(nilaiRapor.kelasId) }}
+
+                    <!-- State: Validating -->
+                    <div v-else-if="importState === 'validating'" class="text-center py-5">
+                        <div class="spinner-border text-primary mb-3" role="status"></div>
+                        <p class="text-muted mt-2 fs-7 fw-semibold">Memvalidasi data Excel dengan database...</p>
+                    </div>
+
+                    <!-- State: Preview (Validator Results) -->
+                    <div v-else-if="importState === 'preview'">
+                        <!-- Summary Cards -->
+                        <div class="row g-2 mb-3 text-center">
+                            <div class="col-3">
+                                <div class="p-2 bg-light border rounded-3">
+                                    <span class="fs-9 text-muted d-block fw-semibold text-uppercase">Total Baris</span>
+                                    <span class="fs-6 fw-bold text-dark">{{ validationSummary.total_rows }}</span>
+                                </div>
+                            </div>
+                            <div class="col-3">
+                                <div class="p-2 bg-success-subtle border border-success-subtle rounded-3">
+                                    <span class="fs-9 text-success d-block fw-semibold text-uppercase">Valid</span>
+                                    <span class="fs-6 fw-bold text-success">{{ validationSummary.valid }}</span>
+                                </div>
+                            </div>
+                            <div class="col-3">
+                                <div class="p-2 bg-warning-subtle border border-warning-subtle rounded-3">
+                                    <span class="fs-9 text-warning d-block fw-semibold text-uppercase">Peringatan</span>
+                                    <span class="fs-6 fw-bold text-warning">{{ validationSummary.warning }}</span>
+                                </div>
+                            </div>
+                            <div class="col-3">
+                                <div class="p-2 bg-danger-subtle border border-danger-subtle rounded-3">
+                                    <span class="fs-9 text-danger d-block fw-semibold text-uppercase">Eror</span>
+                                    <span class="fs-6 fw-bold text-danger">{{ validationSummary.error }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Rows Preview List -->
+                        <div class="border rounded-3 p-2 bg-white mb-3" style="max-height: 250px; overflow-y: auto;">
+                            <div v-for="(row, rIdx) in validationData" :key="row.siswa_id" class="border-bottom py-2 px-2">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-bold text-dark fs-8">{{ rIdx + 1 }}. {{ row.nama_lengkap }}</span>
+                                    <span :class="['badge rounded-pill fs-9 px-2 py-0.5', 
+                                                  row.status === 'valid' ? 'bg-success-subtle text-success' : 
+                                                  row.status === 'warning' ? 'bg-warning-subtle text-warning' : 'bg-danger-subtle text-danger']">
+                                        {{ row.status.toUpperCase() }}
+                                    </span>
+                                </div>
+                                <!-- Errors/Warnings Details -->
+                                <ul class="mb-0 ps-3 text-danger fs-8" v-if="row.errors.length > 0">
+                                    <li v-for="err in row.errors" :key="err">{{ err }}</li>
+                                </ul>
+                                <ul class="mb-0 ps-3 text-warning-emphasis fs-8" v-if="row.warnings.length > 0">
+                                    <li v-for="wrn in row.warnings" :key="wrn">{{ wrn }}</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Warning Message -->
+                        <div class="alert alert-danger border-0 d-flex align-items-center gap-2 mb-0 py-2.5 rounded-3 fs-8" v-if="validationSummary.error > 0">
+                            <i class="bi bi-exclamation-octagon-fill fs-6 text-danger"></i>
+                            <span>Ditemukan kesalahan data (eror). Mohon perbaiki berkas Excel Anda sebelum mengunggah kembali.</span>
+                        </div>
+                        <div class="alert alert-warning border-0 d-flex align-items-center gap-2 mb-0 py-2.5 rounded-3 fs-8" v-else-if="validationSummary.warning > 0">
+                            <i class="bi bi-exclamation-triangle-fill fs-6 text-warning"></i>
+                            <span>Data valid dengan peringatan. Peringatan perbedaan agama akan diabaikan otomatis saat impor.</span>
+                        </div>
+                        <div class="alert alert-success border-0 d-flex align-items-center gap-2 mb-0 py-2.5 rounded-3 fs-8" v-else>
+                            <i class="bi bi-check-circle-fill fs-6 text-success"></i>
+                            <span>Semua data berhasil divalidasi dan siap untuk diimpor.</span>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="importNilaiFile" class="form-label fw-semibold text-dark fs-7">Pilih Berkas Excel (.xlsx) Format Nilai</label>
-                        <input type="file" id="importNilaiFile" class="form-control rounded-3" accept=".xlsx" @change="onImportFileChange">
-                        <small class="text-muted fs-8 mt-2 d-block">
-                            <i class="bi bi-info-circle me-1"></i>Pastikan format berkas Excel (.xlsx) yang diunggah sesuai dengan berkas format unduhan dari kelas ini. Kolom Siswa ID dan Header Kode Mata Pelajaran tidak boleh diubah agar data terpetakan dengan benar.
-                        </small>
-                    </div>
+
                 </div>
                 <div class="modal-footer border-top bg-light py-2.5 rounded-bottom-4">
-                    <button type="button" class="btn btn-light rounded-3 fs-8 px-4" data-bs-dismiss="modal">Batal</button>
-                    <button type="button" class="btn btn-primary rounded-3 fs-8 px-4" @click="submitImportGrades" :disabled="!importFile">
-                        Mulai Impor
-                    </button>
+                    <!-- Footer: Select File -->
+                    <template v-if="importState === 'select'">
+                        <button type="button" class="btn btn-light rounded-3 fs-8 px-4" data-bs-dismiss="modal">Batal</button>
+                        <button type="button" class="btn btn-primary rounded-3 fs-8 px-4" @click="validateImportGrades" :disabled="!importFile">
+                            Mulai Impor
+                        </button>
+                    </template>
+                    <!-- Footer: Validating -->
+                    <template v-else-if="importState === 'validating'">
+                        <button type="button" class="btn btn-light rounded-3 fs-8 px-4" :disabled="true">Batal</button>
+                        <button type="button" class="btn btn-primary rounded-3 fs-8 px-4" :disabled="true">Memproses...</button>
+                    </template>
+                    <!-- Footer: Preview -->
+                    <template v-else-if="importState === 'preview'">
+                        <button type="button" class="btn btn-light rounded-3 fs-8 px-4" @click="resetImportState">Kembali</button>
+                        <button type="button" class="btn btn-primary rounded-3 fs-8 px-4" @click="submitImportGrades" :disabled="validationSummary.error > 0">
+                            Lanjutkan Simpan Nilai
+                        </button>
+                    </template>
                 </div>
             </div>
         </div>
@@ -1102,9 +1206,15 @@
                         <div v-for="sub in nilaiRapor.subjects" :key="sub.mapel_id" class="card border border-secondary-subtle rounded-3 mb-3 shadow-none">
                             <div class="card-header bg-light py-2 fw-semibold text-dark fs-7 d-flex justify-content-between align-items-center">
                                 <span>{{ sub.nama_mapel }} <small class="text-muted font-monospace fs-9">({{ sub.kode_mapel }})</small></span>
-                                <span class="badge bg-secondary-subtle text-secondary fs-9" v-if="isReligionMismatch(activeEditSiswa.agama, sub.nama_mapel)">N/A (Beda Agama)</span>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-9" v-if="isReligionMismatch(activeEditSiswa.agama, sub.nama_mapel)">Beda Agama</span>
                             </div>
-                            <div class="card-body p-3" v-if="!isReligionMismatch(activeEditSiswa.agama, sub.nama_mapel)">
+                            <div class="card-body p-3 bg-warning-subtle text-warning-emphasis" v-if="isReligionMismatch(activeEditSiswa.agama, sub.nama_mapel)">
+                                <div class="d-flex align-items-center gap-2 fs-8 fw-semibold">
+                                    <i class="bi bi-exclamation-triangle-fill text-warning fs-6"></i>
+                                    <span>Peringatan: Mata pelajaran ini tidak sesuai dengan keyakinan siswa ({{ activeEditSiswa.agama || 'Belum Diisi' }}). Pengisian dinonaktifkan.</span>
+                                </div>
+                            </div>
+                            <div class="card-body p-3" v-else>
                                 <div class="row g-3">
                                     <div class="col-6 col-md-3">
                                         <label class="form-label fs-8 fw-semibold text-muted mb-1">KKM Mapel</label>
@@ -1139,9 +1249,15 @@
                         <div v-for="sub in nilaiRapor.subjects" :key="sub.mapel_id" class="card border border-secondary-subtle rounded-3 mb-3 shadow-none">
                             <div class="card-header bg-light py-2 fw-semibold text-dark fs-7 d-flex justify-content-between align-items-center">
                                 <span>{{ sub.nama_mapel }} <small class="text-muted font-monospace fs-9">({{ sub.kode_mapel }})</small></span>
-                                <span class="badge bg-secondary-subtle text-secondary fs-9" v-if="isReligionMismatch(activeEditSiswa.agama, sub.nama_mapel)">N/A (Beda Agama)</span>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-9" v-if="isReligionMismatch(activeEditSiswa.agama, sub.nama_mapel)">Beda Agama</span>
                             </div>
-                            <div class="card-body p-3" v-if="!isReligionMismatch(activeEditSiswa.agama, sub.nama_mapel)">
+                            <div class="card-body p-3 bg-warning-subtle text-warning-emphasis" v-if="isReligionMismatch(activeEditSiswa.agama, sub.nama_mapel)">
+                                <div class="d-flex align-items-center gap-2 fs-8 fw-semibold">
+                                    <i class="bi bi-exclamation-triangle-fill text-warning fs-6"></i>
+                                    <span>Peringatan: Mata pelajaran ini tidak sesuai dengan keyakinan siswa ({{ activeEditSiswa.agama || 'Belum Diisi' }}). Pengisian dinonaktifkan.</span>
+                                </div>
+                            </div>
+                            <div class="card-body p-3" v-else>
                                 <div class="row g-3 mb-3">
                                     <div class="col-12 col-md-4">
                                         <label class="form-label fs-8 fw-semibold text-muted mb-1">KKM Mapel</label>
@@ -1240,9 +1356,15 @@
                         <div v-for="sub in nilaiRapor.subjects" :key="sub.mapel_id" class="card border border-secondary-subtle rounded-3 mb-3 shadow-none">
                             <div class="card-header bg-light py-2 fw-semibold text-dark fs-7 d-flex justify-content-between align-items-center">
                                 <span>{{ sub.nama_mapel }} <small class="text-muted font-monospace fs-9">({{ sub.kode_mapel }})</small></span>
-                                <span class="badge bg-secondary-subtle text-secondary fs-9" v-if="isReligionMismatch(activeEditSiswa.agama, sub.nama_mapel)">N/A (Beda Agama)</span>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-9" v-if="isReligionMismatch(activeEditSiswa.agama, sub.nama_mapel)">Beda Agama</span>
                             </div>
-                            <div class="card-body p-3" v-if="!isReligionMismatch(activeEditSiswa.agama, sub.nama_mapel)">
+                            <div class="card-body p-3 bg-warning-subtle text-warning-emphasis" v-if="isReligionMismatch(activeEditSiswa.agama, sub.nama_mapel)">
+                                <div class="d-flex align-items-center gap-2 fs-8 fw-semibold">
+                                    <i class="bi bi-exclamation-triangle-fill text-warning fs-6"></i>
+                                    <span>Peringatan: Mata pelajaran ini tidak sesuai dengan keyakinan siswa ({{ activeEditSiswa.agama || 'Belum Diisi' }}). Pengisian dinonaktifkan.</span>
+                                </div>
+                            </div>
+                            <div class="card-body p-3" v-else>
                                 <div class="row g-3 mb-2">
                                     <div class="col-6">
                                         <label class="form-label fs-8 fw-semibold text-muted mb-1">KKTP (Standar Kelulusan)</label>
@@ -2293,8 +2415,13 @@
                 printModal: {
                     title: '',
                     url: '',
-                    tanggalCetak: new Date().toISOString().split('T')[0]
+                    tanggalCetak: new Date().toISOString().split('T')[0],
+                    showQrCode: true,
+                    reGenerate: false
                 },
+                importState: 'select',
+                validationSummary: { total_rows: 0, valid: 0, warning: 0, error: 0 },
+                validationData: [],
                 riwayatKepsek: [],
                 formKepsek: { id: '', nama_kepsek: '', nip_kepsek: '', tanggal_mulai: '', tanggal_selesai: '', status_plt: 0 },
                 modalKepsekTitle: 'Tambah Riwayat Kepsek',
@@ -2536,11 +2663,18 @@
             openPrintModal(url, title) {
                 this.printModal.url = url;
                 this.printModal.title = title;
+                this.printModal.showQrCode = true;
+                this.printModal.reGenerate = false;
                 new bootstrap.Modal(document.getElementById('modalCetakDokumen')).show();
             },
             executePrint() {
                 if (document.activeElement) document.activeElement.blur();
-                const finalUrl = this.printModal.url + '&tanggal_cetak=' + this.printModal.tanggalCetak;
+                let finalUrl = this.printModal.url 
+                    + '&tanggal_cetak=' + this.printModal.tanggalCetak 
+                    + '&show_qrcode=' + (this.printModal.showQrCode ? '1' : '0');
+                if (this.printModal.reGenerate) {
+                    finalUrl += '&re_generate=1';
+                }
                 window.open(finalUrl, '_blank');
                 bootstrap.Modal.getInstance(document.getElementById('modalCetakDokumen')).hide();
             },
@@ -3045,10 +3179,62 @@
                 this.importFile = null;
                 const fileEl = document.getElementById('importNilaiFile');
                 if (fileEl) fileEl.value = '';
+                this.importState = 'select';
+                this.validationSummary = { total_rows: 0, valid: 0, warning: 0, error: 0 };
+                this.validationData = [];
                 this.importModalObj.show();
             },
             onImportFileChange(e) {
                 this.importFile = e.target.files[0] || null;
+            },
+            validateImportGrades() {
+                if (this.userRole === 'super_admin' && !this.filterTenantId) {
+                    this.toast.fire({ icon: 'warning', title: 'Pilih Sekolah terlebih dahulu.' });
+                    return;
+                }
+                if (!this.importFile) {
+                    this.toast.fire({ icon: 'warning', title: 'Pilih berkas Excel (.xlsx) terlebih dahulu.' });
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('file', this.importFile);
+                formData.append('kelas_id', this.nilaiRapor.kelasId);
+                formData.append('tahun_ajaran', this.nilaiRapor.tahunAjaran);
+                formData.append('semester', this.nilaiRapor.semester);
+                if (this.userRole === 'super_admin' && this.filterTenantId) {
+                    formData.append('tenant_id', this.filterTenantId);
+                }
+
+                this.importState = 'validating';
+
+                axios.post('/SINTA-SaaS/api/v1/nilai-rapor/import-validate', formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                })
+                .then(res => {
+                    if (res.data.success) {
+                        this.validationSummary = res.data.summary;
+                        this.validationData = res.data.data;
+                        this.importState = 'preview';
+                    } else {
+                        this.toast.fire({ icon: 'error', title: res.data.error || 'Gagal memvalidasi file Excel.' });
+                        this.importState = 'select';
+                    }
+                })
+                .catch(err => {
+                    const msg = err.response && err.response.data && err.response.data.error 
+                        ? err.response.data.error 
+                        : 'Terjadi kesalahan saat memvalidasi.';
+                    this.toast.fire({ icon: 'error', title: msg });
+                    this.importState = 'select';
+                });
+            },
+            resetImportState() {
+                this.importState = 'select';
+                this.validationSummary = { total_rows: 0, valid: 0, warning: 0, error: 0 };
+                this.validationData = [];
             },
             submitImportGrades() {
                 if (this.userRole === 'super_admin' && !this.filterTenantId) {
