@@ -2024,7 +2024,7 @@ class PDSSController extends BaseController {
             // --- LANGKAH 2: Ambil nilai rata-rata per siswa (simplified) ---
             // Gunakan rata-rata dari detail_nilai_rapor untuk ranking
             $stmtNilai = $db->prepare("
-                SELECT dnr.siswa_id, AVG(dnr.nilai) AS rata_rata
+                SELECT dnr.siswa_id, AVG(dnr.nilai_akhir) AS rata_rata
                 FROM detail_nilai_rapor dnr
                 WHERE dnr.tenant_id = ? AND dnr.deleted_at IS NULL
                   AND dnr.semester IN (1,2,3,4,5)

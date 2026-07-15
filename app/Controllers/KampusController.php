@@ -433,22 +433,14 @@ class KampusController extends BaseController
                         throw new \Exception("Format Excel tidak valid pada baris " . ($i + 1) . ". Kolom KODE, NAMA, dan Kampus wajib diisi.");
                     }
 
-                    $jenjangRaw = isset($colMap['jenjang']) ? strtolower(trim((string)($row[$colMap['jenjang']] ?? ''))) : 's1';
+                    $jenjangRaw = isset($colMap['jenjang']) ? trim((string)($row[$colMap['jenjang']] ?? '')) : 'S1';
                     $portofolio = isset($colMap['portofolio']) ? trim((string)($row[$colMap['portofolio']] ?? 'Tidak Ada')) : 'Tidak Ada';
                     $kota = isset($colMap['kota']) ? trim((string)($row[$colMap['kota']] ?? '')) : '';
                     
                     $dtVal = isset($colMap['daya_tampung']) ? (int)($row[$colMap['daya_tampung']] ?? 0) : 0;
                     $pmVal = isset($colMap['peminat']) ? (int)($row[$colMap['peminat']] ?? 0) : 0;
 
-                    $jenjang = 'S1';
-                    if (strpos($jenjangRaw, 'diploma iii') !== false || $jenjangRaw === 'd3') $jenjang = 'D3';
-                    elseif (strpos($jenjangRaw, 'diploma iv') !== false || $jenjangRaw === 'd4') $jenjang = 'D4';
-                    elseif (strpos($jenjangRaw, 'sarjana') !== false || $jenjangRaw === 's1') $jenjang = 'S1';
-                    elseif (strpos($jenjangRaw, 'magister') !== false || $jenjangRaw === 's2') $jenjang = 'S2';
-                    elseif (strpos($jenjangRaw, 'doktor') !== false || $jenjangRaw === 's3') $jenjang = 'S3';
-                    elseif (strpos($jenjangRaw, 'profesi') !== false) $jenjang = 'Profesi';
-                    elseif (strpos($jenjangRaw, 'd1') !== false) $jenjang = 'D1';
-                    elseif (strpos($jenjangRaw, 'd2') !== false) $jenjang = 'D2';
+                    $jenjang = $this->normalizeJenjang($jenjangRaw);
 
                     // 1. Find or create Kampus
                     $stmt = $db->prepare("SELECT id FROM master_kampus WHERE nama_kampus = ? AND tenant_id = ?");
@@ -562,6 +554,35 @@ class KampusController extends BaseController
 
     private function sanitizeStr($str) {
         return trim(htmlspecialchars((string)$str, ENT_QUOTES, 'UTF-8'));
+    }
+
+    private function normalizeJenjang(string $raw): string {
+        $raw = strtolower(trim($raw));
+        if (strpos($raw, 'diploma tiga') !== false || strpos($raw, 'diploma iii') !== false || $raw === 'd3') {
+            return 'D3';
+        }
+        if (strpos($raw, 'sarjana terapan') !== false || strpos($raw, 'diploma iv') !== false || strpos($raw, 'diploma empat') !== false || $raw === 'd4') {
+            return 'D4';
+        }
+        if (strpos($raw, 'sarjana') !== false || strpos($raw, 's1') !== false) {
+            return 'S1';
+        }
+        if (strpos($raw, 'magister') !== false || strpos($raw, 's2') !== false) {
+            return 'S2';
+        }
+        if (strpos($raw, 'doktor') !== false || strpos($raw, 's3') !== false) {
+            return 'S3';
+        }
+        if (strpos($raw, 'profesi') !== false) {
+            return 'Profesi';
+        }
+        if (strpos($raw, 'diploma satu') !== false || strpos($raw, 'diploma i') !== false || $raw === 'd1') {
+            return 'D1';
+        }
+        if (strpos($raw, 'diploma dua') !== false || strpos($raw, 'diploma ii') !== false || $raw === 'd2') {
+            return 'D2';
+        }
+        return 'S1'; // Default fallback
     }
 
     public function apiGetMasterKampusProdiFlat()
@@ -882,7 +903,8 @@ class KampusController extends BaseController
                 $kodeProdi   = $colKodeProdi    !== false ? trim((string)($row[$colKodeProdi]   ?? '')) : '';
                 $namaProdi   = trim((string)($row[$colNamaProdi] ?? ''));
                 $fakultas    = $colFakultas     !== false ? trim((string)($row[$colFakultas]    ?? '')) : '';
-                $jenjang     = $colJenjang      !== false ? trim((string)($row[$colJenjang]     ?? 'Sarjana')) : 'Sarjana';
+                $jenjangRaw  = $colJenjang      !== false ? trim((string)($row[$colJenjang]     ?? 'Sarjana')) : 'Sarjana';
+                $jenjang     = $this->normalizeJenjang($jenjangRaw);
                 $portofolio  = $colPortofolio   !== false ? trim((string)($row[$colPortofolio]  ?? 'Tidak Ada')) : 'Tidak Ada';
 
                 if (!$namaKampus && !$namaProdi) continue;
