@@ -333,7 +333,7 @@
                                 :disabled="!kurikulum.kelasId || isLockedKurikulum == 1"
                                 @click="showCopyModal"
                                 title="Salin dari Kelas Lain">
-                            <i class="bi bi-copy"></i>
+                            <i class="bi bi-files"></i>
                         </button>
                         <button v-if="userRole === 'super_admin' || userRole === 'operator_sekolah'"
                                 :class="['btn btn-sm rounded-3 px-2 py-2 w-50 fs-8 fw-semibold', isLockedKurikulum == 1 ? 'btn-danger' : 'btn-outline-secondary']"
@@ -467,7 +467,7 @@
             <div class="modal-content border-0 shadow rounded-4">
                 <div class="modal-header border-bottom py-3">
                     <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2">
-                        <i class="bi bi-copy text-primary"></i>
+                        <i class="bi bi-files text-primary"></i>
                         Salin Kurikulum
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
