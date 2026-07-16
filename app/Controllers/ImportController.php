@@ -75,6 +75,9 @@ class ImportController extends BaseController {
         $nisnIdx = -1;
         $tglLahirIdx = -1;
         $emailIdx = -1;
+        $statusIdx = -1;
+        $angkatanIdx = -1;
+        $tahunLulusIdx = -1;
 
         foreach ($header as $idx => $col) {
             if (strpos($col, 'npsn') !== false || strpos($col, 'sekolah') !== false) {
@@ -87,6 +90,12 @@ class ImportController extends BaseController {
                 $tglLahirIdx = $idx;
             } elseif (strpos($col, 'email') !== false) {
                 $emailIdx = $idx;
+            } elseif (strpos($col, 'status') !== false) {
+                $statusIdx = $idx;
+            } elseif (strpos($col, 'angkatan') !== false) {
+                $angkatanIdx = $idx;
+            } elseif (strpos($col, 'lulus') !== false) {
+                $tahunLulusIdx = $idx;
             }
         }
 
@@ -119,10 +128,12 @@ class ImportController extends BaseController {
             $stmtSiswaInsert = $db->prepare("
                 INSERT INTO siswa (
                     id, tenant_id, nisn, nama_lengkap, tanggal_lahir, 
-                    jenis_kelamin, password, is_first_login, created_at, updated_at
+                    jenis_kelamin, password, is_first_login, created_at, updated_at,
+                    status, id_angkatan, id_tahun_ajaran, tanggal_lulus
                 ) VALUES (
                     :id, :tenant_id, :nisn, :nama_lengkap, :tanggal_lahir, 
-                    'L', :password, 1, NOW(), NOW()
+                    'L', :password, 1, NOW(), NOW(),
+                    :status, :id_angkatan, :id_tahun_ajaran, :tanggal_lulus
                 )
             ");
             $stmtKontakInsert = $db->prepare("
@@ -212,6 +223,51 @@ class ImportController extends BaseController {
                 $hashedPassword = password_hash($rawTglLahir, PASSWORD_BCRYPT);
                 $siswaId = $this->generateUuidV4();
 
+                // Extract optional values
+                $rawStatus = ($statusIdx !== -1 && isset($row[$statusIdx])) ? trim((string)$row[$statusIdx]) : '';
+                $rawAngkatan = ($angkatanIdx !== -1 && isset($row[$angkatanIdx])) ? trim((string)$row[$angkatanIdx]) : '';
+                $rawTahunLulus = ($tahunLulusIdx !== -1 && isset($row[$tahunLulusIdx])) ? trim((string)$row[$tahunLulusIdx]) : '';
+
+                // Handle default status
+                $status = 'Aktif';
+                if (strcasecmp($rawStatus, 'lulus') === 0 || strcasecmp($rawStatus, 'alumni') === 0 || !empty($rawTahunLulus)) {
+                    $status = 'Lulus';
+                }
+
+                $idAngkatan = null;
+                if (!empty($rawAngkatan)) {
+                    $stmtAngkatan = $db->prepare("SELECT id FROM angkatan WHERE tenant_id = ? AND tahun_angkatan = ? LIMIT 1");
+                    $stmtAngkatan->execute([$tenantId, $rawAngkatan]);
+                    $idAngkatan = $stmtAngkatan->fetchColumn();
+                    if (!$idAngkatan) {
+                        $stmtInsertAngkatan = $db->prepare("INSERT INTO angkatan (tenant_id, tahun_angkatan, is_active) VALUES (?, ?, 1)");
+                        $stmtInsertAngkatan->execute([$tenantId, $rawAngkatan]);
+                        $idAngkatan = $db->lastInsertId();
+                    }
+                }
+
+                $idTahunAjaran = null;
+                $tanggalLulus = null;
+                if ($status === 'Lulus') {
+                    if (!empty($rawTahunLulus)) {
+                        $tanggalLulus = "{$rawTahunLulus}-06-20";
+                        $prevYear = (int)$rawTahunLulus - 1;
+                        $tahunAjaranName = "{$prevYear}/{$rawTahunLulus}";
+                        
+                        $stmtTa = $db->prepare("SELECT id FROM tahun_ajaran WHERE tenant_id = ? AND tahun_ajaran = ? LIMIT 1");
+                        $stmtTa->execute([$tenantId, $tahunAjaranName]);
+                        $idTahunAjaran = $stmtTa->fetchColumn();
+                        if (!$idTahunAjaran) {
+                            $stmtInsertTa = $db->prepare("INSERT INTO tahun_ajaran (tenant_id, tahun_ajaran, is_active) VALUES (?, ?, 1)");
+                            $stmtInsertTa->execute([$tenantId, $tahunAjaranName]);
+                            $idTahunAjaran = $db->lastInsertId();
+                        }
+                    } else {
+                        // Fallback: set graduation date to today
+                        $tanggalLulus = date('Y-m-d');
+                    }
+                }
+
                 // Simpan data siswa baru
                 $stmtSiswaInsert->execute([
                     'id' => $siswaId,
@@ -219,7 +275,11 @@ class ImportController extends BaseController {
                     'nisn' => $rawNisn,
                     'nama_lengkap' => $rawNama,
                     'tanggal_lahir' => $rawTglLahir,
-                    'password' => $hashedPassword
+                    'password' => $hashedPassword,
+                    'status' => $status,
+                    'id_angkatan' => $idAngkatan,
+                    'id_tahun_ajaran' => $idTahunAjaran,
+                    'tanggal_lulus' => $tanggalLulus
                 ]);
 
                 // Simpan kontak siswa (email)
@@ -261,9 +321,9 @@ class ImportController extends BaseController {
     public function downloadTemplate(): void {
         $filename = "template_import_siswa.xlsx";
         $data = [
-            ['NPSN Sekolah', 'Nama Lengkap Siswa', 'NISN', 'Tanggal Lahir', 'Email'],
-            ['10203040', 'Ahmad Dani', '0081234567', '2008-04-12', 'ahmad.dani@example.com'],
-            ['10203040', 'Siti Rahma', '0098765432', '2009-09-21', 'siti.rahma@example.com']
+            ['NPSN Sekolah', 'Nama Lengkap Siswa', 'NISN', 'Tanggal Lahir', 'Email', 'Status', 'Tahun Angkatan', 'Tahun Lulus'],
+            ['10203040', 'Ahmad Dani', '0081234567', '2008-04-12', 'ahmad.dani@example.com', 'Aktif', '2023', ''],
+            ['10203040', 'Siti Rahma', '0098765432', '2009-09-21', 'siti.rahma@example.com', 'Lulus', '2005', '2008']
         ];
         
         \Shuchkin\SimpleXLSXGen::fromArray($data)->downloadAs($filename);
