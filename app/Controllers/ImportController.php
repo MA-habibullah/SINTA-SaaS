@@ -233,6 +233,13 @@ class ImportController extends BaseController {
                 $rawAngkatan = ($angkatanIdx !== -1 && isset($row[$angkatanIdx])) ? trim((string)$row[$angkatanIdx]) : '';
                 $rawTahunLulus = ($tahunLulusIdx !== -1 && isset($row[$tahunLulusIdx])) ? trim((string)$row[$tahunLulusIdx]) : '';
 
+                if (is_numeric($rawAngkatan)) {
+                    $rawAngkatan = (string)intval($rawAngkatan);
+                }
+                if (is_numeric($rawTahunLulus)) {
+                    $rawTahunLulus = (string)intval($rawTahunLulus);
+                }
+
                 // Handle default status
                 $status = 'Aktif';
                 if (strcasecmp($rawStatus, 'lulus') === 0 || strcasecmp($rawStatus, 'alumni') === 0 || !empty($rawTahunLulus)) {
