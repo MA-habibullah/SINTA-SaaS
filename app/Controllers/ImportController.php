@@ -167,6 +167,12 @@ class ImportController extends BaseController {
                 if (is_numeric($rawTglLahir)) {
                     $unixTimestamp = ($rawTglLahir - 25569) * 86400;
                     $rawTglLahir = date('Y-m-d', $unixTimestamp);
+                } else {
+                    // Strip time component if present (e.g., '1985-05-12 00:00:00' -> '1985-05-12')
+                    $rawTglLahir = trim($rawTglLahir);
+                    if (strlen($rawTglLahir) > 10) {
+                        $rawTglLahir = substr($rawTglLahir, 0, 10);
+                    }
                 }
 
                 // 1. Validasi Nama Lengkap
