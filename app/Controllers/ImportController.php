@@ -144,6 +144,11 @@ class ImportController extends BaseController {
                 )
             ");
 
+            $stmtAngkatanLookup = $db->prepare("SELECT id FROM angkatan WHERE tenant_id = ? AND tahun_angkatan = ? LIMIT 1");
+            $stmtAngkatanInsert = $db->prepare("INSERT INTO angkatan (tenant_id, tahun_angkatan, is_active) VALUES (?, ?, 1)");
+            $stmtTaLookup = $db->prepare("SELECT id FROM tahun_ajaran WHERE tenant_id = ? AND tahun_ajaran = ? LIMIT 1");
+            $stmtTaInsert = $db->prepare("INSERT INTO tahun_ajaran (tenant_id, tahun_ajaran, is_active) VALUES (?, ?, 1)");
+
             foreach ($rows as $row) {
                 $rowCount++;
                 
@@ -236,12 +241,10 @@ class ImportController extends BaseController {
 
                 $idAngkatan = null;
                 if (!empty($rawAngkatan)) {
-                    $stmtAngkatan = $db->prepare("SELECT id FROM angkatan WHERE tenant_id = ? AND tahun_angkatan = ? LIMIT 1");
-                    $stmtAngkatan->execute([$tenantId, $rawAngkatan]);
-                    $idAngkatan = $stmtAngkatan->fetchColumn();
+                    $stmtAngkatanLookup->execute([$tenantId, $rawAngkatan]);
+                    $idAngkatan = $stmtAngkatanLookup->fetchColumn();
                     if (!$idAngkatan) {
-                        $stmtInsertAngkatan = $db->prepare("INSERT INTO angkatan (tenant_id, tahun_angkatan, is_active) VALUES (?, ?, 1)");
-                        $stmtInsertAngkatan->execute([$tenantId, $rawAngkatan]);
+                        $stmtAngkatanInsert->execute([$tenantId, $rawAngkatan]);
                         $idAngkatan = $db->lastInsertId();
                     }
                 }
@@ -254,12 +257,10 @@ class ImportController extends BaseController {
                         $prevYear = (int)$rawTahunLulus - 1;
                         $tahunAjaranName = "{$prevYear}/{$rawTahunLulus}";
                         
-                        $stmtTa = $db->prepare("SELECT id FROM tahun_ajaran WHERE tenant_id = ? AND tahun_ajaran = ? LIMIT 1");
-                        $stmtTa->execute([$tenantId, $tahunAjaranName]);
-                        $idTahunAjaran = $stmtTa->fetchColumn();
+                        $stmtTaLookup->execute([$tenantId, $tahunAjaranName]);
+                        $idTahunAjaran = $stmtTaLookup->fetchColumn();
                         if (!$idTahunAjaran) {
-                            $stmtInsertTa = $db->prepare("INSERT INTO tahun_ajaran (tenant_id, tahun_ajaran, is_active) VALUES (?, ?, 1)");
-                            $stmtInsertTa->execute([$tenantId, $tahunAjaranName]);
+                            $stmtTaInsert->execute([$tenantId, $tahunAjaranName]);
                             $idTahunAjaran = $db->lastInsertId();
                         }
                     } else {

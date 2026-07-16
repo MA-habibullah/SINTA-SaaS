@@ -1954,9 +1954,15 @@ class BukuIndukController extends BaseController {
                         $tmpPath = $tmpNames[$i];
                         $size = getimagesize($tmpPath);
                         if ($size !== false) {
+                            $mime = $size['mime'];
+                            $type = strtoupper(substr(strstr($mime, '/'), 1));
+                            if ($type === 'JPEG') {
+                                $type = 'JPG';
+                            }
+                            
                             $pdf->AddPage('P', 'A4');
                             // Fit exactly on A4 page (210mm x 297mm)
-                            $pdf->Image($tmpPath, 0, 0, 210, 297);
+                            $pdf->Image($tmpPath, 0, 0, 210, 297, $type);
                             $validImagesCount++;
                         }
                     }
