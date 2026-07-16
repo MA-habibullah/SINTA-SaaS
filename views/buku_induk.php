@@ -956,6 +956,26 @@
         </div>
     </div>
 
+    <!-- Arsip Alumni Tab -->
+    <div v-show="mainActiveTab === 'arsip_alumni'" class="card border-0 shadow-sm rounded-4 animate-fade-in">
+        <?php require __DIR__ . '/arsip_alumni.php'; ?>
+    </div>
+
+    <!-- Modal View Alumni Doc (PDF Viewer) -->
+    <div class="modal fade" id="modalViewAlumniDoc" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" style="max-width: 90%; height: 90vh;">
+            <div class="modal-content border-0 shadow rounded-4" style="height: 100%;">
+                <div class="modal-header border-bottom py-3">
+                    <h5 class="modal-title fw-bold text-dark"><i class="bi bi-file-pdf-fill text-danger me-2"></i>{{ activeAlumniDocTitle }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0 bg-secondary-subtle" style="height: calc(100% - 60px);">
+                    <iframe v-if="activeAlumniDocUrl" :src="activeAlumniDocUrl" class="w-100 h-100 border-0"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Riwayat Kepsek -->
     <div class="modal fade" id="modalRiwayatKepsek" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -2431,8 +2451,28 @@
                     { id: 'seting_kurikulum', name: 'Seting Kurikulum', icon: 'bi bi-gear-wide-connected' },
                     { id: 'input_nilai_rapor', name: 'Input Nilai Rapor', icon: 'bi bi-journal-check' },
                     { id: 'cetak_buku_induk', name: 'Cetak Buku Induk', icon: 'bi bi-printer-fill' },
-                    { id: 'riwayat_kepsek', name: 'Riwayat Kepsek', icon: 'bi bi-clock-history' }
+                    { id: 'riwayat_kepsek', name: 'Riwayat Kepsek', icon: 'bi bi-clock-history' },
+                    { id: 'arsip_alumni', name: 'Arsip Alumni', icon: 'bi bi-safe2-fill' }
                 ],
+                // Alumni State
+                alumniList: [],
+                alumniSearch: '',
+                alumniFilterAngkatan: '',
+                alumniCurrentPage: 1,
+                alumniTotalPages: 1,
+                alumniTotal: 0,
+                alumniLoading: false,
+                selectedAlumniId: '',
+                selectedAlumniName: '',
+                alumniDocs: [],
+                alumniDocsLoading: false,
+                activeAlumniDocUrl: '',
+                activeAlumniDocTitle: '',
+                uploadingAlumniDoc: false,
+                arsipJenisDokumen: 'Buku Induk',
+                arsipKeterangan: '',
+                capturedAlumniImages: [],
+                capturedAlumniImageUrls: [],
                 userRole: '<?php echo htmlspecialchars($user_role ?? ""); ?>',
                 listTenants: <?php echo json_encode($tenantList ?? []); ?>,
                 tempFilterTenantId: '',
@@ -2660,6 +2700,196 @@
             }
         },
         methods: {
+            // --- ALUMNI ARCHIVE METHODS ---
+            fetchAlumni(page = 1) {
+                if (this.userRole === 'super_admin' && !this.filterTenantId) {
+                    this.alumniList = [];
+                    return;
+                }
+                this.alumniLoading = true;
+                this.alumniCurrentPage = page;
+                
+                let params = {
+                    page: page,
+                    per_page: 10,
+                    search: this.alumniSearch,
+                    status: 'Lulus' // Only alumni
+                };
+                if (this.userRole === 'super_admin' && this.filterTenantId) {
+                    params.filter_tenant_id = this.filterTenantId;
+                }
+
+                axios.get('/SINTA-SaaS/api/v1/buku-induk', { params })
+                    .then(res => {
+                        this.alumniList = res.data.data;
+                        this.alumniTotalPages = res.data.last_page;
+                        this.alumniTotal = res.data.total;
+                        this.alumniLoading = false;
+                    }).catch(err => {
+                        this.alumniLoading = false;
+                        this.toast.fire({ icon: 'error', title: 'Gagal memuat data alumni.' });
+                    });
+            },
+            debounceAlumniSearch() {
+                clearTimeout(this.alumniSearchTimeout);
+                this.alumniSearchTimeout = setTimeout(() => {
+                    this.fetchAlumni(1);
+                }, 400);
+            },
+            selectAlumni(siswa) {
+                this.selectedAlumniId = siswa.id;
+                this.selectedAlumniName = siswa.nama_lengkap;
+                this.clearCapture();
+                this.fetchAlumniDocs();
+            },
+            fetchAlumniDocs() {
+                if (!this.selectedAlumniId) return;
+                this.alumniDocsLoading = true;
+                axios.get('/SINTA-SaaS/api/v1/buku-induk/archive/list', { params: { siswa_id: this.selectedAlumniId } })
+                    .then(res => {
+                        this.alumniDocs = res.data;
+                        this.alumniDocsLoading = false;
+                    }).catch(err => {
+                        this.alumniDocsLoading = false;
+                        this.toast.fire({ icon: 'error', title: 'Gagal memuat berkas arsip.' });
+                    });
+            },
+            deleteAlumniDoc(docId) {
+                Swal.fire({
+                    title: 'Apakah Anda yakin?',
+                    text: "Dokumen arsip ini akan dihapus permanen dari server!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Ya, Hapus!',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        let fd = new FormData();
+                        fd.append('id', docId);
+                        axios.post('/SINTA-SaaS/api/v1/buku-induk/archive/delete', fd)
+                            .then(res => {
+                                if (res.data.success) {
+                                    this.toast.fire({ icon: 'success', title: 'Dokumen berhasil dihapus.' });
+                                    this.fetchAlumniDocs();
+                                } else {
+                                    this.toast.fire({ icon: 'error', title: res.data.error || 'Gagal menghapus dokumen.' });
+                                }
+                            }).catch(err => {
+                                this.toast.fire({ icon: 'error', title: 'Gagal menghubungi server.' });
+                            });
+                    }
+                });
+            },
+            viewAlumniDoc(docId, title) {
+                this.activeAlumniDocTitle = title;
+                this.activeAlumniDocUrl = '/SINTA-SaaS/api/v1/buku-induk/archive/view?id=' + docId;
+                new bootstrap.Modal(document.getElementById('modalViewAlumniDoc')).show();
+            },
+            addCapturePage(event) {
+                const files = event.target.files;
+                if (!files || files.length === 0) return;
+                
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    
+                    // Client-side image resizing and compression via Canvas
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            let width = img.width;
+                            let height = img.height;
+                            
+                            // Max dimension limit (1600px)
+                            const max_size = 1600;
+                            if (width > max_size || height > max_size) {
+                                if (width > height) {
+                                    height = Math.round((height * max_size) / width);
+                                    width = max_size;
+                                } else {
+                                    width = Math.round((width * max_size) / height);
+                                    height = max_size;
+                                }
+                            }
+                            
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+                            
+                            // Convert to light JPEG blob (quality 0.7)
+                            canvas.toBlob((blob) => {
+                                this.capturedAlumniImages.push(blob);
+                                this.capturedAlumniImageUrls.push(URL.createObjectURL(blob));
+                            }, 'image/jpeg', 0.7);
+                        };
+                        img.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+                // Reset input file value
+                event.target.value = '';
+            },
+            removeCapturePage(idx) {
+                URL.revokeObjectURL(this.capturedAlumniImageUrls[idx]);
+                this.capturedAlumniImages.splice(idx, 1);
+                this.capturedAlumniImageUrls.splice(idx, 1);
+            },
+            clearCapture() {
+                this.capturedAlumniImageUrls.forEach(url => URL.revokeObjectURL(url));
+                this.capturedAlumniImages = [];
+                this.capturedAlumniImageUrls = [];
+                this.arsipKeterangan = '';
+                this.arsipJenisDokumen = 'Buku Induk';
+            },
+            handleAlumniDocUpload() {
+                if (!this.selectedAlumniId) {
+                    this.toast.fire({ icon: 'error', title: 'Pilih siswa alumni terlebih dahulu.' });
+                    return;
+                }
+                
+                const hasPdfFile = this.$refs.pdfFileInput && this.$refs.pdfFileInput.files && this.$refs.pdfFileInput.files.length > 0;
+                const hasImages = this.capturedAlumniImages.length > 0;
+                
+                if (!hasPdfFile && !hasImages) {
+                    this.toast.fire({ icon: 'error', title: 'Silakan ambil foto HP atau pilih file PDF terlebih dahulu.' });
+                    return;
+                }
+                
+                this.uploadingAlumniDoc = true;
+                let fd = new FormData();
+                fd.append('siswa_id', this.selectedAlumniId);
+                fd.append('jenis_dokumen', this.arsipJenisDokumen);
+                fd.append('keterangan', this.arsipKeterangan);
+                
+                if (hasPdfFile) {
+                    fd.append('pdf_file', this.$refs.pdfFileInput.files[0]);
+                } else {
+                    this.capturedAlumniImages.forEach((blob, idx) => {
+                        fd.append('images[]', blob, `page_${idx + 1}.jpg`);
+                    });
+                }
+                
+                axios.post('/SINTA-SaaS/api/v1/buku-induk/archive/upload', fd, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                }).then(res => {
+                    this.uploadingAlumniDoc = false;
+                    if (res.data.success) {
+                        this.toast.fire({ icon: 'success', title: 'Berkas berhasil diarsipkan.' });
+                        this.clearCapture();
+                        if (this.$refs.pdfFileInput) this.$refs.pdfFileInput.value = '';
+                        this.fetchAlumniDocs();
+                    } else {
+                        this.toast.fire({ icon: 'error', title: res.data.error || 'Gagal mengunggah berkas.' });
+                    }
+                }).catch(err => {
+                    this.uploadingAlumniDoc = false;
+                    this.toast.fire({ icon: 'error', title: 'Gagal menghubungi server.' });
+                });
+            },
             openPrintModal(url, title) {
                 this.printModal.url = url;
                 this.printModal.title = title;
@@ -2907,6 +3137,8 @@
                     if (this.matrixData.length === 0) {
                         this.loadMatrixData();
                     }
+                } else if (tabId === 'arsip_alumni') {
+                    this.fetchAlumni(1);
                 } else {
                     this.fetchData(1);
                 }
