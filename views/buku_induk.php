@@ -278,18 +278,6 @@
                         </select>
                     </div>
 
-                    <!-- Semester -->
-                    <div class="col-12 col-md-2">
-                        <label class="form-label fw-bold text-dark fs-8 mb-1">Semester</label>
-                        <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle"
-                                v-model="kurikulum.semester"
-                                @change="loadKurikulumMapping">
-                            <option value="Ganjil">Ganjil</option>
-                            <option value="Genap">Genap</option>
-                            <option v-if="isKelas12(getKelasName(kurikulum.kelasId))" value="Ujian Sekolah">Ujian Sekolah</option>
-                        </select>
-                    </div>
-
                     <!-- Jenjang -->
                     <div class="col-12 col-md-2">
                         <label class="form-label fw-bold text-dark fs-8 mb-1">Jenjang</label>
@@ -312,6 +300,18 @@
                             <option v-for="k in filteredKurikulumKelas" :key="k.id" :value="k.id">
                                 {{ k.nama_kelas || k.nama }}
                             </option>
+                        </select>
+                    </div>
+
+                    <!-- Semester -->
+                    <div class="col-12 col-md-2">
+                        <label class="form-label fw-bold text-dark fs-8 mb-1">Semester</label>
+                        <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle"
+                                v-model="kurikulum.semester"
+                                @change="loadKurikulumMapping">
+                            <option value="Ganjil">Ganjil</option>
+                            <option value="Genap">Genap</option>
+                            <option v-if="isKelas12(getKelasName(kurikulum.kelasId))" value="Ujian Sekolah">Ujian Sekolah</option>
                         </select>
                     </div>
 
