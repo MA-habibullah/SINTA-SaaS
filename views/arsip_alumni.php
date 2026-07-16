@@ -248,7 +248,10 @@
                                                 <button type="button" class="btn btn-outline-primary btn-sm rounded-3 py-1 px-2.5 fs-9 fw-bold" @click="viewAlumniDoc(doc.id, doc.jenis_dokumen + ' - ' + selectedAlumniName)">
                                                     <i class="bi bi-eye-fill"></i> Lihat
                                                 </button>
-                                                <button type="button" class="btn btn-outline-danger btn-sm rounded-3 py-1 px-2 fs-9" @click="deleteAlumniDoc(doc.id)">
+                                                <button type="button" 
+                                                        v-if="!doc.id.startsWith('virtual_')"
+                                                        class="btn btn-outline-danger btn-sm rounded-3 py-1 px-2 fs-9" 
+                                                        @click="deleteAlumniDoc(doc.id)">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </div>

@@ -2007,12 +2007,53 @@ class BukuIndukController extends BaseController {
                 throw new \Exception("Siswa ID wajib diisi.");
             }
             $db = \App\Config\Database::getConnection();
+            
+            // 1. Fetch archived documents from vault
             $stmt = $db->prepare("SELECT id, jenis_dokumen, file_size, keterangan, created_at 
                                   FROM arsip_dokumen_alumni 
                                   WHERE siswa_id = ? 
                                   ORDER BY created_at DESC");
             $stmt->execute([$siswaId]);
             $docs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // 2. Fetch supporting documents from "dokumen" table (Step 5 uploads)
+            $stmtDok = $db->prepare("SELECT * FROM dokumen WHERE id_siswa = ? LIMIT 1");
+            $stmtDok->execute([$siswaId]);
+            $dok = $stmtDok->fetch(PDO::FETCH_ASSOC);
+
+            if ($dok) {
+                $sizes = [];
+                if (!empty($dok['file_sizes'])) {
+                    $sizes = json_decode($dok['file_sizes'], true) ?: [];
+                }
+
+                $columns = [
+                    'berkas_kk' => 'Kartu Keluarga (KK)',
+                    'berkas_akta' => 'Akta Kelahiran',
+                    'berkas_ijazah_sd' => 'Ijazah SD',
+                    'berkas_ijazah_smp' => 'Ijazah SMP',
+                    'berkas_ijazah_sma' => 'Ijazah SMA',
+                    'berkas_mutasi_masuk' => 'Berkas Mutasi Masuk',
+                    'berkas_mutasi_keluar' => 'Berkas Mutasi Keluar',
+                    'berkas_kip' => 'Berkas KIP / KPS',
+                    'berkas_pernyataan_baru' => 'Surat Pernyataan Baru',
+                    'berkas_pernyataan_tka' => 'Surat Pernyataan TKA'
+                ];
+
+                foreach ($columns as $col => $label) {
+                    if (!empty($dok[$col])) {
+                        // Insert as virtual document
+                        $docs[] = [
+                            'id' => "virtual_{$col}_{$siswaId}",
+                            'jenis_dokumen' => $label,
+                            'file_size' => $sizes[$col] ?? 0,
+                            'keterangan' => 'Dokumen dari Pendaftaran/Profil Siswa',
+                            'created_at' => date('Y-m-d H:i:s')
+                        ];
+                    }
+                }
+            }
+
             echo json_encode($docs);
         } catch (\Throwable $e) {
             echo json_encode([]);
@@ -2064,9 +2105,49 @@ class BukuIndukController extends BaseController {
             }
             
             $db = \App\Config\Database::getConnection();
-            $stmt = $db->prepare("SELECT * FROM arsip_dokumen_alumni WHERE id = ?");
-            $stmt->execute([$id]);
-            $doc = $stmt->fetch(PDO::FETCH_ASSOC);
+            $doc = null;
+
+            // Check if it's a virtual document
+            if (strpos($id, 'virtual_') === 0) {
+                $parts = explode('_', $id);
+                if (count($parts) >= 3) {
+                    $colName = $parts[1] . '_' . $parts[2]; // e.g. berkas_kk
+                    $siswaId = implode('_', array_slice($parts, 3)); // e.g. uuid
+                    
+                    $allowedCols = [
+                        'berkas_kk', 'berkas_akta', 'berkas_ijazah_sd', 
+                        'berkas_ijazah_smp', 'berkas_ijazah_sma', 'berkas_mutasi_masuk', 
+                        'berkas_mutasi_keluar', 'berkas_kip', 'berkas_pernyataan_baru', 
+                        'berkas_pernyataan_tka'
+                    ];
+                    
+                    if (in_array($colName, $allowedCols)) {
+                        $stmtDok = $db->prepare("
+                            SELECT d.{$colName} as file_path, s.tenant_id, s.nama_lengkap 
+                            FROM dokumen d 
+                            JOIN siswa s ON d.id_siswa = s.id 
+                            WHERE d.id_siswa = ? LIMIT 1
+                        ");
+                        $stmtDok->execute([$siswaId]);
+                        $docInfo = $stmtDok->fetch(PDO::FETCH_ASSOC);
+                        
+                        if ($docInfo && !empty($docInfo['file_path'])) {
+                            $doc = [
+                                'file_path' => $docInfo['file_path'],
+                                'tenant_id' => $docInfo['tenant_id'],
+                                'jenis_dokumen' => str_replace('berkas_', '', $colName),
+                                'siswa_id' => $siswaId
+                            ];
+                        }
+                    }
+                }
+            } else {
+                // Fetch standard document from vault
+                $stmt = $db->prepare("SELECT * FROM arsip_dokumen_alumni WHERE id = ?");
+                $stmt->execute([$id]);
+                $doc = $stmt->fetch(PDO::FETCH_ASSOC);
+            }
+
             if (!$doc) {
                 http_response_code(404);
                 die("Dokumen tidak ditemukan.");
@@ -2085,7 +2166,7 @@ class BukuIndukController extends BaseController {
             $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
             $stmtLog = $db->prepare("INSERT INTO log_akses_arsip (user_id, tenant_id, siswa_id, aktivitas, ip_address, user_agent) 
                                      VALUES (?, ?, ?, ?, ?, ?)");
-            $stmtLog->execute([$userId, $doc['tenant_id'], $doc['siswa_id'], "View PDF {$doc['jenis_dokumen']}", $ip, $ua]);
+            $stmtLog->execute([$userId, $doc['tenant_id'], $doc['siswa_id'], "View File {$doc['jenis_dokumen']}", $ip, $ua]);
 
             $fullPath = realpath(__DIR__ . '/../../') . '/' . $doc['file_path'];
             if (!file_exists($fullPath)) {
@@ -2093,7 +2174,15 @@ class BukuIndukController extends BaseController {
                 die("Berkas fisik dokumen tidak ditemukan.");
             }
             
-            header('Content-Type: application/pdf');
+            $ext = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
+            if ($ext === 'pdf') {
+                header('Content-Type: application/pdf');
+            } elseif (in_array($ext, ['png', 'jpg', 'jpeg', 'gif', 'webp'])) {
+                header('Content-Type: image/' . ($ext === 'jpg' ? 'jpeg' : $ext));
+            } else {
+                header('Content-Type: application/octet-stream');
+            }
+            
             header('Content-Disposition: inline; filename="' . basename($doc['file_path']) . '"');
             header('Content-Length: ' . filesize($fullPath));
             readfile($fullPath);
