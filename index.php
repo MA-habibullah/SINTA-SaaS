@@ -389,6 +389,26 @@ try {
             $controller->fetchDetailApi();
             break;
 
+        case '/api/v1/buku-induk/archive/upload':
+            $controller = new App\Controllers\BukuIndukController();
+            $controller->compileImagesToPdfApi();
+            break;
+
+        case '/api/v1/buku-induk/archive/list':
+            $controller = new App\Controllers\BukuIndukController();
+            $controller->fetchDocumentsApi();
+            break;
+
+        case '/api/v1/buku-induk/archive/delete':
+            $controller = new App\Controllers\BukuIndukController();
+            $controller->deleteDocumentApi();
+            break;
+
+        case '/api/v1/buku-induk/archive/view':
+            $controller = new App\Controllers\BukuIndukController();
+            $controller->viewDocumentApi();
+            break;
+
         case '/api/v1/buku_induk/matrix_cetak':
             $controller = new App\Controllers\BukuIndukController();
             $controller->fetchCetakMatrixApi();

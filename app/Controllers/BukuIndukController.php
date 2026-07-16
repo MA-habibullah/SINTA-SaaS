@@ -1888,4 +1888,223 @@ class BukuIndukController extends BaseController {
         }
         exit;
     }
+
+    public function compileImagesToPdfApi(): void {
+        header('Content-Type: application/json');
+        try {
+            $siswaId = $_POST['siswa_id'] ?? '';
+            $jenisDokumen = $_POST['jenis_dokumen'] ?? '';
+            $keterangan = $_POST['keterangan'] ?? '';
+
+            if (empty($siswaId) || empty($jenisDokumen)) {
+                throw new \Exception("Data wajib diisi (Siswa ID dan Jenis Dokumen).");
+            }
+
+            $db = \App\Config\Database::getConnection();
+            
+            // Get tenant_id of student
+            $stmtSiswa = $db->prepare("SELECT tenant_id FROM siswa WHERE id = ?");
+            $stmtSiswa->execute([$siswaId]);
+            $tenantId = $stmtSiswa->fetchColumn();
+            if (!$tenantId) {
+                throw new \Exception("Siswa tidak ditemukan.");
+            }
+
+            // Ensure archive directory exists
+            $archiveDir = realpath(__DIR__ . '/../../storage') . "/archive/{$tenantId}/{$siswaId}";
+            if (!is_dir($archiveDir)) {
+                mkdir($archiveDir, 0755, true);
+            }
+
+            $pdfPath = '';
+            $fileSize = 0;
+
+            // Handle direct PDF upload
+            if (isset($_FILES['pdf_file']) && $_FILES['pdf_file']['error'] === UPLOAD_ERR_OK) {
+                $file = $_FILES['pdf_file'];
+                if (strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)) !== 'pdf') {
+                    throw new \Exception("Format file harus PDF.");
+                }
+                
+                $uuid = $this->generateUuid();
+                $cleanType = str_replace(' ', '_', strtolower($jenisDokumen));
+                $pdfFilename = "{$cleanType}_{$uuid}.pdf";
+                $targetFile = "{$archiveDir}/{$pdfFilename}";
+                
+                if (!move_uploaded_file($file['tmp_name'], $targetFile)) {
+                    throw new \Exception("Gagal menyimpan file PDF.");
+                }
+                
+                $pdfPath = "storage/archive/{$tenantId}/{$siswaId}/{$pdfFilename}";
+                $fileSize = filesize($targetFile);
+            } 
+            // Handle images upload and compile to PDF
+            elseif (isset($_FILES['images']) && !empty($_FILES['images']['tmp_name'])) {
+                $files = $_FILES['images'];
+                $tmpNames = is_array($files['tmp_name']) ? $files['tmp_name'] : [$files['tmp_name']];
+                $errors = is_array($files['error']) ? $files['error'] : [$files['error']];
+                
+                // Load FPDF
+                require_once __DIR__ . '/../Libraries/fpdf.php';
+                $pdf = new \FPDF();
+                
+                $validImagesCount = 0;
+                for ($i = 0; $i < count($tmpNames); $i++) {
+                    if ($errors[$i] === UPLOAD_ERR_OK && !empty($tmpNames[$i])) {
+                        $tmpPath = $tmpNames[$i];
+                        $size = getimagesize($tmpPath);
+                        if ($size !== false) {
+                            $pdf->AddPage('P', 'A4');
+                            // Fit exactly on A4 page (210mm x 297mm)
+                            $pdf->Image($tmpPath, 0, 0, 210, 297);
+                            $validImagesCount++;
+                        }
+                    }
+                }
+                
+                if ($validImagesCount === 0) {
+                    throw new \Exception("Tidak ada gambar valid yang diunggah.");
+                }
+                
+                $uuid = $this->generateUuid();
+                $cleanType = str_replace(' ', '_', strtolower($jenisDokumen));
+                $pdfFilename = "{$cleanType}_{$uuid}.pdf";
+                $targetFile = "{$archiveDir}/{$pdfFilename}";
+                
+                $pdf->Output('F', $targetFile);
+                
+                $pdfPath = "storage/archive/{$tenantId}/{$siswaId}/{$pdfFilename}";
+                $fileSize = filesize($targetFile);
+            } else {
+                throw new \Exception("Unggah file PDF atau foto HP terlebih dahulu.");
+            }
+
+            // Save metadata to database
+            $uuidDoc = $this->generateUuid();
+            $userId = $_SESSION['user_id'] ?? 'SYSTEM';
+            $stmtInsert = $db->prepare("INSERT INTO arsip_dokumen_alumni (id, siswa_id, tenant_id, jenis_dokumen, file_path, file_size, keterangan, uploaded_by) 
+                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmtInsert->execute([$uuidDoc, $siswaId, $tenantId, $jenisDokumen, $pdfPath, $fileSize, $keterangan, $userId]);
+
+            echo json_encode(['success' => true, 'message' => 'Berkas berhasil diarsipkan sebagai PDF.']);
+        } catch (\Throwable $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
+    }
+
+    public function fetchDocumentsApi(): void {
+        header('Content-Type: application/json');
+        try {
+            $siswaId = $_GET['siswa_id'] ?? '';
+            if (empty($siswaId)) {
+                throw new \Exception("Siswa ID wajib diisi.");
+            }
+            $db = \App\Config\Database::getConnection();
+            $stmt = $db->prepare("SELECT id, jenis_dokumen, file_size, keterangan, created_at 
+                                  FROM arsip_dokumen_alumni 
+                                  WHERE siswa_id = ? 
+                                  ORDER BY created_at DESC");
+            $stmt->execute([$siswaId]);
+            $docs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode($docs);
+        } catch (\Throwable $e) {
+            echo json_encode([]);
+        }
+        exit;
+    }
+
+    public function deleteDocumentApi(): void {
+        header('Content-Type: application/json');
+        try {
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new \Exception("Metode request tidak diizinkan.");
+            }
+            $id = $_POST['id'] ?? '';
+            if (empty($id)) {
+                throw new \Exception("ID Dokumen wajib diisi.");
+            }
+            
+            $db = \App\Config\Database::getConnection();
+            $stmt = $db->prepare("SELECT file_path, tenant_id FROM arsip_dokumen_alumni WHERE id = ?");
+            $stmt->execute([$id]);
+            $doc = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$doc) {
+                throw new \Exception("Dokumen tidak ditemukan.");
+            }
+            
+            // Delete record
+            $stmtDel = $db->prepare("DELETE FROM arsip_dokumen_alumni WHERE id = ?");
+            $stmtDel->execute([$id]);
+            
+            // Delete file
+            $fullPath = realpath(__DIR__ . '/../../') . '/' . $doc['file_path'];
+            if (file_exists($fullPath)) {
+                @unlink($fullPath);
+            }
+            
+            echo json_encode(['success' => true, 'message' => 'Dokumen berhasil dihapus.']);
+        } catch (\Throwable $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
+    }
+
+    public function viewDocumentApi(): void {
+        try {
+            $id = $_GET['id'] ?? '';
+            if (empty($id)) {
+                throw new \Exception("ID Dokumen wajib diisi.");
+            }
+            
+            $db = \App\Config\Database::getConnection();
+            $stmt = $db->prepare("SELECT * FROM arsip_dokumen_alumni WHERE id = ?");
+            $stmt->execute([$id]);
+            $doc = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$doc) {
+                http_response_code(404);
+                die("Dokumen tidak ditemukan.");
+            }
+
+            // Check security permissions
+            $tenantId = SessionManager::getTenantId();
+            if ($tenantId && $tenantId !== $doc['tenant_id']) {
+                http_response_code(403);
+                die("Forbidden: Anda tidak memiliki hak akses ke dokumen sekolah ini.");
+            }
+            
+            // Audit Log
+            $userId = $_SESSION['user_id'] ?? 'SYSTEM';
+            $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+            $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+            $stmtLog = $db->prepare("INSERT INTO log_akses_arsip (user_id, tenant_id, siswa_id, aktivitas, ip_address, user_agent) 
+                                     VALUES (?, ?, ?, ?, ?, ?)");
+            $stmtLog->execute([$userId, $doc['tenant_id'], $doc['siswa_id'], "View PDF {$doc['jenis_dokumen']}", $ip, $ua]);
+
+            $fullPath = realpath(__DIR__ . '/../../') . '/' . $doc['file_path'];
+            if (!file_exists($fullPath)) {
+                http_response_code(404);
+                die("Berkas fisik dokumen tidak ditemukan.");
+            }
+            
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: inline; filename="' . basename($doc['file_path']) . '"');
+            header('Content-Length: ' . filesize($fullPath));
+            readfile($fullPath);
+            exit;
+        } catch (\Throwable $e) {
+            http_response_code(500);
+            die("Error: " . $e->getMessage());
+        }
+    }
+
+    private function generateUuid(): string {
+        return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0x0fff) | 0x4000,
+            mt_rand(0, 0x3fff) | 0x8000,
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+        );
+    }
 }
