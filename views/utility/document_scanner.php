@@ -630,11 +630,11 @@
     let prevCamPoints = null;
     let stableFrameCount = 0;
 
-    // Low-res canvas untuk real-time camera calculations
+    // Low-res canvas untuk real-time camera calculations (willReadFrequently to optimize readback)
     let cameraCanvas = document.createElement('canvas');
     cameraCanvas.width = 480;
     cameraCanvas.height = 360;
-    let cameraCtx = cameraCanvas.getContext('2d');
+    let cameraCtx = cameraCanvas.getContext('2d', { willReadFrequently: true });
 
     // Koordinat 4 sudut dokumen halaman tunggal / halaman kiri (normalized 0.0 to 1.0)
     let corners = {
