@@ -135,6 +135,52 @@ class SiswaController extends BaseController {
                 $res = $this->getAcademicOptions($tenantId);
                 $this->jsonResponse($res);
             }
+
+            if ($action === 'get_siswa_detail') {
+                $id = $_GET['id'] ?? '';
+                $roleName = $_SESSION['role_name'] ?? '';
+                $sessionUserId = $_SESSION['user_id'] ?? '';
+                if ($roleName === 'siswa' && $id !== $sessionUserId) {
+                    $this->jsonResponse(['error' => 'Akses ditolak.'], 403);
+                }
+                $siswa = $this->siswaModel->findFullById($id);
+                $kesehatan = $this->siswaModel->getKesehatanSiswa($id);
+                if ($siswa) {
+                    if (is_array($siswa) && isset($siswa['password'])) {
+                        unset($siswa['password']);
+                    }
+                    $this->jsonResponse([
+                        'success' => true,
+                        'data' => $siswa,
+                        'kesehatan' => $kesehatan
+                    ]);
+                } else {
+                    $this->jsonResponse(['error' => 'Siswa tidak ditemukan.'], 404);
+                }
+            }
+
+            if ($action === 'get_siswa_draft') {
+                $draft = $_SESSION['siswa_draft'] ?? null;
+                if (is_array($draft) && isset($draft['password'])) {
+                    unset($draft['password']);
+                }
+                $old = $_SESSION['siswa_old'] ?? null;
+                if (is_array($old) && isset($old['password'])) {
+                    unset($old['password']);
+                }
+                $errors = $_SESSION['siswa_errors'] ?? null;
+                
+                // Clear flash data
+                unset($_SESSION['siswa_old']);
+                unset($_SESSION['siswa_errors']);
+                
+                $this->jsonResponse([
+                    'success' => true,
+                    'draft' => $draft,
+                    'old' => $old,
+                    'errors' => $errors
+                ]);
+            }
             
             $this->jsonResponse(['error' => 'Aksi AJAX tidak dikenal.'], 400);
         } catch (\Throwable $e) {
@@ -374,6 +420,9 @@ class SiswaController extends BaseController {
         $cities = $db->query("SELECT id_kota, nama_kota FROM kota ORDER BY nama_kota ASC")->fetchAll(\PDO::FETCH_ASSOC);
         $academicOptions = $this->getAcademicOptions(null);
 
+        unset($_SESSION['siswa_old']);
+        unset($_SESSION['siswa_errors']);
+
         $draft = $_SESSION['siswa_draft'] ?? null;
         if (is_array($draft) && isset($draft['password'])) {
             unset($draft['password']);
@@ -426,6 +475,8 @@ class SiswaController extends BaseController {
             if (isset($input['password'])) {
                 unset($input['password']);
             }
+            $_SESSION['siswa_old'] = $input;
+            $_SESSION['siswa_errors'] = $errors;
             if ($isAjax) {
                 header('Content-Type: application/json');
                 echo json_encode(['success' => false, 'errors' => $errors]);
@@ -540,6 +591,9 @@ class SiswaController extends BaseController {
         if (is_array($siswa) && isset($siswa['password'])) {
             unset($siswa['password']);
         }
+
+        unset($_SESSION['siswa_old']);
+        unset($_SESSION['siswa_errors']);
 
         // Keamanan: Jika yang login adalah Siswa, dan status sudah Lulus/Pindah, kunci akses
         if ($roleName === 'siswa') {
@@ -724,6 +778,8 @@ class SiswaController extends BaseController {
             if (isset($input['password'])) {
                 unset($input['password']);
             }
+            $_SESSION['siswa_old'] = array_merge($siswa, $input);
+            $_SESSION['siswa_errors'] = $errors;
             if ($isAjax) {
                 header('Content-Type: application/json');
                 echo json_encode(['success' => false, 'errors' => $errors]);

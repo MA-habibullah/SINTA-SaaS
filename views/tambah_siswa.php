@@ -2122,48 +2122,56 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
             });
 
             // Ambil data query Edit jika di-inject dari PHP
-            const loadEditData = () => {
-                const phpData = <?= json_encode($siswaFullData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-                if (phpData && Object.keys(phpData).length > 0) {
-                    Object.keys(phpData).forEach(key => {
-                        if (key in form.value && key !== 'password') {
-                            let val = phpData[key] !== null ? phpData[key] : '';
-                            if (val === '0000-00-00') val = '';
-                            if (typeof form.value[key] === 'number' && val !== '') {
-                                val = Number(val);
+            const loadEditData = async () => {
+                try {
+                    const response = await axios.get(`/SINTA-SaaS/siswa/tambah?ajax=1&action=get_siswa_detail&id=${idSiswa}`);
+                    if (response.data && response.data.success) {
+                        const phpData = response.data.data;
+                        const kesehatanPhp = response.data.kesehatan;
+                        
+                        if (phpData && Object.keys(phpData).length > 0) {
+                            Object.keys(phpData).forEach(key => {
+                                if (key in form.value && key !== 'password') {
+                                    let val = phpData[key] !== null ? phpData[key] : '';
+                                    if (val === '0000-00-00') val = '';
+                                    if (typeof form.value[key] === 'number' && val !== '') {
+                                        val = Number(val);
+                                    }
+                                    form.value[key] = val;
+                                }
+                            });
+                            
+                            // Trigger pemuatan opsi akademik sesuai tenant_id siswa
+                            if (form.value.tenant_id) {
+                                fetchAcademicOptions(form.value.tenant_id);
                             }
-                            form.value[key] = val;
-                        }
-                    });
-                    
-                    // Trigger pemuatan opsi akademik sesuai tenant_id siswa
-                    if (form.value.tenant_id) {
-                        fetchAcademicOptions(form.value.tenant_id);
-                    }
-                    
-                    // Trigger pemuatan chained dropdown alamat secara bertahap
-                    if (form.value.id_provinsi) {
-                        fetchKota(form.value.id_provinsi, false);
-                    }
-                    if (form.value.id_kota) {
-                        fetchKecamatan(form.value.id_kota, false);
-                    }
-                    if (form.value.id_kecamatan) {
-                        fetchKelurahan(form.value.id_kecamatan, false);
-                    }
-                    
-                    const kesehatanPhp = <?= json_encode($kesehatanData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-                    if (kesehatanPhp && Object.keys(kesehatanPhp).length > 0) {
-                        for (let sem in kesehatanPhp) {
-                            if (form.value.kesehatan[sem]) {
-                                form.value.kesehatan[sem].tinggi_badan = kesehatanPhp[sem].tinggi_badan !== null ? kesehatanPhp[sem].tinggi_badan : '';
-                                form.value.kesehatan[sem].berat_badan = kesehatanPhp[sem].berat_badan !== null ? kesehatanPhp[sem].berat_badan : '';
-                                form.value.kesehatan[sem].pendengaran = kesehatanPhp[sem].pendengaran || '';
-                                form.value.kesehatan[sem].pengelihatan = kesehatanPhp[sem].pengelihatan || '';
-                                form.value.kesehatan[sem].gigi = kesehatanPhp[sem].gigi || '';
+                            
+                            // Trigger pemuatan chained dropdown alamat secara bertahap
+                            if (form.value.id_provinsi) {
+                                fetchKota(form.value.id_provinsi, false);
+                            }
+                            if (form.value.id_kota) {
+                                fetchKecamatan(form.value.id_kota, false);
+                            }
+                            if (form.value.id_kecamatan) {
+                                fetchKelurahan(form.value.id_kecamatan, false);
+                            }
+                            
+                            if (kesehatanPhp && Object.keys(kesehatanPhp).length > 0) {
+                                for (let sem in kesehatanPhp) {
+                                    if (form.value.kesehatan[sem]) {
+                                        form.value.kesehatan[sem].tinggi_badan = kesehatanPhp[sem].tinggi_badan !== null ? kesehatanPhp[sem].tinggi_badan : '';
+                                        form.value.kesehatan[sem].berat_badan = kesehatanPhp[sem].berat_badan !== null ? kesehatanPhp[sem].berat_badan : '';
+                                        form.value.kesehatan[sem].pendengaran = kesehatanPhp[sem].pendengaran || '';
+                                        form.value.kesehatan[sem].pengelihatan = kesehatanPhp[sem].pengelihatan || '';
+                                        form.value.kesehatan[sem].gigi = kesehatanPhp[sem].gigi || '';
+                                    }
+                                }
                             }
                         }
                     }
+                } catch (err) {
+                    console.error("Gagal memuat data edit siswa:", err);
                 }
             };
 
@@ -2766,33 +2774,48 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
             };
 
             // Load draft data (TUGAS 1)
-            const loadDraftData = () => {
-                const phpDraft = <?= json_encode($data['draft'] ?? null, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?> || <?= json_encode($data['old'] ?? null, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-                if (phpDraft && Object.keys(phpDraft).length > 0) {
-                    Object.keys(phpDraft).forEach(key => {
-                        if (key in form.value) {
-                            let val = phpDraft[key] !== null ? phpDraft[key] : '';
-                            if (typeof form.value[key] === 'number' && val !== '') {
-                                val = Number(val);
-                            }
-                            form.value[key] = val;
+            const loadDraftData = async () => {
+                try {
+                    const response = await axios.get(`/SINTA-SaaS/siswa/tambah?ajax=1&action=get_siswa_draft`);
+                    if (response.data && response.data.success) {
+                        const phpDraft = response.data.draft || response.data.old;
+                        const phpErrors = response.data.errors;
+                        
+                        if (phpErrors && typeof phpErrors === 'object') {
+                            Object.values(phpErrors).forEach(err => {
+                                errorsList.value.push(err);
+                            });
                         }
-                    });
-                    
-                    // Re-trigger chained dropdown loads for loaded draft values
-                    if (form.value.id_provinsi) {
-                        fetchKota(form.value.id_provinsi, false);
+                        
+                        if (phpDraft && Object.keys(phpDraft).length > 0) {
+                            Object.keys(phpDraft).forEach(key => {
+                                if (key in form.value) {
+                                    let val = phpDraft[key] !== null ? phpDraft[key] : '';
+                                    if (typeof form.value[key] === 'number' && val !== '') {
+                                        val = Number(val);
+                                    }
+                                    form.value[key] = val;
+                                }
+                            });
+                            
+                            // Re-trigger chained dropdown loads for loaded draft values
+                            if (form.value.id_provinsi) {
+                                fetchKota(form.value.id_provinsi, false);
+                            }
+                            if (form.value.id_kota) {
+                                fetchKecamatan(form.value.id_kota, false);
+                            }
+                            if (form.value.id_kecamatan) {
+                                fetchKelurahan(form.value.id_kecamatan, false);
+                            }
+                            if (form.value.tenant_id) {
+                                fetchAcademicOptions(form.value.tenant_id);
+                            }
+                            return;
+                        }
                     }
-                    if (form.value.id_kota) {
-                        fetchKecamatan(form.value.id_kota, false);
-                    }
-                    if (form.value.id_kecamatan) {
-                        fetchKelurahan(form.value.id_kecamatan, false);
-                    }
-                    if (form.value.tenant_id) {
-                        fetchAcademicOptions(form.value.tenant_id);
-                    }
-                    return;
+                } catch (err) {
+                    console.error("Gagal memuat draft:", err);
                 }
                 
                 // Fallback to localStorage draft
@@ -2925,17 +2948,9 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 }
                 
                 if (isEdit.value) {
-                    loadEditData();
+                    await loadEditData();
                 } else {
-                    loadDraftData();
-                }
-
-                // Inject PHP errors if any
-                const phpErrors = <?= json_encode($data['errors'] ?? [], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-                if (phpErrors && typeof phpErrors === 'object') {
-                    Object.values(phpErrors).forEach(err => {
-                        errorsList.value.push(err);
-                    });
+                    await loadDraftData();
                 }
             });
 
