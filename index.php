@@ -389,6 +389,11 @@ try {
             $controller->deleteSiswaGradesApi();
             break;
 
+        case '/api/v1/verify-transkrip/data':
+            $controller = new App\Controllers\BukuIndukController();
+            $controller->verifyTranskripApi();
+            break;
+
         case '/api/v1/buku-induk':
             $controller = new App\Controllers\BukuIndukController();
             $controller->fetchApi();

@@ -1,3 +1,7 @@
+<?php
+// Token halaman untuk AJAX call satu kali pakai
+$token = $pageToken ?? '';
+?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -91,164 +95,111 @@
                 
                 <div class="verify-card p-4 p-md-5">
                     
-                    <!-- Verification Status Header -->
-                    <div class="text-center mb-5">
-                        <div class="badge-verified mb-3">
-                            <i class="bi bi-patch-check-fill fs-5"></i>
-                            <span>DOKUMEN TERVERIFIKASI ASLI</span>
+                    <!-- Loading View -->
+                    <div id="loadingView" class="text-center py-5">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Memuat...</span>
                         </div>
-                        <h2 class="fw-bold text-dark fs-4">Hasil Verifikasi Data Siswa</h2>
-                        <p class="text-muted fs-7">Seluruh data yang ditampilkan di bawah ini telah dicocokkan langsung secara real-time dengan database server sekolah SINTA-SaaS.</p>
+                        <h5 class="fw-semibold">Memuat Data Verifikasi...</h5>
+                        <p class="text-muted fs-7">Mohon tunggu, sistem sedang memverifikasi token keaslian dokumen secara aman.</p>
                     </div>
 
-                    <!-- Student Profile Section -->
-                    <h4 class="fw-bold text-dark border-bottom pb-2 mb-4 fs-6">
-                        <i class="bi bi-person-badge text-primary me-2"></i>Identitas Peserta Didik
-                    </h4>
-
-                    <div class="row g-4 mb-4">
-                        <div class="col-12 col-md-6">
-                            <div class="detail-label">Nama Lengkap Siswa</div>
-                            <div class="detail-value text-primary"><?= htmlspecialchars($siswa['nama_lengkap'] ?? '-') ?></div>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <div class="detail-label">NISN / NIS</div>
-                            <div class="detail-value"><?= htmlspecialchars($siswa['nisn'] ?? '-') ?> / <?= htmlspecialchars($siswa['nis'] ?? '-') ?></div>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <div class="detail-label">Tempat, Tanggal Lahir</div>
-                            <div class="detail-value"><?= htmlspecialchars($siswa['tempat_lahir'] ?? '-') ?>, <?= !empty($siswa['tanggal_lahir']) ? date('d-m-Y', strtotime($siswa['tanggal_lahir'])) : '-' ?></div>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <div class="detail-label">Jenis Kelamin / Agama</div>
-                            <div class="detail-value"><?= ($siswa['jenis_kelamin'] ?? '') === 'L' ? 'Laki-laki' : 'Perempuan' ?> / <?= htmlspecialchars($siswa['agama'] ?? '-') ?></div>
-                        </div>
-                        <div class="col-12">
-                            <div class="detail-label">Sekolah Penerbit Dokumen</div>
-                            <div class="detail-value text-success"><?= htmlspecialchars($siswa['tenant_info']['nama_sekolah'] ?? '-') ?> (NPSN: <?= htmlspecialchars($siswa['tenant_info']['npsn'] ?? '-') ?>)</div>
-                        </div>
+                    <!-- Error View -->
+                    <div id="errorView" class="text-center py-5 d-none">
+                        <i class="bi bi-exclamation-triangle-fill text-danger fs-1 mb-3"></i>
+                        <h4 class="fw-bold" id="errorTitle">Verifikasi Gagal</h4>
+                        <p class="text-muted fs-7" id="errorText">Dokumen tidak dapat diverifikasi atau token telah kedaluwarsa.</p>
+                        <a href="javascript:location.reload()" class="btn btn-primary rounded-pill mt-3 px-4">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Coba Lagi
+                        </a>
                     </div>
 
-                    <div class="divider-dashed"></div>
+                    <!-- Main Data View (Hidden initially) -->
+                    <div id="dataView" class="d-none">
+                        <!-- Verification Status Header -->
+                        <div class="text-center mb-5">
+                            <div class="badge-verified mb-3">
+                                <i class="bi bi-patch-check-fill fs-5"></i>
+                                <span>DOKUMEN TERVERIFIKASI ASLI</span>
+                            </div>
+                            <h2 class="fw-bold text-dark fs-4">Hasil Verifikasi Data Siswa</h2>
+                            <p class="text-muted fs-7">Seluruh data yang ditampilkan di bawah ini telah dicocokkan langsung secara real-time dengan database server sekolah SINTA-SaaS.</p>
+                        </div>
 
-                    <!-- Grades Transcript Summary Section -->
-                    <h4 class="fw-bold text-dark border-bottom pb-2 mb-4 fs-6">
-                        <i class="bi bi-journal-bookmark-fill text-primary me-2"></i>Ringkasan Transkrip Nilai Akademik
-                    </h4>
+                        <!-- Student Profile Section -->
+                        <h4 class="fw-bold text-dark border-bottom pb-2 mb-4 fs-6">
+                            <i class="bi bi-person-badge text-primary me-2"></i>Identitas Peserta Didik
+                        </h4>
 
-                    <?php
-                    // Group grades by subject name
-                    $transkrip = [];
-                    if (!empty($siswa['transkrip_grades'])) {
-                        foreach ($siswa['transkrip_grades'] as $g) {
-                            $mName = $g['nama_mapel'];
-                            if (!isset($transkrip[$mName])) {
-                                $transkrip[$mName] = [
-                                    's1' => '-', 's2' => '-', 's3' => '-', 's4' => '-', 's5' => '-', 's6' => '-',
-                                    'us' => '-', 'ns' => '-'
-                                ];
-                            }
-                            $sem = strtolower($g['semester']);
-                            $ta = $g['tahun_ajaran'];
-                            
-                            // Map TA dynamically to semesters 1-6
-                            static $taMapping = [];
-                            if (!in_array($ta, $taMapping)) {
-                                $taMapping[] = $ta;
-                                sort($taMapping);
-                            }
-                            $taIndex = array_search($ta, $taMapping);
-                            $baseSmt = ($taIndex * 2) + 1;
-                            
-                            if ($sem === 'ujian sekolah') {
-                                $transkrip[$mName]['us'] = round((float)$g['nilai_akhir']);
-                            } else {
-                                $smtNum = (strpos($sem, 'genap') !== false) ? $baseSmt + 1 : $baseSmt;
-                                if ($smtNum >= 1 && $smtNum <= 6) {
-                                    $transkrip[$mName]["s$smtNum"] = round((float)$g['nilai_akhir']);
-                                }
-                            }
-                        }
-                    }
+                        <div class="row g-4 mb-4">
+                            <div class="col-12 col-md-6">
+                                <div class="detail-label">Nama Lengkap Siswa</div>
+                                <div class="detail-value text-primary" id="valNama">-</div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="detail-label">NISN / NIS</div>
+                                <div class="detail-value" id="valNisnNis">-</div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="detail-label">Tempat, Tanggal Lahir</div>
+                                <div class="detail-value" id="valTtl">-</div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="detail-label">Jenis Kelamin / Agama</div>
+                                <div class="detail-value" id="valJkAgama">-</div>
+                            </div>
+                            <div class="col-12">
+                                <div class="detail-label">Sekolah Penerbit Dokumen</div>
+                                <div class="detail-value text-success" id="valSekolah">-</div>
+                            </div>
+                        </div>
 
-                    // Calculate NS (Nilai Sekolah)
-                    foreach ($transkrip as $k => $v) {
-                        $sum = 0;
-                        $count = 0;
-                        for ($i=1; $i<=6; $i++) {
-                            if ($v["s$i"] !== '-') {
-                                $sum += $v["s$i"];
-                                $count++;
-                            }
-                        }
-                        if ($count > 0) {
-                            $rata = $sum / $count;
-                            if ($v['us'] !== '-') {
-                                $transkrip[$k]['ns'] = round((0.6 * $rata) + (0.4 * $v['us']));
-                            } else {
-                                $transkrip[$k]['ns'] = round($rata);
-                            }
-                        }
-                    }
-                    ?>
+                        <div class="divider-dashed"></div>
 
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover align-middle table-grades">
-                            <thead>
-                                <tr class="text-center">
-                                    <th rowspan="2" width="5%" class="align-middle">No</th>
-                                    <th rowspan="2" class="text-start align-middle">Mata Pelajaran</th>
-                                    <th colspan="6">Nilai Rapor Smt</th>
-                                    <th rowspan="2" width="10%" class="align-middle">US</th>
-                                    <th rowspan="2" width="12%" class="align-middle">Nilai Sekolah</th>
-                                </tr>
-                                <tr class="text-center">
-                                    <th width="7%">1</th>
-                                    <th width="7%">2</th>
-                                    <th width="7%">3</th>
-                                    <th width="7%">4</th>
-                                    <th width="7%">5</th>
-                                    <th width="7%">6</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (!empty($transkrip)): ?>
-                                    <?php $no = 1; foreach ($transkrip as $name => $data): ?>
-                                        <tr>
-                                            <td class="text-center text-muted"><?= $no++ ?></td>
-                                            <td class="fw-semibold text-dark"><?= htmlspecialchars($name) ?></td>
-                                            <td class="text-center"><?= $data['s1'] ?></td>
-                                            <td class="text-center"><?= $data['s2'] ?></td>
-                                            <td class="text-center"><?= $data['s3'] ?></td>
-                                            <td class="text-center"><?= $data['s4'] ?></td>
-                                            <td class="text-center"><?= $data['s5'] ?></td>
-                                            <td class="text-center"><?= $data['s6'] ?></td>
-                                            <td class="text-center text-primary fw-semibold"><?= $data['us'] ?></td>
-                                            <td class="text-center bg-light fw-bold text-success fs-7"><?= $data['ns'] ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="10" class="text-center text-muted py-4">Tidak ada data transkrip nilai terdaftar.</td>
+                        <!-- Grades Transcript Summary Section -->
+                        <h4 class="fw-bold text-dark border-bottom pb-2 mb-4 fs-6">
+                            <i class="bi bi-journal-bookmark-fill text-primary me-2"></i>Ringkasan Transkrip Nilai Akademik
+                        </h4>
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover align-middle table-grades">
+                                <thead>
+                                    <tr class="text-center">
+                                        <th rowspan="2" width="5%" class="align-middle">No</th>
+                                        <th rowspan="2" class="text-start align-middle">Mata Pelajaran</th>
+                                        <th colspan="6">Nilai Rapor Smt</th>
+                                        <th rowspan="2" width="10%" class="align-middle">US</th>
+                                        <th rowspan="2" width="12%" class="align-middle">Nilai Sekolah</th>
                                     </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="divider-dashed"></div>
-
-                    <!-- Footer Info -->
-                    <div class="row align-items-center">
-                        <div class="col-12 col-md-8 text-center text-md-start mb-3 mb-md-0">
-                            <p class="text-muted fs-8 mb-0">
-                                <i class="bi bi-info-circle me-1"></i>Halaman ini diterbitkan sebagai sarana legalitas digital untuk memvalidasi kesesuaian data fisik dengan database SINTA-SaaS secara langsung.
-                            </p>
+                                    <tr class="text-center">
+                                        <th width="7%">1</th>
+                                        <th width="7%">2</th>
+                                        <th width="7%">3</th>
+                                        <th width="7%">4</th>
+                                        <th width="7%">5</th>
+                                        <th width="7%">6</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tableBody">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="col-12 col-md-4 text-center text-md-end">
-                            <a href="javascript:window.print()" class="btn btn-outline-primary btn-sm rounded-pill px-3">
-                                <i class="bi bi-printer me-1"></i> Cetak Halaman Ini
-                            </a>
+
+                        <div class="divider-dashed"></div>
+
+                        <!-- Footer Info -->
+                        <div class="row align-items-center">
+                            <div class="col-12 col-md-8 text-center text-md-start mb-3 mb-md-0">
+                                <p class="text-muted fs-8 mb-0">
+                                    <i class="bi bi-info-circle me-1"></i>Halaman ini diterbitkan sebagai sarana legalitas digital untuk memvalidasi kesesuaian data fisik dengan database SINTA-SaaS secara langsung.
+                                </p>
+                            </div>
+                            <div class="col-12 col-md-4 text-center text-md-end">
+                                <a href="javascript:window.print()" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                                    <i class="bi bi-printer me-1"></i> Cetak Halaman Ini
+                                </a>
+                            </div>
                         </div>
                     </div>
 
@@ -256,12 +207,176 @@
                 
                 <!-- Bottom Copyright -->
                 <div class="text-center text-muted fs-9 mb-5">
-                    &copy; <?= date('Y') ?> SINTA-SaaS. All rights reserved. | Security Verified Legality Page.
+                    &copy; <span id="valYear"></span> SINTA-SaaS. All rights reserved. | Security Verified Legality Page.
                 </div>
 
             </div>
         </div>
     </div>
 
+    <!-- Script to fetch dynamically with security -->
+    <script>
+        (function() {
+            document.getElementById('valYear').innerText = new Date().getFullYear();
+            
+            const token = '<?= $token ?>';
+            if (!token) {
+                showError('Akses Ditolak', 'Token keamanan halaman tidak terdeteksi.');
+                return;
+            }
+
+            fetch('/SINTA-SaaS/api/v1/verify-transkrip/data?token=' + encodeURIComponent(token))
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Response error dengan status ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(res => {
+                    if (!res.success || !res.data) {
+                        throw new Error(res.error || 'Gagal memuat data verifikasi.');
+                    }
+                    renderData(res.data);
+                })
+                .catch(err => {
+                    showError('Verifikasi Gagal', err.message || 'Terjadi kesalahan saat menghubungi server.');
+                });
+
+            function showError(title, message) {
+                document.getElementById('loadingView').classList.add('d-none');
+                document.getElementById('dataView').classList.add('d-none');
+                document.getElementById('errorTitle').innerText = title;
+                document.getElementById('errorText').innerText = message;
+                document.getElementById('errorView').classList.remove('d-none');
+            }
+
+            function renderData(siswa) {
+                // Render Profile
+                document.getElementById('valNama').innerText = siswa.nama_lengkap || '-';
+                document.getElementById('valNisnNis').innerText = (siswa.nisn || '-') + ' / ' + (siswa.nis || '-');
+                
+                let ttl = '-';
+                if (siswa.tempat_lahir) {
+                    ttl = siswa.tempat_lahir;
+                    if (siswa.tanggal_lahir) {
+                        const parts = siswa.tanggal_lahir.split('-');
+                        if (parts.length === 3) {
+                            ttl += ', ' + parts[2] + '-' + parts[1] + '-' + parts[0];
+                        } else {
+                            ttl += ', ' + siswa.tanggal_lahir;
+                        }
+                    }
+                }
+                document.getElementById('valTtl').innerText = ttl;
+                
+                const jk = siswa.jenis_kelamin === 'L' ? 'Laki-laki' : (siswa.jenis_kelamin === 'P' ? 'Perempuan' : '-');
+                document.getElementById('valJkAgama').innerText = jk + ' / ' + (siswa.agama || '-');
+                
+                const tenant = siswa.tenant_info || {};
+                document.getElementById('valSekolah').innerText = (tenant.nama_sekolah || '-') + ' (NPSN: ' + (tenant.npsn || '-') + ')';
+
+                // Process Grades
+                const transkrip = {};
+                const taMapping = [];
+                
+                if (siswa.transkrip_grades && siswa.transkrip_grades.length > 0) {
+                    siswa.transkrip_grades.forEach(g => {
+                        const mName = g.nama_mapel;
+                        if (!transkrip[mName]) {
+                            transkrip[mName] = {
+                                s1: '-', s2: '-', s3: '-', s4: '-', s5: '-', s6: '-',
+                                us: '-', ns: '-'
+                            };
+                        }
+                        const sem = (g.semester || '').toLowerCase();
+                        const ta = g.tahun_ajaran;
+                        
+                        if (!taMapping.includes(ta)) {
+                            taMapping.push(ta);
+                            taMapping.sort();
+                        }
+                        const taIndex = taMapping.indexOf(ta);
+                        const baseSmt = (taIndex * 2) + 1;
+                        
+                        if (sem === 'ujian sekolah') {
+                            transkrip[mName].us = Math.round(parseFloat(g.nilai_akhir));
+                        } else {
+                            const smtNum = (sem.includes('genap')) ? baseSmt + 1 : baseSmt;
+                            if (smtNum >= 1 && smtNum <= 6) {
+                                transkrip[mName]['s' + smtNum] = Math.round(parseFloat(g.nilai_akhir));
+                            }
+                        }
+                    });
+                }
+
+                // Calculate NS (Nilai Sekolah)
+                const subjectNames = Object.keys(transkrip);
+                subjectNames.forEach(k => {
+                    let sum = 0;
+                    let count = 0;
+                    for (let i = 1; i <= 6; i++) {
+                        if (transkrip[k]['s' + i] !== '-') {
+                            sum += transkrip[k]['s' + i];
+                            count++;
+                        }
+                    }
+                    if (count > 0) {
+                        const rata = sum / count;
+                        if (transkrip[k].us !== '-') {
+                            transkrip[k].ns = Math.round((0.6 * rata) + (0.4 * transkrip[k].us));
+                        } else {
+                            transkrip[k].ns = Math.round(rata);
+                        }
+                    }
+                });
+
+                // Render Table
+                const tbody = document.getElementById('tableBody');
+                tbody.innerHTML = '';
+                
+                if (subjectNames.length > 0) {
+                    let no = 1;
+                    subjectNames.forEach(name => {
+                        const d = transkrip[name];
+                        const tr = document.createElement('tr');
+                        
+                        tr.innerHTML = `
+                            <td class="text-center text-muted">${no++}</td>
+                            <td class="fw-semibold text-dark">${escapeHtml(name)}</td>
+                            <td class="text-center">${d.s1}</td>
+                            <td class="text-center">${d.s2}</td>
+                            <td class="text-center">${d.s3}</td>
+                            <td class="text-center">${d.s4}</td>
+                            <td class="text-center">${d.s5}</td>
+                            <td class="text-center">${d.s6}</td>
+                            <td class="text-center text-primary fw-semibold">${d.us}</td>
+                            <td class="text-center bg-light fw-bold text-success fs-7">${d.ns}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="10" class="text-center text-muted py-4">Tidak ada data transkrip nilai terdaftar.</td>
+                        </tr>
+                    `;
+                }
+
+                // Switch views
+                document.getElementById('loadingView').classList.add('d-none');
+                document.getElementById('dataView').classList.remove('d-none');
+            }
+
+            function escapeHtml(str) {
+                if (!str) return '';
+                return str
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+        })();
+    </script>
 </body>
 </html>

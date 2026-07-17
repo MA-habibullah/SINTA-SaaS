@@ -1821,21 +1821,21 @@ class BukuIndukController extends BaseController {
         header("X-Frame-Options: DENY");
         header("X-XSS-Protection: 1; mode=block");
         header("Referrer-Policy: strict-origin-when-cross-origin");
-        header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; frame-ancestors 'none';");
+        header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; frame-ancestors 'none'; connect-src 'self';");
         header("Cache-Control: no-store, no-cache, must-revalidate");
         header("Pragma: no-cache");
 
-        // ── 2. Rate Limiting sederhana berbasis IP (max 30 req/menit) ──────────
-        $ip          = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-        $ipHash      = md5($ip); // Jangan simpan IP asli di file
+        // ── 2. Rate Limiting berbasis IP (max 20 req/menit untuk halaman) ───────
+        $ip           = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $ipHash       = md5($ip);
         $rateLimitDir = __DIR__ . '/../../storage/app/rate_limit/';
         if (!is_dir($rateLimitDir)) {
             @mkdir($rateLimitDir, 0755, true);
         }
-        $rateFile = $rateLimitDir . 'vt_' . $ipHash . '.json';
+        $rateFile = $rateLimitDir . 'vt_page_' . $ipHash . '.json';
         $now      = time();
-        $window   = 60;   // 1 menit
-        $maxReq   = 30;   // maksimal 30 request per menit
+        $window   = 60;
+        $maxReq   = 20;
 
         $rateData = ['count' => 0, 'start' => $now];
         if (file_exists($rateFile)) {
@@ -1844,7 +1844,6 @@ class BukuIndukController extends BaseController {
                 $rateData = $decoded;
             }
         }
-        // Reset window jika sudah lebih dari 1 menit
         if (($now - $rateData['start']) > $window) {
             $rateData = ['count' => 0, 'start' => $now];
         }
@@ -1853,62 +1852,157 @@ class BukuIndukController extends BaseController {
 
         if ($rateData['count'] > $maxReq) {
             http_response_code(429);
-            echo '<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><title>Terlalu Banyak Permintaan</title></head><body>';
-            echo '<h1>429 Terlalu Banyak Permintaan</h1>';
-            echo '<p>Anda telah melakukan terlalu banyak permintaan. Silakan coba lagi dalam beberapa saat.</p>';
+            echo '<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><title>429</title></head><body>';
+            echo '<h1>429 Terlalu Banyak Permintaan</h1><p>Silakan coba lagi dalam beberapa saat.</p>';
             echo '</body></html>';
             exit;
         }
 
-        // ── 3. Validasi Format UUID v4 pada parameter ?id= ─────────────────────
+        // ── 3. Validasi Format UUID v4 ──────────────────────────────────────────
         $id = trim($_GET['id'] ?? '');
         $uuidPattern = '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i';
         if (empty($id) || !preg_match($uuidPattern, $id)) {
             http_response_code(400);
-            echo '<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><title>Permintaan Tidak Valid</title></head><body>';
-            echo '<h1>400 Permintaan Tidak Valid</h1>';
-            echo '<p>Parameter ID yang diberikan tidak valid.</p>';
+            echo '<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><title>400</title></head><body>';
+            echo '<h1>400 Permintaan Tidak Valid</h1><p>Parameter ID tidak valid.</p>';
             echo '</body></html>';
             exit;
         }
 
-        // ── 4. Ambil data siswa via Prepared Statement (sudah aman dari SQLi) ──
+        // ── 4. Validasi keberadaan siswa (tanpa ambil data lengkap) ────────────
         try {
             $db = \App\Config\Database::getConnection();
+            $stmt = $db->prepare("SELECT id FROM siswa WHERE id = ? AND deleted_at IS NULL LIMIT 1");
+            $stmt->execute([$id]);
+            if (!$stmt->fetch()) {
+                http_response_code(404);
+                echo '<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><title>404</title></head><body>';
+                echo '<h1>404 Tidak Ditemukan</h1><p>Dokumen verifikasi tidak ditemukan.</p>';
+                echo '</body></html>';
+                exit;
+            }
         } catch (\Throwable $e) {
             http_response_code(500);
-            echo '<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><title>Kesalahan Sistem</title></head><body>';
-            echo '<h1>500 Kesalahan Sistem</h1><p>Terjadi kesalahan pada server. Silakan coba lagi.</p>';
-            echo '</body></html>';
+            echo '<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><title>500</title></head><body>';
+            echo '<h1>500 Kesalahan Sistem</h1><p>Silakan coba lagi.</p></body></html>';
             exit;
         }
 
-        $siswaModel = new \App\Models\Siswa(null);
-        $siswa = $siswaModel->findFullById($id);
+        // ── 5. Buat One-Time Session Token untuk AJAX request ──────────────────
+        // Data TIDAK dikirim ke view — hanya token + siswa_id yang disimpan di session
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            session_start();
+        }
+        $token = bin2hex(random_bytes(32)); // 64-char hex token
+        $_SESSION['vt_token']    = $token;
+        $_SESSION['vt_siswa_id'] = $id;
+        $_SESSION['vt_expires']  = time() + 300; // Token valid 5 menit
 
-        if (!$siswa) {
-            http_response_code(404);
-            echo '<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><title>Data Tidak Ditemukan</title></head><body>';
-            echo '<h1>404 Data Tidak Ditemukan</h1>';
-            echo '<p>Dokumen verifikasi tidak ditemukan atau sudah tidak aktif.</p>';
-            echo '</body></html>';
+        // ── 6. Render skeleton HTML (TANPA DATA dari DB) ────────────────────────
+        // Token dikirim ke view hanya untuk digunakan sekali oleh AJAX call
+        $pageToken = htmlspecialchars($token, ENT_QUOTES, 'UTF-8');
+        require __DIR__ . '/../../views/verify_transkrip.php';
+        exit;
+    }
+
+    /**
+     * API: Ambil data verifikasi transkrip via AJAX (One-Time Token)
+     * GET /api/v1/verify-transkrip/data
+     * Data hanya dikembalikan jika token valid dan belum expired.
+     * Setelah dikonsumsi, token langsung dihapus dari session (one-time use).
+     */
+    public function verifyTranskripApi(): void {
+        // ── Security Headers untuk API ─────────────────────────────────────────
+        header("Content-Type: application/json; charset=UTF-8");
+        header("X-Content-Type-Options: nosniff");
+        header("X-Frame-Options: DENY");
+        header("Cache-Control: no-store, no-cache");
+
+        // ── Rate Limiting berbasis IP (max 10 req/menit untuk AJAX data) ────────
+        $ip           = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $ipHash       = md5($ip);
+        $rateLimitDir = __DIR__ . '/../../storage/app/rate_limit/';
+        if (!is_dir($rateLimitDir)) {
+            @mkdir($rateLimitDir, 0755, true);
+        }
+        $rateFile = $rateLimitDir . 'vt_api_' . $ipHash . '.json';
+        $now      = time();
+        $window   = 60;
+        $maxReq   = 10;
+
+        $rateData = ['count' => 0, 'start' => $now];
+        if (file_exists($rateFile)) {
+            $decoded = json_decode(file_get_contents($rateFile), true);
+            if (is_array($decoded)) {
+                $rateData = $decoded;
+            }
+        }
+        if (($now - $rateData['start']) > $window) {
+            $rateData = ['count' => 0, 'start' => $now];
+        }
+        $rateData['count']++;
+        file_put_contents($rateFile, json_encode($rateData), LOCK_EX);
+
+        if ($rateData['count'] > $maxReq) {
+            http_response_code(429);
+            echo json_encode(['success' => false, 'error' => 'Terlalu banyak permintaan.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
             exit;
         }
 
-        // ── 5. Ambil info tenant ────────────────────────────────────────────────
+        // ── Validasi Session & One-Time Token ────────────────────────────────────
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            session_start();
+        }
+
+        $requestToken = trim($_GET['token'] ?? '');
+        $sessionToken = $_SESSION['vt_token']    ?? '';
+        $siswaId      = $_SESSION['vt_siswa_id'] ?? '';
+        $expires      = $_SESSION['vt_expires']  ?? 0;
+
+        // Hapus token dari session SEGERA (one-time use — tidak bisa dipakai ulang)
+        unset($_SESSION['vt_token'], $_SESSION['vt_siswa_id'], $_SESSION['vt_expires']);
+
+        if (
+            empty($requestToken) ||
+            empty($sessionToken) ||
+            !hash_equals($sessionToken, $requestToken) ||
+            time() > $expires ||
+            empty($siswaId)
+        ) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Token tidak valid atau sudah kedaluwarsa.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            exit;
+        }
+
+        // ── Validasi UUID siswaId dari session (bukan dari input user) ───────────
+        $uuidPattern = '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i';
+        if (!preg_match($uuidPattern, $siswaId)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'ID tidak valid.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            exit;
+        }
+
+        // ── Ambil data siswa (hanya setelah token tervalidasi) ──────────────────
         try {
+            $db = \App\Config\Database::getConnection();
+
+            $siswaModel = new \App\Models\Siswa(null);
+            $siswa = $siswaModel->findFullById($siswaId);
+
+            if (!$siswa) {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'error' => 'Data tidak ditemukan.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+                exit;
+            }
+
+            // Ambil info tenant
             $stmtTenant = $db->prepare(
-                "SELECT nama_sekolah, npsn, alamat, kecamatan, kabupaten_kota, provinsi, nama_kepsek, nip_kepsek
-                 FROM tenants WHERE id = ? LIMIT 1"
+                "SELECT nama_sekolah, npsn, nama_kepsek FROM tenants WHERE id = ? LIMIT 1"
             );
             $stmtTenant->execute([$siswa['tenant_id']]);
             $siswa['tenant_info'] = $stmtTenant->fetch(PDO::FETCH_ASSOC) ?: [];
-        } catch (\Throwable $e) {
-            $siswa['tenant_info'] = [];
-        }
 
-        // ── 6. Ambil transkrip nilai ────────────────────────────────────────────
-        try {
+            // Ambil transkrip nilai (hanya kolom yang diperlukan)
             $stmt = $db->prepare("
                 SELECT d.nilai_akhir, d.semester, d.tahun_ajaran, m.nama_mapel, m.kelompok
                 FROM detail_nilai_rapor d
@@ -1916,21 +2010,32 @@ class BukuIndukController extends BaseController {
                 WHERE d.siswa_id = ? AND d.deleted_at IS NULL
                 ORDER BY m.kelompok ASC, m.nama_mapel ASC, d.tahun_ajaran ASC, d.semester ASC
             ");
-            $stmt->execute([$id]);
+            $stmt->execute([$siswaId]);
             $siswa['transkrip_grades'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Hapus semua kolom sensitif sebelum dikembalikan ke client
+            $sensitiveKeys = [
+                'password', 'token', 'api_key', 'nik', 'no_kk',
+                'nama_ibu', 'nama_ayah', 'email', 'no_hp',
+                'tenant_id', 'user_id', 'created_at', 'updated_at', 'deleted_at'
+            ];
+            foreach ($sensitiveKeys as $key) {
+                unset($siswa[$key]);
+            }
+
+            http_response_code(200);
+            echo json_encode(
+                ['success' => true, 'data' => $siswa],
+                JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE
+            );
         } catch (\Throwable $e) {
-            $siswa['transkrip_grades'] = [];
+            http_response_code(500);
+            echo json_encode(['success' => false, 'error' => 'Terjadi kesalahan sistem.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
         }
-
-        // ── 7. Hapus kolom sensitif sebelum dikirim ke view ────────────────────
-        $sensitiveKeys = ['password', 'token', 'api_key', 'nik', 'no_kk', 'nama_ibu', 'nama_ayah'];
-        foreach ($sensitiveKeys as $key) {
-            unset($siswa[$key]);
-        }
-
-        require __DIR__ . '/../../views/verify_transkrip.php';
         exit;
     }
+
+
 
     private function renderOrGetArchive(string $siswaId, string $tenantId, string $filename, callable $renderCallback): void {
         $archiveDir = __DIR__ . "/../../storage/archive/{$tenantId}/{$siswaId}";
