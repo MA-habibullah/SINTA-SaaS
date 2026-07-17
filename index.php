@@ -368,6 +368,16 @@ try {
             $controller->index();
             break;
 
+        case '/utility/document-scanner':
+            // Pastikan session sudah login
+            if (!isset($_SESSION['user_id'])) {
+                header('Location: /SINTA-SaaS/login');
+                exit;
+            }
+            $controller = new App\Controllers\UtilityController();
+            $controller->documentScanner();
+            break;
+
         case '/buku-induk':
             $controller = new App\Controllers\BukuIndukController();
             $controller->index();
