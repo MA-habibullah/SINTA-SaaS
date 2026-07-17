@@ -657,6 +657,10 @@
     });
 
     // STATE & GLOBAL VARIABLES
+    let resizeHandler = null;
+    let panMouseMoveHandler = null;
+    let panMouseUpHandler = null;
+
     let originalMat = null;     // OpenCV Mat untuk gambar asli
     let originalFileSize = 0;   // Ukuran berkas asli dalam bytes
     let activeFilter = 'color'; // Mode filter aktif (Default: color)
@@ -796,7 +800,11 @@
     const spineDivider = document.getElementById('spine-divider');
 
     // 1. INITIALIZE & CHECKS
-    document.addEventListener("DOMContentLoaded", () => {
+    function initAeroScan() {
+        if (window._aeroScanCleanup) {
+            window._aeroScanCleanup();
+        }
+
         safeCreateIcons();
         initDragAndDropHandlers();
         initParametersListeners();
@@ -810,12 +818,24 @@
         initZoomAndPan();
         initOcrListeners();
 
-        window.addEventListener('resize', () => {
+        resizeHandler = () => {
             if (originalMat) {
                 updateSvgOverlay();
             }
-        });
-    });
+        };
+        window.addEventListener('resize', resizeHandler);
+
+        window._aeroScanCleanup = function() {
+            stopCameraScan();
+            if (resizeHandler) window.removeEventListener('resize', resizeHandler);
+            if (panMouseMoveHandler) window.removeEventListener('mousemove', panMouseMoveHandler);
+            if (panMouseUpHandler) window.removeEventListener('mouseup', panMouseUpHandler);
+            window._aeroScanCleanup = null;
+        };
+    }
+
+    // Jalankan inisialisasi secara langsung saat berkas dimuat
+    initAeroScan();
 
     window.onOpenCvReady = function() {
         const _dot     = document.getElementById('status-dot');
@@ -3207,21 +3227,24 @@
             startPanY = panY;
         });
 
-        window.addEventListener('mousemove', (e) => {
+        panMouseMoveHandler = (e) => {
             if (!isPanning) return;
             const dx = e.clientX - startClientX;
             const dy = e.clientY - startClientY;
             panX = startPanX + dx / zoomScale;
             panY = startPanY + dy / zoomScale;
             updateZoomTransform();
-        });
+        };
 
-        window.addEventListener('mouseup', () => {
+        panMouseUpHandler = () => {
             if (isPanning) {
                 isPanning = false;
                 originalCanvasContainer.style.cursor = 'default';
             }
-        });
+        };
+
+        window.addEventListener('mousemove', panMouseMoveHandler);
+        window.addEventListener('mouseup', panMouseUpHandler);
 
         originalCanvasContainer.addEventListener('touchstart', (e) => {
             if (!originalMat || e.touches.length > 1) return;
@@ -3400,9 +3423,11 @@
         showToast("Teks berhasil diunduh sebagai berkas .txt!", "success");
     }
 
-    // Clean up camera stream on Turbo visit / navigation
+    // Clean up camera stream and window listeners on Turbo visit / navigation
     document.addEventListener("turbo:before-cache", function cleanup() {
-        stopCameraScan();
+        if (window._aeroScanCleanup) {
+            window._aeroScanCleanup();
+        }
         document.removeEventListener("turbo:before-cache", cleanup);
     });
 
