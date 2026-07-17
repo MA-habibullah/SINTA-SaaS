@@ -2515,11 +2515,11 @@ $baseUrl    = '/SINTA-SaaS';
 const { ref, computed, onMounted, nextTick } = Vue;
 
 // Inject PHP variables safely
-const _tenantId  = <?= json_encode($tenantId) ?>;
-const _userRole  = <?= json_encode($userRole) ?>;
-const _userId    = <?= json_encode($_SESSION['user_id'] ?? '') ?>;
+const _tenantId  = <?= json_encode($tenantId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+const _userRole  = <?= json_encode($userRole, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+const _userId    = <?= json_encode($_SESSION['user_id'] ?? '', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 const _baseUrl   = '<?= $baseUrl ?>';
-const _tahunAjaranList = <?= json_encode($tahunAjaranList) ?>;
+const _tahunAjaranList = <?= json_encode($tahunAjaranList, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 
 window.VueAppRegistry.register('#bkApp', {
     setup() {

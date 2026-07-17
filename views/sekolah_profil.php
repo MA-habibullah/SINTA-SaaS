@@ -482,7 +482,7 @@
     window.VueAppRegistry.register('#schoolProfileApp', {
         setup() {
             // Initial data from PHP controller
-            const tenant = ref(<?= json_encode($tenant, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>);
+            const tenant = ref(<?= json_encode($tenant, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
             
             // Map logo preview
             const logoPreview = ref(tenant.value.logo ? `/SINTA-SaaS/storage/app/public/${tenant.value.logo}` : null);

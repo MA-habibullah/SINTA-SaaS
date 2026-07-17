@@ -158,7 +158,7 @@
     window.VueAppRegistry.register('#schoolIdentityApp', {
         setup() {
             // Inject initial tenant data from PHP securely
-            const schoolData = ref(<?= json_encode($tenant, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>);
+            const schoolData = ref(<?= json_encode($tenant, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
             
             const form = reactive({
                 nama_sekolah: schoolData.value.nama_sekolah,

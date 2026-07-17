@@ -297,7 +297,7 @@ if (window.VueAppRegistry.register) {
         return {
             baseUrl: '<?= $baseUrl ?>',
             tenantId: '<?= htmlspecialchars($tenantId) ?>',
-            canWrite: <?= json_encode($canWrite) ?>,
+            canWrite: <?= json_encode($canWrite, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
             loading: false,
             dataList: [],
             searchQuery: '',

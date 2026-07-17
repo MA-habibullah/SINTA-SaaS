@@ -220,7 +220,7 @@ $userRole = $_SESSION['role_name'] ?? '';
             let searchTimeout = null;
 
             // Filters
-            const isSuperAdmin = ref(<?= json_encode($userRole === 'super_admin') ?>);
+            const isSuperAdmin = ref(<?= json_encode($userRole === 'super_admin', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
             const tenantOptions = ref([]);
             const roleOptions = ref([]);
             const selectedTenant = ref('');

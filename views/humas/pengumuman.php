@@ -234,7 +234,7 @@
                                         </td>
                                         <td class="py-4 text-center">
                                             <div class="flex justify-center gap-2">
-                                                <button class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-blue-600 hover:bg-blue-50 hover:border-blue-200 flex items-center justify-center transition-colors" onclick='editPengumuman(<?= json_encode($row) ?>)' title="Edit">
+                                                <button class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-blue-600 hover:bg-blue-50 hover:border-blue-200 flex items-center justify-center transition-colors" onclick="editPengumuman(<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>)" title="Edit">
                                                     <i class="bi bi-pencil-square"></i>
                                                 </button>
                                                 <form action="/SINTA-SaaS/informasi/pengumuman/delete" method="POST" class="m-0" onsubmit="return confirm('Hapus pengumuman ini secara permanen?');">
@@ -316,7 +316,7 @@
                                         </td>
                                         <td class="py-4 text-center">
                                             <div class="flex justify-center gap-2">
-                                                <button class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-blue-600 hover:bg-blue-50 hover:border-blue-200 flex items-center justify-center transition-colors" onclick='editKategori(<?= json_encode($k) ?>)' title="Edit">
+                                                <button class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-blue-600 hover:bg-blue-50 hover:border-blue-200 flex items-center justify-center transition-colors" onclick="editKategori(<?= htmlspecialchars(json_encode($k), ENT_QUOTES, 'UTF-8') ?>)" title="Edit">
                                                     <i class="bi bi-pencil-square"></i>
                                                 </button>
                                                 <form action="/SINTA-SaaS/informasi/pengumuman/kategori/delete" method="POST" class="m-0" onsubmit="return confirm('Menghapus kategori akan mengosongkan kategori pada pengumuman terkait. Lanjutkan?');">

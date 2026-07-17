@@ -536,7 +536,7 @@
                 ],
                 activeTab: 'jenjang',
                 userRole: '<?php echo htmlspecialchars($user_role ?? ""); ?>',
-                listTenants: <?php echo json_encode($tenant_list ?? []); ?>,
+                listTenants: <?php echo json_encode($tenant_list ?? [], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>,
                 filterTenantId: '', // Filter sekolah aktif (Super Admin only)
                 listData: [],
                 listJenjang: [], // Opsi khusus dropdown Kelas
