@@ -1815,43 +1815,118 @@ class BukuIndukController extends BaseController {
     }
 
     public function verifyTranskrip(): void {
-        $id = $_GET['id'] ?? '';
-        if (empty($id)) {
-            die("<h1>Bad Request</h1><p>ID siswa tidak valid.</p>");
+        // ── 1. HTTP Security Headers ────────────────────────────────────────────
+        header("Content-Type: text/html; charset=UTF-8");
+        header("X-Content-Type-Options: nosniff");
+        header("X-Frame-Options: DENY");
+        header("X-XSS-Protection: 1; mode=block");
+        header("Referrer-Policy: strict-origin-when-cross-origin");
+        header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; frame-ancestors 'none';");
+        header("Cache-Control: no-store, no-cache, must-revalidate");
+        header("Pragma: no-cache");
+
+        // ── 2. Rate Limiting sederhana berbasis IP (max 30 req/menit) ──────────
+        $ip          = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $ipHash      = md5($ip); // Jangan simpan IP asli di file
+        $rateLimitDir = __DIR__ . '/../../storage/app/rate_limit/';
+        if (!is_dir($rateLimitDir)) {
+            @mkdir($rateLimitDir, 0755, true);
+        }
+        $rateFile = $rateLimitDir . 'vt_' . $ipHash . '.json';
+        $now      = time();
+        $window   = 60;   // 1 menit
+        $maxReq   = 30;   // maksimal 30 request per menit
+
+        $rateData = ['count' => 0, 'start' => $now];
+        if (file_exists($rateFile)) {
+            $decoded = json_decode(file_get_contents($rateFile), true);
+            if (is_array($decoded)) {
+                $rateData = $decoded;
+            }
+        }
+        // Reset window jika sudah lebih dari 1 menit
+        if (($now - $rateData['start']) > $window) {
+            $rateData = ['count' => 0, 'start' => $now];
+        }
+        $rateData['count']++;
+        file_put_contents($rateFile, json_encode($rateData), LOCK_EX);
+
+        if ($rateData['count'] > $maxReq) {
+            http_response_code(429);
+            echo '<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><title>Terlalu Banyak Permintaan</title></head><body>';
+            echo '<h1>429 Terlalu Banyak Permintaan</h1>';
+            echo '<p>Anda telah melakukan terlalu banyak permintaan. Silakan coba lagi dalam beberapa saat.</p>';
+            echo '</body></html>';
+            exit;
         }
 
-        $db = \App\Config\Database::getConnection();
-        
+        // ── 3. Validasi Format UUID v4 pada parameter ?id= ─────────────────────
+        $id = trim($_GET['id'] ?? '');
+        $uuidPattern = '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i';
+        if (empty($id) || !preg_match($uuidPattern, $id)) {
+            http_response_code(400);
+            echo '<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><title>Permintaan Tidak Valid</title></head><body>';
+            echo '<h1>400 Permintaan Tidak Valid</h1>';
+            echo '<p>Parameter ID yang diberikan tidak valid.</p>';
+            echo '</body></html>';
+            exit;
+        }
+
+        // ── 4. Ambil data siswa via Prepared Statement (sudah aman dari SQLi) ──
+        try {
+            $db = \App\Config\Database::getConnection();
+        } catch (\Throwable $e) {
+            http_response_code(500);
+            echo '<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><title>Kesalahan Sistem</title></head><body>';
+            echo '<h1>500 Kesalahan Sistem</h1><p>Terjadi kesalahan pada server. Silakan coba lagi.</p>';
+            echo '</body></html>';
+            exit;
+        }
+
         $siswaModel = new \App\Models\Siswa(null);
         $siswa = $siswaModel->findFullById($id);
 
         if (!$siswa) {
-            die("<h1>Not Found</h1><p>Data siswa tidak ditemukan.</p>");
+            http_response_code(404);
+            echo '<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><title>Data Tidak Ditemukan</title></head><body>';
+            echo '<h1>404 Data Tidak Ditemukan</h1>';
+            echo '<p>Dokumen verifikasi tidak ditemukan atau sudah tidak aktif.</p>';
+            echo '</body></html>';
+            exit;
         }
 
+        // ── 5. Ambil info tenant ────────────────────────────────────────────────
         try {
-            $stmtTenant = $db->prepare("SELECT nama_sekolah, npsn, alamat, kecamatan, kabupaten_kota, provinsi, nama_kepsek, nip_kepsek FROM tenants WHERE id = ?");
+            $stmtTenant = $db->prepare(
+                "SELECT nama_sekolah, npsn, alamat, kecamatan, kabupaten_kota, provinsi, nama_kepsek, nip_kepsek
+                 FROM tenants WHERE id = ? LIMIT 1"
+            );
             $stmtTenant->execute([$siswa['tenant_id']]);
-            $siswa['tenant_info'] = $stmtTenant->fetch(PDO::FETCH_ASSOC);
+            $siswa['tenant_info'] = $stmtTenant->fetch(PDO::FETCH_ASSOC) ?: [];
         } catch (\Throwable $e) {
             $siswa['tenant_info'] = [];
         }
 
-        $gradesRaw = [];
+        // ── 6. Ambil transkrip nilai ────────────────────────────────────────────
         try {
             $stmt = $db->prepare("
-                SELECT d.*, m.nama_mapel, m.kelompok 
-                FROM detail_nilai_rapor d 
-                JOIN mata_pelajaran m ON d.mapel_id = m.id 
-                WHERE d.siswa_id = ? AND d.deleted_at IS NULL 
+                SELECT d.nilai_akhir, d.semester, d.tahun_ajaran, m.nama_mapel, m.kelompok
+                FROM detail_nilai_rapor d
+                JOIN mata_pelajaran m ON d.mapel_id = m.id
+                WHERE d.siswa_id = ? AND d.deleted_at IS NULL
                 ORDER BY m.kelompok ASC, m.nama_mapel ASC, d.tahun_ajaran ASC, d.semester ASC
             ");
             $stmt->execute([$id]);
-            $gradesRaw = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $siswa['transkrip_grades'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Throwable $e) {
-            // Ignore
+            $siswa['transkrip_grades'] = [];
         }
-        $siswa['transkrip_grades'] = $gradesRaw;
+
+        // ── 7. Hapus kolom sensitif sebelum dikirim ke view ────────────────────
+        $sensitiveKeys = ['password', 'token', 'api_key', 'nik', 'no_kk', 'nama_ibu', 'nama_ayah'];
+        foreach ($sensitiveKeys as $key) {
+            unset($siswa[$key]);
+        }
 
         require __DIR__ . '/../../views/verify_transkrip.php';
         exit;
