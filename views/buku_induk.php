@@ -2474,12 +2474,12 @@
                 capturedAlumniImages: [],
                 capturedAlumniImageUrls: [],
                 userRole: '<?php echo htmlspecialchars($user_role ?? ""); ?>',
-                listTenants: <?php echo json_encode($tenantList ?? [], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>,
+                listTenants: [],
                 tempFilterTenantId: '',
                 filterTenantId: '', 
-                jenjangOptions: <?php echo json_encode($jenjangList ?? [], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>,
+                jenjangOptions: [],
                 filterJenjang: '',
-                kelasOptions: <?php echo json_encode($kelasList ?? [], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>,
+                kelasOptions: [],
                 filterKelas: '',
                 filterStatus: '',
                 filterTahunAjaranCetak: '',
@@ -2573,11 +2573,23 @@
                 })
             };
         },
-        mounted() {
+        async mounted() {
             this.detailModalObj = new bootstrap.Modal(document.getElementById('detailModal'));
             this.copyModalObj = new bootstrap.Modal(document.getElementById('copyKurikulumModal'));
             this.importModalObj = new bootstrap.Modal(document.getElementById('importNilaiModal'));
             this.detailNilaiModalObj = new bootstrap.Modal(document.getElementById('modalInputDetailNilai'));
+            
+            // Load options via AJAX
+            try {
+                const response = await axios.get('/SINTA-SaaS/api/v1/buku-induk?action=get_options');
+                if (response.data && response.data.success) {
+                    this.listTenants = response.data.tenantList || [];
+                    this.jenjangOptions = response.data.jenjangList || [];
+                    this.kelasOptions = response.data.kelasList || [];
+                }
+            } catch (err) {
+                console.error("Gagal memuat opsi filter buku induk:", err);
+            }
             
             // Bersihkan data sampah dari tenant lain jika Super Admin belum memilih sekolah
             if (this.userRole === 'super_admin' && !this.filterTenantId) {

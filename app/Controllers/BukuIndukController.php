@@ -88,6 +88,48 @@ class BukuIndukController extends BaseController {
         $tenantId = SessionManager::getTenantId();
         $filterTenant = isset($_GET['filter_tenant_id']) ? trim($_GET['filter_tenant_id']) : '';
 
+        if (isset($_GET['action']) && $_GET['action'] === 'get_options') {
+            $q = "SELECT id, nama_kelas, id_jenjang FROM kelas WHERE is_active = 1 AND deleted_at IS NULL";
+            if ($tenantId) {
+                $q .= " AND tenant_id = :tenant_id";
+            }
+            $q .= " ORDER BY nama_kelas ASC";
+            $stmt = $db->prepare($q);
+            if ($tenantId) {
+                $stmt->execute(['tenant_id' => $tenantId]);
+            } else {
+                $stmt->execute();
+            }
+            $kelasList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $qJenjang = "SELECT id, nama_jenjang FROM jenjang WHERE is_active = 1 AND deleted_at IS NULL";
+            if ($tenantId) {
+                $qJenjang .= " AND tenant_id = :tenant_id";
+            }
+            $qJenjang .= " ORDER BY nama_jenjang ASC";
+            $stmtJenjang = $db->prepare($qJenjang);
+            if ($tenantId) {
+                $stmtJenjang->execute(['tenant_id' => $tenantId]);
+            } else {
+                $stmtJenjang->execute();
+            }
+            $jenjangList = $stmtJenjang->fetchAll(PDO::FETCH_ASSOC);
+
+            $tenantList = [];
+            if (!$tenantId) {
+                $stmtTenant = $db->query("SELECT id, nama_sekolah FROM tenants WHERE deleted_at IS NULL ORDER BY nama_sekolah ASC");
+                $tenantList = $stmtTenant->fetchAll(PDO::FETCH_ASSOC);
+            }
+
+            $this->jsonResponse([
+                'success' => true,
+                'kelasList' => $kelasList,
+                'jenjangList' => $jenjangList,
+                'tenantList' => $tenantList
+            ]);
+            return;
+        }
+
         // Guard against Super Admin requesting data without a school filter context
         if (empty($tenantId) && empty($filterTenant)) {
             $this->jsonResponse([
