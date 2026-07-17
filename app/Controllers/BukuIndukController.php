@@ -1888,28 +1888,24 @@ class BukuIndukController extends BaseController {
             exit;
         }
 
-        // ── 5. Buat One-Time Session Token untuk AJAX request ──────────────────
-        // Data TIDAK dikirim ke view — hanya token + siswa_id yang disimpan di session
+        // ── 5. Buat One-Time Session untuk AJAX request ────────────────────────
+        // Data TIDAK dikirim ke view — hanya siswa_id yang disimpan di session
         if (session_status() !== PHP_SESSION_ACTIVE) {
             session_start();
         }
-        $token = bin2hex(random_bytes(32)); // 64-char hex token
-        $_SESSION['vt_token']    = $token;
         $_SESSION['vt_siswa_id'] = $id;
-        $_SESSION['vt_expires']  = time() + 300; // Token valid 5 menit
+        $_SESSION['vt_expires']  = time() + 300; // valid 5 menit
 
-        // ── 6. Render skeleton HTML (TANPA DATA dari DB) ────────────────────────
-        // Token dikirim ke view hanya untuk digunakan sekali oleh AJAX call
-        $pageToken = htmlspecialchars($token, ENT_QUOTES, 'UTF-8');
+        // ── 6. Render skeleton HTML (TANPA DATA dari DB dan TANPA TOKEN) ───────
         require __DIR__ . '/../../views/verify_transkrip.php';
         exit;
     }
 
     /**
-     * API: Ambil data verifikasi transkrip via AJAX (One-Time Token)
+     * API: Ambil data verifikasi transkrip via AJAX (Session-Based)
      * GET /api/v1/verify-transkrip/data
-     * Data hanya dikembalikan jika token valid dan belum expired.
-     * Setelah dikonsumsi, token langsung dihapus dari session (one-time use).
+     * Data hanya dikembalikan jika session valid dan belum expired.
+     * Setelah dikonsumsi, session langsung dimusnahkan (one-time data load).
      */
     public function verifyTranskripApi(): void {
         // ── Security Headers untuk API ─────────────────────────────────────────
@@ -1949,28 +1945,20 @@ class BukuIndukController extends BaseController {
             exit;
         }
 
-        // ── Validasi Session & One-Time Token ────────────────────────────────────
+        // ── Validasi Session Murni ──────────────────────────────────────────────
         if (session_status() !== PHP_SESSION_ACTIVE) {
             session_start();
         }
 
-        $requestToken = trim($_GET['token'] ?? '');
-        $sessionToken = $_SESSION['vt_token']    ?? '';
-        $siswaId      = $_SESSION['vt_siswa_id'] ?? '';
-        $expires      = $_SESSION['vt_expires']  ?? 0;
+        $siswaId = $_SESSION['vt_siswa_id'] ?? '';
+        $expires = $_SESSION['vt_expires']  ?? 0;
 
-        // Hapus token dari session SEGERA (one-time use — tidak bisa dipakai ulang)
-        unset($_SESSION['vt_token'], $_SESSION['vt_siswa_id'], $_SESSION['vt_expires']);
+        // Hapus session SEGERA (one-time use)
+        unset($_SESSION['vt_siswa_id'], $_SESSION['vt_expires']);
 
-        if (
-            empty($requestToken) ||
-            empty($sessionToken) ||
-            !hash_equals($sessionToken, $requestToken) ||
-            time() > $expires ||
-            empty($siswaId)
-        ) {
+        if (empty($siswaId) || time() > $expires) {
             http_response_code(403);
-            echo json_encode(['success' => false, 'error' => 'Token tidak valid atau sudah kedaluwarsa.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            echo json_encode(['success' => false, 'error' => 'Sesi verifikasi tidak valid atau sudah kedaluwarsa.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
             exit;
         }
 

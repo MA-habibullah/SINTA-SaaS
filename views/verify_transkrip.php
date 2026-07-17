@@ -114,94 +114,8 @@ $token = $pageToken ?? '';
                         </a>
                     </div>
 
-                    <!-- Main Data View (Hidden initially) -->
-                    <div id="dataView" class="d-none">
-                        <!-- Verification Status Header -->
-                        <div class="text-center mb-5">
-                            <div class="badge-verified mb-3">
-                                <i class="bi bi-patch-check-fill fs-5"></i>
-                                <span>DOKUMEN TERVERIFIKASI ASLI</span>
-                            </div>
-                            <h2 class="fw-bold text-dark fs-4">Hasil Verifikasi Data Siswa</h2>
-                            <p class="text-muted fs-7">Seluruh data yang ditampilkan di bawah ini telah dicocokkan langsung secara real-time dengan database server sekolah SINTA-SaaS.</p>
-                        </div>
-
-                        <!-- Student Profile Section -->
-                        <h4 class="fw-bold text-dark border-bottom pb-2 mb-4 fs-6">
-                            <i class="bi bi-person-badge text-primary me-2"></i>Identitas Peserta Didik
-                        </h4>
-
-                        <div class="row g-4 mb-4">
-                            <div class="col-12 col-md-6">
-                                <div class="detail-label">Nama Lengkap Siswa</div>
-                                <div class="detail-value text-primary" id="valNama">-</div>
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <div class="detail-label">NISN / NIS</div>
-                                <div class="detail-value" id="valNisnNis">-</div>
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <div class="detail-label">Tempat, Tanggal Lahir</div>
-                                <div class="detail-value" id="valTtl">-</div>
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <div class="detail-label">Jenis Kelamin / Agama</div>
-                                <div class="detail-value" id="valJkAgama">-</div>
-                            </div>
-                            <div class="col-12">
-                                <div class="detail-label">Sekolah Penerbit Dokumen</div>
-                                <div class="detail-value text-success" id="valSekolah">-</div>
-                            </div>
-                        </div>
-
-                        <div class="divider-dashed"></div>
-
-                        <!-- Grades Transcript Summary Section -->
-                        <h4 class="fw-bold text-dark border-bottom pb-2 mb-4 fs-6">
-                            <i class="bi bi-journal-bookmark-fill text-primary me-2"></i>Ringkasan Transkrip Nilai Akademik
-                        </h4>
-
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-hover align-middle table-grades">
-                                <thead>
-                                    <tr class="text-center">
-                                        <th rowspan="2" width="5%" class="align-middle">No</th>
-                                        <th rowspan="2" class="text-start align-middle">Mata Pelajaran</th>
-                                        <th colspan="6">Nilai Rapor Smt</th>
-                                        <th rowspan="2" width="10%" class="align-middle">US</th>
-                                        <th rowspan="2" width="12%" class="align-middle">Nilai Sekolah</th>
-                                    </tr>
-                                    <tr class="text-center">
-                                        <th width="7%">1</th>
-                                        <th width="7%">2</th>
-                                        <th width="7%">3</th>
-                                        <th width="7%">4</th>
-                                        <th width="7%">5</th>
-                                        <th width="7%">6</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tableBody">
-                                    <!-- Rendered dynamically -->
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div class="divider-dashed"></div>
-
-                        <!-- Footer Info -->
-                        <div class="row align-items-center">
-                            <div class="col-12 col-md-8 text-center text-md-start mb-3 mb-md-0">
-                                <p class="text-muted fs-8 mb-0">
-                                    <i class="bi bi-info-circle me-1"></i>Halaman ini diterbitkan sebagai sarana legalitas digital untuk memvalidasi kesesuaian data fisik dengan database SINTA-SaaS secara langsung.
-                                </p>
-                            </div>
-                            <div class="col-12 col-md-4 text-center text-md-end">
-                                <a href="javascript:window.print()" class="btn btn-outline-primary btn-sm rounded-pill px-3">
-                                    <i class="bi bi-printer me-1"></i> Cetak Halaman Ini
-                                </a>
-                            </div>
-                        </div>
-                    </div>
+                    <!-- Main Data View (Akan dimasukkan secara dinamis oleh JavaScript jika verifikasi sukses) -->
+                    <div id="dataViewContainer"></div>
 
                 </div>
                 
@@ -219,13 +133,7 @@ $token = $pageToken ?? '';
         (function() {
             document.getElementById('valYear').innerText = new Date().getFullYear();
             
-            const token = '<?= $token ?>';
-            if (!token) {
-                showError('Akses Ditolak', 'Token keamanan halaman tidak terdeteksi.');
-                return;
-            }
-
-            fetch('/SINTA-SaaS/api/v1/verify-transkrip/data?token=' + encodeURIComponent(token))
+            fetch('/SINTA-SaaS/api/v1/verify-transkrip/data')
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Response error dengan status ' + response.status);
@@ -244,17 +152,13 @@ $token = $pageToken ?? '';
 
             function showError(title, message) {
                 document.getElementById('loadingView').classList.add('d-none');
-                document.getElementById('dataView').classList.add('d-none');
+                document.getElementById('dataViewContainer').innerHTML = '';
                 document.getElementById('errorTitle').innerText = title;
                 document.getElementById('errorText').innerText = message;
                 document.getElementById('errorView').classList.remove('d-none');
             }
 
             function renderData(siswa) {
-                // Render Profile
-                document.getElementById('valNama').innerText = siswa.nama_lengkap || '-';
-                document.getElementById('valNisnNis').innerText = (siswa.nisn || '-') + ' / ' + (siswa.nis || '-');
-                
                 let ttl = '-';
                 if (siswa.tempat_lahir) {
                     ttl = siswa.tempat_lahir;
@@ -267,13 +171,9 @@ $token = $pageToken ?? '';
                         }
                     }
                 }
-                document.getElementById('valTtl').innerText = ttl;
                 
                 const jk = siswa.jenis_kelamin === 'L' ? 'Laki-laki' : (siswa.jenis_kelamin === 'P' ? 'Perempuan' : '-');
-                document.getElementById('valJkAgama').innerText = jk + ' / ' + (siswa.agama || '-');
-                
                 const tenant = siswa.tenant_info || {};
-                document.getElementById('valSekolah').innerText = (tenant.nama_sekolah || '-') + ' (NPSN: ' + (tenant.npsn || '-') + ')';
 
                 // Process Grades
                 const transkrip = {};
@@ -330,41 +230,128 @@ $token = $pageToken ?? '';
                     }
                 });
 
-                // Render Table
-                const tbody = document.getElementById('tableBody');
-                tbody.innerHTML = '';
-                
+                // Generate table rows HTML
+                let tableRowsHtml = '';
                 if (subjectNames.length > 0) {
                     let no = 1;
                     subjectNames.forEach(name => {
                         const d = transkrip[name];
-                        const tr = document.createElement('tr');
-                        
-                        tr.innerHTML = `
-                            <td class="text-center text-muted">${no++}</td>
-                            <td class="fw-semibold text-dark">${escapeHtml(name)}</td>
-                            <td class="text-center">${d.s1}</td>
-                            <td class="text-center">${d.s2}</td>
-                            <td class="text-center">${d.s3}</td>
-                            <td class="text-center">${d.s4}</td>
-                            <td class="text-center">${d.s5}</td>
-                            <td class="text-center">${d.s6}</td>
-                            <td class="text-center text-primary fw-semibold">${d.us}</td>
-                            <td class="text-center bg-light fw-bold text-success fs-7">${d.ns}</td>
+                        tableRowsHtml += `
+                            <tr>
+                                <td class="text-center text-muted">${no++}</td>
+                                <td class="fw-semibold text-dark">${escapeHtml(name)}</td>
+                                <td class="text-center">${d.s1}</td>
+                                <td class="text-center">${d.s2}</td>
+                                <td class="text-center">${d.s3}</td>
+                                <td class="text-center">${d.s4}</td>
+                                <td class="text-center">${d.s5}</td>
+                                <td class="text-center">${d.s6}</td>
+                                <td class="text-center text-primary fw-semibold">${d.us}</td>
+                                <td class="text-center bg-light fw-bold text-success fs-7">${d.ns}</td>
+                            </tr>
                         `;
-                        tbody.appendChild(tr);
                     });
                 } else {
-                    tbody.innerHTML = `
+                    tableRowsHtml = `
                         <tr>
                             <td colspan="10" class="text-center text-muted py-4">Tidak ada data transkrip nilai terdaftar.</td>
                         </tr>
                     `;
                 }
 
-                // Switch views
+                // Construct full HTML
+                const fullHtml = `
+                    <div id="dataView">
+                        <!-- Verification Status Header -->
+                        <div class="text-center mb-5">
+                            <div class="badge-verified mb-3">
+                                <i class="bi bi-patch-check-fill fs-5"></i>
+                                <span>DOKUMEN TERVERIFIKASI ASLI</span>
+                            </div>
+                            <h2 class="fw-bold text-dark fs-4">Hasil Verifikasi Data Siswa</h2>
+                            <p class="text-muted fs-7">Seluruh data yang ditampilkan di bawah ini telah dicocokkan langsung secara real-time dengan database server sekolah SINTA-SaaS.</p>
+                        </div>
+
+                        <!-- Student Profile Section -->
+                        <h4 class="fw-bold text-dark border-bottom pb-2 mb-4 fs-6">
+                            <i class="bi bi-person-badge text-primary me-2"></i>Identitas Peserta Didik
+                        </h4>
+
+                        <div class="row g-4 mb-4">
+                            <div class="col-12 col-md-6">
+                                <div class="detail-label">Nama Lengkap Siswa</div>
+                                <div class="detail-value text-primary">${escapeHtml(siswa.nama_lengkap || '-')}</div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="detail-label">NISN / NIS</div>
+                                <div class="detail-value">${escapeHtml(siswa.nisn || '-')} / ${escapeHtml(siswa.nis || '-')}</div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="detail-label">Tempat, Tanggal Lahir</div>
+                                <div class="detail-value">${escapeHtml(ttl)}</div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="detail-label">Jenis Kelamin / Agama</div>
+                                <div class="detail-value">${escapeHtml(jk)} / ${escapeHtml(siswa.agama || '-')}</div>
+                            </div>
+                            <div class="col-12">
+                                <div class="detail-label">Sekolah Penerbit Dokumen</div>
+                                <div class="detail-value text-success">${escapeHtml(tenant.nama_sekolah || '-')} (NPSN: ${escapeHtml(tenant.npsn || '-')})</div>
+                            </div>
+                        </div>
+
+                        <div class="divider-dashed"></div>
+
+                        <!-- Grades Transcript Summary Section -->
+                        <h4 class="fw-bold text-dark border-bottom pb-2 mb-4 fs-6">
+                            <i class="bi bi-journal-bookmark-fill text-primary me-2"></i>Ringkasan Transkrip Nilai Akademik
+                        </h4>
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover align-middle table-grades">
+                                <thead>
+                                    <tr class="text-center">
+                                        <th rowspan="2" width="5%" class="align-middle">No</th>
+                                        <th rowspan="2" class="text-start align-middle">Mata Pelajaran</th>
+                                        <th colspan="6">Nilai Rapor Smt</th>
+                                        <th rowspan="2" width="10%" class="align-middle">US</th>
+                                        <th rowspan="2" width="12%" class="align-middle">Nilai Sekolah</th>
+                                    </tr>
+                                    <tr class="text-center">
+                                        <th width="7%">1</th>
+                                        <th width="7%">2</th>
+                                        <th width="7%">3</th>
+                                        <th width="7%">4</th>
+                                        <th width="7%">5</th>
+                                        <th width="7%">6</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    \${tableRowsHtml}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="divider-dashed"></div>
+
+                        <!-- Footer Info -->
+                        <div class="row align-items-center">
+                            <div class="col-12 col-md-8 text-center text-md-start mb-3 mb-md-0">
+                                <p class="text-muted fs-8 mb-0">
+                                    <i class="bi bi-info-circle me-1"></i>Halaman ini diterbitkan sebagai sarana legalitas digital untuk memvalidasi kesesuaian data fisik dengan database SINTA-SaaS secara langsung.
+                                </p>
+                            </div>
+                            <div class="col-12 col-md-4 text-center text-md-end">
+                                <a href="javascript:window.print()" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                                    <i class="bi bi-printer me-1"></i> Cetak Halaman Ini
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('dataViewContainer').innerHTML = fullHtml;
                 document.getElementById('loadingView').classList.add('d-none');
-                document.getElementById('dataView').classList.remove('d-none');
             }
 
             function escapeHtml(str) {
