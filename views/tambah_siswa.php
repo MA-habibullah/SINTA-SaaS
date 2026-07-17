@@ -12,14 +12,26 @@ $actionUrl = $isEdit ? '/SINTA-SaaS/siswa/update' : '/SINTA-SaaS/siswa/simpan';
 $formTitle = $isEdit ? 'Edit Data Siswa' : 'Tambah Siswa Baru';
 $idSiswa = $isEdit ? ($data['siswa']['id'] ?? '') : '';
 $siswaFullData = $isEdit ? $data['siswa'] : [];
-if ($isEdit && isset($siswaFullData['password'])) {
-    unset($siswaFullData['password']);
+if ($isEdit) {
+    if (is_array($siswaFullData)) {
+        unset($siswaFullData['password']);
+    } elseif (is_object($siswaFullData)) {
+        unset($siswaFullData->password);
+    }
 }
-if (isset($data['draft']['password'])) {
-    unset($data['draft']['password']);
+if (isset($data['draft'])) {
+    if (is_array($data['draft'])) {
+        unset($data['draft']['password']);
+    } elseif (is_object($data['draft'])) {
+        unset($data['draft']->password);
+    }
 }
-if (isset($data['old']['password'])) {
-    unset($data['old']['password']);
+if (isset($data['old'])) {
+    if (is_array($data['old'])) {
+        unset($data['old']['password']);
+    } elseif (is_object($data['old'])) {
+        unset($data['old']->password);
+    }
 }
 $kesehatanData = $isEdit ? ($data['kesehatan'] ?? []) : [];
 ?>

@@ -375,6 +375,9 @@ class SiswaController extends BaseController {
         $academicOptions = $this->getAcademicOptions(null);
 
         $draft = $_SESSION['siswa_draft'] ?? null;
+        if (is_array($draft) && isset($draft['password'])) {
+            unset($draft['password']);
+        }
 
         $data = [
             'title' => 'Tambah Siswa Baru',
@@ -420,6 +423,9 @@ class SiswaController extends BaseController {
         $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') || isset($_POST['ajax']);
 
         if (!empty($errors)) {
+            if (isset($input['password'])) {
+                unset($input['password']);
+            }
             if ($isAjax) {
                 header('Content-Type: application/json');
                 echo json_encode(['success' => false, 'errors' => $errors]);
@@ -530,6 +536,9 @@ class SiswaController extends BaseController {
         $siswa = $this->siswaModel->findFullById($id);
         if (!$siswa) {
             $this->redirectWithError('Data siswa tidak ditemukan atau Anda tidak memiliki akses.', '/SINTA-SaaS/pengguna');
+        }
+        if (is_array($siswa) && isset($siswa['password'])) {
+            unset($siswa['password']);
         }
 
         // Keamanan: Jika yang login adalah Siswa, dan status sudah Lulus/Pindah, kunci akses
@@ -709,6 +718,12 @@ class SiswaController extends BaseController {
         }
 
         if (!empty($errors)) {
+            if (is_array($siswa) && isset($siswa['password'])) {
+                unset($siswa['password']);
+            }
+            if (isset($input['password'])) {
+                unset($input['password']);
+            }
             if ($isAjax) {
                 header('Content-Type: application/json');
                 echo json_encode(['success' => false, 'errors' => $errors]);
