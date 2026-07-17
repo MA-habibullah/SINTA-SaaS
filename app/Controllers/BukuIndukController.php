@@ -2004,16 +2004,15 @@ class BukuIndukController extends BaseController {
 
             // Ambil transkrip nilai (hanya kolom yang diperlukan)
             $stmt = $db->prepare("
-                SELECT d.nilai_akhir, d.semester, d.tahun_ajaran, m.nama_mapel, m.kelompok
+                SELECT d.nilai_akhir, d.semester, d.tahun_ajaran, m.nama_mapel
                 FROM detail_nilai_rapor d
                 JOIN mata_pelajaran m ON d.mapel_id = m.id
                 WHERE d.siswa_id = ? AND d.deleted_at IS NULL
-                ORDER BY m.kelompok ASC, m.nama_mapel ASC, d.tahun_ajaran ASC, d.semester ASC
+                ORDER BY m.nama_mapel ASC, d.tahun_ajaran ASC, d.semester ASC
             ");
             $stmt->execute([$siswaId]);
             $siswa['transkrip_grades'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Hapus semua kolom sensitif sebelum dikembalikan ke client
             $sensitiveKeys = [
                 'password', 'token', 'api_key', 'nik', 'no_kk',
                 'nama_ibu', 'nama_ayah', 'email', 'no_hp',
@@ -2030,7 +2029,7 @@ class BukuIndukController extends BaseController {
             );
         } catch (\Throwable $e) {
             http_response_code(500);
-            echo json_encode(['success' => false, 'error' => 'Kesalahan sistem.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            echo json_encode(['success' => false, 'error' => 'Terjadi kesalahan sistem.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
         }
         exit;
     }
