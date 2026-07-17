@@ -2030,12 +2030,10 @@ class BukuIndukController extends BaseController {
             );
         } catch (\Throwable $e) {
             http_response_code(500);
-            echo json_encode(['success' => false, 'error' => 'Terjadi kesalahan sistem.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            echo json_encode(['success' => false, 'error' => 'Kesalahan sistem.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
         }
         exit;
     }
-
-
 
     private function renderOrGetArchive(string $siswaId, string $tenantId, string $filename, callable $renderCallback): void {
         $archiveDir = __DIR__ . "/../../storage/archive/{$tenantId}/{$siswaId}";
