@@ -1825,6 +1825,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
             // User Role dan Edit Status dari PHP
             const userRole = ref('<?= htmlspecialchars($data['user_role'] ?? "") ?>');
             const isEdit = ref(<?= $isEdit ? 'true' : 'false' ?>);
+            const idSiswa = <?= json_encode($idSiswa, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 
             // List options untuk Super Admin
             const listTenants = ref([]);
