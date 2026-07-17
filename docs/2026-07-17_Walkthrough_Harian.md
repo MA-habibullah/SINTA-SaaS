@@ -104,3 +104,37 @@ Aturan walkthrough di .agents/AGENTS.md diperbarui dari satu file per tugas menj
 **Jenis**: Configuration
 
 Aturan Implementation Plans di .agents/AGENTS.md diperbarui dari satu file terpisah per plan menjadi satu file gabungan per hari (YYYY-MM-DD_Implementation_Plans_Harian.md). Format entri standar: Waktu, Status (Draft/Disetujui/Dieksekusi), dan Deskripsi ringkas. File lama yang sudah ada di docs/ tidak disentuh.
+
+---
+## Hardening Keamanan Halaman Verifikasi Transkrip
+**Waktu**: 19:53 WIB
+**Jenis**: Security Fix
+
+**File diubah:** pp/Controllers/BukuIndukController.php method erifyTranskrip()
+
+**Perlindungan yang ditambahkan:**
+1. **Validasi UUID v4** — Parameter GET ?id= divalidasi dengan regex ketat /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i. Request dengan string non-UUID langsung ditolak dengan HTTP 400.
+2. **HTTP Security Headers** — 7 header keamanan: X-Content-Type-Options: nosniff, X-Frame-Options: DENY, X-XSS-Protection, Referrer-Policy, Content-Security-Policy (CSP), Cache-Control: no-store, Pragma: no-cache
+3. **Rate Limiting berbasis IP** — Max 30 request/menit per IP. Counter disimpan di storage/app/rate_limit/vt_{md5_ip}.json. Request melebihi batas mendapat HTTP 429.
+4. **Error Response Aman** — Ganti die() dengan http_response_code() + HTML response yang bersih tanpa mengekspos detail internal (400/404/429/500)
+5. **Penghapusan Data Sensitif** — unset() kolom password, 	oken, pi_key, 
+ik, 
+o_kk, 
+ama_ibu, 
+ama_ayah dari array $siswa sebelum dikirim ke view
+6. **Query SELECT lebih sempit** — Ganti SELECT d.* menjadi hanya kolom yang dibutuhkan di query transkrip nilai
+
+---
+## Zero Data Leakage Halaman Verifikasi Transkrip
+**Waktu**: 20:01 WIB
+**Jenis**: Security Fix
+
+**Masalah:** Data siswa dan transkrip nilai tercetak secara statis di HTML sumber Halaman Verifikasi Transkrip, memungkinkan pihak ketiga mengakses informasi sensitif secara langsung tanpa autentikasi / rate limit yang memadai (masalah kebocoran data).
+
+**Root Cause:** Halaman iews/verify_transkrip.php sebelumnya menggunakan inline PHP echo untuk memunculkan data nama, NISN, TTL, sekolah penerbit, dan transkrip nilai langsung ke dalam markup HTML halaman.
+
+**Perubahan yang dilakukan:**
+1. Mengubah routing utama di index.php untuk mendukung /api/v1/verify-transkrip/data.
+2. Mengubah logic erifyTranskrip() di pp/Controllers/BukuIndukController.php untuk membatasi query awal, menerbitkan One-Time Token (OTT) di session, dan hanya merender skeleton HTML.
+3. Menyediakan method API asinkron erifyTranskripApi() yang mengembalikan data siswa dan transkrip dalam format JSON setelah memverifikasi token OTT dan membersihkan data sensitif.
+4. Menulis ulang iews/verify_transkrip.php ke model AJAX Fetch menggunakan vanilla JavaScript fetch() agar data dirender secara dinamis di memori browser, menjaga HTML Page Source (Ctrl+U) dan tab Element Inspect tetap bersih dari kebocoran data database statis.
