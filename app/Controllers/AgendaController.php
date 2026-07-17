@@ -31,6 +31,77 @@ class AgendaController extends BaseController {
         $filterMonth = $_GET['month'] ?? date('Y-m');
         $isSuperAdmin = ($_SESSION['role_name'] === 'super_admin');
         $selectedTenant = $_GET['filter_tenant_id'] ?? '';
+
+        if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
+            $action = $_GET['action'] ?? '';
+            if ($action === 'get_agenda_data') {
+                $activeTenantId = $this->tenantId;
+                if ($isSuperAdmin && $selectedTenant !== '') {
+                    $activeTenantId = ($selectedTenant === 'global') ? null : $selectedTenant;
+                }
+                
+                $agendaModel = new AgendaModel($activeTenantId);
+                $agenda = $agendaModel->getAll();
+
+                $events = [];
+                $ganttTasks = [];
+                
+                if (!empty($agenda)) {
+                    foreach ($agenda as $a) {
+                        $events[] = [
+                            'id' => $a['id'],
+                            'title' => $a['judul'],
+                            'start' => $a['waktu_mulai'] ?? $a['tanggal_mulai'],
+                            'end' => $a['waktu_selesai'] ?? $a['tanggal_selesai'],
+                            'backgroundColor' => $a['kode_warna'] ?? '#0b5ed7',
+                            'borderColor' => $a['kode_warna'] ?? '#0b5ed7',
+                            'extendedProps' => [
+                                'fullData' => $a
+                            ]
+                        ];
+                    }
+
+                    // Batasi rentang waktu maksimal 6 bulan ke depan dari bulan berjalan
+                    $startLimit = date('Y-m-01', strtotime('-1 month')); // Toleransi 1 bulan ke belakang
+                    $endLimit = date('Y-m-t', strtotime('+5 months'));   // Total 6 bulan ke depan
+
+                    foreach ($agenda as $a) {
+                        $start = date('Y-m-d', strtotime($a['waktu_mulai'] ?? $a['tanggal_mulai']));
+                        $end = date('Y-m-d', strtotime($a['waktu_selesai'] ?? $a['tanggal_selesai'] ?? $start));
+                        
+                        // Skip jika kegiatan berada di luar rentang 6 bulan
+                        if ($start > $endLimit || $end < $startLimit) {
+                            continue;
+                        }
+
+                        // Frappe Gantt requires end date > start date
+                        if ($end <= $start) {
+                            $end = date('Y-m-d', strtotime($start . ' + 1 day'));
+                        }
+
+                        // Potong tampilan chart visual jika melebihi batas 6 bulan
+                        $displayStart = ($start < $startLimit) ? $startLimit : $start;
+                        $displayEnd = ($end > $endLimit) ? $endLimit : $end;
+
+                        $ganttTasks[] = [
+                            'id' => 'Task_' . $a['id'],
+                            'name' => $a['judul'],
+                            'start' => $displayStart,
+                            'end' => $displayEnd,
+                            'progress' => 100,
+                            'custom_class' => 'gantt-' . str_replace('#', '', $a['kode_warna'] ?? '#0b5ed7')
+                        ];
+                    }
+                }
+
+                $this->jsonResponse([
+                    'success' => true,
+                    'events' => $events,
+                    'ganttTasks' => $ganttTasks
+                ]);
+                return;
+            }
+        }
         
         $db = \App\Config\Database::getConnection();
         $tenants = [];

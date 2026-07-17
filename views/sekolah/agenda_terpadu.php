@@ -919,173 +919,129 @@ function initAgendaTerpadu() {
         });
     }
 
-    <?php
-    $events = [];
-    $ganttTasks = [];
-    if (!empty($agenda)) {
-        foreach ($agenda as $a) {
-            $events[] = [
-                'id' => $a['id'],
-                'title' => $a['judul'],
-                'start' => $a['waktu_mulai'] ?? $a['tanggal_mulai'],
-                'end' => $a['waktu_selesai'] ?? $a['tanggal_selesai'],
-                'backgroundColor' => $a['kode_warna'] ?? '#0b5ed7',
-                'borderColor' => $a['kode_warna'] ?? '#0b5ed7',
-                'extendedProps' => [
-                    'fullData' => $a
-                ]
-            ];
-        }
-    }
-    
-    if (!empty($agenda)) {
-        // Batasi rentang waktu maksimal 6 bulan ke depan dari bulan berjalan
-        $startLimit = date('Y-m-01', strtotime('-1 month')); // Toleransi 1 bulan ke belakang
-        $endLimit = date('Y-m-t', strtotime('+5 months'));   // Total 6 bulan ke depan
+    // Fetch dynamic events and tasks via AJAX
+    const filterTenantId = '<?= $selectedTenant ?>';
+    axios.get(`/SINTA-SaaS/sekolah/agenda?ajax=1&action=get_agenda_data&filter_tenant_id=${filterTenantId}`)
+        .then(response => {
+            if (response.data && response.data.success) {
+                const events = response.data.events || [];
+                const tasks = response.data.ganttTasks || [];
 
-        foreach ($agenda as $a) {
-            $start = date('Y-m-d', strtotime($a['waktu_mulai'] ?? $a['tanggal_mulai']));
-            $end = date('Y-m-d', strtotime($a['waktu_selesai'] ?? $a['tanggal_selesai'] ?? $start));
-            
-            // Skip jika kegiatan berada di luar rentang 6 bulan
-            if ($start > $endLimit || $end < $startLimit) {
-                continue;
-            }
-
-            // Frappe Gantt requires end date > start date
-            if ($end <= $start) {
-                $end = date('Y-m-d', strtotime($start . ' + 1 day'));
-            }
-
-            // Potong tampilan chart visual jika melebihi batas 6 bulan agar grafik tidak terlalu panjang
-            $displayStart = ($start < $startLimit) ? $startLimit : $start;
-            $displayEnd = ($end > $endLimit) ? $endLimit : $end;
-
-            $ganttTasks[] = [
-                'id' => 'Task_' . $a['id'],
-                'name' => $a['judul'],
-                'start' => $displayStart,
-                'end' => $displayEnd,
-                'progress' => 100,
-                'custom_class' => 'gantt-' . str_replace('#', '', $a['kode_warna'] ?? '#0b5ed7')
-            ];
-        }
-    }
-
-    ?>
-    
-    // Setup FullCalendar (Cegah inisialisasi ganda)
-    var calendarEl = document.getElementById('calendar');
-    if (calendarEl && !calendarEl.classList.contains('fc')) {
-        var calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
-            initialDate: '<?= $filterMonth ?>-01',
-            headerToolbar: {
-                left: 'prev,next',
-                center: 'title',
-                right: 'today'
-            },
-            height: 600, // Make it taller for full width
-            events: <?= json_encode($events, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
-            dateClick: function(info) {
-                var dateStr = info.dateStr;
-                document.getElementById('agendaDetailTitle').innerText = 'Kegiatan Tanggal ' + dateStr;
-                
-                var filtered = calendar.getEvents().filter(e => {
-                    var start = e.startStr.split('T')[0];
-                    var end = e.endStr ? e.endStr.split('T')[0] : start;
-                    return dateStr >= start && dateStr <= end;
-                });
-                
-                var bodyHtml = '';
-                if (filtered.length === 0) {
-                    bodyHtml = '<div class="text-center py-4 text-muted"><i class="bi bi-calendar-x fs-1 opacity-50 mb-2 d-block"></i><p class="mb-0">Tidak ada kegiatan pada tanggal ini.</p></div>';
-                } else {
-                    bodyHtml = '<div class="list-group list-group-flush">';
-                    filtered.forEach(e => {
-                        bodyHtml += '<div class="list-group-item px-0 border-bottom-0 mb-3 rounded-3 p-3 shadow-sm" style="border-left: 4px solid '+e.backgroundColor+' !important; background-color: #f8f9fa;">';
-                        bodyHtml += '<h6 class="fw-bold mb-1">'+e.title+'</h6>';
-                        if (e.extendedProps && e.extendedProps.fullData) {
-                            if (e.extendedProps.fullData.lokasi) {
-                                bodyHtml += '<small class="text-muted d-block mt-1"><i class="bi bi-geo-alt me-1 text-danger"></i>'+e.extendedProps.fullData.lokasi+'</small>';
+                // Setup FullCalendar (Cegah inisialisasi ganda)
+                var calendarEl = document.getElementById('calendar');
+                if (calendarEl && !calendarEl.classList.contains('fc')) {
+                    var calendar = new FullCalendar.Calendar(calendarEl, {
+                        initialView: 'dayGridMonth',
+                        initialDate: '<?= $filterMonth ?>-01',
+                        headerToolbar: {
+                            left: 'prev,next',
+                            center: 'title',
+                            right: 'today'
+                        },
+                        height: 600, // Make it taller for full width
+                        events: events,
+                        dateClick: function(info) {
+                            var dateStr = info.dateStr;
+                            document.getElementById('agendaDetailTitle').innerText = 'Kegiatan Tanggal ' + dateStr;
+                            
+                            var filtered = calendar.getEvents().filter(e => {
+                                var start = e.startStr.split('T')[0];
+                                var end = e.endStr ? e.endStr.split('T')[0] : start;
+                                return dateStr >= start && dateStr <= end;
+                            });
+                            
+                            var bodyHtml = '';
+                            if (filtered.length === 0) {
+                                bodyHtml = '<div class="text-center py-4 text-muted"><i class="bi bi-calendar-x fs-1 opacity-50 mb-2 d-block"></i><p class="mb-0">Tidak ada kegiatan pada tanggal ini.</p></div>';
+                            } else {
+                                bodyHtml = '<div class="list-group list-group-flush">';
+                                filtered.forEach(e => {
+                                    bodyHtml += '<div class="list-group-item px-0 border-bottom-0 mb-3 rounded-3 p-3 shadow-sm" style="border-left: 4px solid '+e.backgroundColor+' !important; background-color: #f8f9fa;">';
+                                    bodyHtml += '<h6 class="fw-bold mb-1">'+e.title+'</h6>';
+                                    if (e.extendedProps && e.extendedProps.fullData) {
+                                        if (e.extendedProps.fullData.lokasi) {
+                                            bodyHtml += '<small class="text-muted d-block mt-1"><i class="bi bi-geo-alt me-1 text-danger"></i>'+e.extendedProps.fullData.lokasi+'</small>';
+                                        }
+                                        if (e.extendedProps.fullData.nama_pic) {
+                                            bodyHtml += '<small class="text-muted d-block mt-1"><i class="bi bi-person me-1 text-primary"></i>PIC: '+e.extendedProps.fullData.nama_pic+'</small>';
+                                        }
+                                    }
+                                    bodyHtml += '</div>';
+                                });
+                                bodyHtml += '</div>';
                             }
-                            if (e.extendedProps.fullData.nama_pic) {
-                                bodyHtml += '<small class="text-muted d-block mt-1"><i class="bi bi-person me-1 text-primary"></i>PIC: '+e.extendedProps.fullData.nama_pic+'</small>';
+                            document.getElementById('agendaDetailBody').innerHTML = bodyHtml;
+                            
+                            document.getElementById('btnTambahDariDetail').onclick = function() {
+                                var detailModal = bootstrap.Modal.getInstance(document.getElementById('agendaDetailModal'));
+                                if (detailModal) detailModal.hide();
+                                
+                                document.getElementById('a_waktu_mulai').value = dateStr + 'T08:00';
+                                var addModal = new bootstrap.Modal(document.getElementById('addAgendaModal'));
+                                addModal.show();
+                            };
+                            
+                            var dModal = new bootstrap.Modal(document.getElementById('agendaDetailModal'));
+                            dModal.show();
+                        },
+                        eventClick: function(info) {
+                            let data = info.event.extendedProps.fullData;
+                            if (data) {
+                                editAgenda(data);
                             }
                         }
-                        bodyHtml += '</div>';
                     });
-                    bodyHtml += '</div>';
-                }
-                document.getElementById('agendaDetailBody').innerHTML = bodyHtml;
-                
-                document.getElementById('btnTambahDariDetail').onclick = function() {
-                    var detailModal = bootstrap.Modal.getInstance(document.getElementById('agendaDetailModal'));
-                    if (detailModal) detailModal.hide();
                     
-                    document.getElementById('a_waktu_mulai').value = dateStr + 'T08:00';
-                    var addModal = new bootstrap.Modal(document.getElementById('addAgendaModal'));
-                    addModal.show();
-                };
-                
-                var dModal = new bootstrap.Modal(document.getElementById('agendaDetailModal'));
-                dModal.show();
-            },
-            eventClick: function(info) {
-                let data = info.event.extendedProps.fullData;
-                if (data) {
-                    editAgenda(data);
+                    // Langsung render saat inisialisasi
+                    calendar.render();
+                    
+                    document.getElementById('kalender-tab').addEventListener('shown.bs.tab', function () {
+                        calendar.updateSize();
+                    });
+                    
+                    // Timeout yang lebih panjang untuk memastikan DOM benar-benar siap
+                    setTimeout(function() {
+                        calendar.updateSize();
+                        calendar.render();
+                    }, 500);
+                    
+                    window.addEventListener('load', function() {
+                        calendar.updateSize();
+                    });
+                }
+
+                // Setup Frappe Gantt (Cegah inisialisasi ganda)
+                var ganttTarget = document.getElementById('gantt-target');
+                if (tasks && tasks.length > 0 && ganttTarget && ganttTarget.innerHTML.trim() === '') {
+                    var gantt = new Gantt("#gantt-target", tasks, {
+                        header_height: 50,
+                        column_width: 30,
+                        step: 24,
+                        view_modes: ['Quarter Day', 'Half Day', 'Day', 'Week', 'Month'],
+                        bar_height: 25,
+                        bar_corner_radius: 5,
+                        arrow_curve: 5,
+                        padding: 18,
+                        view_mode: 'Day',   
+                        date_format: 'YYYY-MM-DD',
+                        custom_popup_html: function(task) {
+                            return `
+                            <div class="p-2" style="background:#fff; border-radius:5px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                                <h6 class="mb-1 fw-bold">${task.name}</h6>
+                                <small class="text-muted">${task.start} - ${task.end}</small>
+                            </div>`;
+                        }
+                    });
+                    // Automatically scroll to today or start
+                    if (document.querySelector('.gantt-container')) {
+                        document.querySelector('.gantt-container').scrollLeft = 0;
+                    }
                 }
             }
+        })
+        .catch(err => {
+            console.error("Gagal memuat data agenda:", err);
         });
-        
-        // Langsung render saat inisialisasi
-        calendar.render();
-        
-        document.getElementById('kalender-tab').addEventListener('shown.bs.tab', function () {
-            calendar.updateSize();
-        });
-        
-        // Timeout yang lebih panjang untuk memastikan DOM benar-benar siap
-        setTimeout(function() {
-            calendar.updateSize();
-            calendar.render();
-        }, 500);
-        
-        window.addEventListener('load', function() {
-            calendar.updateSize();
-        });
-    }
-    
-    // Setup Frappe Gantt (Cegah inisialisasi ganda)
-    var ganttTarget = document.getElementById('gantt-target');
-    var tasks = <?= json_encode($ganttTasks, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-    
-    if (tasks && tasks.length > 0 && ganttTarget && ganttTarget.innerHTML.trim() === '') {
-        var gantt = new Gantt("#gantt-target", tasks, {
-            header_height: 50,
-            column_width: 30,
-            step: 24,
-            view_modes: ['Quarter Day', 'Half Day', 'Day', 'Week', 'Month'],
-            bar_height: 25,
-            bar_corner_radius: 5,
-            arrow_curve: 5,
-            padding: 18,
-            view_mode: 'Day',   
-            date_format: 'YYYY-MM-DD',
-            custom_popup_html: function(task) {
-                return `
-                <div class="p-2" style="background:#fff; border-radius:5px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                    <h6 class="mb-1 fw-bold">${task.name}</h6>
-                    <small class="text-muted">${task.start} - ${task.end}</small>
-                </div>`;
-            }
-        });
-        // Automatically scroll to today or start
-        if (document.querySelector('.gantt-container')) {
-            document.querySelector('.gantt-container').scrollLeft = 0;
-        }
-    }
     
     // Inisialisasi Simple DataTables pada Daftar Agenda
     if (document.getElementById('agendaTable') && typeof simpleDatatables !== 'undefined') {
