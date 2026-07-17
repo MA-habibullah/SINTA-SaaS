@@ -477,33 +477,55 @@
 <!-- Vue App Registration Script -->
 <script>
 {
-    const { ref, reactive } = Vue;
+    const { ref, reactive, onMounted } = Vue;
 
     window.VueAppRegistry.register('#schoolProfileApp', {
         setup() {
-            // Initial data from PHP controller
-            const tenant = ref(<?= json_encode($tenant, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
-            
-            // Map logo preview
-            const logoPreview = ref(tenant.value.logo ? `/SINTA-SaaS/storage/app/public/${tenant.value.logo}` : null);
+            // Initial empty refs populated onMounted
+            const tenant = ref({});
+            const logoPreview = ref(null);
             
             const form = reactive({
-                alamat_sekolah: tenant.value.alamat_sekolah || '',
-                rt_rw: tenant.value.rt_rw || '',
-                kode_pos: tenant.value.kode_pos || '',
-                kelurahan: tenant.value.kelurahan || '',
-                kecamatan: tenant.value.kecamatan || 'Kec. Tandes',
-                kabupaten_kota: tenant.value.kabupaten_kota || 'Kota Surabaya',
-                provinsi: tenant.value.provinsi || 'Prov. Jawa Timur',
-                no_telp: tenant.value.no_telp || '',
-                email_sekolah: tenant.value.email_sekolah || '',
-                website: tenant.value.website || '',
-                nama_kepsek: tenant.value.nama_kepsek || 'Nana Petty Puspitasari',
-                pangkat_kepsek: tenant.value.pangkat_kepsek || 'Pembina',
-                nip_kepsek: tenant.value.nip_kepsek || '',
-                nama_operator: tenant.value.nama_operator || 'Edi Sugiarto',
-                email_operator: tenant.value.email_operator || 'aidasugiarto@gmail.com',
-                akreditasi: tenant.value.akreditasi || 'A (Unggul)'
+                alamat_sekolah: '',
+                rt_rw: '',
+                kode_pos: '',
+                kelurahan: '',
+                kecamatan: 'Kec. Tandes',
+                kabupaten_kota: 'Kota Surabaya',
+                provinsi: 'Prov. Jawa Timur',
+                no_telp: '',
+                email_sekolah: '',
+                website: '',
+                nama_kepsek: 'Nana Petty Puspitasari',
+                pangkat_kepsek: 'Pembina',
+                nip_kepsek: '',
+                nama_operator: 'Edi Sugiarto',
+                email_operator: 'aidasugiarto@gmail.com',
+                akreditasi: 'A (Unggul)'
+            });
+
+            const loadSchoolProfile = async () => {
+                try {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const tId = urlParams.get('tenant_id') || '';
+                    const response = await axios.get(`/SINTA-SaaS/sekolah/profil?ajax=1&action=get_profile_detail&tenant_id=${tId}`);
+                    if (response.data && response.data.success) {
+                        tenant.value = response.data.data;
+                        logoPreview.value = tenant.value.logo ? `/SINTA-SaaS/storage/app/public/${tenant.value.logo}` : null;
+                        
+                        Object.keys(form).forEach(key => {
+                            if (key in tenant.value) {
+                                form[key] = tenant.value[key] !== null ? tenant.value[key] : '';
+                            }
+                        });
+                    }
+                } catch (err) {
+                    console.error("Gagal memuat profil sekolah:", err);
+                }
+            };
+
+            onMounted(() => {
+                loadSchoolProfile();
             });
 
             const errors = ref({});

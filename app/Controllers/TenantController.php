@@ -48,6 +48,25 @@ class TenantController extends BaseController {
             exit;
         }
 
+        if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
+            $action = $_GET['action'] ?? '';
+            if ($action === 'get_tenant_detail') {
+                try {
+                    $db = Database::getConnection();
+                    $stmt = $db->prepare("SELECT * FROM tenants WHERE id = :id AND deleted_at IS NULL LIMIT 1");
+                    $stmt->execute(['id' => $tenantId]);
+                    $tenant = $stmt->fetch(PDO::FETCH_ASSOC);
+                    if ($tenant) {
+                        $this->jsonResponse(['success' => true, 'data' => $tenant]);
+                    } else {
+                        $this->jsonResponse(['error' => 'Sekolah tidak ditemukan.'], 404);
+                    }
+                } catch (\Throwable $e) {
+                    $this->jsonResponse(['error' => $e->getMessage()], 500);
+                }
+            }
+        }
+
         try {
             $db = Database::getConnection();
             $stmt = $db->prepare("SELECT * FROM tenants WHERE id = :id AND deleted_at IS NULL LIMIT 1");

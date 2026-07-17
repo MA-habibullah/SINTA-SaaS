@@ -153,17 +153,36 @@
 <!-- Vue App Registration Script -->
 <script>
 {
-    const { ref, reactive } = Vue;
+    const { ref, reactive, onMounted } = Vue;
 
     window.VueAppRegistry.register('#schoolIdentityApp', {
         setup() {
-            // Inject initial tenant data from PHP securely
-            const schoolData = ref(<?= json_encode($tenant, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
+            const schoolData = ref({});
             
             const form = reactive({
-                nama_sekolah: schoolData.value.nama_sekolah,
-                npsn: schoolData.value.npsn,
-                subdomain: schoolData.value.subdomain
+                nama_sekolah: '',
+                npsn: '',
+                subdomain: ''
+            });
+
+            const loadSchoolIdentity = async () => {
+                try {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const tId = urlParams.get('id') || '';
+                    const response = await axios.get(`/SINTA-SaaS/sekolah/identitas?ajax=1&action=get_tenant_detail&id=${tId}`);
+                    if (response.data && response.data.success) {
+                        schoolData.value = response.data.data;
+                        form.nama_sekolah = schoolData.value.nama_sekolah || '';
+                        form.npsn = schoolData.value.npsn || '';
+                        form.subdomain = schoolData.value.subdomain || '';
+                    }
+                } catch (err) {
+                    console.error("Gagal memuat identitas sekolah:", err);
+                }
+            };
+
+            onMounted(() => {
+                loadSchoolIdentity();
             });
 
             const errors = ref({});
