@@ -86,8 +86,63 @@
     .aeroscan-toast.toast-info    { border-left-color: var(--as-primary); }
     .aeroscan-info-banner { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--as-radius-md); padding: 10px 12px; font-size: 0.78rem; line-height: 1.45; color: #1d4ed8; display: flex; gap: 8px; margin-top: 10px; }
     #ocr-activate-banner { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 40px 20px; text-align: center; color: var(--as-text-muted); }
+
+    /* ── RESPONSIVE MOBILE OPTIMIZATIONS ───────────────────────────── */
+    @media (max-width: 768px) {
+        .aeroscan-card-title {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 10px !important;
+        }
+        .aeroscan-card-title > span {
+            font-size: 0.85rem;
+        }
+        .aeroscan-card-title .d-flex {
+            justify-content: flex-start !important;
+            width: 100% !important;
+            flex-wrap: wrap;
+        }
+        .aeroscan-tab-group {
+            width: 100% !important;
+        }
+        .aeroscan-tab-group button {
+            flex: 1;
+            font-size: 0.72rem !important;
+            padding: 8px 4px !important;
+        }
+        #output-res-badge {
+            align-self: flex-start !important;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .aeroscan-stats-container {
+            grid-template-columns: 1fr !important;
+            gap: 6px !important;
+        }
+        .aeroscan-stat-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px !important;
+            text-align: left !important;
+        }
+        .aeroscan-stat-label {
+            margin-bottom: 0 !important;
+        }
+        .aeroscan-stat-value {
+            font-size: 0.85rem !important;
+        }
+        #zoom-percent {
+            min-width: 38px !important;
+        }
+    }
+
     @keyframes spin  { to { transform: rotate(360deg); } }
     @keyframes pulse { from { opacity: 0.45; } to { opacity: 1; } }
+    .hidden {
+        display: none !important;
+    }
 </style>
 
 <!-- MAIN APP UI CONTAINER -->
@@ -304,24 +359,26 @@
 
                 <!-- PANEL 1: AREA FOTO ASLI (DETEKSI) -->
                 <div class="aeroscan-card">
-                    <div class="aeroscan-card-title d-flex justify-content-between align-items-center">
+                    <div class="aeroscan-card-title d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
                         <span class="d-flex align-items-center gap-2">
                             <span style="background: var(--as-success); width: 8px; height: 8px; border-radius: 50%;"></span>
                             Foto Dokumen Asli
                         </span>
                         <!-- Zoom & Pan Controls -->
-                        <div class="d-flex gap-2 align-items-center" style="z-index: 10;">
-                            <button class="btn btn-outline-secondary btn-sm p-1" id="zoom-out-btn" style="width: 28px; height: 28px;" title="Zoom Out">
-                                <i data-lucide="zoom-out" style="width: 14px; height: 14px; color: var(--as-text-muted);"></i>
-                            </button>
-                            <span id="zoom-percent" class="fs-9 text-muted fw-bold" style="min-width: 32px; text-align: center;">100%</span>
-                            <button class="btn btn-outline-secondary btn-sm p-1" id="zoom-in-btn" style="width: 28px; height: 28px;" title="Zoom In">
-                                <i data-lucide="zoom-in" style="width: 14px; height: 14px; color: var(--as-text-muted);"></i>
-                            </button>
-                            <button class="btn btn-outline-secondary btn-sm p-1" id="zoom-reset-btn" style="width: 28px; height: 28px;" title="Reset Zoom">
-                                <i data-lucide="maximize-2" style="width: 14px; height: 14px; color: var(--as-text-muted);"></i>
-                            </button>
-                            <span class="badge bg-light text-muted border fs-9" id="orig-res-badge">0 x 0 px</span>
+                        <div class="d-flex gap-2 align-items-center flex-wrap" style="z-index: 10;">
+                            <div class="btn-group border rounded" style="background: #ffffff; padding: 2px;">
+                                <button class="btn btn-link btn-sm p-1 border-0" id="zoom-out-btn" style="width: 28px; height: 28px; text-decoration: none;" title="Zoom Out">
+                                    <i data-lucide="zoom-out" style="width: 14px; height: 14px; color: var(--as-text-muted);"></i>
+                                </button>
+                                <span id="zoom-percent" class="fs-9 text-muted fw-bold d-flex align-items-center justify-content-center" style="min-width: 38px; text-align: center; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">100%</span>
+                                <button class="btn btn-link btn-sm p-1 border-0" id="zoom-in-btn" style="width: 28px; height: 28px; text-decoration: none;" title="Zoom In">
+                                    <i data-lucide="zoom-in" style="width: 14px; height: 14px; color: var(--as-text-muted);"></i>
+                                </button>
+                                <button class="btn btn-link btn-sm p-1 border-0" id="zoom-reset-btn" style="width: 28px; height: 28px; text-decoration: none;" title="Reset Zoom">
+                                    <i data-lucide="maximize-2" style="width: 14px; height: 14px; color: var(--as-text-muted);"></i>
+                                </button>
+                            </div>
+                            <span class="badge bg-light text-muted border fs-9 py-2 px-2.5" id="orig-res-badge">0 x 0 px</span>
                         </div>
                     </div>
 
@@ -368,19 +425,19 @@
 
                 <!-- PANEL 2: HASIL SCAN & OCR -->
                 <div class="aeroscan-card">
-                    <div class="aeroscan-card-title d-flex justify-content-between align-items-center mb-0">
-                        <div class="d-flex gap-2">
-                            <button class="aeroscan-filter-btn active px-3 py-1" id="tab-image-btn" style="border-radius: 6px;">
+                    <div class="aeroscan-card-title d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mb-0">
+                        <div class="aeroscan-tab-group d-flex p-1 rounded border" style="background: #f1f5f9; gap: 4px;">
+                            <button class="aeroscan-filter-btn active px-3 py-1.5" id="tab-image-btn" style="border-radius: 6px;">
                                 <i data-lucide="image" style="width: 14px; height: 14px;" class="me-1 inline-block align-middle"></i>
                                 <span class="align-middle">Gambar Hasil</span>
                             </button>
-                            <button class="aeroscan-filter-btn px-3 py-1" id="tab-ocr-btn" style="border-radius: 6px;" title="Aktifkan Ekstraksi Teks (OCR) - Membutuhkan unduhan model ~10MB">
-                                <i data-lucide="languages" style="width: 14px; height: 14px;" class="me-1 inline-block align-middle"></i>
+                            <button class="aeroscan-filter-btn px-3 py-1.5 d-flex align-items-center gap-1" id="tab-ocr-btn" style="border-radius: 6px;" title="Aktifkan Ekstraksi Teks (OCR) - Membutuhkan unduhan model ~10MB">
+                                <i data-lucide="languages" style="width: 14px; height: 14px;" class="inline-block align-middle"></i>
                                 <span class="align-middle">Ekstrak Teks (OCR)</span>
                                 <span class="badge bg-warning text-dark ms-1" style="font-size: 0.6rem;">Opsional</span>
                             </button>
                         </div>
-                        <span class="badge bg-light text-muted border fs-9" id="output-res-badge">0 x 0 px</span>
+                        <span class="badge bg-light text-muted border fs-9 py-2 px-3 align-self-end align-self-sm-center" id="output-res-badge">0 x 0 px</span>
                     </div>
 
                     <div class="aeroscan-canvas-container mt-3" style="min-height: 420px; position: relative;">
@@ -799,8 +856,14 @@
                 }
 
                 if (originalMat) {
-                    detectCorners(originalMat);
-                    processAndCompress();
+                    statusDot.className = "aeroscan-status-dot processing";
+                    statusText.innerText = "Memproses...";
+                    setTimeout(() => {
+                        detectCorners(originalMat);
+                        processAndCompress();
+                        statusDot.className = "aeroscan-status-dot ready";
+                        statusText.innerText = "Sistem Siap";
+                    }, 15);
                 }
             }
         });
@@ -828,8 +891,14 @@
                 spineDivider.classList.remove('hidden');
 
                 if (originalMat) {
-                    detectCorners(originalMat);
-                    processAndCompress();
+                    statusDot.className = "aeroscan-status-dot processing";
+                    statusText.innerText = "Memproses...";
+                    setTimeout(() => {
+                        detectCorners(originalMat);
+                        processAndCompress();
+                        statusDot.className = "aeroscan-status-dot ready";
+                        statusText.innerText = "Sistem Siap";
+                    }, 15);
                 }
             }
         });
@@ -854,8 +923,14 @@
             safeCreateIcons();
 
             if (originalMat) {
-                detectCorners(originalMat);
-                processAndCompress();
+                statusDot.className = "aeroscan-status-dot processing";
+                statusText.innerText = "Memproses...";
+                setTimeout(() => {
+                    detectCorners(originalMat);
+                    processAndCompress();
+                    statusDot.className = "aeroscan-status-dot ready";
+                    statusText.innerText = "Sistem Siap";
+                }, 15);
             }
         });
     }
@@ -912,7 +987,13 @@
                 targetH = 3684;
             }
             document.getElementById('output-res-badge').innerText = `${targetW} x ${targetH} px`;
-            processAndCompress();
+            statusDot.className = "aeroscan-status-dot processing";
+            statusText.innerText = "Memproses...";
+            setTimeout(() => {
+                processAndCompress();
+                statusDot.className = "aeroscan-status-dot ready";
+                statusText.innerText = "Sistem Siap";
+            }, 15);
         });
 
         filterBtns.forEach(btn => {
@@ -920,15 +1001,27 @@
                 filterBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 activeFilter = btn.dataset.mode;
-                processAndCompress();
+                statusDot.className = "aeroscan-status-dot processing";
+                statusText.innerText = "Memproses...";
+                setTimeout(() => {
+                    processAndCompress();
+                    statusDot.className = "aeroscan-status-dot ready";
+                    statusText.innerText = "Sistem Siap";
+                }, 15);
             });
         });
 
         rotateBtn.addEventListener('click', rotateInputImage);
         resetCornersBtn.addEventListener('click', () => {
             if (originalMat) {
-                detectCorners(originalMat);
-                processAndCompress();
+                statusDot.className = "aeroscan-status-dot processing";
+                statusText.innerText = "Memproses...";
+                setTimeout(() => {
+                    detectCorners(originalMat);
+                    processAndCompress();
+                    statusDot.className = "aeroscan-status-dot ready";
+                    statusText.innerText = "Sistem Siap";
+                }, 15);
             }
         });
     }
@@ -2343,22 +2436,24 @@
         statusText.innerText = "Memutar Gambar...";
         showToast('Memutar gambar 90° searah jarum jam...', 'info');
 
-        let rotated = new cv.Mat();
-        cv.rotate(originalMat, rotated, cv.ROTATE_90_CLOCKWISE);
-        originalMat.delete();
-        originalMat = rotated;
+        setTimeout(() => {
+            let rotated = new cv.Mat();
+            cv.rotate(originalMat, rotated, cv.ROTATE_90_CLOCKWISE);
+            originalMat.delete();
+            originalMat = rotated;
 
-        cv.imshow(canvasOriginal, originalMat);
+            cv.imshow(canvasOriginal, originalMat);
 
-        fitOriginalCanvas(originalMat.cols, originalMat.rows);
-        document.getElementById('orig-res-badge').innerText = `${originalMat.cols} x ${originalMat.rows} px`;
+            fitOriginalCanvas(originalMat.cols, originalMat.rows);
+            document.getElementById('orig-res-badge').innerText = `${originalMat.cols} x ${originalMat.rows} px`;
 
-        runSpineDetection(originalMat);
-        detectCorners(originalMat);
-        processAndCompress();
+            runSpineDetection(originalMat);
+            detectCorners(originalMat);
+            processAndCompress();
 
-        statusDot.className = "aeroscan-status-dot ready";
-        statusText.innerText = "Sistem Siap";
+            statusDot.className = "aeroscan-status-dot ready";
+            statusText.innerText = "Sistem Siap";
+        }, 15);
     }
 
     // 17. WARPING, ENHANCEMENT & SHARPENING PIPELINE
@@ -2642,25 +2737,79 @@
     function addCurrentToPdfQueue() {
         if (!originalMat) return;
 
-        const imgW = originalMat.cols;
-        const imgH = originalMat.rows;
-        const quality = parseFloat(qualitySlider.value);
-        const resPreset = resPresetSelect.value;
+        statusDot.className = "aeroscan-status-dot processing";
+        statusText.innerText = "Menambahkan...";
+        addToPdfBtn.disabled = true;
+        addToPdfBtn.classList.add('disabled');
 
-        let targetW = 1200;
-        let targetH = 1842;
-        if (resPreset === 'hd') {
-            targetW = 1600;
-            targetH = 2456;
-        } else if (resPreset === 'super-hd') {
-            targetW = 2400;
-            targetH = 3684;
-        }
+        setTimeout(() => {
+            const imgW = originalMat.cols;
+            const imgH = originalMat.rows;
+            const quality = parseFloat(qualitySlider.value);
+            const resPreset = resPresetSelect.value;
 
-        if (editingPageId !== null) {
-            const pageIndex = pdfPageQueue.findIndex(p => p.id === editingPageId);
-            if (pageIndex !== -1) {
-                const page = pdfPageQueue[pageIndex];
+            let targetW = 1200;
+            let targetH = 1842;
+            if (resPreset === 'hd') {
+                targetW = 1600;
+                targetH = 2456;
+            } else if (resPreset === 'super-hd') {
+                targetW = 2400;
+                targetH = 3684;
+            }
+
+            if (editingPageId !== null) {
+                const pageIndex = pdfPageQueue.findIndex(p => p.id === editingPageId);
+                if (pageIndex !== -1) {
+                    const page = pdfPageQueue[pageIndex];
+
+                    if (!isBookMode) {
+                        const pts = {
+                            tl: { x: corners.tl.x * imgW, y: corners.tl.y * imgH },
+                            tr: { x: corners.tr.x * imgW, y: corners.tr.y * imgH },
+                            br: { x: corners.br.x * imgW, y: corners.br.y * imgH },
+                            bl: { x: corners.bl.x * imgW, y: corners.bl.y * imgH }
+                        };
+
+                        warpAndFilterMat(originalMat, pts, 'canvas-output', targetW, targetH);
+                        const dataUrl = canvasOutput.toDataURL('image/jpeg', quality);
+
+                        page.corners = JSON.parse(JSON.stringify(corners));
+                        page.isBookMode = false;
+                        page.rotationAngle = rotationAngle;
+                        page.spineX = spineX;
+                        page.isSpineActive = isSpineActive;
+                        page.activeFilter = activeFilter;
+                        page.brightness = parseInt(brightnessSlider.value);
+                        page.contrast = parseFloat(contrastSlider.value);
+                        page.sharpen = parseFloat(sharpenSlider.value);
+                        page.resolutionPreset = resPreset;
+                        page.jpegQuality = quality;
+                        page.canvasDataURL = dataUrl;
+                    } else {
+                        const ptsL = {
+                            tl: { x: corners.tl.x * imgW, y: corners.tl.y * imgH },
+                            tr: { x: corners.tr.x * imgW, y: corners.tr.y * imgH },
+                            br: { x: corners.br.x * imgW, y: corners.br.y * imgH },
+                            bl: { x: corners.bl.x * imgW, y: corners.bl.y * imgH }
+                        };
+                        warpAndFilterMat(originalMat, ptsL, 'canvas-output-left', targetW, targetH);
+                        const dataUrlL = canvasOutputLeft.toDataURL('image/jpeg', quality);
+                        page.canvasDataURL = dataUrlL;
+                        page.isBookMode = true;
+                    }
+
+                    showToast(`Halaman ${pageIndex + 1} berhasil diperbarui!`, 'success');
+                }
+
+                editingPageId = null;
+                addToPdfBtn.innerHTML = `<i data-lucide="plus-circle" style="width: 14px; height: 14px;" class="me-1 inline-block align-middle"></i><span class="align-middle">Simpan Halaman Aktif</span>`;
+                addToPdfBtn.style.borderColor = 'var(--accent-cyan)';
+                addToPdfBtn.style.color = 'var(--accent-cyan)';
+                safeCreateIcons();
+            } else {
+                const filename = "Scan Halaman";
+                const originalDataURL = canvasOriginal.toDataURL('image/jpeg', 0.85);
 
                 if (!isBookMode) {
                     const pts = {
@@ -2673,18 +2822,26 @@
                     warpAndFilterMat(originalMat, pts, 'canvas-output', targetW, targetH);
                     const dataUrl = canvasOutput.toDataURL('image/jpeg', quality);
 
-                    page.corners = JSON.parse(JSON.stringify(corners));
-                    page.isBookMode = false;
-                    page.rotationAngle = rotationAngle;
-                    page.spineX = spineX;
-                    page.isSpineActive = isSpineActive;
-                    page.activeFilter = activeFilter;
-                    page.brightness = parseInt(brightnessSlider.value);
-                    page.contrast = parseFloat(contrastSlider.value);
-                    page.sharpen = parseFloat(sharpenSlider.value);
-                    page.resolutionPreset = resPreset;
-                    page.jpegQuality = quality;
-                    page.canvasDataURL = dataUrl;
+                    pdfPageQueue.push({
+                        id: Date.now() + Math.random().toString(36).substr(2, 9),
+                        filename: filename,
+                        originalSrc: originalDataURL,
+                        corners: JSON.parse(JSON.stringify(corners)),
+                        cornersRight: JSON.parse(JSON.stringify(cornersRight)),
+                        isBookMode: false,
+                        rotationAngle: rotationAngle,
+                        spineX: spineX,
+                        isSpineActive: isSpineActive,
+                        activeFilter: activeFilter,
+                        brightness: parseInt(brightnessSlider.value),
+                        contrast: parseFloat(contrastSlider.value),
+                        sharpen: parseFloat(sharpenSlider.value),
+                        resolutionPreset: resPreset,
+                        jpegQuality: quality,
+                        canvasDataURL: dataUrl
+                    });
+
+                    showToast("Halaman berhasil ditambahkan ke antrean PDF.", "success");
                 } else {
                     const ptsL = {
                         tl: { x: corners.tl.x * imgW, y: corners.tl.y * imgH },
@@ -2692,120 +2849,69 @@
                         br: { x: corners.br.x * imgW, y: corners.br.y * imgH },
                         bl: { x: corners.bl.x * imgW, y: corners.bl.y * imgH }
                     };
+
+                    const ptsR = {
+                        tl: { x: cornersRight.tl.x * imgW, y: cornersRight.tl.y * imgH },
+                        tr: { x: cornersRight.tr.x * imgW, y: cornersRight.tr.y * imgH },
+                        br: { x: cornersRight.br.x * imgW, y: cornersRight.br.y * imgH },
+                        bl: { x: cornersRight.bl.x * imgW, y: cornersRight.bl.y * imgH }
+                    };
+
                     warpAndFilterMat(originalMat, ptsL, 'canvas-output-left', targetW, targetH);
+                    warpAndFilterMat(originalMat, ptsR, 'canvas-output-right', targetW, targetH);
+
                     const dataUrlL = canvasOutputLeft.toDataURL('image/jpeg', quality);
-                    page.canvasDataURL = dataUrlL;
-                    page.isBookMode = true;
+                    const dataUrlR = canvasOutputRight.toDataURL('image/jpeg', quality);
+
+                    const baseId = Date.now();
+                    pdfPageQueue.push({
+                        id: baseId + '_L',
+                        filename: filename + ' (Kiri)',
+                        originalSrc: originalDataURL,
+                        corners: JSON.parse(JSON.stringify(corners)),
+                        cornersRight: JSON.parse(JSON.stringify(cornersRight)),
+                        isBookMode: true,
+                        rotationAngle: rotationAngle,
+                        spineX: spineX,
+                        isSpineActive: isSpineActive,
+                        activeFilter: activeFilter,
+                        brightness: parseInt(brightnessSlider.value),
+                        contrast: parseFloat(contrastSlider.value),
+                        sharpen: parseFloat(sharpenSlider.value),
+                        resolutionPreset: resPreset,
+                        jpegQuality: quality,
+                        canvasDataURL: dataUrlL
+                    });
+
+                    pdfPageQueue.push({
+                        id: baseId + '_R',
+                        filename: filename + ' (Kanan)',
+                        originalSrc: originalDataURL,
+                        corners: JSON.parse(JSON.stringify(corners)),
+                        cornersRight: JSON.parse(JSON.stringify(cornersRight)),
+                        isBookMode: true,
+                        rotationAngle: rotationAngle,
+                        spineX: spineX,
+                        isSpineActive: isSpineActive,
+                        activeFilter: activeFilter,
+                        brightness: parseInt(brightnessSlider.value),
+                        contrast: parseFloat(contrastSlider.value),
+                        sharpen: parseFloat(sharpenSlider.value),
+                        resolutionPreset: resPreset,
+                        jpegQuality: quality,
+                        canvasDataURL: dataUrlR
+                    });
+
+                    showToast("Dua halaman buku berhasil ditambahkan ke antrean PDF.", "success");
                 }
-
-                showToast(`Halaman ${pageIndex + 1} berhasil diperbarui!`, 'success');
             }
 
-            editingPageId = null;
-            addToPdfBtn.innerHTML = `<i data-lucide="plus-circle" style="width: 14px; height: 14px;" class="me-1 inline-block align-middle"></i><span class="align-middle">Simpan Halaman Aktif</span>`;
-            addToPdfBtn.style.borderColor = 'var(--accent-cyan)';
-            addToPdfBtn.style.color = 'var(--accent-cyan)';
-            safeCreateIcons();
-        } else {
-            const filename = "Scan Halaman";
-            const originalDataURL = canvasOriginal.toDataURL('image/jpeg', 0.85);
-
-            if (!isBookMode) {
-                const pts = {
-                    tl: { x: corners.tl.x * imgW, y: corners.tl.y * imgH },
-                    tr: { x: corners.tr.x * imgW, y: corners.tr.y * imgH },
-                    br: { x: corners.br.x * imgW, y: corners.br.y * imgH },
-                    bl: { x: corners.bl.x * imgW, y: corners.bl.y * imgH }
-                };
-
-                warpAndFilterMat(originalMat, pts, 'canvas-output', targetW, targetH);
-                const dataUrl = canvasOutput.toDataURL('image/jpeg', quality);
-
-                pdfPageQueue.push({
-                    id: Date.now() + Math.random().toString(36).substr(2, 9),
-                    filename: filename,
-                    originalSrc: originalDataURL,
-                    corners: JSON.parse(JSON.stringify(corners)),
-                    cornersRight: JSON.parse(JSON.stringify(cornersRight)),
-                    isBookMode: false,
-                    rotationAngle: rotationAngle,
-                    spineX: spineX,
-                    isSpineActive: isSpineActive,
-                    activeFilter: activeFilter,
-                    brightness: parseInt(brightnessSlider.value),
-                    contrast: parseFloat(contrastSlider.value),
-                    sharpen: parseFloat(sharpenSlider.value),
-                    resolutionPreset: resPreset,
-                    jpegQuality: quality,
-                    canvasDataURL: dataUrl
-                });
-
-                showToast("Halaman berhasil ditambahkan ke antrean PDF.", "success");
-            } else {
-                const ptsL = {
-                    tl: { x: corners.tl.x * imgW, y: corners.tl.y * imgH },
-                    tr: { x: corners.tr.x * imgW, y: corners.tr.y * imgH },
-                    br: { x: corners.br.x * imgW, y: corners.br.y * imgH },
-                    bl: { x: corners.bl.x * imgW, y: corners.bl.y * imgH }
-                };
-
-                const ptsR = {
-                    tl: { x: cornersRight.tl.x * imgW, y: cornersRight.tl.y * imgH },
-                    tr: { x: cornersRight.tr.x * imgW, y: cornersRight.tr.y * imgH },
-                    br: { x: cornersRight.br.x * imgW, y: cornersRight.br.y * imgH },
-                    bl: { x: cornersRight.bl.x * imgW, y: cornersRight.bl.y * imgH }
-                };
-
-                warpAndFilterMat(originalMat, ptsL, 'canvas-output-left', targetW, targetH);
-                warpAndFilterMat(originalMat, ptsR, 'canvas-output-right', targetW, targetH);
-
-                const dataUrlL = canvasOutputLeft.toDataURL('image/jpeg', quality);
-                const dataUrlR = canvasOutputRight.toDataURL('image/jpeg', quality);
-
-                const baseId = Date.now();
-                pdfPageQueue.push({
-                    id: baseId + '_L',
-                    filename: filename + ' (Kiri)',
-                    originalSrc: originalDataURL,
-                    corners: JSON.parse(JSON.stringify(corners)),
-                    cornersRight: JSON.parse(JSON.stringify(cornersRight)),
-                    isBookMode: true,
-                    rotationAngle: rotationAngle,
-                    spineX: spineX,
-                    isSpineActive: isSpineActive,
-                    activeFilter: activeFilter,
-                    brightness: parseInt(brightnessSlider.value),
-                    contrast: parseFloat(contrastSlider.value),
-                    sharpen: parseFloat(sharpenSlider.value),
-                    resolutionPreset: resPreset,
-                    jpegQuality: quality,
-                    canvasDataURL: dataUrlL
-                });
-
-                pdfPageQueue.push({
-                    id: baseId + '_R',
-                    filename: filename + ' (Kanan)',
-                    originalSrc: originalDataURL,
-                    corners: JSON.parse(JSON.stringify(corners)),
-                    cornersRight: JSON.parse(JSON.stringify(cornersRight)),
-                    isBookMode: true,
-                    rotationAngle: rotationAngle,
-                    spineX: spineX,
-                    isSpineActive: isSpineActive,
-                    activeFilter: activeFilter,
-                    brightness: parseInt(brightnessSlider.value),
-                    contrast: parseFloat(contrastSlider.value),
-                    sharpen: parseFloat(sharpenSlider.value),
-                    resolutionPreset: resPreset,
-                    jpegQuality: quality,
-                    canvasDataURL: dataUrlR
-                });
-
-                showToast("Dua halaman buku berhasil ditambahkan ke antrean PDF.", "success");
-            }
-        }
-
-        renderThumbnails();
+            renderThumbnails();
+            addToPdfBtn.disabled = false;
+            addToPdfBtn.classList.remove('disabled');
+            statusDot.className = "aeroscan-status-dot ready";
+            statusText.innerText = "Sistem Siap";
+        }, 15);
     }
 
     function deletePage(pageId) {
@@ -3009,28 +3115,40 @@
         statusDot.className = "aeroscan-status-dot processing";
         statusText.innerText = "Membuat PDF...";
         showToast('Mengompilasi halaman PDF, harap tunggu...', 'info');
+        generatePdfBtn.disabled = true;
+        generatePdfBtn.classList.add('disabled');
 
-        const { jsPDF } = window.jspdf;
+        setTimeout(() => {
+            try {
+                const { jsPDF } = window.jspdf;
 
-        const pdf = new jsPDF({
-            orientation: 'portrait',
-            unit: 'mm',
-            format: [215, 330] // Folio Size
-        });
+                const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: [215, 330] // Folio Size
+                });
 
-        pdfPageQueue.forEach((page, index) => {
-            if (index > 0) {
-                pdf.addPage([215, 330], 'portrait');
+                pdfPageQueue.forEach((page, index) => {
+                    if (index > 0) {
+                        pdf.addPage([215, 330], 'portrait');
+                    }
+                    pdf.addImage(page.canvasDataURL, 'JPEG', 0, 0, 215, 330, undefined, 'FAST');
+                });
+
+                const pdfName = pdfFilenameInput.value.trim() || 'Dokumen_Scan_Aero';
+                pdf.save(`${pdfName}.pdf`);
+
+                showToast('PDF berhasil dibuat dan diunduh!', 'success');
+            } catch (err) {
+                console.error("PDF generation failed:", err);
+                showToast('Gagal membuat PDF: ' + err.message, 'error');
+            } finally {
+                statusDot.className = "aeroscan-status-dot ready";
+                statusText.innerText = "Sistem Siap";
+                generatePdfBtn.disabled = false;
+                generatePdfBtn.classList.remove('disabled');
             }
-            pdf.addImage(page.canvasDataURL, 'JPEG', 0, 0, 215, 330, undefined, 'FAST');
-        });
-
-        const pdfName = pdfFilenameInput.value.trim() || 'Dokumen_Scan_Aero';
-        pdf.save(`${pdfName}.pdf`);
-
-        statusDot.className = "aeroscan-status-dot ready";
-        statusText.innerText = "Sistem Siap";
-        showToast('PDF berhasil dibuat dan diunduh!', 'success');
+        }, 15);
     }
 
     // 20. ZOOM & PAN LOGIC
