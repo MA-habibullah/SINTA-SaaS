@@ -12,6 +12,15 @@ $actionUrl = $isEdit ? '/SINTA-SaaS/siswa/update' : '/SINTA-SaaS/siswa/simpan';
 $formTitle = $isEdit ? 'Edit Data Siswa' : 'Tambah Siswa Baru';
 $idSiswa = $isEdit ? ($data['siswa']['id'] ?? '') : '';
 $siswaFullData = $isEdit ? $data['siswa'] : [];
+if ($isEdit && isset($siswaFullData['password'])) {
+    unset($siswaFullData['password']);
+}
+if (isset($data['draft']['password'])) {
+    unset($data['draft']['password']);
+}
+if (isset($data['old']['password'])) {
+    unset($data['old']['password']);
+}
 $kesehatanData = $isEdit ? ($data['kesehatan'] ?? []) : [];
 ?>
 
@@ -2102,7 +2111,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
             // Ambil data query Edit jika di-inject dari PHP
             const loadEditData = () => {
-                const phpData = <?= json_encode($siswaFullData) ?>;
+                const phpData = <?= json_encode($siswaFullData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
                 if (phpData && Object.keys(phpData).length > 0) {
                     Object.keys(phpData).forEach(key => {
                         if (key in form.value && key !== 'password') {
@@ -2131,7 +2140,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                         fetchKelurahan(form.value.id_kecamatan, false);
                     }
                     
-                    const kesehatanPhp = <?= json_encode($kesehatanData) ?>;
+                    const kesehatanPhp = <?= json_encode($kesehatanData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
                     if (kesehatanPhp && Object.keys(kesehatanPhp).length > 0) {
                         for (let sem in kesehatanPhp) {
                             if (form.value.kesehatan[sem]) {
@@ -2746,7 +2755,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
             // Load draft data (TUGAS 1)
             const loadDraftData = () => {
-                const phpDraft = <?= json_encode($data['draft'] ?? null) ?> || <?= json_encode($data['old'] ?? null) ?>;
+                const phpDraft = <?= json_encode($data['draft'] ?? null, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?> || <?= json_encode($data['old'] ?? null, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
                 if (phpDraft && Object.keys(phpDraft).length > 0) {
                     Object.keys(phpDraft).forEach(key => {
                         if (key in form.value) {
@@ -2910,7 +2919,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 }
 
                 // Inject PHP errors if any
-                const phpErrors = <?= json_encode($data['errors'] ?? []) ?>;
+                const phpErrors = <?= json_encode($data['errors'] ?? [], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
                 if (phpErrors && typeof phpErrors === 'object') {
                     Object.values(phpErrors).forEach(err => {
                         errorsList.value.push(err);
