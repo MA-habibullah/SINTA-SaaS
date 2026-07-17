@@ -21,6 +21,7 @@ class DashboardController extends BaseController {
         SessionManager::start();
 
         // 2. Amankan Dashboard: Cek apakah session user_id telah disetel
+        // 2. Amankan Dashboard: Cek apakah session user_id telah disetel
         // Jika belum login, redirect ke halaman login
         if (!isset($_SESSION['user_id'])) {
             header('Location: /SINTA-SaaS/login');
@@ -30,6 +31,108 @@ class DashboardController extends BaseController {
         // 3. Dapatkan tenant_id (sekolah) dari session pengguna yang sedang aktif
         $tenantId = $_SESSION['tenant_id'];
         $isSuperAdmin = ($_SESSION['role_name'] === 'super_admin');
+
+        // CHECK IF AJAX REQUEST
+        if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
+            $action = $_GET['action'] ?? '';
+            if ($action === 'get_dashboard_stats') {
+                $db = Database::getConnection();
+                try {
+                    if ($isSuperAdmin) {
+                        $stmtSiswaList = $db->query("
+                            SELECT s.nis, s.nisn, s.nama_lengkap, s.jenis_kelamin, s.tempat_lahir, s.tanggal_lahir, s.alamat, t.nama_sekolah 
+                            FROM siswa s
+                            JOIN tenants t ON s.tenant_id = t.id
+                            WHERE s.deleted_at IS NULL 
+                            ORDER BY s.nama_lengkap ASC 
+                            LIMIT 20
+                        ");
+                        $siswaList = $stmtSiswaList->fetchAll() ?: [];
+
+                        $stmtGtkList = $db->query("
+                            SELECT u.nama_lengkap, u.email, u.status, r.nama_role, t.nama_sekolah
+                            FROM users u
+                            JOIN roles r ON u.role_id = r.id
+                            JOIN tenants t ON u.tenant_id = t.id
+                            WHERE r.nama_role = 'guru' AND u.deleted_at IS NULL
+                            ORDER BY u.nama_lengkap ASC
+                        ");
+                        $gtkList = $stmtGtkList->fetchAll() ?: [];
+                    } else {
+                        $stmtSiswaList = $db->prepare("
+                            SELECT nis, nisn, nama_lengkap, jenis_kelamin, tempat_lahir, tanggal_lahir, alamat 
+                            FROM siswa 
+                            WHERE tenant_id = :tenant_id AND deleted_at IS NULL 
+                            ORDER BY nama_lengkap ASC 
+                            LIMIT 20
+                        ");
+                        $stmtSiswaList->execute(['tenant_id' => $tenantId]);
+                        $siswaList = $stmtSiswaList->fetchAll() ?: [];
+
+                        $stmtGtkList = $db->prepare("
+                            SELECT u.nama_lengkap, u.email, u.status, r.nama_role 
+                            FROM users u
+                            JOIN roles r ON u.role_id = r.id
+                            WHERE u.tenant_id = :tenant_id 
+                              AND r.nama_role = 'guru' 
+                              AND u.deleted_at IS NULL
+                            ORDER BY u.nama_lengkap ASC
+                        ");
+                        $stmtGtkList->execute(['tenant_id' => $tenantId]);
+                        $gtkList = $stmtGtkList->fetchAll() ?: [];
+                    }
+
+                    $logWhere = "l.table_name = 'siswa'";
+                    $logParams = [];
+                    if (!$isSuperAdmin) {
+                        $logWhere .= " AND l.tenant_id = :tenant_id";
+                        $logParams['tenant_id'] = $tenantId;
+                    }
+
+                    $stmtLogs = $db->prepare("
+                        SELECT l.*, u.nama_lengkap AS actor_name, t.nama_sekolah
+                        FROM activity_logs l
+                        LEFT JOIN users u ON l.user_id = u.id
+                        LEFT JOIN tenants t ON l.tenant_id = t.id
+                        WHERE {$logWhere}
+                        ORDER BY l.created_at DESC
+                        LIMIT 50
+                    ");
+                    $stmtLogs->execute($logParams);
+                    $recentChangesRaw = $stmtLogs->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                    $this->resolveLogDataIds($recentChangesRaw, $db);
+
+                    $recentChanges = [];
+                    foreach ($recentChangesRaw as $log) {
+                        $oldObj = json_decode($log['old_data'] ?? '', true) ?: [];
+                        $newObj = json_decode($log['new_data'] ?? '', true) ?: [];
+                        $studentName = $newObj['nama_lengkap'] ?? ($oldObj['nama_lengkap'] ?? 'Tidak Diketahui');
+                        $recentChanges[] = [
+                            'id' => $log['id'],
+                            'waktu' => $log['created_at'],
+                            'action' => $log['action'],
+                            'table_name' => $log['table_name'],
+                            'sekolah' => $log['nama_sekolah'] ?? 'Sistem (Global)',
+                            'nama_siswa' => $studentName,
+                            'actor_name' => $log['actor_name'] ?? 'System',
+                            'user_role' => $log['user_role'] ?? 'system',
+                            'ip_address' => $log['ip_address'] ?? '127.0.0.1',
+                            'old_data' => $log['old_data'],
+                            'new_data' => $log['new_data']
+                        ];
+                    }
+
+                    $this->jsonResponse([
+                        'success' => true,
+                        'siswaList' => $siswaList,
+                        'gtkList' => $gtkList,
+                        'recentChanges' => $recentChanges
+                    ]);
+                } catch (\PDOException $e) {
+                    $this->jsonResponse(['error' => $e->getMessage()], 500);
+                }
+            }
+        }
 
         try {
             $db = Database::getConnection();
@@ -67,26 +170,10 @@ class DashboardController extends BaseController {
                 ];
 
                 // F. Daftar Siswa Lintas Tenant untuk Tab Visualisasi
-                $stmtSiswaList = $db->query("
-                    SELECT s.nis, s.nisn, s.nama_lengkap, s.jenis_kelamin, s.tempat_lahir, s.tanggal_lahir, s.alamat, t.nama_sekolah 
-                    FROM siswa s
-                    JOIN tenants t ON s.tenant_id = t.id
-                    WHERE s.deleted_at IS NULL 
-                    ORDER BY s.nama_lengkap ASC 
-                    LIMIT 20
-                ");
-                $siswaList = $stmtSiswaList->fetchAll() ?: [];
+                $siswaList = [];
 
                 // G. Daftar Guru (GTK) Lintas Tenant untuk Tab Visualisasi
-                $stmtGtkList = $db->query("
-                    SELECT u.nama_lengkap, u.email, u.status, r.nama_role, t.nama_sekolah
-                    FROM users u
-                    JOIN roles r ON u.role_id = r.id
-                    JOIN tenants t ON u.tenant_id = t.id
-                    WHERE r.nama_role = 'guru' AND u.deleted_at IS NULL
-                    ORDER BY u.nama_lengkap ASC
-                ");
-                $gtkList = $stmtGtkList->fetchAll() ?: [];
+                $gtkList = [];
 
             } else {
                 // 4. Kueri Spesifik Tenant untuk Operator / Guru (Dengan Filter tenant_id)
@@ -135,75 +222,14 @@ class DashboardController extends BaseController {
                 $totalSiswa = $stmtSiswa->fetch()['total'] ?? 0;
 
                 // D. Daftar Siswa di Sekolah Ini untuk Tab Visualisasi
-                $stmtSiswaList = $db->prepare("
-                    SELECT nis, nisn, nama_lengkap, jenis_kelamin, tempat_lahir, tanggal_lahir, alamat 
-                    FROM siswa 
-                    WHERE tenant_id = :tenant_id AND deleted_at IS NULL 
-                    ORDER BY nama_lengkap ASC 
-                    LIMIT 20
-                ");
-                $stmtSiswaList->execute(['tenant_id' => $tenantId]);
-                $siswaList = $stmtSiswaList->fetchAll() ?: [];
+                $siswaList = [];
 
                 // E. Daftar Guru (GTK) di Sekolah Ini untuk Tab Visualisasi
-                $stmtGtkList = $db->prepare("
-                    SELECT u.nama_lengkap, u.email, u.status, r.nama_role 
-                    FROM users u
-                    JOIN roles r ON u.role_id = r.id
-                    WHERE u.tenant_id = :tenant_id 
-                      AND r.nama_role = 'guru' 
-                      AND u.deleted_at IS NULL
-                    ORDER BY u.nama_lengkap ASC
-                ");
-                $stmtGtkList->execute(['tenant_id' => $tenantId]);
-                $gtkList = $stmtGtkList->fetchAll() ?: [];
+                $gtkList = [];
             }
 
             // Query log perubahan aktivitas untuk siswa (untuk tabel dashboard)
-            $logWhere = "l.table_name = 'siswa'";
-            $logParams = [];
-            if (!$isSuperAdmin) {
-                $logWhere .= " AND l.tenant_id = :tenant_id";
-                $logParams['tenant_id'] = $tenantId;
-            }
-
-            $stmtLogs = $db->prepare("
-                SELECT l.*, u.nama_lengkap AS actor_name, t.nama_sekolah
-                FROM activity_logs l
-                LEFT JOIN users u ON l.user_id = u.id
-                LEFT JOIN tenants t ON l.tenant_id = t.id
-                WHERE {$logWhere}
-                ORDER BY l.created_at DESC
-                LIMIT 50
-            ");
-            $stmtLogs->execute($logParams);
-            $recentChangesRaw = $stmtLogs->fetchAll(PDO::FETCH_ASSOC) ?: [];
-
-            // Resolve database IDs in log data to human-readable names
-            $this->resolveLogDataIds($recentChangesRaw, $db);
-
             $recentChanges = [];
-            foreach ($recentChangesRaw as $log) {
-                $oldObj = json_decode($log['old_data'] ?? '', true) ?: [];
-                $newObj = json_decode($log['new_data'] ?? '', true) ?: [];
-                
-                // Cari nama siswa
-                $studentName = $newObj['nama_lengkap'] ?? ($oldObj['nama_lengkap'] ?? 'Tidak Diketahui');
-                
-                $recentChanges[] = [
-                    'id' => $log['id'],
-                    'waktu' => $log['created_at'],
-                    'action' => $log['action'],
-                    'table_name' => $log['table_name'],
-                    'sekolah' => $log['nama_sekolah'] ?? 'Sistem (Global)',
-                    'nama_siswa' => $studentName,
-                    'actor_name' => $log['actor_name'] ?? 'System',
-                    'user_role' => $log['user_role'] ?? 'system',
-                    'ip_address' => $log['ip_address'] ?? '127.0.0.1',
-                    'old_data' => $log['old_data'],
-                    'new_data' => $log['new_data']
-                ];
-            }
 
             // Map roleId if missing in session
             $roleId = $_SESSION['role_id'] ?? null;

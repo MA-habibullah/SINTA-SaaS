@@ -729,9 +729,9 @@ $isAdminOrSuper = in_array('super_admin', $user_roles, true) || in_array('operat
                 tabSearchQuery: '',
                 userRole: <?= json_encode($stats['user_role'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
                 schoolInfo: <?= json_encode($stats['school_info'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
-                siswaList: <?= json_encode($stats['siswa_list'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
-                gtkList: <?= json_encode($stats['gtk_list'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
-                recentChanges: <?= json_encode($stats['recent_changes'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+                siswaList: [],
+                gtkList: [],
+                recentChanges: [],
                 sarpras: [
                     { nama: 'Ruang Kelas Teori', jumlah: 12, kondisiWidth: 90, kondisiText: '90% Baik' },
                     { nama: 'Laboratorium Komputer', jumlah: 2, kondisiWidth: 95, kondisiText: '95% Sangat Baik' },
@@ -1139,6 +1139,18 @@ $isAdminOrSuper = in_array('super_admin', $user_roles, true) || in_array('operat
                             : 'Terjadi kesalahan sistem saat memperbarui profil sekolah.';
                     }
                 });
+            }
+        },
+        async mounted() {
+            try {
+                const response = await axios.get('/SINTA-SaaS/dashboard?ajax=1&action=get_dashboard_stats');
+                if (response.data && response.data.success) {
+                    this.siswaList = response.data.siswaList || [];
+                    this.gtkList = response.data.gtkList || [];
+                    this.recentChanges = response.data.recentChanges || [];
+                }
+            } catch (err) {
+                console.error("Gagal memuat data statistik dashboard:", err);
             }
         }
     });
