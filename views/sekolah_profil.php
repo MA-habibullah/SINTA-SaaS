@@ -508,7 +508,7 @@
                 try {
                     const urlParams = new URLSearchParams(window.location.search);
                     const tId = urlParams.get('tenant_id') || '';
-                    const response = await axios.get(`/SINTA-SaaS/sekolah/profil?ajax=1&action=get_profile_detail&tenant_id=${tId}`);
+                    const response = await axios.get(`/SINTA-SaaS/sekolah/identitas?ajax=1&action=get_profile_detail&tenant_id=${tId}`);
                     if (response.data && response.data.success) {
                         tenant.value = response.data.data;
                         logoPreview.value = tenant.value.logo ? `/SINTA-SaaS/storage/app/public/${tenant.value.logo}` : null;

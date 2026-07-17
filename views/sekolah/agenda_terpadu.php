@@ -921,7 +921,7 @@ function initAgendaTerpadu() {
 
     // Fetch dynamic events and tasks via AJAX
     const filterTenantId = '<?= $selectedTenant ?>';
-    axios.get(`/SINTA-SaaS/sekolah/agenda?ajax=1&action=get_agenda_data&filter_tenant_id=${filterTenantId}`)
+    axios.get(`/SINTA-SaaS/informasi/agenda?ajax=1&action=get_agenda_data&filter_tenant_id=${filterTenantId}`)
         .then(response => {
             if (response.data && response.data.success) {
                 const events = response.data.events || [];
