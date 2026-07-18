@@ -67,3 +67,14 @@
 ### Root Cause:
 - Folder uploads untuk PDSS sebelumnya terpisah di root directory (`/uploads/pdss/`), yang tidak konsisten dengan standar *Storage Isolation* SINTA-SaaS yang menggunakan `/storage/uploads/`.
 - Dilakukan konsolidasi agar semua berkas upload berada di bawah subdirektori `/storage/uploads/` demi ketertiban struktur dan pengamanan terpusat berkas.
+
+---
+## Perbaikan Blank Tab Tracking Data Alumni pada Halaman BK Alumni
+**Waktu**: 17:05 WIB
+**Jenis**: Bug Fix
+
+### File yang Diubah:
+- `views/bk/alumni_layout.php` - Mengubah filter `$allowed_pdss_tabs` dari `['alumni']` menjadi `['tracking']`.
+
+### Root Cause:
+- Terjadi mismatch/ketidaksesuaian ID tab filter di mana layout pembungkus mengirimkan ID `alumni` sedangkan module utama `pdss_index.php` mengharapkan ID `tracking` untuk merender dan menampilkan kontainer data alumni. Akibatnya, kontainer data disembunyikan (`v-show`) dan halaman terlihat kosong (blank).

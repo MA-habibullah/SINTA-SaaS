@@ -458,3 +458,33 @@ Memindahkan folder `/uploads/pdss` secara rekursif ke `/storage/uploads/pdss` me
 1. Jalankan script refactoring `scratch/refactor_pdss_uploads_path.php` ? verifikasi database ter-update dan folder fisik berpindah dengan benar.
 2. Buka menu BK Akademik ? Simulasi Kampus ? tab Simulasi 3.
 3. Unggah file bukti baru ? verifikasi data disimpan di folder `/storage/uploads/pdss/simulasi/` dan file dapat diakses melalui link `/storage/uploads/pdss/simulasi/...` tanpa broken link.
+
+---
+## Perbaikan Blank Tab Tracking Data Alumni pada Halaman BK Alumni
+**Waktu**: 17:05 WIB
+**Status**: Dieksekusi
+**Deskripsi**: Mengatasi masalah tab "Tracking Data Alumni" yang kosong melompong (blank) akibat ketidaksesuaian ID tab filter `$allowed_pdss_tabs` di layout pembungkus dengan template utama `pdss_index.php`.
+
+### Proposed Changes
+
+#### [MODIFY] [views/bk/alumni_layout.php](file:///c:/xampp/htdocs/SINTA-SaaS/views/bk/alumni_layout.php)
+- Mengubah nilai filter tab dari `'alumni'` menjadi `'tracking'`.
+
+*Sebelum:*
+```php
+$allowed_pdss_tabs = ['alumni'];
+include __DIR__ . '/../pdss_index.php';
+```
+
+*Sesudah:*
+```php
+$allowed_pdss_tabs = ['tracking'];
+include __DIR__ . '/../pdss_index.php';
+```
+
+### Root Cause
+Di `pdss_index.php` baris 1056, Vue `activeTab` diinisialisasi dari `$allowed_pdss_tabs[0]`. Karena nilainya `'alumni'`, state Vue diset ke `'alumni'`. Namun, elemen kontainer tabel tracking di `pdss_index.php` baris 676 dibatasi dengan `<div v-show="activeTab === 'tracking'"`, dan menu navigasi tab baris 164 dibatasi dengan `in_array('tracking', $allowed_pdss_tabs)`. Ketidakcocokan ID tab (`alumni` vs `tracking`) ini menyebabkan HTML kontainer disembunyikan secara visual dan tab bar tidak dirender, menghasilkan halaman kosong.
+
+### Verification Plan
+1. Buka halaman `/bk/alumni` → pilih sekolah (misal: SMAN 1 Jakarta).
+2. Verifikasi tab "Tracking Data Alumni" memuat tabel data alumni dengan benar (tidak kosong).
