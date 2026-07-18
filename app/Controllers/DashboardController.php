@@ -21,8 +21,6 @@ class DashboardController extends BaseController {
         SessionManager::start();
 
         // 2. Amankan Dashboard: Cek apakah session user_id telah disetel
-        // 2. Amankan Dashboard: Cek apakah session user_id telah disetel
-        // Jika belum login, redirect ke halaman login
         if (!isset($_SESSION['user_id'])) {
             header('Location: /SINTA-SaaS/login');
             exit;
@@ -38,6 +36,7 @@ class DashboardController extends BaseController {
             if ($action === 'get_dashboard_stats') {
                 $db = Database::getConnection();
                 try {
+                    // --- A. Query Data Siswa & GTK ---
                     if ($isSuperAdmin) {
                         $stmtSiswaList = $db->query("
                             SELECT s.nis, s.nisn, s.nama_lengkap, s.jenis_kelamin, s.tempat_lahir, s.tanggal_lahir, s.alamat, t.nama_sekolah 
@@ -82,6 +81,7 @@ class DashboardController extends BaseController {
                         $gtkList = $stmtGtkList->fetchAll() ?: [];
                     }
 
+                    // --- B. Query Audit Trail ---
                     $logWhere = "l.table_name = 'siswa'";
                     $logParams = [];
                     if (!$isSuperAdmin) {
@@ -122,11 +122,97 @@ class DashboardController extends BaseController {
                         ];
                     }
 
+                    // --- C. Query Statistik Utama & Profil Sekolah ---
+                    if ($isSuperAdmin) {
+                        $stmtTotalSekolah = $db->query("SELECT COUNT(*) as total FROM tenants WHERE deleted_at IS NULL");
+                        $totalSekolah = $stmtTotalSekolah->fetch()['total'] ?? 0;
+
+                        $stmtActiveTenants = $db->query("SELECT COUNT(*) as total FROM tenants WHERE status = 'active' AND deleted_at IS NULL");
+                        $activeCount = $stmtActiveTenants->fetch()['total'] ?? 0;
+                        $paketAktif = "SaaS Enterprise (" . $activeCount . " Sekolah)";
+
+                        $stmtSiswa = $db->query("SELECT COUNT(*) as total FROM siswa WHERE deleted_at IS NULL");
+                        $totalSiswa = $stmtSiswa->fetch()['total'] ?? 0;
+
+                        $stmtSync = $db->query("SELECT COUNT(*) as total FROM tenants WHERE status_sinkronisasi = 'Tersinkronisasi' AND deleted_at IS NULL");
+                        $syncCount = $stmtSync->fetch()['total'] ?? 0;
+                        $statusSinkronisasi = "Node OK ({$syncCount}/{$totalSekolah})";
+
+                        $schoolInfo = [
+                            'nama_sekolah' => 'Pusat Kendali SaaS (Global)',
+                            'npsn' => 'PLATFORM',
+                            'subdomain' => 'admin',
+                            'status' => 'active',
+                            'paket_aktif' => 'Global SaaS Owner',
+                            'status_sinkronisasi' => '100% Online',
+                            'created_at' => date('Y-m-d H:i:s')
+                        ];
+                    } else {
+                        if ($tenantId === null) {
+                            $this->jsonResponse(['error' => 'Tenant tidak valid.'], 403);
+                        }
+
+                        $stmtTotalSekolah = $db->prepare("
+                            SELECT COUNT(*) as total 
+                            FROM tenants 
+                            WHERE id = :tenant_id AND deleted_at IS NULL
+                        ");
+                        $stmtTotalSekolah->execute(['tenant_id' => $tenantId]);
+                        $totalSekolah = $stmtTotalSekolah->fetch()['total'] ?? 0;
+
+                        $stmtTenant = $db->prepare("
+                            SELECT nama_sekolah, npsn, subdomain, status, paket_aktif, status_sinkronisasi, created_at 
+                            FROM tenants 
+                            WHERE id = :tenant_id AND deleted_at IS NULL
+                        ");
+                        $stmtTenant->execute(['tenant_id' => $tenantId]);
+                        $schoolInfo = $stmtTenant->fetch() ?: [];
+
+                        $paketAktif = $schoolInfo['paket_aktif'] ?? 'Trial';
+                        $statusSinkronisasi = $schoolInfo['status_sinkronisasi'] ?? 'Offline';
+
+                        $stmtSiswa = $db->prepare("
+                            SELECT COUNT(*) as total 
+                            FROM siswa 
+                            WHERE tenant_id = :tenant_id AND deleted_at IS NULL
+                        ");
+                        $stmtSiswa->execute(['tenant_id' => $tenantId]);
+                        $totalSiswa = $stmtSiswa->fetch()['total'] ?? 0;
+                    }
+
+                    // --- D. Fetch Pengumuman ---
+                    $roleId = $_SESSION['role_id'] ?? null;
+                    if ($roleId === null) {
+                        $roleName = $_SESSION['role_name'] ?? '';
+                        if ($roleName === 'super_admin') $roleId = 1;
+                        elseif ($roleName === 'operator_sekolah') $roleId = 2;
+                        elseif ($roleName === 'siswa') $roleId = 6;
+                        else $roleId = 0;
+                    }
+
+                    $pengumumanModel = new PengumumanModel($tenantId);
+                    $pengumuman_list = $pengumumanModel->getActiveForUser($roleId, 1, 0) ?: [];
+                    $total_pengumuman = $pengumumanModel->countActiveForUser($roleId) ?: 0;
+
                     $this->jsonResponse([
                         'success' => true,
                         'siswaList' => $siswaList,
                         'gtkList' => $gtkList,
-                        'recentChanges' => $recentChanges
+                        'recentChanges' => $recentChanges,
+                        'stats' => [
+                            'nama_sekolah' => $schoolInfo['nama_sekolah'] ?? 'Sekolah',
+                            'npsn' => $schoolInfo['npsn'] ?? 'NPSN',
+                            'subdomain' => $schoolInfo['subdomain'] ?? 'subdomain',
+                            'total_sekolah' => $totalSekolah,
+                            'paket_aktif' => $paketAktif,
+                            'total_siswa' => $totalSiswa,
+                            'status_sinkronisasi' => $statusSinkronisasi,
+                            'user_nama' => $_SESSION['nama_lengkap'] ?? 'User',
+                            'user_role' => $_SESSION['role_name'] ?? 'guest',
+                            'pengumuman_list' => $pengumuman_list,
+                            'total_pengumuman' => $total_pengumuman,
+                            'school_info' => $schoolInfo
+                        ]
                     ]);
                 } catch (\PDOException $e) {
                     $this->jsonResponse(['error' => $e->getMessage()], 500);
@@ -134,145 +220,34 @@ class DashboardController extends BaseController {
             }
         }
 
+        // Tampilkan halaman skeleton kosong (TANPA DATA dari DB)
         try {
             $db = Database::getConnection();
-
-            if ($isSuperAdmin) {
-                // 4. Kueri Global Platform untuk Super Admin (Tanpa Filter tenant_id)
-                
-                // A. Menghitung Jumlah Sekolah (Tenants)
-                $stmtTotalSekolah = $db->query("SELECT COUNT(*) as total FROM tenants WHERE deleted_at IS NULL");
-                $totalSekolah = $stmtTotalSekolah->fetch()['total'] ?? 0;
-
-                // B. Menghitung Jumlah Paket Aktif (Total Tenant dengan Status Active)
-                $stmtActiveTenants = $db->query("SELECT COUNT(*) as total FROM tenants WHERE status = 'active' AND deleted_at IS NULL");
-                $activeCount = $stmtActiveTenants->fetch()['total'] ?? 0;
-                $paketAktif = "SaaS Enterprise (" . $activeCount . " Sekolah)";
-
-                // C. Menghitung Jumlah Siswa Aktif Lintas Semua Sekolah
-                $stmtSiswa = $db->query("SELECT COUNT(*) as total FROM siswa WHERE deleted_at IS NULL");
-                $totalSiswa = $stmtSiswa->fetch()['total'] ?? 0;
-
-                // D. Menghitung Status Sinkronisasi Global
-                $stmtSync = $db->query("SELECT COUNT(*) as total FROM tenants WHERE status_sinkronisasi = 'Tersinkronisasi' AND deleted_at IS NULL");
-                $syncCount = $stmtSync->fetch()['total'] ?? 0;
-                $statusSinkronisasi = "Node OK ({$syncCount}/{$totalSekolah})";
-
-                // E. Profil Instansi untuk Super Admin
-                $schoolInfo = [
-                    'nama_sekolah' => 'Pusat Kendali SaaS (Global)',
-                    'npsn' => 'PLATFORM',
-                    'subdomain' => 'admin',
-                    'status' => 'active',
-                    'paket_aktif' => 'Global SaaS Owner',
-                    'status_sinkronisasi' => '100% Online',
-                    'created_at' => date('Y-m-d H:i:s')
-                ];
-
-                // F. Daftar Siswa Lintas Tenant untuk Tab Visualisasi
-                $siswaList = [];
-
-                // G. Daftar Guru (GTK) Lintas Tenant untuk Tab Visualisasi
-                $gtkList = [];
-
+            $namaSekolah = 'Dashboard';
+            if (!$isSuperAdmin && $tenantId !== null) {
+                $stmt = $db->prepare("SELECT nama_sekolah FROM tenants WHERE id = ? LIMIT 1");
+                $stmt->execute([$tenantId]);
+                $res = $stmt->fetch();
+                if ($res) {
+                    $namaSekolah = $res['nama_sekolah'];
+                }
             } else {
-                // 4. Kueri Spesifik Tenant untuk Operator / Guru (Dengan Filter tenant_id)
-                if ($tenantId === null) {
-                    // Jika bukan super admin tapi tidak memiliki tenant_id, paksa logout
-                    SessionManager::logout();
-                    header('Location: /SINTA-SaaS/login?error=tenant_suspended');
-                    exit;
-                }
-
-                // A. Menghitung Jumlah Sekolah di bawah Tenant Ini (Hasilnya 1)
-                $stmtTotalSekolah = $db->prepare("
-                    SELECT COUNT(*) as total 
-                    FROM tenants 
-                    WHERE id = :tenant_id AND deleted_at IS NULL
-                ");
-                $stmtTotalSekolah->execute(['tenant_id' => $tenantId]);
-                $totalSekolah = $stmtTotalSekolah->fetch()['total'] ?? 0;
-
-                // B. Mengambil Informasi Profil Sekolah (Tenant) - Termasuk paket & sinkronisasi
-                $stmtTenant = $db->prepare("
-                    SELECT nama_sekolah, npsn, subdomain, status, paket_aktif, status_sinkronisasi, created_at 
-                    FROM tenants 
-                    WHERE id = :tenant_id AND deleted_at IS NULL
-                ");
-                $stmtTenant->execute(['tenant_id' => $tenantId]);
-                $schoolInfo = $stmtTenant->fetch();
-
-                if (!$schoolInfo) {
-                    // Jika tenant_id session tidak valid (misal sekolah dinonaktifkan secara global)
-                    SessionManager::logout();
-                    header('Location: /SINTA-SaaS/login?error=tenant_suspended');
-                    exit;
-                }
-
-                $paketAktif = $schoolInfo['paket_aktif'];
-                $statusSinkronisasi = $schoolInfo['status_sinkronisasi'];
-
-                // C. Menghitung Jumlah Siswa Aktif di Sekolah ini
-                $stmtSiswa = $db->prepare("
-                    SELECT COUNT(*) as total 
-                    FROM siswa 
-                    WHERE tenant_id = :tenant_id AND deleted_at IS NULL
-                ");
-                $stmtSiswa->execute(['tenant_id' => $tenantId]);
-                $totalSiswa = $stmtSiswa->fetch()['total'] ?? 0;
-
-                // D. Daftar Siswa di Sekolah Ini untuk Tab Visualisasi
-                $siswaList = [];
-
-                // E. Daftar Guru (GTK) di Sekolah Ini untuk Tab Visualisasi
-                $gtkList = [];
+                $namaSekolah = 'Pusat Kendali SaaS (Global)';
             }
-
-            // Query log perubahan aktivitas untuk siswa (untuk tabel dashboard)
-            $recentChanges = [];
-
-            // Map roleId if missing in session
-            $roleId = $_SESSION['role_id'] ?? null;
-            if ($roleId === null) {
-                $roleName = $_SESSION['role_name'] ?? '';
-                if ($roleName === 'super_admin') $roleId = 1;
-                elseif ($roleName === 'operator_sekolah') $roleId = 2;
-                elseif ($roleName === 'siswa') $roleId = 6;
-                else $roleId = 0;
-            }
-
-            // H. Fetch Pengumuman (Limit 1 for Dashboard)
-            $pengumumanModel = new PengumumanModel($tenantId);
-            $pengumuman_list = $pengumumanModel->getActiveForUser($roleId, 1, 0);
-            $total_pengumuman = $pengumumanModel->countActiveForUser($roleId);
-
-            // 5. Kemas data untuk disalurkan ke View
-            $stats = [
-                'nama_sekolah' => $schoolInfo['nama_sekolah'],
-                'npsn' => $schoolInfo['npsn'],
-                'subdomain' => $schoolInfo['subdomain'],
-                'total_sekolah' => $totalSekolah,
-                'paket_aktif' => $paketAktif,
-                'total_siswa' => $totalSiswa,
-                'status_sinkronisasi' => $statusSinkronisasi,
-                'user_nama' => $_SESSION['nama_lengkap'],
+            
+            $data = [
+                'title' => 'Dashboard - ' . $namaSekolah,
                 'user_role' => $_SESSION['role_name'],
-                'school_info' => $schoolInfo,
-                'siswa_list' => $siswaList,
-                'gtk_list' => $gtkList,
-                'recent_changes' => $recentChanges,
-                'pengumuman_list' => $pengumuman_list,
-                'total_pengumuman' => $total_pengumuman
+                'user_nama' => $_SESSION['nama_lengkap']
             ];
-
-            // 6. Muat file Tampilan menggunakan Master Layout
-            $stats['title'] = 'Dashboard - ' . $schoolInfo['nama_sekolah'];
-            $this->render('dashboard_view', ['stats' => $stats, 'data' => $stats]);
-
-        } catch (\PDOException $e) {
-            // Log kesalahan dan tampilkan halaman error yang aman
-            error_log("Dashboard query error: " . $e->getMessage());
-            die("Terjadi kesalahan pada sistem. Silakan hubungi Administrator.");
+            $this->render('dashboard_view', ['stats' => $data, 'data' => $data]);
+        } catch (\Throwable $e) {
+            $data = [
+                'title' => 'Dashboard',
+                'user_role' => $_SESSION['role_name'],
+                'user_nama' => $_SESSION['nama_lengkap']
+            ];
+            $this->render('dashboard_view', ['stats' => $data, 'data' => $data]);
         }
     }
 

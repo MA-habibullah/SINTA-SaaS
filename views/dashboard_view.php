@@ -14,31 +14,34 @@ $isAdminOrSuper = in_array('super_admin', $user_roles, true) || in_array('operat
         <div class="col-12">
             <div class="p-3 p-md-4 rounded-4 shadow-sm border-0 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3" style="background: linear-gradient(135deg, #1e293b, #0f172a); color: #fff;">
                 <div>
-                    <h4 class="fw-bold mb-1 fs-5 fs-md-4">Selamat Datang Kembali, <?= htmlspecialchars($stats['user_nama']) ?>! 👋</h4>
-                    <p class="text-slate-300 mb-0 opacity-75 fs-7">Mengakses Sekolah: <strong><?= htmlspecialchars($stats['nama_sekolah']) ?></strong></p>
+                    <h4 class="fw-bold mb-1 fs-5 fs-md-4">
+                        <span v-if="isLoadingStats" class="placeholder-glow"><span class="placeholder col-6 bg-secondary"></span></span>
+                        <span v-else>Selamat Datang Kembali, {{ stats.user_nama }}! 👋</span>
+                    </h4>
+                    <p class="text-slate-300 mb-0 opacity-75 fs-7">
+                        <span v-if="isLoadingStats" class="placeholder-glow"><span class="placeholder col-4 bg-secondary"></span></span>
+                        <span v-else>Mengakses Sekolah: <strong>{{ stats.nama_sekolah }}</strong></span>
+                    </p>
                 </div>
                 <div class="flex-shrink-0">
-                    <span class="badge bg-primary px-3 py-2 fs-7 rounded-3">
-                        Domain: <?= htmlspecialchars($stats['subdomain']) ?>.sinta-saas.id
+                    <span class="badge bg-primary px-3 py-2 fs-7 rounded-3" v-if="!isLoadingStats">
+                        Domain: {{ stats.subdomain }}.sinta-saas.id
                     </span>
                 </div>
             </div>
         </div>
     </div>
 
-    <?php if ($stats['user_role'] !== 'siswa'): ?>
     <!-- Multi-Tenant Isolation Alert Info -->
-    <div class="alert alert-primary border-0 rounded-4 p-3 mb-4 shadow-sm d-flex align-items-center gap-3" role="alert">
+    <div class="alert alert-primary border-0 rounded-4 p-3 mb-4 shadow-sm d-flex align-items-center gap-3" role="alert" v-if="userRole !== 'siswa'">
         <i class="bi bi-shield-fill-check text-primary fs-3"></i>
         <div>
             <strong class="text-primary-emphasis">Akses Multi-Tenant Aman:</strong> Sistem mendeteksi ID tenant Anda secara otomatis dari session. Seluruh data sekolah di luar wewenang Anda terisolasi dan tidak dapat diakses (secure by design).
         </div>
     </div>
-    <?php endif; ?>
 
-    <?php if ($stats['user_role'] !== 'siswa'): ?>
     <!-- 4 Metrics Cards Row -->
-    <div class="row g-3 g-md-4 mb-4">
+    <div class="row g-3 g-md-4 mb-4" v-if="userRole !== 'siswa'">
         
         <!-- Card 1: Total Sekolah -->
         <div class="col-12 col-sm-6 col-lg-3">
@@ -46,7 +49,10 @@ $isAdminOrSuper = in_array('super_admin', $user_roles, true) || in_array('operat
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <div class="text-muted fw-semibold mb-1 fs-8 text-uppercase" style="font-size: 0.75rem;">Total Sekolah</div>
-                        <h3 class="fw-bold text-dark mb-0"><?= number_format($stats['total_sekolah']) ?></h3>
+                        <h3 class="fw-bold text-dark mb-0">
+                            <span v-if="isLoadingStats" class="spinner-border spinner-border-sm text-primary" role="status"></span>
+                            <span v-else>{{ stats.total_sekolah }}</span>
+                        </h3>
                     </div>
                     <div class="bg-primary-subtle rounded-3 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; font-size: 1.25rem; color: #084298;">
                         <i class="bi bi-buildings"></i>
@@ -60,8 +66,11 @@ $isAdminOrSuper = in_array('super_admin', $user_roles, true) || in_array('operat
             <div class="card border-0 shadow-sm rounded-4 h-100 p-3 p-md-4 border-start border-info border-4" style="transition: transform 0.2s ease;">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <div class="text-muted fw-semibold mb-1 fs-8 text-uppercase" style="font-size: 0.75rem;">Paket Hack</div>
-                        <h5 class="fw-bold text-info mb-0"><?= htmlspecialchars($stats['paket_aktif']) ?></h5>
+                        <div class="text-muted fw-semibold mb-1 fs-8 text-uppercase" style="font-size: 0.75rem;">Paket Aktif</div>
+                        <h5 class="fw-bold text-info mb-0">
+                            <span v-if="isLoadingStats" class="spinner-border spinner-border-sm text-info" role="status"></span>
+                            <span v-else>{{ stats.paket_aktif }}</span>
+                        </h5>
                     </div>
                     <div class="bg-info-subtle text-info rounded-3 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; font-size: 1.25rem;">
                         <i class="bi bi-gem"></i>
@@ -76,7 +85,10 @@ $isAdminOrSuper = in_array('super_admin', $user_roles, true) || in_array('operat
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <div class="text-muted fw-semibold mb-1 fs-8 text-uppercase" style="font-size: 0.75rem;">Total Siswa</div>
-                        <h3 class="fw-bold text-success mb-0"><?= number_format($stats['total_siswa']) ?></h3>
+                        <h3 class="fw-bold text-success mb-0">
+                            <span v-if="isLoadingStats" class="spinner-border spinner-border-sm text-success" role="status"></span>
+                            <span v-else>{{ stats.total_siswa }}</span>
+                        </h3>
                     </div>
                     <div class="bg-success-subtle text-success rounded-3 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; font-size: 1.25rem;">
                         <i class="bi bi-people-fill"></i>
@@ -92,8 +104,8 @@ $isAdminOrSuper = in_array('super_admin', $user_roles, true) || in_array('operat
                     <div>
                         <div class="text-muted fw-semibold mb-1 fs-8 text-uppercase" style="font-size: 0.75rem;">Sinkronisasi</div>
                         <h5 class="fw-bold text-warning mb-0 d-flex align-items-center gap-1">
-                            <span class="spinner-grow spinner-grow-sm text-warning" role="status"></span>
-                            <?= htmlspecialchars($stats['status_sinkronisasi']) ?>
+                            <span class="spinner-grow spinner-grow-sm text-warning" role="status" v-if="isLoadingStats"></span>
+                            <span v-else>{{ stats.status_sinkronisasi }}</span>
                         </h5>
                     </div>
                     <div class="bg-warning-subtle text-warning rounded-3 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; font-size: 1.25rem;">
@@ -104,49 +116,28 @@ $isAdminOrSuper = in_array('super_admin', $user_roles, true) || in_array('operat
         </div>
  
     </div>
-    <?php endif; ?>
 
     <!-- Papan Pengumuman (Timeline UI) -->
-    <?php if (!empty($stats['pengumuman_list'])): ?>
-    <div class="row mb-5">
+    <div class="row mb-5" v-if="stats.pengumuman_list && stats.pengumuman_list.length > 0">
         <div class="col-12">
             <!-- Header section matching reference image -->
             <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
                 <h4 class="fw-bold mb-0 text-dark d-flex align-items-center" style="font-family: 'Inter', sans-serif;">
                     <i class="bi bi-megaphone-fill text-dark me-2 fs-3"></i> Pengumuman
                 </h4>
-                <button class="btn btn-info btn-sm text-white fw-bold shadow-sm d-flex align-items-center px-3 rounded-2" onclick="location.reload()">
+                <button class="btn btn-info btn-sm text-white fw-bold shadow-sm d-flex align-items-center px-3 rounded-2" @click="refreshStats">
                     <i class="bi bi-arrow-repeat me-1 fs-6"></i> Refresh
                 </button>
             </div>
             
-            <div class="timeline-container position-relative ps-2">
-                <?php 
-                $currentGroup = '';
-                $bulanIndo = [
-                    '01' => 'Januari', '02' => 'Februari', '03' => 'Maret', '04' => 'April', '05' => 'Mei', '06' => 'Juni',
-                    '07' => 'Juli', '08' => 'Agustus', '09' => 'September', '10' => 'Oktober', '11' => 'November', '12' => 'Desember'
-                ];
-                
-                foreach ($stats['pengumuman_list'] as $idx => $pengumuman): 
-                    $monthNum = date('m', strtotime($pengumuman['created_at']));
-                    $year = date('Y', strtotime($pengumuman['created_at']));
-                    
-                    if ($idx === 0) {
-                        $groupLabel = "Pengumuman Terakhir";
-                    } else {
-                        $groupLabel = $bulanIndo[$monthNum] . " " . $year;
-                    }
-                    
-                    if ($currentGroup !== $groupLabel):
-                        $currentGroup = $groupLabel;
-                ?>
-                <div class="mb-3 position-relative z-2">
-                    <span class="badge px-3 py-2 fs-7 rounded-2 shadow-sm" style="background-color: #0b5ed7; color: white;"><?= $groupLabel ?></span>
-                </div>
-                <?php endif; ?>
-                
-                <div class="d-flex position-relative mb-4">
+            <!-- Timeline Loader Spinner -->
+            <div v-if="isLoadingStats" class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="text-muted mt-2 fs-8">Memuat pengumuman terbaru...</p>
+            </div>
+
+            <div v-else class="timeline-container position-relative ps-2">
+                <div class="d-flex position-relative mb-4" v-for="(pengumuman, idx) in stats.pengumuman_list" :key="pengumuman.id">
                     <!-- Vertical Line (hides on last item if needed, but we keep it simple here) -->
                     <div class="position-absolute h-100" style="left: 15px; top: 32px; width: 2px; background-color: #dee2e6; z-index: 1;"></div>
                     
@@ -163,66 +154,45 @@ $isAdminOrSuper = in_array('super_admin', $user_roles, true) || in_array('operat
                             <div class="card-body p-2 p-md-3">
                                 <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-start mb-2 gap-1">
                                     <h5 class="fw-bold mb-0 text-uppercase" style="color: #0d6efd; font-family: 'Inter', sans-serif; font-size: 0.85rem; line-height: 1.4;">
-                                        <?= htmlspecialchars($pengumuman['judul']) ?>
+                                        {{ pengumuman.judul }}
                                     </h5>
                                     <div class="text-muted text-end align-self-end align-self-sm-start" style="font-size: 0.75rem;">
-                                        <i class="bi bi-calendar-event me-1"></i> <?= date('d-m-Y', strtotime($pengumuman['created_at'])) ?> <i class="bi bi-clock ms-1 me-1"></i> <?= date('H:i', strtotime($pengumuman['created_at'])) ?>
+                                        <i class="bi bi-calendar-event me-1"></i> {{ formatDateTime(pengumuman.created_at) }}
                                     </div>
                                 </div>
                                 
-                                <?php if (($_SESSION['role_name'] ?? '') === 'super_admin'): ?>
-                                <div class="mb-2 d-flex flex-wrap gap-1 align-items-center text-muted" style="font-size: 0.7rem;">
-                                    <span><i class="bi bi-person-circle me-1"></i><?= htmlspecialchars($pengumuman['nama_pembuat']) ?></span>
+                                <div class="mb-2 d-flex flex-wrap gap-1 align-items-center text-muted" style="font-size: 0.7rem;" v-if="userRole === 'super_admin'">
+                                    <span><i class="bi bi-person-circle me-1"></i>{{ pengumuman.nama_pembuat }}</span>
                                     <span>•</span>
-                                    <span class="badge bg-secondary-subtle text-secondary rounded-pill border px-2 py-1"><i class="bi bi-building me-1"></i><?= htmlspecialchars($pengumuman['nama_sekolah'] ?? 'Global') ?></span>
+                                    <span class="badge bg-secondary-subtle text-secondary rounded-pill border px-2 py-1"><i class="bi bi-building me-1"></i>{{ pengumuman.nama_sekolah || 'Global' }}</span>
                                     <span>•</span>
-                                    <?php 
-                                        $vis = strtolower($pengumuman['visibilitas']);
-                                        $badgeClass = 'bg-primary';
-                                        if ($vis === 'siswa') $badgeClass = 'bg-success';
-                                        elseif ($vis === 'guru') $badgeClass = 'bg-info';
-                                        elseif ($vis === 'private') $badgeClass = 'bg-danger';
-                                    ?>
-                                    <span class="badge <?= $badgeClass ?> text-white rounded-pill px-2 py-1"><i class="bi bi-globe2 me-1"></i> <?= ucfirst($vis) ?></span>
-                                </div>
-                                <?php endif; ?>
-                                
-                                <div class="text-dark mt-2 pengumuman-content text-break" style="font-size: 0.8rem; line-height: 1.5;">
-                                    <?= $pengumuman['isi_pengumuman'] ?>
+                                    <span class="badge text-white rounded-pill px-2 py-1" :class="pengumuman.visibilitas === 'super_admin' ? 'bg-danger' : 'bg-primary'"><i class="bi bi-globe2 me-1"></i> {{ pengumuman.visibilitas }}</span>
                                 </div>
                                 
-                                <?php if ($pengumuman['lampiran_file']): ?>
-                                <?php 
-                                    $ext = strtolower(pathinfo($pengumuman['lampiran_file'], PATHINFO_EXTENSION)); 
-                                    $isImage = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp']);
-                                ?>
-                                <div class="mt-3 pt-2 border-top">
-                                    <?php if ($isImage): ?>
-                                        <div class="mb-2 rounded-3 overflow-hidden shadow-sm" style="max-height: 150px; cursor: pointer; max-width: 250px;" onclick="window.open('/SINTA-SaaS/storage/app/public/<?= htmlspecialchars($pengumuman['lampiran_file']) ?>', '_blank')">
-                                            <img src="/SINTA-SaaS/storage/app/public/<?= htmlspecialchars($pengumuman['lampiran_file']) ?>" class="w-100 h-100 object-fit-cover hover-zoom" alt="Lampiran Pengumuman">
-                                        </div>
-                                    <?php endif; ?>
-                                    <a href="/SINTA-SaaS/storage/app/public/<?= htmlspecialchars($pengumuman['lampiran_file']) ?>" target="_blank" class="btn btn-primary fw-semibold d-flex d-md-inline-flex justify-content-center align-items-center rounded-3 px-3 py-1 shadow-sm w-100 w-md-auto" style="font-size: 0.8rem; transition: all 0.2s ease;">
-                                        <i class="bi <?= $isImage ? 'bi-image' : 'bi-cloud-download-fill' ?> me-2"></i> 
-                                        <?= $isImage ? 'Lihat Gambar' : 'Unduh Lampiran' ?>
+                                <div class="text-dark mt-2 pengumuman-content text-break" style="font-size: 0.8rem; line-height: 1.5;" v-html="pengumuman.isi_pengumuman">
+                                </div>
+                                
+                                <div class="mt-3 pt-2 border-top" v-if="pengumuman.lampiran_file">
+                                    <div class="mb-2 rounded-3 overflow-hidden shadow-sm" style="max-height: 150px; cursor: pointer; max-width: 250px;" v-if="isImageFile(pengumuman.lampiran_file)" @click="window.open('/SINTA-SaaS/storage/app/public/' + pengumuman.lampiran_file, '_blank')">
+                                        <img :src="'/SINTA-SaaS/storage/app/public/' + pengumuman.lampiran_file" class="w-100 h-100 object-fit-cover hover-zoom" alt="Lampiran Pengumuman">
+                                    </div>
+                                    <a :href="'/SINTA-SaaS/storage/app/public/' + pengumuman.lampiran_file" target="_blank" class="btn btn-primary fw-semibold d-flex d-md-inline-flex justify-content-center align-items-center rounded-3 px-3 py-1 shadow-sm w-100 w-md-auto" style="font-size: 0.8rem; transition: all 0.2s ease;">
+                                        <i class="bi me-2" :class="isImageFile(pengumuman.lampiran_file) ? 'bi-image' : 'bi-cloud-download-fill'"></i> 
+                                        {{ isImageFile(pengumuman.lampiran_file) ? 'Lihat Gambar' : 'Unduh Lampiran' }}
                                     </a>
                                 </div>
-                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
                 </div>
-                <?php endforeach; ?>
             </div>
         </div>
         
-        <?php if (($stats['total_pengumuman'] ?? 0) > count($stats['pengumuman_list'])): ?>
-        <div class="mt-2 mb-4 text-center">
+        <div class="mt-2 mb-4 text-center" v-if="stats.total_pengumuman > stats.pengumuman_list.length">
             <a href="/SINTA-SaaS/pengumuman/arsip" class="btn btn-outline-primary rounded-pill px-4 py-2 fw-semibold shadow-sm hover-shadow" style="transition: all 0.2s ease;">
-                Lihat Semua Pengumuman (<?= $stats['total_pengumuman'] ?>) <i class="bi bi-arrow-right ms-1"></i>
+                Lihat Semua Pengumuman ({{ stats.total_pengumuman }}) <i class="bi bi-arrow-right ms-1"></i>
             </a>
         </div>
-        <?php endif; ?>
     </div>
     
     <style>
@@ -265,8 +235,8 @@ $isAdminOrSuper = in_array('super_admin', $user_roles, true) || in_array('operat
         background-color: transparent !important;
         border-bottom: 2px solid #2563eb !important;
     }
-</style>
-    <?php endif; ?>
+
+
 
     <?php if ($isAdminOrSuper): ?>
     <!-- Tabs Navigation Bar (Vue.js Controlled with Mobile Horizontal Scroll) -->
@@ -727,8 +697,20 @@ $isAdminOrSuper = in_array('super_admin', $user_roles, true) || in_array('operat
             return {
                 activeTab: 'profil',
                 tabSearchQuery: '',
+                isLoadingStats: true,
                 userRole: <?= json_encode($stats['user_role'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
-                schoolInfo: <?= json_encode($stats['school_info'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+                schoolInfo: {},
+                stats: {
+                    user_nama: '',
+                    nama_sekolah: '',
+                    subdomain: '',
+                    total_sekolah: 0,
+                    paket_aktif: '',
+                    total_siswa: 0,
+                    status_sinkronisasi: '',
+                    pengumuman_list: [],
+                    total_pengumuman: 0
+                },
                 siswaList: [],
                 gtkList: [],
                 recentChanges: [],
@@ -1139,19 +1121,34 @@ $isAdminOrSuper = in_array('super_admin', $user_roles, true) || in_array('operat
                             : 'Terjadi kesalahan sistem saat memperbarui profil sekolah.';
                     }
                 });
+            },
+            async refreshStats() {
+                this.isLoadingStats = true;
+                try {
+                    const response = await axios.get('/SINTA-SaaS/dashboard?ajax=1&action=get_dashboard_stats');
+                    if (response.data && response.data.success) {
+                        this.siswaList = response.data.siswaList || [];
+                        this.gtkList = response.data.gtkList || [];
+                        this.recentChanges = response.data.recentChanges || [];
+                        if (response.data.stats) {
+                            this.stats = response.data.stats;
+                            this.schoolInfo = response.data.stats.school_info || {};
+                        }
+                    }
+                } catch (err) {
+                    console.error("Gagal memuat data statistik dashboard:", err);
+                } finally {
+                    this.isLoadingStats = false;
+                }
+            },
+            isImageFile(filename) {
+                if (!filename) return false;
+                const ext = filename.split('.').pop().toLowerCase();
+                return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
             }
         },
         async mounted() {
-            try {
-                const response = await axios.get('/SINTA-SaaS/dashboard?ajax=1&action=get_dashboard_stats');
-                if (response.data && response.data.success) {
-                    this.siswaList = response.data.siswaList || [];
-                    this.gtkList = response.data.gtkList || [];
-                    this.recentChanges = response.data.recentChanges || [];
-                }
-            } catch (err) {
-                console.error("Gagal memuat data statistik dashboard:", err);
-            }
+            await this.refreshStats();
         }
     });
 }
