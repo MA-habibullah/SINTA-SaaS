@@ -836,7 +836,7 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
                 hapusKuliah, hapusPekerjaan,
                 userRole, showSearchDropdown, searchResults, searchingStudents, selectedStudent, activeForm,
                 searchStudents, selectStudent,
-                listJalur, listKampusProdi, syncKampusData, resetKuliah
+                listJalur, listKampusProdi, syncKampusData, resetKuliah, resetPekerjaan
             };
         }
     });
