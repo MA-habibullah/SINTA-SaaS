@@ -1,4 +1,4 @@
-﻿# Walkthrough Harian — 2026-07-17
+# Walkthrough Harian — 2026-07-17
 
 ---
 ## Integrasi AeroScan (Pemindai Dokumen) ke SINTA-SaaS
@@ -131,10 +131,20 @@ ama_ayah dari array $siswa sebelum dikirim ke view
 
 **Masalah:** Data siswa dan transkrip nilai tercetak secara statis di HTML sumber Halaman Verifikasi Transkrip, memungkinkan pihak ketiga mengakses informasi sensitif secara langsung tanpa autentikasi / rate limit yang memadai (masalah kebocoran data).
 
-**Root Cause:** Halaman iews/verify_transkrip.php sebelumnya menggunakan inline PHP echo untuk memunculkan data nama, NISN, TTL, sekolah penerbit, dan transkrip nilai langsung ke dalam markup HTML halaman.
+**Root Cause:** Halaman  iews/verify_transkrip.php sebelumnya menggunakan inline PHP echo untuk memunculkan data nama, NISN, TTL, sekolah penerbit, dan transkrip nilai langsung ke dalam markup HTML halaman.
 
 **Perubahan yang dilakukan:**
 1. Mengubah routing utama di index.php untuk mendukung /api/v1/verify-transkrip/data.
-2. Mengubah logic erifyTranskrip() di pp/Controllers/BukuIndukController.php untuk membatasi query awal, menerbitkan One-Time Token (OTT) di session, dan hanya merender skeleton HTML.
-3. Menyediakan method API asinkron erifyTranskripApi() yang mengembalikan data siswa dan transkrip dalam format JSON setelah memverifikasi token OTT dan membersihkan data sensitif.
-4. Menulis ulang iews/verify_transkrip.php ke model AJAX Fetch menggunakan vanilla JavaScript fetch() agar data dirender secara dinamis di memori browser, menjaga HTML Page Source (Ctrl+U) dan tab Element Inspect tetap bersih dari kebocoran data database statis.
+2. Mengubah logic verifyTranskrip() di app/Controllers/BukuIndukController.php untuk membatasi query awal, menerbitkan One-Time Token (OTT) di session, dan hanya merender skeleton HTML.
+3. Menyediakan method API asinkron verifyTranskripApi() yang mengembalikan data siswa dan transkrip dalam format JSON setelah memverifikasi token OTT dan membersihkan data sensitif.
+4. Menulis ulang views/verify_transkrip.php ke model AJAX Fetch menggunakan vanilla JavaScript fetch() agar data dirender secara dinamis di memori browser, menjaga HTML Page Source (Ctrl+U) dan tab Element Inspect tetap bersih dari kebocoran data database statis.
+
+---
+## Proteksi Token Leakage & Skeleton Exposure di Verifikasi Transkrip
+**Waktu**: 20:25 WIB
+**Jenis**: Security Hardening
+
+**Perubahan yang dilakukan:**
+1. **Mengeliminasi token di JavaScript:** AJAX request ke `/api/v1/verify-transkrip/data` kini tidak lagi membawa query parameter token, melainkan bergantung penuh pada session cookie bawaan browser secara aman.
+2. **Merender markup secara dinamis:** Tag layout `#dataView` dipindahkan sepenuhnya ke dalam JavaScript string template di berkas `views/verify_transkrip.php`. 
+3. **Mencegah exposure layout kosong:** Skeleton layout tidak lagi terpampang jelas di Ctrl+U atau Inspect Element sebelum status API response sukses. Markup layout hanya disuntikkan ke dalam `#dataViewContainer` setelah data sukses tervalidasi secara internal di server.

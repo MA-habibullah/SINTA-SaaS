@@ -37,3 +37,33 @@
 3. **Perbaikan Error 500 Toggle Setting**: Menambahkan method static `getUserNama()` di `app/Core/SessionManager.php` untuk menghindari error `Call to undefined method` ketika menyimpan data log pembukaan/penutupan simulasi.
 4. **Format Ekspor Spreadsheet Modern (XLSX)**: Mengubah format output file ekspor simulasi pada `apiExportSimulasi()` di `app/Controllers/PDSSController.php` dari format file CSV menjadi format berkas spreadsheet (.xlsx) menggunakan `\Shuchkin\SimpleXLSXGen`.
 5. **Pencatatan Analisis Log**: Menambahkan rangkuman root cause analysis di akhir file `scratch/00 error, log, console, inject, dll.txt`.
+
+---
+## Perbaikan Halaman BK Alumni & Tracer Study
+**Waktu**: 16:17 WIB
+**Jenis**: Bug Fix / Feature / Refactor
+
+### File yang Diubah:
+- pp/Controllers/TracerController.php — Tambah guru_bk dan operator_sekolah ke role guard storeKuliah/storePekerjaan. Tambah method deleteKuliah() dan deletePekerjaan().
+- iews/tracer_study.php — Refactor total: XSS-safe via json_encode flag, banner role-aware (siswa vs admin), tabel dengan kolom Nama Alumni dan tombol Hapus untuk admin, live search siswa alumni, toggle input alumni luar sistem.
+- index.php — Tambah 3 route baru: DELETE tracer kuliah/pekerjaan dan search siswa alumni.
+- pp/Controllers/PDSSController.php — Hapus duplikat method apiSearchStudents (sudah ada di baris 887).
+
+### Root Cause:
+- Role guru_bk dan operator_sekolah mendapat 403 karena tidak terdaftar di whitelist storeKuliah/storePekerjaan.
+- XSS risk: $userRole di-echo langsung ke <script> tanpa json_encode.
+- Tidak ada tombol hapus dan kolom nama alumni untuk tampilan admin.
+- Endpoint DELETE dan search siswa belum ada.
+
+---
+## Restrukturisasi & Integrasi Folder Uploads PDSS
+**Waktu**: 16:55 WIB
+**Jenis**: Refactor / Security Storage Integration
+
+### File yang Diubah:
+- `app/Controllers/PDSSController.php` - Mengubah target direktori upload dan relative path penyimpanan file bukti dari `uploads/pdss/` menjadi `storage/uploads/pdss/`.
+- `scratch/refactor_pdss_uploads_path.php` [BARU] - Script otomatis untuk migrasi data path di database dan memindahkan folder fisik.
+
+### Root Cause:
+- Folder uploads untuk PDSS sebelumnya terpisah di root directory (`/uploads/pdss/`), yang tidak konsisten dengan standar *Storage Isolation* SINTA-SaaS yang menggunakan `/storage/uploads/`.
+- Dilakukan konsolidasi agar semua berkas upload berada di bawah subdirektori `/storage/uploads/` demi ketertiban struktur dan pengamanan terpusat berkas.
