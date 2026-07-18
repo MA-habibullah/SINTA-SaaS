@@ -78,3 +78,16 @@
 
 ### Root Cause:
 - Terjadi mismatch/ketidaksesuaian ID tab filter di mana layout pembungkus mengirimkan ID `alumni` sedangkan module utama `pdss_index.php` mengharapkan ID `tracking` untuk merender dan menampilkan kontainer data alumni. Akibatnya, kontainer data disembunyikan (`v-show`) dan halaman terlihat kosong (blank).
+
+---
+## Perbaikan Alumni Luar Sistem Tidak Muncul di Riwayat Kuliah & Pekerjaan
+**Waktu**: 17:10 WIB
+**Jenis**: Bug Fix
+
+### File yang Diubah:
+- `app/Controllers/TracerController.php` -- Mengubah JOIN siswa s menjadi LEFT JOIN siswa s pada 4 query di method apiGetKuliah() dan apiGetPekerjaan().
+
+### Root Cause:
+- Data alumni input manual (luar sistem) disimpan dengan id_siswa = NULL di tabel riwayat_kuliah dan riwayat_pekerjaan.
+- Query lama menggunakan INNER JOIN siswa s ON rk.id_siswa = s.id sehingga baris dengan id_siswa = NULL selalu tersaring keluar.
+- Solusi: Mengubah ke LEFT JOIN agar baris dengan id_siswa = NULL tetap diikutsertakan. Kolom nama_lengkap akan berisi NULL untuk alumni luar sistem (ditangani di frontend dengan fallback nama).

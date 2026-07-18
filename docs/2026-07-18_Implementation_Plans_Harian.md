@@ -488,3 +488,60 @@ Di `pdss_index.php` baris 1056, Vue `activeTab` diinisialisasi dari `$allowed_pd
 ### Verification Plan
 1. Buka halaman `/bk/alumni` → pilih sekolah (misal: SMAN 1 Jakarta).
 2. Verifikasi tab "Tracking Data Alumni" memuat tabel data alumni dengan benar (tidak kosong).
+
+---
+## Perbaikan Alumni Luar Sistem Tidak Muncul di Riwayat Kuliah & Pekerjaan
+**Waktu**: 17:10 WIB
+**Status**: Dieksekusi
+
+### Latar Belakang & Root Cause
+
+Alumni yang diinput secara manual via menu **"Input Alumni Luar Sistem"** (tanpa menunjuk akun siswa aktif) disimpan ke tabel `riwayat_kuliah` dan `riwayat_pekerjaan` dengan kolom `id_siswa = NULL`.
+
+Method `apiGetKuliah()` dan `apiGetPekerjaan()` di `app/Controllers/TracerController.php` menggunakan `INNER JOIN siswa s ON rk.id_siswa = s.id`. Karena `id_siswa = NULL` tidak cocok dengan satu pun baris di tabel `siswa`, seluruh data alumni luar sistem otomatis **tersaring keluar** (tidak pernah muncul di hasil query) meskipun data sudah tersimpan dengan benar di database.
+
+### Proposed Changes
+
+#### File: `app/Controllers/TracerController.php`
+
+**Method `apiGetKuliah()` - Sebelum:**
+`php
+// list per tenant
+SELECT rk.*, s.nama_lengkap FROM riwayat_kuliah rk JOIN siswa s ON rk.id_siswa = s.id WHERE rk.tenant_id = ?
+// list semua tenant (superadmin)
+SELECT rk.*, s.nama_lengkap, t.nama_sekolah FROM riwayat_kuliah rk JOIN siswa s ON rk.id_siswa = s.id JOIN tenants t ...
+`
+
+**Method `apiGetKuliah()` - Sesudah:**
+`php
+// list per tenant
+SELECT rk.*, s.nama_lengkap FROM riwayat_kuliah rk LEFT JOIN siswa s ON rk.id_siswa = s.id WHERE rk.tenant_id = ?
+// list semua tenant (superadmin)
+SELECT rk.*, s.nama_lengkap, t.nama_sekolah FROM riwayat_kuliah rk LEFT JOIN siswa s ON rk.id_siswa = s.id JOIN tenants t ...
+`
+
+**Method `apiGetPekerjaan()` - Sebelum:**
+`php
+// list per tenant
+SELECT rp.*, s.nama_lengkap FROM riwayat_pekerjaan rp JOIN siswa s ON rp.id_siswa = s.id WHERE rp.tenant_id = ?
+// list semua tenant (superadmin)
+SELECT rp.*, s.nama_lengkap, t.nama_sekolah FROM riwayat_pekerjaan rp JOIN siswa s ON rp.id_siswa = s.id JOIN tenants t ...
+`
+
+**Method `apiGetPekerjaan()` - Sesudah:**
+`php
+// list per tenant
+SELECT rp.*, s.nama_lengkap FROM riwayat_pekerjaan rp LEFT JOIN siswa s ON rp.id_siswa = s.id WHERE rp.tenant_id = ?
+// list semua tenant (superadmin)
+SELECT rp.*, s.nama_lengkap, t.nama_sekolah FROM riwayat_pekerjaan rp LEFT JOIN siswa s ON rp.id_siswa = s.id JOIN tenants t ...
+`
+
+### Penjelasan Teknis
+INNER JOIN mensyaratkan baris ada di kedua tabel. Karena alumni luar sistem memiliki id_siswa = NULL, join gagal dan baris dibuang. LEFT JOIN mengambil semua baris dari tabel kiri (riwayat_kuliah/pekerjaan) meskipun tidak ada pasangan di tabel siswa, sehingga data alumni luar sistem kini ikut muncul.
+
+### Verification Plan
+1. Login ke sekolah yang memiliki data input alumni luar sistem (misal: SMAN 11).
+2. Buka halaman BK > Alumni > tab Riwayat Kuliah.
+3. Verifikasi data alumni luar sistem muncul di tabel.
+4. Pastikan data alumni reguler (id_siswa valid) juga masih tampil normal.
+5. Ulangi verifikasi di tab Riwayat Pekerjaan.
