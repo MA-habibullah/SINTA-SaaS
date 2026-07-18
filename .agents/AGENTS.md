@@ -17,19 +17,30 @@ Saat merancang fitur baru atau memodifikasi modul yang ada, terapkan arsitektur 
 Selalu simpan file percobaan, pengujian (*testing*), atau pengecekan (seperti file dengan awalan `test_`, `check_`, `grant_`, dsb.) HANYA ke dalam folder `C:\xampp\htdocs\SINTA-SaaS\scratch`. Jangan pernah menyimpan file-file sementara ini di *root directory* atau direktori inti aplikasi lainnya.
 
 ## Implementation Plans
-Setiap kali ada rencana implementasi (*implementation plan*) yang telah diselesaikan atau dijalankan, ringkasan plan tersebut wajib **ditambahkan (append)** ke dalam **satu file gabungan per hari** di folder `C:\xampp\htdocs\SINTA-SaaS\docs` dengan format nama: `YYYY-MM-DD_Implementation_Plans_Harian.md` (contoh: `2026-07-17_Implementation_Plans_Harian.md`).
+Setiap kali ada rencana implementasi (*implementation plan*) yang telah diselesaikan atau dijalankan, **SELURUH ISI plan** (bukan hanya ringkasan) wajib **ditambahkan (append)** ke dalam **satu file gabungan per hari** di folder `C:\xampp\htdocs\SINTA-SaaS\docs` dengan format nama: `YYYY-MM-DD_Implementation_Plans_Harian.md` (contoh: `2026-07-17_Implementation_Plans_Harian.md`).
+
+> ⚠️ **PERINGATAN KRITIS**: Jangan pernah hanya menyimpan rangkuman atau deskripsi singkat. Seluruh konten plan — termasuk semua kode SQL, kode PHP, kode JavaScript, tabel, diagram, dan verification plan — WAJIB disertakan secara lengkap verbatim (apa adanya) di dalam file harian. File harian adalah **satu-satunya sumber kebenaran** untuk semua rencana implementasi; file plan terpisah per fitur tidak boleh menjadi satu-satunya tempat penyimpanan.
 
 **Aturan file implementation plan harian:**
 - **Satu file per hari** — jika file `YYYY-MM-DD_Implementation_Plans_Harian.md` sudah ada, tambahkan (*append*) entri baru di bawahnya. Jangan membuat file baru per plan.
 - Setiap entri dipisahkan dengan garis pemisah `---` dan diberi subjudul `## [Nama Fitur/Plan]` beserta waktu penulisannya.
-- Format setiap entri:
+- **Format setiap entri (WAJIB LENGKAP):**
   ```
   ---
   ## [Nama Fitur atau Rencana]
   **Waktu**: HH:MM WIB
   **Status**: Draft / Disetujui / Dieksekusi
-  **Deskripsi**: [Ringkasan singkat apa yang direncanakan, file yang akan diubah, dan pendekatan teknis utama]
+
+  [SELURUH ISI IMPLEMENTATION PLAN DITEMPEL DI SINI — VERBATIM]
+  Mencakup:
+  - Latar belakang & root cause
+  - Semua proposed changes lengkap per file (dengan kode sebelum/sesudah)
+  - Semua query SQL, kode PHP, kode JavaScript yang direncanakan
+  - Matriks hak akses (jika ada)
+  - Verification plan (manual + automated)
   ```
+- **DILARANG** hanya mengisi bagian `**Deskripsi**` dengan satu baris ringkasan. Jika plan memiliki 200 baris konten, maka semua 200 baris tersebut harus ada di file harian.
+
 
 ## Walkthroughs
 Setiap kali pekerjaan diselesaikan, dokumen penjelasan hasil akhir (*walkthrough*) wajib **ditambahkan (append)** ke dalam **satu file gabungan per hari** di folder `C:\xampp\htdocs\SINTA-SaaS\docs` dengan format nama: `YYYY-MM-DD_Walkthrough_Harian.md` (contoh: `2026-07-17_Walkthrough_Harian.md`).
