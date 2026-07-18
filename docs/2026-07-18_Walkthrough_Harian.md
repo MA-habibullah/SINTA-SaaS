@@ -1,4 +1,4 @@
----
+ï»¿---
 ## Pengamanan Halaman Dashboard & Proteksi Cetak Buku Induk (OTT)
 **Waktu**: 15:05 WIB
 **Jenis**: Security Hardening
@@ -44,10 +44,10 @@
 **Jenis**: Bug Fix / Feature / Refactor
 
 ### File yang Diubah:
-- pp/Controllers/TracerController.php — Tambah guru_bk dan operator_sekolah ke role guard storeKuliah/storePekerjaan. Tambah method deleteKuliah() dan deletePekerjaan().
-- iews/tracer_study.php — Refactor total: XSS-safe via json_encode flag, banner role-aware (siswa vs admin), tabel dengan kolom Nama Alumni dan tombol Hapus untuk admin, live search siswa alumni, toggle input alumni luar sistem.
-- index.php — Tambah 3 route baru: DELETE tracer kuliah/pekerjaan dan search siswa alumni.
-- pp/Controllers/PDSSController.php — Hapus duplikat method apiSearchStudents (sudah ada di baris 887).
+- pp/Controllers/TracerController.php â€” Tambah guru_bk dan operator_sekolah ke role guard storeKuliah/storePekerjaan. Tambah method deleteKuliah() dan deletePekerjaan().
+- iews/tracer_study.php â€” Refactor total: XSS-safe via json_encode flag, banner role-aware (siswa vs admin), tabel dengan kolom Nama Alumni dan tombol Hapus untuk admin, live search siswa alumni, toggle input alumni luar sistem.
+- index.php â€” Tambah 3 route baru: DELETE tracer kuliah/pekerjaan dan search siswa alumni.
+- pp/Controllers/PDSSController.php â€” Hapus duplikat method apiSearchStudents (sudah ada di baris 887).
 
 ### Root Cause:
 - Role guru_bk dan operator_sekolah mendapat 403 karena tidak terdaftar di whitelist storeKuliah/storePekerjaan.

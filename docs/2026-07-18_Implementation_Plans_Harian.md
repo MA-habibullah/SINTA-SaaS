@@ -1,4 +1,4 @@
-# Implementation Plans Harian — 2026-07-18
+﻿# Implementation Plans Harian â€” 2026-07-18
 
 ---
 ## Zero Data Leakage Dashboard & Solusi Cetak Aman
@@ -19,8 +19,8 @@ Halaman Dashboard (`views/dashboard_view.php`) menyuntikkan data mentah statisti
 - Pada `BukuIndukController.php`, verifikasi token session di backend sebelum melakukan render HTML/PDF rapor.
 
 ### Verification Plan
-1. Buka dashboard → Ctrl+U → pastikan data siswaList dan gtkList tidak tercetak dalam plaintext.
-2. Akses link cetak rapor dengan memanipulasi URL secara manual → pastikan sistem melempar error 403/Forbidden jika tidak ada session/token yang valid.
+1. Buka dashboard â†’ Ctrl+U â†’ pastikan data siswaList dan gtkList tidak tercetak dalam plaintext.
+2. Akses link cetak rapor dengan memanipulasi URL secara manual â†’ pastikan sistem melempar error 403/Forbidden jika tidak ada session/token yang valid.
 
 ---
 ## Perbaikan Modul BK Akademik & PDSS (Error 400 Bad Request)
@@ -47,7 +47,7 @@ watch: {
 ```
 
 ### Verification Plan
-1. Buka menu BK Akademik → tab Simulasi Pilihan Kampus.
+1. Buka menu BK Akademik â†’ tab Simulasi Pilihan Kampus.
 2. Buka Network DevTools. Pastikan request ke `/api/v1/pdss/simulasi/setting` tidak lagi menghasilkan error 400 Bad Request.
 3. Pastikan toggle penguncian simulasi dapat dimuat dan disimpan dengan status 200 OK.
 
@@ -75,7 +75,7 @@ WHERE rkk.tahun_ajaran_id = :tahun_ajaran_id
 ```
 
 ### Verification Plan
-1. Buka tab Pangkalan Data (PDSS) → pilih Tahun Ajaran Evaluasi `2024/2025`.
+1. Buka tab Pangkalan Data (PDSS) â†’ pilih Tahun Ajaran Evaluasi `2024/2025`.
 2. Pastikan daftar 30 siswa kelas 12 dummy (MIPA & IPS) tampil lengkap dengan status dan nilai.
 
 ---
@@ -96,7 +96,7 @@ Pada method `apiGetSimulasi()`, penentuan status *eligible* siswa dan perhitunga
 - Pastikan formula rata-rata dihitung dari mata pelajaran PDSS yang dicentang di konfigurasi Langkah 1.
 
 ### Verification Plan
-1. Buka menu BK Akademik → Simulasi Pilihan Kampus.
+1. Buka menu BK Akademik â†’ Simulasi Pilihan Kampus.
 2. Pastikan rata-rata nilai rapor siswa tampil (misal: 87.50, bukan 0.00).
 3. Verifikasi ranking paralel terurut dengan benar dan status kelayakan ("Eligible" / "Tidak Eligible") tampil sesuai kuota akreditasi sekolah.
 
@@ -109,15 +109,15 @@ Pada method `apiGetSimulasi()`, penentuan status *eligible* siswa dan perhitunga
 
 Tiga masalah utama ditemukan pada halaman `http://localhost/SINTA-SaaS/bk/alumni`:
 
-1. **Role `guru_bk` dan `operator_sekolah` mendapat `403 Forbidden`** saat menyimpan data tracer — whitelist role di `storeKuliah()` dan `storePekerjaan()` tidak menyertakan kedua role tersebut.
+1. **Role `guru_bk` dan `operator_sekolah` mendapat `403 Forbidden`** saat menyimpan data tracer â€” whitelist role di `storeKuliah()` dan `storePekerjaan()` tidak menyertakan kedua role tersebut.
 2. **Celah XSS** pada injeksi variabel PHP `$userRole` ke dalam tag `<script>` Vue yang tidak menggunakan `json_encode` dengan flag pelindung.
-3. **Fitur Admin tidak ada** — tidak ada tombol Hapus, tidak ada kolom Nama Alumni, tidak ada live search siswa untuk admin input, tidak ada endpoint DELETE, tidak ada route search siswa.
+3. **Fitur Admin tidak ada** â€” tidak ada tombol Hapus, tidak ada kolom Nama Alumni, tidak ada live search siswa untuk admin input, tidak ada endpoint DELETE, tidak ada route search siswa.
 
 ---
 
 ### Component 1: [TracerController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/TracerController.php)
 
-#### A. Fix storeKuliah() — baris 119
+#### A. Fix storeKuliah() â€” baris 119
 
 ```php
 // SEBELUM
@@ -127,7 +127,7 @@ Tiga masalah utama ditemukan pada halaman `http://localhost/SINTA-SaaS/bk/alumni
 } elseif (!in_array($roleName, ['admin', 'operator', 'super_admin', 'operator_sekolah', 'guru_bk'], true)) {
 ```
 
-#### B. Fix storePekerjaan() — baris 222
+#### B. Fix storePekerjaan() â€” baris 222
 
 ```php
 // SEBELUM
@@ -201,7 +201,7 @@ public function deletePekerjaan(): void {
 
 ---
 
-### Component 2: [index.php](file:///C:/xampp/htdocs/SINTA-SaaS/index.php) — Routes Baru
+### Component 2: [index.php](file:///C:/xampp/htdocs/SINTA-SaaS/index.php) â€” Routes Baru
 
 ```php
 case '/api/v1/tracer/kuliah/delete':
@@ -223,9 +223,9 @@ case '/api/v1/pdss/students/search':
 
 ---
 
-### Component 3: [tracer_study.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/tracer_study.php) — Refactor Total
+### Component 3: [tracer_study.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/tracer_study.php) â€” Refactor Total
 
-#### A. Anti-XSS — Injeksi variabel ke script
+#### A. Anti-XSS â€” Injeksi variabel ke script
 
 ```php
 // SEBELUM (rentan XSS)
@@ -242,7 +242,7 @@ const isAdmin  = ref(<?= json_encode($isAdmin) ?>);
 // Hanya untuk siswa alumni
 <?php if ($userRole === 'siswa'): ?>
 <div class="alert..." style="background:linear-gradient(135deg,#eff6ff,#ecfdf5);">
-    <h5>✅ Status: Alumni Lulus</h5>
+    <h5>âœ… Status: Alumni Lulus</h5>
     <p>Anda dapat menambah riwayat kuliah dan pekerjaan di bawah ini.</p>
 </div>
 <?php endif; ?>
@@ -250,7 +250,7 @@ const isAdmin  = ref(<?= json_encode($isAdmin) ?>);
 // Hanya untuk admin/guru_bk/operator
 <?php if ($isAdmin): ?>
 <div class="alert..." style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);">
-    <h6>Mode Admin — <?= htmlspecialchars(ucwords(str_replace('_',' ',$userRole))) ?></h6>
+    <h6>Mode Admin â€” <?= htmlspecialchars(ucwords(str_replace('_',' ',$userRole))) ?></h6>
     <p>Anda dapat menambah dan mengelola data tracer alumni.
        Siswa hanya dapat melihat dan mengedit data milik dirinya sendiri.</p>
 </div>
@@ -263,7 +263,7 @@ const isAdmin  = ref(<?= json_encode($isAdmin) ?>);
 <th v-if="isAdmin">Nama Alumni</th>
 ...
 <td v-if="isAdmin" class="fw-semibold text-truncate" style="max-width:140px;">
-    {{ item.nama_lengkap || item.nama_alumni || '—' }}
+    {{ item.nama_lengkap || item.nama_alumni || 'â€”' }}
 </td>
 ```
 
@@ -358,13 +358,13 @@ async function hapusKuliah(id) {
     const data = await res.json();
     if (res.ok && data.success) {
         riwayatKuliah.value = riwayatKuliah.value.filter(k => k.id !== id);
-        alertKuliah.value = { msg: '✅ ' + data.message, type: 'success' };
+        alertKuliah.value = { msg: 'âœ… ' + data.message, type: 'success' };
     } else {
         alert(data.error || 'Gagal menghapus data.');
     }
 }
 
-// Hapus riwayat pekerjaan (admin) — pola sama dengan hapusKuliah
+// Hapus riwayat pekerjaan (admin) â€” pola sama dengan hapusKuliah
 async function hapusPekerjaan(id) {
     if (!confirm('Hapus riwayat pekerjaan ini? Tindakan tidak dapat dibatalkan.')) return;
     const res = await fetch(
@@ -374,7 +374,7 @@ async function hapusPekerjaan(id) {
     const data = await res.json();
     if (res.ok && data.success) {
         riwayatPekerjaan.value = riwayatPekerjaan.value.filter(p => p.id !== id);
-        alertPekerjaan.value = { msg: '✅ ' + data.message, type: 'success' };
+        alertPekerjaan.value = { msg: 'âœ… ' + data.message, type: 'success' };
     } else {
         alert(data.error || 'Gagal menghapus data.');
     }
@@ -387,16 +387,16 @@ async function hapusPekerjaan(id) {
 
 | Fitur | super_admin | admin / operator_sekolah | guru_bk | siswa |
 |---|:---:|:---:|:---:|:---:|
-| Lihat tab Tracking Alumni (PDSS) | ✅ | ✅ | ✅ | ❌ |
-| Lihat riwayat kuliah milik sendiri | ❌ | ❌ | ❌ | ✅ |
-| Lihat riwayat kuliah semua alumni sekolah | ✅ | ✅ (tenant) | ✅ (tenant) | ❌ |
-| Input riwayat kuliah (milik sendiri) | ❌ | ❌ | ❌ | ✅ (hanya jika status=Lulus) |
-| Input riwayat kuliah (untuk alumni lain) | ✅ | ✅ | ✅ | ❌ |
-| Hapus riwayat kuliah / pekerjaan | ✅ | ✅ | ✅ | ❌ |
-| Live search siswa alumni | ✅ | ✅ | ✅ | ❌ |
-| Kolom "Nama Alumni" di tabel | ✅ | ✅ | ✅ | ❌ |
-| Banner "Status: Alumni Lulus" | ❌ | ❌ | ❌ | ✅ |
-| Banner "Mode Admin" | ✅ | ✅ | ✅ | ❌ |
+| Lihat tab Tracking Alumni (PDSS) | âœ… | âœ… | âœ… | âŒ |
+| Lihat riwayat kuliah milik sendiri | âŒ | âŒ | âŒ | âœ… |
+| Lihat riwayat kuliah semua alumni sekolah | âœ… | âœ… (tenant) | âœ… (tenant) | âŒ |
+| Input riwayat kuliah (milik sendiri) | âŒ | âŒ | âŒ | âœ… (hanya jika status=Lulus) |
+| Input riwayat kuliah (untuk alumni lain) | âœ… | âœ… | âœ… | âŒ |
+| Hapus riwayat kuliah / pekerjaan | âœ… | âœ… | âœ… | âŒ |
+| Live search siswa alumni | âœ… | âœ… | âœ… | âŒ |
+| Kolom "Nama Alumni" di tabel | âœ… | âœ… | âœ… | âŒ |
+| Banner "Status: Alumni Lulus" | âŒ | âŒ | âŒ | âœ… |
+| Banner "Mode Admin" | âœ… | âœ… | âœ… | âŒ |
 
 ---
 
@@ -404,20 +404,20 @@ async function hapusPekerjaan(id) {
 
 ```bash
 # Syntax check semua file
-php -l app/Controllers/TracerController.php    # → No syntax errors
-php -l views/tracer_study.php                  # → No syntax errors
-php -l app/Controllers/PDSSController.php      # → No syntax errors
-php -l index.php                               # → No syntax errors
+php -l app/Controllers/TracerController.php    # â†’ No syntax errors
+php -l views/tracer_study.php                  # â†’ No syntax errors
+php -l app/Controllers/PDSSController.php      # â†’ No syntax errors
+php -l index.php                               # â†’ No syntax errors
 ```
 
 **Manual Verification:**
-- Login `guru_bk` → `/bk/alumni` → tab "Input Portofolio Alumni" → tambah kuliah → **harus berhasil (bukan 403)**
-- Login `operator_sekolah` → ulangi → **harus berhasil**
-- Login `admin` → cek kolom "Nama Alumni" muncul, tombol Hapus tersedia, live search berfungsi
-- Login `siswa` (Lulus) → banner "Alumni Lulus" muncul, tidak ada tombol Hapus
-- Login `siswa` (Aktif) → halaman menampilkan pesan 403
-- DevTools: `DELETE /api/v1/tracer/kuliah/delete?id=X&tenant_id=Y` → `{"success":true}`
-- DevTools: `GET /api/v1/pdss/students/search?q=andi&tenant_id=Y` → hanya siswa berstatus Lulus
+- Login `guru_bk` â†’ `/bk/alumni` â†’ tab "Input Portofolio Alumni" â†’ tambah kuliah â†’ **harus berhasil (bukan 403)**
+- Login `operator_sekolah` â†’ ulangi â†’ **harus berhasil**
+- Login `admin` â†’ cek kolom "Nama Alumni" muncul, tombol Hapus tersedia, live search berfungsi
+- Login `siswa` (Lulus) â†’ banner "Alumni Lulus" muncul, tidak ada tombol Hapus
+- Login `siswa` (Aktif) â†’ halaman menampilkan pesan 403
+- DevTools: `DELETE /api/v1/tracer/kuliah/delete?id=X&tenant_id=Y` â†’ `{"success":true}`
+- DevTools: `GET /api/v1/pdss/students/search?q=andi&tenant_id=Y` â†’ hanya siswa berstatus Lulus
 
 
 ---
@@ -436,7 +436,7 @@ SET bukti_file = REPLACE(bukti_file, 'uploads/pdss/', 'storage/uploads/pdss/')
 WHERE bukti_file LIKE 'uploads/pdss/%';
 ```
 
-#### 2. Modifikasi Controller � [PDSSController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/PDSSController.php)
+#### 2. Modifikasi Controller — [PDSSController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/PDSSController.php)
 Mengubah rujukan path penyimpanan target dan relative path di method `apiUploadBuktiSimulasi`:
 
 *Sebelum:*
