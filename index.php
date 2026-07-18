@@ -598,6 +598,24 @@ try {
             }
             break;
 
+        case '/api/v1/tracer/kuliah/delete':
+            // API: Hapus riwayat kuliah (hanya admin/guru_bk)
+            $controller = new App\Controllers\TracerController();
+            $controller->deleteKuliah();
+            break;
+
+        case '/api/v1/tracer/pekerjaan/delete':
+            // API: Hapus riwayat pekerjaan (hanya admin/guru_bk)
+            $controller = new App\Controllers\TracerController();
+            $controller->deletePekerjaan();
+            break;
+
+        case '/api/v1/pdss/students/search':
+            // API: Pencarian siswa alumni untuk form tracer study admin
+            $controller = new App\Controllers\PDSSController();
+            $controller->apiSearchStudents();
+            break;
+
         // ================================================================
         // BIMBINGAN KONSELING (BK) ROUTES
         // Role Guard: super_admin, operator_sekolah, guru_bk (enforced in BKController)
