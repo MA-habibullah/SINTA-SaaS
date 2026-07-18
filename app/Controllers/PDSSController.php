@@ -2568,12 +2568,12 @@ class PDSSController extends BaseController {
                 $tahunAjaranId = $stmtTA->fetchColumn();
             }
 
-            $uploadDir = __DIR__ . "/../../uploads/pdss/simulasi/{$tenantId}/{$tahunAjaranId}/";
+            $uploadDir = __DIR__ . "/../../storage/uploads/pdss/simulasi/{$tenantId}/{$tahunAjaranId}/";
             if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
 
             $newFilename = "sim3_{$siswaId}_" . time() . ".$ext";
             $destPath    = $uploadDir . $newFilename;
-            $relativePath = "uploads/pdss/simulasi/{$tenantId}/{$tahunAjaranId}/{$newFilename}";
+            $relativePath = "storage/uploads/pdss/simulasi/{$tenantId}/{$tahunAjaranId}/{$newFilename}";
 
             if (!move_uploaded_file($file['tmp_name'], $destPath)) {
                 $this->jsonResponse(['error' => 'Gagal memindahkan file.'], 500); return;
