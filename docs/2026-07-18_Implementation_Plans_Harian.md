@@ -598,3 +598,40 @@ Kedua Vue instance independen satu sama lain.
 5. Data alumni luar sistem (id_siswa=NULL) muncul di kedua tab (dari fix LEFT JOIN sebelumnya)
 6. Tidak ada error di browser console
 7. Akses langsung ke /tracer-study (standalone) masih berfungsi normal dengan sub-nav tabs-nya sendiri
+
+---
+## Fix: Toggle Input Alumni Luar Sistem di Riwayat Pekerjaan + Fix Duplicate HTML ID
+**Waktu**: 17:49 WIB
+**Status**: Dieksekusi
+
+### Perubahan 1: Toggle Input Alumni Luar Sistem di Form Riwayat Pekerjaan
+**File**: views/tracer_study.php
+
+Form Riwayat Pekerjaan sebelumnya hanya memiliki input search siswa tanpa opsi input manual.
+Ditambahkan fitur Input Alumni Luar Sistem (toggle switch) yang sama persis dengan form Riwayat Kuliah.
+
+**Perubahan di tracer_study.php:**
+1. HTML form pekerjaan: ganti input search biasa dengan struktur toggle + conditional input (search vs manual)
+2. formPekerjaan ref: tambah is_manual: false
+3. resetPekerjaan(): pertahankan nilai is_manual saat reset, tambah reset selectedStudent
+4. submitPekerjaan(): ubah validasi -- skip siswa_id jika is_manual=true, wajib nama_alumni jika manual
+5. return {}: tambah resetPekerjaan yang sebelumnya lupa di-expose (root cause error TypeError: resetPekerjaan is not a function)
+
+### Perubahan 2: Fix Duplicate HTML ID (18 node)
+**File**: views/tracer_study.php
+
+tracer_study.php di-include 2x dalam alumni_layout.php (sekali untuk tab Kuliah, sekali untuk tab Pekerjaan).
+Semua 19 elemen dengan id= hardcoded akan duplikat di DOM, melanggar standar HTML dan autofill browser.
+
+**Solusi**: Tambah suffix PHP  ke semua HTML id=.
+
+**ID yang diperbaiki (19 total):**
+- tab-kuliah, tab-pekerjaan (nav sub-tab internal)
+- tbl-kuliah, tbl-pekerjaan (tabel data)
+- manualInputKuliah + label for=, manualInputPekerjaan + label for= (toggle switch)
+- input-tahun-masuk, input-tahun-lulus, select-status-kuliah, btn-simpan-kuliah (form kuliah)
+- input-nama-perusahaan, input-posisi, select-pendapatan, input-tahun-mulai-kerja, input-tahun-selesai-kerja, select-status-kerja, btn-simpan-pekerjaan (form pekerjaan)
+
+**Hasil ID setelah fix (contoh):**
+- id='tbl-kuliah-tracerApp_kuliah' (instance Riwayat Kuliah)
+- id='tbl-kuliah-tracerApp_pekerjaan' (instance Riwayat Pekerjaan) -- tidak akan ada karena tab kuliah hanya ada di instance kuliah

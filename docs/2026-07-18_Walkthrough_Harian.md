@@ -106,3 +106,16 @@
 - Saat tab Riwayat Kuliah diklik, Vue instance tracerApp_kuliah langsung aktif dengan activeTab='kuliah'.
 - Saat tab Riwayat Pekerjaan diklik, Vue instance tracerApp_pekerjaan langsung aktif dengan activeTab='pekerjaan'.
 - Halaman standalone /tracer-study tetap berfungsi normal karena is_sub_module tidak di-set.
+
+---
+## Fix Toggle Input Alumni Luar Sistem Pekerjaan + Fix Duplicate HTML ID
+**Waktu**: 17:57 WIB
+**Jenis**: Bug Fix + Feature
+
+### File yang Diubah:
+- `views/tracer_study.php`
+
+### Pekerjaan yang Diselesaikan:
+1. **Toggle Input Alumni Luar Sistem di Riwayat Pekerjaan** -- form pekerjaan kini punya fitur yang sama dengan form kuliah: toggle switch, mode search siswa, mode input nama manual.
+2. **Fix TypeError: resetPekerjaan is not a function** -- resetPekerjaan lupa di-expose di return {} Vue setup. Sudah ditambahkan.
+3. **Fix 19 Duplicate HTML ID** -- semua id= hardcoded diberi suffix  agar unik saat file di-include 2x dalam satu halaman (tracerApp_kuliah dan tracerApp_pekerjaan). Ini menghilangkan peringatan 'Duplicate form field id' di browser DevTools.
