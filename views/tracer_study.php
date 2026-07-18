@@ -203,7 +203,7 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
                     <li class="nav-item">
                         <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" 
                                 :class="{active: activeTab === 'kuliah'}"
-                                @click="activeTab = 'kuliah'" id="tab-kuliah">
+                                @click="activeTab = 'kuliah'" id="tab-kuliah-<?= $tracer_instance_id ?>">
                             <i class="bi bi-mortarboard me-2 fs-6"></i> Riwayat Kuliah
                             <span class="badge bg-primary ms-1 rounded-pill">{{ riwayatKuliah.length }}</span>
                         </button>
@@ -211,7 +211,7 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
                     <li class="nav-item">
                         <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" 
                                 :class="{active: activeTab === 'pekerjaan'}"
-                                @click="activeTab = 'pekerjaan'" id="tab-pekerjaan">
+                                @click="activeTab = 'pekerjaan'" id="tab-pekerjaan-<?= $tracer_instance_id ?>">
                             <i class="bi bi-briefcase me-2 fs-6"></i> Riwayat Pekerjaan
                             <span class="badge bg-success ms-1 rounded-pill">{{ riwayatPekerjaan.length }}</span>
                         </button>
@@ -235,7 +235,7 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
 
         <!-- Data Table -->
         <div v-if="riwayatKuliah.length > 0" class="table-responsive mb-4">
-            <table class="table table-hover align-middle" id="tbl-kuliah">
+            <table class="table table-hover align-middle" id="tbl-kuliah-<?= $tracer_instance_id ?>">
                 <thead class="table-light">
                     <tr>
                         <th>#</th>
@@ -296,8 +296,8 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
                     <div class="d-flex justify-content-between align-items-center mb-1">
                         <label class="form-label fw-semibold fs-7 mb-0">Nama Alumni (Siswa) <span class="text-danger">*</span></label>
                         <div class="form-check form-switch m-0">
-                            <input class="form-check-input" type="checkbox" id="manualInputKuliah" v-model="formKuliah.is_manual" @change="resetKuliah()">
-                            <label class="form-check-label fs-7" for="manualInputKuliah">Input Alumni Luar Sistem</label>
+                            <input class="form-check-input" type="checkbox" id="manualInputKuliah-<?= $tracer_instance_id ?>" v-model="formKuliah.is_manual" @change="resetKuliah()">
+                            <label class="form-check-label fs-7" for="manualInputKuliah-<?= $tracer_instance_id ?>">Input Alumni Luar Sistem</label>
                         </div>
                     </div>
                     
@@ -360,17 +360,17 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
                 <div class="col-md-3">
                     <label class="form-label fw-semibold fs-7">Tahun Masuk <span class="text-danger">*</span></label>
                     <input type="number" class="form-control" v-model.number="formKuliah.tahun_masuk"
-                           :min="2000" :max="currentYear + 1" placeholder="2022" id="input-tahun-masuk">
+                           :min="2000" :max="currentYear + 1" placeholder="2022" id="input-tahun-masuk-<?= $tracer_instance_id ?>">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label fw-semibold fs-7">Tahun Lulus</label>
                     <input type="number" class="form-control" v-model.number="formKuliah.tahun_lulus"
                            :min="formKuliah.tahun_masuk" :max="currentYear + 5"
-                           placeholder="Kosongkan jika masih aktif" id="input-tahun-lulus">
+                           placeholder="Kosongkan jika masih aktif" id="input-tahun-lulus-<?= $tracer_instance_id ?>">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-semibold fs-7">Status Kuliah <span class="text-danger">*</span></label>
-                    <select class="form-select" v-model="formKuliah.status_kuliah" id="select-status-kuliah">
+                    <select class="form-select" v-model="formKuliah.status_kuliah" id="select-status-kuliah-<?= $tracer_instance_id ?>">
                         <option value="Aktif">Aktif</option>
                         <option value="Lulus">Lulus</option>
                         <option value="Drop">Drop Out</option>
@@ -378,7 +378,7 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
                 </div>
                 <div class="col-12 d-flex justify-content-end">
                     <button class="btn btn-primary px-4 rounded-3" :disabled="loadingKuliah"
-                            @click="submitKuliah" id="btn-simpan-kuliah">
+                            @click="submitKuliah" id="btn-simpan-kuliah-<?= $tracer_instance_id ?>">
                         <span v-if="loadingKuliah" class="spinner-border spinner-border-sm me-2"></span>
                         <i v-else class="bi bi-floppy me-2"></i>
                         {{ loadingKuliah ? 'Menyimpan...' : 'Simpan Kuliah' }}
@@ -400,7 +400,7 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
 
         <!-- Data Table -->
         <div v-if="riwayatPekerjaan.length > 0" class="table-responsive mb-4">
-            <table class="table table-hover align-middle" id="tbl-pekerjaan">
+            <table class="table table-hover align-middle" id="tbl-pekerjaan-<?= $tracer_instance_id ?>">
                 <thead class="table-light">
                     <tr>
                         <th>#</th>
@@ -461,8 +461,8 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
                     <div class="d-flex justify-content-between align-items-center mb-1">
                         <label class="form-label fw-semibold fs-7 mb-0">Nama Alumni (Siswa) <span class="text-danger">*</span></label>
                         <div class="form-check form-switch m-0">
-                            <input class="form-check-input" type="checkbox" id="manualInputPekerjaan" v-model="formPekerjaan.is_manual" @change="resetPekerjaan()">
-                            <label class="form-check-label fs-7" for="manualInputPekerjaan">Input Alumni Luar Sistem</label>
+                            <input class="form-check-input" type="checkbox" id="manualInputPekerjaan-<?= $tracer_instance_id ?>" v-model="formPekerjaan.is_manual" @change="resetPekerjaan()">
+                            <label class="form-check-label fs-7" for="manualInputPekerjaan-<?= $tracer_instance_id ?>">Input Alumni Luar Sistem</label>
                         </div>
                     </div>
 
@@ -500,16 +500,16 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
                 <div class="col-md-6">
                     <label class="form-label fw-semibold fs-7">Nama Perusahaan <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" v-model="formPekerjaan.nama_perusahaan"
-                           placeholder="PT. Contoh Indonesia" id="input-nama-perusahaan" maxlength="255">
+                           placeholder="PT. Contoh Indonesia" id="input-nama-perusahaan-<?= $tracer_instance_id ?>" maxlength="255">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold fs-7">Posisi / Jabatan <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" v-model="formPekerjaan.posisi_jabatan"
-                           placeholder="Software Engineer" id="input-posisi" maxlength="255">
+                           placeholder="Software Engineer" id="input-posisi-<?= $tracer_instance_id ?>" maxlength="255">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-semibold fs-7">Pendapatan Bulanan</label>
-                    <select class="form-select" v-model="formPekerjaan.pendapatan_bulanan" id="select-pendapatan">
+                    <select class="form-select" v-model="formPekerjaan.pendapatan_bulanan" id="select-pendapatan-<?= $tracer_instance_id ?>">
                         <option value="">Pilih rentang...</option>
                         <option value="< 1 Juta">Kurang dari 1 Juta</option>
                         <option value="1-3 Juta">1 – 3 Juta</option>
@@ -521,17 +521,17 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
                 <div class="col-md-2">
                     <label class="form-label fw-semibold fs-7">Tahun Mulai <span class="text-danger">*</span></label>
                     <input type="number" class="form-control" v-model.number="formPekerjaan.tahun_mulai"
-                           :min="2000" :max="currentYear + 1" placeholder="2023" id="input-tahun-mulai-kerja">
+                           :min="2000" :max="currentYear + 1" placeholder="2023" id="input-tahun-mulai-kerja-<?= $tracer_instance_id ?>">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label fw-semibold fs-7">Tahun Selesai</label>
                     <input type="number" class="form-control" v-model.number="formPekerjaan.tahun_selesai"
                            :min="formPekerjaan.tahun_mulai" :max="currentYear + 5"
-                           placeholder="Kosongkan jika aktif" id="input-tahun-selesai-kerja">
+                           placeholder="Kosongkan jika aktif" id="input-tahun-selesai-kerja-<?= $tracer_instance_id ?>">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-semibold fs-7">Status Kerja <span class="text-danger">*</span></label>
-                    <select class="form-select" v-model="formPekerjaan.status_kerja" id="select-status-kerja">
+                    <select class="form-select" v-model="formPekerjaan.status_kerja" id="select-status-kerja-<?= $tracer_instance_id ?>">
                         <option value="Kontrak">Kontrak</option>
                         <option value="Tetap">Tetap / Permanent</option>
                         <option value="Magang">Magang</option>
@@ -539,7 +539,7 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
                 </div>
                 <div class="col-12 d-flex justify-content-end">
                     <button class="btn btn-success px-4 rounded-3" :disabled="loadingPekerjaan"
-                            @click="submitPekerjaan" id="btn-simpan-pekerjaan">
+                            @click="submitPekerjaan" id="btn-simpan-pekerjaan-<?= $tracer_instance_id ?>">
                         <span v-if="loadingPekerjaan" class="spinner-border spinner-border-sm me-2"></span>
                         <i v-else class="bi bi-floppy me-2"></i>
                         {{ loadingPekerjaan ? 'Menyimpan...' : 'Simpan Pekerjaan' }}
