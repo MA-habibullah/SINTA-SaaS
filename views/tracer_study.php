@@ -458,29 +458,42 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
 
             <div class="row g-3">
                 <div class="col-md-12" v-if="isAdmin">
-                    <label class="form-label fw-semibold fs-7">Nama Alumni (Siswa) <span class="text-danger">*</span></label>
-                    <div class="position-relative">
-                        <input type="text" class="form-control" v-model="formPekerjaan.nama_alumni"
-                               @input="searchStudents('pekerjaan')" @focus="showSearchDropdown = true; activeForm = 'pekerjaan'"
-                               placeholder="Ketik nama atau NISN siswa lulus..." autocomplete="off">
-                        <div v-if="showSearchDropdown && activeForm === 'pekerjaan' && searchResults.length > 0" 
-                             class="dropdown-menu show w-100 position-absolute overflow-auto shadow-sm" style="max-height: 200px; z-index: 999;">
-                            <button type="button" class="dropdown-item py-2 border-bottom" v-for="s in searchResults" :key="s.id" @mousedown.prevent="selectStudent(s, 'pekerjaan')">
-                                <div class="fw-bold">{{ s.nama_lengkap }}</div>
-                                <small class="text-muted">NISN: {{ s.nisn || '-' }} | NIS: {{ s.nis || '-' }}</small>
-                            </button>
-                        </div>
-                        <div v-else-if="showSearchDropdown && activeForm === 'pekerjaan' && searchResults.length === 0 && formPekerjaan.nama_alumni.trim().length >= 2"
-                             class="dropdown-menu show w-100 position-absolute p-3 text-center text-muted shadow-sm" style="z-index: 999;">
-                            <i class="bi bi-info-circle me-1"></i> Tidak ada siswa cocok.
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label fw-semibold fs-7 mb-0">Nama Alumni (Siswa) <span class="text-danger">*</span></label>
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" id="manualInputPekerjaan" v-model="formPekerjaan.is_manual" @change="resetPekerjaan()">
+                            <label class="form-check-label fs-7" for="manualInputPekerjaan">Input Alumni Luar Sistem</label>
                         </div>
                     </div>
-                    <div v-if="selectedStudent && activeForm === 'pekerjaan'" class="mt-2 p-2 bg-success bg-opacity-10 border border-success border-opacity-25 rounded d-flex align-items-center gap-2">
-                        <i class="bi bi-check-circle-fill text-success"></i>
-                        <div style="font-size: 0.8rem;">
-                            <span class="d-block fw-bold text-success">{{ selectedStudent.nama_lengkap }}</span>
-                            <span class="text-success text-opacity-75">Siswa Terpilih</span>
+
+                    <div v-if="!formPekerjaan.is_manual">
+                        <div class="position-relative">
+                            <input type="text" class="form-control" v-model="formPekerjaan.nama_alumni"
+                                   @input="searchStudents('pekerjaan')" @focus="showSearchDropdown = true; activeForm = 'pekerjaan'"
+                                   placeholder="Ketik nama atau NISN siswa lulus..." autocomplete="off">
+                            <div v-if="showSearchDropdown && activeForm === 'pekerjaan' && searchResults.length > 0" 
+                                 class="dropdown-menu show w-100 position-absolute overflow-auto shadow-sm" style="max-height: 200px; z-index: 999;">
+                                <button type="button" class="dropdown-item py-2 border-bottom" v-for="s in searchResults" :key="s.id" @mousedown.prevent="selectStudent(s, 'pekerjaan')">
+                                    <div class="fw-bold">{{ s.nama_lengkap }}</div>
+                                    <small class="text-muted">NISN: {{ s.nisn || '-' }} | NIS: {{ s.nis || '-' }}</small>
+                                </button>
+                            </div>
+                            <div v-else-if="showSearchDropdown && activeForm === 'pekerjaan' && searchResults.length === 0 && formPekerjaan.nama_alumni.trim().length >= 2"
+                                 class="dropdown-menu show w-100 position-absolute p-3 text-center text-muted shadow-sm" style="z-index: 999;">
+                                <i class="bi bi-info-circle me-1"></i> Tidak ada siswa cocok.
+                            </div>
                         </div>
+                        <div v-if="selectedStudent && activeForm === 'pekerjaan'" class="mt-2 p-2 bg-success bg-opacity-10 border border-success border-opacity-25 rounded d-flex align-items-center gap-2">
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            <div style="font-size: 0.8rem;">
+                                <span class="d-block fw-bold text-success">{{ selectedStudent.nama_lengkap }}</span>
+                                <span class="text-success text-opacity-75">Siswa Terpilih</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-else>
+                        <input type="text" class="form-control" v-model="formPekerjaan.nama_alumni" placeholder="Ketik nama alumni secara manual..." autocomplete="off">
+                        <small class="text-muted">Menambahkan data alumni lawas yang tidak terdaftar di sistem.</small>
                     </div>
                 </div>
 
@@ -576,6 +589,7 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
             });
 
             const formPekerjaan = ref({
+                is_manual: false,
                 siswa_id: '', nama_alumni: '',
                 nama_perusahaan: '', posisi_jabatan: '', pendapatan_bulanan: '',
                 tahun_mulai: new Date().getFullYear(),
@@ -697,6 +711,7 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
 
             function resetPekerjaan() {
                 formPekerjaan.value = {
+                    is_manual: formPekerjaan.value.is_manual,
                     siswa_id: '', nama_alumni: '',
                     nama_perusahaan: '', posisi_jabatan: '', pendapatan_bulanan: '',
                     tahun_mulai: new Date().getFullYear(),
@@ -738,8 +753,12 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
             }
 
             async function submitPekerjaan() {
-                if (isAdmin.value && !formPekerjaan.value.siswa_id) {
-                    alertPekerjaan.value = { msg: 'Silakan cari dan pilih alumni (siswa) terlebih dahulu.', type: 'danger' };
+                if (isAdmin.value && !formPekerjaan.value.is_manual && !formPekerjaan.value.siswa_id) {
+                    alertPekerjaan.value = { msg: 'Silakan cari dan pilih alumni (siswa) terlebih dahulu. Atau centang "Input Alumni Luar Sistem".', type: 'danger' };
+                    return;
+                }
+                if (isAdmin.value && formPekerjaan.value.is_manual && !formPekerjaan.value.nama_alumni.trim()) {
+                    alertPekerjaan.value = { msg: 'Nama alumni wajib diisi untuk input luar sistem.', type: 'danger' };
                     return;
                 }
                 if (!formPekerjaan.value.nama_perusahaan.trim() || !formPekerjaan.value.posisi_jabatan.trim()) {
