@@ -341,11 +341,11 @@ class TracerController extends BaseController {
                 $stmt = $db->prepare("SELECT * FROM riwayat_kuliah WHERE id_siswa = ? AND tenant_id = ? ORDER BY tahun_masuk DESC");
                 $stmt->execute([$targetId, $tenantId]);
             } else {
-                $stmt = $db->prepare("SELECT rk.*, s.nama_lengkap FROM riwayat_kuliah rk JOIN siswa s ON rk.id_siswa = s.id WHERE rk.tenant_id = ? ORDER BY rk.created_at DESC");
+                $stmt = $db->prepare("SELECT rk.*, s.nama_lengkap FROM riwayat_kuliah rk LEFT JOIN siswa s ON rk.id_siswa = s.id WHERE rk.tenant_id = ? ORDER BY rk.created_at DESC");
                 $stmt->execute([$tenantId]);
             }
         } else {
-            $stmt = $db->query("SELECT rk.*, s.nama_lengkap, t.nama_sekolah FROM riwayat_kuliah rk JOIN siswa s ON rk.id_siswa = s.id JOIN tenants t ON rk.tenant_id = t.id ORDER BY rk.created_at DESC LIMIT 200");
+            $stmt = $db->query("SELECT rk.*, s.nama_lengkap, t.nama_sekolah FROM riwayat_kuliah rk LEFT JOIN siswa s ON rk.id_siswa = s.id JOIN tenants t ON rk.tenant_id = t.id ORDER BY rk.created_at DESC LIMIT 200");
         }
 
         $this->jsonResponse([
@@ -376,11 +376,11 @@ class TracerController extends BaseController {
                 $stmt = $db->prepare("SELECT * FROM riwayat_pekerjaan WHERE id_siswa = ? AND tenant_id = ? ORDER BY tahun_mulai DESC");
                 $stmt->execute([$targetId, $tenantId]);
             } else {
-                $stmt = $db->prepare("SELECT rp.*, s.nama_lengkap FROM riwayat_pekerjaan rp JOIN siswa s ON rp.id_siswa = s.id WHERE rp.tenant_id = ? ORDER BY rp.created_at DESC");
+                $stmt = $db->prepare("SELECT rp.*, s.nama_lengkap FROM riwayat_pekerjaan rp LEFT JOIN siswa s ON rp.id_siswa = s.id WHERE rp.tenant_id = ? ORDER BY rp.created_at DESC");
                 $stmt->execute([$tenantId]);
             }
         } else {
-            $stmt = $db->query("SELECT rp.*, s.nama_lengkap, t.nama_sekolah FROM riwayat_pekerjaan rp JOIN siswa s ON rp.id_siswa = s.id JOIN tenants t ON rp.tenant_id = t.id ORDER BY rp.created_at DESC LIMIT 200");
+            $stmt = $db->query("SELECT rp.*, s.nama_lengkap, t.nama_sekolah FROM riwayat_pekerjaan rp LEFT JOIN siswa s ON rp.id_siswa = s.id JOIN tenants t ON rp.tenant_id = t.id ORDER BY rp.created_at DESC LIMIT 200");
         }
 
         $this->jsonResponse([
