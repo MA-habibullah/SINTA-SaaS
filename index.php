@@ -394,6 +394,11 @@ try {
             $controller->verifyTranskripApi();
             break;
 
+        case '/api/v1/cetak/request-token':
+            $controller = new App\Controllers\BukuIndukController();
+            $controller->requestCetakToken();
+            break;
+
         case '/api/v1/buku-induk':
             $controller = new App\Controllers\BukuIndukController();
             $controller->fetchApi();

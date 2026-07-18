@@ -3,9 +3,9 @@
  * View: PDSS & Alumni Career Tracking Module Dashboard
  * Stack: Vue 3 + Tailwind CSS (preflight OFF to avoid conflict with Bootstrap)
  */
-$userRole   = $data['user_role']   ?? ($_SESSION['role_name']    ?? '');
-$tenantId   = $data['tenant_id']   ?? '';
-$tenantList = $data['tenant_list'] ?? [];
+$userRole   = $data['user_role']   ?? $userRole ?? $user_role ?? ($_SESSION['role_name']    ?? '');
+$tenantId   = $data['tenant_id']   ?? $tenantId ?? $tenant_id ?? '';
+$tenantList = $data['tenant_list'] ?? $tenantList ?? $tenant_list ?? [];
 ?>
 
 
@@ -1600,8 +1600,11 @@ $tenantList = $data['tenant_list'] ?? [];
             async refreshAll() {
                 this.loading = true;
                 try {
+                    // 1. Ambil data kesiapan terlebih dahulu (menginisialisasi tahun ajaran)
+                    await this.fetchKesiapan();
+                    
+                    // 2. Ambil data lainnya secara paralel setelah tahun ajaran siap
                     await Promise.all([
-                        this.fetchKesiapan(),
                         this.fetchPdssMapels(),
                         this.fetchAlumni(),
                         this.fetchCampuses()
@@ -1684,6 +1687,7 @@ $tenantList = $data['tenant_list'] ?? [];
             },
 
             async fetchPdssMapels() {
+                if (!this.filterAcademicYear) return;
                 if (this.userRole === 'super_admin' && !this.currentTenantId) {
                     this.pdssMapels = [];
                     return;
@@ -1751,11 +1755,13 @@ $tenantList = $data['tenant_list'] ?? [];
                     }
                 } catch (e) {
                     console.error('Failed updating manual eligibility', e);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Gagal',
-                        text: e.response?.data?.error || 'Gagal merubah status kelayakan.'
-                    });
+                    const status = e.response ? e.response.status : 500;
+                    const msg = e.response?.data?.error || 'Gagal merubah status kelayakan.';
+                    if (status === 400 || status === 422) {
+                        Swal.fire({ icon: 'warning', title: 'Perhatian', text: msg, confirmButtonColor: '#f8bb86' });
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Gagal', text: msg, confirmButtonColor: '#2563eb' });
+                    }
                 }
             },
 
@@ -2073,6 +2079,7 @@ $tenantList = $data['tenant_list'] ?? [];
             // SIMULASI PEMILIHAN KAMPUS METHODS
             // ============================================================
             async fetchSimulasiSettings() {
+                if (!this.filterAcademicYear) return;
                 try {
                     let url = `${_baseUrl}/api/v1/pdss/simulasi/setting?tahun_ajaran_id=${this.filterAcademicYear}`;
                     if (this.currentTenantId) url += `&tenant_id=${this.currentTenantId}`;
@@ -2112,12 +2119,18 @@ $tenantList = $data['tenant_list'] ?? [];
                         this.fetchSimulasi();
                     }
                 } catch (e) {
+                    const status = e.response ? e.response.status : 500;
                     const msg = (e.response && e.response.data && e.response.data.error) || 'Gagal mengubah status simulasi.';
-                    Swal.fire({ icon: 'error', title: 'Gagal', text: msg, confirmButtonColor: '#2563eb' });
+                    if (status === 400 || status === 422) {
+                        Swal.fire({ icon: 'warning', title: 'Perhatian', text: msg, confirmButtonColor: '#f8bb86' });
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Gagal', text: msg, confirmButtonColor: '#2563eb' });
+                    }
                 }
             },
 
             async fetchSimulasi() {
+                if (!this.filterAcademicYear) return;
                 this.loadingSimulasi = true;
                 try {
                     let url = `${_baseUrl}/api/v1/pdss/simulasi?tahun_ajaran_id=${this.filterAcademicYear}&no_simulasi=${this.activeNoSimulasi}`;
@@ -2284,8 +2297,12 @@ $tenantList = $data['tenant_list'] ?? [];
             openModalUploadBukti(siswa) {
                 this.modalUploadBukti.siswa = siswa;
                 this.modalUploadBukti.file = null;
-                this.$refs.buktiFileInput.value = '';
                 this.modalUploadBukti.show = true;
+                this.$nextTick(() => {
+                    if (this.$refs.buktiFileInput) {
+                        this.$refs.buktiFileInput.value = '';
+                    }
+                });
             },
 
             handleFileUpload(event) {

@@ -116,7 +116,7 @@ class TracerController extends BaseController {
             }
             // KUNCI: id_siswa & tenant_id dari SESSION — tidak bisa dimanipulasi user
             // Tidak perlu membaca dari request body sama sekali
-        } elseif (!in_array($roleName, ['admin', 'operator', 'super_admin'], true)) {
+        } elseif (!in_array($roleName, ['admin', 'operator', 'super_admin', 'operator_sekolah', 'guru_bk'], true)) {
             $this->jsonResponse(['error' => 'Akses ditolak.'], 403);
         } else {
             // Admin mengisi tracer untuk siswa lain → siswa_id dari body, tapi tenant dikunci dari session
@@ -219,7 +219,7 @@ class TracerController extends BaseController {
                     'error' => 'Akses ditolak. Fitur Tracer Study hanya tersedia untuk siswa yang telah dinyatakan Lulus.'
                 ], 403);
             }
-        } elseif (!in_array($roleName, ['admin', 'operator', 'super_admin'], true)) {
+        } elseif (!in_array($roleName, ['admin', 'operator', 'super_admin', 'operator_sekolah', 'guru_bk'], true)) {
             $this->jsonResponse(['error' => 'Akses ditolak.'], 403);
         } else {
             $body    = $this->getJsonInput();
@@ -387,5 +387,94 @@ class TracerController extends BaseController {
             'success' => true,
             'data' => $stmt->fetchAll(\PDO::FETCH_ASSOC)
         ]);
+    }
+
+    // =========================================================================
+    // API: Hapus Riwayat Kuliah (DELETE)
+    // DELETE /api/v1/tracer/kuliah/delete?id={id}
+    // Hanya admin, guru_bk, operator_sekolah yang boleh menghapus.
+    // =========================================================================
+    public function deleteKuliah(): void {
+        $roleName = $_SESSION['role_name'] ?? '';
+        $tenantId = SessionManager::getTenantId();
+        if (empty($tenantId) && !empty($_GET['tenant_id'])) {
+            $tenantId = trim($_GET['tenant_id']);
+        }
+
+        // Hanya role admin yang boleh hapus
+        if (!in_array($roleName, ['super_admin', 'admin', 'operator', 'operator_sekolah', 'guru_bk'], true)) {
+            $this->jsonResponse(['error' => 'Akses ditolak.'], 403);
+            return;
+        }
+
+        $id = filter_var($_GET['id'] ?? '', FILTER_VALIDATE_INT);
+        if (!$id) {
+            $this->jsonResponse(['error' => 'ID tidak valid.'], 400);
+            return;
+        }
+
+        $db = \App\Config\Database::getConnection();
+
+        // Verifikasi bahwa record milik tenant ini (kecuali super_admin)
+        if ($roleName !== 'super_admin') {
+            $stmt = $db->prepare("SELECT id FROM riwayat_kuliah WHERE id = ? AND tenant_id = ?");
+            $stmt->execute([$id, $tenantId]);
+            if (!$stmt->fetch()) {
+                $this->jsonResponse(['error' => 'Data tidak ditemukan atau akses ditolak.'], 404);
+                return;
+            }
+        }
+
+        $stmt = $db->prepare("DELETE FROM riwayat_kuliah WHERE id = ?");
+        $stmt->execute([$id]);
+
+        if ($stmt->rowCount() > 0) {
+            $this->jsonResponse(['success' => true, 'message' => 'Riwayat kuliah berhasil dihapus.']);
+        } else {
+            $this->jsonResponse(['error' => 'Data tidak ditemukan.'], 404);
+        }
+    }
+
+    // =========================================================================
+    // API: Hapus Riwayat Pekerjaan (DELETE)
+    // DELETE /api/v1/tracer/pekerjaan/delete?id={id}
+    // =========================================================================
+    public function deletePekerjaan(): void {
+        $roleName = $_SESSION['role_name'] ?? '';
+        $tenantId = SessionManager::getTenantId();
+        if (empty($tenantId) && !empty($_GET['tenant_id'])) {
+            $tenantId = trim($_GET['tenant_id']);
+        }
+
+        if (!in_array($roleName, ['super_admin', 'admin', 'operator', 'operator_sekolah', 'guru_bk'], true)) {
+            $this->jsonResponse(['error' => 'Akses ditolak.'], 403);
+            return;
+        }
+
+        $id = filter_var($_GET['id'] ?? '', FILTER_VALIDATE_INT);
+        if (!$id) {
+            $this->jsonResponse(['error' => 'ID tidak valid.'], 400);
+            return;
+        }
+
+        $db = \App\Config\Database::getConnection();
+
+        if ($roleName !== 'super_admin') {
+            $stmt = $db->prepare("SELECT id FROM riwayat_pekerjaan WHERE id = ? AND tenant_id = ?");
+            $stmt->execute([$id, $tenantId]);
+            if (!$stmt->fetch()) {
+                $this->jsonResponse(['error' => 'Data tidak ditemukan atau akses ditolak.'], 404);
+                return;
+            }
+        }
+
+        $stmt = $db->prepare("DELETE FROM riwayat_pekerjaan WHERE id = ?");
+        $stmt->execute([$id]);
+
+        if ($stmt->rowCount() > 0) {
+            $this->jsonResponse(['success' => true, 'message' => 'Riwayat pekerjaan berhasil dihapus.']);
+        } else {
+            $this->jsonResponse(['error' => 'Data tidak ditemukan.'], 404);
+        }
     }
 }

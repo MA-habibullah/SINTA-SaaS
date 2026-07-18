@@ -2096,8 +2096,19 @@
                     return;
                 }
                 
-                const url = `/SINTA-SaaS/cetak-rapot?id=${encodeURIComponent(studentId)}&tempat=${encodeURIComponent(this.printTempat.trim())}&tanggal=${encodeURIComponent(this.printTanggal.trim())}`;
-                window.open(url, '_blank');
+                axios.get('/SINTA-SaaS/api/v1/cetak/request-token', { params: { id: studentId } })
+                    .then(response => {
+                        if (response.data && response.data.success) {
+                            const token = response.data.token;
+                            const url = `/SINTA-SaaS/cetak-rapot?id=${encodeURIComponent(studentId)}&tempat=${encodeURIComponent(this.printTempat.trim())}&tanggal=${encodeURIComponent(this.printTanggal.trim())}&token=${token}`;
+                            window.open(url, '_blank');
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Gagal', text: response.data.error || 'Gagal menyiapkan otentikasi cetak.' });
+                        }
+                    })
+                    .catch(err => {
+                        Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal memproses token keamanan cetak.' });
+                    });
             },
             printBulk() {
                 if (!this.filterKelas) {
@@ -2113,8 +2124,19 @@
                     return;
                 }
                 
-                const url = `/SINTA-SaaS/cetak-rapot-kelas?kelas_id=${encodeURIComponent(this.filterKelas)}&tempat=${encodeURIComponent(this.printTempat.trim())}&tanggal=${encodeURIComponent(this.printTanggal.trim())}`;
-                window.open(url, '_blank');
+                axios.get('/SINTA-SaaS/api/v1/cetak/request-token', { params: { kelas_id: this.filterKelas } })
+                    .then(response => {
+                        if (response.data && response.data.success) {
+                            const token = response.data.token;
+                            const url = `/SINTA-SaaS/cetak-rapot-kelas?kelas_id=${encodeURIComponent(this.filterKelas)}&tempat=${encodeURIComponent(this.printTempat.trim())}&tanggal=${encodeURIComponent(this.printTanggal.trim())}&token=${token}`;
+                            window.open(url, '_blank');
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Gagal', text: response.data.error || 'Gagal menyiapkan otentikasi cetak.' });
+                        }
+                    })
+                    .catch(err => {
+                        Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal memproses token keamanan cetak.' });
+                    });
             },
 
             // ---- Methods untuk Bulk Photo Upload ----

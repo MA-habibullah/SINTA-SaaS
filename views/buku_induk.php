@@ -2911,14 +2911,45 @@
             },
             executePrint() {
                 if (document.activeElement) document.activeElement.blur();
-                let finalUrl = this.printModal.url 
-                    + '&tanggal_cetak=' + this.printModal.tanggalCetak 
-                    + '&show_qrcode=' + (this.printModal.showQrCode ? '1' : '0');
-                if (this.printModal.reGenerate) {
-                    finalUrl += '&re_generate=1';
+                
+                let targetId = '';
+                const matchId = this.printModal.url.match(/[?&]id=([^&]+)/);
+                const matchKelasId = this.printModal.url.match(/[?&]kelas_id=([^&]+)/);
+                
+                let params = {};
+                if (matchId) {
+                    targetId = matchId[1];
+                    params.id = targetId;
+                } else if (matchKelasId) {
+                    targetId = matchKelasId[1];
+                    params.kelas_id = targetId;
                 }
-                window.open(finalUrl, '_blank');
-                bootstrap.Modal.getInstance(document.getElementById('modalCetakDokumen')).hide();
+
+                if (!targetId) {
+                    this.toast.fire({ icon: 'error', title: 'Target cetak tidak valid.' });
+                    return;
+                }
+
+                axios.get('/SINTA-SaaS/api/v1/cetak/request-token', { params })
+                    .then(response => {
+                        if (response.data && response.data.success) {
+                            const token = response.data.token;
+                            let finalUrl = this.printModal.url 
+                                + '&tanggal_cetak=' + this.printModal.tanggalCetak 
+                                + '&show_qrcode=' + (this.printModal.showQrCode ? '1' : '0')
+                                + '&token=' + token;
+                            if (this.printModal.reGenerate) {
+                                finalUrl += '&re_generate=1';
+                            }
+                            window.open(finalUrl, '_blank');
+                            bootstrap.Modal.getInstance(document.getElementById('modalCetakDokumen')).hide();
+                        } else {
+                            this.toast.fire({ icon: 'error', title: response.data.error || 'Gagal menyiapkan otentikasi cetak.' });
+                        }
+                    })
+                    .catch(err => {
+                        this.toast.fire({ icon: 'error', title: 'Gagal memproses token keamanan cetak.' });
+                    });
             },
             async fetchRiwayatKepsek() {
                 try {

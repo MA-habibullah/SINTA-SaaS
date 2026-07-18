@@ -102,6 +102,14 @@ class SessionManager {
     }
 
     /**
+     * Get current User Nama Lengkap
+     */
+    public static function getUserNama(): ?string {
+        self::start();
+        return $_SESSION['nama_lengkap'] ?? null;
+    }
+
+    /**
      * Check if user is logged in
      */
     public static function isLoggedIn(): bool {

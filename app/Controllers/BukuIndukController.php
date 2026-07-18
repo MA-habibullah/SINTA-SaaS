@@ -506,6 +506,8 @@ class BukuIndukController extends BaseController {
     }
 
     public function printRapot(): void {
+        $this->validatePrintToken();
+
         $id = $_GET['id'] ?? '';
         $tempat = $_GET['tempat'] ?? 'Jombang';
         $tanggal = $_GET['tanggal'] ?? '';
@@ -641,6 +643,8 @@ class BukuIndukController extends BaseController {
     }
 
     public function printBukuInduk(): void {
+        $this->validatePrintToken();
+
         $id = $_GET['id'] ?? '';
         $tempat = $_GET['tempat'] ?? 'Jombang';
         $tanggal = $_GET['tanggal'] ?? '';
@@ -904,6 +908,8 @@ class BukuIndukController extends BaseController {
     }
 
     public function printRapotSemester(): void {
+        $this->validatePrintToken();
+
         $id = $_GET['id'] ?? '';
         $semester = $_GET['semester'] ?? 'Ganjil';
         $ta = $_GET['ta'] ?? '';
@@ -1126,6 +1132,8 @@ class BukuIndukController extends BaseController {
     }
 
     public function printRapotKelas(): void {
+        $this->validatePrintToken();
+
         $kelasId = $_GET['kelas_id'] ?? '';
         $tempat = $_GET['tempat'] ?? 'Jombang';
         $tanggal = $_GET['tanggal'] ?? '';
@@ -1516,6 +1524,8 @@ class BukuIndukController extends BaseController {
     }
 
     public function printRapotSemesterBulk(): void {
+        $this->validatePrintToken();
+
         $kelasId = $_GET['kelas_id'] ?? '';
         $semester = $_GET['semester'] ?? '';
         $ta = $_GET['ta'] ?? '';
@@ -2409,4 +2419,90 @@ class BukuIndukController extends BaseController {
             mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
         );
     }
+
+    /**
+     * API: Menerbitkan One-Time Token (OTT) berumur pendek untuk cetak dokumen.
+     * GET /api/v1/cetak/request-token
+     */
+    public function requestCetakToken(): void {
+        header("Content-Type: application/json; charset=UTF-8");
+        header("X-Content-Type-Options: nosniff");
+        header("X-Frame-Options: DENY");
+
+        SessionManager::start();
+        if (!isset($_SESSION['user_id'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'error' => 'Silakan login terlebih dahulu.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            exit;
+        }
+
+        $targetId = trim($_GET['id'] ?? $_GET['kelas_id'] ?? '');
+        if (empty($targetId)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Target ID tidak valid.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            exit;
+        }
+
+        try {
+            $token = bin2hex(random_bytes(16)); // 32-char secure token
+            
+            if (!isset($_SESSION['print_tokens']) || !is_array($_SESSION['print_tokens'])) {
+                $_SESSION['print_tokens'] = [];
+            }
+
+            // Simpan token dengan validitas 60 detik
+            $_SESSION['print_tokens'][$token] = [
+                'target_id' => $targetId,
+                'expires' => time() + 60
+            ];
+
+            echo json_encode(['success' => true, 'token' => $token], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            exit;
+        } catch (\Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'error' => 'Gagal menerbitkan token keamanan.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            exit;
+        }
+    }
+
+    /**
+     * Helper: Validasi One-Time Token (OTT) untuk proses render cetak dokumen.
+     * Token akan langsung dihapus setelah divalidasi (one-time use).
+     */
+    private function validatePrintToken(): void {
+        SessionManager::start();
+        
+        if (!isset($_SESSION['user_id'])) {
+            http_response_code(403);
+            die("<h1>Forbidden</h1><p>Akses ditolak. Silakan login terlebih dahulu.</p>");
+        }
+
+        $token = trim($_GET['token'] ?? '');
+        if (empty($token)) {
+            http_response_code(400);
+            die("<h1>Bad Request</h1><p>Token cetak tidak ditemukan atau tidak valid.</p>");
+        }
+
+        if (!isset($_SESSION['print_tokens'][$token])) {
+            http_response_code(403);
+            die("<h1>Forbidden</h1><p>Token cetak tidak sah, kedaluwarsa, atau telah digunakan.</p>");
+        }
+
+        $tokenData = $_SESSION['print_tokens'][$token];
+        
+        // Hapus token cetak seketika (One-Time Token)
+        unset($_SESSION['print_tokens'][$token]);
+
+        if (time() > $tokenData['expires']) {
+            http_response_code(403);
+            die("<h1>Forbidden</h1><p>Token cetak sudah kedaluwarsa.</p>");
+        }
+
+        $targetId = trim($_GET['id'] ?? $_GET['kelas_id'] ?? '');
+        if (!empty($targetId) && $tokenData['target_id'] !== $targetId) {
+            http_response_code(403);
+            die("<h1>Forbidden</h1><p>Token cetak tidak cocok dengan target cetak.</p>");
+        }
+    }
 }
+

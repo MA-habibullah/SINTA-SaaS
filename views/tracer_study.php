@@ -2,12 +2,21 @@
 /**
  * View: Tracer Study / Portofolio Alumni
  * Hanya dapat diakses oleh siswa berstatus 'Lulus' atau Admin Sekolah / Super Admin.
+ *
+ * Hak Akses Per Role:
+ * - siswa      : Hanya lihat & input data milik sendiri. Tidak bisa melihat data siswa lain.
+ * - guru_bk    : Bisa input & lihat data alumni milik sekolahnya. Aksi hapus tersedia.
+ * - operator_sekolah / admin : Sama seperti guru_bk.
+ * - super_admin: Akses seluruh data lintas sekolah. Perlu memilih tenant dulu untuk input.
  */
 $userRole  = $data['user_role']         ?? ($_SESSION['role_name']    ?? '');
 $userNama  = $data['user_nama']         ?? ($_SESSION['nama_lengkap'] ?? 'Alumni');
 $kuliah    = $data['riwayat_kuliah']    ?? [];
 $pekerjaan = $data['riwayat_pekerjaan'] ?? [];
 $baseUrl   = '/SINTA-SaaS';
+
+// Tentukan apakah user ini adalah role "admin" (bukan siswa)
+$isAdmin = in_array($userRole, ['super_admin', 'operator_sekolah', 'admin', 'operator', 'guru_bk']);
 ?>
 
 <style>
@@ -133,8 +142,10 @@ $baseUrl   = '/SINTA-SaaS';
 <div id="tracerApp" v-cloak>
 
     <!-- ================================================================
-         BANNER INFO STATUS ALUMNI
+         BANNER: Status tergantung role
     ================================================================ -->
+    <!-- Banner untuk SISWA ALUMNI -->
+    <?php if ($userRole === 'siswa'): ?>
     <div class="alert border-0 rounded-4 p-4 mb-4 shadow-sm d-flex align-items-center gap-3"
          style="background: linear-gradient(135deg,#eff6ff,#ecfdf5);">
         <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
@@ -149,6 +160,27 @@ $baseUrl   = '/SINTA-SaaS';
             </p>
         </div>
     </div>
+    <?php endif; ?>
+
+    <!-- Banner untuk ADMIN / GURU BK / OPERATOR -->
+    <?php if ($isAdmin): ?>
+    <div class="alert border-0 rounded-4 p-3 mb-4 shadow-sm d-flex align-items-center gap-3"
+         style="background: linear-gradient(135deg,#f5f3ff,#ede9fe);">
+        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+             style="width:44px;height:44px;background:linear-gradient(135deg,#6366f1,#8b5cf6);">
+            <i class="bi bi-person-badge-fill fs-5 text-white"></i>
+        </div>
+        <div>
+            <h6 class="fw-bold mb-0" style="color:#3730a3;">
+                Mode Admin — <?= htmlspecialchars(ucwords(str_replace('_', ' ', $userRole))) ?>
+            </h6>
+            <p class="mb-0 text-muted" style="font-size:0.78rem;">
+                Anda dapat menambah dan mengelola data tracer study alumni di sekolah ini.
+                <strong>Siswa hanya dapat melihat dan mengedit data milik dirinya sendiri.</strong>
+            </p>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <!-- ================================================================
          TAB NAVIGATION
@@ -195,18 +227,25 @@ $baseUrl   = '/SINTA-SaaS';
                 <thead class="table-light">
                     <tr>
                         <th>#</th>
+                        <th v-if="isAdmin">Nama Alumni</th>
                         <th>Kampus</th>
                         <th>Fakultas / Jurusan</th>
+                        <th>Jalur</th>
                         <th>Tahun Masuk</th>
                         <th>Tahun Lulus</th>
                         <th>Status</th>
+                        <th v-if="isAdmin" class="text-center">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-for="(item, idx) in riwayatKuliah" :key="item.id">
                         <td class="text-muted">{{ idx + 1 }}</td>
+                        <td v-if="isAdmin" class="fw-semibold text-truncate" style="max-width:140px;">
+                            {{ item.nama_lengkap || item.nama_alumni || '—' }}
+                        </td>
                         <td class="fw-semibold">{{ item.nama_kampus }}</td>
                         <td class="text-muted">{{ item.fakultas || '—' }} / {{ item.jurusan || '—' }}</td>
+                        <td class="text-muted">{{ item.nama_jalur || '—' }}</td>
                         <td>{{ item.tahun_masuk }}</td>
                         <td>{{ item.tahun_lulus || 'Masih Kuliah' }}</td>
                         <td>
@@ -219,6 +258,13 @@ $baseUrl   = '/SINTA-SaaS';
                                 {{ item.status_kuliah }}
                             </span>
                         </td>
+                        <td v-if="isAdmin" class="text-center">
+                            <button class="btn btn-sm btn-outline-danger rounded-2 px-2 py-1"
+                                    @click="hapusKuliah(item.id)"
+                                    title="Hapus riwayat kuliah ini">
+                                <i class="bi bi-trash3 fs-7"></i>
+                            </button>
+                        </td>
                     </tr>
                 </tbody>
             </table>
@@ -230,11 +276,11 @@ $baseUrl   = '/SINTA-SaaS';
         </div>
 
         <!-- Form Tambah Riwayat Kuliah (Reaktif) -->
-        <div class="form-card p-4">
+        <div class="form-card p-4 mt-3">
             <h6 class="fw-bold mb-3"><i class="bi bi-plus-circle me-2 text-primary"></i>Tambah Riwayat Kuliah</h6>
 
             <div class="row g-3">
-                <div class="col-md-12" v-if="userRole !== 'siswa'">
+                <div class="col-md-12" v-if="isAdmin">
                     <div class="d-flex justify-content-between align-items-center mb-1">
                         <label class="form-label fw-semibold fs-7 mb-0">Nama Alumni (Siswa) <span class="text-danger">*</span></label>
                         <div class="form-check form-switch m-0">
@@ -346,17 +392,22 @@ $baseUrl   = '/SINTA-SaaS';
                 <thead class="table-light">
                     <tr>
                         <th>#</th>
+                        <th v-if="isAdmin">Nama Alumni</th>
                         <th>Perusahaan</th>
                         <th>Posisi / Jabatan</th>
                         <th>Tahun Mulai</th>
                         <th>Tahun Selesai</th>
                         <th>Pendapatan</th>
                         <th>Status</th>
+                        <th v-if="isAdmin" class="text-center">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-for="(item, idx) in riwayatPekerjaan" :key="item.id">
                         <td class="text-muted">{{ idx + 1 }}</td>
+                        <td v-if="isAdmin" class="fw-semibold text-truncate" style="max-width:140px;">
+                            {{ item.nama_lengkap || item.nama_alumni || '—' }}
+                        </td>
                         <td class="fw-semibold">{{ item.nama_perusahaan }}</td>
                         <td>{{ item.posisi_jabatan }}</td>
                         <td>{{ item.tahun_mulai }}</td>
@@ -372,6 +423,13 @@ $baseUrl   = '/SINTA-SaaS';
                                 {{ item.status_kerja }}
                             </span>
                         </td>
+                        <td v-if="isAdmin" class="text-center">
+                            <button class="btn btn-sm btn-outline-danger rounded-2 px-2 py-1"
+                                    @click="hapusPekerjaan(item.id)"
+                                    title="Hapus riwayat pekerjaan ini">
+                                <i class="bi bi-trash3 fs-7"></i>
+                            </button>
+                        </td>
                     </tr>
                 </tbody>
             </table>
@@ -383,11 +441,11 @@ $baseUrl   = '/SINTA-SaaS';
         </div>
 
         <!-- Form Tambah Riwayat Pekerjaan (Reaktif) -->
-        <div class="form-card p-4">
+        <div class="form-card p-4 mt-3">
             <h6 class="fw-bold mb-3"><i class="bi bi-plus-circle me-2 text-success"></i>Tambah Riwayat Pekerjaan</h6>
 
             <div class="row g-3">
-                <div class="col-md-12" v-if="userRole !== 'siswa'">
+                <div class="col-md-12" v-if="isAdmin">
                     <label class="form-label fw-semibold fs-7">Nama Alumni (Siswa) <span class="text-danger">*</span></label>
                     <div class="position-relative">
                         <input type="text" class="form-control" v-model="formPekerjaan.nama_alumni"
@@ -487,6 +545,10 @@ $baseUrl   = '/SINTA-SaaS';
             const listJalur        = ref([]);
             const listKampusProdi  = ref([]);
 
+            // Role state (anti-XSS: menggunakan json_encode bukan echo langsung)
+            const userRole = ref(<?= json_encode($userRole, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
+            const isAdmin  = ref(<?= json_encode($isAdmin) ?>);
+
             const formKuliah = ref({
                 is_manual: false,
                 siswa_id: '',
@@ -509,15 +571,14 @@ $baseUrl   = '/SINTA-SaaS';
                 status_kerja: 'Kontrak'
             });
 
-            const userRole = ref('<?= $userRole ?>');
             const showSearchDropdown = ref(false);
             const searchResults = ref([]);
             const searchingStudents = ref(false);
             const selectedStudent = ref(null);
             const activeForm = ref('');
 
-            const urlParams      = new URLSearchParams(window.location.search);
-            const tenantId       = urlParams.get('tenant_id') || '';
+            const urlParams = new URLSearchParams(window.location.search);
+            const tenantId  = urlParams.get('tenant_id') || '';
 
             async function fetchMasterData() {
                 if (userRole.value === 'super_admin' && !tenantId) {
@@ -584,7 +645,7 @@ $baseUrl   = '/SINTA-SaaS';
                 }
                 searchingStudents.value = true;
                 try {
-                    const res = await fetch(`/SINTA-SaaS/api/v1/pdss/students/search?q=${encodeURIComponent(query)}`);
+                    const res = await fetch(`/SINTA-SaaS/api/v1/pdss/students/search?q=${encodeURIComponent(query)}&tenant_id=${tenantId}`);
                     const data = await res.json();
                     if (data.success) {
                         searchResults.value = data.data || [];
@@ -633,7 +694,7 @@ $baseUrl   = '/SINTA-SaaS';
             }
 
             async function submitKuliah() {
-                if (userRole.value !== 'siswa' && !formKuliah.value.is_manual && !formKuliah.value.siswa_id) {
+                if (isAdmin.value && !formKuliah.value.is_manual && !formKuliah.value.siswa_id) {
                     alertKuliah.value = { msg: 'Silakan cari dan pilih alumni (siswa) terlebih dahulu. Atau centang "Input Alumni Luar Sistem".', type: 'danger' };
                     return;
                 }
@@ -652,10 +713,7 @@ $baseUrl   = '/SINTA-SaaS';
                     const data = await res.json();
                     if (res.ok && data.success) {
                         alertKuliah.value = { msg: '✅ ' + data.message, type: 'success' };
-                        riwayatKuliah.value.push({
-                            id: data.id,
-                            ...formKuliah.value
-                        });
+                        await fetchRiwayat('kuliah');
                         resetKuliah();
                     } else {
                         alertKuliah.value = { msg: '❌ ' + (data.error || 'Gagal menyimpan.'), type: 'danger' };
@@ -668,7 +726,7 @@ $baseUrl   = '/SINTA-SaaS';
             }
 
             async function submitPekerjaan() {
-                if (userRole.value !== 'siswa' && !formPekerjaan.value.siswa_id) {
+                if (isAdmin.value && !formPekerjaan.value.siswa_id) {
                     alertPekerjaan.value = { msg: 'Silakan cari dan pilih alumni (siswa) terlebih dahulu.', type: 'danger' };
                     return;
                 }
@@ -687,10 +745,7 @@ $baseUrl   = '/SINTA-SaaS';
                     const data = await res.json();
                     if (res.ok && data.success) {
                         alertPekerjaan.value = { msg: '✅ ' + data.message, type: 'success' };
-                        riwayatPekerjaan.value.push({
-                            id: data.id,
-                            ...formPekerjaan.value
-                        });
+                        await fetchRiwayat('pekerjaan');
                         resetPekerjaan();
                     } else {
                         alertPekerjaan.value = { msg: '❌ ' + (data.error || 'Gagal menyimpan.'), type: 'danger' };
@@ -702,13 +757,52 @@ $baseUrl   = '/SINTA-SaaS';
                 }
             }
 
+            async function hapusKuliah(id) {
+                if (!confirm('Hapus riwayat kuliah ini? Tindakan tidak dapat dibatalkan.')) return;
+                try {
+                    const res = await fetch(`/SINTA-SaaS/api/v1/tracer/kuliah/delete?id=${id}&tenant_id=${tenantId}`, {
+                        method: 'DELETE',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.success) {
+                        riwayatKuliah.value = riwayatKuliah.value.filter(k => k.id !== id);
+                        alertKuliah.value = { msg: '✅ Data berhasil dihapus.', type: 'success' };
+                    } else {
+                        alert(data.error || 'Gagal menghapus data.');
+                    }
+                } catch (e) {
+                    alert('Koneksi gagal. Coba lagi.');
+                }
+            }
+
+            async function hapusPekerjaan(id) {
+                if (!confirm('Hapus riwayat pekerjaan ini? Tindakan tidak dapat dibatalkan.')) return;
+                try {
+                    const res = await fetch(`/SINTA-SaaS/api/v1/tracer/pekerjaan/delete?id=${id}&tenant_id=${tenantId}`, {
+                        method: 'DELETE',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.success) {
+                        riwayatPekerjaan.value = riwayatPekerjaan.value.filter(p => p.id !== id);
+                        alertPekerjaan.value = { msg: '✅ Data berhasil dihapus.', type: 'success' };
+                    } else {
+                        alert(data.error || 'Gagal menghapus data.');
+                    }
+                } catch (e) {
+                    alert('Koneksi gagal. Coba lagi.');
+                }
+            }
+
             return {
-                activeTab, currentYear,
+                activeTab, currentYear, isAdmin,
                 loadingKuliah, loadingPekerjaan,
                 alertKuliah, alertPekerjaan,
                 riwayatKuliah, riwayatPekerjaan,
                 formKuliah, formPekerjaan,
                 submitKuliah, submitPekerjaan,
+                hapusKuliah, hapusPekerjaan,
                 userRole, showSearchDropdown, searchResults, searchingStudents, selectedStudent, activeForm,
                 searchStudents, selectStudent,
                 listJalur, listKampusProdi, syncKampusData, resetKuliah

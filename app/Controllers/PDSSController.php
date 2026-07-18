@@ -226,23 +226,30 @@ class PDSSController extends BaseController {
                                       s2.id IN (
                                           SELECT DISTINCT dnr2.siswa_id 
                                           FROM detail_nilai_rapor dnr2 
+                                          JOIN kelas k_dnr ON dnr2.kelas_id = k_dnr.id
                                           WHERE dnr2.tenant_id = ? 
-                                            AND dnr2.semester = 5 
+                                            AND dnr2.semester = 'Ganjil'
+                                            AND (k_dnr.nama_kelas LIKE '%12%' OR k_dnr.nama_kelas LIKE '%XII%')
                                             AND dnr2.tahun_ajaran = ?
                                       )
                                       OR (
                                           s2.id NOT IN (
                                               SELECT DISTINCT dnr2.siswa_id 
                                               FROM detail_nilai_rapor dnr2 
+                                              JOIN kelas k_dnr ON dnr2.kelas_id = k_dnr.id
                                               WHERE dnr2.tenant_id = ? 
-                                                AND dnr2.semester = 5
+                                                AND dnr2.semester = 'Ganjil'
+                                                AND (k_dnr.nama_kelas LIKE '%12%' OR k_dnr.nama_kelas LIKE '%XII%')
                                           )
-                                          AND CONCAT(
-                                              CAST(SUBSTRING(ta2.tahun_ajaran, 1, 4) AS UNSIGNED) + 2,
-                                              '/',
-                                              CAST(SUBSTRING(ta2.tahun_ajaran, 1, 4) AS UNSIGNED) + 3
-                                          ) = ?
                                           AND (k2.nama_kelas LIKE '%12%' OR k2.nama_kelas LIKE '%XII%')
+                                          AND (
+                                              CONCAT(
+                                                  CAST(SUBSTRING(ta2.tahun_ajaran, 1, 4) AS UNSIGNED) + 2,
+                                                  '/',
+                                                  CAST(SUBSTRING(ta2.tahun_ajaran, 1, 4) AS UNSIGNED) + 3
+                                              ) = ?
+                                              OR ta2.tahun_ajaran = ?
+                                          )
                                       )
                                   )
                             )
@@ -258,7 +265,8 @@ class PDSSController extends BaseController {
                 $tenantId,       // dnr2.tenant_id
                 $selectedTaName, // dnr2.tahun_ajaran
                 $tenantId,       // dnr2.tenant_id (NOT IN)
-                $selectedTaName  // CONCAT comparison
+                $selectedTaName, // CONCAT comparison
+                $selectedTaName  // ta2.tahun_ajaran comparison
             ]);
             $allMapels = $stmtAll->fetchAll(PDO::FETCH_ASSOC);
 
@@ -607,8 +615,10 @@ class PDSSController extends BaseController {
                     s.id IN (
                         SELECT DISTINCT dnr.siswa_id 
                         FROM detail_nilai_rapor dnr 
+                        JOIN kelas k_dnr ON dnr.kelas_id = k_dnr.id
                         WHERE dnr.tenant_id = ? 
-                          AND dnr.semester = 5 
+                          AND dnr.semester = 'Ganjil' 
+                          AND (k_dnr.nama_kelas LIKE '%12%' OR k_dnr.nama_kelas LIKE '%XII%')
                           AND dnr.tahun_ajaran = ?
                     )
                     -- Kasus 2: Belum ada nilai Semester 5 sama sekali, tapi secara angkatan/teoritis dia kelas 12 di tahun ajaran terpilih
@@ -616,20 +626,26 @@ class PDSSController extends BaseController {
                         s.id NOT IN (
                             SELECT DISTINCT dnr.siswa_id 
                             FROM detail_nilai_rapor dnr 
+                            JOIN kelas k_dnr ON dnr.kelas_id = k_dnr.id
                             WHERE dnr.tenant_id = ? 
-                              AND dnr.semester = 5
+                              AND dnr.semester = 'Ganjil'
+                              AND (k_dnr.nama_kelas LIKE '%12%' OR k_dnr.nama_kelas LIKE '%XII%')
                         )
-                        AND CONCAT(
-                            CAST(SUBSTRING(ta.tahun_ajaran, 1, 4) AS UNSIGNED) + 2,
-                            '/',
-                            CAST(SUBSTRING(ta.tahun_ajaran, 1, 4) AS UNSIGNED) + 3
-                        ) = ?
                         AND (k.nama_kelas LIKE '%12%' OR k.nama_kelas LIKE '%XII%')
+                        AND (
+                            CONCAT(
+                                CAST(SUBSTRING(ta.tahun_ajaran, 1, 4) AS UNSIGNED) + 2,
+                                '/',
+                                CAST(SUBSTRING(ta.tahun_ajaran, 1, 4) AS UNSIGNED) + 3
+                            ) = ?
+                            OR ta.tahun_ajaran = ?
+                        )
                     )
                 )";
                 $paramsSiswa[] = $tenantId;
                 $paramsSiswa[] = $selectedTaName;
                 $paramsSiswa[] = $tenantId;
+                $paramsSiswa[] = $selectedTaName;
                 $paramsSiswa[] = $selectedTaName;
             } else {
                 $sqlSiswa .= " AND (k.nama_kelas LIKE '%12%' OR k.nama_kelas LIKE '%XII%')";
@@ -1670,8 +1686,10 @@ class PDSSController extends BaseController {
                     s.id IN (
                         SELECT DISTINCT dnr.siswa_id 
                         FROM detail_nilai_rapor dnr 
+                        JOIN kelas k_dnr ON dnr.kelas_id = k_dnr.id
                         WHERE dnr.tenant_id = ? 
-                          AND dnr.semester = 5 
+                          AND dnr.semester = 'Ganjil' 
+                          AND (k_dnr.nama_kelas LIKE '%12%' OR k_dnr.nama_kelas LIKE '%XII%')
                           AND dnr.tahun_ajaran = ?
                     )
                     -- Kasus 2: Belum ada nilai Semester 5 sama sekali, tapi secara angkatan/teoritis dia kelas 12 di tahun ajaran terpilih
@@ -1679,20 +1697,26 @@ class PDSSController extends BaseController {
                         s.id NOT IN (
                             SELECT DISTINCT dnr.siswa_id 
                             FROM detail_nilai_rapor dnr 
+                            JOIN kelas k_dnr ON dnr.kelas_id = k_dnr.id
                             WHERE dnr.tenant_id = ? 
-                              AND dnr.semester = 5
+                              AND dnr.semester = 'Ganjil'
+                              AND (k_dnr.nama_kelas LIKE '%12%' OR k_dnr.nama_kelas LIKE '%XII%')
                         )
-                        AND CONCAT(
-                            CAST(SUBSTRING(ta.tahun_ajaran, 1, 4) AS UNSIGNED) + 2,
-                            '/',
-                            CAST(SUBSTRING(ta.tahun_ajaran, 1, 4) AS UNSIGNED) + 3
-                        ) = ?
                         AND (k.nama_kelas LIKE '%12%' OR k.nama_kelas LIKE '%XII%')
+                        AND (
+                            CONCAT(
+                                CAST(SUBSTRING(ta.tahun_ajaran, 1, 4) AS UNSIGNED) + 2,
+                                '/',
+                                CAST(SUBSTRING(ta.tahun_ajaran, 1, 4) AS UNSIGNED) + 3
+                            ) = ?
+                            OR ta.tahun_ajaran = ?
+                        )
                     )
                 )";
                 $paramsSiswa[] = $tenantId;
                 $paramsSiswa[] = $selectedTaName;
                 $paramsSiswa[] = $tenantId;
+                $paramsSiswa[] = $selectedTaName;
                 $paramsSiswa[] = $selectedTaName;
             } else {
                 $sqlSiswa .= " AND (k.nama_kelas LIKE '%12%' OR k.nama_kelas LIKE '%XII%')";
@@ -1950,7 +1974,7 @@ class PDSSController extends BaseController {
                 $stmtPrev->execute([$tenantId, $tahunAjaranId, $noSimulasi - 1]);
                 $prevLocked = $stmtPrev->fetchColumn();
                 if (!$prevLocked) {
-                    $this->jsonResponse(['error' => "Simulasi " . ($noSimulasi-1) . " harus dikunci terlebih dahulu sebelum membuka Simulasi $noSimulasi."], 400);
+                    $this->jsonResponse(['error' => "Harap cek simulasi sebelumnya (Simulasi " . ($noSimulasi-1) . ") dan lakukan kunci permanen sebelum melanjutkan simulasi berikutnya."], 400);
                     return;
                 }
             }
@@ -2016,36 +2040,71 @@ class PDSSController extends BaseController {
                   AND s.deleted_at IS NULL
                   AND (
                       s.id IN (
-                          SELECT DISTINCT dnr.siswa_id FROM detail_nilai_rapor dnr
-                          WHERE dnr.tenant_id = ? AND dnr.semester = 5 AND dnr.tahun_ajaran = ? AND dnr.deleted_at IS NULL
+                          SELECT DISTINCT dnr.siswa_id 
+                          FROM detail_nilai_rapor dnr
+                          JOIN kelas k_dnr ON dnr.kelas_id = k_dnr.id
+                          WHERE dnr.tenant_id = ? 
+                            AND dnr.semester = 'Ganjil' 
+                            AND (k_dnr.nama_kelas LIKE '%12%' OR k_dnr.nama_kelas LIKE '%XII%')
+                            AND dnr.tahun_ajaran = ? 
+                            AND dnr.deleted_at IS NULL
                       )
                       OR (
                           s.id NOT IN (
-                              SELECT DISTINCT dnr2.siswa_id FROM detail_nilai_rapor dnr2
-                              WHERE dnr2.tenant_id = ? AND dnr2.semester = 5 AND dnr2.deleted_at IS NULL
+                              SELECT DISTINCT dnr2.siswa_id 
+                              FROM detail_nilai_rapor dnr2
+                              JOIN kelas k_dnr ON dnr2.kelas_id = k_dnr.id
+                              WHERE dnr2.tenant_id = ? 
+                                AND dnr2.semester = 'Ganjil' 
+                                AND (k_dnr.nama_kelas LIKE '%12%' OR k_dnr.nama_kelas LIKE '%XII%')
+                                AND dnr2.deleted_at IS NULL
                           )
-                          AND CONCAT(CAST(SUBSTRING(ta.tahun_ajaran,1,4) AS UNSIGNED)+2,'/',CAST(SUBSTRING(ta.tahun_ajaran,1,4) AS UNSIGNED)+3) = ?
                           AND (k.nama_kelas LIKE '%12%' OR k.nama_kelas LIKE '%XII%')
+                          AND (
+                              CONCAT(CAST(SUBSTRING(ta.tahun_ajaran,1,4) AS UNSIGNED)+2,'/',CAST(SUBSTRING(ta.tahun_ajaran,1,4) AS UNSIGNED)+3) = ?
+                              OR ta.tahun_ajaran = ?
+                          )
                       )
                   )
                 ORDER BY j.nama_jurusan ASC, s.nama_lengkap ASC
             ");
-            $stmtSiswa->execute([$tenantId, $tenantId, $selectedTaName, $tenantId, $selectedTaName]);
+            $stmtSiswa->execute([$tenantId, $tenantId, $selectedTaName, $tenantId, $selectedTaName, $selectedTaName]);
             $siswaList = $stmtSiswa->fetchAll(PDO::FETCH_ASSOC);
 
-            // --- LANGKAH 2: Ambil nilai rata-rata per siswa (simplified) ---
-            // Gunakan rata-rata dari detail_nilai_rapor untuk ranking
-            $stmtNilai = $db->prepare("
-                SELECT dnr.siswa_id, AVG(dnr.nilai_akhir) AS rata_rata
-                FROM detail_nilai_rapor dnr
-                WHERE dnr.tenant_id = ? AND dnr.deleted_at IS NULL
-                  AND dnr.semester IN (1,2,3,4,5)
-                GROUP BY dnr.siswa_id
-            ");
-            $stmtNilai->execute([$tenantId]);
+            // --- LANGKAH 2: Ambil nilai rata-rata per siswa ---
+            $siswaIds = array_column($siswaList, 'id');
             $nilaiMap = [];
-            foreach ($stmtNilai->fetchAll(PDO::FETCH_ASSOC) as $n) {
-                $nilaiMap[$n['siswa_id']] = (float)$n['rata_rata'];
+
+            if (!empty($siswaIds)) {
+                $siswaPlaceholders = implode(',', array_fill(0, count($siswaIds), '?'));
+                $stmtNilaiAll = $db->prepare("
+                    SELECT dnr.siswa_id, dnr.nilai_akhir, dnr.semester, k_dnr.nama_kelas
+                    FROM detail_nilai_rapor dnr
+                    JOIN kelas k_dnr ON dnr.kelas_id = k_dnr.id
+                    WHERE dnr.tenant_id = ? AND dnr.deleted_at IS NULL
+                      AND dnr.siswa_id IN ($siswaPlaceholders)
+                ");
+                $stmtNilaiAll->execute(array_merge([$tenantId], $siswaIds));
+                $rawGrades = $stmtNilaiAll->fetchAll(PDO::FETCH_ASSOC);
+
+                $studentGradesAccumulator = [];
+                foreach ($rawGrades as $rg) {
+                    $semLevel = $this->getSemesterLevel($rg['nama_kelas'], $rg['semester']);
+                    if ($semLevel !== null && $semLevel >= 1 && $semLevel <= 5) {
+                        $sid = $rg['siswa_id'];
+                        if (!isset($studentGradesAccumulator[$sid])) {
+                            $studentGradesAccumulator[$sid] = ['sum' => 0.0, 'count' => 0];
+                        }
+                        $studentGradesAccumulator[$sid]['sum'] += (float)$rg['nilai_akhir'];
+                        $studentGradesAccumulator[$sid]['count']++;
+                    }
+                }
+
+                foreach ($studentGradesAccumulator as $sid => $data) {
+                    if ($data['count'] > 0) {
+                        $nilaiMap[$sid] = $data['sum'] / $data['count'];
+                    }
+                }
             }
 
             // --- LANGKAH 3: Beri peringkat per jurusan ---
@@ -2144,11 +2203,49 @@ class PDSSController extends BaseController {
                 SELECT COUNT(DISTINCT s2.id) * 0.4 AS quota, s2.id_jurusan
                 FROM siswa s2
                 JOIN kelas k2 ON s2.id_kelas = k2.id
+                LEFT JOIN tahun_ajaran ta2 ON s2.id_tahun_ajaran = ta2.id
                 WHERE s2.tenant_id = ? AND s2.status = 'Aktif' AND s2.deleted_at IS NULL
                   AND (k2.nama_kelas LIKE '%12%' OR k2.nama_kelas LIKE '%XII%')
+                  AND (
+                      s2.id IN (
+                          SELECT DISTINCT dnr.siswa_id 
+                          FROM detail_nilai_rapor dnr 
+                          JOIN kelas k_dnr ON dnr.kelas_id = k_dnr.id
+                          WHERE dnr.tenant_id = ? 
+                            AND dnr.semester = 'Ganjil' 
+                            AND (k_dnr.nama_kelas LIKE '%12%' OR k_dnr.nama_kelas LIKE '%XII%')
+                            AND dnr.tahun_ajaran = ?
+                      )
+                      OR (
+                          s2.id NOT IN (
+                              SELECT DISTINCT dnr.siswa_id 
+                              FROM detail_nilai_rapor dnr 
+                              JOIN kelas k_dnr ON dnr.kelas_id = k_dnr.id
+                              WHERE dnr.tenant_id = ? 
+                                AND dnr.semester = 'Ganjil'
+                                AND (k_dnr.nama_kelas LIKE '%12%' OR k_dnr.nama_kelas LIKE '%XII%')
+                          )
+                          AND (k2.nama_kelas LIKE '%12%' OR k2.nama_kelas LIKE '%XII%')
+                          AND (
+                              CONCAT(
+                                  CAST(SUBSTRING(ta2.tahun_ajaran, 1, 4) AS UNSIGNED) + 2,
+                                  '/',
+                                  CAST(SUBSTRING(ta2.tahun_ajaran, 1, 4) AS UNSIGNED) + 3
+                              ) = ?
+                              OR ta2.tahun_ajaran = ?
+                          )
+                      )
+                  )
                 GROUP BY s2.id_jurusan
             ");
-            $stmtQuota->execute([$tenantId]);
+            $stmtQuota->execute([
+                $tenantId, 
+                $tenantId, 
+                $selectedTaName, 
+                $tenantId, 
+                $selectedTaName, 
+                $selectedTaName
+            ]);
             $quotaMap = []; // id_jurusan => quota
             foreach ($stmtQuota->fetchAll(PDO::FETCH_ASSOC) as $q) {
                 $quotaMap[$q['id_jurusan']] = (int)ceil($q['quota']);
@@ -2541,29 +2638,28 @@ class PDSSController extends BaseController {
             $rows = $stmtData->fetchAll(PDO::FETCH_ASSOC);
 
             $safeTA = str_replace('/', '-', $taNama);
-            $filename = "simulasi_{$noSimulasi}_ta_{$safeTA}.csv";
-            header('Content-Type: text/csv; charset=UTF-8');
-            header("Content-Disposition: attachment; filename=\"{$filename}\"");
-            header('Pragma: no-cache');
-            echo "\xEF\xBB\xBF"; // BOM UTF-8
-            $out = fopen('php://output', 'w');
-            fputcsv($out, ['No','Nama Siswa','Kelas','Jurusan','Kampus Pilihan 1','Prodi Pilihan 1','Kampus Pilihan 2','Prodi Pilihan 2','Bukti Upload','Status']);
+            $filename = "simulasi_{$noSimulasi}_ta_{$safeTA}.xlsx";
+
+            $excelData = [
+                ['No','Nama Siswa','Kelas','Jurusan','Kampus Pilihan 1','Prodi Pilihan 1','Kampus Pilihan 2','Prodi Pilihan 2','Bukti Upload','Status']
+            ];
             $no = 1;
             foreach ($rows as $r) {
-                fputcsv($out, [
-                    $no++,
-                    $r['nama_lengkap'],
-                    $r['nama_kelas'] ?? '-',
-                    $r['nama_jurusan'] ?? '-',
-                    $r['kampus_1'] ?? '-',
-                    $r['prodi_1'] ?? '-',
-                    $r['kampus_2'] ?? '-',
-                    $r['prodi_2'] ?? '-',
-                    $r['bukti_filename'] ?? '-',
-                    $r['status'] ?? '-',
-                ]);
+                $excelData[] = [
+                    (string)$no++,
+                    (string)$r['nama_lengkap'],
+                    (string)($r['nama_kelas'] ?? '-'),
+                    (string)($r['nama_jurusan'] ?? '-'),
+                    (string)($r['kampus_1'] ?? '-'),
+                    (string)($r['prodi_1'] ?? '-'),
+                    (string)($r['kampus_2'] ?? '-'),
+                    (string)($r['prodi_2'] ?? '-'),
+                    (string)($r['bukti_filename'] ?? '-'),
+                    (string)($r['status'] ?? '-')
+                ];
             }
-            fclose($out);
+
+            \Shuchkin\SimpleXLSXGen::fromArray($excelData)->downloadAs($filename);
             exit;
         } catch (\Throwable $e) {
             error_log('[PDSSController::apiExportSimulasi] ' . $e->getMessage());
