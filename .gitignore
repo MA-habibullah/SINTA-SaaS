@@ -13,6 +13,10 @@
 /storage/uploads/**/*
 /storage/archive/**/*
 /storage/app/rate_limit/
+# Kecualikan .gitkeep agar struktur folder penting tetap ter-track
+!storage/app/public/uploads/**/.gitkeep
+!storage/uploads/**/.gitkeep
+!storage/archive/**/.gitkeep
 # Mengabaikan folder scratch untuk file debugging lokal
 /scratch/
 /contoh desain tampilan cetak buku induk/
