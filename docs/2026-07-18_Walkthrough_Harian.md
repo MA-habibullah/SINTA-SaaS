@@ -91,3 +91,18 @@
 - Data alumni input manual (luar sistem) disimpan dengan id_siswa = NULL di tabel riwayat_kuliah dan riwayat_pekerjaan.
 - Query lama menggunakan INNER JOIN siswa s ON rk.id_siswa = s.id sehingga baris dengan id_siswa = NULL selalu tersaring keluar.
 - Solusi: Mengubah ke LEFT JOIN agar baris dengan id_siswa = NULL tetap diikutsertakan. Kolom nama_lengkap akan berisi NULL untuk alumni luar sistem (ditangani di frontend dengan fallback nama).
+
+---
+## Restrukturisasi Nav Tabs Alumni: Hapus Portofolio, Naikkan Riwayat Kuliah & Pekerjaan
+**Waktu**: 17:35 WIB
+**Jenis**: Feature / Refactor
+
+### File yang Diubah:
+- `views/bk/alumni_layout.php` -- Hapus tab 'Input Portofolio Alumni', tambah 2 tab baru 'Riwayat Kuliah' & 'Riwayat Pekerjaan' di nav utama, masing-masing include tracer_study.php dengan variabel  yang sesuai.
+- `views/tracer_study.php` -- Refactor agar reusable: ID mount Vue dinamis (tracerApp_kuliah / tracerApp_pekerjaan), activeTab diinisialisasi dari PHP variable, sub-nav tabs internal dibungkus kondisi empty(is_sub_module) agar tidak muncul ganda saat di-embed.
+
+### Mekanisme Teknis:
+- Dua Vue instance terpisah: tracerApp_kuliah dan tracerApp_pekerjaan, keduanya terdaftar di VueAppRegistry dengan selector unik masing-masing.
+- Saat tab Riwayat Kuliah diklik, Vue instance tracerApp_kuliah langsung aktif dengan activeTab='kuliah'.
+- Saat tab Riwayat Pekerjaan diklik, Vue instance tracerApp_pekerjaan langsung aktif dengan activeTab='pekerjaan'.
+- Halaman standalone /tracer-study tetap berfungsi normal karena is_sub_module tidak di-set.

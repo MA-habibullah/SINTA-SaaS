@@ -545,3 +545,56 @@ INNER JOIN mensyaratkan baris ada di kedua tabel. Karena alumni luar sistem memi
 3. Verifikasi data alumni luar sistem muncul di tabel.
 4. Pastikan data alumni reguler (id_siswa valid) juga masih tampil normal.
 5. Ulangi verifikasi di tab Riwayat Pekerjaan.
+
+---
+## Restrukturisasi Nav Tabs Alumni: Hapus 'Input Portofolio', Naikkan 'Riwayat Kuliah' & 'Riwayat Pekerjaan'
+**Waktu**: 17:33 WIB
+**Status**: Dieksekusi
+
+### Latar Belakang
+Halaman BK > Alumni sebelumnya memiliki 2 tab utama:
+1. Tracking Data Alumni (include pdss_index.php)
+2. Input Portofolio Alumni (include tracer_study.php)
+
+Di dalam tracer_study.php terdapat sub-tab 'Riwayat Kuliah' dan 'Riwayat Pekerjaan'. 
+Permintaan: hapus tab 'Input Portofolio Alumni' dan naikkan kedua sub-tab tersebut ke level nav utama.
+
+### Arsitektur Target
+Nav Utama (alumni_layout.php):
+- [Tab 1] Tracking Data Alumni  --> include pdss_index.php (tidak berubah)
+- [Tab 2] Riwayat Kuliah        --> include tracer_study.php dengan active_tracer_tab='kuliah'
+- [Tab 3] Riwayat Pekerjaan    --> include tracer_study.php dengan active_tracer_tab='pekerjaan'
+
+### Solusi Teknis: Multiple Vue Instance
+tracer_study.php di-include 2x. Agar tidak terjadi konflik ID dan VueAppRegistry,
+digunakan ID mount point yang dinamis berdasarkan tab aktif:
+- tracerApp_kuliah    --> untuk tab Riwayat Kuliah
+- tracerApp_pekerjaan --> untuk tab Riwayat Pekerjaan
+
+VueAppRegistry.register menggunakan selector '#tracerApp_kuliah' dan '#tracerApp_pekerjaan' secara terpisah.
+Kedua Vue instance independen satu sama lain.
+
+### File yang Diubah
+
+#### views/bk/alumni_layout.php
+- Hapus li nav-item 'portofolio-tab' dan tab-pane id='portofolio'
+- Tambah li nav-item 'riwayat-kuliah-tab' dan 'riwayat-pekerjaan-tab'
+- Tambah tab-pane id='riwayat-kuliah' yang include tracer_study.php dengan active_tracer_tab='kuliah', is_sub_module=true
+- Tambah tab-pane id='riwayat-pekerjaan' yang include tracer_study.php dengan active_tracer_tab='pekerjaan', is_sub_module=true
+- Update script auto-resize dari portofolio-tab ke kedua tab baru
+
+#### views/tracer_study.php
+- Tambah variabel PHP: tracer_initial_tab, tracer_instance_id, tracer_vue_selector
+- ID Vue mount point diubah dari hardcoded 'tracerApp' ke dinamis via htmlspecialchars(tracer_instance_id)
+- VueAppRegistry.register menggunakan selector dinamis dari PHP json_encode(tracer_vue_selector)
+- activeTab ref diinisialisasi dari tracer_initial_tab (PHP) bukan hardcoded 'kuliah'
+- Sub-nav tabs internal dibungkus dengan kondisi <?php if (empty(is_sub_module)): ?> agar tidak muncul ganda
+
+### Verification Plan
+1. Buka /bk/alumni?tenant_id=... -> pastikan 3 tab muncul: Tracking Data Alumni, Riwayat Kuliah, Riwayat Pekerjaan
+2. Tab 'Input Portofolio Alumni' sudah tidak ada
+3. Klik Riwayat Kuliah -> Vue instance tracerApp_kuliah ter-mount, tabel riwayat kuliah muncul
+4. Klik Riwayat Pekerjaan -> Vue instance tracerApp_pekerjaan ter-mount, tabel riwayat pekerjaan muncul
+5. Data alumni luar sistem (id_siswa=NULL) muncul di kedua tab (dari fix LEFT JOIN sebelumnya)
+6. Tidak ada error di browser console
+7. Akses langsung ke /tracer-study (standalone) masih berfungsi normal dengan sub-nav tabs-nya sendiri
