@@ -8,6 +8,10 @@
  * - guru_bk    : Bisa input & lihat data alumni milik sekolahnya. Aksi hapus tersedia.
  * - operator_sekolah / admin : Sama seperti guru_bk.
  * - super_admin: Akses seluruh data lintas sekolah. Perlu memilih tenant dulu untuk input.
+ *
+ * Variabel opsional dari layout pemanggil:
+ * - $active_tracer_tab : 'kuliah' | 'pekerjaan'  — tab aktif awal (default: 'kuliah')
+ * - $is_sub_module     : true — sembunyikan header & sub-nav internal
  */
 $userRole  = $data['user_role']         ?? ($_SESSION['role_name']    ?? '');
 $userNama  = $data['user_nama']         ?? ($_SESSION['nama_lengkap'] ?? 'Alumni');
@@ -17,6 +21,12 @@ $baseUrl   = '/SINTA-SaaS';
 
 // Tentukan apakah user ini adalah role "admin" (bukan siswa)
 $isAdmin = in_array($userRole, ['super_admin', 'operator_sekolah', 'admin', 'operator', 'guru_bk']);
+
+// --- Reusability Support ---
+// ID unik untuk Vue mount point (mendukung include 2x dalam halaman yang sama)
+$tracer_initial_tab  = $active_tracer_tab ?? 'kuliah'; // 'kuliah' | 'pekerjaan'
+$tracer_instance_id  = 'tracerApp_' . $tracer_initial_tab;
+$tracer_vue_selector = '#' . $tracer_instance_id;
 ?>
 
 <style>
@@ -139,7 +149,7 @@ $isAdmin = in_array($userRole, ['super_admin', 'operator_sekolah', 'admin', 'ope
 <?php endif; ?>
 
 <!-- Vue App Mount Point -->
-<div id="tracerApp" v-cloak>
+<div id="<?= htmlspecialchars($tracer_instance_id, ENT_QUOTES, 'UTF-8') ?>" v-cloak>
 
     <!-- ================================================================
          BANNER: Status tergantung role
@@ -183,8 +193,9 @@ $isAdmin = in_array($userRole, ['super_admin', 'operator_sekolah', 'admin', 'ope
     <?php endif; ?>
 
     <!-- ================================================================
-         TAB NAVIGATION
+         TAB NAVIGATION (disembunyikan jika dipanggil sebagai sub-module)
     ================================================================ -->
+    <?php if (empty($is_sub_module)): ?>
     <div class="card border-0 shadow-sm rounded-4 mb-4">
         <div class="card-body p-2 bg-white rounded-4">
             <div class="nav-tabs-wrapper">
@@ -209,6 +220,7 @@ $isAdmin = in_array($userRole, ['super_admin', 'operator_sekolah', 'admin', 'ope
             </div>
         </div>
     </div>
+    <?php endif; ?>
 
     <!-- ================================================================
          TAB PANEL: RIWAYAT KULIAH
@@ -524,15 +536,15 @@ $isAdmin = in_array($userRole, ['super_admin', 'operator_sekolah', 'admin', 'ope
         </div>
     </div>
 
-</div><!-- End #tracerApp -->
+</div><!-- End Vue mount -->
 
 <script>
 {
     const { ref, computed, onMounted } = Vue;
 
-    window.VueAppRegistry.register('#tracerApp', {
+    window.VueAppRegistry.register(<?= json_encode($tracer_vue_selector, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>, {
         setup() {
-            const activeTab      = ref('kuliah');
+            const activeTab      = ref(<?= json_encode($tracer_initial_tab, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
             const currentYear    = ref(new Date().getFullYear());
             const loadingKuliah  = ref(false);
             const loadingPekerjaan = ref(false);

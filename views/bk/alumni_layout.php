@@ -94,8 +94,13 @@ $tenantId   = $tenant_id ?? '';
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="portofolio-tab" data-bs-toggle="tab" data-bs-target="#portofolio" type="button" role="tab">
-                            <i class="bi bi-briefcase me-2 fs-6"></i> Input Portofolio Alumni
+                        <button class="nav-link" id="riwayat-kuliah-tab" data-bs-toggle="tab" data-bs-target="#riwayat-kuliah" type="button" role="tab">
+                            <i class="bi bi-mortarboard me-2 fs-6"></i> Riwayat Kuliah
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="riwayat-pekerjaan-tab" data-bs-toggle="tab" data-bs-target="#riwayat-pekerjaan" type="button" role="tab">
+                            <i class="bi bi-briefcase me-2 fs-6"></i> Riwayat Pekerjaan
                         </button>
                     </li>
                 </ul>
@@ -118,9 +123,25 @@ $tenantId   = $tenant_id ?? '';
             </div>
         </div>
 
-        <!-- TAB 2: Input Portofolio (Tracer Study Module) -->
-        <div class="tab-pane fade" id="portofolio" role="tabpanel">
-            <?php include __DIR__ . '/../tracer_study.php'; ?>
+
+        <!-- TAB 2: Riwayat Kuliah -->
+        <div class="tab-pane fade" id="riwayat-kuliah" role="tabpanel">
+            <?php
+                $active_tracer_tab = 'kuliah';
+                $is_sub_module     = true;
+                include __DIR__ . '/../tracer_study.php';
+                unset($active_tracer_tab, $is_sub_module);
+            ?>
+        </div>
+
+        <!-- TAB 3: Riwayat Pekerjaan -->
+        <div class="tab-pane fade" id="riwayat-pekerjaan" role="tabpanel">
+            <?php
+                $active_tracer_tab = 'pekerjaan';
+                $is_sub_module     = true;
+                include __DIR__ . '/../tracer_study.php';
+                unset($active_tracer_tab, $is_sub_module);
+            ?>
         </div>
 
     </div>
@@ -130,12 +151,13 @@ $tenantId   = $tenant_id ?? '';
 <!-- Auto-resize fix for Vue apps inside hidden Bootstrap tabs -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const portofolioTab = document.getElementById('portofolio-tab');
-    if (portofolioTab) {
-        portofolioTab.addEventListener('shown.bs.tab', function () {
-            // Trigger resize event to help Vue components (like charts or tables) render correctly when unhidden
-            window.dispatchEvent(new Event('resize'));
-        });
-    }
+    ['riwayat-kuliah-tab', 'riwayat-pekerjaan-tab'].forEach(function(tabId) {
+        const tabEl = document.getElementById(tabId);
+        if (tabEl) {
+            tabEl.addEventListener('shown.bs.tab', function () {
+                window.dispatchEvent(new Event('resize'));
+            });
+        }
+    });
 });
 </script>
