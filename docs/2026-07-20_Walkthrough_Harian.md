@@ -293,6 +293,14 @@ Memperbaiki kendala popup error "Gagal memuat akses user" saat tombol Akses dikl
 - `views/pengguna_index.php`
 - `app/Core/RouteGuard.php`
 
+---
+## Resolusi Dynamic Tenant Menu Resolution untuk Modal Akses
+**Waktu**: 18:04 WIB
+**Jenis**: Bug Fix / Multi-Tenant Support
+Memperbaiki kendala daftar checklist menu kosong di modal Hak Akses saat login sebagai Super Admin. Root cause: Controller sebelumnya mengambil `tenant_id` dari session user aktif (`SessionManager::getTenantId()`). Bagi Super Admin, `tenant_id` bernilai `null` sehingga pencarian menu di tabel `tenant_menu_access` tidak membuahkan hasil. Solusi: Mengubah controller (`AksesController.php`) agar melakukan *lookup* `tenant_id` milik user target secara langsung dari tabel `users` database. Jika user target tidak terikat dengan tenant (misal sesama Super Admin), default ke global fallback untuk memuat seluruh menu. Berkas yang diubah:
+- `app/Controllers/AksesController.php`
+
+
 
 
 
