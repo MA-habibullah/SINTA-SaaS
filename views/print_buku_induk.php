@@ -50,8 +50,26 @@ $pendidikanWali = !empty($siswa['pendidikan_wali']) ? $siswa['pendidikan_wali'] 
 $pekerjaanWali = !empty($siswa['pekerjaan_wali']) ? $siswa['pekerjaan_wali'] : '......................';
 
 // Pendidikan Sebelumnya
-$asalSekolah = $siswa['sekolah_asal'] ?? '......................';
-$tglIjazah = $siswa['tanggal_ijazah_sebelumnya'] ?? '......................';
+$asalSekolahRaw = $siswa['sekolah_asal'] ?? '......................';
+$asalSekolahTingkat = '......................';
+$asalSekolahNama = '......................';
+
+if (!empty($siswa['sekolah_asal'])) {
+    $asalLower = strtolower($siswa['sekolah_asal']);
+    if (str_contains($asalLower, 'smp') || str_contains($asalLower, 'tsanawiyah') || str_contains($asalLower, 'mts')) {
+        $asalSekolahTingkat = 'SMP / MTs';
+    } elseif (str_contains($asalLower, 'sd') || str_contains($asalLower, 'ibtidaiyah') || str_contains($asalLower, 'mi')) {
+        $asalSekolahTingkat = 'SD / MI';
+    } elseif (str_contains($asalLower, 'sma') || str_contains($asalLower, 'aliyah') || str_contains($asalLower, 'ma') || str_contains($asalLower, 'smk')) {
+        $asalSekolahTingkat = 'SMA / MA / SMK';
+    }
+    $asalSekolahNama = $siswa['sekolah_asal'];
+}
+
+$tglIjazah = '......................';
+if (!empty($siswa['tanggal_ijazah_sebelumnya'])) {
+    $tglIjazah = date('d-m-Y', strtotime($siswa['tanggal_ijazah_sebelumnya']));
+}
 $noIjazah = $siswa['no_ijazah_sebelumnya'] ?? '......................';
 if ($tglIjazah !== '......................' && $noIjazah !== '......................') {
     $tglIjazahGabung = $tglIjazah . ' / ' . $noIjazah;
@@ -81,6 +99,19 @@ $pindahTingkatDitinggalkan = (!empty($siswa['tingkat_ditinggalkan'])) ? $siswa['
 $keluarAlasan = (!empty($siswa['keluar_karena']) && $siswa['keluar_karena'] !== 'Mutasi' && $siswa['keluar_karena'] !== 'Lulus') ? $siswa['alasan_keluar'] : '......................';
 $keluarTanggal = (!empty($siswa['tanggal_keluar'])) ? date('d-m-Y', strtotime($siswa['tanggal_keluar'])) : '......................';
 
+// Resolve academic years (TA1, TA2, TA3)
+$ta1 = '........ / ........';
+$ta2 = '........ / ........';
+$ta3 = '........ / ........';
+
+if (!empty($siswa['tahun_ajaran_mulai']) && preg_match('/^(\d{4})\/(\d{4})$/', $siswa['tahun_ajaran_mulai'], $matches)) {
+    $startYear = (int)$matches[1];
+    $endYear = (int)$matches[2];
+    
+    $ta1 = $startYear . ' / ' . $endYear;
+    $ta2 = ($startYear + 1) . ' / ' . ($endYear + 1);
+    $ta3 = ($startYear + 2) . ' / ' . ($endYear + 2);
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -90,7 +121,7 @@ $keluarTanggal = (!empty($siswa['tanggal_keluar'])) ? date('d-m-Y', strtotime($s
     <style>
         @page {
             size: 215mm 330mm; /* Folio / F4 */
-            margin: 1.27cm 2cm 1.27cm 2.5cm; /* top right bottom left */
+            margin: 1cm 0.8cm 1cm 2.5cm; /* top right bottom left */
         }
         body {
             font-family: Arial, sans-serif;
@@ -232,8 +263,15 @@ $keluarTanggal = (!empty($siswa['tanggal_keluar'])) ? date('d-m-Y', strtotime($s
 
     <!-- Halaman 1 -->
     <div class="page">
+        <?php if (isset($showQrCode) && $showQrCode): ?>
+            <div style="position: absolute; right: 0; top: 40px; text-align: center; border: 1px solid #ccc; padding: 5px; border-radius: 4px; background-color: #fff; width: 85px; z-index: 10;">
+                <span style="font-size: 6px; font-weight: bold; display: block; margin-bottom: 2px; text-transform: uppercase; font-family: sans-serif;">Verifikasi</span>
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=75x75&data=<?= urlencode($urlVerifikasi) ?>" alt="QR Code" style="width: 75px; height: 75px; display: block; margin: 0 auto;">
+            </div>
+        <?php endif; ?>
+
         <div class="header-title">III. LEMBAR BUKU INDUK PESERTA DIDIK</div>
-        <table style="width: 100%; margin-bottom: 25px; font-size: 10pt; line-height: 1.6;">
+        <table style="width: 82%; margin-bottom: 25px; font-size: 10pt; line-height: 1.6;">
             <tr>
                 <td style="width: 25%; font-weight: bold;">NOMOR INDUK SISWA</td>
                 <td style="width: 2%">:</td>
@@ -335,8 +373,8 @@ $keluarTanggal = (!empty($siswa['tanggal_keluar'])) ? date('d-m-Y', strtotime($s
         <table class="list-table">
             <tr><td class="col-no"><?= (!empty($wali) && $wali !== '......................') ? '16.' : '15.' ?></td><td class="col-label">Pendidikan sebelumnya</td><td class="col-colon">:</td><td class="col-val"></td></tr>
             <tr><td></td><td class="sub-label">a. Masuk menjadi peserta didik baru</td><td class="col-colon">:</td><td class="col-val"></td></tr>
-            <tr><td></td><td class="sub-label-2">1) Asal Sekolah</td><td class="col-colon">:</td><td class="col-val"><?= htmlspecialchars($asalSekolah) ?></td></tr>
-            <tr><td></td><td class="sub-label-2">2) Nama Sekolah</td><td class="col-colon">:</td><td class="col-val">......................</td></tr>
+            <tr><td></td><td class="sub-label-2">1) Asal Sekolah</td><td class="col-colon">:</td><td class="col-val"><?= htmlspecialchars($asalSekolahTingkat) ?></td></tr>
+            <tr><td></td><td class="sub-label-2">2) Nama Sekolah</td><td class="col-colon">:</td><td class="col-val"><?= htmlspecialchars($asalSekolahNama) ?></td></tr>
             <tr><td></td><td class="sub-label-2">3) Tanggal dan Nomor Ijazah/STTB</td><td class="col-colon">:</td><td class="col-val"><?= htmlspecialchars($tglIjazahGabung) ?></td></tr>
             <tr><td></td><td class="sub-label">b. Pindahan dari sekolah lain</td><td class="col-colon">:</td><td class="col-val"></td></tr>
             <tr><td></td><td class="sub-label-2">1) Nama Sekolah asal</td><td class="col-colon">:</td><td class="col-val"><?= htmlspecialchars($pindahDariSekolah) ?></td></tr>
@@ -369,9 +407,9 @@ $keluarTanggal = (!empty($siswa['tanggal_keluar'])) ? date('d-m-Y', strtotime($s
                 <tr>
                     <th rowspan="3" style="width:5%">NO.</th>
                     <th rowspan="3" style="width:20%">Aspek yang dinilai</th>
-                    <th colspan="2">Thn Pelajaran ........ / ........</th>
-                    <th colspan="2">Thn Pelajaran ........ / ........</th>
-                    <th colspan="2">Thn Pelajaran ........ / ........</th>
+                    <th colspan="2">Thn Pelajaran <?= htmlspecialchars($ta1) ?></th>
+                    <th colspan="2">Thn Pelajaran <?= htmlspecialchars($ta2) ?></th>
+                    <th colspan="2">Thn Pelajaran <?= htmlspecialchars($ta3) ?></th>
                 </tr>
                 <tr>
                     <th colspan="2">Semester</th>
@@ -417,9 +455,9 @@ $keluarTanggal = (!empty($siswa['tanggal_keluar'])) ? date('d-m-Y', strtotime($s
                 <tr>
                     <th rowspan="2" style="width:5%">NO.</th>
                     <th rowspan="2" style="width:20%">Aspek yang dinilai</th>
-                    <th>Thn Pelajaran ........ / ........</th>
-                    <th>Thn Pelajaran ........ / ........</th>
-                    <th>Thn Pelajaran ........ / ........</th>
+                    <th>Thn Pelajaran <?= htmlspecialchars($ta1) ?></th>
+                    <th>Thn Pelajaran <?= htmlspecialchars($ta2) ?></th>
+                    <th>Thn Pelajaran <?= htmlspecialchars($ta3) ?></th>
                 </tr>
                 <tr>
                     <th>Keterangan</th>
@@ -517,25 +555,6 @@ $keluarTanggal = (!empty($siswa['tanggal_keluar'])) ? date('d-m-Y', strtotime($s
                 <?php endif; ?>
             </tbody>
         </table>
-
-        <!-- Left-aligned QR Code Verification for Document Legality -->
-        <div style="float: left; margin-top: 30px; margin-left: 20px;">
-            <?php if (isset($showQrCode) && $showQrCode): ?>
-                <div style="text-align: center; border: 1px solid #ccc; padding: 5px; border-radius: 4px; display: inline-block; background-color: #fff; width: 85px;">
-                    <span style="font-size: 6px; font-weight: bold; display: block; margin-bottom: 2px; text-transform: uppercase; font-family: sans-serif;">Verifikasi</span>
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=75x75&data=<?= urlencode($urlVerifikasi) ?>" alt="QR Code" style="width: 75px; height: 75px; display: block; margin: 0 auto;">
-                </div>
-            <?php endif; ?>
-        </div>
-
-        <div class="signature-box">
-            <div><?= htmlspecialchars($tempat) ?>, <?= htmlspecialchars($tanggal) ?></div>
-            <div>Kepala Sekolah</div>
-            <div style="height: 2cm;"></div>
-            <div style="font-weight: bold; text-decoration: underline;"><?= htmlspecialchars($siswa['nama_kepsek']) ?></div>
-            <div>NIP. <?= htmlspecialchars($siswa['nip_kepsek']) ?></div>
-        </div>
-        <div class="clearfix"></div>
     </div>
 </body>
 </html>
