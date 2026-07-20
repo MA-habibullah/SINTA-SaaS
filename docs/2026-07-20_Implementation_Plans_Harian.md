@@ -926,3 +926,27 @@ Menampilkan nama Kurikulum Kelas yang sedang aktif di sebelah nama Kelas Fisik p
 *   Buka tab **Setingan Kurikulum** pada Buku Induk (`http://localhost/SINTA-SaaS/buku-induk`).
 *   Pilih Kelas dan Kurikulum. Pastikan judul header menampilkan `Kelompok Mata Pelajaran (Kelas: 10-Baru [Kurikulum Merdeka])`.
 
+---
+## Pengembangan Fitur Export & Import Excel 4 Komponen Nilai Rapor
+**Waktu**: 16:25 WIB
+**Status**: Dieksekusi
+
+# Implementation Plan: Export & Import Excel 4 Komponen Nilai Rapor (KKTP, Nilai Akhir, Capaian Tertinggi, Capaian Terendah)
+
+Mengembangkan template berkas Excel ekspor dan impor agar mencakup 4 kolom penilaian lengkap per mata pelajaran.
+
+---
+
+## 1. Rencana Perubahan (Proposed Changes)
+### app/Controllers/NilaiRaporController.php
+#### [MODIFY] NilaiRaporController.php
+*   Memperbarui fungsi `export()` untuk menghasilkan 4 sub-kolom per mata pelajaran: `KKTP`, `Nilai Akhir`, `Capaian Tertinggi`, dan `Capaian Terendah`.
+*   Memperbarui fungsi `import()` dan `validateExcelImportApi()` untuk memetakan dan menyimpan keempat komponen nilai tersebut ke kolom `kkm`, `nilai_akhir`, dan `nilai_detail_json`.
+
+---
+
+## 2. Verification Plan
+*   Buka tab **Input Nilai Rapor** pada Buku Induk (`http://localhost/SINTA-SaaS/buku-induk`).
+*   Klik **Unduh Format Excel**, buka berkas `.xlsx`, pastikan terdapat kolom KKTP, Nilai Akhir, Capaian Tertinggi, dan Capaian Terendah per mata pelajaran.
+*   Isi data lalu upload melalui **Impor dari Excel**, pastikan seluruh data terimpor dengan sukses.
+

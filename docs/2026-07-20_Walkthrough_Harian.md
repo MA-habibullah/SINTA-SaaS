@@ -213,3 +213,10 @@ Menjalankan perintah skrip pembersihan data di lingkungan local `scratch/reset_b
 **Jenis**: UI/UX Enhancement
 Menambahkan informasi nama Kurikulum Kelas yang sedang aktif (contoh: *Kurikulum Merdeka*, *Kurikulum 2013 (K-13)*) dalam bentuk *badge pill* langsung di judul header **Kelompok Mata Pelajaran (Kelas: 10-Baru [Kurikulum Merdeka])** pada tab Setingan Kurikulum. Solusi: Menambahkan metode helper Vue `getKurikulumName(kurikulumId)` dan menyunting elemen header di `views/buku_induk.php`. Berkas yang diubah:
 - `views/buku_induk.php`
+
+---
+## Pengembangan Fitur Export & Import Excel 4 Komponen Nilai Rapor (KKTP, Nilai Akhir, Capaian Tertinggi, Capaian Terendah)
+**Waktu**: 16:25 WIB
+**Jenis**: Feature Enhancement
+Mengembangkan skema berkas Excel pada ekspor dan impor nilai rapor agar mendukung 4 komponen penilaian mata pelajaran sekaligus per siswa: (1) KKTP/KKM, (2) Nilai Akhir (Angka), (3) Capaian Kompetensi Tertinggi (Deskripsi), dan (4) Capaian Kompetensi Terendah (Deskripsi). Solusi: Memperbarui fungsi `export()`, `import()`, dan `validateExcelImportApi()` pada `NilaiRaporController.php` dengan pembacaan header kolom berbasis regex `[mapel_id]` dan tipe komponen `- KKTP`, `- Nilai Akhir`, `- Capaian Tertinggi`, `- Capaian Terendah`. Berkas yang diubah:
+- `app/Controllers/NilaiRaporController.php`

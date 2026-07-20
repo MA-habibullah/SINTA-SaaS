@@ -497,7 +497,8 @@ class NilaiRaporController extends BaseController {
         $students = $stmtSiswa->fetchAll(PDO::FETCH_ASSOC);
 
         // 3. Get existing grades matrix
-        $qGrades = "SELECT siswa_id, mapel_id, nilai_akhir 
+        // 3. Get existing grades matrix
+        $qGrades = "SELECT siswa_id, mapel_id, nilai_akhir, kkm, nilai_detail_json 
                     FROM detail_nilai_rapor
                     WHERE kelas_id = :kelas_id
                       AND tahun_ajaran = :tahun_ajaran
@@ -515,16 +516,30 @@ class NilaiRaporController extends BaseController {
 
         $gradesMatrix = [];
         foreach ($gradesList as $row) {
-            $gradesMatrix[$row['siswa_id']][$row['mapel_id']] = $row['nilai_akhir'];
+            $detail = json_decode($row['nilai_detail_json'] ?? '', true) ?: [];
+            $tertinggi = $detail['capaian_tertinggi'] ?? $detail['kognitif_deskripsi'] ?? $detail['pengetahuan_deskripsi'] ?? '';
+            $terendah = $detail['capaian_terendah'] ?? $detail['psikomotorik_deskripsi'] ?? $detail['keterampilan_deskripsi'] ?? '';
+
+            $gradesMatrix[$row['siswa_id']][$row['mapel_id']] = [
+                'nilai_akhir' => $row['nilai_akhir'],
+                'kkm' => $row['kkm'] ?? ($detail['kkm'] ?? ''),
+                'tertinggi' => $tertinggi,
+                'terendah' => $terendah
+            ];
         }
 
         // Build excel data matrix
         $excelData = [];
 
-        // Build header line: Siswa ID, NISN, Nama Siswa, Subject 1 [ID], Subject 2 [ID]...
+        // Build header line: Siswa ID, NISN, Nama Siswa, [Mapel] - KKTP, [Mapel] - Nilai Akhir...
         $header = ['Siswa ID', 'NISN', 'Nama Siswa'];
         foreach ($subjects as $sub) {
-            $header[] = $sub['nama_mapel'] . " [" . $sub['mapel_id'] . "]";
+            $mid = $sub['mapel_id'];
+            $mname = $sub['nama_mapel'];
+            $header[] = "{$mname} - KKTP [{$mid}]";
+            $header[] = "{$mname} - Nilai Akhir [{$mid}]";
+            $header[] = "{$mname} - Capaian Tertinggi [{$mid}]";
+            $header[] = "{$mname} - Capaian Terendah [{$mid}]";
         }
         $excelData[] = $header;
 
@@ -537,11 +552,23 @@ class NilaiRaporController extends BaseController {
                 (string)$stu['nama_lengkap']
             ];
             foreach ($subjects as $sub) {
+                $mid = $sub['mapel_id'];
                 if ($this->isReligionSubjectMismatch($stu['agama'] ?? null, $sub['nama_mapel'])) {
                     $row[] = 'N/A';
+                    $row[] = 'N/A';
+                    $row[] = 'N/A';
+                    $row[] = 'N/A';
                 } else {
-                    $val = $gradesMatrix[$stu['id']][$sub['mapel_id']] ?? '';
+                    $g = $gradesMatrix[$stu['id']][$mid] ?? null;
+                    $kkm = $g['kkm'] ?? '';
+                    $val = $g['nilai_akhir'] ?? '';
+                    $tertinggi = $g['tertinggi'] ?? '';
+                    $terendah = $g['terendah'] ?? '';
+
+                    $row[] = $kkm !== '' ? (float)$kkm : '';
                     $row[] = $val !== '' ? (float)$val : '';
+                    $row[] = (string)$tertinggi;
+                    $row[] = (string)$terendah;
                 }
             }
             $excelData[] = $row;
@@ -622,16 +649,28 @@ class NilaiRaporController extends BaseController {
             $header[0] = preg_replace('/^[\x{FEFF}\x{200B}]+/u', '', $header[0]);
         }
 
-        // Map column indices of subjects to their mapel_id
-        $mapelCols = []; // index => mapel_id
+        // Map column indices of subjects to their mapel_id & column type
+        $mapelCols = []; // index => ['mapel_id' => ..., 'type' => 'nilai_akhir'|'kkm'|'tertinggi'|'terendah']
         foreach ($header as $idx => $colName) {
             if ($idx < 3) {
                 continue; // Skip Siswa ID, NISN, Nama Siswa
             }
             
-            // Extract mapel_id from header (format: "Math [12]" or "Math [12")
+            // Extract mapel_id from header (format: "Math - KKTP [12]" or "Math [12]")
             if (preg_match('/\[([0-9]+)\]/', $colName, $matches)) {
-                $mapelCols[$idx] = (int)$matches[1];
+                $mapelId = (int)$matches[1];
+                $type = 'nilai_akhir'; // default
+                if (strpos($colName, '- KKTP') !== false || strpos($colName, '- KKM') !== false) {
+                    $type = 'kkm';
+                } elseif (strpos($colName, '- Capaian Tertinggi') !== false) {
+                    $type = 'tertinggi';
+                } elseif (strpos($colName, '- Capaian Terendah') !== false) {
+                    $type = 'terendah';
+                }
+                $mapelCols[$idx] = [
+                    'mapel_id' => $mapelId,
+                    'type' => $type
+                ];
             }
         }
 
@@ -677,11 +716,13 @@ class NilaiRaporController extends BaseController {
         try {
             $stmtUpsert = $db->prepare("
                 INSERT INTO detail_nilai_rapor 
-                    (tenant_id, siswa_id, kelas_id, tahun_ajaran, semester, mapel_id, nilai_akhir)
+                    (tenant_id, siswa_id, kelas_id, tahun_ajaran, semester, mapel_id, nilai_akhir, kkm, nilai_detail_json)
                 VALUES 
-                    (:tenant_id, :siswa_id, :kelas_id, :tahun_ajaran, :semester, :mapel_id, :nilai_akhir)
+                    (:tenant_id, :siswa_id, :kelas_id, :tahun_ajaran, :semester, :mapel_id, :nilai_akhir, :kkm, :nilai_detail_json)
                 ON DUPLICATE KEY UPDATE 
-                    nilai_akhir = VALUES(nilai_akhir), 
+                    nilai_akhir = COALESCE(VALUES(nilai_akhir), detail_nilai_rapor.nilai_akhir),
+                    kkm = COALESCE(VALUES(kkm), detail_nilai_rapor.kkm),
+                    nilai_detail_json = COALESCE(VALUES(nilai_detail_json), detail_nilai_rapor.nilai_detail_json),
                     updated_at = NOW()
             ");
 
@@ -696,21 +737,57 @@ class NilaiRaporController extends BaseController {
                     continue; // Skip row if no student ID is found
                 }
 
-                // Loop through subject columns and insert values
-                foreach ($mapelCols as $idx => $mapelId) {
+                $studentGrades = [];
+                foreach ($mapelCols as $idx => $colInfo) {
+                    $mapelId = $colInfo['mapel_id'];
+                    $type = $colInfo['type'];
                     $rawVal = isset($row[$idx]) ? trim((string)$row[$idx]) : '';
                     if ($rawVal === 'N/A' || $rawVal === 'n/a' || $rawVal === '') {
-                        continue; // Skip N/A or empty values
+                        continue;
                     }
 
+                    $studentGrades[$mapelId][$type] = $rawVal;
+                }
+
+                foreach ($studentGrades as $mapelId => $data) {
                     // Check for religion mismatch
                     $studentReligion = $studentsMap[$siswaId] ?? null;
                     $mapelName = $subjectsMap[$mapelId] ?? '';
                     if ($this->isReligionSubjectMismatch($studentReligion, $mapelName)) {
-                        continue; // Skip mismatched religion subjects
+                        continue;
                     }
 
-                    $val = (float)$rawVal;
+                    $val = isset($data['nilai_akhir']) && $data['nilai_akhir'] !== '' ? (float)$data['nilai_akhir'] : null;
+                    $kkm = isset($data['kkm']) && $data['kkm'] !== '' ? (float)$data['kkm'] : null;
+
+                    // Fetch existing JSON detail to merge
+                    $stmtExist = $db->prepare("SELECT nilai_detail_json, kkm, nilai_akhir FROM detail_nilai_rapor WHERE siswa_id = ? AND mapel_id = ? AND kelas_id = ? AND tahun_ajaran = ? AND semester = ? AND tenant_id = ? AND deleted_at IS NULL LIMIT 1");
+                    $stmtExist->execute([$siswaId, $mapelId, $kelasId, $tahunAjaran, $semester, $tenantId]);
+                    $existRow = $stmtExist->fetch(PDO::FETCH_ASSOC);
+                    $existDetail = $existRow ? (json_decode($existRow['nilai_detail_json'] ?? '', true) ?: []) : [];
+
+                    if ($val === null && $existRow) {
+                        $val = $existRow['nilai_akhir'];
+                    }
+                    if ($kkm === null && $existRow) {
+                        $kkm = $existRow['kkm'];
+                    }
+
+                    if (isset($data['tertinggi'])) {
+                        $existDetail['capaian_tertinggi'] = $data['tertinggi'];
+                        $existDetail['kognitif_deskripsi'] = $data['tertinggi'];
+                        $existDetail['pengetahuan_deskripsi'] = $data['tertinggi'];
+                    }
+                    if (isset($data['terendah'])) {
+                        $existDetail['capaian_terendah'] = $data['terendah'];
+                        $existDetail['psikomotorik_deskripsi'] = $data['terendah'];
+                        $existDetail['keterampilan_deskripsi'] = $data['terendah'];
+                    }
+                    if ($kkm !== null) {
+                        $existDetail['kkm'] = $kkm;
+                    }
+
+                    $detailJson = !empty($existDetail) ? json_encode($existDetail) : null;
 
                     $stmtUpsert->execute([
                         'tenant_id' => $tenantId,
@@ -719,7 +796,9 @@ class NilaiRaporController extends BaseController {
                         'tahun_ajaran' => $tahunAjaran,
                         'semester' => $semester,
                         'mapel_id' => $mapelId,
-                        'nilai_akhir' => $val
+                        'nilai_akhir' => $val,
+                        'kkm' => $kkm,
+                        'nilai_detail_json' => $detailJson
                     ]);
                 }
                 $successCount++;
@@ -922,11 +1001,23 @@ class NilaiRaporController extends BaseController {
                 $header[0] = preg_replace('/^[\x{FEFF}\x{200B}]+/u', '', $header[0]);
             }
 
-            $mapelCols = []; // index => mapel_id
+            $mapelCols = []; // index => ['mapel_id' => ..., 'type' => 'nilai_akhir'|'kkm'|'tertinggi'|'terendah']
             foreach ($header as $idx => $colName) {
                 if ($idx < 3) continue;
                 if (preg_match('/\[([0-9]+)\]/', $colName, $matches)) {
-                    $mapelCols[$idx] = (int)$matches[1];
+                    $mapelId = (int)$matches[1];
+                    $type = 'nilai_akhir'; // default
+                    if (strpos($colName, '- KKTP') !== false || strpos($colName, '- KKM') !== false) {
+                        $type = 'kkm';
+                    } elseif (strpos($colName, '- Capaian Tertinggi') !== false) {
+                        $type = 'tertinggi';
+                    } elseif (strpos($colName, '- Capaian Terendah') !== false) {
+                        $type = 'terendah';
+                    }
+                    $mapelCols[$idx] = [
+                        'mapel_id' => $mapelId,
+                        'type' => $type
+                    ];
                 }
             }
 
@@ -997,13 +1088,15 @@ class NilaiRaporController extends BaseController {
                 }
 
                 $gradesChecked = [];
-                foreach ($mapelCols as $idx => $mapelId) {
+                foreach ($mapelCols as $idx => $colInfo) {
+                    $mapelId = $colInfo['mapel_id'];
+                    $type = $colInfo['type'];
                     $rawVal = isset($row[$idx]) ? trim((string)$row[$idx]) : '';
-                    $mapelName = $subjectsMap[$mapelId] ?? "Mata Pelajaran ID: {$mapelId}";
+                    $mapelName = $subjectsMap[$mapelId] ?? "Mapel ID: {$mapelId}";
                     
                     if ($rawVal === 'N/A' || $rawVal === 'n/a' || $rawVal === '') {
                         $gradesChecked[] = [
-                            'mapel_name' => $mapelName,
+                            'mapel_name' => "{$mapelName} (" . strtoupper($type) . ")",
                             'value' => 'N/A',
                             'status' => 'info',
                             'msg' => 'Dilewati (Kosong/NA)'
@@ -1011,27 +1104,37 @@ class NilaiRaporController extends BaseController {
                         continue;
                     }
 
-                    if (!is_numeric($rawVal)) {
-                        $rowErrors[] = "Nilai '{$rawVal}' pada mapel '{$mapelName}' bukan angka.";
-                        $gradesChecked[] = [
-                            'mapel_name' => $mapelName,
-                            'value' => $rawVal,
-                            'status' => 'error',
-                            'msg' => 'Bukan angka'
-                        ];
-                        continue;
-                    }
+                    if ($type === 'nilai_akhir' || $type === 'kkm') {
+                        if (!is_numeric($rawVal)) {
+                            $rowErrors[] = "Nilai '{$rawVal}' pada {$type} mapel '{$mapelName}' bukan angka.";
+                            $gradesChecked[] = [
+                                'mapel_name' => "{$mapelName} (" . strtoupper($type) . ")",
+                                'value' => $rawVal,
+                                'status' => 'error',
+                                'msg' => 'Bukan angka'
+                            ];
+                            continue;
+                        }
 
-                    $val = (float)$rawVal;
-                    if ($val < 0 || $val > 100) {
-                        $rowErrors[] = "Nilai {$val} pada mapel '{$mapelName}' di luar batas 0-100.";
+                        $val = (float)$rawVal;
+                        if ($val < 0 || $val > 100) {
+                            $rowErrors[] = "Nilai {$val} pada {$type} mapel '{$mapelName}' di luar batas 0-100.";
+                            $gradesChecked[] = [
+                                'mapel_name' => "{$mapelName} (" . strtoupper($type) . ")",
+                                'value' => $val,
+                                'status' => 'error',
+                                'msg' => 'Di luar batas 0-100'
+                            ];
+                            continue;
+                        }
+                    } else {
+                        // Text description (tertinggi / terendah)
                         $gradesChecked[] = [
-                            'mapel_name' => $mapelName,
-                            'value' => $val,
-                            'status' => 'error',
-                            'msg' => 'Di luar batas 0-100'
+                            'mapel_name' => "{$mapelName} (" . ($type === 'tertinggi' ? 'Capaian Tertinggi' : 'Capaian Terendah') . ")",
+                            'value' => mb_strimwidth($rawVal, 0, 30, '...'),
+                            'status' => 'success',
+                            'msg' => 'Deskripsi Valid'
                         ];
-                        continue;
                     }
 
                     // Religion check
