@@ -1001,3 +1001,30 @@ Mengubah status code HTTP untuk error validasi pemblokiran dari 500 menjadi 400 
 *   Klik tombol **Hapus** pada Mata Pelajaran yang sedang digunakan.
 *   Pastikan tidak ada lagi error HTTP 500 di console browser, dan modal SweetAlert peringatan muncul dengan jelas.
 
+---
+## Pengalihan Respon Pemblokiran ke Payload HTTP 200 (Clean Console UX)
+**Waktu**: 16:36 WIB
+**Status**: Dieksekusi
+
+# Implementation Plan: Pengalihan Respon Pemblokiran ke Payload HTTP 200 (Clean Console UX)
+
+Mengalirkan respon pemblokiran hapus data master menggunakan HTTP 200 OK dengan payload JSON success=false untuk mencegah munculnya log error merah di browser DevTools.
+
+---
+
+## 1. Rencana Perubahan (Proposed Changes)
+### app/Controllers/KelembagaanController.php
+#### [MODIFY] KelembagaanController.php
+*   Mengubah penanganan exception di `deleteApi()` untuk merespons dengan HTTP Status Code 200 OK dan body `{'success': false, 'error': '...'}`.
+
+### views/master_kelembagaan.php
+#### [MODIFY] views/master_kelembagaan.php
+*   Memperbarui `deleteItem()` di Vue.js untuk memeriksa `res.data.success` sehingga SweetAlert warning modal langsung terbuka tanpa memicu catch error Axios.
+
+---
+
+## 2. Verification Plan
+*   Buka **Master Data Kelembagaan** (`http://localhost/SINTA-SaaS/master-data`).
+*   Klik tombol **Hapus** pada Mata Pelajaran yang sedang digunakan.
+*   Periksa Console DevTools browser: pastikan **100% bersih tanpa log merah HTTP 400/500**, dan modal SweetAlert peringatan langsung terbuka.
+

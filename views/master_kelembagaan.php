@@ -782,8 +782,19 @@
                     if (result.isConfirmed) {
                         axios.post('/SINTA-SaaS/api/v1/kelembagaan/hapus', { module: this.activeTab, id: id })
                              .then(res => {
-                                 this.toast.fire({ icon: 'success', title: res.data.message });
-                                 this.fetchData(this.currentPage);
+                                 if (res.data && res.data.success) {
+                                     this.toast.fire({ icon: 'success', title: res.data.message });
+                                     this.fetchData(this.currentPage);
+                                 } else {
+                                     const msg = (res.data && res.data.error) || 'Gagal menghapus data.';
+                                     Swal.fire({
+                                         icon: 'warning',
+                                         title: 'Tidak Dapat Dihapus',
+                                         text: msg,
+                                         confirmButtonColor: '#3085d6',
+                                         confirmButtonText: 'Saya Mengerti'
+                                     });
+                                 }
                              })
                              .catch(err => {
                                  const msg = (err.response && err.response.data && err.response.data.error) || 'Gagal menghapus data.';

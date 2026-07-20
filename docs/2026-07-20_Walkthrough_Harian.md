@@ -235,3 +235,11 @@ Mengembangkan skema berkas Excel pada ekspor dan impor nilai rapor agar mendukun
 Memperbaiki pesan error `api/v1/kelembagaan/hapus 500 (Internal Server Error)`. Root cause: `deleteApi()` di `KelembagaanController.php` melempar HTTP 500 saat menangkap `InvalidArgumentException` dari fungsi proteksi `checkDataInUse()`, sehingga Axios menganggapnya sebagai server crash. Solusi: (1) Mengubah penanganan `InvalidArgumentException` di `KelembagaanController.php` agar merespons dengan HTTP Status Code **400 (Bad Request)**, dan (2) Memperbarui `deleteItem()` di `views/master_kelembagaan.php` agar menampilkan modal peringatan SweetAlert (*Saya Mengerti*) yang informatif menjelaskan alasan data tidak dapat dihapus. Berkas yang diubah:
 - `app/Controllers/KelembagaanController.php`
 - `views/master_kelembagaan.php`
+
+---
+## Pengalihan Respon Pemblokiran ke Payload HTTP 200 (Clean Console UX)
+**Waktu**: 16:36 WIB
+**Jenis**: UI/UX & API Optimization
+Menghilangkan pesan error merah `400 (Bad Request)` dan `[AXIOS API ERROR]` di DevTools Console browser saat penghapusan master data terblokir. Solusi: (1) Mengubah `deleteApi()` di `KelembagaanController.php` agar mengembalikan HTTP Status Code **200 OK** dengan payload JSON `{'success': false, 'error': '...'}` saat terjadi kegagalan validasi proteksi, dan (2) Memperbarui `deleteItem()` pada `views/master_kelembagaan.php` untuk membaca flag `res.data.success`, sehingga console browser 100% bersih tanpa log error merah dan langsung mengarahkan pengguna ke modal peringatan SweetAlert yang informatif. Berkas yang diubah:
+- `app/Controllers/KelembagaanController.php`
+- `views/master_kelembagaan.php`

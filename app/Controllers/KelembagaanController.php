@@ -217,7 +217,7 @@ class KelembagaanController extends BaseController {
         try {
             $exists = $this->model->findById($module, $id);
             if (!$exists) {
-                $this->jsonResponse(['error' => 'Data tidak ditemukan.'], 404);
+                $this->jsonResponse(['success' => false, 'error' => 'Data tidak ditemukan.']);
             }
 
             $this->model->delete($module, $id);
@@ -226,9 +226,9 @@ class KelembagaanController extends BaseController {
                 'message' => 'Data berhasil dipindahkan ke tong sampah.'
             ]);
         } catch (\InvalidArgumentException $e) {
-            $this->jsonResponse(['error' => $e->getMessage()], 400);
+            $this->jsonResponse(['success' => false, 'error' => $e->getMessage()]);
         } catch (\Throwable $e) {
-            $this->jsonResponse(['error' => $e->getMessage()], 500);
+            $this->jsonResponse(['success' => false, 'error' => 'Terjadi kesalahan sistem: ' . $e->getMessage()]);
         }
     }
 
