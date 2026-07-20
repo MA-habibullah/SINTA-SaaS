@@ -228,28 +228,12 @@ class PDSSController extends BaseController {
                                           FROM detail_nilai_rapor dnr2 
                                           JOIN kelas k_dnr ON dnr2.kelas_id = k_dnr.id
                                           WHERE dnr2.tenant_id = ? 
-                                            AND dnr2.semester = 'Ganjil'
                                             AND (k_dnr.nama_kelas LIKE '%12%' OR k_dnr.nama_kelas LIKE '%XII%')
                                             AND dnr2.tahun_ajaran = ?
                                       )
                                       OR (
-                                          s2.id NOT IN (
-                                              SELECT DISTINCT dnr2.siswa_id 
-                                              FROM detail_nilai_rapor dnr2 
-                                              JOIN kelas k_dnr ON dnr2.kelas_id = k_dnr.id
-                                              WHERE dnr2.tenant_id = ? 
-                                                AND dnr2.semester = 'Ganjil'
-                                                AND (k_dnr.nama_kelas LIKE '%12%' OR k_dnr.nama_kelas LIKE '%XII%')
-                                          )
-                                          AND (k2.nama_kelas LIKE '%12%' OR k2.nama_kelas LIKE '%XII%')
-                                          AND (
-                                              CONCAT(
-                                                  CAST(SUBSTRING(ta2.tahun_ajaran, 1, 4) AS UNSIGNED) + 2,
-                                                  '/',
-                                                  CAST(SUBSTRING(ta2.tahun_ajaran, 1, 4) AS UNSIGNED) + 3
-                                              ) = ?
-                                              OR ta2.tahun_ajaran = ?
-                                          )
+                                          (k2.nama_kelas LIKE '%12%' OR k2.nama_kelas LIKE '%XII%')
+                                          AND (ta2.tahun_ajaran = ? OR ta2.tahun_ajaran IS NULL)
                                       )
                                   )
                             )
@@ -264,8 +248,6 @@ class PDSSController extends BaseController {
                 $tenantId,       // s2.tenant_id
                 $tenantId,       // dnr2.tenant_id
                 $selectedTaName, // dnr2.tahun_ajaran
-                $tenantId,       // dnr2.tenant_id (NOT IN)
-                $selectedTaName, // CONCAT comparison
                 $selectedTaName  // ta2.tahun_ajaran comparison
             ]);
             $allMapels = $stmtAll->fetchAll(PDO::FETCH_ASSOC);
@@ -611,39 +593,21 @@ class PDSSController extends BaseController {
             $paramsSiswa = [$tenantId];
             if (!empty($tahunAjaranId)) {
                 $sqlSiswa .= " AND (
-                    -- Kasus 1: Sudah ada nilai Semester 5 di tahun ajaran terpilih
+                    -- Kasus 1: Sudah ada nilai semester kelas 12 di tahun ajaran terpilih
                     s.id IN (
                         SELECT DISTINCT dnr.siswa_id 
                         FROM detail_nilai_rapor dnr 
                         JOIN kelas k_dnr ON dnr.kelas_id = k_dnr.id
                         WHERE dnr.tenant_id = ? 
-                          AND dnr.semester = 'Ganjil' 
                           AND (k_dnr.nama_kelas LIKE '%12%' OR k_dnr.nama_kelas LIKE '%XII%')
                           AND dnr.tahun_ajaran = ?
                     )
-                    -- Kasus 2: Belum ada nilai Semester 5 sama sekali, tapi secara angkatan/teoritis dia kelas 12 di tahun ajaran terpilih
+                    -- Kasus 2: Siswa kelas 12 yang terdaftar di tahun ajaran terpilih
                     OR (
-                        s.id NOT IN (
-                            SELECT DISTINCT dnr.siswa_id 
-                            FROM detail_nilai_rapor dnr 
-                            JOIN kelas k_dnr ON dnr.kelas_id = k_dnr.id
-                            WHERE dnr.tenant_id = ? 
-                              AND dnr.semester = 'Ganjil'
-                              AND (k_dnr.nama_kelas LIKE '%12%' OR k_dnr.nama_kelas LIKE '%XII%')
-                        )
-                        AND (k.nama_kelas LIKE '%12%' OR k.nama_kelas LIKE '%XII%')
-                        AND (
-                            CONCAT(
-                                CAST(SUBSTRING(ta.tahun_ajaran, 1, 4) AS UNSIGNED) + 2,
-                                '/',
-                                CAST(SUBSTRING(ta.tahun_ajaran, 1, 4) AS UNSIGNED) + 3
-                            ) = ?
-                            OR ta.tahun_ajaran = ?
-                        )
+                        (k.nama_kelas LIKE '%12%' OR k.nama_kelas LIKE '%XII%')
+                        AND (ta.tahun_ajaran = ? OR ta.tahun_ajaran IS NULL)
                     )
                 )";
-                $paramsSiswa[] = $tenantId;
-                $paramsSiswa[] = $selectedTaName;
                 $paramsSiswa[] = $tenantId;
                 $paramsSiswa[] = $selectedTaName;
                 $paramsSiswa[] = $selectedTaName;

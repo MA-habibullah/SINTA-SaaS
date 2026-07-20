@@ -1051,3 +1051,27 @@ Mengubah status respon HTTP dari 400 Bad Request menjadi 200 OK dengan payload d
 *   Beralih tab dan periksa DevTools Console browser.
 *   Pastikan tidak ada lagi log error merah `GET /api/v1/kampus 400 (Bad Request)` atau `[AXIOS API ERROR] Status: 400`.
 
+---
+## Perbaikan Filter Presisi Siswa Kelas 12 PDSS Berdasarkan Tahun Ajaran Target
+**Waktu**: 16:53 WIB
+**Status**: Dieksekusi
+
+# Implementation Plan: Perbaikan Filter Presisi Siswa Kelas 12 PDSS Berdasarkan Tahun Ajaran Target
+
+Mengoreksi query filter siswa kelas 12 pada PDSSController agar mencocokkan siswa kelas 12 secara presisi berdasarkan Tahun Ajaran Evaluasi yang dipilih.
+
+---
+
+## 1. Rencana Perubahan (Proposed Changes)
+### app/Controllers/PDSSController.php
+#### [MODIFY] PDSSController.php
+*   Menghapus formula `CONCAT(SUBSTRING(...) + 2)` pada `apiGetKesiapan()` dan `apiGetPdssMapels()`.
+*   Menggunakan pencocokan langsung `dnr.tahun_ajaran = :selectedTaName` atau `(k.nama_kelas LIKE '%12%' AND ta.tahun_ajaran = :selectedTaName)` agar siswa dari angkatan lain tidak bocor ke tahun ajaran evaluasi yang tidak sesuai.
+
+---
+
+## 2. Verification Plan
+*   Buka halaman **Bimbingan Konseling -> Akademik (PDSS)** (`http://localhost/SINTA-SaaS/bk/akademik`).
+*   Pilih Tahun Ajaran Evaluasi `2026/2027`: pastikan 28 siswa Dummy Cohort dari angkatan `2024/2025` tidak lagi muncul di `2026/2027`.
+*   Pilih Tahun Ajaran Evaluasi `2024/2025`: pastikan 28 siswa Dummy Cohort muncul tepat pada tahun ajaran evaluasi `2024/2025`.
+

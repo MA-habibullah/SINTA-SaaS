@@ -250,3 +250,10 @@ Menghilangkan pesan error merah `400 (Bad Request)` dan `[AXIOS API ERROR]` di D
 **Jenis**: UI/UX & API Error Response Improvement
 Memperbaiki pesan error `GET /api/v1/kampus 400 (Bad Request)` dan `[AXIOS API ERROR]` di Console browser saat `fetchKampusFlatList()` dipanggil sebelum tenant dipilih. Root cause: `checkAccess()` di `KampusController.php` merespons HTTP Status Code 400 saat `tenant_id` belum terpilih. Solusi: (1) Menambahkan pembacaan `tenant_id` dari POST/body JSON jika ada, dan (2) Mengubah penanganan `tenant_id` kosong di `KampusController.php` agar merespons HTTP Status Code **200 OK** dengan payload `{'success': false, 'data': [], 'error': 'Tenant tidak terdeteksi...'}`. Hal ini membuat DevTools Console browser 100% bersih tanpa error merah. Berkas yang diubah:
 - `app/Controllers/KampusController.php`
+
+---
+## Perbaikan Filter Presisi Siswa Kelas 12 PDSS Berdasarkan Tahun Ajaran Target
+**Waktu**: 16:53 WIB
+**Jenis**: Bug Fix / Data Mapping Query Correction
+Memperbaiki kemunculan 28 siswa `Dummy Cohort` (TA Masuk `2024/2025`) pada filter Tahun Ajaran Evaluasi `2026/2027` di halaman PDSS/Akademik BK (`http://localhost/SINTA-SaaS/bk/akademik`). Root cause: Query SQL pada `apiGetKesiapan()` dan `apiGetPdssMapels()` di `PDSSController.php` sebelumnya menggunakan formula `CONCAT(SUBSTRING(ta.tahun_ajaran, 1, 4) + 2)` yang secara otomatis menambah 2 tahun pada tahun ajaran siswa, sehingga angkatan `2024/2025` terhitung dan bocor ke evaluasi `2026/2027`. Solusi: Mengubah klausa query SQL agar mencocokkan siswa kelas 12 secara presisi terhadap Tahun Ajaran Evaluasi yang dipilih (`dnr.tahun_ajaran = :selectedTaName` ATAU `(k.nama_kelas LIKE '%12%' AND ta.tahun_ajaran = :selectedTaName)`). Berkas yang diubah:
+- `app/Controllers/PDSSController.php`
