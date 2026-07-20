@@ -4281,12 +4281,5 @@
             }
         }
     });
-
-    // Fix for WAI-ARIA accessibility error: Blocked aria-hidden on an element because its descendant retained focus
-    document.addEventListener('hide.bs.modal', function() {
-        if (document.activeElement) {
-            document.activeElement.blur();
-        }
-    });
 }
 </script>

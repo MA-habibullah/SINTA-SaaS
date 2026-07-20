@@ -154,6 +154,13 @@
     <script>
         window.vueApps = window.vueApps || {};
 
+        // Fix for WAI-ARIA accessibility error: Blocked aria-hidden on an element because its descendant retained focus
+        document.addEventListener('hide.bs.modal', function() {
+            if (document.activeElement && typeof document.activeElement.blur === 'function') {
+                document.activeElement.blur();
+            }
+        });
+
         // Debug Mode: Global Axios Interceptor
         if (window.axios) {
             axios.interceptors.response.use(
@@ -672,6 +679,29 @@
             #layout-wrapper.sidebar-open #sidebar-overlay {
                 display: block;
             }
+
+            /* Floating Help Widget (FAB) style */
+            .fab-help {
+                position: fixed;
+                bottom: 25px;
+                right: 25px;
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #2563eb, #1d4ed8);
+                color: white !important;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+                z-index: 1050;
+                transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                text-decoration: none;
+            }
+            .fab-help:hover {
+                transform: scale(1.1) translateY(-3px);
+                box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6);
+            }
         }
     </style>
     <!-- Favicon -->
@@ -710,9 +740,14 @@
             <?php include __DIR__ . '/footer.php'; ?>
         </div>
 
-    </div>
 </div>
 
+<?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true && strpos($_SERVER['REQUEST_URI'] ?? '', '/bantuan') === false): ?>
+    <!-- Floating Help Widget (FAB) -->
+    <a href="/SINTA-SaaS/bantuan" class="fab-help" title="Butuh Bantuan?">
+        <i class="bi bi-question-lg fs-4"></i>
+    </a>
+<?php endif; ?>
 
 </body>
 </html>
