@@ -965,20 +965,39 @@ class BukuIndukController extends BaseController {
             $siswa['tenant_info']['nip_kepsek'] = $historicalKepsek['nip_kepsek'];
         }
 
-        // Fetch grades and historical class name
+        // Flexible semester matching (Ganjil -> 1,3,5,7,9,11 & Genap -> 2,4,6,8,10,12)
+        $semVariants = [$semester];
+        $lowerSem = strtolower(trim($semester));
+        if ($lowerSem === 'ganjil') {
+            $semVariants = array_merge($semVariants, ['1', '3', '5', '7', '9', '11', 'Ganjil']);
+        } elseif ($lowerSem === 'genap') {
+            $semVariants = array_merge($semVariants, ['2', '4', '6', '8', '10', '12', 'Genap']);
+        } elseif (is_numeric($lowerSem)) {
+            $num = (int)$lowerSem;
+            if ($num % 2 !== 0) {
+                $semVariants = array_merge($semVariants, [(string)$num, 'Ganjil']);
+            } else {
+                $semVariants = array_merge($semVariants, [(string)$num, 'Genap']);
+            }
+        }
+        $semVariants = array_values(array_unique($semVariants));
+        $semPlaceholders = implode(',', array_fill(0, count($semVariants), '?'));
+
         $grades = [];
         $historicalKelas = null;
         try {
+            $queryParams = array_merge([$id, $ta], $semVariants);
             $stmtGrades = $db->prepare("
-                SELECT d.*, m.nama_mapel, k.nama_kelas 
+                SELECT d.*, m.nama_mapel, k.nama_kelas, COALESCE(pm.kelompok_id, 'A. Kelompok Mata Pelajaran Umum') AS kelompok_id 
                 FROM detail_nilai_rapor d 
                 JOIN mata_pelajaran m ON d.mapel_id = m.id 
                 LEFT JOIN kelas k ON d.kelas_id = k.id
-                WHERE d.siswa_id = ? AND d.semester = ? AND d.tahun_ajaran = ? 
+                LEFT JOIN pemetaan_mapel pm ON (pm.tenant_id = d.tenant_id AND pm.kelas_id = d.kelas_id AND pm.tahun_ajaran = d.tahun_ajaran AND pm.semester = d.semester AND pm.mapel_id = d.mapel_id AND pm.deleted_at IS NULL)
+                WHERE d.siswa_id = ? AND d.tahun_ajaran = ? AND d.semester IN ({$semPlaceholders})
                 AND d.deleted_at IS NULL 
-                ORDER BY m.nama_mapel ASC
+                ORDER BY kelompok_id ASC, m.nama_mapel ASC
             ");
-            $stmtGrades->execute([$id, $semester, $ta]);
+            $stmtGrades->execute($queryParams);
             $grades = $stmtGrades->fetchAll(PDO::FETCH_ASSOC);
             
             if (count($grades) > 0 && !empty($grades[0]['nama_kelas'])) {
@@ -1038,9 +1057,10 @@ class BukuIndukController extends BaseController {
         $sikapK13 = [];
         if ($tipePenilaian === 'kompleks') {
             try {
-                $qSikap = "SELECT * FROM nilai_sikap_k13 WHERE siswa_id = ? AND tahun_ajaran = ? AND semester = ? LIMIT 1";
+                $sikapParams = array_merge([$id, $ta], $semVariants);
+                $qSikap = "SELECT * FROM nilai_sikap_k13 WHERE siswa_id = ? AND tahun_ajaran = ? AND semester IN ({$semPlaceholders}) LIMIT 1";
                 $stmtSikap = $db->prepare($qSikap);
-                $stmtSikap->execute([$id, $ta, $semester]);
+                $stmtSikap->execute($sikapParams);
                 $sikapRow = $stmtSikap->fetch(PDO::FETCH_ASSOC);
                 if ($sikapRow) {
                     $sikapK13[$id] = $sikapRow;
@@ -1115,11 +1135,12 @@ class BukuIndukController extends BaseController {
         $gradesRaw = [];
         try {
             $stmt = $db->prepare("
-                SELECT d.*, m.nama_mapel, m.kelompok 
+                SELECT d.*, m.nama_mapel, COALESCE(pm.kelompok_id, 'A. Kelompok Mata Pelajaran Umum') AS kelompok 
                 FROM detail_nilai_rapor d 
                 JOIN mata_pelajaran m ON d.mapel_id = m.id 
+                LEFT JOIN pemetaan_mapel pm ON (pm.tenant_id = d.tenant_id AND pm.kelas_id = d.kelas_id AND pm.tahun_ajaran = d.tahun_ajaran AND pm.semester = d.semester AND pm.mapel_id = d.mapel_id AND pm.deleted_at IS NULL)
                 WHERE d.siswa_id = ? AND d.deleted_at IS NULL 
-                ORDER BY m.kelompok ASC, m.nama_mapel ASC, d.tahun_ajaran ASC, d.semester ASC
+                ORDER BY kelompok ASC, m.nama_mapel ASC, d.tahun_ajaran ASC, d.semester ASC
             ");
             $stmt->execute([$id]);
             $gradesRaw = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -1291,6 +1312,7 @@ class BukuIndukController extends BaseController {
                 OR (s.id_kelas = :kelas_id3 AND " . ($filterTahunAjaran === $activeTahunAjaran ? "s.status = 'Aktif'" : "1=0") . ")
                 OR (s.id_kelas = :kelas_id4 AND s.id_tahun_ajaran IN (SELECT id FROM tahun_ajaran WHERE tahun_ajaran = :tahun_ajaran3))
             )";
+            $where[] = "(ta.tahun_ajaran IS NULL OR ta.tahun_ajaran <= :filter_ta_max1)";
             $params['kelas_id1'] = $filterKelas;
             $params['kelas_id2'] = $filterKelas;
             $params['kelas_id3'] = $filterKelas;
@@ -1298,6 +1320,7 @@ class BukuIndukController extends BaseController {
             $params['tahun_ajaran1'] = $filterTahunAjaran;
             $params['tahun_ajaran2'] = $filterTahunAjaran;
             $params['tahun_ajaran3'] = $filterTahunAjaran;
+            $params['filter_ta_max1'] = $filterTahunAjaran;
         } else if ($filterKelas !== '') {
             $where[] = "(
                 s.id_kelas = :kelas_id1
@@ -1315,9 +1338,11 @@ class BukuIndukController extends BaseController {
                 OR s.id_tahun_ajaran IN (SELECT id FROM tahun_ajaran WHERE tahun_ajaran = :tahun_ajaran3)
                 " . ($filterTahunAjaran === $activeTahunAjaran ? " OR s.status = 'Aktif' " : "") . "
             )";
+            $where[] = "(ta.tahun_ajaran IS NULL OR ta.tahun_ajaran <= :filter_ta_max2)";
             $params['tahun_ajaran1'] = $filterTahunAjaran;
             $params['tahun_ajaran2'] = $filterTahunAjaran;
             $params['tahun_ajaran3'] = $filterTahunAjaran;
+            $params['filter_ta_max2'] = $filterTahunAjaran;
         }
         if ($filterStatus !== '') {
             $where[] = "s.status = :status";
@@ -1843,6 +1868,32 @@ class BukuIndukController extends BaseController {
         exit;
     }
 
+    /**
+     * Hapus file rate limit yang usianya lebih dari 1 jam (Garbage Collection)
+     */
+    private function cleanStaleRateLimitFiles(string $rateLimitDir): void {
+        // Peluang 10% agar tidak membebani IO server pada setiap request
+        if (rand(1, 10) !== 1) {
+            return;
+        }
+
+        try {
+            if (is_dir($rateLimitDir)) {
+                $files = glob($rateLimitDir . '*.json');
+                $now = time();
+                if ($files) {
+                    foreach ($files as $f) {
+                        if (is_file($f) && ($now - filemtime($f)) > 3600) {
+                            @unlink($f);
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // Ignore garbage collection errors
+        }
+    }
+
     public function verifyTranskrip(): void {
         // ── 1. HTTP Security Headers ────────────────────────────────────────────
         header("Content-Type: text/html; charset=UTF-8");
@@ -1861,6 +1912,8 @@ class BukuIndukController extends BaseController {
         if (!is_dir($rateLimitDir)) {
             @mkdir($rateLimitDir, 0755, true);
         }
+        $this->cleanStaleRateLimitFiles($rateLimitDir);
+
         $rateFile = $rateLimitDir . 'vt_page_' . $ipHash . '.json';
         $now      = time();
         $window   = 60;
@@ -1950,6 +2003,8 @@ class BukuIndukController extends BaseController {
         if (!is_dir($rateLimitDir)) {
             @mkdir($rateLimitDir, 0755, true);
         }
+        $this->cleanStaleRateLimitFiles($rateLimitDir);
+
         $rateFile = $rateLimitDir . 'vt_api_' . $ipHash . '.json';
         $now      = time();
         $window   = 60;

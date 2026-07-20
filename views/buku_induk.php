@@ -873,6 +873,7 @@
                                             <button v-if="siswa.years[n-1].has_ganjil || siswa.years[n-1].tahun_ajaran !== '-'" @click="openPrintModal('/SINTA-SaaS/cetak-rapot-semester?id=' + siswa.id + '&semester=Ganjil&ta=' + encodeURIComponent(siswa.years[n-1].tahun_ajaran), 'Rapor Semester Ganjil (' + siswa.years[n-1].tahun_ajaran + ')')" class="btn btn-primary btn-sm rounded-3 py-1 px-2 fs-8">
                                                 <i class="bi bi-printer"></i>
                                             </button>
+                                        </td>
                                         <td class="text-center">
                                             <div class="d-inline-flex gap-1 justify-content-center">
                                                 <button v-if="siswa.years[n-1].has_genap || siswa.years[n-1].tahun_ajaran !== '-'" @click="openPrintModal('/SINTA-SaaS/cetak-rapot-semester?id=' + siswa.id + '&semester=Genap&ta=' + encodeURIComponent(siswa.years[n-1].tahun_ajaran), 'Rapor Semester Genap (' + siswa.years[n-1].tahun_ajaran + ')')" class="btn btn-primary btn-sm rounded-3 py-1 px-2 fs-8">
@@ -2753,17 +2754,15 @@
                     const val = g.nilai_akhir;
                     const pred = g.predikat || '';
                     const ta = g.tahun_ajaran;
-                    const sem = (g.semester || '').toLowerCase();
-                    
-                    if (!mapelMap[mapelName]) {
-                        mapelMap[mapelName] = {
-                            nama_mapel: mapelName,
-                            kode_mapel: mapelCode,
-                            grades: {}
-                        };
+                    const semStr = (g.semester || '').toLowerCase().trim();
+                    let semKey = 'genap';
+                    if (semStr.includes('ganjil')) {
+                        semKey = 'ganjil';
+                    } else if (semStr.includes('genap')) {
+                        semKey = 'genap';
+                    } else if (!isNaN(parseInt(semStr))) {
+                        semKey = (parseInt(semStr) % 2 !== 0) ? 'ganjil' : 'genap';
                     }
-                    
-                    const semKey = sem.includes('ganjil') ? 'ganjil' : 'genap';
                     const key = `${ta}|${semKey}`;
                     
                     mapelMap[mapelName].grades[key] = {
@@ -3413,7 +3412,8 @@
                     const studentId = student.id;
                     this.nilaiRapor.subjects.forEach(subject => {
                         const subjectId = subject.mapel_id;
-                        const entry = this.nilaiRapor.grades[studentId][subjectId];
+                        const entry = (this.nilaiRapor.grades && this.nilaiRapor.grades[studentId] && this.nilaiRapor.grades[studentId][subjectId]) ? this.nilaiRapor.grades[studentId][subjectId] : null;
+                        if (!entry) return;
                         
                         let nilaiAkhir = entry.nilai_akhir;
                         let kkm = entry.kkm;
@@ -3513,11 +3513,12 @@
                 this.detailNilaiModalObj.show();
             },
             getAverageGrade(studentId) {
-                if (!this.nilaiRapor.grades[studentId] || this.nilaiRapor.subjects.length === 0) return '-';
+                if (!this.nilaiRapor.grades || !this.nilaiRapor.grades[studentId] || !this.nilaiRapor.subjects || this.nilaiRapor.subjects.length === 0) return '-';
                 let total = 0;
                 let count = 0;
                 this.nilaiRapor.subjects.forEach(subject => {
-                    const entry = this.nilaiRapor.grades[studentId][subject.mapel_id];
+                    const entry = (this.nilaiRapor.grades[studentId] && this.nilaiRapor.grades[studentId][subject.mapel_id]) ? this.nilaiRapor.grades[studentId][subject.mapel_id] : null;
+                    if (!entry) return;
                     let val = entry.nilai_akhir;
                     
                     // Auto calculate if empty
