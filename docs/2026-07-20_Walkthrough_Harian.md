@@ -300,6 +300,15 @@ Memperbaiki kendala popup error "Gagal memuat akses user" saat tombol Akses dikl
 Memperbaiki kendala daftar checklist menu kosong di modal Hak Akses saat login sebagai Super Admin. Root cause: Controller sebelumnya mengambil `tenant_id` dari session user aktif (`SessionManager::getTenantId()`). Bagi Super Admin, `tenant_id` bernilai `null` sehingga pencarian menu di tabel `tenant_menu_access` tidak membuahkan hasil. Solusi: Mengubah controller (`AksesController.php`) agar melakukan *lookup* `tenant_id` milik user target secara langsung dari tabel `users` database. Jika user target tidak terikat dengan tenant (misal sesama Super Admin), default ke global fallback untuk memuat seluruh menu. Berkas yang diubah:
 - `app/Controllers/AksesController.php`
 
+---
+## Pengurutan Hirarki Menu & Indikator Cabang (Tree Branch) pada Modal Akses
+**Waktu**: 18:07 WIB
+**Jenis**: UI/UX Improvement
+Merapikan urutan checklist menu pada modal Hak Akses agar tersusun secara hirarki (setiap sub-menu langsung berada di bawah menu induknya) dan menambahkan garis cabang `└──` untuk memperjelas kedalaman sub-menu seperti tampilan Manajemen User & Hak Akses. Langkah: (1) Menambahkan logika penyusunan pohon (tree traversal) di `AksesController::fetchUserAccessOverrides()` untuk menyusun child menu tepat setelah parent menu-nya sebelum dikirimkan sebagai JSON response, (2) Menambahkan branch marker `└──` berwarna redup (`text-muted opacity-50`) di `pengguna_index.php` pada item yang memiliki `parent_id` agar struktur hirarki sub-menu terlihat jelas. Berkas yang diubah:
+- `app/Controllers/AksesController.php`
+- `views/pengguna_index.php`
+
+
 
 
 
