@@ -235,6 +235,7 @@ $isAdminOrSuper = in_array('super_admin', $user_roles, true) || in_array('operat
         background-color: transparent !important;
         border-bottom: 2px solid #2563eb !important;
     }
+    </style>
 
 
 
