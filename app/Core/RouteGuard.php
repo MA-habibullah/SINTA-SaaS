@@ -12,6 +12,8 @@ class RouteGuard {
      * Mengembalikan true jika diizinkan, false jika diblokir.
      */
     public static function check(string $path, ?string $tenantId, $roleName): bool {
+        $userId = $_SESSION['user_id'] ?? null;
+
         // Normalisasi parameter roleName menjadi array
         $roleNames = is_array($roleName) ? $roleName : [$roleName];
 

@@ -361,7 +361,7 @@
                                 </td>
                                 <td class="text-center">
                                     <div class="d-inline-flex gap-2" v-if="!trashMode">
-                                        <button class="btn btn-sm btn-outline-warning rounded-2 px-2 py-1 fs-8" @click="openUserAccessModal(item)" title="Hak Akses Khusus">
+                                        <button class="btn btn-sm btn-warning text-dark fw-semibold rounded-2 px-2 py-1 fs-8" @click="openUserAccessModal(item)" title="Hak Akses Khusus">
                                             <i class="bi bi-key-fill me-1"></i>Akses
                                         </button>
                                         <button class="btn btn-sm btn-outline-secondary rounded-2 px-2 py-1 fs-8" @click="openEditModal(item)">
@@ -1579,7 +1579,7 @@
                 this.selectedStaffId = user.id;
                 this.selectedStaffName = user.nama_lengkap;
                 try {
-                    const res = await axios.get(`${_baseUrl}/api/v1/akses/user-override?user_id=${user.id}`);
+                    const res = await axios.get('/SINTA-SaaS/api/v1/akses/user-override?user_id=' + encodeURIComponent(user.id));
                     if (res.data.success) {
                         this.overrideMenus = res.data.menus || [];
                         this.overrideCheckedIds = res.data.checked_ids || [];
@@ -1599,7 +1599,7 @@
                 this.overrideCheckedIds.forEach(id => payload.append('menu_ids[]', id));
 
                 try {
-                    const res = await axios.post(`${_baseUrl}/api/v1/akses/user-override/simpan`, payload);
+                    const res = await axios.post('/SINTA-SaaS/api/v1/akses/user-override/simpan', payload);
                     if (res.data.success) {
                         Swal.fire({
                             title: 'Berhasil',
