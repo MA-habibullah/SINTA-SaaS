@@ -1,0 +1,6 @@
+# Nonaktifkan eksekusi PHP demi keamanan RCE (Remote Code Execution)
+<Files *.php>
+    deny from all
+</Files>
+RemoveHandler .php
+php_flag engine off

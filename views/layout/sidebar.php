@@ -165,6 +165,19 @@ if (!empty($roles)) {
             }
         }
 
+        // Ambil jumlah unread tickets untuk badge sidebar
+        $unreadBadgeCount = 0;
+        if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
+            if (($_SESSION['role_name'] ?? '') === 'super_admin') {
+                $stmtUnread = $db->prepare("SELECT COUNT(*) FROM tickets WHERE admin_unread = 1");
+                $stmtUnread->execute();
+            } else {
+                $stmtUnread = $db->prepare("SELECT COUNT(*) FROM tickets WHERE user_unread = 1 AND tenant_id = ? AND user_id = ?");
+                $stmtUnread->execute([$_SESSION['tenant_id'] ?? null, $_SESSION['user_id'] ?? null]);
+            }
+            $unreadBadgeCount = (int)$stmtUnread->fetchColumn();
+        }
+
     } catch (\Throwable $e) {
         error_log("Gagal memuat sidebar dinamis: " . $e->getMessage());
     }
@@ -246,11 +259,15 @@ if (!empty($roles)) {
                                    <?= ($menu['url'] === '#' || empty($menu['url'])) ? 'onclick="showSimulationAlert(\'' . htmlspecialchars($menu['nama_menu'], ENT_QUOTES, 'UTF-8') . '\'); return false;"' : '' ?>>
                                     <i class="<?= htmlspecialchars($menu['icon'] ?? 'bi bi-circle') ?>"></i>
                                     <span class="nav-label"><?= htmlspecialchars($menu['nama_menu']) ?></span>
-                                    <?php if (!empty($menu['badge'])): ?>
-                                    <span class="ms-auto badge rounded-pill text-bg-success" style="font-size:0.6rem;padding:2px 6px;">
-                                        <?= htmlspecialchars($menu['badge']) ?>
-                                    </span>
-                                    <?php endif; ?>
+                                     <?php if ($menu['id'] == 61 && $unreadBadgeCount > 0): ?>
+                                     <span class="ms-auto badge rounded-pill bg-danger" style="font-size:0.6rem;padding:2px 6px;">
+                                         <?= $unreadBadgeCount ?>
+                                     </span>
+                                     <?php elseif (!empty($menu['badge'])): ?>
+                                     <span class="ms-auto badge rounded-pill text-bg-success" style="font-size:0.6rem;padding:2px 6px;">
+                                         <?= htmlspecialchars($menu['badge']) ?>
+                                     </span>
+                                     <?php endif; ?>
                                 </a>
                             </li>
                 <?php 

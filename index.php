@@ -378,6 +378,35 @@ try {
             $controller->documentScanner();
             break;
 
+        // Rute Pusat Bantuan (Ticketing System)
+        case '/bantuan':
+            (new \App\Controllers\BantuanController())->index();
+            break;
+        case '/api/v1/bantuan/buat':
+            (new \App\Controllers\BantuanController())->apiCreateTicket();
+            break;
+        case '/api/v1/bantuan/list':
+            (new \App\Controllers\BantuanController())->apiListTickets();
+            break;
+        case '/api/v1/bantuan/detail':
+            (new \App\Controllers\BantuanController())->apiGetTicketDetail();
+            break;
+        case '/api/v1/bantuan/balas':
+            (new \App\Controllers\BantuanController())->apiReplyTicket();
+            break;
+        case '/api/v1/bantuan/update-status':
+            (new \App\Controllers\BantuanController())->apiUpdateStatus();
+            break;
+        case '/api/v1/bantuan/faq-lookup':
+            (new \App\Controllers\BantuanController())->apiFaqLookup();
+            break;
+        case '/api/v1/bantuan/canned-responses':
+            (new \App\Controllers\BantuanController())->apiGetCannedResponses();
+            break;
+        case '/api/v1/bantuan/unread-count':
+            (new \App\Controllers\BantuanController())->apiGetUnreadCount();
+            break;
+
         case '/buku-induk':
             $controller = new App\Controllers\BukuIndukController();
             $controller->index();
