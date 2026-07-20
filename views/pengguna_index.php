@@ -156,7 +156,7 @@
                             <th class="text-center">L/P</th>
                             <th>TTL</th>
                             <th>Alamat</th>
-                            <th>Akun User & Email</th>
+
                             <th>Kelengkapan Data</th>
                             <th class="text-center" style="width: 120px;">Status Siswa</th>
                             <th class="text-center" style="width: 160px;">Aksi</th>
@@ -225,12 +225,7 @@
                                         {{ item.alamat || '-' }}
                                     </span>
                                 </td>
-                                <td>
-                                    <div v-if="item.kontak_email || item.email">
-                                        <a :href="'mailto:' + (item.kontak_email || item.email)" class="text-decoration-none font-monospace">{{ item.kontak_email || item.email }}</a>
-                                    </div>
-                                    <span v-else class="badge bg-light text-muted border">Tanpa Akun</span>
-                                </td>
+
                                 <td>
                                     <div class="d-flex flex-column" style="min-width: 120px;">
                                         <div class="d-flex justify-content-between align-items-center mb-1">
