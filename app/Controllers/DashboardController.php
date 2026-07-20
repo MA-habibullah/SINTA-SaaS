@@ -181,14 +181,11 @@ class DashboardController extends BaseController {
                     }
 
                     // --- D. Fetch Pengumuman ---
-                    $roleId = $_SESSION['role_id'] ?? null;
-                    if ($roleId === null) {
-                        $roleName = $_SESSION['role_name'] ?? '';
-                        if ($roleName === 'super_admin') $roleId = 1;
-                        elseif ($roleName === 'operator_sekolah') $roleId = 2;
-                        elseif ($roleName === 'siswa') $roleId = 6;
-                        else $roleId = 0;
-                    }
+                    $roleName = $_SESSION['role_name'] ?? '';
+                    $db = Database::getConnection();
+                    $stmtRole = $db->prepare("SELECT id FROM roles WHERE nama_role = ? LIMIT 1");
+                    $stmtRole->execute([$roleName]);
+                    $roleId = (int)$stmtRole->fetchColumn() ?: 0;
 
                     $pengumumanModel = new PengumumanModel($tenantId);
                     $pengumuman_list = $pengumumanModel->getActiveForUser($roleId, 1, 0) ?: [];
@@ -262,14 +259,11 @@ class DashboardController extends BaseController {
         }
 
         $tenantId = $_SESSION['tenant_id'];
-        $roleId = $_SESSION['role_id'] ?? null;
-        if ($roleId === null) {
-            $roleName = $_SESSION['role_name'] ?? '';
-            if ($roleName === 'super_admin') $roleId = 1;
-            elseif ($roleName === 'operator_sekolah') $roleId = 2;
-            elseif ($roleName === 'siswa') $roleId = 6;
-            else $roleId = 0;
-        }
+        $roleName = $_SESSION['role_name'] ?? '';
+        $db = Database::getConnection();
+        $stmtRole = $db->prepare("SELECT id FROM roles WHERE nama_role = ? LIMIT 1");
+        $stmtRole->execute([$roleName]);
+        $roleId = (int)$stmtRole->fetchColumn() ?: 0;
         
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
         if ($page < 1) $page = 1;

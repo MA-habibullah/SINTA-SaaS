@@ -15,9 +15,8 @@ class PengumumanController extends BaseController {
         parent::__construct();
         SessionManager::requireLogin();
         
-        $role = $_SESSION['role_name'] ?? '';
-        // Hanya super_admin, admin, dan humas yang boleh mengelola pengumuman
-        if (!in_array($role, ['super_admin', 'operator_sekolah', 'humas'])) {
+        // Hanya super_admin, admin, dan humas yang boleh mengelola pengumuman (mendukung override)
+        if (!\App\Core\RouteGuard::checkCurrent(['super_admin', 'operator_sekolah', 'humas'])) {
             http_response_code(403);
             die("403 - Forbidden: Anda tidak memiliki akses ke Manajemen Pengumuman.");
         }

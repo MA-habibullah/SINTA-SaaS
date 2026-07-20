@@ -23,10 +23,8 @@ class BukuIndukController extends BaseController {
 
         SessionManager::requireLogin();
         
-        // Cek role yang diperbolehkan
-        $roles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
-        $allowed = array_intersect($roles, ['super_admin', 'operator_sekolah', 'guru']);
-        if (empty($allowed)) {
+        // Cek role yang diperbolehkan dengan RouteGuard::checkCurrent
+        if (!\App\Core\RouteGuard::checkCurrent(['super_admin', 'operator_sekolah', 'guru'])) {
             http_response_code(403);
             die("<h1>403 Forbidden</h1><p>Anda tidak memiliki akses ke halaman Buku Induk.</p>");
         }

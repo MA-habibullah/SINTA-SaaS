@@ -16,9 +16,8 @@ class QueueController extends BaseController {
         // 1. Gate Keamanan: Wajib Login
         SessionManager::requireLogin();
         
-        // 2. Otorisasi: Hanya super_admin & operator_sekolah
-        $role = $_SESSION['role_name'] ?? '';
-        if ($role !== 'super_admin' && $role !== 'operator_sekolah') {
+        // 2. Otorisasi: Hanya super_admin & operator_sekolah (mendukung override)
+        if (!\App\Core\RouteGuard::checkCurrent(['super_admin', 'operator_sekolah'])) {
             http_response_code(403);
             echo "<div style='font-family: sans-serif; text-align: center; padding: 50px;'>";
             echo "<h1 style='color: #dc3545;'>403 Akses Ditolak</h1>";

@@ -108,4 +108,34 @@ class RouteGuard {
             return true;
         }
     }
+
+    /**
+     * Memeriksa apakah request URI saat ini diizinkan untuk diakses berdasarkan RouteGuard (dan override-nya)
+     * atau terdaftar dalam array allowedRoles.
+     */
+    public static function checkCurrent(array $allowedRoles): bool {
+        $roleName = $_SESSION['role_name'] ?? '';
+        $roles = $_SESSION['roles'] ?? [$roleName];
+        $tenantId = $_SESSION['tenant_id'] ?? null;
+        
+        $path = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+        $project_folder = '/SINTA-SaaS';
+        if (strncasecmp($path, $project_folder, strlen($project_folder)) === 0) {
+            $path = substr($path, strlen($project_folder));
+        }
+
+        // 1. Loloskan jika lolos validasi RouteGuard (termasuk override user_menu_access)
+        if (self::check($path, $tenantId, $roles)) {
+            return true;
+        }
+
+        // 2. Fallback: Loloskan jika salah satu role user termasuk dalam allowedRoles
+        foreach ($roles as $r) {
+            if (in_array($r, $allowedRoles, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

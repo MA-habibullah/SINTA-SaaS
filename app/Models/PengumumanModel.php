@@ -80,8 +80,9 @@ class PengumumanModel {
         $whereTenant = ($this->tenantId === null) ? "1=1" : "(p.tenant_id = :tenant_id OR p.tenant_id IS NULL)";
         
         $isAdmin = in_array($userRoleId, [1, 2]) ? 1 : 0;
-        $isGuru = in_array($userRoleId, [3, 20, 21]) ? 1 : 0;
-        $isSiswa = ($userRoleId == 6) ? 1 : 0;
+        // Seluruh Guru, Karyawan (Staff), Waka, dan Kepala Sekolah dikelompokkan sebagai "Guru/Staff"
+        $isGuru = in_array($userRoleId, [3, 6, 20, 21, 22, 23, 24, 25, 26]) ? 1 : 0;
+        $isSiswa = ($userRoleId == 4) ? 1 : 0;
         
         $roleCondition = "(:is_admin = 1 OR p.visibilitas = 'public' 
                           OR (p.visibilitas = 'guru' AND :is_guru = 1) 
@@ -142,8 +143,9 @@ class PengumumanModel {
         $whereTenant = ($this->tenantId === null) ? "1=1" : "(p.tenant_id = :tenant_id OR p.tenant_id IS NULL)";
         
         $isAdmin = in_array($userRoleId, [1, 2]) ? 1 : 0;
-        $isGuru = in_array($userRoleId, [3, 20, 21]) ? 1 : 0;
-        $isSiswa = ($userRoleId == 6) ? 1 : 0;
+        // Seluruh Guru, Karyawan (Staff), Waka, dan Kepala Sekolah dikelompokkan sebagai "Guru/Staff"
+        $isGuru = in_array($userRoleId, [3, 6, 20, 21, 22, 23, 24, 25, 26]) ? 1 : 0;
+        $isSiswa = ($userRoleId == 4) ? 1 : 0;
         
         $roleCondition = "(:is_admin = 1 OR p.visibilitas = 'public' 
                           OR (p.visibilitas = 'guru' AND :is_guru = 1) 

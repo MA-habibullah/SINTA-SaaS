@@ -38,15 +38,7 @@ class BKController extends BaseController {
     // ROLE GATE — Blokir akses jika bukan role yang diizinkan
     // =========================================================================
     private function guardRole(): void {
-        $roles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
-        $hasAllowedRole = false;
-        foreach ($roles as $r) {
-            if (in_array($r, self::ALLOWED_ROLES, true)) {
-                $hasAllowedRole = true;
-                break;
-            }
-        }
-        if (!$hasAllowedRole) {
+        if (!\App\Core\RouteGuard::checkCurrent(self::ALLOWED_ROLES)) {
             $isApi = str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/SINTA-SaaS/api/');
             if ($isApi) {
                 $this->jsonResponse(['error' => 'Akses ditolak. Modul ini hanya untuk Guru BK, Admin Sekolah, dan Super Admin.'], 403);

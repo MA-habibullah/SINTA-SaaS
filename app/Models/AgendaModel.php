@@ -73,7 +73,7 @@ class AgendaModel {
         
         $filtered = [];
         $isAdmin = in_array($userRoleId, [1, 2]);
-        $isGuru = in_array($userRoleId, [3, 20, 21]);
+        $isGuru = in_array($userRoleId, [3, 6, 20, 21, 22, 23, 24, 25, 26]);
         
         foreach ($all as $a) {
             $vis = $a['visibilitas'];

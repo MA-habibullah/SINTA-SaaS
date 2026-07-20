@@ -15,9 +15,8 @@ class ActiveSessionController extends BaseController {
         // 1. Wajib Login (Security Gate)
         SessionManager::requireLogin();
         
-        // 2. Hak Akses: Hanya Super Admin & Operator Sekolah
-        $role = $_SESSION['role_name'] ?? '';
-        if ($role !== 'super_admin' && $role !== 'operator_sekolah') {
+        // 2. Hak Akses: Hanya Super Admin & Operator Sekolah (mendukung override)
+        if (!\App\Core\RouteGuard::checkCurrent(['super_admin', 'operator_sekolah'])) {
             http_response_code(403);
             echo "<div style='font-family: sans-serif; text-align: center; padding: 50px;'>";
             echo "<h1 style='color: #dc3545;'>403 Akses Ditolak</h1>";
