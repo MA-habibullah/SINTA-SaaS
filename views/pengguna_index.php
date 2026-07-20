@@ -747,7 +747,9 @@
                     <div class="list-group list-group-flush border-bottom-0">
                         <label v-for="menu in overrideMenus" :key="menu.id" class="list-group-item d-flex align-items-center gap-2 border-0 px-0 py-2 fs-7 cursor-pointer">
                             <input type="checkbox" :value="menu.id" v-model="overrideCheckedIds" class="form-check-input">
-                            <span :class="{'fw-bold text-dark': !menu.parent_id, 'ps-3 text-secondary': menu.parent_id}">{{ menu.nama_menu }}</span>
+                            <span :class="{'fw-bold text-dark': !menu.parent_id, 'ps-3 text-secondary': menu.parent_id}">
+                                <span v-if="menu.parent_id" class="text-muted opacity-50 me-1">└──</span>{{ menu.nama_menu }}
+                            </span>
                         </label>
                     </div>
                 </div>

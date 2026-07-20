@@ -278,6 +278,29 @@ class AksesController extends BaseController {
             }
             $menus = $stmtMenus->fetchAll(PDO::FETCH_ASSOC);
 
+            // Susun menu ke dalam hirarki terurut (Parent diikuti Child-nya)
+            $parentMenus = [];
+            $childMenus = [];
+            foreach ($menus as $m) {
+                if (empty($m['parent_id'])) {
+                    $parentMenus[] = $m;
+                } else {
+                    $childMenus[$m['parent_id']][] = $m;
+                }
+            }
+
+            $sortedMenus = [];
+            foreach ($parentMenus as $parent) {
+                $sortedMenus[] = $parent;
+                $pId = $parent['id'];
+                if (isset($childMenus[$pId])) {
+                    foreach ($childMenus[$pId] as $child) {
+                        $sortedMenus[] = $child;
+                    }
+                }
+            }
+            $menus = $sortedMenus;
+
             // 2. Ambil menu ter-override untuk user ini
             $stmtChecked = $db->prepare("SELECT menu_id FROM user_menu_access WHERE user_id = ? AND tenant_id = ?");
             $stmtChecked->execute([$userId, $tenantId]);
