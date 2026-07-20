@@ -635,8 +635,8 @@ $tenantList = $data['tenant_list'] ?? $tenantList ?? $tenant_list ?? [];
                                 </td>
                                 <td class="text-center">
                                     <span class="text-xs px-2.5 py-1 rounded-full font-semibold"
-                                          :class="stu.jumlah_nilai === totalConfiguredSemesters ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-amber-50 text-amber-700 border border-amber-100'">
-                                        {{ stu.jumlah_nilai }} / {{ totalConfiguredSemesters }} Nilai
+                                          :class="stu.jumlah_nilai >= (stu.expected_nilai || totalConfiguredSemesters) ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-amber-50 text-amber-700 border border-amber-100'">
+                                        {{ stu.jumlah_nilai }} / {{ stu.expected_nilai || totalConfiguredSemesters }} Nilai
                                     </span>
                                 </td>
                                 <td class="text-center pe-6">

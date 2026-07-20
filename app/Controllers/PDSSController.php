@@ -816,6 +816,7 @@ class PDSSController extends BaseController {
                     'rata_rata' => $rataRata,
                     'total_nilai' => $studentSum,
                     'jumlah_nilai' => $totalActual,
+                    'expected_nilai' => $studentExpectedCount, // nilai yang diharapkan per siswa (bukan global)
                     'status_eligible' => $statusEligible
                 ];
             }
