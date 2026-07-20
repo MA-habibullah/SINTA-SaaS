@@ -373,8 +373,13 @@
         <div v-else>
             
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="fw-bold text-dark mb-0 fs-6">
-                    <i class="bi bi-grid-fill text-primary me-2"></i>Kelompok Mata Pelajaran (Kelas: {{ getKelasName(kurikulum.kelasId) }})
+                <h5 class="fw-bold text-dark mb-0 fs-6 d-inline-flex align-items-center flex-wrap gap-1">
+                    <i class="bi bi-grid-fill text-primary me-1"></i>
+                    <span>Kelompok Mata Pelajaran (Kelas: {{ getKelasName(kurikulum.kelasId) }}</span>
+                    <span v-if="getKurikulumName(kurikulum.kurikulumId)" class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 rounded-pill fs-8 ms-1">
+                        <i class="bi bi-journal-bookmark-fill me-1"></i>{{ getKurikulumName(kurikulum.kurikulumId) }}
+                    </span>
+                    <span>)</span>
                 </h5>
                 <button class="btn btn-primary btn-sm rounded-3 px-3 py-2 fs-8 fw-semibold" @click="addGroup">
                     <i class="bi bi-plus-lg me-1"></i> Tambah Kelompok
@@ -3824,6 +3829,11 @@
                 if (!kelasId) return '';
                 const k = this.masterKurikulum.kelas.find(x => x.id == kelasId);
                 return k ? k.nama_kelas : '';
+            },
+            getKurikulumName(kurikulumId) {
+                if (!kurikulumId) return '';
+                const k = this.kurikulumList.find(x => x.id == kurikulumId);
+                return k ? k.nama_kurikulum : '';
             },
             isKelas12(className) {
                 if (!className) return false;

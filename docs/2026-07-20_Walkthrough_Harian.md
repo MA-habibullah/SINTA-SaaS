@@ -199,3 +199,17 @@ Menghapus file seeder data pengujian `2026_07_20_01_seed_dummy_12_semester_grade
 **Jenis**: UI/UX Enhancement / Sorting Improvement
 Memperbarui logika pengurutan (*sorting*) untuk data Tahun Ajaran dan Tahun Angkatan pada halaman Master Data Kelembagaan (`http://localhost/SINTA-SaaS/master-data`). Sebelumnya data diurutkan berdasarkan `id DESC` yang kurang presisi secara kronologis. Solusi: Mengubah klausa pengurutan di `app/Models/Kelembagaan.php` pada fungsi `getPaginated()` dan `getOptions()` menjadi `ORDER BY k.tahun_ajaran DESC` dan `ORDER BY k.tahun_angkatan DESC` sehingga Tahun Ajaran terbaru (contoh: 2026/2027, 2025/2026, 2024/2025...) tampil di urutan paling atas. Berkas yang diubah:
 - `app/Models/Kelembagaan.php`
+
+---
+## Pembersihan & Reset Data Inputan Nilai Rapor & Setingan Kurikulum Localhost
+**Waktu**: 16:20 WIB
+**Jenis**: Localhost Cleanup / Data Reset
+Menjalankan perintah skrip pembersihan data di lingkungan local `scratch/reset_buku_induk_nilai_kurikulum.php` untuk mengosongkan seluruh baris inputan nilai rapor siswa (`detail_nilai_rapor`, `nilai_sikap_k13`, `absensi_semester`, `kesehatan_siswa`, `log_nilai_rapor`, `nilai_ujian_sekolah`) dan setingan kurikulum (`kelas_kurikulum`, `pemetaan_mapel`). Berkas yang dibuat:
+- `scratch/reset_buku_induk_nilai_kurikulum.php`
+
+---
+## Penambahan Informasi Kurikulum Aktif pada Header Kelompok Mata Pelajaran
+**Waktu**: 16:23 WIB
+**Jenis**: UI/UX Enhancement
+Menambahkan informasi nama Kurikulum Kelas yang sedang aktif (contoh: *Kurikulum Merdeka*, *Kurikulum 2013 (K-13)*) dalam bentuk *badge pill* langsung di judul header **Kelompok Mata Pelajaran (Kelas: 10-Baru [Kurikulum Merdeka])** pada tab Setingan Kurikulum. Solusi: Menambahkan metode helper Vue `getKurikulumName(kurikulumId)` dan menyunting elemen header di `views/buku_induk.php`. Berkas yang diubah:
+- `views/buku_induk.php`

@@ -882,3 +882,47 @@ Mengubah pengurutan data tabel Tahun Ajaran dan Tahun Angkatan pada halaman Mast
 *   Buka halaman Master Data Kelembagaan (`http://localhost/SINTA-SaaS/master-data`).
 *   Pilih tab **Tahun Ajaran**. Pastikan daftar terurut dari tahun terbaru (contoh: 2026/2027, 2025/2026, 2024/2025...).
 
+---
+## Pembersihan & Reset Data Inputan Nilai Rapor & Setingan Kurikulum Localhost
+**Waktu**: 16:20 WIB
+**Status**: Dieksekusi
+
+# Implementation Plan: Pembersihan & Reset Data Inputan Nilai Rapor & Setingan Kurikulum
+
+Membuat dan mengeksekusi skrip pembersihan data `scratch/reset_buku_induk_nilai_kurikulum.php` untuk mengosongkan tabel inputan nilai rapor siswa dan pemetaan setingan kurikulum di lingkungan localhost.
+
+---
+
+## 1. Rencana Perubahan (Proposed Changes)
+### scratch/reset_buku_induk_nilai_kurikulum.php
+#### [NEW] reset_buku_induk_nilai_kurikulum.php
+*   Menjalankan query `TRUNCATE TABLE` untuk tabel `detail_nilai_rapor`, `nilai_sikap_k13`, `absensi_semester`, `kesehatan_siswa`, `log_nilai_rapor`, `nilai_ujian_sekolah`, `kelas_kurikulum`, dan `pemetaan_mapel`.
+
+---
+
+## 2. Verification Plan
+*   Jalankan `php scratch/check_all_tables.php` untuk memastikan seluruh tabel terkait bernilai 0 baris.
+
+---
+## Penambahan Informasi Kurikulum Aktif pada Header Kelompok Mata Pelajaran
+**Waktu**: 16:23 WIB
+**Status**: Dieksekusi
+
+# Implementation Plan: Penambahan Informasi Kurikulum Aktif pada Header Kelompok Mata Pelajaran
+
+Menampilkan nama Kurikulum Kelas yang sedang aktif di sebelah nama Kelas Fisik pada header section **Kelompok Mata Pelajaran**.
+
+---
+
+## 1. Rencana Perubahan (Proposed Changes)
+### views/buku_induk.php
+#### [MODIFY] views/buku_induk.php
+*   Menambahkan fungsi helper `getKurikulumName(kurikulumId)` di objek `methods` Vue.js.
+*   Menambahkan elemen *badge pill* `<span class="badge bg-primary-subtle ..."><i class="bi bi-journal-bookmark-fill me-1"></i>{{ getKurikulumName(kurikulum.kurikulumId) }}</span>` di dalam header `Kelompok Mata Pelajaran`.
+
+---
+
+## 2. Verification Plan
+*   Buka tab **Setingan Kurikulum** pada Buku Induk (`http://localhost/SINTA-SaaS/buku-induk`).
+*   Pilih Kelas dan Kurikulum. Pastikan judul header menampilkan `Kelompok Mata Pelajaran (Kelas: 10-Baru [Kurikulum Merdeka])`.
+
