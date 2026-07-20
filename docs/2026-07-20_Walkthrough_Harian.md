@@ -266,3 +266,11 @@ Memperbaiki log error merah `GET /api/v1/pdss/simulasi/setting 400 (Bad Request)
 - `app/Controllers/PDSSController.php`
 - `views/pdss_index.php`
 
+---
+## Penanganan Error Jaringan (Network Error) pada Pengunggahan Berkas Langkah 5
+**Waktu**: 17:35 WIB
+**Jenis**: Bug Fix / UX Improvement
+Menambahkan penanganan khusus pada `views/tambah_siswa.php` saat terjadi `"Network Error"` pada pengunggahan berkas secara berurutan. Apabila kegagalan jaringan terjadi (misalnya karena concurrent connection limit Cloudflare, browser/OS throttling, atau paket internet lambat), pesan error default digantikan dengan instruksi yang ramah: `"Penting: Harap upload 1 file lalu klik Simpan, dan ulangi proses tersebut untuk meng-upload file berikutnya satu per satu."` Berkas yang diubah:
+- `views/tambah_siswa.php`
+
+
