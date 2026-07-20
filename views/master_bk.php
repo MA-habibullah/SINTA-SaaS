@@ -429,6 +429,14 @@ $baseUrl    = '/SINTA-SaaS';
                         </button>
                     </li>
                     <?php endif; ?>
+                    <?php if(!isset($allowed_bk_tabs) || in_array('beasiswa', $allowed_bk_tabs)): ?>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'beasiswa'}"
+                                @click="switchTab('beasiswa')" id="tab-beasiswa">
+                            <i class="bi bi-gift me-2 fs-6"></i> Beasiswa Siswa
+                        </button>
+                    </li>
+                    <?php endif; ?>
                 </ul>
             </div>
         </div>
@@ -2508,6 +2516,183 @@ $baseUrl    = '/SINTA-SaaS';
         </div>
     </div>
 
+    <!-- ═══════════════════════════════════════════════════════════
+         TAB 8: BEASISWA SISWA
+    ════════════════════════════════════════════════════════════ -->
+    <div v-show="activeTab === 'beasiswa'">
+        <!-- Warning untuk Super Admin jika belum memilih sekolah -->
+        <div v-if="userRole === 'super_admin' && !currentTenantId" class="text-center py-5">
+            <div class="card border-0 shadow-sm rounded-4 p-5 mx-auto animate-fade-in" style="max-width: 500px; background: #fff;">
+                <i class="bi bi-funnel text-warning fs-1 mb-3"></i>
+                <h5 class="fw-bold mb-2 text-dark">Pilih Sekolah Terlebih Dahulu</h5>
+                <p class="text-muted fs-7 mb-0">
+                    Silakan gunakan filter di bagian atas halaman untuk memilih sekolah sebelum mengelola data beasiswa siswa.
+                </p>
+            </div>
+        </div>
+
+        <div v-else class="row g-4 animate-fade-in">
+            <!-- Panel Kiri: Pilih Siswa & Input Beasiswa -->
+            <div class="col-lg-5">
+                <div class="bk-card p-4">
+                    <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                        <h6 class="fw-bold mb-0">
+                            <i class="bi bi-gift-fill me-2 text-success"></i>
+                            Input Riwayat Beasiswa
+                        </h6>
+                        <button v-if="activeBeasiswaSiswa" @click="clearSiswaBeasiswa" class="btn btn-xs btn-outline-secondary rounded-3 py-1 px-2 fw-semibold" style="font-size: 0.72rem;">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Ganti Siswa
+                        </button>
+                    </div>
+
+                    <!-- Search Siswa Dropdown -->
+                    <div class="mb-3">
+                        <label for="input-beasiswa-cari-siswa" class="form-label fw-bold fs-7 mb-1 text-dark">Pilih Siswa <span class="text-danger">*</span></label>
+                        <div class="position-relative">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                                <input type="text" 
+                                       id="input-beasiswa-cari-siswa"
+                                       name="beasiswa_cari_siswa"
+                                       class="form-control form-control-sm border-start-0 ps-1 rounded-end-3" 
+                                       placeholder="Ketik Nama, NISN, atau NIK Siswa..."
+                                       v-model="beasiswaSearchSiswa"
+                                       @input="searchSiswaBeasiswaDebounce"
+                                       @focus="showBeasiswaSiswaDropdown = true"
+                                       @blur="hideBeasiswaDropdownDelay" />
+                            </div>
+                            
+                            <!-- Dropdown Pencarian Siswa -->
+                            <div v-if="showBeasiswaSiswaDropdown && beasiswaSiswaOptions.length > 0" 
+                                 class="position-absolute w-100 bg-white border rounded-3 shadow-lg p-1 mt-1 z-3"
+                                 style="max-height: 250px; overflow-y: auto;">
+                                <div v-for="s in beasiswaSiswaOptions" 
+                                     :key="s.id" 
+                                     @mousedown.prevent="selectSiswaBeasiswa(s)"
+                                     class="p-2 rounded-2 hover-bg-slate cursor-pointer fs-7 d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="fw-bold text-dark">{{ s.nama_lengkap }}</div>
+                                        <div class="text-muted fs-8">NISN: {{ s.nisn }} | Kelas: {{ s.nama_kelas || '-' }}</div>
+                                    </div>
+                                    <span class="badge bg-primary-subtle text-primary rounded-pill px-2 py-1 fs-9">Pilih</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr v-if="activeBeasiswaSiswa" class="my-3">
+
+                    <!-- Form Input Beasiswa (Hanya jika siswa sudah terpilih) -->
+                    <div v-if="activeBeasiswaSiswa">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold fs-7 mb-1">Jenis Beasiswa <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm rounded-3" v-model="formBeasiswa.jenis_beasiswa" placeholder="Contoh: PIP, Beasiswa Prestasi, Pemda, Yayasan" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold fs-7 mb-1">Sumber Beasiswa</label>
+                            <input type="text" class="form-control form-control-sm rounded-3" v-model="formBeasiswa.sumber" placeholder="Contoh: Kemenag, CSR Bank Mandiri, Pemprov">
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label fw-semibold fs-7 mb-1">Tahun Menerima <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control form-control-sm rounded-3" v-model.number="formBeasiswa.tahun_menerima" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-semibold fs-7 mb-1">Nominal (Opsional)</label>
+                                <input type="number" class="form-control form-control-sm rounded-3" v-model.number="formBeasiswa.nominal" placeholder="Contoh: 1000000">
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <button class="btn btn-sm btn-outline-secondary rounded-3 px-3" @click="resetFormBeasiswa">Reset</button>
+                            <button class="btn btn-sm btn-success rounded-3 px-4 d-inline-flex align-items-center gap-1" @click="simpanBeasiswa" :disabled="loadingSimpanBeasiswa">
+                                <span v-if="loadingSimpanBeasiswa" class="spinner-border spinner-border-sm"></span>
+                                <i v-else class="bi bi-floppy"></i>
+                                Simpan Beasiswa
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel Kanan: Daftar Seluruh Beasiswa & Filter/Ekspor -->
+            <div class="col-lg-7">
+                <div class="bk-card p-4 h-100 d-flex flex-column">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 pb-2 border-bottom">
+                        <h6 class="fw-bold mb-0">
+                            <i class="bi bi-clock-history me-2 text-warning"></i>
+                            Daftar Penerima Beasiswa
+                        </h6>
+                        <div class="d-flex align-items-center gap-2">
+                            <!-- Filter Tahun Ajaran -->
+                            <select class="form-select form-select-sm rounded-3" style="width: 155px; font-size: 0.78rem;" v-model="filterBeasiswaTahunAjaran" @change="loadAllBeasiswa">
+                                <option value="">Semua Thn Ajaran</option>
+                                <option v-for="ta in tahunAjaranList" :key="ta.id" :value="ta.id">{{ ta.tahun_ajaran }}</option>
+                            </select>
+                            
+                            <!-- Download Excel Button -->
+                            <button class="btn btn-sm btn-outline-primary rounded-3 d-inline-flex align-items-center gap-1 fw-semibold" style="font-size: 0.78rem;" @click="exportBeasiswaExcel">
+                                <i class="bi bi-file-earmark-spreadsheet"></i>
+                                Excel
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Loader -->
+                    <div v-if="loadingBeasiswaList" class="flex-grow-1 d-flex flex-column align-items-center justify-content-center py-5 text-muted">
+                        <div class="spinner-border text-primary spinner-border-sm mb-2"></div>
+                        <span class="fs-7">Memuat data beasiswa...</span>
+                    </div>
+
+                    <div v-else class="flex-grow-1 table-responsive">
+                        <table class="table table-hover align-middle fs-8">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 5%">No.</th>
+                                    <th>Nama Siswa</th>
+                                    <th>Kelas</th>
+                                    <th>Jenis Beasiswa</th>
+                                    <th>Sumber</th>
+                                    <th>Tahun</th>
+                                    <th>Nominal</th>
+                                    <th class="text-center" style="width: 10%">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(b, bIdx) in allBeasiswaList" :key="b.id">
+                                    <td>{{ bIdx + 1 }}</td>
+                                    <td>
+                                        <div class="fw-bold text-dark text-start">{{ b.nama_lengkap }}</div>
+                                        <div class="text-muted text-start fs-9" style="font-family: monospace;">NISN: {{ b.nisn || '-' }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border px-2 py-1 fs-9">
+                                            {{ b.nama_kelas || '-' }}
+                                        </span>
+                                    </td>
+                                    <td class="fw-bold text-success text-start">{{ b.jenis_beasiswa }}</td>
+                                    <td class="text-start">{{ b.sumber || '-' }}</td>
+                                    <td class="font-monospace fw-bold">{{ b.tahun_menerima }}</td>
+                                    <td>{{ b.nominal ? 'Rp ' + Number(b.nominal).toLocaleString('id-ID') : '-' }}</td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-outline-danger rounded-2 px-2 py-1" @click="hapusBeasiswa(b.id)" title="Hapus riwayat beasiswa">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr v-if="allBeasiswaList.length === 0">
+                                    <td colspan="8" class="text-center py-4 text-muted">
+                                        Tidak ada data beasiswa yang tercatat.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div><!-- End #bkApp -->
 
 <script>
@@ -2525,6 +2710,18 @@ window.VueAppRegistry.register('#bkApp', {
     setup() {
         const userRole       = _userRole;
         const baseUrl        = _baseUrl;
+
+        const toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            didOpen: (t) => {
+                t.addEventListener('mouseenter', Swal.stopTimer)
+                t.addEventListener('mouseleave', Swal.resumeTimer)
+            }
+        });
 
         // ─── State ──────────────────────────────────────────
         const activeTab      = ref('<?= $allowed_bk_tabs[0] ?? "dashboard" ?>');
@@ -2698,7 +2895,7 @@ window.VueAppRegistry.register('#bkApp', {
         });
 
         // ─── Tab Switch + Lazy Load ──────────────────────────
-        const tabsLoaded = ref({ dashboard: false, penjurusan: false, tracer: false, jurnal: false, prestasi: false, kehadiran: false, pelanggaran: false });
+        const tabsLoaded = ref({ dashboard: false, penjurusan: false, tracer: false, jurnal: false, prestasi: false, kehadiran: false, pelanggaran: false, beasiswa: false });
 
         function switchTab(tab) {
             activeTab.value = tab;
@@ -2711,6 +2908,7 @@ window.VueAppRegistry.register('#bkApp', {
                 if (tab === 'prestasi')   { loadPrestasi(); }
                 if (tab === 'kehadiran')  { loadKelasKehadiran(); }
                 if (tab === 'pelanggaran') { switchSubTab(activeSubTab.value); }
+                if (tab === 'beasiswa')   { loadAllBeasiswa(); }
             } else {
                 if (tab === 'pelanggaran') { switchSubTab(activeSubTab.value); }
             }
@@ -4233,6 +4431,178 @@ window.VueAppRegistry.register('#bkApp', {
             return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
         }
 
+        // --- BEASISWA STATE & METHODS ---
+        const activeBeasiswaSiswa = ref(null);
+        const beasiswaSearchSiswa = ref('');
+        const beasiswaSiswaOptions = ref([]);
+        const showBeasiswaSiswaDropdown = ref(false);
+        const loadingSearchBeasiswaSiswa = ref(false);
+        const riwayatBeasiswaList = ref([]);
+        const formBeasiswa = ref({
+            jenis_beasiswa: '',
+            sumber: '',
+            tahun_menerima: new Date().getFullYear(),
+            nominal: ''
+        });
+        const loadingSimpanBeasiswa = ref(false);
+
+        let searchBeasiswaTimeout = null;
+        function searchSiswaBeasiswaDebounce() {
+            clearTimeout(searchBeasiswaTimeout);
+            searchBeasiswaTimeout = setTimeout(() => {
+                const q = beasiswaSearchSiswa.value.trim();
+                if (q.length < 2) {
+                    beasiswaSiswaOptions.value = [];
+                    return;
+                }
+                loadingSearchBeasiswaSiswa.value = true;
+                const params = new URLSearchParams();
+                params.set('q', q);
+                if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
+                params.set('limit', '10');
+
+                axios.get(`${_baseUrl}/api/v1/bk/siswa?${params.toString()}`)
+                    .then(res => {
+                        beasiswaSiswaOptions.value = res.data.data || [];
+                    })
+                    .catch(() => {
+                        beasiswaSiswaOptions.value = [];
+                    })
+                    .finally(() => {
+                        loadingSearchBeasiswaSiswa.value = false;
+                    });
+            }, 280);
+        }
+
+        function selectSiswaBeasiswa(s) {
+            activeBeasiswaSiswa.value = s;
+            beasiswaSearchSiswa.value = s.nama_lengkap;
+            beasiswaSiswaOptions.value = [];
+            showBeasiswaSiswaDropdown.value = false;
+            fetchBeasiswa(s.id);
+        }
+
+        function clearSiswaBeasiswa() {
+            activeBeasiswaSiswa.value = null;
+            beasiswaSearchSiswa.value = '';
+            beasiswaSiswaOptions.value = [];
+            riwayatBeasiswaList.value = [];
+        }
+
+        function hideBeasiswaDropdownDelay() {
+            setTimeout(() => {
+                showBeasiswaSiswaDropdown.value = false;
+            }, 250);
+        }
+
+        function fetchBeasiswa(siswaId) {
+            axios.get(`${_baseUrl}/api/v1/buku-induk/beasiswa`, { params: { siswa_id: siswaId } })
+                .then(res => {
+                    riwayatBeasiswaList.value = res.data.data || [];
+                })
+                .catch(() => {
+                    toast.fire({ icon: 'error', title: 'Gagal memuat riwayat beasiswa.' });
+                });
+        }
+
+        // --- ALL BEASISWA LIST STATE & METHODS ---
+        const allBeasiswaList = ref([]);
+        const filterBeasiswaTahunAjaran = ref('');
+        const loadingBeasiswaList = ref(false);
+
+        function loadAllBeasiswa() {
+            if (_userRole === 'super_admin' && !currentTenantId.value) return;
+            loadingBeasiswaList.value = true;
+            const params = new URLSearchParams();
+            if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
+            if (filterBeasiswaTahunAjaran.value) params.set('tahun_ajaran_id', filterBeasiswaTahunAjaran.value);
+
+            axios.get(`${_baseUrl}/api/v1/bk/beasiswa/list?${params.toString()}`)
+                .then(res => {
+                    allBeasiswaList.value = res.data.data || [];
+                })
+                .catch(() => {
+                    allBeasiswaList.value = [];
+                    toast.fire({ icon: 'error', title: 'Gagal memuat daftar beasiswa.' });
+                })
+                .finally(() => {
+                    loadingBeasiswaList.value = false;
+                });
+        }
+
+        function exportBeasiswaExcel() {
+            if (_userRole === 'super_admin' && !currentTenantId.value) {
+                Swal.fire('Perhatian', 'Pilih sekolah terlebih dahulu.', 'warning');
+                return;
+            }
+            const params = new URLSearchParams();
+            if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
+            if (filterBeasiswaTahunAjaran.value) params.set('tahun_ajaran_id', filterBeasiswaTahunAjaran.value);
+
+            window.open(`${_baseUrl}/api/v1/bk/beasiswa/export?${params.toString()}`, '_blank');
+        }
+
+        function simpanBeasiswa() {
+            if (!activeBeasiswaSiswa.value) {
+                Swal.fire('Gagal!', 'Pilih siswa terlebih dahulu.', 'error');
+                return;
+            }
+            if (!formBeasiswa.value.jenis_beasiswa || !formBeasiswa.value.tahun_menerima) {
+                Swal.fire('Gagal!', 'Jenis Beasiswa dan Tahun Menerima wajib diisi.', 'error');
+                return;
+            }
+            loadingSimpanBeasiswa.value = true;
+            const payload = {
+                siswa_id: activeBeasiswaSiswa.value.id,
+                jenis_beasiswa: formBeasiswa.value.jenis_beasiswa,
+                sumber: formBeasiswa.value.sumber,
+                tahun_menerima: formBeasiswa.value.tahun_menerima,
+                nominal: formBeasiswa.value.nominal
+            };
+            axios.post(`${_baseUrl}/api/v1/buku-induk/beasiswa`, payload)
+                .then(() => {
+                    toast.fire({ icon: 'success', title: 'Data beasiswa berhasil disimpan.' });
+                    resetFormBeasiswa();
+                    loadAllBeasiswa(); // Refresh daftar utama
+                })
+                .catch(err => {
+                    Swal.fire('Gagal!', (err.response && err.response.data && err.response.data.error) || 'Terjadi kesalahan.', 'error');
+                })
+                .finally(() => {
+                    loadingSimpanBeasiswa.value = false;
+                });
+        }
+
+        function hapusBeasiswa(id) {
+            Swal.fire({
+                title: 'Hapus data beasiswa?',
+                text: "Tindakan ini tidak dapat dibatalkan!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Ya, Hapus!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    axios.delete(`${_baseUrl}/api/v1/buku-induk/beasiswa`, { params: { id: id } })
+                        .then(() => {
+                            toast.fire({ icon: 'success', title: 'Data beasiswa berhasil dihapus.' });
+                            loadAllBeasiswa(); // Refresh daftar utama
+                        });
+                }
+            });
+        }
+
+        function resetFormBeasiswa() {
+            formBeasiswa.value = {
+                jenis_beasiswa: '',
+                sumber: '',
+                tahun_menerima: new Date().getFullYear(),
+                nominal: ''
+            };
+        }
+
         // ─── Init ────────────────────────────────────────────
         onMounted(() => {
             loadDashboard();
@@ -4287,7 +4657,14 @@ window.VueAppRegistry.register('#bkApp', {
             selectSiswaPelanggaran, clearSiswaPelanggaran, handleFotoUpload, submitPelanggaran, editPelanggaran, deletePelanggaran,
             loadPelanggaranCatatan, loadPelanggaranSanksi, showFotoModal, getKategoriBadge,
             getPoinBadgeClass, formatTanggalIndo, sanksiSearch, sanksiStatus, sanksiDetailModal,
-            formTindakLanjut, submittingTindakLanjut, openSanksiDetail, submitTindakLanjut
+            formTindakLanjut, submittingTindakLanjut, openSanksiDetail, submitTindakLanjut,
+            // Beasiswa
+            toast, activeBeasiswaSiswa, beasiswaSearchSiswa, beasiswaSiswaOptions, showBeasiswaSiswaDropdown,
+            loadingSearchBeasiswaSiswa, riwayatBeasiswaList, formBeasiswa, loadingSimpanBeasiswa,
+            searchSiswaBeasiswaDebounce, selectSiswaBeasiswa, clearSiswaBeasiswa, hideBeasiswaDropdownDelay,
+            fetchBeasiswa, simpanBeasiswa, hapusBeasiswa, resetFormBeasiswa,
+            // Daftar Semua Beasiswa
+            allBeasiswaList, filterBeasiswaTahunAjaran, loadingBeasiswaList, loadAllBeasiswa, exportBeasiswaExcel
         };
     }
 });

@@ -206,9 +206,14 @@
                                 </span>
                             </td>
                             <td class="text-center">
-                                <button class="btn btn-sm btn-primary rounded-2 px-2.5 py-1.5 d-inline-flex align-items-center gap-1 shadow-sm" @click="viewDetail(item.id)">
-                                    <i class="bi bi-eye"></i> Detail
-                                </button>
+                                <div class="d-inline-flex gap-1">
+                                    <button class="btn btn-sm btn-primary rounded-2 px-2.5 py-1.5 d-inline-flex align-items-center gap-1 shadow-sm" @click="viewDetail(item.id)">
+                                        <i class="bi bi-eye"></i> Detail
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success rounded-2 px-2.5 py-1.5 d-inline-flex align-items-center gap-1 shadow-sm" @click="viewDetail(item.id, 'beasiswa')">
+                                        <i class="bi bi-gift"></i> Beasiswa
+                                    </button>
+                                </div>
                             </td>
                         </tr>
 
@@ -4021,28 +4026,31 @@
                         this.toast.fire({ icon: 'error', title: 'Gagal memuat Buku Induk.' });
                     });
             },
+            viewDetail(siswaId, defaultTab = 'identitas') {
+                this.detailLoading = true;
+                this.selectedSiswa = null;
+                this.activeDetailTab = defaultTab;
+                this.detailModalObj.show();
+
+                axios.get('/SINTA-SaaS/api/v1/buku-induk/detail', { params: { id: siswaId } })
+                     .then(res => {
+                          this.selectedSiswa = res.data;
+                          this.detailLoading = false;
+                          if (defaultTab === 'beasiswa') {
+                              this.fetchBeasiswa(siswaId);
+                          }
+                     })
+                     .catch(err => {
+                          this.detailLoading = false;
+                          this.detailModalObj.hide();
+                          this.toast.fire({ icon: 'error', title: 'Gagal memuat detail siswa.' });
+                      });
+            },
             debounceSearch() {
                 clearTimeout(this.searchTimeout);
                 this.searchTimeout = setTimeout(() => {
                     this.fetchData(1);
                 }, 400);
-            },
-            viewDetail(siswaId) {
-                this.detailLoading = true;
-                this.selectedSiswa = null;
-                this.activeDetailTab = 'identitas';
-                this.detailModalObj.show();
-
-                axios.get('/SINTA-SaaS/api/v1/buku-induk/detail', { params: { id: siswaId } })
-                     .then(res => {
-                         this.selectedSiswa = res.data;
-                         this.detailLoading = false;
-                     })
-                     .catch(err => {
-                         this.detailLoading = false;
-                         this.detailModalObj.hide();
-                         this.toast.fire({ icon: 'error', title: 'Gagal memuat detail siswa.' });
-                     });
             },
             formatTanggal(tglStr) {
                 if (!tglStr) return '-';

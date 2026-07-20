@@ -1008,6 +1008,16 @@ try {
             $controller->apiSiswaSearch();
             break;
 
+        case '/api/v1/bk/beasiswa/list':
+            $controller = new App\Controllers\BKController();
+            $controller->apiBeasiswaList();
+            break;
+
+        case '/api/v1/bk/beasiswa/export':
+            $controller = new App\Controllers\BKController();
+            $controller->apiExportBeasiswa();
+            break;
+
         case '/api/v1/bk/kelas':
             // API: GET daftar kelas aktif untuk filter Rekam Kasus (Tab 5)
             $controller = new App\Controllers\BKController();

@@ -1385,6 +1385,11 @@ class BKController extends BaseController {
             }
 
             $db->commit();
+
+            foreach ($siswaIds as $sId) {
+                \App\Helpers\CacheInvalidator::clearStudentCache($sId, $tenantId);
+            }
+
             $this->jsonResponse(['success' => true, 'message' => 'Data prestasi siswa berhasil disimpan.']);
         } catch (\Throwable $e) {
             if (isset($db) && $db->inTransaction()) $db->rollBack();
@@ -1605,6 +1610,10 @@ class BKController extends BaseController {
 
             $db->commit();
 
+            foreach ($siswaIds as $sId) {
+                \App\Helpers\CacheInvalidator::clearStudentCache($sId, $tenantId);
+            }
+
             // Pembersihan File Pasca-Commit Sukses
             foreach ($oldPathsToDelete as $oldFile) {
                 if (file_exists($oldFile)) {
@@ -1653,9 +1662,18 @@ class BKController extends BaseController {
         try {
             $db = \App\Config\Database::getConnection();
 
+            // Get student IDs before soft-deleting prestasi
+            $stmtAnggota = $db->prepare("SELECT id_siswa FROM prestasi_siswa_anggota WHERE id_prestasi = ?");
+            $stmtAnggota->execute([$idPrestasi]);
+            $siswaIds = $stmtAnggota->fetchAll(\PDO::FETCH_COLUMN);
+
             // Soft delete
             $stmt = $db->prepare("UPDATE prestasi_siswa SET deleted_at = NOW() WHERE id = ? AND tenant_id = ?");
             $stmt->execute([$idPrestasi, $tenantId]);
+
+            foreach ($siswaIds as $sId) {
+                \App\Helpers\CacheInvalidator::clearStudentCache($sId, $tenantId);
+            }
 
             $this->jsonResponse(['success' => true, 'message' => 'Data prestasi berhasil dihapus.']);
         } catch (\Throwable $e) {
@@ -3149,6 +3167,140 @@ class BKController extends BaseController {
         } catch (\Throwable $e) {
             error_log('[BKController::apiStoreTindakLanjutSanksi] ' . $e->getMessage());
             $this->jsonResponse(['error' => 'Gagal menyimpan tindak lanjut: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // =========================================================================
+    // API: Mendapatkan daftar beasiswa (Tab Beasiswa Siswa)
+    // GET /api/v1/bk/beasiswa/list
+    // =========================================================================
+    public function apiBeasiswaList(): void {
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['success' => true, 'data' => []]);
+            return;
+        }
+
+        $tahunAjaranId = $this->sanitize($_GET['tahun_ajaran_id'] ?? '');
+
+        try {
+            $db = \App\Config\Database::getConnection();
+            $whereClause = "WHERE rb.tenant_id = :tenant_id";
+            $params = ['tenant_id' => $tenantId];
+
+            if (!empty($tahunAjaranId)) {
+                $whereClause .= " AND s.id_tahun_ajaran = :tahun_ajaran_id";
+                $params['tahun_ajaran_id'] = $tahunAjaranId;
+            }
+
+            $sql = "
+                SELECT rb.id, rb.jenis_beasiswa, rb.sumber, rb.tahun_menerima, rb.nominal,
+                       s.nama_lengkap, s.nisn, k.nama_kelas, ta.tahun_ajaran
+                FROM riwayat_beasiswa rb
+                JOIN siswa s ON rb.siswa_id = s.id
+                LEFT JOIN kelas k ON s.id_kelas = k.id
+                LEFT JOIN tahun_ajaran ta ON s.id_tahun_ajaran = ta.id
+                $whereClause
+                ORDER BY rb.tahun_menerima DESC, s.nama_lengkap ASC
+            ";
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            $this->jsonResponse(['success' => true, 'data' => $data]);
+        } catch (\Throwable $e) {
+            error_log('[BKController::apiBeasiswaList] ' . $e->getMessage());
+            $this->jsonResponse(['success' => false, 'error' => 'Gagal mengambil data beasiswa.'], 500);
+        }
+    }
+
+    // =========================================================================
+    // API: Ekspor data beasiswa ke Excel (.xlsx)
+    // GET /api/v1/bk/beasiswa/export
+    // =========================================================================
+    public function apiExportBeasiswa(): void {
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            exit('Pilih sekolah terlebih dahulu.');
+        }
+
+        $tahunAjaranId = $this->sanitize($_GET['tahun_ajaran_id'] ?? '');
+
+        try {
+            $db = \App\Config\Database::getConnection();
+            
+            // Ambil nama sekolah
+            $stmtTenant = $db->prepare("SELECT nama_sekolah FROM tenants WHERE id = ?");
+            $stmtTenant->execute([$tenantId]);
+            $namaSekolah = $stmtTenant->fetchColumn() ?: 'Sekolah';
+
+            $tahunAjaranStr = 'Semua Tahun Ajaran';
+            if (!empty($tahunAjaranId)) {
+                $stmtTA = $db->prepare("SELECT tahun_ajaran FROM tahun_ajaran WHERE id = ?");
+                $stmtTA->execute([$tahunAjaranId]);
+                $tahunAjaranStr = $stmtTA->fetchColumn() ?: 'Semua Tahun Ajaran';
+            }
+
+            $whereClause = "WHERE rb.tenant_id = :tenant_id";
+            $params = ['tenant_id' => $tenantId];
+
+            if (!empty($tahunAjaranId)) {
+                $whereClause .= " AND s.id_tahun_ajaran = :tahun_ajaran_id";
+                $params['tahun_ajaran_id'] = $tahunAjaranId;
+            }
+
+            $sql = "
+                SELECT rb.jenis_beasiswa, rb.sumber, rb.tahun_menerima, rb.nominal,
+                       s.nama_lengkap, s.nisn, k.nama_kelas, ta.tahun_ajaran
+                FROM riwayat_beasiswa rb
+                JOIN siswa s ON rb.siswa_id = s.id
+                LEFT JOIN kelas k ON s.id_kelas = k.id
+                LEFT JOIN tahun_ajaran ta ON s.id_tahun_ajaran = ta.id
+                $whereClause
+                ORDER BY rb.tahun_menerima DESC, s.nama_lengkap ASC
+            ";
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            $filename = "Rekap_Beasiswa_" . str_replace(' ', '_', $namaSekolah) . "_" . str_replace('/', '-', $tahunAjaranStr) . "_" . date('Ymd_His') . ".xlsx";
+
+            $excelData = [];
+            $excelData[] = ['REKAPITULASI PENERIMA BEASISWA SISWA'];
+            $excelData[] = ['Sekolah:', $namaSekolah];
+            $excelData[] = ['Tahun Ajaran Filter:', $tahunAjaranStr];
+            $excelData[] = []; // Baris pemisah
+
+            $excelData[] = [
+                'No.',
+                'Nama Lengkap',
+                'NISN',
+                'Kelas',
+                'Tahun Ajaran Masuk',
+                'Jenis Beasiswa',
+                'Sumber Beasiswa',
+                'Tahun Menerima',
+                'Nominal (Rp)'
+            ];
+
+            $no = 1;
+            foreach ($rows as $r) {
+                $excelData[] = [
+                    $no++,
+                    $r['nama_lengkap'],
+                    $r['nisn'] ? ' ' . $r['nisn'] : '-',
+                    $r['nama_kelas'] ?: 'Belum Masuk Kelas',
+                    $r['tahun_ajaran'] ?: '-',
+                    $r['jenis_beasiswa'],
+                    $r['sumber'] ?: '-',
+                    $r['tahun_menerima'],
+                    $r['nominal'] ? (float)$r['nominal'] : 0
+                ];
+            }
+
+            \Shuchkin\SimpleXLSXGen::fromArray($excelData)->downloadAs($filename);
+        } catch (\Throwable $e) {
+            error_log('[BKController::apiExportBeasiswa] ' . $e->getMessage());
+            exit('Gagal mengekspor data.');
         }
     }
 }

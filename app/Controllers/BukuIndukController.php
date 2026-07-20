@@ -661,6 +661,11 @@ class BukuIndukController extends BaseController {
             die("<h1>Not Found</h1><p>Data siswa tidak ditemukan.</p>");
         }
 
+        // Set tenant ID dynamically if logged in as Super Admin
+        if ($tenantId === null && isset($siswa['tenant_id'])) {
+            $siswaModel->setTenantId($siswa['tenant_id']);
+        }
+
         // Dapatkan nama-nama wilayah (Provinsi, Kota, Kecamatan, Kelurahan) secara human readable jika ada
         if (!empty($siswa['id_kelurahan'])) {
             try {
@@ -777,6 +782,20 @@ class BukuIndukController extends BaseController {
             // Ignore
         }
         $siswa['kesehatan'] = $kesehatan;
+
+        // Fetch start academic year name
+        $tahunAjaranMulai = '';
+        if (!empty($siswa['id_tahun_ajaran'])) {
+            try {
+                $db = \App\Config\Database::getConnection();
+                $stmtTa = $db->prepare("SELECT tahun_ajaran FROM tahun_ajaran WHERE id = ?");
+                $stmtTa->execute([$siswa['id_tahun_ajaran']]);
+                $tahunAjaranMulai = $stmtTa->fetchColumn() ?: '';
+            } catch (\Throwable $e) {
+                // Ignore
+            }
+        }
+        $siswa['tahun_ajaran_mulai'] = $tahunAjaranMulai;
 
         // QR Code options and parameters
         $showQrCode = isset($_GET['show_qrcode']) && $_GET['show_qrcode'] == '1';
@@ -2524,6 +2543,13 @@ class BukuIndukController extends BaseController {
         $tenantId = SessionManager::getTenantId();
         try {
             $db = \App\Config\Database::getConnection();
+
+            if (empty($tenantId)) {
+                $stmtSiswa = $db->prepare("SELECT tenant_id FROM siswa WHERE id = ?");
+                $stmtSiswa->execute([$siswaId]);
+                $tenantId = $stmtSiswa->fetchColumn();
+            }
+
             $stmt = $db->prepare("
                 SELECT * 
                 FROM riwayat_beasiswa 
@@ -2571,6 +2597,18 @@ class BukuIndukController extends BaseController {
 
         try {
             $db = \App\Config\Database::getConnection();
+
+            if (empty($tenantId)) {
+                $stmtSiswa = $db->prepare("SELECT tenant_id FROM siswa WHERE id = ?");
+                $stmtSiswa->execute([$siswaId]);
+                $tenantId = $stmtSiswa->fetchColumn();
+            }
+
+            if (empty($tenantId)) {
+                $this->jsonResponse(['success' => false, 'error' => 'Tenant sekolah siswa tidak ditemukan.'], 400);
+                return;
+            }
+
             $stmt = $db->prepare("
                 INSERT INTO riwayat_beasiswa (tenant_id, siswa_id, jenis_beasiswa, sumber, tahun_menerima, nominal) 
                 VALUES (:tenant_id, :siswa_id, :jenis_beasiswa, :sumber, :tahun_menerima, :nominal)
@@ -2584,8 +2622,10 @@ class BukuIndukController extends BaseController {
                 'nominal' => $nominal
             ]);
 
+            \App\Helpers\CacheInvalidator::clearStudentCache($siswaId, $tenantId);
             $this->jsonResponse(['success' => true, 'message' => 'Data beasiswa berhasil disimpan.']);
         } catch (\Throwable $e) {
+            error_log('[BukuIndukController::storeBeasiswaApi] ' . $e->getMessage());
             $this->jsonResponse(['success' => false, 'error' => 'Gagal menyimpan data beasiswa.'], 500);
         }
     }
@@ -2614,14 +2654,31 @@ class BukuIndukController extends BaseController {
 
         try {
             $db = \App\Config\Database::getConnection();
-            $stmt = $db->prepare("
-                DELETE FROM riwayat_beasiswa 
-                WHERE id = :id AND tenant_id = :tenant_id
-            ");
-            $stmt->execute([
-                'id' => $id,
-                'tenant_id' => $tenantId
-            ]);
+
+            // Get student ID and tenant ID before deleting
+            $stmtSiswa = $db->prepare("SELECT siswa_id, tenant_id FROM riwayat_beasiswa WHERE id = ?");
+            $stmtSiswa->execute([$id]);
+            $row = $stmtSiswa->fetch(\PDO::FETCH_ASSOC);
+            $siswaId = $row['siswa_id'] ?? null;
+            $dbTenantId = $row['tenant_id'] ?? null;
+
+            if (!$siswaId) {
+                $this->jsonResponse(['success' => false, 'error' => 'Data beasiswa tidak ditemukan.'], 404);
+                return;
+            }
+
+            // Validate tenant access
+            if ($roleName !== 'super_admin' && $dbTenantId !== $tenantId) {
+                $this->jsonResponse(['success' => false, 'error' => 'Anda tidak memiliki izin untuk menghapus data ini.'], 403);
+                return;
+            }
+
+            $stmt = $db->prepare("DELETE FROM riwayat_beasiswa WHERE id = ?");
+            $stmt->execute([$id]);
+
+            if ($siswaId) {
+                \App\Helpers\CacheInvalidator::clearStudentCache($siswaId, $dbTenantId);
+            }
 
             $this->jsonResponse(['success' => true, 'message' => 'Data beasiswa berhasil dihapus.']);
         } catch (\Throwable $e) {
