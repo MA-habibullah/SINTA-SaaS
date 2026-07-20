@@ -25,13 +25,27 @@ class KampusController extends BaseController
         // Prioritas tenant_id:
         // 1. Dari sesi (untuk operator_sekolah / guru_bk yang hanya punya 1 tenant)
         // 2. Dari parameter GET ?tenant_id=... (untuk super_admin yang memfilter dari UI)
+        // 3. Dari parameter POST / JSON body
         $tenantId = $_SESSION['tenant_id'] ?? '';
         if (empty($tenantId) && !empty($_GET['tenant_id'])) {
             $tenantId = trim($_GET['tenant_id']);
         }
+        if (empty($tenantId) && !empty($_POST['tenant_id'])) {
+            $tenantId = trim($_POST['tenant_id']);
+        }
+        if (empty($tenantId)) {
+            $body = $this->getJsonInput();
+            if (!empty($body['tenant_id'])) {
+                $tenantId = trim($body['tenant_id']);
+            }
+        }
 
         if (empty($tenantId)) {
-            $this->jsonResponse(['error' => 'Tenant tidak terdeteksi. Silakan pilih sekolah terlebih dahulu.'], 400);
+            $this->jsonResponse([
+                'success' => false,
+                'data'    => [],
+                'error'   => 'Tenant tidak terdeteksi. Silakan pilih sekolah terlebih dahulu.'
+            ], 200);
         }
 
         return $tenantId;

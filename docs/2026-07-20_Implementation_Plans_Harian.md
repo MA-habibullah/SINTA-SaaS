@@ -1028,3 +1028,26 @@ Mengalirkan respon pemblokiran hapus data master menggunakan HTTP 200 OK dengan 
 *   Klik tombol **Hapus** pada Mata Pelajaran yang sedang digunakan.
 *   Periksa Console DevTools browser: pastikan **100% bersih tanpa log merah HTTP 400/500**, dan modal SweetAlert peringatan langsung terbuka.
 
+---
+## Pengalihan Respon Kampus API 'Tenant Tidak Terdeteksi' ke Payload HTTP 200
+**Waktu**: 16:39 WIB
+**Status**: Dieksekusi
+
+# Implementation Plan: Pengalihan Respon Kampus API 'Tenant Tidak Terdeteksi' ke Payload HTTP 200
+
+Mengubah status respon HTTP dari 400 Bad Request menjadi 200 OK dengan payload data kosong saat tenant belum terpilih.
+
+---
+
+## 1. Rencana Perubahan (Proposed Changes)
+### app/Controllers/KampusController.php
+#### [MODIFY] KampusController.php
+*   Memperbarui fungsi `checkAccess()` untuk mengembalikan HTTP Status 200 OK dengan `{'success': false, 'data': [], 'error': 'Tenant tidak terdeteksi...'}` saat tenant ID kosong.
+
+---
+
+## 2. Verification Plan
+*   Buka halaman **Buku Induk** (`http://localhost/SINTA-SaaS/buku-induk`) atau **PDSS / Tracer Study**.
+*   Beralih tab dan periksa DevTools Console browser.
+*   Pastikan tidak ada lagi log error merah `GET /api/v1/kampus 400 (Bad Request)` atau `[AXIOS API ERROR] Status: 400`.
+

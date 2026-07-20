@@ -243,3 +243,10 @@ Memperbaiki pesan error `api/v1/kelembagaan/hapus 500 (Internal Server Error)`. 
 Menghilangkan pesan error merah `400 (Bad Request)` dan `[AXIOS API ERROR]` di DevTools Console browser saat penghapusan master data terblokir. Solusi: (1) Mengubah `deleteApi()` di `KelembagaanController.php` agar mengembalikan HTTP Status Code **200 OK** dengan payload JSON `{'success': false, 'error': '...'}` saat terjadi kegagalan validasi proteksi, dan (2) Memperbarui `deleteItem()` pada `views/master_kelembagaan.php` untuk membaca flag `res.data.success`, sehingga console browser 100% bersih tanpa log error merah dan langsung mengarahkan pengguna ke modal peringatan SweetAlert yang informatif. Berkas yang diubah:
 - `app/Controllers/KelembagaanController.php`
 - `views/master_kelembagaan.php`
+
+---
+## Pengalihan Respon Kampus API 'Tenant Tidak Terdeteksi' ke Payload HTTP 200
+**Waktu**: 16:39 WIB
+**Jenis**: UI/UX & API Error Response Improvement
+Memperbaiki pesan error `GET /api/v1/kampus 400 (Bad Request)` dan `[AXIOS API ERROR]` di Console browser saat `fetchKampusFlatList()` dipanggil sebelum tenant dipilih. Root cause: `checkAccess()` di `KampusController.php` merespons HTTP Status Code 400 saat `tenant_id` belum terpilih. Solusi: (1) Menambahkan pembacaan `tenant_id` dari POST/body JSON jika ada, dan (2) Mengubah penanganan `tenant_id` kosong di `KampusController.php` agar merespons HTTP Status Code **200 OK** dengan payload `{'success': false, 'data': [], 'error': 'Tenant tidak terdeteksi...'}`. Hal ini membuat DevTools Console browser 100% bersih tanpa error merah. Berkas yang diubah:
+- `app/Controllers/KampusController.php`
