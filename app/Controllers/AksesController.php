@@ -241,7 +241,6 @@ class AksesController extends BaseController {
         }
 
         $userId = $_GET['user_id'] ?? '';
-        $tenantId = \App\Core\SessionManager::getTenantId();
         if (empty($userId)) {
             echo json_encode(['success' => false, 'error' => 'user_id wajib diisi.']);
             exit;
@@ -250,15 +249,33 @@ class AksesController extends BaseController {
         try {
             $db = \App\Config\Database::getConnection();
             
+            // Ambil tenant_id dari user target langsung
+            $stmtUser = $db->prepare("SELECT tenant_id FROM users WHERE id = ?");
+            $stmtUser->execute([$userId]);
+            $tenantId = $stmtUser->fetchColumn();
+
+            if (empty($tenantId)) {
+                $tenantId = '00000000-0000-0000-0000-000000000000';
+            }
+
             // 1. Ambil semua menu yang didukung oleh tenant ini
-            $stmtMenus = $db->prepare("
-                SELECT m.id, m.nama_menu, m.parent_id 
-                FROM menus m 
-                JOIN tenant_menu_access tma ON m.id = tma.menu_id 
-                WHERE tma.tenant_id = ? 
-                ORDER BY m.parent_id ASC, m.urutan ASC
-            ");
-            $stmtMenus->execute([$tenantId]);
+            if ($tenantId === '00000000-0000-0000-0000-000000000000') {
+                $stmtMenus = $db->prepare("
+                    SELECT m.id, m.nama_menu, m.parent_id 
+                    FROM menus m 
+                    ORDER BY m.parent_id ASC, m.urutan ASC
+                ");
+                $stmtMenus->execute();
+            } else {
+                $stmtMenus = $db->prepare("
+                    SELECT m.id, m.nama_menu, m.parent_id 
+                    FROM menus m 
+                    JOIN tenant_menu_access tma ON m.id = tma.menu_id 
+                    WHERE tma.tenant_id = ? 
+                    ORDER BY m.parent_id ASC, m.urutan ASC
+                ");
+                $stmtMenus->execute([$tenantId]);
+            }
             $menus = $stmtMenus->fetchAll(PDO::FETCH_ASSOC);
 
             // 2. Ambil menu ter-override untuk user ini
@@ -293,7 +310,6 @@ class AksesController extends BaseController {
             exit;
         }
 
-        $tenantId = \App\Core\SessionManager::getTenantId();
         $userId = $_POST['user_id'] ?? '';
         $menuIds = $_POST['menu_ids'] ?? []; // Array ID menu
 
@@ -304,6 +320,16 @@ class AksesController extends BaseController {
 
         try {
             $db = \App\Config\Database::getConnection();
+
+            // Ambil tenant_id dari user target langsung
+            $stmtUser = $db->prepare("SELECT tenant_id FROM users WHERE id = ?");
+            $stmtUser->execute([$userId]);
+            $tenantId = $stmtUser->fetchColumn();
+
+            if (empty($tenantId)) {
+                $tenantId = '00000000-0000-0000-0000-000000000000';
+            }
+
             $db->beginTransaction();
 
             // Hapus semua override lama untuk user ini di tenant terkait
