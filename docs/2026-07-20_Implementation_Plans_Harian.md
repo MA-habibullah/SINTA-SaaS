@@ -1075,3 +1075,44 @@ Mengoreksi query filter siswa kelas 12 pada PDSSController agar mencocokkan sisw
 *   Pilih Tahun Ajaran Evaluasi `2026/2027`: pastikan 28 siswa Dummy Cohort dari angkatan `2024/2025` tidak lagi muncul di `2026/2027`.
 *   Pilih Tahun Ajaran Evaluasi `2024/2025`: pastikan 28 siswa Dummy Cohort muncul tepat pada tahun ajaran evaluasi `2024/2025`.
 
+---
+## Pengalihan Respon API Simulasi Setting ke Payload HTTP 200 (Clean Console UX)
+**Waktu**: 16:57 WIB
+**Status**: Dieksekusi
+
+# Implementation Plan: Pengalihan Respon API Simulasi Setting ke Payload HTTP 200
+
+Menghilangkan log error merah `GET /api/v1/pdss/simulasi/setting 400 (Bad Request)` dan `[AXIOS API ERROR] Status: 400` di DevTools Console browser.
+
+---
+
+## 1. Root Cause
+
+Fungsi `apiGetSimulasiSetting()` dan `apiToggleSimulasiSetting()` di `PDSSController.php` merespons HTTP 400/422/403 pada kondisi:
+- `tenant_id` belum terpilih (HTTP 400)
+- Parameter `no_simulasi`/`action` tidak valid (HTTP 422)
+- Akses ditolak (HTTP 403)
+- Sequential lock simulasi belum dipenuhi (HTTP 400)
+
+HTTP 4xx tersebut ditangkap Axios sebagai *network error*, sehingga mencetak baris log error merah di DevTools Console.
+
+---
+
+## 2. Rencana Perubahan (Proposed Changes)
+
+### app/Controllers/PDSSController.php
+#### [MODIFY] PDSSController.php
+*   `apiGetSimulasiSetting()`: Mengubah respons HTTP 400 dan 500 menjadi HTTP **200 OK** dengan payload `{'success': false, 'data': [], 'error': '...'}`.
+*   `apiToggleSimulasiSetting()`: Mengubah semua respons HTTP 400/403/422 menjadi HTTP **200 OK** dengan payload `{'success': false, 'error': '...'}`.
+
+### views/pdss_index.php
+#### [MODIFY] views/pdss_index.php
+*   Memperbarui `toggleSimulasiSetting()` pada Vue.js untuk membaca `res.data.success` secara langsung dan menampilkan SweetAlert peringatan/error tanpa memerlukan blok `catch` Axios.
+
+---
+
+## 3. Verification Plan
+*   Buka halaman **Bimbingan Konseling -> Akademik (PDSS)** dengan Tahun Ajaran `2026/2027` yang belum ada PDSS config.
+*   Periksa DevTools Console: pastikan **tidak ada lagi log merah** `GET /api/v1/pdss/simulasi/setting 400 (Bad Request)` atau `[AXIOS API ERROR]`.
+*   Klik tombol toggle simulasi untuk Simulasi 2 sebelum Simulasi 1 dikunci: pastikan modal SweetAlert **Perhatian** muncul dengan pesan sequential lock yang jelas, tanpa log merah di console.
+

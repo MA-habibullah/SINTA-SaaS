@@ -257,3 +257,12 @@ Memperbaiki pesan error `GET /api/v1/kampus 400 (Bad Request)` dan `[AXIOS API E
 **Jenis**: Bug Fix / Data Mapping Query Correction
 Memperbaiki kemunculan 28 siswa `Dummy Cohort` (TA Masuk `2024/2025`) pada filter Tahun Ajaran Evaluasi `2026/2027` di halaman PDSS/Akademik BK (`http://localhost/SINTA-SaaS/bk/akademik`). Root cause: Query SQL pada `apiGetKesiapan()` dan `apiGetPdssMapels()` di `PDSSController.php` sebelumnya menggunakan formula `CONCAT(SUBSTRING(ta.tahun_ajaran, 1, 4) + 2)` yang secara otomatis menambah 2 tahun pada tahun ajaran siswa, sehingga angkatan `2024/2025` terhitung dan bocor ke evaluasi `2026/2027`. Solusi: Mengubah klausa query SQL agar mencocokkan siswa kelas 12 secara presisi terhadap Tahun Ajaran Evaluasi yang dipilih (`dnr.tahun_ajaran = :selectedTaName` ATAU `(k.nama_kelas LIKE '%12%' AND ta.tahun_ajaran = :selectedTaName)`). Berkas yang diubah:
 - `app/Controllers/PDSSController.php`
+
+---
+## Pengalihan Respon API Simulasi Setting ke Payload HTTP 200 (Clean Console UX)
+**Waktu**: 16:57 WIB
+**Jenis**: UI/UX & API Error Response Improvement
+Memperbaiki log error merah `GET /api/v1/pdss/simulasi/setting 400 (Bad Request)` dan `[AXIOS API ERROR] Status: 400` di DevTools Console browser. Root cause: fungsi `apiGetSimulasiSetting()` dan `apiToggleSimulasiSetting()` di `PDSSController.php` merespons HTTP 400/422/403 saat tenant belum terpilih, validasi gagal, atau simulasi sequential lock belum dipenuhi. Solusi: (1) Mengubah semua respons error/validasi non-fatal menjadi HTTP **200 OK** dengan payload `{'success': false, 'error': '...'}`, dan (2) Memperbarui `toggleSimulasiSetting()` di `pdss_index.php` untuk membaca flag `res.data.success` secara langsung dan menampilkan SweetAlert peringatan/error tanpa perlu menangkap exception Axios. Berkas yang diubah:
+- `app/Controllers/PDSSController.php`
+- `views/pdss_index.php`
+

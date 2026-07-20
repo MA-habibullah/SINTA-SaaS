@@ -1880,7 +1880,7 @@ class PDSSController extends BaseController {
      */
     public function apiGetSimulasiSetting(): void {
         $tenantId = $this->getSecureTenantId();
-        if (!$tenantId) { $this->jsonResponse(['error' => 'Pilih sekolah terlebih dahulu.'], 400); return; }
+        if (!$tenantId) { $this->jsonResponse(['success' => false, 'data' => [], 'error' => 'Pilih sekolah terlebih dahulu.'], 200); return; }
 
         $tahunAjaranId = $_GET['tahun_ajaran_id'] ?? '';
         try {
@@ -1902,7 +1902,7 @@ class PDSSController extends BaseController {
             $this->jsonResponse(['success' => true, 'data' => $settings, 'tahun_ajaran_id' => $tahunAjaranId]);
         } catch (\Throwable $e) {
             error_log('[PDSSController::apiGetSimulasiSetting] ' . $e->getMessage());
-            $this->jsonResponse(['error' => 'Gagal memuat setting simulasi.'], 500);
+            $this->jsonResponse(['success' => false, 'error' => 'Gagal memuat setting simulasi: ' . $e->getMessage()], 200);
         }
     }
 
@@ -1911,9 +1911,9 @@ class PDSSController extends BaseController {
      * POST /api/v1/pdss/simulasi/setting
      */
     public function apiToggleSimulasiSetting(): void {
-        if (!$this->canWrite()) { $this->jsonResponse(['error' => 'Akses ditolak.'], 403); return; }
+        if (!$this->canWrite()) { $this->jsonResponse(['success' => false, 'error' => 'Akses ditolak.'], 200); return; }
         $tenantId = $this->getSecureTenantId();
-        if (!$tenantId) { $this->jsonResponse(['error' => 'Tenant tidak terdeteksi.'], 400); return; }
+        if (!$tenantId) { $this->jsonResponse(['success' => false, 'error' => 'Tenant tidak terdeteksi.'], 200); return; }
 
         $input = $this->getJsonInput();
         $noSimulasi  = (int)($input['no_simulasi'] ?? 0);
@@ -1921,7 +1921,7 @@ class PDSSController extends BaseController {
         $tahunAjaranId = $input['tahun_ajaran_id'] ?? '';
 
         if (!in_array($noSimulasi, [1,2,3]) || !in_array($action, ['open','close','lock'])) {
-            $this->jsonResponse(['error' => 'Parameter tidak valid.'], 422); return;
+            $this->jsonResponse(['success' => false, 'error' => 'Parameter tidak valid.'], 200); return;
         }
 
         try {
@@ -1938,7 +1938,10 @@ class PDSSController extends BaseController {
                 $stmtPrev->execute([$tenantId, $tahunAjaranId, $noSimulasi - 1]);
                 $prevLocked = $stmtPrev->fetchColumn();
                 if (!$prevLocked) {
-                    $this->jsonResponse(['error' => "Harap cek simulasi sebelumnya (Simulasi " . ($noSimulasi-1) . ") dan lakukan kunci permanen sebelum melanjutkan simulasi berikutnya."], 400);
+                    $this->jsonResponse([
+                        'success' => false,
+                        'error' => "Harap cek simulasi sebelumnya (Simulasi " . ($noSimulasi-1) . ") dan lakukan kunci permanen sebelum melanjutkan simulasi berikutnya."
+                    ], 200);
                     return;
                 }
             }

@@ -2113,19 +2113,17 @@ $tenantList = $data['tenant_list'] ?? $tenantList ?? $tenant_list ?? [];
                         action: action,
                         tahun_ajaran_id: this.filterAcademicYear
                     });
-                    if (res.data.success) {
+                    if (res.data && res.data.success) {
                         Swal.fire({ icon: 'success', title: 'Berhasil', text: res.data.message, confirmButtonColor: '#2563eb' });
                         this.fetchSimulasiSettings();
                         this.fetchSimulasi();
+                    } else {
+                        const msg = (res.data && res.data.error) || 'Gagal mengubah status simulasi.';
+                        Swal.fire({ icon: 'warning', title: 'Perhatian', text: msg, confirmButtonColor: '#f8bb86' });
                     }
                 } catch (e) {
-                    const status = e.response ? e.response.status : 500;
                     const msg = (e.response && e.response.data && e.response.data.error) || 'Gagal mengubah status simulasi.';
-                    if (status === 400 || status === 422) {
-                        Swal.fire({ icon: 'warning', title: 'Perhatian', text: msg, confirmButtonColor: '#f8bb86' });
-                    } else {
-                        Swal.fire({ icon: 'error', title: 'Gagal', text: msg, confirmButtonColor: '#2563eb' });
-                    }
+                    Swal.fire({ icon: 'warning', title: 'Perhatian', text: msg, confirmButtonColor: '#f8bb86' });
                 }
             },
 
