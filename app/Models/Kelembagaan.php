@@ -439,6 +439,101 @@ class Kelembagaan extends Model {
     }
 
     /**
+     * Periksa apakah data master sedang digunakan oleh modul/tabel lain
+     */
+    public function checkDataInUse(string $table, int $id): array {
+        $this->validateTableName($table);
+        $item = $this->findById($table, $id);
+        if (!$item) {
+            return ['in_use' => false, 'reasons' => []];
+        }
+
+        $reasons = [];
+
+        if ($table === 'mata_pelajaran') {
+            $stmt = $this->db->prepare("SELECT COUNT(*) FROM pemetaan_mapel WHERE mapel_id = ? AND deleted_at IS NULL");
+            $stmt->execute([$id]);
+            if ($stmt->fetchColumn() > 0) {
+                $reasons[] = "Pemetaan Kelompok Mata Pelajaran";
+            }
+
+            $stmt = $this->db->prepare("SELECT COUNT(*) FROM detail_nilai_rapor WHERE mapel_id = ? AND deleted_at IS NULL");
+            $stmt->execute([$id]);
+            if ($stmt->fetchColumn() > 0) {
+                $reasons[] = "Input Nilai Rapor Siswa";
+            }
+
+            try {
+                $stmt = $this->db->prepare("SELECT COUNT(*) FROM pdss_config_mapel WHERE mapel_id = ?");
+                $stmt->execute([$id]);
+                if ($stmt->fetchColumn() > 0) {
+                    $reasons[] = "Konfigurasi Mapel PDSS";
+                }
+            } catch (\Throwable) {}
+        } elseif ($table === 'kelas') {
+            $stmt = $this->db->prepare("SELECT COUNT(*) FROM siswa WHERE id_kelas = ? AND deleted_at IS NULL");
+            $stmt->execute([$id]);
+            if ($stmt->fetchColumn() > 0) {
+                $reasons[] = "Data Siswa Aktif";
+            }
+
+            $stmt = $this->db->prepare("SELECT COUNT(*) FROM pemetaan_mapel WHERE kelas_id = ? AND deleted_at IS NULL");
+            $stmt->execute([$id]);
+            if ($stmt->fetchColumn() > 0) {
+                $reasons[] = "Pemetaan Mata Pelajaran Kelas";
+            }
+
+            $stmt = $this->db->prepare("SELECT COUNT(*) FROM detail_nilai_rapor WHERE kelas_id = ? AND deleted_at IS NULL");
+            $stmt->execute([$id]);
+            if ($stmt->fetchColumn() > 0) {
+                $reasons[] = "Nilai Rapor Siswa";
+            }
+        } elseif ($table === 'jurusan') {
+            $stmt = $this->db->prepare("SELECT COUNT(*) FROM kelas WHERE id_jurusan = ? AND deleted_at IS NULL");
+            $stmt->execute([$id]);
+            if ($stmt->fetchColumn() > 0) {
+                $reasons[] = "Data Kelas";
+            }
+        } elseif ($table === 'jenjang') {
+            $stmt = $this->db->prepare("SELECT COUNT(*) FROM kelas WHERE id_jenjang = ? AND deleted_at IS NULL");
+            $stmt->execute([$id]);
+            if ($stmt->fetchColumn() > 0) {
+                $reasons[] = "Data Kelas";
+            }
+        } elseif ($table === 'tahun_ajaran') {
+            $taName = $item['tahun_ajaran'] ?? '';
+            $stmt = $this->db->prepare("SELECT COUNT(*) FROM pemetaan_mapel WHERE tahun_ajaran = ? AND deleted_at IS NULL");
+            $stmt->execute([$taName]);
+            if ($stmt->fetchColumn() > 0) {
+                $reasons[] = "Pemetaan Mata Pelajaran";
+            }
+
+            $stmt = $this->db->prepare("SELECT COUNT(*) FROM detail_nilai_rapor WHERE tahun_ajaran = ? AND deleted_at IS NULL");
+            $stmt->execute([$taName]);
+            if ($stmt->fetchColumn() > 0) {
+                $reasons[] = "Nilai Rapor Siswa";
+            }
+        } elseif ($table === 'angkatan') {
+            $stmt = $this->db->prepare("SELECT COUNT(*) FROM siswa WHERE id_angkatan = ? AND deleted_at IS NULL");
+            $stmt->execute([$id]);
+            if ($stmt->fetchColumn() > 0) {
+                $reasons[] = "Data Siswa";
+            }
+        } elseif ($table === 'kurikulum') {
+            $stmt = $this->db->prepare("SELECT COUNT(*) FROM kelas_kurikulum WHERE kurikulum_id = ?");
+            $stmt->execute([$id]);
+            if ($stmt->fetchColumn() > 0) {
+                $reasons[] = "Setingan Kurikulum Kelas";
+            }
+        }
+
+        return [
+            'in_use' => !empty($reasons),
+            'reasons' => $reasons
+        ];
+    }
+
+    /**
      * Soft Delete (Pindahkan ke Tong Sampah)
      */
     public function delete(string $table, int $id): bool {
@@ -450,6 +545,13 @@ class Kelembagaan extends Model {
             if (!$check || $check['tenant_id'] === null) {
                 throw new \InvalidArgumentException("Akses ditolak: Kurikulum sistem/nasional tidak boleh dihapus.");
             }
+        }
+
+        // Check if data is already in use by other modules
+        $usage = $this->checkDataInUse($table, $id);
+        if ($usage['in_use']) {
+            $reasonStr = implode(', ', $usage['reasons']);
+            throw new \InvalidArgumentException("Data ini tidak dapat dihapus karena sedang terhubung/digunakan pada: {$reasonStr}. Silakan nonaktifkan status keaktifannya melalui saklar status jika tidak lagi digunakan.");
         }
 
         $dbTable = ($table === 'kurikulum') ? 'ref_kurikulum' : $table;

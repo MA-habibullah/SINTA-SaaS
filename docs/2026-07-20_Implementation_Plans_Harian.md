@@ -950,3 +950,27 @@ Mengembangkan template berkas Excel ekspor dan impor agar mencakup 4 kolom penil
 *   Klik **Unduh Format Excel**, buka berkas `.xlsx`, pastikan terdapat kolom KKTP, Nilai Akhir, Capaian Tertinggi, dan Capaian Terendah per mata pelajaran.
 *   Isi data lalu upload melalui **Impor dari Excel**, pastikan seluruh data terimpor dengan sukses.
 
+---
+## Pemulihan Data Mapel Terhapus & Proteksi Penghapusan Master Data Ber-relasi
+**Waktu**: 16:30 WIB
+**Status**: Dieksekusi
+
+# Implementation Plan: Pemulihan Data Mapel & Proteksi Penghapusan Master Data Ber-relasi
+
+Memulihkan data mata pelajaran terhapus dan menambahkan proteksi penghapusan pada model Kelembagaan untuk memblokir aksi hapus pada data master yang sedang digunakan.
+
+---
+
+## 1. Rencana Perubahan (Proposed Changes)
+### app/Models/Kelembagaan.php
+#### [MODIFY] Kelembagaan.php
+*   Menambahkan fungsi `checkDataInUse(string $table, int $id)` untuk mengecek relasi data di tabel transaksi (`pemetaan_mapel`, `detail_nilai_rapor`, `pdss_config_mapel`, `siswa`, `kelas_kurikulum`, dll.).
+*   Memperbarui fungsi `delete()` agar melempar exception pencegahan jika data sedang digunakan.
+
+---
+
+## 2. Verification Plan
+*   Buka **Master Data Kelembagaan** (`http://localhost/SINTA-SaaS/master-data`) pada tab **Mata Pelajaran**.
+*   Pastikan 11 mata pelajaran yang sempat terhapus telah kembali aktif.
+*   Coba hapus mata pelajaran yang sedang digunakan dalam Pemetaan Mapel. Pastikan sistem menampilkan pesan blokir ramah pengguna dan menyarankan untuk menggunakan saklar status nonaktif.
+

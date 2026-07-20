@@ -220,3 +220,10 @@ Menambahkan informasi nama Kurikulum Kelas yang sedang aktif (contoh: *Kurikulum
 **Jenis**: Feature Enhancement
 Mengembangkan skema berkas Excel pada ekspor dan impor nilai rapor agar mendukung 4 komponen penilaian mata pelajaran sekaligus per siswa: (1) KKTP/KKM, (2) Nilai Akhir (Angka), (3) Capaian Kompetensi Tertinggi (Deskripsi), dan (4) Capaian Kompetensi Terendah (Deskripsi). Solusi: Memperbarui fungsi `export()`, `import()`, dan `validateExcelImportApi()` pada `NilaiRaporController.php` dengan pembacaan header kolom berbasis regex `[mapel_id]` dan tipe komponen `- KKTP`, `- Nilai Akhir`, `- Capaian Tertinggi`, `- Capaian Terendah`. Berkas yang diubah:
 - `app/Controllers/NilaiRaporController.php`
+
+---
+## Pemulihan Data Mapel Terhapus & Proteksi Penghapusan Master Data Ber-relasi
+**Waktu**: 16:30 WIB
+**Jenis**: Security & Data Integrity Protection
+(1) Memulihkan 11 data Mata Pelajaran yang sempat terhapus (*soft delete*) di database kembali ke status aktif. (2) Menerapkan proteksi integritas data pada `app/Models/Kelembagaan.php` dengan menambahkan fungsi `checkDataInUse()`. Jika data Master (Mata Pelajaran, Kelas, Jurusan, Jenjang, Tahun Ajaran, Angkatan, Kurikulum) sudah pernah digunakan pada transaksi/pemetaan sistem (misal: Pemetaan Mapel, Nilai Rapor, Data Siswa, PDSS), sistem akan memblokir tindakan hapus dan memberikan instruksi pesan agar pengguna cukup menonaktifkan status keaktifan melalui saklar (*switch toggle*). Berkas yang diubah:
+- `app/Models/Kelembagaan.php`
