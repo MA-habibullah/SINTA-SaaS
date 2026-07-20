@@ -227,3 +227,11 @@ Mengembangkan skema berkas Excel pada ekspor dan impor nilai rapor agar mendukun
 **Jenis**: Security & Data Integrity Protection
 (1) Memulihkan 11 data Mata Pelajaran yang sempat terhapus (*soft delete*) di database kembali ke status aktif. (2) Menerapkan proteksi integritas data pada `app/Models/Kelembagaan.php` dengan menambahkan fungsi `checkDataInUse()`. Jika data Master (Mata Pelajaran, Kelas, Jurusan, Jenjang, Tahun Ajaran, Angkatan, Kurikulum) sudah pernah digunakan pada transaksi/pemetaan sistem (misal: Pemetaan Mapel, Nilai Rapor, Data Siswa, PDSS), sistem akan memblokir tindakan hapus dan memberikan instruksi pesan agar pengguna cukup menonaktifkan status keaktifan melalui saklar (*switch toggle*). Berkas yang diubah:
 - `app/Models/Kelembagaan.php`
+
+---
+## Standardisasi Status Code HTTP 400 & Modal Peringatan SweetAlert pada Pemblokiran Hapus Master Data
+**Waktu**: 16:33 WIB
+**Jenis**: Bug Fix / API Error Response Improvement
+Memperbaiki pesan error `api/v1/kelembagaan/hapus 500 (Internal Server Error)`. Root cause: `deleteApi()` di `KelembagaanController.php` melempar HTTP 500 saat menangkap `InvalidArgumentException` dari fungsi proteksi `checkDataInUse()`, sehingga Axios menganggapnya sebagai server crash. Solusi: (1) Mengubah penanganan `InvalidArgumentException` di `KelembagaanController.php` agar merespons dengan HTTP Status Code **400 (Bad Request)**, dan (2) Memperbarui `deleteItem()` di `views/master_kelembagaan.php` agar menampilkan modal peringatan SweetAlert (*Saya Mengerti*) yang informatif menjelaskan alasan data tidak dapat dihapus. Berkas yang diubah:
+- `app/Controllers/KelembagaanController.php`
+- `views/master_kelembagaan.php`

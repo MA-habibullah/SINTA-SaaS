@@ -786,7 +786,14 @@
                                  this.fetchData(this.currentPage);
                              })
                              .catch(err => {
-                                 this.toast.fire({ icon: 'error', title: (err.response && err.response.data && err.response.data.error) || 'Gagal menghapus.' });
+                                 const msg = (err.response && err.response.data && err.response.data.error) || 'Gagal menghapus data.';
+                                 Swal.fire({
+                                     icon: 'warning',
+                                     title: 'Tidak Dapat Dihapus',
+                                     text: msg,
+                                     confirmButtonColor: '#3085d6',
+                                     confirmButtonText: 'Saya Mengerti'
+                                 });
                              });
                     }
                 });

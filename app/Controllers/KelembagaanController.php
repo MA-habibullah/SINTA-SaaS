@@ -225,6 +225,8 @@ class KelembagaanController extends BaseController {
                 'success' => true,
                 'message' => 'Data berhasil dipindahkan ke tong sampah.'
             ]);
+        } catch (\InvalidArgumentException $e) {
+            $this->jsonResponse(['error' => $e->getMessage()], 400);
         } catch (\Throwable $e) {
             $this->jsonResponse(['error' => $e->getMessage()], 500);
         }
@@ -253,6 +255,8 @@ class KelembagaanController extends BaseController {
                 'success' => true,
                 'message' => 'Data berhasil dikembalikan dari tong sampah.'
             ]);
+        } catch (\InvalidArgumentException $e) {
+            $this->jsonResponse(['error' => $e->getMessage()], 400);
         } catch (\Throwable $e) {
             $this->jsonResponse(['error' => $e->getMessage()], 500);
         }
@@ -285,6 +289,8 @@ class KelembagaanController extends BaseController {
             } else {
                 $this->jsonResponse(['error' => 'Gagal mengubah status.'], 400);
             }
+        } catch (\InvalidArgumentException $e) {
+            $this->jsonResponse(['error' => $e->getMessage()], 400);
         } catch (\Throwable $e) {
             $this->jsonResponse(['error' => $e->getMessage()], 500);
         }

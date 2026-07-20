@@ -974,3 +974,30 @@ Memulihkan data mata pelajaran terhapus dan menambahkan proteksi penghapusan pad
 *   Pastikan 11 mata pelajaran yang sempat terhapus telah kembali aktif.
 *   Coba hapus mata pelajaran yang sedang digunakan dalam Pemetaan Mapel. Pastikan sistem menampilkan pesan blokir ramah pengguna dan menyarankan untuk menggunakan saklar status nonaktif.
 
+---
+## Standardisasi Status Code HTTP 400 & Modal Peringatan SweetAlert pada Pemblokiran Hapus Master Data
+**Waktu**: 16:33 WIB
+**Status**: Dieksekusi
+
+# Implementation Plan: Standardisasi Status Code HTTP 400 & Modal Peringatan SweetAlert
+
+Mengubah status code HTTP untuk error validasi pemblokiran dari 500 menjadi 400 Bad Request serta menampilkan popup modal SweetAlert yang informatif.
+
+---
+
+## 1. Rencana Perubahan (Proposed Changes)
+### app/Controllers/KelembagaanController.php
+#### [MODIFY] KelembagaanController.php
+*   Menangkap `InvalidArgumentException` di fungsi `deleteApi()`, `restoreApi()`, dan `toggleStatusApi()` lalu mengembalikan HTTP 400 Bad Request.
+
+### views/master_kelembagaan.php
+#### [MODIFY] views/master_kelembagaan.php
+*   Memperbarui fungsi `deleteItem()` di Vue.js untuk menampilkan SweetAlert `icon: 'warning'` dengan judul `Tidak Dapat Dihapus` dan tombol `Saya Mengerti`.
+
+---
+
+## 2. Verification Plan
+*   Buka **Master Data Kelembagaan** (`http://localhost/SINTA-SaaS/master-data`).
+*   Klik tombol **Hapus** pada Mata Pelajaran yang sedang digunakan.
+*   Pastikan tidak ada lagi error HTTP 500 di console browser, dan modal SweetAlert peringatan muncul dengan jelas.
+
