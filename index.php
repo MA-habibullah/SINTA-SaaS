@@ -1042,6 +1042,16 @@ try {
             $controller->fetchAccessMap();
             break;
 
+        case '/api/v1/akses/user-override':
+            $controller = new App\Controllers\AksesController();
+            $controller->fetchUserAccessOverrides();
+            break;
+
+        case '/api/v1/akses/user-override/simpan':
+            $controller = new App\Controllers\AksesController();
+            $controller->saveUserAccessOverrides();
+            break;
+
         case '/utilitas/log-aktivitas':
             $controller = new App\Controllers\ActivityLogController();
             $controller->index();

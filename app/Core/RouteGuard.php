@@ -60,6 +60,23 @@ class RouteGuard {
                 return false; // Ditutup total oleh Super Admin untuk Sekolah ini
             }
 
+            // Cek apakah user memiliki hak akses kustom langsung (override)
+            $stmtUserCheck = $db->prepare("
+                SELECT COUNT(*) 
+                FROM user_menu_access 
+                WHERE tenant_id = :tenant_id 
+                  AND user_id = :user_id 
+                  AND menu_id = :menu_id
+            ");
+            $stmtUserCheck->execute([
+                'tenant_id' => $tenantId,
+                'user_id' => $userId,
+                'menu_id' => $menuId
+            ]);
+            if ((int)$stmtUserCheck->fetchColumn() > 0) {
+                return true; // Loloskan akses (Bypass Role)
+            }
+
             // 5. Verifikasi apakah peran user ini memiliki hak akses di tabel role_menu_access (tenant-isolated atau fallback)
             $stmtCheckCustom = $db->prepare("SELECT COUNT(*) FROM role_menu_access WHERE tenant_id = :tenant_id");
             $stmtCheckCustom->execute(['tenant_id' => $tenantId]);

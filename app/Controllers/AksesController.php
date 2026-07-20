@@ -224,4 +224,107 @@ class AksesController extends BaseController {
         }
         exit;
     }
+
+    /**
+     * API: Ambil semua menu & menu tercentang khusus untuk seorang user
+     * GET /api/v1/akses/user-override?user_id=X
+     */
+    public function fetchUserAccessOverrides(): void {
+        header('Content-Type: application/json');
+        
+        // Pastikan super_admin atau operator_sekolah
+        $roleName = $_SESSION['role_name'] ?? '';
+        if ($roleName !== 'super_admin' && $roleName !== 'operator_sekolah') {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Akses ditolak.']);
+            exit;
+        }
+
+        $userId = $_GET['user_id'] ?? '';
+        $tenantId = \App\Core\SessionManager::getTenantId();
+        if (empty($userId)) {
+            echo json_encode(['success' => false, 'error' => 'user_id wajib diisi.']);
+            exit;
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+            
+            // 1. Ambil semua menu yang didukung oleh tenant ini
+            $stmtMenus = $db->prepare("
+                SELECT m.id, m.nama_menu, m.parent_id 
+                FROM menus m 
+                JOIN tenant_menu_access tma ON m.id = tma.menu_id 
+                WHERE tma.tenant_id = ? 
+                ORDER BY m.parent_id ASC, m.urutan ASC
+            ");
+            $stmtMenus->execute([$tenantId]);
+            $menus = $stmtMenus->fetchAll(PDO::FETCH_ASSOC);
+
+            // 2. Ambil menu ter-override untuk user ini
+            $stmtChecked = $db->prepare("SELECT menu_id FROM user_menu_access WHERE user_id = ? AND tenant_id = ?");
+            $stmtChecked->execute([$userId, $tenantId]);
+            $checkedIds = $stmtChecked->fetchAll(PDO::FETCH_COLUMN) ?: [];
+
+            echo json_encode([
+                'success' => true, 
+                'menus' => $menus, 
+                'checked_ids' => array_map('intval', $checkedIds)
+            ]);
+        } catch (\Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
+    }
+
+    /**
+     * API: Simpan ceklis override menu untuk user
+     * POST /api/v1/akses/user-override/simpan
+     */
+    public function saveUserAccessOverrides(): void {
+        header('Content-Type: application/json');
+
+        // Pastikan super_admin atau operator_sekolah
+        $roleName = $_SESSION['role_name'] ?? '';
+        if ($roleName !== 'super_admin' && $roleName !== 'operator_sekolah') {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Akses ditolak.']);
+            exit;
+        }
+
+        $tenantId = \App\Core\SessionManager::getTenantId();
+        $userId = $_POST['user_id'] ?? '';
+        $menuIds = $_POST['menu_ids'] ?? []; // Array ID menu
+
+        if (empty($userId)) {
+            echo json_encode(['success' => false, 'error' => 'user_id wajib diisi.']);
+            exit;
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+            $db->beginTransaction();
+
+            // Hapus semua override lama untuk user ini di tenant terkait
+            $stmtDel = $db->prepare("DELETE FROM user_menu_access WHERE user_id = ? AND tenant_id = ?");
+            $stmtDel->execute([$userId, $tenantId]);
+
+            // Insert baru
+            if (!empty($menuIds)) {
+                $stmtIns = $db->prepare("INSERT INTO user_menu_access (tenant_id, user_id, menu_id) VALUES (?, ?, ?)");
+                foreach ($menuIds as $mid) {
+                    $stmtIns->execute([$tenantId, $userId, (int)$mid]);
+                }
+            }
+
+            $db->commit();
+            echo json_encode(['success' => true, 'message' => 'Hak akses khusus pengguna berhasil diperbarui.']);
+        } catch (\Throwable $e) {
+            if ($db->inTransaction()) $db->rollBack();
+            http_response_code(500);
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
+    }
 }

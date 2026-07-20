@@ -50,15 +50,24 @@ if (!empty($roles)) {
             $inClause = implode(',', array_fill(0, count($roles), '?'));
             $sql = "SELECT DISTINCT m.* 
                     FROM menus m
-                    JOIN role_menu_access rma ON m.id = rma.menu_id
-                    JOIN roles r ON rma.role_id = r.id
                     JOIN tenant_menu_access tma ON m.id = tma.menu_id
-                    WHERE r.nama_role IN ($inClause) 
-                      AND tma.tenant_id = ?
-                      AND rma.tenant_id = ?
+                    WHERE tma.tenant_id = ?
+                      AND (
+                          m.id IN (
+                              SELECT rma.menu_id 
+                              FROM role_menu_access rma
+                              JOIN roles r ON rma.role_id = r.id
+                              WHERE r.nama_role IN ($inClause) AND rma.tenant_id = ?
+                          )
+                          OR m.id IN (
+                              SELECT uma.menu_id 
+                              FROM user_menu_access uma 
+                              WHERE uma.user_id = ? AND uma.tenant_id = ?
+                          )
+                      )
                     ORDER BY m.parent_id ASC, m.urutan ASC";
             $stmt = $db->prepare($sql);
-            $params = array_merge($roles, [$tenantId, $accessTenantId]);
+            $params = array_merge([$tenantId], $roles, [$accessTenantId, $_SESSION['user_id'] ?? '', $tenantId]);
             $stmt->execute($params);
         } else {
             // Tanpa filter tenant (untuk Super Admin yang mengelola seluruh platform, gunakan fallback default)

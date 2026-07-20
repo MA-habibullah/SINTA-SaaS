@@ -1166,4 +1166,41 @@ Pemberitahuan bawaan "Network Error" sangat umum dan membingungkan pengguna. Men
 5. Pastikan modal popup SweetAlert "Penyimpanan Gagal" muncul dengan pesan:
    `"Penting: Harap upload 1 file lalu klik Simpan, dan ulangi proses tersebut untuk meng-upload file berikutnya satu per satu."`
 
+---
+## Rencana Skema Arsitektur: Override Akses Menu Tingkat Pengguna (Opsi B)
+**Waktu**: 17:53 WIB
+**Status**: Dieksekusi
+
+# Implementation Plan: Override Akses Menu Tingkat Pengguna (Opsi B)
+
+Memungkinkan beberapa user tertentu mendapatkan akses ke menu khusus di luar peran (role) standar mereka di SINTA-SaaS (User-level access override).
+
+---
+
+## 1. Berkas yang Terlibat
+
+| Tipe | Berkas | Deskripsi Perubahan |
+|---|---|---|
+| **[NEW]** | [2026_07_20_02_create_user_menu_access.php](file:///C:/xampp/htdocs/SINTA-SaaS/database/migrations/2026_07_20_02_create_user_menu_access.php) | Migrasi DDL pembuatan tabel `user_menu_access`. |
+| **[MODIFY]** | [index.php](file:///C:/xampp/htdocs/SINTA-SaaS/index.php) | Registrasi route API `/api/v1/akses/user-override` dan `/api/v1/akses/user-override/simpan`. |
+| **[MODIFY]** | [RouteGuard.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Core/RouteGuard.php) | Penambahan logika *bypass check* berbasis `user_id` di database. |
+| **[MODIFY]** | [sidebar.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/layout/sidebar.php) | Penyesuaian kueri penarikan menu agar memuat menu khusus per user. |
+| **[MODIFY]** | [AksesController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/AksesController.php) | Pembuatan endpoint controller `fetchUserAccessOverrides` and `saveUserAccessOverrides`. |
+| **[MODIFY]** | [pengguna_index.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/pengguna_index.php) | Integrasi tombol kunci 🔑, modal kelola akses, & script Vue.js. |
+
+---
+
+## 2. Verification Plan
+
+### Verifikasi Manual
+1. Masuk sebagai Admin/Operator Sekolah.
+2. Buka halaman **Pengguna** -> Tab **Guru/Karyawan**.
+3. Pilih salah satu staf (misal guru yang tidak memiliki akses BK), lalu klik tombol Kunci 🔑.
+4. Pada modal, centang menu **Bimbingan Konseling** lalu klik **Simpan Akses**.
+5. Login (atau impersonate) sebagai guru tersebut.
+6. Pastikan:
+   - Menu **Bimbingan Konseling** tampil di sidebar kirinya.
+   - Guru tersebut bisa membuka halaman `/SINTA-SaaS/bk` dengan sukses tanpa terkena blokir 403.
+
+
 

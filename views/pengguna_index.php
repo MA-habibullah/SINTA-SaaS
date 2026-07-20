@@ -361,6 +361,9 @@
                                 </td>
                                 <td class="text-center">
                                     <div class="d-inline-flex gap-2" v-if="!trashMode">
+                                        <button class="btn btn-sm btn-outline-warning rounded-2 px-2 py-1 fs-8" @click="openUserAccessModal(item)" title="Hak Akses Khusus">
+                                            <i class="bi bi-key-fill me-1"></i>Akses
+                                        </button>
                                         <button class="btn btn-sm btn-outline-secondary rounded-2 px-2 py-1 fs-8" @click="openEditModal(item)">
                                             <i class="bi bi-pencil-square me-1"></i>Edit
                                         </button>
@@ -724,6 +727,38 @@
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Hak Akses Khusus Pengguna -->
+    <div class="modal fade" id="userAccessModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-bottom py-3">
+                    <h5 class="modal-title fw-bold text-dark">
+                        <i class="bi bi-key-fill text-warning me-2"></i>Hak Akses Menu: {{ selectedStaffName }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-muted fs-8 mb-3">Tandai menu di bawah untuk memberikan akses khusus langsung ke staf ini di luar hak akses perannya.</p>
+                    
+                    <div class="list-group list-group-flush border-bottom-0">
+                        <label v-for="menu in overrideMenus" :key="menu.id" class="list-group-item d-flex align-items-center gap-2 border-0 px-0 py-2 fs-7 cursor-pointer">
+                            <input type="checkbox" :value="menu.id" v-model="overrideCheckedIds" class="form-check-input">
+                            <span :class="{'fw-bold text-dark': !menu.parent_id, 'ps-3 text-secondary': menu.parent_id}">{{ menu.nama_menu }}</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer border-top bg-light py-2.5 rounded-bottom-4">
+                    <button type="button" class="btn btn-light rounded-3 fs-8 px-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-primary rounded-3 fs-8 px-4 d-flex align-items-center gap-1.5" @click="saveUserAccessOverrides" :disabled="saveAccessLoading">
+                        <span v-if="saveAccessLoading" class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        <i class="bi bi-check-lg" v-else></i>
+                        Simpan Akses
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -1335,6 +1370,13 @@
                 importFile: null,
                 importErrors: [],
 
+                // Override user access states (Opsi B)
+                overrideMenus: [],
+                overrideCheckedIds: [],
+                selectedStaffId: '',
+                selectedStaffName: '',
+                saveAccessLoading: false,
+
                 // ---- State untuk panel Profile Rapot ----
                 printTempat: '',
                 printTanggal: '',
@@ -1532,6 +1574,51 @@
                         });
                     }
                 });
+            },
+            async openUserAccessModal(user) {
+                this.selectedStaffId = user.id;
+                this.selectedStaffName = user.nama_lengkap;
+                try {
+                    const res = await axios.get(`${_baseUrl}/api/v1/akses/user-override?user_id=${user.id}`);
+                    if (res.data.success) {
+                        this.overrideMenus = res.data.menus || [];
+                        this.overrideCheckedIds = res.data.checked_ids || [];
+                        const modal = new bootstrap.Modal(document.getElementById('userAccessModal'));
+                        modal.show();
+                    } else {
+                        Swal.fire('Gagal', res.data.error || 'Gagal memuat data akses.', 'error');
+                    }
+                } catch(e) {
+                    Swal.fire('Error', 'Gagal memuat akses user.', 'error');
+                }
+            },
+            async saveUserAccessOverrides() {
+                this.saveAccessLoading = true;
+                const payload = new FormData();
+                payload.append('user_id', this.selectedStaffId);
+                this.overrideCheckedIds.forEach(id => payload.append('menu_ids[]', id));
+
+                try {
+                    const res = await axios.post(`${_baseUrl}/api/v1/akses/user-override/simpan`, payload);
+                    if (res.data.success) {
+                        Swal.fire({
+                            title: 'Berhasil',
+                            text: res.data.message,
+                            icon: 'success',
+                            confirmButtonColor: '#2563eb'
+                        }).then(() => {
+                            const modalEl = document.getElementById('userAccessModal');
+                            const modalInst = bootstrap.Modal.getInstance(modalEl);
+                            if (modalInst) modalInst.hide();
+                        });
+                    } else {
+                        Swal.fire('Gagal', res.data.error || 'Gagal menyimpan akses.', 'error');
+                    }
+                } catch(e) {
+                    Swal.fire('Error', 'Gagal menyimpan akses.', 'error');
+                } finally {
+                    this.saveAccessLoading = false;
+                }
             },
             getActiveTabName() {
                 const tab = this.tabs.find(t => t.id === this.activeTab);
