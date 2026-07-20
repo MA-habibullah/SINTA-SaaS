@@ -243,7 +243,7 @@ $keluarTanggal = (!empty($siswa['tanggal_keluar'])) ? date('d-m-Y', strtotime($s
                 <td style="width: 28%"><?= htmlspecialchars(!empty($siswa['sekolah_kecamatan']) ? $siswa['sekolah_kecamatan'] : '.................') ?></td>
             </tr>
             <tr>
-                <td style="font-weight: bold;">NOMOR INDUK SISWA NASIONAL</td>
+                <td style="font-weight: bold;">NISN</td>
                 <td>:</td>
                 <td><?= htmlspecialchars($nisn) ?></td>
                 <td style="font-weight: bold;">KAB/KOTA</td>
@@ -286,10 +286,7 @@ $keluarTanggal = (!empty($siswa['tanggal_keluar'])) ? date('d-m-Y', strtotime($s
             <tr><td class="col-no">5.</td><td class="col-label">Kewarganegaraan</td><td class="col-colon">:</td><td class="col-val"><?= htmlspecialchars($kewarganegaraan) ?></td></tr>
             <tr><td class="col-no">6.</td><td class="col-label">Anak ke</td><td class="col-colon">:</td><td class="col-val"><?= htmlspecialchars($anakKe) ?></td></tr>
             
-            <tr><td class="col-no">7.</td><td class="col-label">Jumlah Saudara</td><td class="col-colon"></td><td class="col-val"></td></tr>
-            <tr><td></td><td class="sub-label">a. Kandung</td><td class="col-colon">:</td><td class="col-val"><?= htmlspecialchars($jmlSaudara) ?></td></tr>
-            <tr><td></td><td class="sub-label">b. Tiri</td><td class="col-colon">:</td><td class="col-val"><?= htmlspecialchars($jmlSaudaraTiri) ?></td></tr>
-            <tr><td></td><td class="sub-label">c. Angkat</td><td class="col-colon">:</td><td class="col-val"><?= htmlspecialchars($jmlSaudaraAngkat) ?></td></tr>
+            <tr><td class="col-no">7.</td><td class="col-label">Jumlah saudara kandung</td><td class="col-colon">:</td><td class="col-val"><?= htmlspecialchars($jmlSaudara) ?></td></tr>
             
             <tr><td class="col-no">8.</td><td class="col-label">Bahasa sehari-hari dirumah</td><td class="col-colon">:</td><td class="col-val"><?= htmlspecialchars($bahasa) ?></td></tr>
             <tr><td class="col-no">9.</td><td class="col-label">Golongan Darah</td><td class="col-colon">:</td><td class="col-val"><?= htmlspecialchars($golDarah) ?></td></tr>
