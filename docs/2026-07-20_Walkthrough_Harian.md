@@ -130,3 +130,72 @@ Memposisikan kontainer QR Code / Barcode secara presisi di samping kanan tabel i
 **Jenis**: UI/UX Refactoring
 Mengubah definisi `@page` margin pada `print_buku_induk.php` menjadi Top: 1cm, Right: 0.8cm, Bottom: 1cm, Left: 2.5cm sesuai instruksi pengguna. Berkas yang diubah:
 - `views/print_buku_induk.php`
+
+---
+## Otomatisasi Pembersihan (Garbage Collection) File Rate Limit Kedaluwarsa
+**Waktu**: 14:50 WIB
+**Jenis**: Feature / Optimization
+Menambahkan fungsi `cleanStaleRateLimitFiles` pada `BukuIndukController` yang secara otomatis menghapus file cache `.json` di folder `storage/app/rate_limit/` yang sudah berusia lebih dari 1 jam (3600 detik) menggunakan mekanisme probabilistik 10% request agar tidak membebani IO server. Berkas yang diubah:
+- `app/Controllers/BukuIndukController.php`
+
+---
+## Pengelompokan Mata Pelajaran, Cetak Rapor Kurikulum, dan Seeding Data Dummy 12 Semester
+**Waktu**: 15:38 WIB
+**Jenis**: Feature / Database Seeder / UI Refactoring
+Mengelompokkan mata pelajaran ke dalam 5 kelompok (Umum, Pilihan, Peminatan, Lintas Minat, Mulok), menyesuaikan format kolom cetak rapor berdasarkan kurikulum (Merdeka & K-13), dan membenihkan data dummy 12 semester lengkap dengan 25 mapel & nilai sikap. Berkas yang diubah:
+- `database/migrations/2026_07_20_01_seed_dummy_12_semester_grades.php` [BARU]
+- `app/Controllers/BukuIndukController.php`
+- `views/print_rapot_merdeka.php`
+- `views/print_rapot_k13.php`
+
+---
+## Proteksi Keamanan Produksi (Production Safeguard) Pada Seeder Data Dummy 12 Semester
+**Waktu**: 15:41 WIB
+**Jenis**: Security / Governance
+Menambahkan blok proteksi `PRODUCTION SAFEGUARD` pada file migrasi seeder data dummy `2026_07_20_01_seed_dummy_12_semester_grades.php` yang secara otomatis memeriksa variabel lingkungan (`APP_ENV`, `APP_DEBUG`) dan nama host domain. Jika terdeteksi berjalan di server produksi (`APP_ENV=production` atau live host), proses pembenihan data dummy akan **otomatis ditolak/dibatalkan (`[SAFETY BLOCKED]`)** sehingga database produksi dijamin tetap bersih dan aman dari data pengujian. Berkas yang diubah:
+- `database/migrations/2026_07_20_01_seed_dummy_12_semester_grades.php`
+
+---
+## Perbaikan Query Rapor Semester (Pencocokan Semester Ganjil/Genap & Hapus Kolom Non-Eksis m.kelompok)
+**Waktu**: 15:46 WIB
+**Jenis**: Bug Fix
+Memperbaiki kendala data nilai rapor semester yang tampil kosong pada halaman cetak. Penyebab utama: (1) kueri SQL memuat kolom `m.kelompok` yang tidak ada pada tabel `mata_pelajaran` sehingga memicu SQL error dan mengembalikan data kosong, serta (2) pencocokan nama semester (`Ganjil`/`Genap`) belum mendukung pemetaan ke angka semester (`1` s.d. `12`). Kami menambahkan *flexible semester mapping* dan memperbaiki klausa `SELECT` pada `BukuIndukController`. Berkas yang diubah:
+- `app/Controllers/BukuIndukController.php`
+
+---
+## Perbaikan Filter Tahun Ajaran Halaman Buku Induk (Pencegahan Siswa Angkatan Masa Depan Tampil)
+**Waktu**: 15:50 WIB
+**Jenis**: Bug Fix / Logic Correction
+Memperbaiki kendala siswa angkatan baru (misal: Tahun Masuk 2026/2027) yang ikut muncul ketika pengguna memfilter Tahun Ajaran terdahulu (misal: 2022/2023). Root cause: Kueri pencarian `fetchCetakMatrixApi` belum menyaring `tahun_masuk` (siswa angkatan `2026/2027` belum masuk sekolah pada `2022/2023`) dan seeder sempat memasukkan nilai dummy pada siswa sebelum tahun masuknya. Solusi: (1) Menambahkan kriteria `WHERE (ta.tahun_ajaran IS NULL OR ta.tahun_ajaran <= :filter_ta_max)` pada `BukuIndukController.php`, dan (2) Memperbarui `id_tahun_ajaran` (Tahun Masuk) siswa seeder ke `2020/2021` agar sinkron dengan histori 12 semester. Berkas yang diubah:
+- `app/Controllers/BukuIndukController.php`
+- `database/migrations/2026_07_20_01_seed_dummy_12_semester_grades.php`
+
+---
+## Perbaikan Tampilan Transkrip Nilai Kelulusan (Hapus Kolom m.kelompok & Dukungan Parsing Semester Angka 1-6)
+**Waktu**: 15:58 WIB
+**Jenis**: Bug Fix
+Memperbaiki kendala lembar cetak Transkrip Nilai Kelulusan yang menampilkan pesan `Belum ada data nilai tercatat.`. Root cause: (1) Kueri SQL pada `printTranskripNilai()` memanggil kolom `m.kelompok` yang tidak ada pada tabel `mata_pelajaran` sehingga memicu *silent SQL error*, dan (2) Logika pemetaan semester di `print_transkrip_merdeka.php` & `print_transkrip_standar.php` belum membaca format semester angka (`1` s.d. `6`). Solusi: (1) Memperbaiki kueri SQL menggunakan `COALESCE(pm.kelompok_id, ...)`, (2) Memperbarui parsing semester untuk mendukung format angka, dan (3) Membersihkan cache arsip cetak dokumen siswa. Berkas yang diubah:
+- `app/Controllers/BukuIndukController.php`
+- `views/print_transkrip_merdeka.php`
+- `views/print_transkrip_standar.php`
+
+---
+## Perbaikan Vue Runtime Error (`Cannot read properties of undefined (reading '10')`)
+**Waktu**: 16:04 WIB
+**Jenis**: Bug Fix / Vue Error Prevention
+Memperbaiki `[VUE RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading '10')` pada halaman `buku-induk`. Root cause: (1) Pengaksesan properti objek `this.nilaiRapor.grades[studentId][subjectId]` dan `getAverageGrade()` belum dibungkus dengan pemeriksaan *null-guard* sehingga memicu error saat `mapel_id` atau `studentId` belum terinisialisasi lengkap, (2) Pengelompokan semester pada `formattedGrades` belum membaca semester angka, dan (3) Terdapat tag penutup `</td>` yang belum tertutup pada tabel matriks cetak. Solusi: Menambahkan *null-guard check* pada `getAverageGrade()` & `saveNilaiRapor()`, menyempurnakan `formattedGrades`, dan merapikan struktur HTML matriks. Berkas yang diubah:
+- `views/buku_induk.php`
+
+---
+## Pembersihan Berkas Seeder Data Dummy dari Direktori Migrasi
+**Waktu**: 16:07 WIB
+**Jenis**: Cleanup / Security
+Menghapus file seeder data pengujian `2026_07_20_01_seed_dummy_12_semester_grades.php` dari direktori `database/migrations/` untuk memastikan berkas pengujian tersebut tidak akan terunggah atau dieksekusi di server produksi. Berkas yang dihapus:
+- `database/migrations/2026_07_20_01_seed_dummy_12_semester_grades.php` [DIHAPUS]
+
+---
+## Pengurutan Tahun Ajaran & Angkatan Berdasarkan Tahun Terbaru pada Master Data (`/master-data`)
+**Waktu**: 16:13 WIB
+**Jenis**: UI/UX Enhancement / Sorting Improvement
+Memperbarui logika pengurutan (*sorting*) untuk data Tahun Ajaran dan Tahun Angkatan pada halaman Master Data Kelembagaan (`http://localhost/SINTA-SaaS/master-data`). Sebelumnya data diurutkan berdasarkan `id DESC` yang kurang presisi secara kronologis. Solusi: Mengubah klausa pengurutan di `app/Models/Kelembagaan.php` pada fungsi `getPaginated()` dan `getOptions()` menjadi `ORDER BY k.tahun_ajaran DESC` dan `ORDER BY k.tahun_angkatan DESC` sehingga Tahun Ajaran terbaru (contoh: 2026/2027, 2025/2026, 2024/2025...) tampil di urutan paling atas. Berkas yang diubah:
+- `app/Models/Kelembagaan.php`

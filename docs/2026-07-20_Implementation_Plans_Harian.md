@@ -561,3 +561,324 @@ Mengubah aturan CSS `@page` margin pada lembar cetak Buku Induk (`print_buku_ind
 ## 2. Verification Plan
 *   Buka URL cetak Buku Induk.
 *   Periksa aturan CSS `@page` di devtools browser / dialog cetak, pastikan margin yang diterapkan adalah Top: 1cm, Right: 0.8cm, Bottom: 1cm, dan Left: 2.5cm.
+
+---
+## Otomatisasi Pembersihan (Garbage Collection) File Rate Limit Kedaluwarsa
+**Waktu**: 14:50 WIB
+**Status**: Dieksekusi
+
+# Implementation Plan: Otomatisasi Pembersihan (Garbage Collection) File Rate Limit Kedaluwarsa
+
+Menambahkan fitur pembersihan otomatis (*Garbage Collection*) untuk menghapus file `.json` di folder `storage/app/rate_limit/` yang usianya sudah lebih dari 1 jam (3600 detik).
+
+---
+
+## 1. Rencana Perubahan (Proposed Changes)
+### app/Controllers/BukuIndukController.php
+#### [MODIFY] BukuIndukController.php
+*   Menambahkan fungsi private `cleanStaleRateLimitFiles(string $rateLimitDir)` dengan pembersihan probabilistik (10% peluang per request) untuk menghapus file rate limit berusia > 3600 detik.
+*   Memanggil `cleanStaleRateLimitFiles()` pada method `verifyTranskrip()` dan `verifyTranskripApi()`.
+
+---
+
+## 2. Verification Plan
+*   Lakukan request ke endpoint verifikasi dokumen.
+*   Pastikan file-file `.json` lama di `storage/app/rate_limit/` yang berusia lebih dari 1 jam terhapus secara otomatis tanpa mengganggu proses request.
+
+---
+## Kelompok Mata Pelajaran, Cetak Rapor Berdasarkan Kurikulum, dan Data Dummy 12 Semester
+**Waktu**: 14:57 WIB
+**Status**: Dieksekusi
+
+# Rencana Implementasi: Kelompok Mata Pelajaran, Cetak Rapor Berdasarkan Kurikulum, dan Data Dummy 12 Semester
+
+Rencana ini bertujuan untuk memetakan kelompok mata pelajaran secara terstruktur (Umum, Pilihan, Peminatan, Lintas Minat, Mulok), menyesuaikan kolom dan tata letak cetak rapor berdasarkan pengaturan kurikulum (Kurikulum Merdeka & Kurikulum 2013/K-13), serta menyediakan data dummy lengkap sebanyak 12 semester untuk kebutuhan pengujian dan verifikasi transkrip/rapor.
+
+---
+
+## 1. Struktur Kelompok Mata Pelajaran
+
+Setiap mata pelajaran akan dikategorikan ke dalam 5 kelompok standar nasional dan daerah:
+
+1. **A. Kelompok Mata Pelajaran Umum** (Umum / Wajib A)
+   - Pendidikan Agama dan Budi Pekerti
+   - Pendidikan Pancasila / PKn
+   - Bahasa Indonesia
+   - Matematika
+   - Bahasa Inggris
+   - Pendidikan Jasmani, Olahraga, dan Kesehatan (PJOK)
+   - Sejarah / Sejarah Indonesia
+   - Seni dan Budaya (Seni Musik, Seni Rupa, Seni Teater, Seni Tari)
+
+2. **B. Kelompok Mata Pelajaran Pilihan** (Pilihan / Umum B)
+   - Biologi, Kimia, Fisika
+   - Informatika, Matematika Tingkat Lanjut
+   - Sosiologi, Ekonomi, Geografi, Antropologi
+   - Bahasa Indonesia Tingkat Lanjut, Bahasa Inggris Tingkat Lanjut
+   - Bahasa Asing (Arab, Jepang, Mandarin, Jerman, Prancis, Korea)
+   - Prakarya dan Kewirausahaan (PKWU)
+
+3. **C. Mata Pelajaran Peminatan** (C1. Peminatan MIPA / IPS / Bahasa)
+   - Peminatan MIPA: Matematika Peminatan, Biologi, Fisika, Kimia
+   - Peminatan IPS: Geografi, Sejarah Peminatan, Sosiologi, Ekonomi
+   - Peminatan Bahasa: Bahasa & Sastra Indonesia, Bahasa & Sastra Inggris, Bahasa Asing Peminatan
+
+4. **D. Mata Pelajaran Lintas Minat** (C2. Lintas Minat)
+   - Mata pelajaran pilihan di luar peminatan utama (contoh: Bahasa & Sastra Inggris untuk siswa MIPA, Ekonomi untuk siswa MIPA)
+
+5. **E. Mata Pelajaran Mulok / Khas Sekolah** (D. Mulok / Khas Sekolah)
+   - Bahasa Daerah (Jawa / Sunda / Bali)
+   - Keagamaan Khusus / Tahfidz / Khas Pesantren / Khas Sekolah
+
+---
+
+## 2. Penyesuaian Kolom Cetak Rapor Berdasarkan Settingan Kurikulum
+
+### A. Template Kurikulum Merdeka (`print_rapot_merdeka.php` & `print_rapot_bulk_merdeka.php`)
+- **Struktur Kolom**:
+  | NO. | MATA PELAJARAN | NILAI AKHIR | CAPAIAN PEMBELAJARAN | KKTP |
+- **Pengelompokan dalam Tabel**:
+  - `A. Kelompok Mata Pelajaran Umum`
+  - `B. Kelompok Mata Pelajaran Pilihan`
+  - `E. Mata Pelajaran Mulok / Khas Sekolah`
+- **Baris Rekapitulasi**:
+  - Total **Jumlah Nilai**
+  - **Rata-rata Nilai** Intrakurikuler
+
+### B. Template Kurikulum 2013 / K-13 (`print_rapot_k13.php` & `print_rapot_bulk_k13.php`)
+- **Seksi Sikap (KI-1 & KI-2)**:
+  - Table Sikap Spiritual (KI-1) & Sikap Sosial (KI-2) memuat `Predikat` (SB/B/C/K) dan `Deskripsi`.
+- **Struktur Kolom Pengetahuan & Keterampilan**:
+  | NO. | MATA PELAJARAN | KKM | PENGETAHUAN (KI-3) [Nilai | Predikat | Deskripsi] | KETERAMPILAN (KI-4) [Nilai | Predikat | Deskripsi] |
+- **Pengelompokan dalam Tabel**:
+  - `NO. UMUM A (WAJIB)`
+  - `NO. UMUM B (WAJIB)`
+  - `NO. C1. PEMINATAN`
+  - `NO. C2. LINTAS MINAT`
+  - `NO. D. MULOK / KHAS SEKOLAH`
+
+---
+
+## 3. Rencana Pembuatan Data Dummy 12 Semester
+
+Akan dibuatkan file migrasi/seeder database baru `2026_07_20_01_seed_dummy_12_semester_grades.php` yang akan mengisi data historis lengkap untuk siswa sampel selama **12 Semester** (Semester 1 s.d. 12 across 6 Tahun Ajaran):
+
+1. **Tahun Ajaran & Semester**:
+   - Semester 1 & 2 (Tahun Pelajaran 2020/2021) - Kelas 7 / Kelas 10
+   - Semester 3 & 4 (Tahun Pelajaran 2021/2022) - Kelas 8 / Kelas 11
+   - Semester 5 & 6 (Tahun Pelajaran 2022/2023) - Kelas 9 / Kelas 12
+   - Semester 7 & 8 (Tahun Pelajaran 2023/2024)
+   - Semester 9 & 10 (Tahun Pelajaran 2024/2025)
+   - Semester 11 & 12 (Tahun Pelajaran 2025/2026)
+
+2. **Cakupan Data yang Di-seed**:
+   - Pemetaan Mata Pelajaran (`pemetaan_mapel`) untuk ke-5 kelompok mapel.
+   - Nilai Rapor Akademik (`detail_nilai_rapor`) mencakup nilai pengetahuan, keterampilan, nilai akhir, KKTP/KKM, dan deskripsi capaian pembelajaran.
+   - Nilai Sikap K-13 (`nilai_sikap_k13`) untuk predikat dan deskripsi spiritual/sosial.
+
+---
+
+## Proposed Changes
+
+### Database / Migrations
+
+#### [NEW] [2026_07_20_01_seed_dummy_12_semester_grades.php](file:///C:/xampp/htdocs/SINTA-SaaS/database/migrations/2026_07_20_01_seed_dummy_12_semester_grades.php)
+- Membuat script migrasi berformat `return ['up' => function(PDO $pdo){...}]` untuk meng-insert data dummy 12 semester lengkap dengan kelompok mapel A s.d. E.
+
+---
+
+### Backend & Controller
+
+#### [MODIFY] [BukuIndukController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/BukuIndukController.php)
+- Memastikan query pencetakan rapor mengelompokkan nilai berdasarkan `kelompok_id` / `kelompok` secara konsisten untuk K-13 dan Kurikulum Merdeka.
+
+---
+
+### Views / Print Templates
+
+#### [MODIFY] [print_rapot_merdeka.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/print_rapot_merdeka.php)
+- Menyesuaikan header tabel, kolom (`NO`, `MATA PELAJARAN`, `NILAI AKHIR`, `CAPAIAN PEMBELAJARAN`, `KKTP`), pengelompokan A, B, E, serta baris Jumlah & Rata-rata Nilai.
+
+#### [MODIFY] [print_rapot_k13.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/print_rapot_k13.php)
+- Menyesuaikan header tabel, kolom Pengetahuan (KI-3) & Keterampilan (KI-4), serta sub-header pengelompokan (Umum A, Umum B, C1 Peminatan, C2 Lintas Minat, D Mulok).
+
+---
+
+## Verification Plan
+
+### Automated Tests
+- Menjalankan migrasi seeder via terminal:
+  `php migrate.php`
+- Memverifikasi keberadaan data dummy 12 semester di tabel `detail_nilai_rapor`, `pemetaan_mapel`, dan `nilai_sikap_k13`.
+
+### Manual Verification
+1. Buka halaman Cetak Rapor Semester untuk Kurikulum Merdeka & K-13.
+2. Pastikan tabel nilai terbagi rapi berdasarkan kelompok A, B, C1, C2, D/E.
+3. Pastikan kolom-kolom nilai (Pengetahuan, Keterampilan, Nilai Akhir, Capaian Pembelajaran, KKM/KKTP) sesuai dengan gambar sampel.
+4. Buka transkrip / buku induk 12 semester dan pastikan seluruh 12 semester menampilkan data nilai yang lengkap.
+
+---
+## Proteksi Keamanan Produksi (Production Safeguard) Pada Seeder Data Dummy 12 Semester
+**Waktu**: 15:41 WIB
+**Status**: Dieksekusi
+
+# Implementation Plan: Proteksi Keamanan Produksi (Production Safeguard) Pada Seeder Data Dummy 12 Semester
+
+Menambahkan mekanisme pertahanan dan pemeriksaan lingkungan kerja (*environment check*) agar script seeder data dummy `2026_07_20_01_seed_dummy_12_semester_grades.php` secara otomatis menolak dieksekusi di server produksi.
+
+---
+
+## 1. Rencana Perubahan (Proposed Changes)
+### database/migrations/2026_07_20_01_seed_dummy_12_semester_grades.php
+#### [MODIFY] 2026_07_20_01_seed_dummy_12_semester_grades.php
+*   Menambahkan pengecekan `APP_ENV === 'production'`, `APP_DEBUG === 'false'`, serta pengenalan nama host domain live di awal fungsi closure `up`. Jika terdeteksi lingkungan produksi, proses dibatalkan dengan pesan warning `[SAFETY BLOCKED]`.
+
+---
+
+## 2. Verification Plan
+*   Jalankan script pengujian `scratch/test_production_safeguard.php` yang mensimulasikan `APP_ENV=production`.
+*   Pastikan migrasi mengembalikan status `[SAFETY BLOCKED]` dan tidak ada data dummy yang di-insert ke database.
+
+---
+## Perbaikan Query Rapor Semester (Pencocokan Semester Ganjil/Genap & Hapus Kolom Non-Eksis m.kelompok)
+**Waktu**: 15:46 WIB
+**Status**: Dieksekusi
+
+# Implementation Plan: Perbaikan Query Rapor Semester (Pencocokan Semester Ganjil/Genap & Hapus Kolom Non-Eksis m.kelompok)
+
+Memperbaiki query pengambilan nilai rapor semester pada `BukuIndukController.php` agar mendukung pencocokan fleksibel nama semester (`Ganjil`/`Genap`) dengan angka semester (`1` s.d. `12`), serta menghapus kolom `m.kelompok` yang memicu SQL error.
+
+---
+
+## 1. Rencana Perubahan (Proposed Changes)
+### app/Controllers/BukuIndukController.php
+#### [MODIFY] BukuIndukController.php
+*   Mengganti `COALESCE(pm.kelompok_id, m.kelompok, ...)` menjadi `COALESCE(pm.kelompok_id, 'A. Kelompok Mata Pelajaran Umum')` karena kolom `m.kelompok` tidak ada di tabel `mata_pelajaran`.
+*   Menambahkan pemetaan otomatis variabel `$semester` (`Ganjil` -> `1,3,5,7,9,11`, `Genap` -> `2,4,6,8,10,12`) dalam klausa `WHERE d.semester IN (...)`.
+
+---
+
+## 2. Verification Plan
+*   Buka URL cetak rapor semester untuk Afifah (`semester=Ganjil&ta=2020/2021`).
+*   Pastikan seluruh 25 mata pelajaran pada TA 2020/2021 Semester 1 langsung muncul dengan lengkap pada kelompok A s.d. E.
+
+---
+## Perbaikan Filter Tahun Ajaran Halaman Buku Induk (Pencegahan Siswa Angkatan Masa Depan Tampil)
+**Waktu**: 15:50 WIB
+**Status**: Dieksekusi
+
+# Implementation Plan: Perbaikan Filter Tahun Ajaran Halaman Buku Induk
+
+Memperbaiki logika filter `fetchCetakMatrixApi` pada `BukuIndukController.php` dan seeder data dummy agar siswa angkatan masa depan (contoh: `2026/2027`) tidak muncul saat filter Tahun Ajaran terdahulu (contoh: `2022/2023`) dipilih.
+
+---
+
+## 1. Rencana Perubahan (Proposed Changes)
+### app/Controllers/BukuIndukController.php
+#### [MODIFY] BukuIndukController.php
+*   Menambahkan batasan `(ta.tahun_ajaran IS NULL OR ta.tahun_ajaran <= :filter_ta_max)` dalam query pencarian siswa berdasarkan filter Tahun Ajaran.
+
+### database/migrations/2026_07_20_01_seed_dummy_12_semester_grades.php
+#### [MODIFY] 2026_07_20_01_seed_dummy_12_semester_grades.php
+*   Mengatur `id_tahun_ajaran` (Tahun Masuk) siswa seeder ke `2020/2021` agar sinkron dengan periode 12 semester (2020/2021 s.d 2025/2026).
+
+---
+
+## 2. Verification Plan
+*   Buka halaman Buku Induk (`http://localhost/SINTA-SaaS/buku-induk`) dan filter Tahun Ajaran `2022/2023`.
+*   Pastikan siswa angkatan `2026/2027` (seperti Anisah Farah Karunia, Arjuna Ahza Rasyiid, Abdullah Azzam Aufar) tidak lagi muncul di daftar `2022/2023`.
+
+---
+## Perbaikan Tampilan Transkrip Nilai Kelulusan (Hapus Kolom m.kelompok & Dukungan Parsing Semester Angka 1-6)
+**Waktu**: 15:58 WIB
+**Status**: Dieksekusi
+
+# Implementation Plan: Perbaikan Tampilan Transkrip Nilai Kelulusan
+
+Memperbaiki query dan logika parsing semester pada Transkrip Nilai Kelulusan agar data 25 mata pelajaran beserta nilai semester 1 s.d. 6 tampil utuh.
+
+---
+
+## 1. Rencana Perubahan (Proposed Changes)
+### app/Controllers/BukuIndukController.php
+#### [MODIFY] BukuIndukController.php
+*   Mengganti `m.kelompok` dengan `COALESCE(pm.kelompok_id, 'A. Kelompok Mata Pelajaran Umum') AS kelompok` pada query `printTranskripNilai()`.
+
+### views/print_transkrip_merdeka.php & views/print_transkrip_standar.php
+#### [MODIFY] print_transkrip_merdeka.php & print_transkrip_standar.php
+*   Memperbarui logika pemetaan semester untuk mengenali angka semester `1` s.d. `6` secara presisi ke dalam kolom matriks transkrip nilai.
+
+---
+
+## 2. Verification Plan
+*   Muat ulang URL cetak Transkrip Nilai untuk Afifah (`cetak-transkrip-nilai?id=a20e48ed-21d1-4661-a0bc-4bdf381978b6`).
+*   Pastikan tabel transkrip terisi 27 baris mata pelajaran dengan nilai lengkap untuk Semester 1 s.d. 6.
+
+---
+## Perbaikan Vue Runtime Error (`Cannot read properties of undefined (reading '10')`)
+**Waktu**: 16:04 WIB
+**Status**: Dieksekusi
+
+# Implementation Plan: Perbaikan Vue Runtime Error (`Cannot read properties of undefined (reading '10')`)
+
+Menambahkan penanganan defensif (*null-guard checks*) pada metode Vue `getAverageGrade()`, `saveNilaiRapor()`, dan `formattedGrades` di `views/buku_induk.php` agar terhindar dari runtime error saat mengakses properti objek yang belum terdefinisi.
+
+---
+
+## 1. Rencana Perubahan (Proposed Changes)
+### views/buku_induk.php
+#### [MODIFY] views/buku_induk.php
+*   Menambahkan pengecekan keberadaan `this.nilaiRapor.grades[studentId]` sebelum mengakses `[subjectId]`.
+*   Memperbarui pemetaan semester di `formattedGrades` agar mendukung angka semester ganjil/genap.
+*   Menutup tag `</td>` yang kurang pada baris matriks semester.
+
+---
+
+## 2. Verification Plan
+*   Buka halaman Buku Induk (`http://localhost/SINTA-SaaS/buku-induk`) dan buka Console DevTools browser.
+*   Pastikan tidak ada lagi pesan `[VUE RUNTIME ERROR] TypeError: Cannot read properties of undefined (reading '10')`.
+
+---
+## Pembersihan Berkas Seeder Data Dummy dari Direktori Migrasi
+**Waktu**: 16:07 WIB
+**Status**: Dieksekusi
+
+# Implementation Plan: Pembersihan Berkas Seeder Data Dummy dari Direktori Migrasi
+
+Menghapus berkas seeder dummy `2026_07_20_01_seed_dummy_12_semester_grades.php` dari direktori `database/migrations/` agar tidak terunggah ke server produksi.
+
+---
+
+## 1. Rencana Perubahan (Proposed Changes)
+### database/migrations/2026_07_20_01_seed_dummy_12_semester_grades.php
+#### [DELETE] 2026_07_20_01_seed_dummy_12_semester_grades.php
+*   Menghapus berkas seeder dummy pengujian 12 semester.
+
+---
+
+## 2. Verification Plan
+*   Jalankan `Test-Path` di PowerShell untuk memastikan file `database/migrations/2026_07_20_01_seed_dummy_12_semester_grades.php` bernilai `False`.
+
+---
+## Pengurutan Tahun Ajaran & Angkatan Berdasarkan Tahun Terbaru pada Master Data (`/master-data`)
+**Waktu**: 16:13 WIB
+**Status**: Dieksekusi
+
+# Implementation Plan: Pengurutan Tahun Ajaran & Angkatan Berdasarkan Tahun Terbaru
+
+Mengubah pengurutan data tabel Tahun Ajaran dan Tahun Angkatan pada halaman Master Data Kelembagaan agar menampilkan tahun ajaran terbaru di urutan paling atas.
+
+---
+
+## 1. Rencana Perubahan (Proposed Changes)
+### app/Models/Kelembagaan.php
+#### [MODIFY] Kelembagaan.php
+*   Memperbarui fungsi `getPaginated()` agar menggunakan `ORDER BY k.tahun_ajaran DESC` untuk modul `tahun_ajaran` dan `ORDER BY k.tahun_angkatan DESC` untuk modul `angkatan`.
+*   Memperbarui fungsi `getOptions()` agar menggunakan pengurutan `DESC` pada modul `tahun_ajaran` dan `angkatan`.
+
+---
+
+## 2. Verification Plan
+*   Buka halaman Master Data Kelembagaan (`http://localhost/SINTA-SaaS/master-data`).
+*   Pilih tab **Tahun Ajaran**. Pastikan daftar terurut dari tahun terbaru (contoh: 2026/2027, 2025/2026, 2024/2025...).
+
