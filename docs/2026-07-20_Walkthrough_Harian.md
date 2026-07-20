@@ -273,4 +273,17 @@ Memperbaiki log error merah `GET /api/v1/pdss/simulasi/setting 400 (Bad Request)
 Menambahkan penanganan khusus pada `views/tambah_siswa.php` saat terjadi `"Network Error"` pada pengunggahan berkas secara berurutan. Apabila kegagalan jaringan terjadi (misalnya karena concurrent connection limit Cloudflare, browser/OS throttling, atau paket internet lambat), pesan error default digantikan dengan instruksi yang ramah: `"Penting: Harap upload 1 file lalu klik Simpan, dan ulangi proses tersebut untuk meng-upload file berikutnya satu per satu."` Berkas yang diubah:
 - `views/tambah_siswa.php`
 
+---
+## Override Akses Menu Tingkat Pengguna (Opsi B)
+**Waktu**: 17:54 WIB
+**Jenis**: Feature / Access Management
+Mengimplementasikan fitur Override Akses Menu tingkat pengguna (Opsi B) agar admin/operator sekolah dapat memberikan hak akses menu sidebar kustom langsung ke pengguna tertentu di luar wewenang perannya. Berkas yang dibuat/diubah:
+- `database/migrations/2026_07_20_02_create_user_menu_access.php` [BARU]
+- `index.php`
+- `app/Core/RouteGuard.php`
+- `views/layout/sidebar.php`
+- `app/Controllers/AksesController.php`
+- `views/pengguna_index.php`
+
+
 
