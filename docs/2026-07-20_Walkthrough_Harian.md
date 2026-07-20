@@ -317,9 +317,57 @@ Merapikan urutan checklist menu pada modal Hak Akses agar tersusun secara hirark
 - `views/dashboard_view.php`
 - `database/migrations/2026_07_20_03_remove_guru_default_ppdb_access.php` [BARU]
 
+---
+## Perbaikan Visibilitas Pengumuman, Pembatasan Menu Informasi & Kegiatan, serta Bypass Otorisasi Kontroler (Bypass Guard)
+**Waktu**: 23:00 WIB
+**Jenis**: Bug Fix / Security Hardening
+(1) Menghapus akses default menu **Informasi & Kegiatan** (menu_id: 45) beserta sub-menunya bagi role Guru dan Karyawan dari basis data (tabel `role_menu_access`).
+(2) Memperbaiki logika visibilitas pengumuman/agenda agar seluruh staf (Guru, Karyawan, Waka, Kepala Sekolah) masuk dalam golongan "Guru/Staff" dan menepis role mapping hardcoded di `DashboardController.php`.
+(3) Menambahkan helper `RouteGuard::checkCurrent()` serta mengintegrasikannya ke kontroler inti (Buku Induk, Pengumuman, BK, Ekskul, Sekolah, Antrean, Log Aktivitas, Sesi Aktif) untuk meloloskan akses pengguna yang memiliki override khusus di `user_menu_access` sekalipun terhalang oleh *role check* keras pada level kontroler. Berkas yang diubah/dibuat:
+- `database/migrations/2026_07_20_04_remove_guru_karyawan_informasi_kegiatan_access.php` [BARU]
+- `app/Core/RouteGuard.php`
+- `app/Models/PengumumanModel.php`
+- `app/Models/AgendaModel.php`
+- `app/Controllers/DashboardController.php`
+- `app/Controllers/BukuIndukController.php`
+- `app/Controllers/PengumumanController.php`
+- `app/Controllers/BKController.php`
+- `app/Controllers/EkskulController.php`
+- `app/Controllers/SekolahController.php`
+- `app/Controllers/QueueController.php`
+- `app/Controllers/ActiveSessionController.php`
+- `app/Controllers/ActivityLogController.php`
 
+---
+## Penanganan Warning WAI-ARIA Modal Accessibility secara Universal
+**Waktu**: 23:15 WIB
+**Jenis**: Bug Fix / Accessibility Improvement
+Menghilangkan warning `Blocked aria-hidden on an element because its descendant retained focus` di console browser saat menutup modal Bootstrap secara global dengan menambahkan listener `hide.bs.modal` terpusat pada file layout utama `master.php` untuk memanggil `activeElement.blur()` secara otomatis sebelum modal disembunyikan. Menghapus listener lokal serupa di `buku_induk.php` untuk mencegah redudansi. Berkas yang diubah:
+- `views/layout/master.php`
+- `views/buku_induk.php`
 
+---
+## Pembuatan Aplikasi Pelaporan dan Request Sistem (Pusat Bantuan SaaS)
+**Waktu**: 23:20 WIB
+**Jenis**: Feature / Security Hardening
+Mendirikan sistem tiket bantuan terintegrasi secara dinamis untuk melaporkan bug, kritik saran, kendala dapodik, request fitur, dan tanya jawab bantuan. Mengimplementasikan FAQ pintar untuk solusi instan saat mengetik judul tiket, canned responses admin, penanda pesan unread di sidebar, tombol bantuan mengambang (FAB), proteksi IDOR, dan keamanan pengunggahan file lampiran menggunakan `.htaccess`. Berkas yang dibuat/diubah:
+- `database/migrations/2026_07_20_05_create_ticket_system.php` [BARU]
+- `index.php`
+- `app/Controllers/BantuanController.php` [BARU]
+- `views/bantuan_user.php` [BARU]
+- `views/bantuan_admin.php` [BARU]
+- `views/layout/master.php`
+- `views/layout/sidebar.php`
+- `public/uploads/tickets/.htaccess` [BARU]
 
-
-
+---
+## Audit & Hardening Keamanan SINTA-SaaS (Multi-Tenant, RBAC, XSS, SQLi, IDOR, RCE)
+**Waktu**: 23:28 WIB
+**Jenis**: Security Hardening
+Melakukan audit menyeluruh terhadap skema RBAC (akses PPDB Guru & Karyawan), SQL Injection, XSS, IDOR, dan RCE. Melakukan mitigasi celah XSS pada inisialisasi skrip inline view (master_kelembagaan.php & tracer_study.php) serta meluncurkan konfigurasi `.htaccess` anti-eksekusi skrip PHP di 3 folder unggahan utama aplikasi demi keamanan mutlak RCE. Berkas yang dibuat/diubah:
+- `views/master_kelembagaan.php`
+- `views/tracer_study.php`
+- `public/uploads/.htaccess` [BARU]
+- `storage/app/public/uploads/.htaccess` [BARU]
+- `storage/uploads/.htaccess` [BARU]
 

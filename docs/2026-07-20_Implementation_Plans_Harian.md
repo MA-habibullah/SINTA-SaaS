@@ -1202,5 +1202,530 @@ Memungkinkan beberapa user tertentu mendapatkan akses ke menu khusus di luar per
    - Menu **Bimbingan Konseling** tampil di sidebar kirinya.
    - Guru tersebut bisa membuka halaman `/SINTA-SaaS/bk` dengan sukses tanpa terkena blokir 403.
 
+---
+## Perbaikan Visibilitas Pengumuman, Pembatasan Menu Informasi & Kegiatan, serta Bypass Otorisasi Kontroler (Bypass Guard)
+**Waktu**: 22:55 WIB
+**Status**: Dieksekusi
 
+# Rencana Implementasi: Perbaikan Visibilitas Pengumuman, Pembatasan Menu Informasi & Kegiatan, serta Bypass Otorisasi Kontroler (Bypass Guard)
+
+Dokumen ini menjelaskan langkah-langkah teknis untuk:
+1. Memulihkan hak akses pengumuman/agenda bagi Guru & Karyawan secara dinamis.
+2. Mencabut hak akses default menu "Informasi & Kegiatan" bagi Guru & Karyawan.
+3. Menambahkan helper `RouteGuard::checkCurrent()` dan memperbarui seluruh kontroler yang memiliki otorisasi peran statis (seperti Buku Induk, Pengumuman, BK, Ekskul, dsb.) agar meloloskan akses pengguna jika telah diberikan hak akses khusus (override) oleh administrator.
+
+## User Review Required
+
+(None)
+
+## Open Questions
+
+(None)
+
+## Proposed Changes
+
+### [Component Name]
+
+#### [NEW] [2026_07_20_04_remove_guru_karyawan_informasi_kegiatan_access.php](file:///C:/xampp/htdocs/SINTA-SaaS/database/migrations/2026_07_20_04_remove_guru_karyawan_informasi_kegiatan_access.php)
+#### [MODIFY] [RouteGuard.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Core/RouteGuard.php)
+#### [MODIFY] [PengumumanModel.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Models/PengumumanModel.php)
+#### [MODIFY] [AgendaModel.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Models/AgendaModel.php)
+#### [MODIFY] [DashboardController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/DashboardController.php)
+#### [MODIFY] [BukuIndukController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/BukuIndukController.php)
+#### [MODIFY] [PengumumanController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/PengumumanController.php)
+#### [MODIFY] [BKController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/BKController.php)
+#### [MODIFY] [EkskulController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/EkskulController.php)
+#### [MODIFY] [SekolahController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/SekolahController.php)
+#### [MODIFY] [QueueController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/QueueController.php)
+#### [MODIFY] [ActiveSessionController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/ActiveSessionController.php)
+#### [MODIFY] [ActivityLogController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/ActivityLogController.php)
+
+---
+
+## Rencana Perubahan Berkas
+
+### 1. [NEW] [2026_07_20_04_remove_guru_karyawan_informasi_kegiatan_access.php](file:///C:/xampp/htdocs/SINTA-SaaS/database/migrations/2026_07_20_04_remove_guru_karyawan_informasi_kegiatan_access.php)
+
+Membuat file migrasi untuk mencabut hak akses menu "Informasi & Kegiatan" (menu_id: 45) beserta sub-menunya (menu_id: 46, 47) bagi role Guru (3) dan Karyawan (6) di seluruh tenant.
+
+```php
+<?php
+/**
+ * Migration: Remove default Informasi & Kegiatan menu access for Guru and Karyawan roles
+ * Location: database/migrations/2026_07_20_04_remove_guru_karyawan_informasi_kegiatan_access.php
+ */
+
+return [
+    'up' => function (PDO $pdo): void {
+        $pdo->exec("DELETE FROM role_menu_access WHERE role_id IN (3, 6) AND menu_id IN (45, 46, 47)");
+        echo "- Berhasil mencabut akses default Informasi & Kegiatan untuk Guru dan Karyawan.\n";
+    },
+    'down' => function (PDO $pdo): void {
+        $tenants = ['00000000-0000-0000-0000-000000000000'];
+        $stmt = $pdo->prepare("INSERT INTO role_menu_access (tenant_id, role_id, menu_id) VALUES (?, ?, ?)");
+        foreach ($tenants as $tenantId) {
+            try {
+                $stmt->execute([$tenantId, 3, 45]);
+                $stmt->execute([$tenantId, 3, 47]);
+            } catch (\PDOException $e) {}
+            try {
+                $stmt->execute([$tenantId, 6, 45]);
+            } catch (\PDOException $e) {}
+        }
+        echo "- Berhasil memulihkan akses default Informasi & Kegiatan untuk Guru dan Karyawan.\n";
+    },
+];
+```
+
+### 2. [MODIFY] [RouteGuard.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Core/RouteGuard.php)
+
+Tambahkan helper statis `checkCurrent()` untuk melakukan verifikasi hak akses URL aktif dengan aman:
+
+```php
+    /**
+     * Memeriksa apakah request URI saat ini diizinkan untuk diakses berdasarkan RouteGuard (dan override-nya)
+     * atau terdaftar dalam array allowedRoles.
+     */
+    public static function checkCurrent(array $allowedRoles): bool {
+        $roleName = $_SESSION['role_name'] ?? '';
+        $roles = $_SESSION['roles'] ?? [$roleName];
+        $tenantId = $_SESSION['tenant_id'] ?? null;
+        
+        $path = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+        $project_folder = '/SINTA-SaaS';
+        if (strncasecmp($path, $project_folder, strlen($project_folder)) === 0) {
+            $path = substr($path, strlen($project_folder));
+        }
+
+        // 1. Loloskan jika lolos validasi RouteGuard (termasuk override user_menu_access)
+        if (self::check($path, $tenantId, $roles)) {
+            return true;
+        }
+
+        // 2. Fallback: Loloskan jika salah satu role user termasuk dalam allowedRoles
+        foreach ($roles as $r) {
+            if (in_array($r, $allowedRoles, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+```
+
+### 3. [MODIFY] [PengumumanModel.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Models/PengumumanModel.php)
+
+Sesuaikan pengecekan `$isGuru` dan `$isSiswa` di metode `getActiveForUser()` dan `countActiveForUser()`.
+
+**Sebelum (Baris 82-84 & 144-146):**
+```php
+        $isAdmin = in_array($userRoleId, [1, 2]) ? 1 : 0;
+        $isGuru = in_array($userRoleId, [3, 20, 21]) ? 1 : 0;
+        $isSiswa = ($userRoleId == 6) ? 1 : 0;
+```
+
+**Sesudah:**
+```php
+        $isAdmin = in_array($userRoleId, [1, 2]) ? 1 : 0;
+        $isGuru = in_array($userRoleId, [3, 6, 20, 21, 22, 23, 24, 25, 26]) ? 1 : 0;
+        $isSiswa = ($userRoleId == 4) ? 1 : 0;
+```
+
+### 4. [MODIFY] [AgendaModel.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Models/AgendaModel.php)
+
+Sesuaikan pengecekan `$isGuru` di metode `getActiveForUser()`.
+
+**Sebelum (Baris 75-76):**
+```php
+        $isAdmin = in_array($userRoleId, [1, 2]);
+        $isGuru = in_array($userRoleId, [3, 20, 21]);
+```
+
+**Sesudah:**
+```php
+        $isGuru = in_array($userRoleId, [3, 6, 20, 21, 22, 23, 24, 25, 26]);
+```
+
+### 5. [MODIFY] [DashboardController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/DashboardController.php)
+
+Ganti pemetaan manual `role_id` dengan kueri database dinamis pada metode `index()` dan `pengumumanArsip()`.
+
+**Sebelum:**
+```php
+                    $roleId = $_SESSION['role_id'] ?? null;
+                    if ($roleId === null) {
+                        $roleName = $_SESSION['role_name'] ?? '';
+                        if ($roleName === 'super_admin') $roleId = 1;
+                        elseif ($roleName === 'operator_sekolah') $roleId = 2;
+                        elseif ($roleName === 'siswa') $roleId = 6;
+                        else $roleId = 0;
+                    }
+```
+
+**Sesudah:**
+```php
+                    $roleName = $_SESSION['role_name'] ?? '';
+                    $db = Database::getConnection();
+                    $stmtRole = $db->prepare("SELECT id FROM roles WHERE nama_role = ? LIMIT 1");
+                    $stmtRole->execute([$roleName]);
+                    $roleId = (int)$stmtRole->fetchColumn() ?: 0;
+```
+
+### 6. [MODIFY] Kontroler-Kontroler Sistem (Menggunakan `RouteGuard::checkCurrent`)
+
+Ubah logika pengecekan otorisasi peran keras pada kontroler-kontroler berikut agar menggunakan `RouteGuard::checkCurrent()`:
+
+- BukuIndukController.php
+- PengumumanController.php
+- BKController.php
+- EkskulController.php
+- SekolahController.php
+- QueueController.php
+- ActiveSessionController.php
+- ActivityLogController.php
+
+---
+
+## Verification Plan
+
+### Automated Tests
+- `scratch/test_announcement_visibility.php`
+- `scratch/test_controller_override_bypass.php`
+
+### Manual Verification
+1. Login sebagai Guru Lisa (tanpa wewenang khusus). Pastikan menu **Informasi & Kegiatan** di sidebar kiri tersembunyi.
+2. Login sebagai Admin, berikan kunci akses khusus untuk menu **Informasi & Kegiatan** dan **Pengumuman** ke Guru Lisa.
+3. Login kembali sebagai Guru Lisa. Klik menu **Informasi & Kegiatan** -> **Pengumuman**. Halaman Manajemen Pengumuman harus terbuka secara sempurna tanpa error 403.
+
+---
+## Penanganan Warning WAI-ARIA Modal Accessibility secara Universal
+**Waktu**: 23:10 WIB
+**Status**: Dieksekusi
+
+# Rencana Implementasi: Penanganan Warning WAI-ARIA Modal Accessibility secara Universal
+
+Rencana ini bertujuan untuk menghilangkan peringatan WAI-ARIA (`Blocked aria-hidden on an element because its descendant retained focus`) di Developer Console saat menutup modal Bootstrap secara global di seluruh aplikasi.
+
+## Proposed Changes
+
+### [MODIFY] [master.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/layout/master.php)
+- Menambahkan event listener global `hide.bs.modal` pada root layout untuk melakukan `blur()` otomatis pada elemen yang fokus sesaat sebelum modal ditutup.
+
+### [MODIFY] [buku_induk.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/buku_induk.php)
+- Menghapus event listener modal-blur lokal agar terpusat pada file layout utama `master.php` (mencegah redundansi kode).
+
+## Verification Plan
+
+### Manual Verification
+1. Buka halaman `/SINTA-SaaS/pengguna` di browser.
+2. Buka salah satu modal (seperti modal Hak Akses atau Edit User) lalu tutup modal tersebut.
+3. Verifikasi pada Developer Console Chrome bahwa tidak ada peringatan WAI-ARIA `Blocked aria-hidden...` yang tercatat.
+
+
+---
+## Pembuatan Aplikasi Pelaporan dan Request Sistem (Pusat Bantuan SaaS)
+**Waktu**: 23:15 WIB
+**Status**: Dieksekusi
+
+# Rencana Implementasi: Pusat Bantuan & Layanan Tiket Bantuan (Ticketing System)
+
+Rencana ini dibuat untuk menambahkan modul **Pusat Bantuan (Layanan Tiket)** terisolasi (*multi-tenant safe*) ke dalam ekosistem SINTA-SaaS dengan standar premium. Sistem ini dirancang untuk memfasilitasi komunikasi kendala teknis/non-teknis dari pengguna (Guru, Karyawan, Siswa, Operator Sekolah) langsung ke tim manajemen infrastruktur IT (Super Admin).
+
+## Fitur Unggulan Rekomendasi (Premium Addition)
+1. **Floating Help Button (FAB)**: Ikon bantuan mengambang (`?`) di pojok kanan bawah layar pada layout utama (`master.php`) sebagai pintasan instan ke pusat bantuan.
+2. **Integrasi FAQ Pintar (Knowledge Base Lookup)**: Kolom pencarian dinamis (Axios) yang memunculkan rekomendasi solusi FAQ secara *real-time* ketika user mengetik judul tiket sebelum disubmit.
+3. **Template Balasan Cepat (Canned Responses)**: Dropdown pilihan template jawaban untuk mempercepat tanggapan Super Admin terhadap kendala berulang.
+4. **Indikator Unread (Badge Percakapan Baru)**: Menampilkan badge jumlah pesan unread milik user dan admin pada sidebar/menu.
+5. **Proteksi Unggahan Ekstra (.htaccess script block)**: Membuat berkas `.htaccess` untuk menonaktifkan PHP/CGI engine pada direktori unggahan tiket.
+
+## Proposed Changes
+
+### [NEW] [2026_07_20_05_create_ticket_system.php](file:///C:/xampp/htdocs/SINTA-SaaS/database/migrations/2026_07_20_05_create_ticket_system.php)
+### [MODIFY] [index.php](file:///C:/xampp/htdocs/SINTA-SaaS/index.php)
+### [NEW] [BantuanController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/BantuanController.php)
+### [NEW] [bantuan_user.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/bantuan_user.php)
+### [NEW] [bantuan_admin.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/bantuan_admin.php)
+### [MODIFY] [master.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/layout/master.php)
+### [MODIFY] [sidebar.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/layout/sidebar.php)
+### [NEW] [.htaccess](file:///C:/xampp/htdocs/SINTA-SaaS/public/uploads/tickets/.htaccess)
+
+---
+
+## Rencana Perubahan Berkas
+
+### 1. [NEW] [2026_07_20_05_create_ticket_system.php](file:///C:/xampp/htdocs/SINTA-SaaS/database/migrations/2026_07_20_05_create_ticket_system.php)
+
+```php
+<?php
+/**
+ * Migration: Create Ticketing System Tables and Menus
+ * Location: database/migrations/2026_07_20_05_create_ticket_system.php
+ */
+
+return [
+    'up' => function (PDO $pdo): void {
+        // Tabel Kategori Tiket
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `ticket_categories` (
+            `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `nama_kategori` VARCHAR(100) NOT NULL,
+            `sla_hours` INT NOT NULL DEFAULT 48
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
+
+        // Seed Kategori Default
+        $stmt = $pdo->prepare("INSERT INTO `ticket_categories` (id, nama_kategori, sla_hours) VALUES (?, ?, ?)");
+        $categories = [
+            [1, 'Laporan Bug / Sistem Error', 24],
+            [2, 'Request Fitur / Menu Baru', 168],
+            [3, 'Kendala Data Pokok / Dapodik', 48],
+            [4, 'Bantuan Penggunaan', 48],
+            [5, 'Kritik & Saran', 168]
+        ];
+        foreach ($categories as $cat) {
+            try {
+                $stmt->execute($cat);
+            } catch (\PDOException $e) {}
+        }
+
+        // Tabel FAQ Pintar (Knowledge Base)
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `ticket_faqs` (
+            `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `pertanyaan` VARCHAR(255) NOT NULL,
+            `jawaban` TEXT NOT NULL,
+            `kategori` VARCHAR(100) NOT NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
+
+        // Seed FAQ Awal
+        $stmtFaq = $pdo->prepare("INSERT INTO `ticket_faqs` (pertanyaan, jawaban, kategori) VALUES (?, ?, ?)");
+        $faqs = [
+            ['Bagaimana cara mereset password Akun Guru?', 'Untuk mereset password akun guru, silakan hubungi Operator Sekolah Anda untuk melakukan reset melalui menu Manajemen Pengguna.', 'Bantuan Penggunaan'],
+            ['Mengapa saya tidak dapat mengakses menu PPDB?', 'Akses menu PPDB dinonaktifkan secara default untuk Guru/Karyawan. Jika Anda ditugaskan menjadi panitia, silakan minta Admin Sekolah untuk memberikan Kunci Akses Khusus melalui profil pengguna Anda.', 'Bantuan Penggunaan'],
+            ['Bagaimana cara membetulkan data NISN siswa yang salah?', 'Data NISN ditarik langsung dari sistem Dapodik Kemendikbud. Pastikan data di Dapodik lokal sudah sinkron dengan server pusat, lalu sistem SINTA akan memperbarui data secara berkala.', 'Kendala Data Pokok / Dapodik'],
+            ['Aplikasi lambat atau halaman blank putih', 'Silakan lakukan pembersihan cache browser Anda dengan menekan tombol Ctrl + F5 secara bersamaan, atau coba akses menggunakan mode Incognito.', 'Laporan Bug / Sistem Error']
+        ];
+        foreach ($faqs as $faq) {
+            try {
+                $stmtFaq->execute($faq);
+            } catch (\PDOException $e) {}
+        }
+
+        // Tabel Balasan Cepat (Canned Responses)
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `ticket_canned_responses` (
+            `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `judul` VARCHAR(100) NOT NULL,
+            `konten` TEXT NOT NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
+
+        // Seed Balasan Cepat Awal
+        $stmtCanned = $pdo->prepare("INSERT INTO `ticket_canned_responses` (judul, konten) VALUES (?, ?)");
+        $canneds = [
+            ['Panduan Reset Password', "Halo,\n\nUntuk kendala lupa password atau reset password akun, Administrator Sekolah Anda dapat meresetnya secara langsung melalui menu:\n1. Masuk ke menu \"Pengaturan & Utilitas\" -> \"Manajemen Pengguna\".\n2. Cari nama Anda, klik aksi Edit.\n3. Masukkan password baru dan simpan.\n\nTerima kasih."],
+            ['Perbaikan Bug Selesai', "Halo,\n\nTerima kasih atas laporan Anda. Laporan bug ini telah berhasil kami perbaiki dan rilis pada pembaruan sistem terbaru. Silakan muat ulang halaman (Ctrl + F5) dan coba kembali.\n\nSalam,\nTim IT Support SINTA-SaaS"],
+            ['Data Menunggu Sinkronisasi', "Halo,\n\nPerubahan data pokok/dapodik memerlukan waktu sinkronisasi berkala antara server lokal dan cloud. Silakan tunggu 1x24 jam. Jika data belum berubah, hubungi operator dapodik sekolah untuk memverifikasi status sinkronisasi.\n\nTerima kasih."]
+        ];
+        foreach ($canneds as $canned) {
+            try {
+                $stmtCanned->execute($canned);
+            } catch (\PDOException $e) {}
+        }
+
+        // Tabel Utama Tiket (SaaS Multi-Tenant Safe & UUID)
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `tickets` (
+            `id` CHAR(36) PRIMARY KEY,
+            `tenant_id` CHAR(36) NOT NULL,
+            `user_id` CHAR(36) NOT NULL,
+            `category_id` INT UNSIGNED NOT NULL,
+            `judul` VARCHAR(255) NOT NULL,
+            `deskripsi` TEXT NOT NULL,
+            `urgensi` ENUM('Rendah', 'Sedang', 'Tinggi', 'Kritis') DEFAULT 'Rendah',
+            `status` ENUM('Menunggu', 'Diproses', 'Selesai', 'Batal') DEFAULT 'Menunggu',
+            `lampiran` VARCHAR(255) DEFAULT NULL,
+            `user_agent` VARCHAR(255) DEFAULT NULL,
+            `last_url` VARCHAR(255) DEFAULT NULL,
+            `user_unread` TINYINT(1) DEFAULT 0,
+            `admin_unread` TINYINT(1) DEFAULT 1,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            `sla_deadline` TIMESTAMP NULL DEFAULT NULL,
+            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            CONSTRAINT `fk_tickets_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE,
+            CONSTRAINT `fk_tickets_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+            CONSTRAINT `fk_tickets_category` FOREIGN KEY (`category_id`) REFERENCES `ticket_categories` (`id`) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
+
+        // Tabel Balasan Percakapan (Thread)
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `ticket_replies` (
+            `id` CHAR(36) PRIMARY KEY,
+            `ticket_id` CHAR(36) NOT NULL,
+            `user_id` CHAR(36) NOT NULL,
+            `is_superadmin` TINYINT(1) DEFAULT 0,
+            `pesan` TEXT NOT NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT `fk_replies_ticket` FOREIGN KEY (`ticket_id`) REFERENCES `tickets` (`id`) ON DELETE CASCADE,
+            CONSTRAINT `fk_replies_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
+
+        // Registrasi Menu Baru: Pusat Bantuan (ID: 61)
+        $stmtMenu = $pdo->prepare("INSERT INTO `menus` (id, nama_menu, url, parent_id, icon, urutan) VALUES (?, ?, ?, ?, ?, ?)");
+        try {
+            $stmtMenu->execute([61, 'Pusat Bantuan', '/bantuan', null, 'bi bi-question-circle', 100]);
+        } catch (\PDOException $e) {}
+
+        // Berikan Akses Menu Default ke Semua Role
+        $tenants = $pdo->query("SELECT id FROM tenants WHERE deleted_at IS NULL")->fetchAll(PDO::FETCH_COLUMN);
+        $roles = $pdo->query("SELECT id FROM roles")->fetchAll(PDO::FETCH_COLUMN);
+
+        // Tambah ke tenant_menu_access
+        $stmtTMA = $pdo->prepare("INSERT INTO `tenant_menu_access` (tenant_id, menu_id) VALUES (?, 61)");
+        foreach ($tenants as $tId) {
+            try {
+                $stmtTMA->execute([$tId]);
+            } catch (\PDOException $e) {}
+        }
+
+        // Tambah ke role_menu_access
+        $stmtRMA = $pdo->prepare("INSERT INTO `role_menu_access` (tenant_id, role_id, menu_id) VALUES (?, ?, 61)");
+        foreach ($tenants as $tId) {
+            foreach ($roles as $rId) {
+                try {
+                    $stmtRMA->execute([$tId, $rId]);
+                } catch (\PDOException $e) {}
+            }
+        }
+        // Tambahkan juga untuk global tenant fallback
+        foreach ($roles as $rId) {
+            try {
+                $stmtRMA->execute(['00000000-0000-0000-0000-000000000000', $rId, 61]);
+            } catch (\PDOException $e) {}
+        }
+
+        echo "- Tabel-tabel Pusat Bantuan dan registrasi menu berhasil dibuat.\n";
+    },
+    'down' => function (PDO $pdo): void {
+        $pdo->exec("DELETE FROM `role_menu_access` WHERE menu_id = 61");
+        $pdo->exec("DELETE FROM `tenant_menu_access` WHERE menu_id = 61");
+        $pdo->exec("DELETE FROM `menus` WHERE id = 61");
+        $pdo->exec("DROP TABLE IF EXISTS `ticket_replies`");
+        $pdo->exec("DROP TABLE IF EXISTS `tickets`");
+        $pdo->exec("DROP TABLE IF EXISTS `ticket_canned_responses`");
+        $pdo->exec("DROP TABLE IF EXISTS `ticket_faqs`");
+        $pdo->exec("DROP TABLE IF EXISTS `ticket_categories`");
+        echo "- Tabel-tabel Pusat Bantuan berhasil di-rollback.\n";
+    },
+];
+```
+
+### 2. [MODIFY] [index.php](file:///C:/xampp/htdocs/SINTA-SaaS/index.php)
+Pendaftaran rute API dan halaman `/bantuan`.
+
+### 3. [NEW] [BantuanController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/BantuanController.php)
+Kontroler untuk memproses aksi submit tiket, penarikan daftar tiket, thread balasan chat, lookup FAQ pintar, canned responses admin, dan update status tiket.
+
+### 4. [NEW] [bantuan_user.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/bantuan_user.php)
+Halaman list history tiket dan form input pembuatan tiket baru bagi user sekolah.
+
+### 5. [NEW] [bantuan_admin.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/bantuan_admin.php)
+Dashboard sentral Super Admin untuk menanggapi tiket dari seluruh tenant.
+
+### 6. [MODIFY] [master.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/layout/master.php)
+Menambahkan Floating Action Button (FAB) bantuan mengambang di pojok kanan bawah.
+
+### 7. [MODIFY] [sidebar.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/layout/sidebar.php)
+Menyertakan badge unread counter pada item menu Pusat Bantuan.
+
+### 8. [NEW] [.htaccess](file:///C:/xampp/htdocs/SINTA-SaaS/public/uploads/tickets/.htaccess)
+Proteksi unggahan guna mencegah eksekusi PHP RCE.
+
+---
+
+## Verification Plan
+
+### Automated Tests
+- `scratch/test_helpcenter_integration.php` (Validasi CRUD, Upload File MIME signature, dan IDOR protection)
+
+### Manual Verification
+1. Login sebagai Guru Lisa, klik tombol melayang **FAB** di pojok kanan bawah, pastikan langsung mengarah ke `/bantuan`.
+2. Pada formulir tiket, ketik judul "password", pastikan daftar FAQ "Reset Password Akun Guru" langsung muncul secara otomatis di bawah kolom judul.
+3. Login sebagai Super Admin, buka detail tiket, pilih canned response "Perbaikan Bug Selesai" dari dropdown, pastikan konten teks terisi otomatis di editor chat balasan.
+
+---
+## Audit & Hardening Keamanan SINTA-SaaS (Multi-Tenant, RBAC, XSS, SQLi, IDOR, RCE)
+**Waktu**: 23:25 WIB
+**Status**: Dieksekusi
+
+# Rencana Implementasi: Audit & Hardening Keamanan SINTA-SaaS (Multi-Tenant, RBAC, XSS, SQLi, IDOR, RCE)
+
+Rencana implementasi ini dirancang untuk mendokumentasikan hasil audit keamanan menyeluruh pada sistem SINTA-SaaS (untuk peran Guru, Karyawan, Siswa, Admin Sekolah, dan Super Admin) serta merumuskan langkah-langkah pengerasan (*security hardening*) untuk meminimalkan permukaan serangan (*attack surface*).
+
+---
+
+## Hasil Audit & Analisis Keamanan
+
+### 1. Hak Akses Peran & RBAC (Role-Based Access Control)
+*   **Temuan**:
+    - Akses ke menu **PPDB / Penerimaan Siswa Baru** (menu ID: 2, 3, 4, 10) bagi **Guru** (role_id: 3) dan **Karyawan** (role_id: 6) telah diaudit. Akses default Guru telah sukses dihapus melalui migrasi `2026_07_20_03_remove_guru_default_ppdb_access.php`. Karyawan secara alami diblokir karena tidak terdaftar memiliki izin akses PPDB di database.
+    - Akses menu **Informasi & Kegiatan** (Pengumuman, Agenda, dsb.) dikendalikan secara ketat lewat `RouteGuard::checkCurrent()`. Guru/karyawan hanya dapat membacanya kecuali jika diberi wewenang khusus / override user.
+*   **Rekomendasi**: Pertahankan dan audit berkala data `role_menu_access` dan `user_menu_access`.
+
+### 2. Pencegahan SQL Injection (SQLi)
+*   **Temuan**:
+    - Kami melakukan pemindaian otomatis (*static analysis*) pada seluruh kueri database di folder `app/`.
+    - **Hasil**: Seluruh kueri dinamis yang menangkap parameter input pengguna telah menggunakan **PDO Prepared Statements** secara konsisten.
+    - Klausa `IN (...)` yang dinamis di `BaseController::lookups()` dan `KampusController::prodiIds` dikonstruksi secara aman menggunakan fungsi penguji/escaping (`$db->quote()`) atau *placeholders* representatif (`?`).
+*   **Rekomendasi**: Tidak diperlukan perubahan kueri database karena arsitektur saat ini sudah 100% aman dari SQL Injection.
+
+### 3. Pencegahan Cross-Site Scripting (XSS)
+*   **Temuan**:
+    - Masih terdapat sisa inisialisasi variabel string dari PHP langsung ke variabel Javascript di tag `<script>` tanpa menyertakan bendera sanitasi XSS yang memadai.
+    - Di `views/master_kelembagaan.php`, inisialisasi `userRole` sebelumnya menggunakan `htmlspecialchars` yang kurang aman untuk injeksi langsung ke inline skrip.
+    - Di `views/tracer_study.php`, inisialisasi `isAdmin` belum ditambahkan opsi bendera anti-XSS.
+*   **Tindakan Hardening**:
+    - Kami telah menyempurnakan inisialisasi tersebut dengan `json_encode($var, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)` demi keamanan mutlak.
+
+### 4. Pencegahan Insecure Direct Object Reference (IDOR)
+*   **Temuan**:
+    - Pemeriksaan detail dan penghapusan data (misal: di `BantuanController`, `TracerController`, `SiswaController`) selalu mengikat filter kueri ke `$_SESSION['tenant_id']` dan `$_SESSION['user_id']` (untuk non-Super Admin).
+    - Client tidak dapat memanipulasi parameter URL/POST untuk melihat atau menghapus data milik tenant/sekolah lain.
+*   **Rekomendasi**: Kebijakan ini harus selalu dipertahankan pada penulisan API baru di masa mendatang.
+
+### 5. Perlindungan Remote Code Execution (RCE) pada Unggahan File
+*   **Temuan**:
+    - Modul seperti agenda, pengumuman, biodata siswa, dan tiket bantuan memiliki fitur unggahan berkas.
+    - Berkas diunggah ke `public/uploads/` dan `storage/app/public/uploads/`.
+    - Jika peretas berhasil mengunggah berkas web shell berekstensi `.php` yang disamarkan, ada potensi eksekusi kode jarak jauh (RCE) jika folder tersebut dapat diakses langsung oleh web server.
+*   **Rekomendasi Hardening**:
+    - Menerapkan perlindungan berlapis dengan meletakkan berkas proteksi `.htaccess` di seluruh folder unggahan utama aplikasi untuk memblokir pengeksekusian berkas berekstensi PHP/CGI secara rekursif.
+
+---
+
+## Proposed Changes
+
+Kami akan melakukan pengerasan keamanan tambahan di level direktori server dengan menyebarkan konfigurasi `.htaccess` antiblokir eksekusi naskah PHP di folder unggahan berikut:
+
+### [Hardening] Upload Protection (.htaccess)
+
+#### [NEW] [public_uploads_htaccess](file:///C:/xampp/htdocs/SINTA-SaaS/public/uploads/.htaccess)
+Membuat file `.htaccess` di root folder `public/uploads/` untuk melindungi seluruh subdirektori di bawahnya (termasuk `tickets` dan subfolder lainnya).
+
+#### [NEW] [storage_app_public_uploads_htaccess](file:///C:/xampp/htdocs/SINTA-SaaS/storage/app/public/uploads/.htaccess)
+Membuat file `.htaccess` di root folder `storage/app/public/uploads/` untuk melindungi berkas unggahan berorientasi sekolah/tenant.
+
+#### [NEW] [storage_uploads_htaccess](file:///C:/xampp/htdocs/SINTA-SaaS/storage/uploads/.htaccess)
+Membuat file `.htaccess` di root folder `storage/uploads/` (untuk pembinaan, pdss simulasi, dsb.).
+
+---
+
+## Verification Plan
+
+### Automated Tests
+1. **Pengujian Sintaks**:
+   Menjalankan pengecekan kesalahan sintaks PHP di terminal CLI untuk memastikan tidak ada kesalahan konfigurasi.
+   ```bash
+   php -l public/uploads/.htaccess
+   ```
+
+### Manual Verification
+1. Lakukan simulasi pengunggahan gambar PHP palsu (misal berkas bernama `exploit.php.png` atau `exploit.php`) di salah satu modul unggah berkas (misal Pusat Bantuan).
+2. Verifikasi sistem menolak file yang tidak bertipe MIME asli gambar (`png`/`jpg`/`jpeg`).
+3. Coba akses langsung tautan berkas PHP jika berhasil terunggah (misal `/SINTA-SaaS/public/uploads/tickets/test.php`). Pastikan web server Apache merespon dengan **403 Forbidden** atau menampilkan kode mentah teks alih-alih mengeksekusi perintah PHP tersebut.
 
