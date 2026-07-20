@@ -308,6 +308,16 @@ Merapikan urutan checklist menu pada modal Hak Akses agar tersusun secara hirark
 - `app/Controllers/AksesController.php`
 - `views/pengguna_index.php`
 
+---
+## Perbaikan Mount Vue Dashboard Non-Admin & Pencabutan Akses PPDB Guru Default
+**Waktu**: 18:14 WIB
+**Jenis**: Bug Fix / Security Hardening
+(1) Memperbaiki kendala tampilan dashboard guru yang rusak (tampil kode kurung reaktif mentah seperti `{{ stats... }}`). Root cause: Ada tag `<style>` yang dibuka di `dashboard_view.php` tetapi tag penutup `</style>` miliknya secara tidak sengaja dibungkus di dalam blok PHP `if ($isAdminOrSuper)`. Akibatnya, saat guru/karyawan (non-admin) login, tag penutup `</style>` tidak tercetak sehingga browser menganggap seluruh tag HTML & `<script>` Vue setelahnya sebagai kode CSS biasa. Solusi: Memindahkan tag penutup `</style>` keluar dari blok pengondisian PHP agar selalu tercetak secara universal.
+(2) Membatasi hak akses PPDB agar guru/karyawan tidak bisa melihat menu PPDB secara default tanpa "kunci akses khusus". Solusi: Membuat file migrasi baru `2026_07_20_03_remove_guru_default_ppdb_access.php` yang menghapus record menu PPDB (menu_id: 2, 3, 4, 10) untuk role Guru dari tabel `role_menu_access` di database. Berkas yang dibuat/diubah:
+- `views/dashboard_view.php`
+- `database/migrations/2026_07_20_03_remove_guru_default_ppdb_access.php` [BARU]
+
+
 
 
 
