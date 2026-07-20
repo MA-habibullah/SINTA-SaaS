@@ -151,7 +151,13 @@ class Kelembagaan extends Model {
         $total = (int)$countStmt->fetchColumn();
 
         // Ambil data halaman aktif dengan pagination
-        $orderBy = " ORDER BY k.id DESC"; // default sort
+        if ($table === 'tahun_ajaran') {
+            $orderBy = " ORDER BY k.tahun_ajaran DESC";
+        } elseif ($table === 'angkatan') {
+            $orderBy = " ORDER BY k.tahun_angkatan DESC";
+        } else {
+            $orderBy = " ORDER BY k.id DESC"; // default sort
+        }
         $limitClause = " LIMIT :limit OFFSET :offset";
         
         $dataStmt = $this->db->prepare($selectSql . $whereClause . $orderBy . $limitClause);
@@ -197,19 +203,26 @@ class Kelembagaan extends Model {
         if ($table === 'kelas') {
             $extraSelect = ", id_jenjang";
         }
+
+        $orderSql = "ORDER BY nama ASC";
+        if ($table === 'tahun_ajaran') {
+            $orderSql = "ORDER BY " . $this->allowedTables[$table]['name_field'] . " DESC";
+        } elseif ($table === 'angkatan') {
+            $orderSql = "ORDER BY " . $this->allowedTables[$table]['name_field'] . " DESC";
+        }
         
         if ($isSuperAdmin) {
             $sql = "SELECT id, " . $this->allowedTables[$table]['name_field'] . " AS nama {$extraSelect}
                     FROM {$table} 
                     WHERE deleted_at IS NULL AND is_active = 1 
-                    ORDER BY nama ASC";
+                    {$orderSql}";
             $stmt = $this->db->prepare($sql);
             $stmt->execute();
         } else {
             $sql = "SELECT id, " . $this->allowedTables[$table]['name_field'] . " AS nama {$extraSelect}
                     FROM {$table} 
                     WHERE tenant_id = :tenant_id AND deleted_at IS NULL AND is_active = 1 
-                    ORDER BY nama ASC";
+                    {$orderSql}";
             $stmt = $this->db->prepare($sql);
             $stmt->execute(['tenant_id' => $this->tenantId]);
         }
