@@ -1116,3 +1116,54 @@ HTTP 4xx tersebut ditangkap Axios sebagai *network error*, sehingga mencetak bar
 *   Periksa DevTools Console: pastikan **tidak ada lagi log merah** `GET /api/v1/pdss/simulasi/setting 400 (Bad Request)` atau `[AXIOS API ERROR]`.
 *   Klik tombol toggle simulasi untuk Simulasi 2 sebelum Simulasi 1 dikunci: pastikan modal SweetAlert **Perhatian** muncul dengan pesan sequential lock yang jelas, tanpa log merah di console.
 
+---
+## Penanganan Error Jaringan (Network Error) pada Pengunggahan Berkas Langkah 5
+**Waktu**: 17:34 WIB
+**Status**: Dieksekusi
+
+# Implementation Plan: Penanganan Error Jaringan (Network Error) pada Pengunggahan Berkas Langkah 5
+
+Menampilkan pesan panduan/notifikasi yang informatif jika terjadi kegagalan jaringan (Network Error) saat mengunggah banyak berkas secara bersamaan pada Langkah 5 pendaftaran/edit data siswa.
+
+---
+
+## 1. Root Cause
+
+Mengapa kegagalan koneksi ("Network Error") sering terjadi saat mengunggah beberapa file sekaligus di perangkat mobile/OS lama?
+1. **Batas Concurrent Connection & Limitasi Server (Cloudflare Rate Limiting/Web Server Limits)**:
+   Proses unggah dokumen pada Langkah 5 di `tambah_siswa.php` dirancang untuk mengunggah berkas secara berurutan (*sequentially*):
+   ```javascript
+   for (let i = 0; i < filesToUpload.length; i++) {
+       // axios.post(...)
+       // delay 500ms
+   }
+   ```
+   Meskipun menggunakan delay 500ms, mengirimkan beberapa request POST berisi file gambar/PDF berukuran megabyte secara berturut-turut dari IP yang sama dalam waktu singkat sering dianggap sebagai aktivitas spam/serangan oleh firewall server, web server (Apache/LiteSpeed rate limit), atau CDN seperti Cloudflare. Ini menyebabkan koneksi ditutup sepihak oleh server, memicu "Network Error" pada Axios.
+2. **Keterbatasan Memori dan Jaringan Seluler Perangkat Mobile**:
+   Di perangkat mobile lama atau jaringan seluler yang kurang stabil, memproses kompresi dan mengunggah beberapa file besar secara berurutan dapat memicu kehabisan memori (Out-Of-Memory) pada browser atau pemutusan koneksi sementara oleh sistem operasi/browser untuk menghemat daya.
+
+Pemberitahuan bawaan "Network Error" sangat umum dan membingungkan pengguna. Menggantinya dengan pesan instruksi yang jelas membantu pengguna menyelesaikan proses unggah tanpa frustrasi.
+
+---
+
+## 2. Rencana Perubahan (Proposed Changes)
+
+### views/tambah_siswa.php
+#### [MODIFY] tambah_siswa.php
+*   Memperbarui blok `catch (err)` di dalam fungsi `saveCurrentStep` untuk mendeteksi apakah pesan error yang ditangkap adalah "Network Error".
+*   Jika terdeteksi "Network Error", ubah pesan error menjadi:
+    `"Penting: Harap upload 1 file lalu klik Simpan, dan ulangi proses tersebut untuk meng-upload file berikutnya satu per satu."`
+
+---
+
+## 3. Verification Plan
+
+### Verifikasi Manual
+1. Buka halaman Edit Siswa di localhost: `http://localhost/SINTA-SaaS/siswa/edit` (atau menu terkait).
+2. Pergi ke **Langkah 5: Registrasi, Keluar & Dokumen Berkas**.
+3. Pilih lebih dari 2 berkas secara bersamaan (misal Kartu Keluarga dan Akta Kelahiran).
+4. Untuk menyimulasikan kegagalan jaringan, matikan koneksi internet (atau set status "Offline" di Network tab DevTools) tepat setelah mengklik tombol Simpan/Unggah.
+5. Pastikan modal popup SweetAlert "Penyimpanan Gagal" muncul dengan pesan:
+   `"Penting: Harap upload 1 file lalu klik Simpan, dan ulangi proses tersebut untuk meng-upload file berikutnya satu per satu."`
+
+

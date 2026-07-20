@@ -2674,6 +2674,8 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                         errMsg = "Total ukuran dokumen terlalu besar dan ditolak oleh server. Silakan unggah satu per satu.";
                     } else if (err.response && (err.response.status === 522 || err.response.status === 524)) {
                         errMsg = "Koneksi terputus (Timeout) saat memproses file. Jangan khawatir, file Anda sedang diunggah secara perlahan. Jika gagal, silakan coba unggah satu per satu.";
+                    } else if (err.message && err.message.toLowerCase().includes('network error')) {
+                        errMsg = "Penting: Harap upload 1 file lalu klik Simpan, dan ulangi proses tersebut untuk meng-upload file berikutnya satu per satu.";
                     }
 
                     Swal.fire({
