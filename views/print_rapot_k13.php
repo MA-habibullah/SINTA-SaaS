@@ -97,18 +97,31 @@
         <tbody>
             <?php 
             if (!empty($grades)): 
-                foreach ($grades as $index => $g):
-                    $detail = !empty($g['nilai_detail_json']) ? json_decode($g['nilai_detail_json'], true) : [];
-                    
-                    $pNilai = isset($detail['pengetahuan_nilai']) && $detail['pengetahuan_nilai'] !== '' ? $detail['pengetahuan_nilai'] : '-';
-                    $pPred = isset($detail['pengetahuan_predikat']) && $detail['pengetahuan_predikat'] !== '' ? $detail['pengetahuan_predikat'] : '-';
-                    $pDesk = isset($detail['pengetahuan_deskripsi']) && $detail['pengetahuan_deskripsi'] !== '' ? $detail['pengetahuan_deskripsi'] : '-';
-                    
-                    $kNilai = isset($detail['keterampilan_nilai']) && $detail['keterampilan_nilai'] !== '' ? $detail['keterampilan_nilai'] : '-';
-                    $kPred = isset($detail['keterampilan_predikat']) && $detail['keterampilan_predikat'] !== '' ? $detail['keterampilan_predikat'] : '-';
-                    $kDesk = isset($detail['keterampilan_deskripsi']) && $detail['keterampilan_deskripsi'] !== '' ? $detail['keterampilan_deskripsi'] : '-';
-                    
-                    $kkm = !empty($g['kkm']) ? floatval($g['kkm']) : '-';
+                // Grouping grades by kelompok_id
+                $groupedGrades = [];
+                foreach ($grades as $g) {
+                    $kel = !empty($g['kelompok_id']) ? $g['kelompok_id'] : 'A. Kelompok Mata Pelajaran Umum';
+                    $groupedGrades[$kel][] = $g;
+                }
+
+                foreach ($groupedGrades as $groupHeader => $gList):
+            ?>
+            <tr style="background-color: #f2f2f2; font-weight: bold;">
+                <td colspan="9" style="padding: 6px; font-size: 10pt; color: #000;"><?= htmlspecialchars($groupHeader) ?></td>
+            </tr>
+            <?php
+                    foreach ($gList as $index => $g):
+                        $detail = !empty($g['nilai_detail_json']) ? json_decode($g['nilai_detail_json'], true) : [];
+                        
+                        $pNilai = isset($detail['nilai_pengetahuan']) ? $detail['nilai_pengetahuan'] : (isset($detail['pengetahuan_nilai']) ? $detail['pengetahuan_nilai'] : ($g['nilai_akhir'] ?? '-'));
+                        $pPred = isset($detail['predikat_pengetahuan']) ? $detail['predikat_pengetahuan'] : (isset($detail['pengetahuan_predikat']) ? $detail['pengetahuan_predikat'] : ($g['predikat'] ?? '-'));
+                        $pDesk = isset($detail['deskripsi_pengetahuan']) ? $detail['deskripsi_pengetahuan'] : (isset($detail['pengetahuan_deskripsi']) ? $detail['pengetahuan_deskripsi'] : ($g['deskripsi'] ?? '-'));
+                        
+                        $kNilai = isset($detail['nilai_keterampilan']) ? $detail['nilai_keterampilan'] : (isset($detail['keterampilan_nilai']) ? $detail['keterampilan_nilai'] : ($g['nilai_akhir'] ?? '-'));
+                        $kPred = isset($detail['predikat_keterampilan']) ? $detail['predikat_keterampilan'] : (isset($detail['keterampilan_predikat']) ? $detail['keterampilan_predikat'] : ($g['predikat'] ?? '-'));
+                        $kDesk = isset($detail['deskripsi_keterampilan']) ? $detail['deskripsi_keterampilan'] : (isset($detail['keterampilan_deskripsi']) ? $detail['keterampilan_deskripsi'] : ($g['deskripsi'] ?? '-'));
+                        
+                        $kkm = !empty($g['kkm']) ? floatval($g['kkm']) : '-';
             ?>
             <tr>
                 <td class="text-center"><?= $index + 1 ?></td>
@@ -122,6 +135,7 @@
                 <td style="font-size: 9pt;"><?= htmlspecialchars($kDesk) ?></td>
             </tr>
             <?php 
+                    endforeach;
                 endforeach;
             else: 
             ?>

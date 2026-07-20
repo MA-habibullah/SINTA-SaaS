@@ -63,27 +63,40 @@
             $jumlahNilai = 0;
             $count = 0;
             if (!empty($grades)): 
-                foreach ($grades as $index => $g):
-                    $nilaiAkhir = floatval($g['nilai_akhir'] ?? 0);
-                    $jumlahNilai += $nilaiAkhir;
-                    $count++;
+                // Grouping grades by kelompok_id
+                $groupedGrades = [];
+                foreach ($grades as $g) {
+                    $kel = !empty($g['kelompok_id']) ? $g['kelompok_id'] : 'A. Kelompok Mata Pelajaran Umum';
+                    $groupedGrades[$kel][] = $g;
+                }
 
-                    $detail = !empty($g['nilai_detail_json']) ? json_decode($g['nilai_detail_json'], true) : [];
-                    $highest = isset($detail['deskripsi_tertinggi']) && $detail['deskripsi_tertinggi'] !== '' ? $detail['deskripsi_tertinggi'] : '';
-                    $lowest = isset($detail['deskripsi_terendah']) && $detail['deskripsi_terendah'] !== '' ? $detail['deskripsi_terendah'] : '';
-                    
-                    $capaian = '';
-                    if ($highest && $lowest) {
-                        $capaian = "Capaian Tertinggi: " . $highest . "\nCapaian Terendah: " . $lowest;
-                    } elseif ($highest) {
-                        $capaian = "Capaian Tertinggi: " . $highest;
-                    } elseif ($lowest) {
-                        $capaian = "Capaian Terendah: " . $lowest;
-                    } else {
-                        $capaian = "Tercapai dengan baik.";
-                    }
+                foreach ($groupedGrades as $groupHeader => $gList):
+            ?>
+            <tr style="background-color: #f2f2f2; font-weight: bold;">
+                <td colspan="5" style="padding: 6px; font-size: 10.5pt; color: #000;"><?= htmlspecialchars($groupHeader) ?></td>
+            </tr>
+            <?php
+                    foreach ($gList as $index => $g):
+                        $nilaiAkhir = floatval($g['nilai_akhir'] ?? 0);
+                        $jumlahNilai += $nilaiAkhir;
+                        $count++;
 
-                    $kktp = !empty($g['kkm']) ? floatval($g['kkm']) : '-';
+                        $detail = !empty($g['nilai_detail_json']) ? json_decode($g['nilai_detail_json'], true) : [];
+                        $highest = isset($detail['deskripsi_tertinggi']) && $detail['deskripsi_tertinggi'] !== '' ? $detail['deskripsi_tertinggi'] : '';
+                        $lowest = isset($detail['deskripsi_terendah']) && $detail['deskripsi_terendah'] !== '' ? $detail['deskripsi_terendah'] : '';
+                        
+                        $capaian = '';
+                        if ($highest && $lowest) {
+                            $capaian = "Capaian Tertinggi: " . $highest . "\nCapaian Terendah: " . $lowest;
+                        } elseif ($highest) {
+                            $capaian = "Capaian Tertinggi: " . $highest;
+                        } elseif ($lowest) {
+                            $capaian = "Capaian Terendah: " . $lowest;
+                        } else {
+                            $capaian = "Tercapai dengan baik.";
+                        }
+
+                        $kktp = !empty($g['kkm']) ? floatval($g['kkm']) : '-';
             ?>
             <tr>
                 <td class='text-center'><?= $index + 1 ?></td>
@@ -93,6 +106,7 @@
                 <td class='text-center'><?= $kktp ?></td>
             </tr>
             <?php 
+                    endforeach;
                 endforeach;
             else: 
             ?>

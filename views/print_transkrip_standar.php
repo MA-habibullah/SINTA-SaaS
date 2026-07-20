@@ -31,13 +31,20 @@ foreach ($siswa['transkrip_grades'] as $g) {
     }
     
     $ta = $g['tahun_ajaran'];
-    $sem = strtolower($g['semester']);
+    $sem = strtolower(trim($g['semester']));
     
     if ($sem === 'ujian sekolah') {
         $mapelData[$mapelName]['us'] = round((float)$g['nilai_akhir']);
     } else {
         $baseSem = $yearMap[$ta] ?? 1;
-        if (strpos($sem, 'genap') !== false) {
+        if (is_numeric($sem)) {
+            $numSem = (int)$sem;
+            if ($numSem >= 1 && $numSem <= 6) {
+                $smt = $numSem;
+            } else {
+                $smt = ($numSem % 2 === 0) ? $baseSem + 1 : $baseSem;
+            }
+        } elseif (strpos($sem, 'genap') !== false || strpos($sem, '2') !== false) {
             $smt = $baseSem + 1;
         } else {
             $smt = $baseSem;
