@@ -20,8 +20,13 @@ class Siswa extends Model {
      * Get data kesehatan per semester
      */
     public function getKesehatanSiswa(string $idSiswa): array {
-        $stmt = $this->db->prepare("SELECT * FROM kesehatan_siswa WHERE siswa_id = ? AND tenant_id = ? ORDER BY semester ASC");
-        $stmt->execute([$idSiswa, $this->tenantId]);
+        if ($this->tenantId) {
+            $stmt = $this->db->prepare("SELECT * FROM kesehatan_siswa WHERE siswa_id = ? AND tenant_id = ? ORDER BY semester ASC");
+            $stmt->execute([$idSiswa, $this->tenantId]);
+        } else {
+            $stmt = $this->db->prepare("SELECT * FROM kesehatan_siswa WHERE siswa_id = ? ORDER BY semester ASC");
+            $stmt->execute([$idSiswa]);
+        }
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         $kesehatan = [];

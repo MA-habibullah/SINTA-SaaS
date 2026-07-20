@@ -835,6 +835,7 @@ class SiswaController extends BaseController {
                 $this->siswaModel->saveKesehatanSiswa($id, $_POST['kesehatan']);
             }
             \App\Helpers\ActivityLogger::record('UPDATE', 'siswa', $id, $siswa, $input);
+            \App\Helpers\CacheInvalidator::clearStudentCache($id, $tenantId);
 
             // ----------------------------------------------------------------
             // COMMIT — data is safe in DB. Now permanently delete old files.
@@ -924,6 +925,7 @@ class SiswaController extends BaseController {
         try {
             $this->siswaModel->delete($id);
             \App\Helpers\ActivityLogger::record('DELETE', 'siswa', $id, $siswa, null);
+            \App\Helpers\CacheInvalidator::clearStudentCache($id, $siswa['tenant_id']);
             $this->redirectWithSuccess('Data siswa berhasil dihapus.', '/SINTA-SaaS/pengguna');
         } catch (\PDOException $e) {
             error_log("Gagal hapus siswa: " . $e->getMessage());
