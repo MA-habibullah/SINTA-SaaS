@@ -285,5 +285,14 @@ Mengimplementasikan fitur Override Akses Menu tingkat pengguna (Opsi B) agar adm
 - `app/Controllers/AksesController.php`
 - `views/pengguna_index.php`
 
+---
+## Perbaikan Reference Error _baseUrl & Keterbacaan Tombol Akses
+**Waktu**: 18:00 WIB
+**Jenis**: Bug Fix / UI Improvement
+Memperbaiki kendala popup error "Gagal memuat akses user" saat tombol Akses diklik. Root cause: Axios request di `pengguna_index.php` menggunakan template literal `${_baseUrl}` yang tidak dideklarasikan di halaman tersebut. Solusi: (1) Mengganti `_baseUrl` dengan path absolut `/SINTA-SaaS` agar konsisten dengan request Axios lain di halaman Pengguna, (2) Mengubah tipe tombol **Akses** dari `btn-outline-warning` (kuning tipis) menjadi solid `btn-warning text-dark fw-semibold` (kuning cerah) agar lebih mudah dibaca dan terlihat jelas bagi admin. Berkas yang diubah:
+- `views/pengguna_index.php`
+- `app/Core/RouteGuard.php`
+
+
 
 
