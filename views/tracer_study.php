@@ -570,9 +570,8 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
             const listJalur        = ref([]);
             const listKampusProdi  = ref([]);
 
-            // Role state (anti-XSS: menggunakan json_encode bukan echo langsung)
             const userRole = ref(<?= json_encode($userRole, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
-            const isAdmin  = ref(<?= json_encode($isAdmin) ?>);
+            const isAdmin  = ref(<?= json_encode($isAdmin, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
 
             const formKuliah = ref({
                 is_manual: false,
