@@ -499,6 +499,17 @@ try {
             $controller->clearArchiveApi();
             break;
 
+        case '/api/v1/buku-induk/beasiswa':
+            $controller = new App\Controllers\BukuIndukController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->storeBeasiswaApi();
+            } elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+                $controller->deleteBeasiswaApi();
+            } else {
+                $controller->getBeasiswaApi();
+            }
+            break;
+
         case '/cetak-rapot':
             $controller = new App\Controllers\BukuIndukController();
             $controller->printRapot();

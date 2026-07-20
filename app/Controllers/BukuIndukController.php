@@ -2504,5 +2504,129 @@ class BukuIndukController extends BaseController {
             die("<h1>Forbidden</h1><p>Token cetak tidak cocok dengan target cetak.</p>");
         }
     }
+
+    /**
+     * API: Mendapatkan daftar beasiswa siswa
+     * GET /api/v1/buku-induk/beasiswa?siswa_id=...
+     */
+    public function getBeasiswaApi(): void {
+        header("Content-Type: application/json; charset=UTF-8");
+        SessionManager::start();
+        if (!isset($_SESSION['user_id'])) {
+            $this->jsonResponse(['success' => false, 'error' => 'Silakan login terlebih dahulu.'], 401);
+        }
+
+        $siswaId = trim($_GET['siswa_id'] ?? '');
+        if (empty($siswaId)) {
+            $this->jsonResponse(['success' => false, 'error' => 'ID siswa tidak valid.'], 400);
+        }
+
+        $tenantId = SessionManager::getTenantId();
+        try {
+            $db = \App\Config\Database::getConnection();
+            $stmt = $db->prepare("
+                SELECT * 
+                FROM riwayat_beasiswa 
+                WHERE siswa_id = :siswa_id AND tenant_id = :tenant_id 
+                ORDER BY tahun_menerima DESC
+            ");
+            $stmt->execute([
+                'siswa_id' => $siswaId,
+                'tenant_id' => $tenantId
+            ]);
+            $beasiswa = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $this->jsonResponse(['success' => true, 'data' => $beasiswa]);
+        } catch (\Throwable $e) {
+            $this->jsonResponse(['success' => false, 'error' => 'Gagal mengambil data beasiswa.'], 500);
+        }
+    }
+
+    /**
+     * API: Menyimpan data beasiswa baru
+     * POST /api/v1/buku-induk/beasiswa
+     */
+    public function storeBeasiswaApi(): void {
+        header("Content-Type: application/json; charset=UTF-8");
+        SessionManager::start();
+        
+        // Proteksi Hak Akses
+        $roleName = $_SESSION['role_name'] ?? '';
+        $allowedRoles = ['super_admin', 'operator_sekolah', 'admin', 'operator', 'guru_bk'];
+        if (!in_array($roleName, $allowedRoles)) {
+            $this->jsonResponse(['success' => false, 'error' => 'Anda tidak memiliki izin untuk menyimpan data ini.'], 403);
+        }
+
+        $input = $this->getJsonInput();
+        $siswaId = trim($input['siswa_id'] ?? '');
+        $jenisBeasiswa = strip_tags(trim($input['jenis_beasiswa'] ?? ''));
+        $sumber = strip_tags(trim($input['sumber'] ?? ''));
+        $tahunMenerima = isset($input['tahun_menerima']) ? (int)$input['tahun_menerima'] : null;
+        $nominal = isset($input['nominal']) && $input['nominal'] !== '' ? (float)$input['nominal'] : null;
+
+        if (empty($siswaId) || empty($jenisBeasiswa) || empty($tahunMenerima)) {
+            $this->jsonResponse(['success' => false, 'error' => 'ID Siswa, Jenis Beasiswa, dan Tahun wajib diisi.'], 400);
+        }
+
+        $tenantId = SessionManager::getTenantId();
+
+        try {
+            $db = \App\Config\Database::getConnection();
+            $stmt = $db->prepare("
+                INSERT INTO riwayat_beasiswa (tenant_id, siswa_id, jenis_beasiswa, sumber, tahun_menerima, nominal) 
+                VALUES (:tenant_id, :siswa_id, :jenis_beasiswa, :sumber, :tahun_menerima, :nominal)
+            ");
+            $stmt->execute([
+                'tenant_id' => $tenantId,
+                'siswa_id' => $siswaId,
+                'jenis_beasiswa' => $jenisBeasiswa,
+                'sumber' => $sumber ?: null,
+                'tahun_menerima' => $tahunMenerima,
+                'nominal' => $nominal
+            ]);
+
+            $this->jsonResponse(['success' => true, 'message' => 'Data beasiswa berhasil disimpan.']);
+        } catch (\Throwable $e) {
+            $this->jsonResponse(['success' => false, 'error' => 'Gagal menyimpan data beasiswa.'], 500);
+        }
+    }
+
+    /**
+     * API: Menghapus data beasiswa
+     * DELETE /api/v1/buku-induk/beasiswa?id=...
+     */
+    public function deleteBeasiswaApi(): void {
+        header("Content-Type: application/json; charset=UTF-8");
+        SessionManager::start();
+
+        // Proteksi Hak Akses
+        $roleName = $_SESSION['role_name'] ?? '';
+        $allowedRoles = ['super_admin', 'operator_sekolah', 'admin', 'operator', 'guru_bk'];
+        if (!in_array($roleName, $allowedRoles)) {
+            $this->jsonResponse(['success' => false, 'error' => 'Anda tidak memiliki izin untuk menghapus data ini.'], 403);
+        }
+
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        if (empty($id)) {
+            $this->jsonResponse(['success' => false, 'error' => 'ID beasiswa tidak valid.'], 400);
+        }
+
+        $tenantId = SessionManager::getTenantId();
+
+        try {
+            $db = \App\Config\Database::getConnection();
+            $stmt = $db->prepare("
+                DELETE FROM riwayat_beasiswa 
+                WHERE id = :id AND tenant_id = :tenant_id
+            ");
+            $stmt->execute([
+                'id' => $id,
+                'tenant_id' => $tenantId
+            ]);
+
+            $this->jsonResponse(['success' => true, 'message' => 'Data beasiswa berhasil dihapus.']);
+        } catch (\Throwable $e) {
+            $this->jsonResponse(['success' => false, 'error' => 'Gagal menghapus data beasiswa.'], 500);
+        }
+    }
 }
 
