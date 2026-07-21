@@ -19,3 +19,25 @@
    - Menambahkan rute `/api/v1/keuangan/buat-tagihan-ppdb` di berkas `index.php`.
 4. **Pengujian Integrasi**:
    - Membuat skrip `scratch/test_spp_billing.php` untuk memvalidasi transaksi keuangan dan PPDB hook secara CLI, seluruh test case berhasil dilalui dengan sukses.
+
+---
+## [Perbaikan Race Condition Inisialisasi Vue & Tabrakan Selector Modul Keuangan]
+**Waktu**: 08:28 WIB
+**Jenis**: Bug Fix
+
+### Masalah (Root Cause):
+1. **Race Condition `DOMContentLoaded`**: Skrip registrasi Vue di dalam view keuangan dibungkus menggunakan event listener `DOMContentLoaded`. Akibatnya, terjadi race condition di mana event `DOMContentLoaded` di layout utama (`master.php`) mengeksekusi `mountAll()` terlebih dahulu sebelum registrasi komponen selesai dilakukan, sehingga Vue gagal merender template dan menampilkan kurung kurawal (`{{ ... }}`) mentah di layar.
+2. **Tabrakan Selector ID**: Penggunaan ID selector `#app` yang sama secara berulang pada 8 halaman modul keuangan menyebabkan ketidakcocokan template saat navigasi asinkronus (Hotwire Turbo Drive) dilakukan, karena Vue mencoba merender konfigurasi layout lama pada elemen baru.
+
+### Perbaikan:
+1. Menghapus pembungkus `DOMContentLoaded` pada seluruh skrip Vue di views keuangan agar registrasi kelas berjalan sinkron saat file diurai (parsed).
+2. Memisahkan selector ID untuk masing-masing halaman keuangan dengan nama unik agar tidak terjadi tabrakan memori:
+   - `keuangan-dashboard-app`
+   - `keuangan-master-app`
+   - `keuangan-keringanan-app`
+   - `keuangan-generate-app`
+   - `keuangan-kasir-app`
+   - `keuangan-laporan-app`
+   - `keuangan-pengaturan-app`
+   - `keuangan-tagihan-saya-app`
+
