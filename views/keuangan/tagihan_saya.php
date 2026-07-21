@@ -155,5 +155,3 @@ window.VueAppRegistry.register('#keuangan-tagihan-saya-app', {
     }
 });
 </script>
-
-<?php include __DIR__ . '/../layout/footer.php'; ?>

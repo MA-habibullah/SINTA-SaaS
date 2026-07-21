@@ -253,5 +253,3 @@ window.VueAppRegistry.register('#keuangan-laporan-app', {
     }
 });
 </script>
-
-<?php include __DIR__ . '/../layout/footer.php'; ?>

@@ -284,5 +284,3 @@ window.VueAppRegistry.register('#keuangan-keringanan-app', {
     }
 });
 </script>
-
-<?php include __DIR__ . '/../layout/footer.php'; ?>

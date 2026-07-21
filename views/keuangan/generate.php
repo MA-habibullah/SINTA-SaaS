@@ -230,5 +230,3 @@ window.VueAppRegistry.register('#keuangan-generate-app', {
     }
 });
 </script>
-
-<?php include __DIR__ . '/../layout/footer.php'; ?>

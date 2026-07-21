@@ -163,5 +163,3 @@ window.VueAppRegistry.register('#keuangan-pengaturan-app', {
     }
 });
 </script>
-
-<?php include __DIR__ . '/../layout/footer.php'; ?>

@@ -152,5 +152,3 @@ window.VueAppRegistry.register('#keuangan-dashboard-app', {
     }
 });
 </script>
-
-<?php include __DIR__ . '/../layout/footer.php'; ?>

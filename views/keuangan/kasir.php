@@ -442,5 +442,3 @@ window.VueAppRegistry.register('#keuangan-kasir-app', {
     }
 });
 </script>
-
-<?php include __DIR__ . '/../layout/footer.php'; ?>
