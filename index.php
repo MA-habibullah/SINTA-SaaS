@@ -407,6 +407,75 @@ try {
             (new \App\Controllers\BantuanController())->apiGetUnreadCount();
             break;
 
+        // Rute Modul Keuangan & SPP Dinamis
+        case '/keuangan/dashboard':
+            (new \App\Controllers\SppController())->dashboard();
+            break;
+        case '/keuangan/master':
+            (new \App\Controllers\SppController())->master();
+            break;
+        case '/keuangan/keringanan':
+            (new \App\Controllers\SppController())->keringanan();
+            break;
+        case '/keuangan/generate':
+            (new \App\Controllers\SppController())->generate();
+            break;
+        case '/keuangan/kasir':
+            (new \App\Controllers\SppController())->kasir();
+            break;
+        case '/keuangan/laporan':
+            (new \App\Controllers\SppController())->laporan();
+            break;
+        case '/keuangan/pengaturan':
+            (new \App\Controllers\SppController())->pengaturan();
+            break;
+        case '/keuangan/tagihan-saya':
+            (new \App\Controllers\SppController())->tagihanSaya();
+            break;
+
+        // API Modul Keuangan & SPP Dinamis
+        case '/api/v1/keuangan/dashboard-metrics':
+            (new \App\Controllers\SppController())->apiDashboardMetrics();
+            break;
+        case '/api/v1/keuangan/komponen':
+            (new \App\Controllers\SppController())->apiKomponen();
+            break;
+        case '/api/v1/keuangan/tarif':
+            (new \App\Controllers\SppController())->apiTarif();
+            break;
+        case '/api/v1/keuangan/keringanan':
+            (new \App\Controllers\SppController())->apiKeringanan();
+            break;
+        case '/api/v1/keuangan/generate-tagihan':
+            (new \App\Controllers\SppController())->apiGenerateTagihan();
+            break;
+        case '/api/v1/keuangan/cari-siswa':
+            (new \App\Controllers\SppController())->apiCariSiswa();
+            break;
+        case '/api/v1/keuangan/tagihan-siswa':
+            (new \App\Controllers\SppController())->apiGetTagihanSiswa();
+            break;
+        case '/api/v1/keuangan/bayar':
+            (new \App\Controllers\SppController())->apiBayarTagihan();
+            break;
+        case '/api/v1/keuangan/laporan-rekap':
+            (new \App\Controllers\SppController())->apiLaporanRekap();
+            break;
+        case '/api/v1/keuangan/pengaturan':
+            (new \App\Controllers\SppController())->apiGetPengaturan();
+            break;
+        case '/api/v1/keuangan/save-pengaturan':
+            (new \App\Controllers\SppController())->apiSavePengaturan();
+            break;
+        case '/api/v1/keuangan/tagihan-saya':
+            (new \App\Controllers\SppController())->apiGetTagihanSaya();
+            break;
+        case '/api/v1/keuangan/buat-tagihan-ppdb':
+            (new \App\Controllers\SppController())->apiCreatePpdbInvoice();
+            break;
+
+
+
         case '/buku-induk':
             $controller = new App\Controllers\BukuIndukController();
             $controller->index();
