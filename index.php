@@ -432,6 +432,9 @@ try {
         case '/keuangan/tagihan-saya':
             (new \App\Controllers\SppController())->tagihanSaya();
             break;
+        case '/keuangan/audit-log':
+            (new \App\Controllers\SppController())->auditLog();
+            break;
 
         // API Modul Keuangan & SPP Dinamis
         case '/api/v1/keuangan/dashboard-metrics':
@@ -449,6 +452,30 @@ try {
         case '/api/v1/keuangan/generate-tagihan':
             (new \App\Controllers\SppController())->apiGenerateTagihan();
             break;
+        case '/api/v1/keuangan/preview-generate':
+            (new \App\Controllers\SppController())->apiPreviewGenerate();
+            break;
+        case '/api/v1/keuangan/daftar-tagihan':
+            (new \App\Controllers\SppController())->apiDaftarTagihan();
+            break;
+        case '/api/v1/keuangan/tahun-ajaran':
+            (new \App\Controllers\SppController())->apiTahunAjaran();
+            break;
+        case '/api/v1/keuangan/kelas':
+            (new \App\Controllers\SppController())->apiKelas();
+            break;
+        case '/api/v1/keuangan/jenjang':
+            (new \App\Controllers\SppController())->apiJenjang();
+            break;
+        case '/api/v1/keuangan/export-tagihan-excel':
+            (new \App\Controllers\SppController())->apiExportTagihanExcel();
+            break;
+        case '/api/v1/keuangan/edit-tagihan-nominal':
+            (new \App\Controllers\SppController())->apiEditTagihanNominal();
+            break;
+        case '/api/v1/keuangan/hapus-tagihan':
+            (new \App\Controllers\SppController())->apiHapusTagihan();
+            break;
         case '/api/v1/keuangan/cari-siswa':
             (new \App\Controllers\SppController())->apiCariSiswa();
             break;
@@ -457,6 +484,9 @@ try {
             break;
         case '/api/v1/keuangan/bayar':
             (new \App\Controllers\SppController())->apiBayarTagihan();
+            break;
+        case '/api/v1/keuangan/batal-pembayaran':
+            (new \App\Controllers\SppController())->apiBatalPembayaran();
             break;
         case '/api/v1/keuangan/laporan-rekap':
             (new \App\Controllers\SppController())->apiLaporanRekap();
@@ -475,6 +505,9 @@ try {
             break;
         case '/api/v1/keuangan/tagihan-saya':
             (new \App\Controllers\SppController())->apiGetTagihanSaya();
+            break;
+        case '/api/v1/keuangan/audit-log':
+            (new \App\Controllers\SppController())->apiAuditLog();
             break;
         case '/api/v1/keuangan/buat-tagihan-ppdb':
             (new \App\Controllers\SppController())->apiCreatePpdbInvoice();
