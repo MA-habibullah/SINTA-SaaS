@@ -99,6 +99,34 @@ if (!empty($roles)) {
         
         $sidebarMenus = $buildTree($allMenus);
 
+        // Kustomisasi Istilah & Visibilitas Modul Keuangan (SPP) secara Dinamis
+        $customModulName = 'Keuangan & Pembayaran';
+        $visibilitasSiswa = 1;
+        if (!empty($_SESSION['tenant_id'])) {
+            try {
+                $stmtSet = $db->prepare("SELECT nama_modul, visibilitas_siswa FROM transaksi_spp_pengaturan WHERE tenant_id = ?");
+                $stmtSet->execute([$_SESSION['tenant_id']]);
+                $setting = $stmtSet->fetch(PDO::FETCH_ASSOC);
+                if ($setting) {
+                    $customModulName = $setting['nama_modul'];
+                    $visibilitasSiswa = (int)$setting['visibilitas_siswa'];
+                }
+            } catch (\Throwable $e) {}
+        }
+
+        $filteredSidebarMenus = [];
+        foreach ($sidebarMenus as $menu) {
+            if ($menu['id'] == 70) {
+                $menu['nama_menu'] = $customModulName;
+                if ($visibilitasSiswa === 0 && in_array('siswa', $roles)) {
+                    continue; // Sembunyikan modul keuangan dari dashboard siswa jika diset private
+                }
+            }
+            $filteredSidebarMenus[] = $menu;
+        }
+        $sidebarMenus = $filteredSidebarMenus;
+
+
 
         if (in_array('siswa', $roles)) {
             $siswaId = $_SESSION['user_id'] ?? '';

@@ -1729,3 +1729,266 @@ Membuat file `.htaccess` di root folder `storage/uploads/` (untuk pembinaan, pds
 2. Verifikasi sistem menolak file yang tidak bertipe MIME asli gambar (`png`/`jpg`/`jpeg`).
 3. Coba akses langsung tautan berkas PHP jika berhasil terunggah (misal `/SINTA-SaaS/public/uploads/tickets/test.php`). Pastikan web server Apache merespon dengan **403 Forbidden** atau menampilkan kode mentah teks alih-alih mengeksekusi perintah PHP tersebut.
 
+---
+## Pencatatan Dinamis Halaman Asal Tiket Bantuan (last_url)
+**Waktu**: 23:45 WIB
+**Status**: Draft
+
+# Rencana Implementasi: Pencatatan Dinamis Halaman Asal Tiket Bantuan (last_url)
+
+Rencana implementasi ini dirancang untuk memperbaiki perekaman kolom `last_url` (Halaman Terakhir Dibuka) pada modul Pusat Bantuan agar merepresentasikan halaman riil tempat pengguna mengalami kendala sebelum berpindah ke halaman pengisian tiket `/bantuan`.
+
+---
+
+## Masalah Utama
+
+Pada implementasi sebelumnya di [views/bantuan_user.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/bantuan_user.php), pengiriman payload data tiket menggunakan:
+```javascript
+formData.append('last_url', window.location.href);
+```
+Karena pengisian formulir tiket dilakukan di halaman `/SINTA-SaaS/bantuan`, maka variabel `window.location.href` akan selalu mengirimkan URL halaman bantuan itu sendiri. Hal ini menyebabkan kolom pelacakan `last_url` di dashboard Super Admin tidak informatif.
+
+---
+
+## Solusi Usulan
+
+Mengubah penangkapan URL asal di sisi client menggunakan **`document.referrer`**. Properti ini mendeteksi URL halaman asal tempat pengguna mengklik tombol FAB Bantuan atau link menu sidebar menuju halaman `/bantuan`.
+
+---
+
+## Proposed Changes
+
+### [Component] Help Center Client Interface
+
+#### [MODIFY] [bantuan_user.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/bantuan_user.php)
+Mengubah penugasan `last_url` di bagian fungsi `submitTicket` di JavaScript Vue 3.
+
+##### Baris Sebelum Perubahan:
+```javascript
+            formData.append('last_url', window.location.href);
+```
+
+##### Baris Sesudah Perubahan:
+```javascript
+            // Deteksi halaman asal sebelum masuk ke bantuan
+            const previousPage = document.referrer && document.referrer.includes(window.location.origin) 
+                ? document.referrer 
+                : window.location.href;
+            formData.append('last_url', previousPage);
+```
+
+---
+
+## Verification Plan
+
+### Manual Verification
+1. Login sebagai Guru/Siswa.
+2. Navigasi ke halaman tertentu, misalnya **Identitas Sekolah** (`/SINTA-SaaS/sekolah/identitas`).
+3. Klik tombol mengambang **FAB Bantuan** di pojok kanan bawah.
+4. Di halaman Pusat Bantuan, ketik laporan tiket dan kirim berkas tiket baru.
+5. Login sebagai **Super Admin**, buka dashboard detail tiket bantuan yang baru dikirim.
+6. Verifikasi kolom **Halaman Terakhir Dibuka** (atau last_url) pada rekap detail tiket memuat URL `/SINTA-SaaS/sekolah/identitas` (halaman asal Anda), bukan `/SINTA-SaaS/bantuan`.
+
+---
+## Pelaporan Tiket Bantuan Langsung via Modal Dialog (FAB)
+**Waktu**: 23:50 WIB
+**Status**: Draft
+
+# Rencana Implementasi: Pelaporan Tiket Bantuan Langsung via Modal Dialog (FAB)
+
+Rencana implementasi ini diajukan untuk meningkatkan kenyamanan pengguna (*User Experience*) dengan memungkinkan pengisian tiket bantuan **langsung di halaman aktif tempat mereka berada** menggunakan Modal Dialog, tanpa perlu melakukan navigasi/redirect halaman ke `/bantuan`.
+
+---
+
+## Mekanisme Alur Baru
+
+1.  **Tombol FAB Interaktif**:
+    - Tombol melayang (FAB) di pojok kanan bawah tidak lagi bertindak sebagai *link static redirection*, melainkan memicu pembukaan **Modal Dialog Bantuan** (`#modalBantuanFAB`) secara dinamis.
+2.  **Perekaman Otomatis URL Kendala**:
+    - Sistem akan mendeteksi `window.location.href` secara tepat dari halaman aktif yang sedang dibuka oleh pengguna dan menyisipkannya otomatis sebagai halaman kendala (`last_url`).
+3.  **Pengiriman Latar Belakang (AJAX Fetch)**:
+    - Pengguna mengisi formulir laporan & lampiran gambar langsung di dalam modal, lalu mengirimkannya via API Axios/Fetch.
+    - Setelah berhasil, modal tertutup otomatis dan memunculkan notifikasi sukses tanpa memuat ulang halaman (*zero-refresh*). Keadaan form, posisi scroll, atau data aktif yang sedang diketik pengguna di halaman kerja utama mereka **tidak akan hilang**.
+
+---
+
+## Proposed Changes
+
+### [Component] Layout Global & Client Interface
+
+#### [MODIFY] [master.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/layout/master.php)
+Mengubah rendering Floating Help Button (FAB) statis menjadi aplikasi Vue 3 kecil terintegrasi modal form bantuan langsung.
+
+##### Blok Kode HTML yang Direncanakan (Sebelum penutup `</body>`):
+```html
+<div id="fab-help-app">
+    <!-- Floating Help Widget (FAB) -->
+    <button v-if="visible" @click="openModal" class="fab-help border-0" title="Butuh Bantuan?">
+        <i class="bi bi-question-lg fs-4"></i>
+    </button>
+
+    <!-- Modal Form Bantuan Langsung -->
+    <div class="modal fade" id="modalBantuanFAB" tabindex="-1" aria-labelledby="modalBantuanFABLabel" aria-hidden="true" ref="modalRef">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0 rounded-4">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="modalBantuanFABLabel">
+                        <i class="bi bi-question-circle-fill text-blue-600 me-2"></i> Laporkan Kendala / Bantuan
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form @submit.prevent="submitReport" enctype="multipart/form-data">
+                    <div class="modal-body pt-3">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Kategori Masalah <span class="text-danger">*</span></label>
+                            <select class="form-select border-slate-200" v-model="form.category_id" required>
+                                <option value="" disabled>-- Pilih Kategori --</option>
+                                <option value="1">Laporan Bug / Sistem Error</option>
+                                <option value="2">Request Fitur / Menu Baru</option>
+                                <option value="3">Kendala Data Pokok / Dapodik</option>
+                                <option value="4">Bantuan Penggunaan</option>
+                                <option value="5">Kritik & Saran</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Judul Masalah <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control border-slate-200" v-model="form.judul" placeholder="Tulis ringkasan kendala..." required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Deskripsi Kendala <span class="text-danger">*</span></label>
+                            <textarea class="form-control border-slate-200" v-model="form.deskripsi" rows="4" placeholder="Jelaskan detail error atau request Anda..." required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Lampiran Gambar <span class="text-muted">(Optional, maks 2MB)</span></label>
+                            <input type="file" class="form-control border-slate-200" @change="onFileChange" accept="image/*">
+                        </div>
+                        <div class="p-2 bg-light rounded text-muted fs-8">
+                            <i class="bi bi-info-circle me-1"></i> Sistem akan merekam otomatis URL halaman aktif Anda: <strong>{{ currentUrl }}</strong>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top-0 pt-0">
+                        <button type="button" class="btn btn-slate-100 fw-semibold" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-primary fw-semibold" :disabled="loading">
+                            <span v-if="loading" class="spinner-border spinner-border-sm me-1" role="status"></span>
+                            Kirim Laporan
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+```
+
+##### Blok Kode JavaScript Vue 3 (di dalam blok `<script>` global):
+```javascript
+window.addEventListener('DOMContentLoaded', () => {
+    window.VueAppRegistry.register('#fab-help-app', {
+        setup() {
+            const visible = Vue.ref(false);
+            const loading = Vue.ref(false);
+            const currentUrl = Vue.ref('');
+            const modalRef = Vue.ref(null);
+            let bsModal = null;
+            
+            const form = Vue.ref({
+                category_id: '',
+                judul: '',
+                deskripsi: '',
+                file: null
+            });
+
+            Vue.onMounted(() => {
+                const loggedIn = <?php echo isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true ? 'true' : 'false'; ?>;
+                const onBantuanPage = window.location.pathname.includes('/bantuan');
+                
+                if (loggedIn && !onBantuanPage) {
+                    visible.value = true;
+                    currentUrl.value = window.location.href;
+                }
+            });
+
+            const openModal = () => {
+                form.value = {
+                    category_id: '',
+                    judul: '',
+                    deskripsi: '',
+                    file: null
+                };
+                if (!bsModal) {
+                    bsModal = new bootstrap.Modal(modalRef.value);
+                }
+                bsModal.show();
+            };
+
+            const onFileChange = (e) => {
+                const files = e.target.files;
+                if (files.length > 0) {
+                    form.value.file = files[0];
+                }
+            };
+
+            const submitReport = async () => {
+                loading.value = true;
+                const formData = new FormData();
+                formData.append('category_id', form.value.category_id);
+                formData.append('judul', form.value.judul);
+                formData.append('deskripsi', form.value.deskripsi);
+                formData.append('last_url', window.location.href);
+                if (form.value.file) {
+                    formData.append('lampiran', form.value.file);
+                }
+
+                try {
+                    const response = await fetch('/SINTA-SaaS/api/v1/bantuan/buat', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const res = await response.json();
+                    if (res.success) {
+                        alert('Laporan berhasil dikirim! Tim support kami akan segera menindaklanjuti.');
+                        bsModal.hide();
+                    } else {
+                        alert(res.error || 'Gagal mengirim laporan.');
+                    }
+                } catch (err) {
+                    alert('Terjadi kesalahan jaringan.');
+                } finally {
+                    loading.value = false;
+                }
+            };
+
+            return {
+                visible,
+                loading,
+                currentUrl,
+                modalRef,
+                form,
+                openModal,
+                onFileChange,
+                submitReport
+            };
+        }
+    });
+});
+```
+
+---
+
+## Verification Plan
+
+### Manual Verification
+1. Login sebagai Guru/Siswa.
+2. Buka salah satu halaman kerja (misal: `/SINTA-SaaS/pengguna`).
+3. Klik tombol mengambang **FAB Bantuan** di pojok kanan bawah.
+4. Pastikan **Modal Dialog** muncul di layar tanpa melakukan redirect/navigasi halaman.
+5. Isi formulir bantuan dan lampirkan screenshot opsional, lalu kirim.
+6. Pastikan modal tertutup sendiri, toast sukses muncul, dan Anda **tetap berada** di halaman `/SINTA-SaaS/pengguna`.
+7. Login sebagai Super Admin, buka detail tiket, pastikan kolom **Halaman Terakhir Dibuka** tercatat secara dinamis & tepat sebagai `http://localhost/SINTA-SaaS/pengguna`.
+8. Simulasikan layar mobile (Responsive Device Mode di Chrome DevTools / F12).
+9. Verifikasi diameter tombol FAB mengecil secara proporsional.
+10. Klik salah satu kolom input pencarian atau input form di halaman utama. Pastikan tombol FAB menghilang secara halus (agar keyboard mobile tidak tertimpa FAB).
+11. Klik di luar kolom input, pastikan tombol FAB muncul kembali.
+12. Klik FAB untuk membuka modal bantuan, verifikasi modal dialog tampil penuh di layar tengah secara responsif, dan tombol FAB menghilang di belakang backdrop modal.
+
+
