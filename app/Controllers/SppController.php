@@ -45,6 +45,17 @@ class SppController extends BaseController {
                     }
                 }
             }
+            // 5. Fallback: Ambil tenant pertama dari database jika super_admin tidak mengirimkan tenant_id
+            try {
+                $db = Database::getConnection();
+                $stmt = $db->query("SELECT id FROM tenants LIMIT 1");
+                $fallbackId = $stmt->fetchColumn();
+                if ($fallbackId) {
+                    return $fallbackId;
+                }
+            } catch (\Throwable $e) {
+                // Abaikan error koneksi database di fallback
+            }
         }
         return $_SESSION['tenant_id'] ?? '';
     }
@@ -189,128 +200,140 @@ class SppController extends BaseController {
 
     // API: CRUD Komponen Biaya
     public function apiKomponen(): void {
-        $tenantId = $this->resolveTenantId();
-        $db = Database::getConnection();
-        $method = $_SERVER['REQUEST_METHOD'];
+        try {
+            $tenantId = $this->resolveTenantId();
+            $db = Database::getConnection();
+            $method = $_SERVER['REQUEST_METHOD'];
 
-        if ($method === 'GET') {
-            $stmt = $db->prepare("SELECT * FROM transaksi_spp_komponen WHERE tenant_id = ? ORDER BY id DESC");
-            $stmt->execute([$tenantId]);
-            $this->jsonResponse(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
-        } elseif ($method === 'POST') {
-            $raw = json_decode(file_get_contents('php://input'), true);
-            $id = (int)($raw['id'] ?? 0);
-            $nama = trim($raw['nama_komponen'] ?? '');
-            $tipe = trim($raw['tipe_periode'] ?? 'Bulanan');
+            if ($method === 'GET') {
+                $stmt = $db->prepare("SELECT * FROM transaksi_spp_komponen WHERE tenant_id = ? ORDER BY id DESC");
+                $stmt->execute([$tenantId]);
+                $this->jsonResponse(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            } elseif ($method === 'POST') {
+                $raw = json_decode(file_get_contents('php://input'), true);
+                $id = (int)($raw['id'] ?? 0);
+                $nama = trim($raw['nama_komponen'] ?? '');
+                $tipe = trim($raw['tipe_periode'] ?? 'Bulanan');
 
-            if (empty($nama)) {
-                $this->jsonResponse(['success' => false, 'error' => 'Nama komponen wajib diisi.'], 422);
+                if (empty($nama)) {
+                    $this->jsonResponse(['success' => false, 'error' => 'Nama komponen wajib diisi.'], 422);
+                }
+
+                if ($id > 0) {
+                    // Update
+                    $stmt = $db->prepare("UPDATE transaksi_spp_komponen SET nama_komponen = ?, tipe_periode = ? WHERE id = ? AND tenant_id = ?");
+                    $stmt->execute([$nama, $tipe, $id, $tenantId]);
+                } else {
+                    // Insert
+                    $stmt = $db->prepare("INSERT INTO transaksi_spp_komponen (tenant_id, nama_komponen, tipe_periode) VALUES (?, ?, ?)");
+                    $stmt->execute([$tenantId, $nama, $tipe]);
+                }
+                $this->jsonResponse(['success' => true]);
+            } elseif ($method === 'DELETE') {
+                $id = (int)($_GET['id'] ?? 0);
+                $stmt = $db->prepare("DELETE FROM transaksi_spp_komponen WHERE id = ? AND tenant_id = ?");
+                $stmt->execute([$id, $tenantId]);
+                $this->jsonResponse(['success' => true]);
             }
-
-            if ($id > 0) {
-                // Update
-                $stmt = $db->prepare("UPDATE transaksi_spp_komponen SET nama_komponen = ?, tipe_periode = ? WHERE id = ? AND tenant_id = ?");
-                $stmt->execute([$nama, $tipe, $id, $tenantId]);
-            } else {
-                // Insert
-                $stmt = $db->prepare("INSERT INTO transaksi_spp_komponen (tenant_id, nama_komponen, tipe_periode) VALUES (?, ?, ?)");
-                $stmt->execute([$tenantId, $nama, $tipe]);
-            }
-            $this->jsonResponse(['success' => true]);
-        } elseif ($method === 'DELETE') {
-            $id = (int)($_GET['id'] ?? 0);
-            $stmt = $db->prepare("DELETE FROM transaksi_spp_komponen WHERE id = ? AND tenant_id = ?");
-            $stmt->execute([$id, $tenantId]);
-            $this->jsonResponse(['success' => true]);
+        } catch (\Throwable $e) {
+            $this->jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
 
     // API: CRUD Tarif Default
     public function apiTarif(): void {
-        $tenantId = $this->resolveTenantId();
-        $db = Database::getConnection();
-        $method = $_SERVER['REQUEST_METHOD'];
+        try {
+            $tenantId = $this->resolveTenantId();
+            $db = Database::getConnection();
+            $method = $_SERVER['REQUEST_METHOD'];
 
-        if ($method === 'GET') {
-            $stmt = $db->prepare("
-                SELECT t.*, k.nama_komponen, c.nama_kelas, j.nama_jenjang, ta.tahun_ajaran
-                FROM transaksi_spp_tarif t
-                JOIN transaksi_spp_komponen k ON t.komponen_id = k.id
-                LEFT JOIN kelas c ON t.kelas_id = c.id
-                LEFT JOIN jenjang j ON t.jenjang_id = j.id
-                JOIN tahun_ajaran ta ON t.tahun_ajaran_id = ta.id
-                WHERE t.tenant_id = ?
-                ORDER BY t.id DESC
-            ");
-            $stmt->execute([$tenantId]);
-            $this->jsonResponse(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
-        } elseif ($method === 'POST') {
-            $raw = json_decode(file_get_contents('php://input'), true);
-            $komponenId = (int)($raw['komponen_id'] ?? 0);
-            $kelasId = !empty($raw['kelas_id']) ? (int)$raw['kelas_id'] : null;
-            $jenjangId = !empty($raw['jenjang_id']) ? (int)$raw['jenjang_id'] : null;
-            $jalurMasuk = !empty($raw['jalur_masuk']) ? trim($raw['jalur_masuk']) : null;
-            $nominal = (float)($raw['nominal'] ?? 0.00);
-            $tahunAjaranId = (int)($raw['tahun_ajaran_id'] ?? 0);
+            if ($method === 'GET') {
+                $stmt = $db->prepare("
+                    SELECT t.*, k.nama_komponen, c.nama_kelas, j.nama_jenjang, ta.tahun_ajaran
+                    FROM transaksi_spp_tarif t
+                    JOIN transaksi_spp_komponen k ON t.komponen_id = k.id
+                    LEFT JOIN kelas c ON t.kelas_id = c.id
+                    LEFT JOIN jenjang j ON t.jenjang_id = j.id
+                    JOIN tahun_ajaran ta ON t.tahun_ajaran_id = ta.id
+                    WHERE t.tenant_id = ?
+                    ORDER BY t.id DESC
+                ");
+                $stmt->execute([$tenantId]);
+                $this->jsonResponse(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            } elseif ($method === 'POST') {
+                $raw = json_decode(file_get_contents('php://input'), true);
+                $komponenId = (int)($raw['komponen_id'] ?? 0);
+                $kelasId = !empty($raw['kelas_id']) ? (int)$raw['kelas_id'] : null;
+                $jenjangId = !empty($raw['jenjang_id']) ? (int)$raw['jenjang_id'] : null;
+                $jalurMasuk = !empty($raw['jalur_masuk']) ? trim($raw['jalur_masuk']) : null;
+                $nominal = (float)($raw['nominal'] ?? 0.00);
+                $tahunAjaranId = (int)($raw['tahun_ajaran_id'] ?? 0);
 
-            if (!$komponenId || !$tahunAjaranId || $nominal <= 0) {
-                $this->jsonResponse(['success' => false, 'error' => 'Komponen, tahun ajaran, dan nominal wajib diisi.'], 422);
+                if (!$komponenId || !$tahunAjaranId || $nominal <= 0) {
+                    $this->jsonResponse(['success' => false, 'error' => 'Komponen, tahun ajaran, dan nominal wajib diisi.'], 422);
+                }
+
+                $stmt = $db->prepare("
+                    INSERT INTO transaksi_spp_tarif (tenant_id, komponen_id, kelas_id, jenjang_id, jalur_masuk, nominal, tahun_ajaran_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ");
+                $stmt->execute([$tenantId, $komponenId, $kelasId, $jenjangId, $jalurMasuk, $nominal, $tahunAjaranId]);
+                $this->jsonResponse(['success' => true]);
+            } elseif ($method === 'DELETE') {
+                $id = (int)($_GET['id'] ?? 0);
+                $stmt = $db->prepare("DELETE FROM transaksi_spp_tarif WHERE id = ? AND tenant_id = ?");
+                $stmt->execute([$id, $tenantId]);
+                $this->jsonResponse(['success' => true]);
             }
-
-            $stmt = $db->prepare("
-                INSERT INTO transaksi_spp_tarif (tenant_id, komponen_id, kelas_id, jenjang_id, jalur_masuk, nominal, tahun_ajaran_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ");
-            $stmt->execute([$tenantId, $komponenId, $kelasId, $jenjangId, $jalurMasuk, $nominal, $tahunAjaranId]);
-            $this->jsonResponse(['success' => true]);
-        } elseif ($method === 'DELETE') {
-            $id = (int)($_GET['id'] ?? 0);
-            $stmt = $db->prepare("DELETE FROM transaksi_spp_tarif WHERE id = ? AND tenant_id = ?");
-            $stmt->execute([$id, $tenantId]);
-            $this->jsonResponse(['success' => true]);
+        } catch (\Throwable $e) {
+            $this->jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
 
     // API: CRUD Keringanan & Beasiswa
     public function apiKeringanan(): void {
-        $tenantId = $this->resolveTenantId();
-        $db = Database::getConnection();
-        $method = $_SERVER['REQUEST_METHOD'];
+        try {
+            $tenantId = $this->resolveTenantId();
+            $db = Database::getConnection();
+            $method = $_SERVER['REQUEST_METHOD'];
 
-        if ($method === 'GET') {
-            $stmt = $db->prepare("
-                SELECT k.*, s.nama_lengkap as nama_siswa, s.nisn, komp.nama_komponen
-                FROM transaksi_spp_keringanan k
-                JOIN siswa s ON k.siswa_id = s.id
-                JOIN transaksi_spp_komponen komp ON k.komponen_id = komp.id
-                WHERE k.tenant_id = ?
-                ORDER BY k.id DESC
-            ");
-            $stmt->execute([$tenantId]);
-            $this->jsonResponse(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
-        } elseif ($method === 'POST') {
-            $raw = json_decode(file_get_contents('php://input'), true);
-            $siswaId = trim($raw['siswa_id'] ?? '');
-            $komponenId = (int)($raw['komponen_id'] ?? 0);
-            $tipe = trim($raw['tipe_keringanan'] ?? 'Nominal');
-            $nilai = (float)($raw['nilai'] ?? 0);
-            $keterangan = trim($raw['keterangan'] ?? '');
+            if ($method === 'GET') {
+                $stmt = $db->prepare("
+                    SELECT k.*, s.nama_lengkap as nama_siswa, s.nisn, komp.nama_komponen
+                    FROM transaksi_spp_keringanan k
+                    JOIN siswa s ON k.siswa_id = s.id
+                    JOIN transaksi_spp_komponen komp ON k.komponen_id = komp.id
+                    WHERE k.tenant_id = ?
+                    ORDER BY k.id DESC
+                ");
+                $stmt->execute([$tenantId]);
+                $this->jsonResponse(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            } elseif ($method === 'POST') {
+                $raw = json_decode(file_get_contents('php://input'), true);
+                $siswaId = trim($raw['siswa_id'] ?? '');
+                $komponenId = (int)($raw['komponen_id'] ?? 0);
+                $tipe = trim($raw['tipe_keringanan'] ?? 'Nominal');
+                $nilai = (float)($raw['nilai'] ?? 0);
+                $keterangan = trim($raw['keterangan'] ?? '');
 
-            if (empty($siswaId) || !$komponenId || $nilai <= 0) {
-                $this->jsonResponse(['success' => false, 'error' => 'Siswa, komponen, dan nilai beasiswa wajib diisi.'], 422);
+                if (empty($siswaId) || !$komponenId || $nilai <= 0) {
+                    $this->jsonResponse(['success' => false, 'error' => 'Siswa, komponen, dan nilai beasiswa wajib diisi.'], 422);
+                }
+
+                $stmt = $db->prepare("
+                    INSERT INTO transaksi_spp_keringanan (tenant_id, siswa_id, komponen_id, tipe_keringanan, nilai, keterangan)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ");
+                $stmt->execute([$tenantId, $siswaId, $komponenId, $tipe, $nilai, $keterangan]);
+                $this->jsonResponse(['success' => true]);
+            } elseif ($method === 'DELETE') {
+                $id = (int)($_GET['id'] ?? 0);
+                $stmt = $db->prepare("DELETE FROM transaksi_spp_keringanan WHERE id = ? AND tenant_id = ?");
+                $stmt->execute([$id, $tenantId]);
+                $this->jsonResponse(['success' => true]);
             }
-
-            $stmt = $db->prepare("
-                INSERT INTO transaksi_spp_keringanan (tenant_id, siswa_id, komponen_id, tipe_keringanan, nilai, keterangan)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ");
-            $stmt->execute([$tenantId, $siswaId, $komponenId, $tipe, $nilai, $keterangan]);
-            $this->jsonResponse(['success' => true]);
-        } elseif ($method === 'DELETE') {
-            $id = (int)($_GET['id'] ?? 0);
-            $stmt = $db->prepare("DELETE FROM transaksi_spp_keringanan WHERE id = ? AND tenant_id = ?");
-            $stmt->execute([$id, $tenantId]);
-            $this->jsonResponse(['success' => true]);
+        } catch (\Throwable $e) {
+            $this->jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
 

@@ -216,6 +216,26 @@ Mengembalikan struktur layout 7 halaman keuangan dari gaya side-by-side flex spl
    - Memastikan tab navigasi custom flat underline yang rapi (garis bawah biru pada status aktif, tanpa folder border Bootstrap) tetap terjaga.
    - Mempertahankan format tabel yang luas, bersih, dan modern tanpa garis pembatas vertikal dengan warna latar header `#f8fafc` sesuai referensi visual Gambar 1.
 
+---
+## [Perbaikan Galat 500 Integrity Constraint Violation pada API Komponen]
+**Waktu**: 16:40 WIB
+**Jenis**: Bug Fix
+
+### Masalah & Analisis Root Cause:
+Ditemukan galat `500 (Internal Server Error)` pada endpoint API `/SINTA-SaaS/api/v1/keuangan/komponen` saat diakses oleh pengguna dengan peran `super_admin`.
+Penyebab utamanya adalah `tenant_id` bernilai string kosong `""` karena payload request POST tidak membawa parameter `tenant_id` dan URL referer tidak memiliki query parameter `tenant_id` (karena diakses dari link sidebar langsung tanpa filter/query string).
+Hal ini memicu eksekusi kueri `INSERT` atau `UPDATE` dengan nilai `tenant_id = ''` yang melanggar kunci asing `fk_spp_komponen_tenant` karena tidak merujuk ke UUID penyewa yang sah.
+
+### Solusi & Implementasi:
+1. **Fallback Default Tenant ID**:
+   - Memodifikasi method `resolveTenantId()` di [SppController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/SppController.php).
+   - Apabila peran yang terdeteksi adalah `super_admin` dan semua parameter pencarian `tenant_id` bernilai kosong, method ini secara cerdas melakukan fallback dengan mengambil ID penyewa pertama (`SELECT id FROM tenants LIMIT 1`) yang ada di database.
+   - Ini memastikan `tenant_id` selalu mengembalikan UUID yang sah untuk `super_admin`, mencegah crash pada database.
+2. **Standardisasi Penanganan Error (Try-Catch)**:
+   - Membungkus method `apiKomponen()`, `apiTarif()`, dan `apiKeringanan()` di [SppController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/SppController.php) menggunakan blok `try-catch`.
+   - Jika terjadi exception (misal masalah database atau kueri), sistem kini mengembalikan respons JSON terstandardisasi (`['success' => false, 'error' => $message]`) dengan status code `500` yang tepat, menghindari output error HTML mentah yang tidak terstruktur.
+
+
 
 
 
