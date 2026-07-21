@@ -853,3 +853,753 @@ Saat jumlah halaman pada tabel data keuangan (Komponen Biaya, Tarif Acuan, Kerin
 ### Rencana Verifikasi & Pengujian
 - Menjalankan syntax checking `php -l` di terminal untuk menjamin integritas kode.
 - Menguji kelancaran interaksi tombol halaman numerik, tombol "Sebelumnya", "Berikutnya", dan status tombol `...` yang dinonaktifkan (`disabled`).
+
+---
+## [Penambahan Filter Sekolah, Tahun Ajaran, Komponen, dan Pengurutan Tahun Ajaran Terbaru di Master Keuangan untuk Super Admin]
+**Waktu**: 17:31 WIB
+**Status**: Dieksekusi
+
+# Rencana Implementasi: Penambahan Filter Sekolah, Tahun Ajaran, Komponen, dan Pengurutan Tahun Ajaran Terbaru di Master Keuangan
+
+Menyediakan fungsionalitas manajemen multi-tenant yang lebih kuat bagi Super Admin dengan menampilkan data sekolah, memberikan filter Sekolah, Tahun Ajaran, dan Komponen pada tabel Tarif Default, serta memastikan Tahun Ajaran terbaru selalu berada di posisi paling atas.
+
+## User Review Required
+> [!IMPORTANT]
+> Fitur penyaringan ini bersifat lokal (client-side dynamic filter) sehingga respons antarmuka sangat cepat (instantaneous).
+> Super Admin juga dapat memilih "-- Semua Sekolah --" pada dropdown filter global untuk melihat kompilasi seluruh komponen & tarif dari semua sekolah di satu halaman tunggal.
+
+## Open Questions
+Tidak ada. Seluruh spesifikasi kebutuhan telah dianalisis dan dirumuskan.
+
+## Proposed Changes
+
+### 1. Backend Controller (`app/Controllers/SppController.php`)
+- **SQL Parameter Binding / SQLi Prevention (Anti-SQLi compliance)**: Memperbaiki string query di `keringanan()` dan `generate()` agar menggunakan prepared statements dengan binding parameter, menggantikan string interpolation.
+- **Dukungan Tampilan Semua Sekolah untuk Super Admin**: Di `apiKomponen()` dan `apiTarif()` (metode `GET`), jika pengguna adalah `super_admin` dan parameter `tenant_id` tidak ditentukan atau kosong (`""`), API akan mengembalikan daftar komponen/tarif dari seluruh tenant/sekolah beserta relasi `tenants.nama_sekolah`.
+- **Pengurutan Tahun Ajaran Terbaru di Bagian Atas**: Mengubah urutan kueri data tarif default (`apiTarif()`) agar diurutkan berdasarkan `tahun_ajaran DESC` terlebih dahulu, kemudian `t.id DESC`.
+
+#### [MODIFY] [SppController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/SppController.php)
+
+---
+
+### 2. Frontend View (`views/keuangan/master.php`)
+- **Global Dropdown Selector**: Menambahkan pilihan `-- Semua Sekolah (Global) --` (nilai kosong `""`) pada pemilih sekolah global Super Admin.
+- **Input Filter Lokal pada Card "Daftar Tarif Default"**:
+  - Pilihan Dropdown **Sekolah/Tenant** (Hanya tampil untuk Super Admin).
+  - Pilihan Dropdown **Tahun Ajaran**.
+  - Pilihan Dropdown **Komponen Biaya** (Dibuat dinamis menggunakan `computed` set unik nama komponen yang tersedia).
+- **Kolom Sekolah pada Tabel**:
+  - Menampilkan kolom `Sekolah` di tabel komponen biaya (Tab 1) dan tabel tarif default (Tab 2) hanya jika pengguna masuk sebagai `super_admin`.
+- **Modifikasi Form Tambah/Edit Data**:
+  - Pada form komponen, jika filter global terpilih "Semua Sekolah", Super Admin wajib memilih Sekolah tujuan di dropdown form sebelum menyimpan.
+  - Pada form tarif, jika filter global terpilih "Semua Sekolah", tampilkan pesan informatif untuk mengarahkan pengguna agar memilih salah satu sekolah terlebih dahulu pada filter global sebelum menautkan tarif baru.
+- **Logika Vue.js**:
+  - Menambahkan reactive variables `filterTarifTenant`, `filterTarifTa`, `filterTarifKomp`.
+  - Membuat computed property `uniqueKomponenNames` untuk opsi select filter komponen.
+  - Memperbarui computed property `filteredTarif` agar menyaring tarif berdasarkan ketiga input filter tersebut secara dinamis.
+  - Menambahkan watcher untuk mereset `tarifPage.value = 1` ketika nilai filter berubah.
+
+#### [MODIFY] [master.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/master.php)
+
+---
+
+## Verification Plan
+
+### Manual Verification
+1. Masuk sebagai `super_admin` dan akses halaman `/SINTA-SaaS/keuangan/master`.
+2. Verifikasi pemilih sekolah di pojok kiri atas/header memiliki opsi `-- Semua Sekolah (Global) --`.
+3. Verifikasi opsi Tahun Ajaran pada form tambah tarif menampilkan tahun ajaran terbaru di bagian atas.
+4. Pilih salah satu tenant, verifikasi data ter-filter sesuai tenant.
+5. Pilih kembali `-- Semua Sekolah (Global) --`, lalu uji filter lokal (Sekolah, Tahun Ajaran, Komponen) di atas tabel "Daftar Tarif Default".
+6. Verifikasi kolom `Sekolah` muncul pada tabel komponen dan tabel tarif default untuk Super Admin.
+7. Coba tambah komponen baru saat mode global aktif, dan verifikasi pilihan Sekolah muncul dan berhasil disimpan.
+
+---
+## [Fitur Preview Penerbitan Tagihan & Manajemen Daftar Tagihan Siswa]
+**Waktu**: 17:38 WIB
+**Status**: Dieksekusi
+
+# Rencana Implementasi: Fitur Preview Penerbitan Tagihan & Manajemen Daftar Tagihan Siswa
+
+Menambahkan navigasi navtab di halaman Generate Tagihan untuk memisahkan fitur penerbitan masal (Generate) dengan manajemen daftar tagihan aktif. Menyediakan pratinjau daftar siswa dan nominal sebelum tagihan diterbitkan, serta manajemen daftar tagihan lengkap dengan pencarian, penyaringan, dan pengeditan nominal secara asinkronus (AJAX Fetch).
+
+## User Review Required
+> [!IMPORTANT]
+> Fitur pencarian dan filter di "Daftar Tagihan Siswa" menggunakan server-side pagination agar performa tetap cepat dan responsif meskipun database memiliki puluhan ribu data tagihan siswa.
+> Edit nominal tagihan diijinkan asalkan tagihan tersebut belum lunas atau nominal bayar lebih kecil dari nominal tagihan baru yang diset. Penghapusan tagihan ditolak secara aman jika tagihan sudah memiliki riwayat pembayaran (`nominal_bayar > 0`).
+
+## Open Questions
+Tidak ada.
+
+## Proposed Changes
+
+### 1. Backend Routes (`index.php`)
+Menambahkan rute-rute endpoint API keuangan baru:
+- `GET /api/v1/keuangan/preview-generate` -> Pratinjau target penerima tagihan berdasarkan form filter.
+- `GET /api/v1/keuangan/daftar-tagihan` -> Mengambil data tagihan siswa terdaftar (paginated & filtered).
+- `POST /api/v1/keuangan/edit-tagihan-nominal` -> Mengedit nominal tagihan aktif dan merekalibrasi status kelunasan.
+- `DELETE /api/v1/keuangan/hapus-tagihan` -> Menghapus tagihan yang belum dibayar secara aman.
+
+#### [MODIFY] [index.php](file:///C:/xampp/htdocs/SINTA-SaaS/index.php)
+
+---
+
+### 2. Backend Controller (`app/Controllers/SppController.php`)
+- **`apiPreviewGenerate()`**: Menyaring siswa aktif berdasarkan kriteria filter, mencocokkan dengan prioritas tarif default, menghitung diskon keringanan/beasiswa personal, memeriksa duplikasi tagihan, dan mengembalikan data pratinjau.
+- **`apiDaftarTagihan()`**: Menerima parameter query pencarian `q`, filter `kelas_id`, `tahun_ajaran_id`, `komponen_id`, `status_lunas`, `tenant_id`, serta parameter pagination `page` & `page_size`. Mengembalikan data tagihan dengan query teroptimasi.
+- **`apiEditTagihanNominal()`**: Memperbarui kolom `nominal_tagihan` pada tagihan yang dipilih, menghitung ulang status lunas (Lunas/Cicil/Belum), serta mencatat perubahan di audit log keuangan.
+- **`apiHapusTagihan()`**: Menghapus tagihan terpilih dari database jika `nominal_bayar` sama dengan 0. Menolak penghapusan dan melempar error jika tagihan sudah dicicil/dibayar.
+
+#### [MODIFY] [SppController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/SppController.php)
+
+---
+
+### 3. Frontend View (`views/keuangan/generate.php`)
+- **Nav Tabs Layout**: Menempatkan Bootstrap Nav Tabs di bagian atas halaman:
+  1. **Generate Tagihan**: Layout 2 kolom (Kiri: Form input filter; Kanan: Tabel preview siswa sebelum generate lengkap dengan nominal asli, diskon, dan nominal bersih).
+  2. **Daftar Tagihan Siswa**: Tabel pencarian, filter, edit nominal, dan pagination numerik dengan elipsis `...`.
+- **Edit Nominal Modal**: Menyediakan modal Bootstrap `#editNominalModal` untuk mengubah nominal tagihan aktif.
+- **Logika Vue.js**:
+  - Watcher otomatis untuk menembak API pratinjau (`preview-generate`) saat form generate dilengkapi.
+  - Implementasi pemanggilan API `apiDaftarTagihan()`, `apiEditTagihanNominal()`, dan `apiHapusTagihan()`.
+  - Sinkronisasi visual untuk memelihara input filter.
+
+#### [MODIFY] [generate.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/generate.php)
+
+---
+
+## Verification Plan
+
+### Manual Verification
+1. Akses halaman `/SINTA-SaaS/keuangan/generate`.
+2. Verifikasi tab navigasi "Generate Tagihan" dan "Daftar Tagihan Siswa" tampil dengan baik.
+3. Pada tab "Generate Tagihan", pilih Komponen Biaya & Tahun Ajaran. Verifikasi panel di sebelah kanan menampilkan tabel pratinjau daftar siswa calon penerima beserta perhitungan diskon dan nominal akhir secara otomatis.
+4. Klik tombol "Terbitkan Tagihan Sekarang" dan pastikan tagihan berhasil terbit.
+5. Pindah ke tab "Daftar Tagihan Siswa". Verifikasi list tagihan terbit muncul lengkap dengan pagination and filter.
+6. Ketikkan nama siswa pada input pencarian, verifikasi pencarian secara server-side berjalan lancar.
+7. Klik tombol "Edit" pada salah satu baris tagihan, ubah nominalnya, klik Simpan, dan pastikan nominal baru ter-update dengan benar.
+8. Klik tombol "Hapus" pada tagihan kosong (belum dibayar), pastikan terhapus. Coba hapus tagihan yang sudah memiliki cicilan/pembayaran, dan pastikan ditolak dengan pesan yang ramah.
+
+---
+## [Penyaringan Tahun Ajaran Berdasarkan Tenant / Sekolah]
+**Waktu**: 17:43 WIB
+**Status**: Dieksekusi
+
+# Rencana Implementasi: Penyaringan Tahun Ajaran Berdasarkan Tenant / Sekolah
+
+Mengatur pemuatan Tahun Ajaran secara dinamis melalui endpoint API AJAX baru, disaring berdasarkan sekolah/tenant yang sedang terpilih secara global. Hal ini memastikan pilihan Tahun Ajaran pada halaman Master Keuangan dan Generate Tagihan terisolasi dengan benar per sekolah.
+
+## User Review Required
+> [!IMPORTANT]
+> Tahun ajaran tidak lagi dimuat secara statis dari PHP controller page loader saat rendering halaman pertama kali. Seluruh pemuatan dialihkan melalui dynamic fetch AJAX (`/api/v1/keuangan/tahun-ajaran`) saat tenant berubah, sesuai dengan arsitektur Zero Data Leakage.
+
+## Open Questions
+Tidak ada.
+
+## Proposed Changes
+
+### 1. Backend Routes (`index.php`)
+Menambahkan rute endpoint API baru:
+- `GET /api/v1/keuangan/tahun-ajaran` -> Mengambil daftar tahun ajaran milik tenant aktif (atau unik global untuk super_admin).
+
+#### [MODIFY] [index.php](file:///C:/xampp/htdocs/SINTA-SaaS/index.php)
+
+---
+
+### 2. Backend Controller (`app/Controllers/SppController.php`)
+- **`apiTahunAjaran()`**: Mengambil data `tahun_ajaran` dari database. Jika pengguna adalah `super_admin` dalam mode global (tanpa param `tenant_id`), list tahun ajaran dikelompokkan secara unik menggunakan `GROUP BY tahun_ajaran`. Jika tenant tertentu dipilih, query disaring berdasarkan `tenant_id` sekolah tersebut.
+
+#### [MODIFY] [SppController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/SppController.php)
+
+---
+
+### 3. Frontend Views (`views/keuangan/master.php` & `views/keuangan/generate.php`)
+- Mengubah deklarasi variabel `listTa` dari *static injection* ke dynamic ref `Vue.ref([])`.
+- Menambahkan method pembantu `fetchTahunAjaran()` untuk mengambil data tahun ajaran dari API baru.
+- Memanggil `fetchTahunAjaran()` saat halaman di-mount dan saat tenant berubah (`onTenantChange()`).
+
+#### [MODIFY] [master.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/master.php)
+#### [MODIFY] [generate.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/generate.php)
+
+---
+
+## Verification Plan
+
+### Manual Verification
+1. Masuk sebagai `super_admin` dan akses halaman `/SINTA-SaaS/keuangan/generate`.
+2. Pilih salah satu tenant (misal: "SMA Negeri 1 Jakarta"). Verifikasi opsi dropdown "Tahun Ajaran" disaring dan hanya menampilkan tahun ajaran milik SMA Negeri 1 Jakarta.
+3. Ubah sekolah di dropdown global, pastikan pilihan Tahun Ajaran berubah menyesuaikan sekolah baru.
+4. Akses halaman `/SINTA-SaaS/keuangan/master`, ganti tenant sekolah, dan pastikan dropdown Tahun Ajaran di form penautan tarif baru ter-update dinamis.
+
+---
+## [Perbaikan Query Lookup Jenjang Kelas pada Penerbitan Tagihan]
+**Waktu**: 17:54 WIB
+**Status**: Dieksekusi
+
+# Rencana Implementasi: Perbaikan Query Lookup Jenjang Kelas pada Penerbitan Tagihan
+
+Memperbaiki kesalahan referensi kolom `jenjang_id` menjadi `id_jenjang` pada tabel `kelas` di kueri database pada method `apiGenerateTagihan` dan `apiPreviewGenerate`. Ini akan memperbaiki masalah daftar nama siswa yang tidak muncul (kosong) saat penerbitan tagihan.
+
+## User Review Required
+> [!IMPORTANT]
+> Kolom jenjang pada tabel `kelas` didefinisikan sebagai `id_jenjang` sesuai skema database DAPODIK, sedangkan di tabel `transaksi_spp_tarif` tetap dinamakan `jenjang_id`. Query pencocokan tarif default berdasarkan jenjang perlu diselaraskan agar tidak memicu error database.
+
+## Open Questions
+Tidak ada.
+
+## Proposed Changes
+
+### 1. Backend Controller (`app/Controllers/SppController.php`)
+- Memperbarui query lookup jenjang di `apiGenerateTagihan()` (baris 511) dari `jenjang_id = ?` ke `id_jenjang = ?`.
+- Memperbarui query lookup jenjang di `apiPreviewGenerate()` (baris 667) dari `jenjang_id = ?` ke `id_jenjang = ?`.
+- Memperbarui filter target jenjang pada query siswa aktif di `apiPreviewGenerate()` (baris 627) dari `jenjang_id = ?` ke `id_jenjang = ?`.
+
+#### [MODIFY] [SppController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/SppController.php)
+
+---
+
+## Verification Plan
+
+### Manual Verification
+1. Akses halaman `/SINTA-SaaS/keuangan/generate`.
+2. Pilih tenant "SMA Negeri 1 Jakarta", Komponen "Formulir Pendaftaran PPDB", dan Tahun Ajaran "2026/2027".
+3. Pilih Target Distribusi "Semua Kelas".
+4. Verifikasi bahwa daftar nama siswa sasaran kini muncul secara otomatis pada panel pratinjau di sebelah kanan (tidak lagi kosong).
+
+---
+## [Penyaringan Kelas dan Jenjang Berdasarkan Tenant / Sekolah]
+**Waktu**: 17:59 WIB
+**Status**: Dieksekusi
+
+# Rencana Implementasi: Penyaringan Kelas dan Jenjang Berdasarkan Tenant / Sekolah
+
+Mengatur pemuatan Kelas dan Jenjang secara dinamis melalui endpoint API AJAX baru, disaring berdasarkan sekolah/tenant terpilih secara global. Ini membatasi pilihan Kelas dan Jenjang sasaran pada antarmuka Master Keuangan dan Generate Tagihan agar terisolasi per sekolah.
+
+## User Review Required
+> [!IMPORTANT]
+> Opsi Kelas dan Jenjang tidak lagi dimuat secara statis dari PHP controller page loader saat rendering halaman pertama kali. Seluruh pemuatan dialihkan melalui dynamic fetch AJAX (`/api/v1/keuangan/kelas` dan `/api/v1/keuangan/jenjang`) saat tenant berubah, sesuai dengan arsitektur Zero Data Leakage.
+
+## Open Questions
+Tidak ada.
+
+## Proposed Changes
+
+### 1. Backend Routes (`index.php`)
+Menambahkan rute-rute endpoint API baru:
+- `GET /api/v1/keuangan/kelas` -> Mengambil daftar kelas milik tenant aktif (atau semua kelas untuk super_admin global).
+- `GET /api/v1/keuangan/jenjang` -> Mengambil daftar jenjang milik tenant aktif (atau semua jenjang untuk super_admin global).
+
+#### [MODIFY] [index.php](file:///C:/xampp/htdocs/SINTA-SaaS/index.php)
+
+---
+
+### 2. Backend Controller (`app/Controllers/SppController.php`)
+- **`apiKelas()`**: Mengambil data `kelas` dari database disaring berdasarkan `tenant_id` aktif.
+- **`apiJenjang()`**: Mengambil data `jenjang` dari database disaring berdasarkan `tenant_id` aktif.
+
+#### [MODIFY] [SppController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/SppController.php)
+
+---
+
+### 3. Frontend Views (`views/keuangan/master.php` & `views/keuangan/generate.php`)
+- Mengubah deklarasi variabel `listKelas` dan `listJenjang` ke dynamic ref `Vue.ref([])`.
+- Menambahkan method pembantu `fetchKelas()` and `fetchJenjang()`.
+- Memanggil pembaruan `fetchKelas()` dan `fetchJenjang()` saat halaman di-mount dan saat tenant berubah (`onTenantChange()`).
+
+#### [MODIFY] [master.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/master.php)
+#### [MODIFY] [generate.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/generate.php)
+
+---
+
+## Verification Plan
+
+### Manual Verification
+1. Akses halaman `/SINTA-SaaS/keuangan/generate`.
+2. Pilih tenant "SMA Negeri 1 Jakarta".
+3. Pilih Target Distribusi "Per Jenjang".
+4. Klik dropdown "Pilih Jenjang Sasaran" dan pastikan hanya jenjang milik SMA Negeri 1 Jakarta yang tampil (seperti: "Sekolah Menengah Atas"), sementara jenjang milik SMK ("Sekolah Menengah Kejuruan") atau sekolah lain disembunyikan.
+5. Lakukan hal yang sama untuk dropdown "Pilih Kelas Sasaran" (Target Distribusi: Per Kelas), pastikan hanya kelas milik SMA Negeri 1 Jakarta yang terdaftar.
+
+---
+## [Pemilihan Siswa Sasaran (Checklist) Sebelum Menerbitkan Tagihan]
+**Waktu**: 18:16 WIB
+**Status**: Dieksekusi
+
+# Rencana Implementasi: Pemilihan Siswa Sasaran (Checklist) Sebelum Menerbitkan Tagihan
+
+Menambahkan fitur pemilihan siswa sasaran menggunakan checkbox pada panel pratinjau di halaman Generate Tagihan. Pengguna dapat memilih semua siswa secara cepat (select all) atau mencentang beberapa siswa saja secara mandiri sebelum menekan tombol "Terbitkan Tagihan".
+
+## User Review Required
+> [!IMPORTANT]
+> Secara default, seluruh siswa yang belum mendapatkan tagihan pada tahun/komponen terpilih akan otomatis tercentang (checked) agar mempercepat proses penerbitan jika memang ditujukan ke semua siswa. Pengguna dapat menghapus centang untuk mengecualikan siswa tertentu dari daftar penerbitan tagihan.
+
+## Open Questions
+Tidak ada.
+
+## Proposed Changes
+
+### 1. Backend Controller (`app/Controllers/SppController.php`)
+- **`apiGenerateTagihan()`**: Menerima parameter array `siswa_ids` dalam body POST. Jika array ini diisi (tidak kosong), query pencarian siswa aktif disaring menggunakan `AND s.id IN (...)` dengan parameter placeholder/prepared statement yang dinamis guna membatasi penerbitan tagihan hanya untuk siswa-siswa terpilih.
+
+#### [MODIFY] [SppController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/SppController.php)
+
+---
+
+### 2. Frontend View (`views/keuangan/generate.php`)
+- **Tabel Preview**: Menambahkan kolom checkbox di paling kiri tabel pratinjau.
+  - Header: Checkbox untuk "Pilih Semua" (Select All).
+  - Row: Checkbox individual per siswa (dinonaktifkan jika tagihan `sudah_ada` bernilai true).
+- **Logika Vue.js**:
+  - State baru: `selectedSiswaIds` (array referensi siswa terpilih).
+  - Computed property `isAllSelected` dan helper `toggleSelectAll()` untuk mengelola status checkbox induk.
+  - Watcher pada `previewList` untuk mencentang seluruh siswa sasaran yang eligible secara default saat pratinjau dimuat.
+  - Menyesuaikan payload AJAX POST pada tombol terbitkan tagihan agar mengirimkan parameter `siswa_ids`.
+
+#### [MODIFY] [generate.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/generate.php)
+
+---
+
+## Verification Plan
+
+### Manual Verification
+1. Akses halaman `/SINTA-SaaS/keuangan/generate`.
+2. Pilih tenant "SMA Negeri 1 Jakarta", Komponen "Formulir Pendaftaran PPDB", dan Tahun Ajaran "2026/2027".
+3. Pada panel pratinjau kanan, verifikasi seluruh siswa calon penerima otomatis tercentang.
+4. Hilangkan centang pada 1-2 siswa, pastikan label tombol terbitkan berubah menjadi `Terbitkan Tagihan (X Siswa)` (jumlah berkurang).
+5. Klik tombol header checkbox untuk menghapus semua centangan siswa. Centang secara manual beberapa siswa saja.
+6. Klik tombol "Terbitkan Tagihan" dan verifikasi tagihan hanya terbit untuk siswa-siswa yang tercentang.
+
+---
+## [Optimalisasi Kueri & Indeks Database Tagihan SPP Massal]
+**Waktu**: 18:25 WIB
+**Status**: Dieksekusi
+
+# Rencana Implementasi: Optimalisasi Kueri & Indeks Database Tagihan SPP Massal
+
+Memperbaiki bug perbedaan data pada hitungan pagination (COUNT vs SELECT) serta menambahkan indeks performa pada database untuk mempercepat operasi sort dan load pada saat mengelola jutaan baris data tagihan SPP.
+
+## User Review Required
+> [!IMPORTANT]
+> Mengubah `INNER JOIN` menjadi `LEFT JOIN` pada tabel lookup `kelas`, `komponen`, `tahun_ajaran`, dan `tenants` di kueri data terpaginasi. Ini menjamin data yang dihitung di fungsi COUNT selalu memiliki jumlah baris yang sama persis dengan yang ditampilkan di fungsi SELECT (meskipun ada kelas/jenjang yang kosong/terhapus).
+> Menambahkan indeks B-TREE baru pada database untuk kolom `created_at`, `(tenant_id, created_at)`, dan `status_lunas`.
+
+## Open Questions
+Tidak ada.
+
+## Proposed Changes
+
+### 1. Database Migration (`database/migrations/2026_07_21_02_add_indexes_to_spp_tagihan.php`)
+- **`up()`**: Menambahkan indeks performa pencarian `idx_spp_tagihan_created`, `idx_spp_tagihan_tenant_created`, dan `idx_spp_tagihan_status` pada tabel `transaksi_spp_tagihan`.
+- **`down()`**: Menghapus indeks performa tersebut saat rollback.
+
+#### [NEW] [2026_07_21_02_add_indexes_to_spp_tagihan.php](file:///C:/xampp/htdocs/SINTA-SaaS/database/migrations/2026_07_21_02_add_indexes_to_spp_tagihan.php)
+
+---
+
+### 2. Backend Controller (`app/Controllers/SppController.php`)
+- **`apiDaftarTagihan()`**:
+  - Mengubah `INNER JOIN` ke `LEFT JOIN` pada query select.
+  - Mengoptimasi klausa pengurutan dari `ORDER BY t.created_at DESC, s.nama_lengkap ASC` menjadi `ORDER BY t.created_at DESC` agar MySQL dapat menggunakan composite index secara langsung (menghindari filesort).
+
+#### [MODIFY] [SppController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/SppController.php)
+
+---
+
+## Verification Plan
+
+### Manual Verification
+1. Akses tab "Daftar Tagihan Siswa".
+2. Navigasi ke halaman-halaman akhir (misal halaman 4175).
+3. Pastikan data tagihan tetap muncul konsisten di tabel sesuai dengan jumlah pagination-nya.
+4. Rasakan perbedaan kecepatan pemuatan halaman yang jauh lebih instan.
+
+---
+## [Ekspor Excel Dinamis (Pivot SPP) & Filter Mandatori Halaman Daftar Tagihan]
+**Waktu**: 18:36 WIB
+**Status**: Dieksekusi
+
+# Rencana Implementasi: Ekspor Excel Dinamis (Pivot SPP) & Filter Mandatori Halaman Daftar Tagihan
+
+Mengubah fungsionalitas pencarian halaman Daftar Tagihan agar mewajibkan filter (tidak me-load data di awal secara langsung) guna meringankan beban server pada database dengan jutaan data. Serta menambahkan menu download Excel dalam format pivot dinamis (cross-tab) menggunakan pustaka `SimpleXLSXGen`.
+
+## User Review Required
+> [!IMPORTANT]
+> - **Filter Mandatori**: Saat pertama kali membuka tab "Daftar Tagihan Siswa", tabel akan kosong dan menampilkan pesan petunjuk untuk memilih filter terlebih dahulu.
+> - **Ekspor Excel Pivot Dinamis**: Struktur Excel dibuat cross-tab dengan sumbu baris: `nama`, `nisn`, `kelas`, dan sumbu kolom dikelompokkan bertingkat: **Tahun Ajaran > Komponen Biaya > [nominal, telah di bayar, Kurang bayar, status]**.
+
+## Open Questions
+Tidak ada.
+
+## Proposed Changes
+
+### 1. Backend Central Router (`index.php`)
+Mendaftarkan rute baru:
+- `GET /api/v1/keuangan/export-tagihan-excel` -> Menjalankan method ekspor Excel pivot SPP di controller.
+
+#### [MODIFY] [index.php](file:///C:/xampp/htdocs/SINTA-SaaS/index.php)
+
+---
+
+### 2. Backend Controller (`app/Controllers/SppController.php`)
+- **`apiExportTagihanExcel()`**:
+  - Mengambil parameter query (`tenant_id`, `q`, `kelas_id`, `tahun_ajaran_id`, `komponen_id`, `status_lunas`).
+  - Memvalidasi bahwa minimal satu filter (di luar tenant) telah diset. Jika tidak ada, kembalikan pesan galat.
+  - Menarik data tagihanSPP aktif yang sesuai dari database.
+  - Memetakan data secara dinamis ke bentuk baris/kolom Pivot (cross-tab).
+  - Memanfaatkan pustaka `SimpleXLSXGen` untuk merancang sheet Excel lengkap dengan merge cell (A1:A3 untuk nama, dst.), background warna cell, dan memicu download otomatis ke browser.
+
+#### [MODIFY] [SppController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/SppController.php)
+
+---
+
+### 3. Frontend View (`views/keuangan/generate.php`)
+- **Computed Property `hasFilterApplied`**: Mengidentifikasi apakah ada filter aktif selain tenant.
+- **`fetchDaftarTagihan()`**: Mencegah request AJAX ke server jika `hasFilterApplied` bernilai false.
+- **Pembersihan onMounted**: Menghapus pemanggilan otomatis `fetchDaftarTagihan()` saat mounted pertama kali.
+- **UI Grid Filter**:
+  - Mengubah layout grid filter agar muat ditambahkan tombol "Excel" (.xlsx) berwarna hijau.
+  - Menonaktifkan tombol "Excel" jika belum ada filter yang diterapkan.
+  - Menambahkan method `downloadExcel()`.
+- **Placeholder Filter Mandatori**:
+  - Menampilkan layout pemberitahuan yang menawan saat belum ada filter yang diisi.
+
+#### [MODIFY] [generate.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/generate.php)
+
+---
+
+## Verification Plan
+
+### Manual Verification
+1. Akses halaman `/SINTA-SaaS/keuangan/generate` dan klik tab **Daftar Tagihan Siswa**.
+2. Verifikasi tabel kosong dan menampilkan ikon filter bertuliskan *"Silakan tentukan minimal satu filter di atas terlebih dahulu..."*.
+3. Verifikasi tombol **Excel** berwarna hijau dalam posisi nonaktif (`disabled`).
+4. Pilih salah satu filter (misal Kelas atau Komponen Biaya). Pastikan kueri terpanggil otomatis dan menampilkan daftar tagihan terbit.
+5. Verifikasi tombol **Excel** kini aktif. Klik tombol **Excel** tersebut.
+6. Periksa file `.xlsx` yang terunduh dan pastikan strukturnya berupa pivot bertingkat sesuai dengan mockup (Tahun Ajaran > Komponen > [nominal, telah di bayar, Kurang bayar, status] dengan merge cell vertikal pada kolom nama, nisn, kelas).
+
+---
+## [Filter Kelas, Riwayat Kelas, & Status Tagihan Loket Kasir]
+**Waktu**: 18:48 WIB
+**Status**: Dieksekusi
+
+# Rencana Implementasi: Filter Kelas, Riwayat Kelas, & Status Tagihan Loket Kasir
+
+Memperbaiki Loket Kasir Pembayaran untuk mendukung pencarian siswa menggunakan filter kelas tambahan (mengantisipasi nama ganda), menampilkan riwayat kelas siswa pada baris tagihan lama sesuai dengan tahun ajaran terkait, serta menampilkan kolom **Status Tagihan** (Belum Lunas, Cicil) sebelum input jumlah pembayaran.
+
+## User Review Required
+> [!IMPORTANT]
+> - **Filter Kelas di Kasir**: Pada kolom pencarian siswa loket pembayaran kasir, ditambahkan dropdown kelas baru. Data opsi kelas ini dimuat secara dinamis mengikuti tenant sekolah terpilih.
+> - **Kelas Lama Tagihan**: Pada tabel Daftar Kewajiban Pembayaran kasir, ditambahkan kolom "Kelas" tepat setelah Tahun Ajaran yang menampilkan kelas siswa pada periode tagihan tersebut dibuat (diambil secara dinamis dari riwayat kenaikan kelas atau fallback ke kelas aktif).
+> - **Kolom Status (Rekomendasi Terbaik)**: Ditambahkan kolom "Status" tepat sebelum kolom input "Bayar (Rp)" yang menyajikan status lunas berjalan dalam bentuk badge berwarna (merah untuk Belum Lunas, kuning untuk Cicil) agar kasir mengetahui riwayat pembayaran tagihan tersebut sebelumnya.
+
+## Open Questions
+Tidak ada.
+
+## Proposed Changes
+
+### 1. Backend Controller (`app/Controllers/SppController.php`)
+- **`apiCariSiswa()`**:
+  - Menerima parameter `kelas_id` opsional.
+  - Jika `kelas_id` diisi, filter pencarian siswa ditambahkan `AND s.id_kelas = ?` untuk mempersempit daftar saran pencarian.
+- **`apiGetTagihanSiswa()`**:
+  - Merefaktor query select agar mengambil nama kelas historis siswa (`nama_kelas_history`) menggunakan subquery `COALESCE` yang memeriksa tabel `riwayat_kenaikan_kelas` untuk `tahun_ajaran` tagihan, atau fallback ke kelas siswa saat ini.
+
+#### [MODIFY] [SppController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/SppController.php)
+
+---
+
+### 2. Frontend View (`views/keuangan/kasir.php`)
+- **Pencarian & Filter Kelas**:
+  - Menata ulang grid pencarian siswa: menyisipkan dropdown **Filter Kelas** sebelum baris pencarian nama/NISN.
+  - Menambahkan ref `listKelas` dan `selectedKelasId`.
+  - Membuat method `fetchKelas()` untuk memuat kelas aktif sekolah secara dinamis.
+  - Memanggil `fetchKelas()` saat mounted dan saat `onTenantChange()` dipicu.
+  - Mengirim parameter `kelas_id` ke API `/api/v1/keuangan/cari-siswa`.
+- **Tabel Daftar Kewajiban**:
+  - Menyisipkan kolom header `Kelas` setelah Tahun Ajaran.
+  - Menampilkan variabel `t.nama_kelas_history` di dalam badge agar tampak premium.
+  - Menyisipkan kolom header `Status` sebelum `Bayar (Rp)`.
+  - Menampilkan `t.status_lunas` dalam badge berwarna menggunakan fungsi `getStatusBadgeClass()`.
+
+#### [MODIFY] [kasir.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/kasir.php)
+
+---
+
+## Verification Plan
+
+### Manual Verification
+1. Akses halaman `/SINTA-SaaS/keuangan/kasir`.
+2. Pilih tenant "SMA Negeri 1 Jakarta".
+3. Verifikasi dropdown **Filter Kelas** terisi daftar kelas SMA Negeri 1 Jakarta secara dinamis.
+4. Pilih kelas tertentu (misal "Kelas X IPS 1") dan cari nama siswa (misal "foni"). Pastikan daftar yang muncul tersaring tepat hanya untuk kelas tersebut.
+5. Klik nama siswa tersebut untuk memuat kewajibannya.
+6. Periksa tabel **Daftar Kewajiban Pembayaran**, pastikan ada kolom **Kelas** di sebelah kanan Tahun Ajaran yang menampilkan kelas historis siswa pada tahun ajaran tersebut (misal "Kelas X IPS 1").
+7. Periksa kolom **Status** di sebelah kanan Sisa Kekurangan, pastikan menampilkan status cicilan berjalan (misal "Cicil" atau "Belum Lunas").
+
+---
+## [Filter Cascading, Daftar Siswa Dinamis, Riwayat Kelas Akurat, & Grouping Tagihan Kasir]
+**Waktu**: 19:03 WIB
+**Status**: Dieksekusi
+
+# Rencana Implementasi: Filter Cascading, Daftar Siswa Dinamis, Riwayat Kelas Akurat per Tahun Ajaran, & Pengelompokan Tagihan Kasir
+
+Memperbarui antarmuka Loket Kasir Pembayaran secara komprehensif dengan menyematkan **Filter Jenjang** bertingkat (cascading) ke **Filter Kelas**, menampilkan seluruh daftar siswa dalam kelas terpilih secara interaktif, menyajikan **riwayat kelas historis yang akurat sesuai tahun ajaran tagihan**, serta merestrukturisasi tabel **Daftar Kewajiban Pembayaran** (grouping per Tahun Ajaran & Komponen, urutan bulan Januari-Desember, kunci tagihan Lunas, dan penyesuaian lebar kolom agar tidak terpotong).
+
+## User Review Required
+> [!IMPORTANT]
+> - **Akurasi Riwayat Kelas per Tahun Ajaran**:
+>   - Kelas yang tampil pada setiap baris tagihan **bukan sekadar kelas siswa saat ini**, melainkan **kelas riwayat siswa pada tahun ajaran tagihan tersebut terbit**.
+>   - Sistem akan memeriksa tabel `riwayat_kenaikan_kelas`:
+>     1. Mengambil `nama_kelas_tujuan` pada record kenaikan/penempatan di tahun ajaran tersebut.
+>     2. Jika tagihan berasal dari tahun sebelumnya, mengambil `nama_kelas_asal` dari record kenaikan kelas setelahnya.
+>     3. Fallback ke kelas aktif siswa jika tidak terdapat histori promo.
+> - **Filter Jenjang & Kelas Cascading**:
+>   - Ditambahkan dropdown **Filter Jenjang** di loket kasir.
+>   - Ketika Jenjang dipilih, opsi pada dropdown **Filter Kelas** otomatis tersaring sesuai Jenjang tersebut.
+>   - Ketika Kelas dipilih, sistem akan menampilkan **seluruh daftar siswa** dalam kelas tersebut tanpa kasir harus mengetik nama/NISN terlebih dahulu.
+> - **Interaksi Klik Nama Siswa**:
+>   - Kasir cukup mengklik salah satu nama siswa dari daftar/saran untuk memuat dan menampilkan **Daftar Kewajiban Pembayaran** siswa tersebut.
+> - **Pengelompokan (Grouping) & Urutan Bulan**:
+>   - Tagihan dikelompokkan secara bertingkat berdasarkan **Tahun Ajaran** -> **Komponen Tagihan**.
+>   - Untuk komponen bulanan, item diurutkan kronologis dari **Januari (1) hingga Desember (12)**.
+> - **Proteksi Tagihan Lunas & Responsivitas Tabel**:
+>   - Tagihan berstatus `Lunas` tetap ditampilkan sebagai informasi riwayat, namun checkbox dan input nominalnya dikunci (`disabled`).
+>   - Tabel dilengkapi dengan `text-nowrap` dan `min-width: 950px` (dengan scroll horizontal jika layar sempit) agar kolom `Bayar (Rp)` dan `Status` tampil utuh.
+
+## Open Questions
+Tidak ada.
+
+## Proposed Changes
+
+### 1. Backend Controller (`app/Controllers/SppController.php`)
+- **`apiKelas()`**:
+  - Menerima parameter `jenjang_id` opsional untuk menyaring kelas berdasarkan `id_jenjang`.
+- **`apiCariSiswa()`**:
+  - Menerima `jenjang_id` dan `kelas_id`.
+  - Jika `kelas_id` atau `jenjang_id` ditentukan tetapi query pencarian `q` kosong, tetap kembalikan seluruh daftar siswa aktif dalam kelas/jenjang tersebut (hingga 50 siswa) diurutkan berdasarkan `nama_lengkap ASC`.
+- **`apiGetTagihanSiswa()`**:
+  - Menghapus filter `AND t.status_lunas != 'Lunas'` agar seluruh riwayat tagihan (Belum, Cicil, Lunas) dapat dimuat.
+  - Memperbarui pencarian `nama_kelas_history` dengan logika resolusi 2-lapis (pemeriksaan `nama_kelas_tujuan` pada tahun ajaran tagihan, atau `nama_kelas_asal` pada record kenaikan kelas tahun berikutnya) agar kelas lama di tahun sebelumnya tampil tepat (misal 2025/2026 menampilkan Kelas X, sedangkan 2026/2027 menampilkan Kelas XI).
+  - Mengurutkan data SQL awal secara kronologis.
+
+#### [MODIFY] [SppController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/SppController.php)
+
+---
+
+### 2. Frontend View (`views/keuangan/kasir.php`)
+- **Grid Filter Jenjang & Kelas**:
+  - Menambahkan dropdown **Filter Jenjang** (`listJenjang` & `selectedJenjangId`).
+  - Menghubungkan perubahan Jenjang dengan pemanggilan `fetchKelas()` cascading.
+  - Menambahkan watcher/event handler pada perubahan Kelas untuk memanggil `searchSiswa()` secara otomatis sehingga seluruh siswa di kelas tersebut langsung muncul dalam opsi pilihan.
+- **Pengelompokan (Grouping) & Urutan Bulan pada Tabel Tagihan**:
+  - Membuat computed property `groupedTagihan` yang mengelompokkan `tagihanList` menurut `tahun_ajaran` -> `nama_komponen`, dan mengurutkan item bulanan dari bulan 1 (Januari) hingga 12 (Desember).
+  - Menyusun baris header kelompok (Group Header Rows) untuk Tahun Ajaran dan Komponen Tagihan.
+- **Proteksi Status & Layout Responsif**:
+  - Memasang `:disabled="t.status_lunas === 'Lunas' || (t.nominal_tagihan - t.nominal_bayar) <= 0"` pada checkbox dan input bayar.
+  - Menerapkan `text-nowrap`, `min-width: 950px`, dan `min-width: 120px` pada kolom input bayar.
+
+#### [MODIFY] [kasir.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/kasir.php)
+
+---
+
+## Verification Plan
+
+### Manual Verification
+1. Akses halaman `/SINTA-SaaS/keuangan/kasir`.
+2. Pilih tenant "SMA Negeri 1 Jakarta".
+3. Pilih **Jenjang** (misal SMA). Pastikan opsi **Kelas** otomatis tersaring hanya untuk kelas SMA.
+4. Pilih **Kelas** (misal "Kelas X IPS 1"). Verifikasi bahwa seluruh daftar siswa di kelas tersebut langsung muncul secara otomatis.
+5. Klik salah satu nama siswa. Verifikasi bahwa **Daftar Kewajiban Pembayaran** muncul dengan pengelompokan Tahun Ajaran -> Komponen Tagihan.
+6. Periksa kolom **Kelas** pada tiap baris tagihan: pastikan tagihan tahun ajaran 2025/2026 menampilkan kelas riwayat lama siswa pada tahun 2025/2026 (misal Kelas X IPS 1), sedangkan tagihan tahun ajaran 2026/2027 menampilkan kelas baru (misal Kelas XI IPS 1).
+7. Periksa komponen bulanan, pastikan urutan bulan berjalan dari Januari sampai Desember.
+8. Periksa tagihan berstatus `Lunas`, pastikan badge berwarna hijau dan input/checkbox dalam posisi terkunci (`disabled`).
+9. Periksa kolom `Bayar (Rp)` dan `Status`, pastikan tidak ada teks/kolom yang terpotong.
+
+---
+## [Fitur Cetak Ulang Kuitansi Pembayaran Tagihan Lunas/Cicil di Loket Kasir]
+**Waktu**: 19:14 WIB
+**Status**: Dieksekusi
+
+# Rencana Implementasi: Fitur Cetak Ulang Kuitansi Bukti Pembayaran Lunas/Cicil
+
+Menambahkan kemampuan cetak ulang kuitansi pembayaran resmi pada halaman Loket Kasir Pembayaran untuk setiap tagihan yang telah memiliki riwayat pembayaran (status Lunas maupun Cicil).
+
+## User Review Required
+> [!IMPORTANT]
+> - **Tombol Cetak Ulang Kuitansi**: Pada setiap baris tagihan yang sudah memiliki pembayaran (`nominal_bayar > 0`), ditambahkan tombol **"Cetak Ulang"** berikon printer di samping badge status.
+> - **Integritas Data Kuitansi**: Menarik `nomor_kwitansi` terakhir, tanggal transaksi, serta metode pembayaran langsung dari tabel `transaksi_spp_pembayaran` untuk mengisi pratinjau kuitansi secara akurat saat tombol diklik.
+
+## Open Questions
+Tidak ada.
+
+## Proposed Changes
+
+### 1. Backend Controller (`app/Controllers/SppController.php`)
+- **`apiGetTagihanSiswa()`**:
+  - Menyisipkan subquery pada SQL select untuk mengambil detail transaksi pembayaran terbaru per tagihan: `latest_nomor_kwitansi`, `latest_tgl_bayar`, dan `latest_metode`.
+
+#### [MODIFY] [SppController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/SppController.php)
+
+---
+
+### 2. Frontend View (`views/keuangan/kasir.php`)
+- **Tombol & Method `reprintKwitansi(t)`**:
+  - Menyajikan tombol **"Cetak Ulang"** (`btn-outline-primary`) pada kolom Status jika `t.nominal_bayar > 0`.
+  - Menambahkan fungsi `reprintKwitansi(t)` yang mengisi objek `printData` dengan informasi pembayaran historis tagihan tersebut, lalu memicu pembukaan modal pratinjau `#modalKwitansi`.
+
+#### [MODIFY] [kasir.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/kasir.php)
+
+---
+
+## Verification Plan
+
+### Manual Verification
+1. Akses halaman `/SINTA-SaaS/keuangan/kasir`.
+2. Cari dan pilih siswa yang telah memiliki tagihan berstatus `Lunas` atau `Cicil`.
+3. Periksa kolom **Status**: verifikasi adanya tombol **"Cetak Ulang"** berikon printer di samping badge status.
+4. Klik tombol **"Cetak Ulang"**.
+5. Verifikasi bahwa modal pratinjau kuitansi terbuka dengan menampilkan Nomor Kuitansi asli, Tanggal Transaksi, Nama Siswa, Kelas Historis, dan Nominal yang telah dibayar.
+6. Klik tombol **Cetak Sekarang** untuk memicu jendela pencetakan kuitansi.
+
+---
+## [Fitur Pembatalan (Void) Transaksi Pembayaran Kasir]
+**Waktu**: 19:40 WIB
+**Status**: Disetujui / Dieksekusi
+
+# Rencana Implementasi: Fitur Pembatalan (Void) Transaksi Pembayaran Kasir
+
+Menyediakan opsi pembatalan (*void / reversal*) transaksi pembayaran resmi di halaman Loket Kasir untuk memulihkan sisa kekurangan tagihan siswa jika admin/kasir salah mengklik pembayaran.
+
+## User Review Required
+> [!IMPORTANT]
+> - **Mekanisme Reversal Saldo Tagihan**:
+>   - Ketika pembayaran dibatalkan, `nominal_dibayar` pada transaksi pembayaran terkait akan dikurangkan dari `transaksi_spp_tagihan.nominal_bayar`.
+>   - Status pelunasan tagihan (`status_lunas`) akan dihitung ulang secara otomatis (`Belum` jika `nominal_bayar = 0`, atau `Cicil` jika `nominal_bayar < nominal_tagihan`).
+> - **Modal Konfirmasi & Alasan Pembatalan**:
+>   - Kasir diwajibkan memasukkan **Alasan Pembatalan** (misal: *"Salah klik nominal"* / *"Salah pilih metode"*) sebagai syarat pembatalan transaksi.
+> - **Audit Trail & Keamanan**:
+>   - Seluruh aktivitas pembatalan dicatat secara permanen di `transaksi_spp_audit_log` dengan rincian identitas kasir, waktu pembatalan, data sebelum & sesudah, serta alasan pembatalan.
+
+## Open Questions
+Tidak ada.
+
+## Proposed Changes
+
+### 1. Routing System (`index.php`)
+- Mendaftarkan rute API baru:
+  - `POST /api/v1/keuangan/batal-pembayaran` -> `SppController::apiBatalPembayaran()`
+
+#### [MODIFY] [index.php](file:///C:/xampp/htdocs/SINTA-SaaS/index.php)
+
+---
+
+### 2. Backend Controller (`app/Controllers/SppController.php`)
+- Menambahkan method `apiBatalPembayaran()`:
+  - Memverifikasi `tagihan_id` dan `alasan_batal`.
+  - Mengambil data pembayaran terbaru dari `transaksi_spp_pembayaran`.
+  - Mengunci baris tagihan dengan `FOR UPDATE` di dalam transaksi database.
+  - Membalikkan nilai `nominal_bayar` dan memperbarui `status_lunas` tagihan.
+  - Menghapus record pembayaran terkait dan menyuntikkan log audit `VOID_PAYMENT` ke `transaksi_spp_audit_log`.
+
+#### [MODIFY] [SppController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/SppController.php)
+
+---
+
+### 3. Frontend View (`views/keuangan/kasir.php`)
+- **Tombol "Batal" pada Baris Tagihan**:
+  - Pada baris tagihan yang memiliki `nominal_bayar > 0`, ditambahkan tombol **"Batal"** (`btn-outline-danger`) di samping tombol **"Cetak Ulang"**.
+- **Modal Konfirmasi Pembatalan**:
+  - Menambahkan modal dialog `#modalBatalPembayaran` yang menampilkan detail kwitansi yang akan dibatalkan beserta input teks wajib untuk **Alasan Pembatalan**.
+  - Mengaitkan method `confirmBatalPembayaran(t)` dan `submitBatalPembayaran()` pada Vue setup untuk mengeksekusi pembatalan dan merefresh daftar tagihan secara otomatis.
+
+#### [MODIFY] [kasir.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/kasir.php)
+
+---
+
+## Verification Plan
+
+### Manual Verification
+1. Akses halaman `/SINTA-SaaS/keuangan/kasir`.
+2. Cari dan pilih siswa yang telah memiliki tagihan berstatus `Lunas` atau `Cicil`.
+3. Periksa kolom **Status**: verifikasi adanya tombol **"Batal"** berwarna merah di samping tombol "Cetak Ulang".
+4. Klik tombol **"Batal"**.
+5. Verifikasi bahwa modal **"Konfirmasi Pembatalan Pembayaran"** muncul dengan rincian nomor kuitansi dan input alasan pembatalan.
+6. Masukkan alasan pembatalan (misal: *"Salah input nominal"*) dan klik tombol **"Ya, Batalkan Transaksi"**.
+7. Verifikasi bahwa tagihan kembali berstatus `Belum Lunas` / `Cicil`, sisa tagihan bertambah sesuai nominal yang dibatalkan, dan notifikasi sukses muncul di layar.
+
+---
+## [Audit Trail & Keamanan Aktivitas Pengguna/Petugas (Khusus Super Admin)]
+**Waktu**: 19:46 WIB
+**Status**: Disetujui / Dieksekusi
+
+# Rencana Implementasi: Audit Trail & Keamanan Aktivitas Pengguna/Petugas (Khusus Super Admin)
+
+Membangun modul pencatatan jejak audit (*Audit Trail & Security System*) yang komprehensif untuk merekam seluruh aktivitas petugas/pengguna (pembayaran, pembatalan/void, pembuatan/penghapusan tagihan, edit tarif/komponen, dsb.) dengan hak akses eksklusif hanya untuk **Super Admin**.
+
+## User Review Required
+> [!IMPORTANT]
+> - **Proteksi Akses Eksklusif Super Admin**:
+>   - Halaman `/keuangan/audit-log` dan API `/api/v1/keuangan/audit-log` diproteksi secara ketat. Jika diakses oleh selain `super_admin` (seperti Admin Sekolah, Operator, Kasir, atau Siswa), sistem akan menolak request dengan HTTP 403 Forbidden.
+> - **Migrasi Menu Khusus Super Admin**:
+>   - Dibuat file migrasi `2026_07_21_03_add_audit_log_menu.php` dengan format `return [...]` array untuk mendaftarkan menu `Audit Trail & Log Security` di bawah parent menu `Keuangan & Pembayaran` hanya untuk role `super_admin` (Role ID 1).
+> - **Fitur Visual JSON Diff Modal**:
+>   - Menyediakan modal detail pratinjau perubahan data (*Data Sebelum* vs *Data Sesudah*) dalam format JSON yang bersih dan mudah dibaca untuk audit investigasi.
+
+## Open Questions
+Tidak ada.
+
+## Proposed Changes
+
+### 1. Database Migration (`database/migrations/2026_07_21_03_add_audit_log_menu.php`)
+#### [NEW] [2026_07_21_03_add_audit_log_menu.php](file:///C:/xampp/htdocs/SINTA-SaaS/database/migrations/2026_07_21_03_add_audit_log_menu.php)
+- Membuat file migrasi terstandarisasi untuk menambahkan menu 79 `Audit Trail & Log Security` khusus `super_admin`.
+
+---
+
+### 2. Logger Helper (`app/Helpers/AuditLogger.php`)
+#### [NEW] [AuditLogger.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Helpers/AuditLogger.php)
+- Membuat helper terpusat `App\Helpers\AuditLogger::log()` untuk memudahkan perekaman aktivitas pengguna secara konsisten di seluruh modul aplikasi.
+
+---
+
+### 3. Routing System (`index.php`)
+#### [MODIFY] [index.php](file:///C:/xampp/htdocs/SINTA-SaaS/index.php)
+- Mendaftarkan rute halaman dan API:
+  - `GET /keuangan/audit-log` -> `SppController::auditLog()`
+  - `GET /api/v1/keuangan/audit-log` -> `SppController::apiAuditLog()`
+
+---
+
+### 4. Controller Backend & Security (`app/Controllers/SppController.php`)
+#### [MODIFY] [SppController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/SppController.php)
+- Menambahkan method `auditLog()` untuk merender halaman view log audit (dengan pengecekan hak akses `super_admin`).
+- Menambahkan method `apiAuditLog()` untuk mengembalikan data log audit (dengan filter tenant, jenis aksi, rentang tanggal, search query, dan pagination).
+- Mengintegrasikan pemanggilan `AuditLogger::log()` / `transaksi_spp_audit_log` pada seluruh fungsi CRUD (Komponen, Tarif, Keringanan, Generate Tagihan, Edit Nominal, Hapus Tagihan, Pembayaran Kasir, Void Pembayaran, & Pengaturan).
+
+---
+
+### 5. Frontend View (`views/keuangan/audit_log.php`)
+#### [NEW] [audit_log.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/audit_log.php)
+- Membangun antarmuka modern Vue 3 untuk Super Admin:
+  - Header & Badge Keamanan Super Admin Platform.
+  - 4 Kartu Metrik Ringkasan Audit (Total Log, Pembayaran, Pembatalan/Void, Modifikasi/Hapus).
+  - Baris Filter Canggih (Sekolah/Tenant, Jenis Aksi, Tanggal Mulai - Akhir, & Search Bar).
+  - Tabel Audit Log interaktif dengan badge status aksi berwarna-warni.
+  - Modal **"Detail Perubahan Data (Audit JSON Diff)"** untuk memeriksa `Data Sebelum` vs `Data Sesudah`.
+
+---
+
+## Verification Plan
+
+### Automated Tests
+- Eksekusi migrasi database: `php migrate.php`
+- Linting sintaksis PHP: `php -l app/Controllers/SppController.php`, `php -l views/keuangan/audit_log.php`
+
+### Manual Verification
+1. Akses `/SINTA-SaaS/keuangan/audit-log` menggunakan akun **Super Admin**.
+2. Verifikasi bahwa halaman **Audit Trail & Log Security** terbuka dengan sempurna.
+3. Lakukan pengujian filter: pilih Tenant tertentu, filter Jenis Aksi `VOID_PAYMENT`, dan masukkan kata kunci pencarian.
+4. Klik tombol **"Lihat Perubahan"** pada salah satu baris log audit untuk memverifikasi modal JSON Diff.
+5. Coba akses `/SINTA-SaaS/keuangan/audit-log` menggunakan akun selain Super Admin (misal akun Operator Sekolah). Verifikasi bahwa sistem menolak akses secara ketat dengan status 403 Forbidden.
+
+
