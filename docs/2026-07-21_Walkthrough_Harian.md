@@ -122,6 +122,21 @@ Pada konstruktor `PengumumanController.php` (baris 25), terdapat pemeriksaan per
 ### Perbaikan:
 Mendefinisikan variabel `$role = $_SESSION['role_name'] ?? '';` di baris awal konstruktor `__construct()` sebelum melakukan pengecekan peran di berkas `app/Controllers/PengumumanController.php`.
 
+---
+## [Mockup Redesain Layout Dashboard & Area Kerja Compact Full-Screen]
+**Waktu**: 12:09 WIB
+**Jenis**: Feature
+
+### Ringkasan Pekerjaan:
+1. **Pembuatan File Mockup**:
+   - Membuat file mockup mandiri [test_compact_layout.php](file:///C:/xampp/htdocs/SINTA-SaaS/scratch/test_compact_layout.php) di folder `scratch/`.
+   - Menggunakan Bootstrap 5, Bootstrap Icons, dan custom CSS untuk menyajikan visualisasi area konten yang lebih padat (compact) dan full-height (stretching setinggi layar).
+2. **Karakteristik Rancangan**:
+   - Rasio kolom terbagi menjadi 30% Panel Input Form (kiri) dan 70% Panel Tabel Data (kanan) untuk efisiensi pandang.
+   - Peniadaan scrollbar window utama dengan mengaktifkan independent scrollbar hanya pada body tabel, menjaga agar header tabel tetap sticky melayang di atas saat data ditarik.
+   - Dilengkapi Vue 3 CDN interaktif di sisi klien sehingga data tarif dapat ditambah, dihapus, difilter secara langsung, dan jam/tanggal aktif di header beroperasi dinamis.
+
+
 
 
 
