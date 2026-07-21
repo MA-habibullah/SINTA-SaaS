@@ -106,7 +106,7 @@ if ($tenantId) {
 </header>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    function initHeaderClock() {
         const clockEl = document.getElementById('header-clock');
         if (clockEl) {
             function updateClock() {
@@ -128,9 +128,18 @@ if ($tenantId) {
                 clockEl.textContent = `${dayName}, ${date} ${monthName} ${year} • ${hours}:${minutes}:${seconds}`;
             }
             updateClock();
-            setInterval(updateClock, 1000);
+            if (window.headerClockInterval) {
+                clearInterval(window.headerClockInterval);
+            }
+            window.headerClockInterval = setInterval(updateClock, 1000);
         }
-    });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initHeaderClock);
+    } else {
+        initHeaderClock();
+    }
 
     // =========================================================================
     // GLOBAL FRONTEND TELEMETRY TRACKER

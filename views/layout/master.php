@@ -301,11 +301,8 @@
             }
         };
 
-        // Integrasi dengan Lifecycle Turbo Drive
-        document.addEventListener('turbo:load', function() {
-            window.VueAppRegistry.mountAll();
-
-            // Toggle Sidebar JS (Vanilla JS)
+        // Fungsi inisialisasi Toggle Sidebar agar aman dari navigasi Turbo maupun reload biasa
+        function initSidebarToggle() {
             const toggleBtn = document.getElementById('sidebarToggle');
             const wrapper = document.getElementById('layout-wrapper');
             const overlay = document.getElementById('sidebar-overlay');
@@ -347,6 +344,12 @@
                     wrapper.classList.remove('sidebar-collapsed');
                 }
             }
+        }
+
+        // Integrasi dengan Lifecycle Turbo Drive
+        document.addEventListener('turbo:load', function() {
+            window.VueAppRegistry.mountAll();
+            initSidebarToggle();
         });
 
         document.addEventListener('turbo:before-cache', function() {
@@ -432,13 +435,16 @@
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', function() {
                 window.VueAppRegistry.mountAll();
+                initSidebarToggle();
             });
         } else {
             window.VueAppRegistry.mountAll();
+            initSidebarToggle();
         }
 
         window.addEventListener('load', function() {
             window.VueAppRegistry.mountAll();
+            initSidebarToggle();
         });
     </script>
     
