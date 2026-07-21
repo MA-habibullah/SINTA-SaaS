@@ -58,4 +58,20 @@ Menghapus baris `<?php include __DIR__ . '/../layout/footer.php'; ?>` pada baris
 5. `views/keuangan/laporan.php`
 6. `views/keuangan/master.php`
 7. `views/keuangan/pengaturan.php`
-8. `views/keuangan/tagihan_saya.php`
+8: `views/keuangan/tagihan_saya.php`
+
+---
+## [Perbaikan Galat SQL 500 pada API Dashboard & Laporan Keuangan]
+**Waktu**: 10:41 WIB
+**Jenis**: Bug Fix
+
+### Masalah (Root Cause):
+1. **Galat pada API Dashboard (`/api/v1/keuangan/dashboard-metrics`)**:
+   Kueri SQL progres pelunasan kelas di dalam fungsi `apiDashboardMetrics` tidak memiliki klausa `FROM` setelah deklarasi proyeksi `SUM`. Akibatnya, kueri tersebut tidak valid secara sintaksis dan memicu pengecualian database (500 Internal Server Error).
+2. **Galat pada API Laporan (`/api/v1/keuangan/laporan-rekap`)**:
+   Kueri SQL laporan pemasukan mencoba mengambil kolom `u.nama` dari tabel `users`. Namun, nama kolom nama pengguna yang valid di tabel `users` adalah `nama_lengkap`, sehingga kueri tersebut memicu galat "Column not found: 1054 Unknown column u.nama".
+
+### Perbaikan:
+1. Menambahkan klausa `FROM transaksi_spp_tagihan t` pada kueri progres kelas di dalam fungsi `apiDashboardMetrics()` pada berkas `app/Controllers/SppController.php`.
+2. Mengubah pemanggilan `u.nama as nama_kasir` menjadi `u.nama_lengkap as nama_kasir` pada kueri laporan rekap di dalam fungsi `apiLaporanRekap()` pada berkas `app/Controllers/SppController.php`.
+
