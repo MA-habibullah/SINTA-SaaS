@@ -111,5 +111,17 @@ Menghapus baris `<?php include __DIR__ . '/../layout/header.php'; ?>` (atau pada
 7. `views/keuangan/pengaturan.php`
 8. `views/keuangan/tagihan_saya.php`
 
+---
+## [Perbaikan Peringatan PHP Undefined Variable di PengumumanController]
+**Waktu**: 11:15 WIB
+**Jenis**: Bug Fix
+
+### Masalah (Root Cause):
+Pada konstruktor `PengumumanController.php` (baris 25), terdapat pemeriksaan peran pengguna `if ($role === 'super_admin')`. Namun, variabel `$role` belum didefinisikan sebelumnya di dalam lingkup konstruktor tersebut. Hal ini memicu peringatan PHP runtime `Undefined variable $role` setiap kali modul pengumuman diakses oleh pengguna.
+
+### Perbaikan:
+Mendefinisikan variabel `$role = $_SESSION['role_name'] ?? '';` di baris awal konstruktor `__construct()` sebelum melakukan pengecekan peran di berkas `app/Controllers/PengumumanController.php`.
+
+
 
 
