@@ -41,3 +41,21 @@
    - `keuangan-pengaturan-app`
    - `keuangan-tagihan-saya-app`
 
+---
+## [Perbaikan Desain Double Footer Modul Keuangan]
+**Waktu**: 10:37 WIB
+**Jenis**: Bug Fix
+
+### Masalah (Root Cause):
+Master layout utama aplikasi (`views/layout/master.php`) sudah menyertakan footer global (`views/layout/footer.php`) secara otomatis di bagian paling bawah kontainer `main-content` (baris 740). Namun, kedelapan (8) view baru pada modul keuangan juga melakukan include `views/layout/footer.php` secara manual di bagian akhir file. Hal ini menyebabkan desain footer tercetak dua kali (double footer) ketika halaman keuangan dirender.
+
+### Perbaikan:
+Menghapus baris `<?php include __DIR__ . '/../layout/footer.php'; ?>` pada baris paling akhir di kedelapan file view keuangan:
+1. `views/keuangan/dashboard.php`
+2. `views/keuangan/generate.php`
+3. `views/keuangan/kasir.php`
+4. `views/keuangan/keringanan.php`
+5. `views/keuangan/laporan.php`
+6. `views/keuangan/master.php`
+7. `views/keuangan/pengaturan.php`
+8. `views/keuangan/tagihan_saya.php`
