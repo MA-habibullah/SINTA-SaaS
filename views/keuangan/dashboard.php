@@ -1,6 +1,6 @@
 <?php include __DIR__ . '/../layout/header.php'; ?>
 
-<div id="app" v-cloak class="container-fluid px-4 py-4">
+<div id="keuangan-dashboard-app" v-cloak class="container-fluid px-4 py-4">
     <!-- Header -->
     <div class="d-flex align-items-center justify-content-between mb-4">
         <div>
@@ -109,49 +109,47 @@
 </style>
 
 <script>
-window.addEventListener('DOMContentLoaded', () => {
-    window.VueAppRegistry.register('#app', {
-        setup() {
-            const metrics = Vue.ref({
-                total_tunggakan: 0,
-                pemasukan_hari_ini: 0,
-                pemasukan_bulan_ini: 0,
-                progres_kelas: []
-            });
+window.VueAppRegistry.register('#keuangan-dashboard-app', {
+    setup() {
+        const metrics = Vue.ref({
+            total_tunggakan: 0,
+            pemasukan_hari_ini: 0,
+            pemasukan_bulan_ini: 0,
+            progres_kelas: []
+        });
 
-            const fetchMetrics = async () => {
-                try {
-                    const response = await fetch('/SINTA-SaaS/api/v1/keuangan/dashboard-metrics');
-                    const res = await response.json();
-                    if (res.success) {
-                        metrics.value = res.data;
-                    }
-                } catch (err) {
-                    console.error(err);
+        const fetchMetrics = async () => {
+            try {
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/dashboard-metrics');
+                const res = await response.json();
+                if (res.success) {
+                    metrics.value = res.data;
                 }
-            };
+            } catch (err) {
+                console.error(err);
+            }
+        };
 
-            const getPercentage = (bayar, tagihan) => {
-                const t = parseFloat(tagihan);
-                if (!t || t <= 0) return 0;
-                return Math.round((parseFloat(bayar) / t) * 100);
-            };
+        const getPercentage = (bayar, tagihan) => {
+            const t = parseFloat(tagihan);
+            if (!t || t <= 0) return 0;
+            return Math.round((parseFloat(bayar) / t) * 100);
+        };
 
-            const formatNumber = (num) => {
-                return new Intl.NumberFormat('id-ID').format(num || 0);
-            };
+        const formatNumber = (num) => {
+            return new Intl.NumberFormat('id-ID').format(num || 0);
+        };
 
-            Vue.onMounted(() => {
-                fetchMetrics();
-            });
+        Vue.onMounted(() => {
+            fetchMetrics();
+        });
 
-            return {
-                metrics,
-                getPercentage,
-                formatNumber
-            };
-        }
-    });
+        return {
+            metrics,
+            getPercentage,
+            formatNumber
+        };
+    }
 });
 </script>
 

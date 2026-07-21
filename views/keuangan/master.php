@@ -1,6 +1,6 @@
 <?php include __DIR__ . '/../layout/header.php'; ?>
 
-<div id="app" v-cloak class="container-fluid px-4 py-4">
+<div id="keuangan-master-app" v-cloak class="container-fluid px-4 py-4">
     <!-- Header -->
     <div class="d-flex align-items-center justify-content-between mb-4">
         <div>
@@ -254,194 +254,192 @@
 </style>
 
 <script>
-window.addEventListener('DOMContentLoaded', () => {
-    window.VueAppRegistry.register('#app', {
-        setup() {
-            // Parsed injected list data
-            const listKelas = JSON.parse(document.getElementById('data-kelas').textContent || '[]');
-            const listJenjang = JSON.parse(document.getElementById('data-jenjang').textContent || '[]');
-            const listTa = JSON.parse(document.getElementById('data-ta').textContent || '[]');
+window.VueAppRegistry.register('#keuangan-master-app', {
+    setup() {
+        // Parsed injected list data
+        const listKelas = JSON.parse(document.getElementById('data-kelas').textContent || '[]');
+        const listJenjang = JSON.parse(document.getElementById('data-jenjang').textContent || '[]');
+        const listTa = JSON.parse(document.getElementById('data-ta').textContent || '[]');
 
-            // Tab 1: Komponen State
-            const komponenList = Vue.ref([]);
-            const loadingKomp = Vue.ref(false);
-            const formKomp = Vue.ref({
-                id: 0,
-                nama_komponen: '',
-                tipe_periode: 'Bulanan'
-            });
+        // Tab 1: Komponen State
+        const komponenList = Vue.ref([]);
+        const loadingKomp = Vue.ref(false);
+        const formKomp = Vue.ref({
+            id: 0,
+            nama_komponen: '',
+            tipe_periode: 'Bulanan'
+        });
 
-            // Tab 2: Tarif State
-            const tarifList = Vue.ref([]);
-            const loadingTarif = Vue.ref(false);
-            const tarifTargetType = Vue.ref('general');
-            const formTarif = Vue.ref({
-                komponen_id: '',
-                tahun_ajaran_id: '',
-                kelas_id: '',
-                jenjang_id: '',
-                jalur_masuk: '',
-                nominal: ''
-            });
+        // Tab 2: Tarif State
+        const tarifList = Vue.ref([]);
+        const loadingTarif = Vue.ref(false);
+        const tarifTargetType = Vue.ref('general');
+        const formTarif = Vue.ref({
+            komponen_id: '',
+            tahun_ajaran_id: '',
+            kelas_id: '',
+            jenjang_id: '',
+            jalur_masuk: '',
+            nominal: ''
+        });
 
-            // Load all components
-            const fetchKomponen = async () => {
-                try {
-                    const response = await fetch('/SINTA-SaaS/api/v1/keuangan/komponen');
-                    const res = await response.json();
-                    if (res.success) {
-                        komponenList.value = res.data;
-                    }
-                } catch (err) {
-                    console.error(err);
+        // Load all components
+        const fetchKomponen = async () => {
+            try {
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/komponen');
+                const res = await response.json();
+                if (res.success) {
+                    komponenList.value = res.data;
                 }
-            };
+            } catch (err) {
+                console.error(err);
+            }
+        };
 
-            // Load all tariffs
-            const fetchTarif = async () => {
-                try {
-                    const response = await fetch('/SINTA-SaaS/api/v1/keuangan/tarif');
-                    const res = await response.json();
-                    if (res.success) {
-                        tarifList.value = res.data;
-                    }
-                } catch (err) {
-                    console.error(err);
+        // Load all tariffs
+        const fetchTarif = async () => {
+            try {
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/tarif');
+                const res = await response.json();
+                if (res.success) {
+                    tarifList.value = res.data;
                 }
-            };
+            } catch (err) {
+                console.error(err);
+            }
+        };
 
-            // Reset form components
-            const resetFormKomp = () => {
-                formKomp.value = { id: 0, nama_komponen: '', tipe_periode: 'Bulanan' };
-            };
+        // Reset form components
+        const resetFormKomp = () => {
+            formKomp.value = { id: 0, nama_komponen: '', tipe_periode: 'Bulanan' };
+        };
 
-            const saveKomponen = async () => {
-                loadingKomp.value = true;
-                try {
-                    const response = await fetch('/SINTA-SaaS/api/v1/keuangan/komponen', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(formKomp.value)
-                    });
-                    const res = await response.json();
-                    if (res.success) {
-                        fetchKomponen();
-                        resetFormKomp();
-                    }
-                } catch (err) {
-                    console.error(err);
-                } finally {
-                    loadingKomp.value = false;
+        const saveKomponen = async () => {
+            loadingKomp.value = true;
+            try {
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/komponen', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formKomp.value)
+                });
+                const res = await response.json();
+                if (res.success) {
+                    fetchKomponen();
+                    resetFormKomp();
                 }
-            };
+            } catch (err) {
+                console.error(err);
+            } finally {
+                loadingKompKomp = false;
+            }
+        };
 
-            const editKomponen = (item) => {
-                formKomp.value = { ...item };
-            };
+        const editKomponen = (item) => {
+            formKomp.value = { ...item };
+        };
 
-            const deleteKomponen = async (id) => {
-                if (!confirm('Apakah Anda yakin ingin menghapus komponen biaya ini? Semua tarif terkait akan terhapus.')) return;
-                try {
-                    const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/komponen?id=${id}`, { method: 'DELETE' });
-                    const res = await response.json();
-                    if (res.success) {
-                        fetchKomponen();
-                        fetchTarif();
-                    }
-                } catch (err) {
-                    console.error(err);
+        const deleteKomponen = async (id) => {
+            if (!confirm('Apakah Anda yakin ingin menghapus komponen biaya ini? Semua tarif terkait akan terhapus.')) return;
+            try {
+                const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/komponen?id=${id}`, { method: 'DELETE' });
+                const res = await response.json();
+                if (res.success) {
+                    fetchKomponen();
+                    fetchTarif();
                 }
-            };
+            } catch (err) {
+                console.error(err);
+            }
+        };
 
-            // Reset dynamic fields when switching target types in Tarif Form
-            const resetTarifTargets = () => {
-                formTarif.value.kelas_id = '';
-                formTarif.value.jenjang_id = '';
-                formTarif.value.jalur_masuk = '';
-            };
+        // Reset dynamic fields when switching target types in Tarif Form
+        const resetTarifTargets = () => {
+            formTarif.value.kelas_id = '';
+            formTarif.value.jenjang_id = '';
+            formTarif.value.jalur_masuk = '';
+        };
 
-            const saveTarif = async () => {
-                loadingTarif.value = true;
-                try {
-                    const response = await fetch('/SINTA-SaaS/api/v1/keuangan/tarif', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(formTarif.value)
-                    });
-                    const res = await response.json();
-                    if (res.success) {
-                        fetchTarif();
-                        formTarif.value.nominal = '';
-                        resetTarifTargets();
-                    }
-                } catch (err) {
-                    console.error(err);
-                } finally {
-                    loadingTarif.value = false;
+        const saveTarif = async () => {
+            loadingTarif.value = true;
+            try {
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/tarif', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formTarif.value)
+                });
+                const res = await response.json();
+                if (res.success) {
+                    fetchTarif();
+                    formTarif.value.nominal = '';
+                    resetTarifTargets();
                 }
-            };
+            } catch (err) {
+                console.error(err);
+            } finally {
+                loadingTarif.value = false;
+            }
+        };
 
-            const deleteTarif = async (id) => {
-                if (!confirm('Hapus tarif default ini?')) return;
-                try {
-                    const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/tarif?id=${id}`, { method: 'DELETE' });
-                    const res = await response.json();
-                    if (res.success) {
-                        fetchTarif();
-                    }
-                } catch (err) {
-                    console.error(err);
+        const deleteTarif = async (id) => {
+            if (!confirm('Hapus tarif default ini?')) return;
+            try {
+                const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/tarif?id=${id}`, { method: 'DELETE' });
+                const res = await response.json();
+                if (res.success) {
+                    fetchTarif();
                 }
-            };
+            } catch (err) {
+                console.error(err);
+            }
+        };
 
-            // Helpers
-            const getPeriodeBadgeClass = (tipe) => {
-                switch(tipe) {
-                    case 'Bulanan': return 'bg-primary text-white';
-                    case 'Semester': return 'bg-warning text-dark';
-                    case 'Tahunan': return 'bg-success text-white';
-                    default: return 'bg-secondary text-white';
-                }
-            };
+        // Helpers
+        const getPeriodeBadgeClass = (tipe) => {
+            switch(tipe) {
+                case 'Bulanan': return 'bg-primary text-white';
+                case 'Semester': return 'bg-warning text-dark';
+                case 'Tahunan': return 'bg-success text-white';
+                default: return 'bg-secondary text-white';
+            }
+        };
 
-            const formatNumber = (num) => {
-                return new Intl.NumberFormat('id-ID').format(num);
-            };
+        const formatNumber = (num) => {
+            return new Intl.NumberFormat('id-ID').format(num);
+        };
 
-            Vue.onMounted(() => {
-                fetchKomponen();
-                fetchTarif();
-                
-                // Preselect active academic year
-                const activeTa = listTa.find(ta => ta.status === 'Aktif');
-                if (activeTa) {
-                    formTarif.value.tahun_ajaran_id = activeTa.id;
-                }
-            });
+        Vue.onMounted(() => {
+            fetchKomponen();
+            fetchTarif();
+            
+            // Preselect active academic year
+            const activeTa = listTa.find(ta => ta.status === 'Aktif');
+            if (activeTa) {
+                formTarif.value.tahun_ajaran_id = activeTa.id;
+            }
+        });
 
-            return {
-                listKelas,
-                listJenjang,
-                listTa,
-                komponenList,
-                loadingKomp,
-                formKomp,
-                tarifList,
-                loadingTarif,
-                tarifTargetType,
-                formTarif,
-                saveKomponen,
-                editKomponen,
-                deleteKomponen,
-                resetFormKomp,
-                resetTarifTargets,
-                saveTarif,
-                deleteTarif,
-                getPeriodeBadgeClass,
-                formatNumber
-            };
-        }
-    });
+        return {
+            listKelas,
+            listJenjang,
+            listTa,
+            komponenList,
+            loadingKomp,
+            formKomp,
+            tarifList,
+            loadingTarif,
+            tarifTargetType,
+            formTarif,
+            saveKomponen,
+            editKomponen,
+            deleteKomponen,
+            resetFormKomp,
+            resetTarifTargets,
+            saveTarif,
+            deleteTarif,
+            getPeriodeBadgeClass,
+            formatNumber
+        };
+    }
 });
 </script>
 

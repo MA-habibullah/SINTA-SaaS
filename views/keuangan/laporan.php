@@ -1,6 +1,6 @@
 <?php include __DIR__ . '/../layout/header.php'; ?>
 
-<div id="app" v-cloak class="container-fluid px-4 py-4">
+<div id="keuangan-laporan-app" v-cloak class="container-fluid px-4 py-4">
     <!-- Header -->
     <div class="d-flex align-items-center justify-content-between mb-4">
         <div>
@@ -135,124 +135,122 @@
 </style>
 
 <script>
-window.addEventListener('DOMContentLoaded', () => {
-    window.VueAppRegistry.register('#app', {
-        setup() {
-            const tipeReport = Vue.ref('pemasukan');
-            const rawList = Vue.ref([]);
-            const filteredList = Vue.ref([]);
+window.VueAppRegistry.register('#keuangan-laporan-app', {
+    setup() {
+        const tipeReport = Vue.ref('pemasukan');
+        const rawList = Vue.ref([]);
+        const filteredList = Vue.ref([]);
 
-            // Filter state
-            const filterText = Vue.ref('');
-            const filterSiswa = Vue.ref('');
-            const filterMetode = Vue.ref('');
+        // Filter state
+        const filterText = Vue.ref('');
+        const filterSiswa = Vue.ref('');
+        const filterMetode = Vue.ref('');
 
-            const setTipe = (tipe) => {
-                tipeReport.value = tipe;
-                fetchReport();
-            };
+        const setTipe = (tipe) => {
+            tipeReport.value = tipe;
+            fetchReport();
+        };
 
-            const fetchReport = async () => {
-                try {
-                    const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/laporan-rekap?tipe=${tipeReport.value}`);
-                    const res = await response.json();
-                    if (res.success) {
-                        rawList.value = res.data;
-                        applyFilters();
-                    }
-                } catch (err) {
-                    console.error(err);
+        const fetchReport = async () => {
+            try {
+                const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/laporan-rekap?tipe=${tipeReport.value}`);
+                const res = await response.json();
+                if (res.success) {
+                    rawList.value = res.data;
+                    applyFilters();
                 }
-            };
+            } catch (err) {
+                console.error(err);
+            }
+        };
 
-            const applyFilters = () => {
-                filteredList.value = rawList.value.filter(item => {
-                    const matchText = !filterText.value || (item.nama_komponen && item.nama_komponen.toLowerCase().includes(filterText.value.toLowerCase()));
-                    const matchSiswa = !filterSiswa.value || (
-                        (item.nama_siswa && item.nama_siswa.toLowerCase().includes(filterSiswa.value.toLowerCase())) ||
-                        (item.nisn && item.nisn.toLowerCase().includes(filterSiswa.value.toLowerCase()))
-                    );
-                    const matchMetode = !filterMetode.value || (item.metode_pembayaran === filterMetode.value);
-                    return matchText && matchSiswa && matchMetode;
-                });
-            };
-
-            Vue.watch([filterText, filterSiswa, filterMetode], () => {
-                applyFilters();
+        const applyFilters = () => {
+            filteredList.value = rawList.value.filter(item => {
+                const matchText = !filterText.value || (item.nama_komponen && item.nama_komponen.toLowerCase().includes(filterText.value.toLowerCase()));
+                const matchSiswa = !filterSiswa.value || (
+                    (item.nama_siswa && item.nama_siswa.toLowerCase().includes(filterSiswa.value.toLowerCase())) ||
+                    (item.nisn && item.nisn.toLowerCase().includes(filterSiswa.value.toLowerCase()))
+                );
+                const matchMetode = !filterMetode.value || (item.metode_pembayaran === filterMetode.value);
+                return matchText && matchSiswa && matchMetode;
             });
+        };
 
-            // Export to Excel simple layout
-            const exportToExcel = () => {
-                let html = '<table>';
-                const headers = document.querySelectorAll('#tableReport th');
+        Vue.watch([filterText, filterSiswa, filterMetode], () => {
+            applyFilters();
+        });
+
+        // Export to Excel simple layout
+        const exportToExcel = () => {
+            let html = '<table>';
+            const headers = document.querySelectorAll('#tableReport th');
+            html += '<tr>';
+            headers.forEach(h => {
+                html += `<th>${h.innerText}</th>`;
+            });
+            html += '</tr>';
+
+            const rows = document.querySelectorAll('#tableReport tbody tr');
+            rows.forEach(r => {
                 html += '<tr>';
-                headers.forEach(h => {
-                    html += `<th>${h.innerText}</th>`;
+                r.querySelectorAll('td').forEach(d => {
+                    html += `<td>${d.innerText}</td>`;
                 });
                 html += '</tr>';
-
-                const rows = document.querySelectorAll('#tableReport tbody tr');
-                rows.forEach(r => {
-                    html += '<tr>';
-                    r.querySelectorAll('td').forEach(d => {
-                        html += `<td>${d.innerText}</td>`;
-                    });
-                    html += '</tr>';
-                });
-                html += '</table>';
-
-                const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `Laporan_${tipeReport.value}_${new Date().toISOString().slice(0,10)}.xls`;
-                a.click();
-            };
-
-            // Print report
-            const printReport = () => {
-                window.print();
-            };
-
-            // Helpers
-            const getBulanName = (bln) => {
-                const list = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-                return list[bln] || '';
-            };
-
-            const formatNumber = (num) => {
-                return new Intl.NumberFormat('id-ID').format(num || 0);
-            };
-
-            const formatDate = (dateStr) => {
-                return new Date(dateStr).toLocaleDateString('id-ID', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-            };
-
-            Vue.onMounted(() => {
-                fetchReport();
             });
+            html += '</table>';
 
-            return {
-                tipeReport,
-                filteredList,
-                filterText,
-                filterSiswa,
-                filterMetode,
-                setTipe,
-                exportToExcel,
-                printReport,
-                getBulanName,
-                formatNumber,
-                formatDate
-            };
-        }
-    });
+            const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Laporan_${tipeReport.value}_${new Date().toISOString().slice(0,10)}.xls`;
+            a.click();
+        };
+
+        // Print report
+        const printReport = () => {
+            window.print();
+        };
+
+        // Helpers
+        const getBulanName = (bln) => {
+            const list = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            return list[bln] || '';
+        };
+
+        const formatNumber = (num) => {
+            return new Intl.NumberFormat('id-ID').format(num || 0);
+        };
+
+        const formatDate = (dateStr) => {
+            return new Date(dateStr).toLocaleDateString('id-ID', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        };
+
+        Vue.onMounted(() => {
+            fetchReport();
+        });
+
+        return {
+            tipeReport,
+            filteredList,
+            filterText,
+            filterSiswa,
+            filterMetode,
+            setTipe,
+            exportToExcel,
+            printReport,
+            getBulanName,
+            formatNumber,
+            formatDate
+        };
+    }
 });
 </script>
 

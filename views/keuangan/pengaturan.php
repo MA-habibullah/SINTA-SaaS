@@ -1,6 +1,6 @@
 <?php include __DIR__ . '/../layout/header.php'; ?>
 
-<div id="app" v-cloak class="container-fluid px-4 py-4">
+<div id="keuangan-pengaturan-app" v-cloak class="container-fluid px-4 py-4">
     <div class="row">
         <div class="col-12 col-lg-8 mx-auto">
             <!-- Header Halaman -->
@@ -95,74 +95,72 @@
 </style>
 
 <script>
-window.addEventListener('DOMContentLoaded', () => {
-    window.VueAppRegistry.register('#app', {
-        setup() {
-            const loading = Vue.ref(false);
-            const successMsg = Vue.ref('');
-            const errorMsg = Vue.ref('');
-            const form = Vue.ref({
-                nama_modul: 'Keuangan & SPP',
-                istilah_tagihan: 'Tagihan',
-                istilah_tunggakan: 'Tunggakan',
-                visibilitas_siswa: 1
-            });
+window.VueAppRegistry.register('#keuangan-pengaturan-app', {
+    setup() {
+        const loading = Vue.ref(false);
+        const successMsg = Vue.ref('');
+        const errorMsg = Vue.ref('');
+        const form = Vue.ref({
+            nama_modul: 'Keuangan & SPP',
+            istilah_tagihan: 'Tagihan',
+            istilah_tunggakan: 'Tunggakan',
+            visibilitas_siswa: 1
+        });
 
-            const fetchSettings = async () => {
-                try {
-                    const response = await fetch('/SINTA-SaaS/api/v1/keuangan/pengaturan');
-                    const res = await response.json();
-                    if (res.success && res.data) {
-                        form.value = res.data;
-                    }
-                } catch (err) {
-                    console.error('Failed to load settings', err);
+        const fetchSettings = async () => {
+            try {
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/pengaturan');
+                const res = await response.json();
+                if (res.success && res.data) {
+                    form.value = res.data;
                 }
-            };
+            } catch (err) {
+                console.error('Failed to load settings', err);
+            }
+        };
 
-            const saveSettings = async () => {
-                loading.value = true;
-                successMsg.value = '';
-                errorMsg.value = '';
+        const saveSettings = async () => {
+            loading.value = true;
+            successMsg.value = '';
+            errorMsg.value = '';
 
-                try {
-                    const response = await fetch('/SINTA-SaaS/api/v1/keuangan/save-pengaturan', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(form.value)
-                    });
-                    const res = await response.json();
-                    if (res.success) {
-                        successMsg.value = 'Pengaturan berhasil diperbarui secara global!';
-                        // Reload page/sidebar dynamically after delay to apply name change
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1200);
-                    } else {
-                        errorMsg.value = res.error || 'Gagal menyimpan pengaturan.';
-                    }
-                } catch (err) {
-                    errorMsg.value = 'Terjadi kesalahan jaringan.';
-                } finally {
-                    loading.value = false;
+            try {
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/save-pengaturan', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(form.value)
+                });
+                const res = await response.json();
+                if (res.success) {
+                    successMsg.value = 'Pengaturan berhasil diperbarui secara global!';
+                    // Reload page/sidebar dynamically after delay to apply name change
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1200);
+                } else {
+                    errorMsg.value = res.error || 'Gagal menyimpan pengaturan.';
                 }
-            };
+            } catch (err) {
+                errorMsg.value = 'Terjadi kesalahan jaringan.';
+            } finally {
+                loading.value = false;
+            }
+        };
 
-            Vue.onMounted(() => {
-                fetchSettings();
-            });
+        Vue.onMounted(() => {
+            fetchSettings();
+        });
 
-            return {
-                loading,
-                successMsg,
-                errorMsg,
-                form,
-                saveSettings
-            };
-        }
-    });
+        return {
+            loading,
+            successMsg,
+            errorMsg,
+            form,
+            saveSettings
+        };
+    }
 });
 </script>
 

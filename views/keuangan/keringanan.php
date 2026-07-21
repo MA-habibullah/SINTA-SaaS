@@ -1,6 +1,6 @@
 <?php include __DIR__ . '/../layout/header.php'; ?>
 
-<div id="app" v-cloak class="container-fluid px-4 py-4">
+<div id="keuangan-keringanan-app" v-cloak class="container-fluid px-4 py-4">
     <!-- Header -->
     <div class="d-flex align-items-center justify-content-between mb-4">
         <div>
@@ -155,135 +155,133 @@
 </style>
 
 <script>
-window.addEventListener('DOMContentLoaded', () => {
-    window.VueAppRegistry.register('#app', {
-        setup() {
-            const komponenList = JSON.parse(document.getElementById('data-komponen').textContent || '[]');
+window.VueAppRegistry.register('#keuangan-keringanan-app', {
+    setup() {
+        const komponenList = JSON.parse(document.getElementById('data-komponen').textContent || '[]');
 
-            const keringananList = Vue.ref([]);
-            const loading = Vue.ref(false);
+        const keringananList = Vue.ref([]);
+        const loading = Vue.ref(false);
 
-            // Student selection autocomplete
-            const siswaSearch = Vue.ref('');
-            const siswaSuggestions = Vue.ref([]);
-            const selectedSiswa = Vue.ref(null);
+        // Student selection autocomplete
+        const siswaSearch = Vue.ref('');
+        const siswaSuggestions = Vue.ref([]);
+        const selectedSiswa = Vue.ref(null);
 
-            const form = Vue.ref({
-                siswa_id: '',
-                komponen_id: '',
-                tipe_keringanan: 'Nominal',
-                nilai: '',
-                keterangan: ''
-            });
+        const form = Vue.ref({
+            siswa_id: '',
+            komponen_id: '',
+            tipe_keringanan: 'Nominal',
+            nilai: '',
+            keterangan: ''
+        });
 
-            // Search student dynamic lookup
-            let searchTimeout = null;
-            const searchSiswa = () => {
-                clearTimeout(searchTimeout);
-                if (siswaSearch.value.length < 2) {
-                    siswaSuggestions.value = [];
-                    return;
-                }
-
-                searchTimeout = setTimeout(async () => {
-                    try {
-                        const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/cari-siswa?q=${encodeURIComponent(siswaSearch.value)}`);
-                        const res = await response.json();
-                        if (res.success) {
-                            siswaSuggestions.value = res.data;
-                        }
-                    } catch (err) {
-                        console.error(err);
-                    }
-                }, 300);
-            };
-
-            const selectSiswa = (siswa) => {
-                selectedSiswa.value = siswa;
-                form.value.siswa_id = siswa.id;
-                siswaSearch.value = '';
+        // Search student dynamic lookup
+        let searchTimeout = null;
+        const searchSiswa = () => {
+            clearTimeout(searchTimeout);
+            if (siswaSearch.value.length < 2) {
                 siswaSuggestions.value = [];
-            };
+                return;
+            }
 
-            const clearSelectedSiswa = () => {
-                selectedSiswa.value = null;
-                form.value.siswa_id = '';
-            };
-
-            const fetchKeringanan = async () => {
+            searchTimeout = setTimeout(async () => {
                 try {
-                    const response = await fetch('/SINTA-SaaS/api/v1/keuangan/keringanan');
+                    const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/cari-siswa?q=${encodeURIComponent(siswaSearch.value)}`);
                     const res = await response.json();
                     if (res.success) {
-                        keringananList.value = res.data;
+                        siswaSuggestions.value = res.data;
                     }
                 } catch (err) {
                     console.error(err);
                 }
-            };
+            }, 300);
+        };
 
-            const saveKeringanan = async () => {
-                loading.value = true;
-                try {
-                    const response = await fetch('/SINTA-SaaS/api/v1/keuangan/keringanan', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(form.value)
-                    });
-                    const res = await response.json();
-                    if (res.success) {
-                        fetchKeringanan();
-                        // Reset form
-                        form.value.komponen_id = '';
-                        form.value.nilai = '';
-                        form.value.keterangan = '';
-                        clearSelectedSiswa();
-                    }
-                } catch (err) {
-                    console.error(err);
-                } finally {
-                    loading.value = false;
+        const selectSiswa = (siswa) => {
+            selectedSiswa.value = siswa;
+            form.value.siswa_id = siswa.id;
+            siswaSearch.value = '';
+            siswaSuggestions.value = [];
+        };
+
+        const clearSelectedSiswa = () => {
+            selectedSiswa.value = null;
+            form.value.siswa_id = '';
+        };
+
+        const fetchKeringanan = async () => {
+            try {
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/keringanan');
+                const res = await response.json();
+                if (res.success) {
+                    keringananList.value = res.data;
                 }
-            };
+            } catch (err) {
+                console.error(err);
+            }
+        };
 
-            const deleteKeringanan = async (id) => {
-                if (!confirm('Hapus konfigurasi beasiswa siswa ini?')) return;
-                try {
-                    const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/keringanan?id=${id}`, { method: 'DELETE' });
-                    const res = await response.json();
-                    if (res.success) {
-                        fetchKeringanan();
-                    }
-                } catch (err) {
-                    console.error(err);
+        const saveKeringanan = async () => {
+            loading.value = true;
+            try {
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/keringanan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(form.value)
+                });
+                const res = await response.json();
+                if (res.success) {
+                    fetchKeringanan();
+                    // Reset form
+                    form.value.komponen_id = '';
+                    form.value.nilai = '';
+                    form.value.keterangan = '';
+                    clearSelectedSiswa();
                 }
-            };
+            } catch (err) {
+                console.error(err);
+            } finally {
+                loading.value = false;
+            }
+        };
 
-            const formatNumber = (num) => {
-                return new Intl.NumberFormat('id-ID').format(num);
-            };
+        const deleteKeringanan = async (id) => {
+            if (!confirm('Hapus konfigurasi beasiswa siswa ini?')) return;
+            try {
+                const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/keringanan?id=${id}`, { method: 'DELETE' });
+                const res = await response.json();
+                if (res.success) {
+                    fetchKeringanan();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
 
-            Vue.onMounted(() => {
-                fetchKeringanan();
-            });
+        const formatNumber = (num) => {
+            return new Intl.NumberFormat('id-ID').format(num);
+        };
 
-            return {
-                komponenList,
-                keringananList,
-                loading,
-                siswaSearch,
-                siswaSuggestions,
-                selectedSiswa,
-                form,
-                searchSiswa,
-                selectSiswa,
-                clearSelectedSiswa,
-                saveKeringanan,
-                deleteKeringanan,
-                formatNumber
-            };
-        }
-    });
+        Vue.onMounted(() => {
+            fetchKeringanan();
+        });
+
+        return {
+            komponenList,
+            keringananList,
+            loading,
+            siswaSearch,
+            siswaSuggestions,
+            selectedSiswa,
+            form,
+            searchSiswa,
+            selectSiswa,
+            clearSelectedSiswa,
+            saveKeringanan,
+            deleteKeringanan,
+            formatNumber
+        };
+    }
 });
 </script>
 

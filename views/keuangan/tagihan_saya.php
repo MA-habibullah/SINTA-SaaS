@@ -10,7 +10,7 @@ $customTagihanTerm = $setting['istilah_tagihan'] ?? 'Tagihan';
 $customTunggakanTerm = $setting['istilah_tunggakan'] ?? 'Tunggakan';
 ?>
 
-<div id="app" v-cloak class="container-fluid px-4 py-4">
+<div id="keuangan-tagihan-saya-app" v-cloak class="container-fluid px-4 py-4">
     <!-- Header -->
     <div class="d-flex align-items-center justify-content-between mb-4">
         <div>
@@ -99,62 +99,60 @@ $customTunggakanTerm = $setting['istilah_tunggakan'] ?? 'Tunggakan';
 </style>
 
 <script>
-window.addEventListener('DOMContentLoaded', () => {
-    window.VueAppRegistry.register('#app', {
-        setup() {
-            const tagihanList = Vue.ref([]);
-            const totalTunggakan = Vue.ref(0);
-            const totalTerbayar = Vue.ref(0);
+window.VueAppRegistry.register('#keuangan-tagihan-saya-app', {
+    setup() {
+        const tagihanList = Vue.ref([]);
+        const totalTunggakan = Vue.ref(0);
+        const totalTerbayar = Vue.ref(0);
 
-            const fetchTagihanSaya = async () => {
-                try {
-                    const response = await fetch('/SINTA-SaaS/api/v1/keuangan/tagihan-saya');
-                    const res = await response.json();
-                    if (res.success) {
-                        tagihanList.value = res.data;
-                        calculateTotals();
-                    }
-                } catch (err) {
-                    console.error(err);
+        const fetchTagihanSaya = async () => {
+            try {
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/tagihan-saya');
+                const res = await response.json();
+                if (res.success) {
+                    tagihanList.value = res.data;
+                    calculateTotals();
                 }
-            };
+            } catch (err) {
+                console.error(err);
+            }
+        };
 
-            const calculateTotals = () => {
-                totalTunggakan.value = tagihanList.value.reduce((sum, t) => sum + (parseFloat(t.nominal_tagihan) - parseFloat(t.nominal_bayar)), 0);
-                totalTerbayar.value = tagihanList.value.reduce((sum, t) => sum + parseFloat(t.nominal_bayar), 0);
-            };
+        const calculateTotals = () => {
+            totalTunggakan.value = tagihanList.value.reduce((sum, t) => sum + (parseFloat(t.nominal_tagihan) - parseFloat(t.nominal_bayar)), 0);
+            totalTerbayar.value = tagihanList.value.reduce((sum, t) => sum + parseFloat(t.nominal_bayar), 0);
+        };
 
-            const getStatusBadgeClass = (status) => {
-                switch(status) {
-                    case 'Lunas': return 'bg-success text-white';
-                    case 'Cicil': return 'bg-warning text-dark';
-                    default: return 'bg-danger text-white';
-                }
-            };
+        const getStatusBadgeClass = (status) => {
+            switch(status) {
+                case 'Lunas': return 'bg-success text-white';
+                case 'Cicil': return 'bg-warning text-dark';
+                default: return 'bg-danger text-white';
+            }
+        };
 
-            const getBulanName = (bln) => {
-                const list = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-                return list[bln] || '';
-            };
+        const getBulanName = (bln) => {
+            const list = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            return list[bln] || '';
+        };
 
-            const formatNumber = (num) => {
-                return new Intl.NumberFormat('id-ID').format(num);
-            };
+        const formatNumber = (num) => {
+            return new Intl.NumberFormat('id-ID').format(num);
+        };
 
-            Vue.onMounted(() => {
-                fetchTagihanSaya();
-            });
+        Vue.onMounted(() => {
+            fetchTagihanSaya();
+        });
 
-            return {
-                tagihanList,
-                totalTunggakan,
-                totalTerbayar,
-                getStatusBadgeClass,
-                getBulanName,
-                formatNumber
-            };
-        }
-    });
+        return {
+            tagihanList,
+            totalTunggakan,
+            totalTerbayar,
+            getStatusBadgeClass,
+            getBulanName,
+            formatNumber
+        };
+    }
 });
 </script>
 

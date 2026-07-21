@@ -1,6 +1,6 @@
 <?php include __DIR__ . '/../layout/header.php'; ?>
 
-<div id="app" v-cloak class="container-fluid px-4 py-4">
+<div id="keuangan-generate-app" v-cloak class="container-fluid px-4 py-4">
     <div class="row">
         <div class="col-12 col-lg-7 mx-auto">
             <!-- Header -->
@@ -140,96 +140,94 @@
 </style>
 
 <script>
-window.addEventListener('DOMContentLoaded', () => {
-    window.VueAppRegistry.register('#app', {
-        setup() {
-            const listKelas = JSON.parse(document.getElementById('data-kelas').textContent || '[]');
-            const listJenjang = JSON.parse(document.getElementById('data-jenjang').textContent || '[]');
-            const listTa = JSON.parse(document.getElementById('data-ta').textContent || '[]');
-            const komponenList = JSON.parse(document.getElementById('data-komponen').textContent || '[]');
+window.VueAppRegistry.register('#keuangan-generate-app', {
+    setup() {
+        const listKelas = JSON.parse(document.getElementById('data-kelas').textContent || '[]');
+        const listJenjang = JSON.parse(document.getElementById('data-jenjang').textContent || '[]');
+        const listTa = JSON.parse(document.getElementById('data-ta').textContent || '[]');
+        const komponenList = JSON.parse(document.getElementById('data-komponen').textContent || '[]');
 
-            const loading = Vue.ref(false);
-            const successMsg = Vue.ref('');
-            const errorMsg = Vue.ref('');
+        const loading = Vue.ref(false);
+        const successMsg = Vue.ref('');
+        const errorMsg = Vue.ref('');
 
-            const isBulanan = Vue.ref(false);
-            const targetType = Vue.ref('all');
+        const isBulanan = Vue.ref(false);
+        const targetType = Vue.ref('all');
 
-            const form = Vue.ref({
-                komponen_id: '',
-                tahun_ajaran_id: '',
-                bulan: '',
-                kelas_id: '',
-                jenjang_id: ''
-            });
+        const form = Vue.ref({
+            komponen_id: '',
+            tahun_ajaran_id: '',
+            bulan: '',
+            kelas_id: '',
+            jenjang_id: ''
+        });
 
-            const onKomponenChange = () => {
-                const selected = komponenList.find(k => k.id == form.value.komponen_id);
-                if (selected && selected.tipe_periode === 'Bulanan') {
-                    isBulanan.value = true;
-                    form.value.bulan = '';
+        const onKomponenChange = () => {
+            const selected = komponenList.find(k => k.id == form.value.komponen_id);
+            if (selected && selected.tipe_periode === 'Bulanan') {
+                isBulanan.value = true;
+                form.value.bulan = '';
+            } else {
+                isBulanan.value = false;
+                form.value.bulan = null;
+            }
+        };
+
+        const resetTargets = () => {
+            form.value.kelas_id = '';
+            form.value.jenjang_id = '';
+        };
+
+        const generateTagihan = async () => {
+            loading.value = true;
+            successMsg.value = '';
+            errorMsg.value = '';
+
+            try {
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/generate-tagihan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(form.value)
+                });
+                const res = await response.json();
+                if (res.success) {
+                    successMsg.value = `Berhasil menerbitkan ${res.count} tagihan untuk target siswa terpilih!`;
+                    // Reset targets only, keep component configuration
+                    resetTargets();
                 } else {
-                    isBulanan.value = false;
-                    form.value.bulan = null;
+                    errorMsg.value = res.error || 'Gagal menerbitkan tagihan.';
                 }
-            };
+            } catch (err) {
+                errorMsg.value = 'Terjadi kesalahan jaringan.';
+            } finally {
+                loading.value = false;
+            }
+        };
 
-            const resetTargets = () => {
-                form.value.kelas_id = '';
-                form.value.jenjang_id = '';
-            };
+        Vue.onMounted(() => {
+            // Select active TA by default
+            const activeTa = listTa.find(ta => ta.status === 'Aktif');
+            if (activeTa) {
+                form.value.tahun_ajaran_id = activeTa.id;
+            }
+        });
 
-            const generateTagihan = async () => {
-                loading.value = true;
-                successMsg.value = '';
-                errorMsg.value = '';
-
-                try {
-                    const response = await fetch('/SINTA-SaaS/api/v1/keuangan/generate-tagihan', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(form.value)
-                    });
-                    const res = await response.json();
-                    if (res.success) {
-                        successMsg.value = `Berhasil menerbitkan ${res.count} tagihan untuk target siswa terpilih!`;
-                        // Reset targets only, keep component configuration
-                        resetTargets();
-                    } else {
-                        errorMsg.value = res.error || 'Gagal menerbitkan tagihan.';
-                    }
-                } catch (err) {
-                    errorMsg.value = 'Terjadi kesalahan jaringan.';
-                } finally {
-                    loading.value = false;
-                }
-            };
-
-            Vue.onMounted(() => {
-                // Select active TA by default
-                const activeTa = listTa.find(ta => ta.status === 'Aktif');
-                if (activeTa) {
-                    form.value.tahun_ajaran_id = activeTa.id;
-                }
-            });
-
-            return {
-                listKelas,
-                listJenjang,
-                listTa,
-                komponenList,
-                loading,
-                successMsg,
-                errorMsg,
-                isBulanan,
-                targetType,
-                form,
-                onKomponenChange,
-                resetTargets,
-                generateTagihan
-            };
-        }
-    });
+        return {
+            listKelas,
+            listJenjang,
+            listTa,
+            komponenList,
+            loading,
+            successMsg,
+            errorMsg,
+            isBulanan,
+            targetType,
+            form,
+            onKomponenChange,
+            resetTargets,
+            generateTagihan
+        };
+    }
 });
 </script>
 

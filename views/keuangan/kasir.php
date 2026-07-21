@@ -1,6 +1,6 @@
 <?php include __DIR__ . '/../layout/header.php'; ?>
 
-<div id="app" v-cloak class="container-fluid px-4 py-4">
+<div id="keuangan-kasir-app" v-cloak class="container-fluid px-4 py-4">
     <!-- Header -->
     <div class="d-flex align-items-center justify-content-between mb-4">
         <div>
@@ -225,223 +225,221 @@
 </style>
 
 <script>
-window.addEventListener('DOMContentLoaded', () => {
-    window.VueAppRegistry.register('#app', {
-        setup() {
-            const siswaSearch = Vue.ref('');
-            const siswaSuggestions = Vue.ref([]);
-            const selectedSiswa = Vue.ref(null);
+window.VueAppRegistry.register('#keuangan-kasir-app', {
+    setup() {
+        const siswaSearch = Vue.ref('');
+        const siswaSuggestions = Vue.ref([]);
+        const selectedSiswa = Vue.ref(null);
 
-            const tagihanList = Vue.ref([]);
-            const totalBelanja = Vue.ref(0);
+        const tagihanList = Vue.ref([]);
+        const totalBelanja = Vue.ref(0);
 
-            const cashReceived = Vue.ref('');
-            const changeAmount = Vue.ref(0);
+        const cashReceived = Vue.ref('');
+        const changeAmount = Vue.ref(0);
 
-            const hasTunggakanLain = Vue.ref(false);
+        const hasTunggakanLain = Vue.ref(false);
 
-            const checkoutForm = Vue.ref({
-                metode_pembayaran: 'Tunai',
-                keterangan: ''
-            });
+        const checkoutForm = Vue.ref({
+            metode_pembayaran: 'Tunai',
+            keterangan: ''
+        });
 
-            const loadingCheckout = Vue.ref(false);
+        const loadingCheckout = Vue.ref(false);
 
-            // Kwitansi Print State
-            const printData = Vue.ref({
-                nomor_kwitansi: '',
-                tanggal: '',
-                metode: '',
-                nama_siswa: '',
-                nisn: '',
-                kelas: '',
-                items: [],
-                total: 0
-            });
+        // Kwitansi Print State
+        const printData = Vue.ref({
+            nomor_kwitansi: '',
+            tanggal: '',
+            metode: '',
+            nama_siswa: '',
+            nisn: '',
+            kelas: '',
+            items: [],
+            total: 0
+        });
 
-            // Autocomplete Search
-            let searchTimeout = null;
-            const searchSiswa = () => {
-                clearTimeout(searchTimeout);
-                if (siswaSearch.value.length < 2) {
-                    siswaSuggestions.value = [];
-                    return;
-                }
-                searchTimeout = setTimeout(async () => {
-                    try {
-                        const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/cari-siswa?q=${encodeURIComponent(siswaSearch.value)}`);
-                        const res = await response.json();
-                        if (res.success) {
-                            siswaSuggestions.value = res.data;
-                        }
-                    } catch (err) {
-                        console.error(err);
-                    }
-                }, 300);
-            };
-
-            const selectSiswa = (siswa) => {
-                selectedSiswa.value = siswa;
-                siswaSearch.value = '';
+        // Autocomplete Search
+        let searchTimeout = null;
+        const searchSiswa = () => {
+            clearTimeout(searchTimeout);
+            if (siswaSearch.value.length < 2) {
                 siswaSuggestions.value = [];
-                fetchTagihanSiswa(siswa.id);
-            };
-
-            const clearSelectedSiswa = () => {
-                selectedSiswa.value = null;
-                tagihanList.value = [];
-                totalBelanja.value = 0;
-                hasTunggakanLain.value = false;
-            };
-
-            const fetchTagihanSiswa = async (siswaId) => {
+                return;
+            }
+            searchTimeout = setTimeout(async () => {
                 try {
-                    const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/tagihan-siswa?siswa_id=${siswaId}`);
+                    const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/cari-siswa?q=${encodeURIComponent(siswaSearch.value)}`);
                     const res = await response.json();
                     if (res.success) {
-                        tagihanList.value = res.data.map(t => ({
-                            ...t,
-                            selected: false,
-                            bayar_input: t.nominal_tagihan - t.nominal_bayar
-                        }));
-
-                        // Cek apakah ada tunggakan lebih dari 1 bulan/tahun ajaran (tunggakan lama)
-                        if (tagihanList.value.length > 1) {
-                            hasTunggakanLain.value = true;
-                        }
+                        siswaSuggestions.value = res.data;
                     }
                 } catch (err) {
                     console.error(err);
                 }
-            };
+            }, 300);
+        };
 
-            const toggleSelectTagihan = (t) => {
-                updateTotal();
-            };
+        const selectSiswa = (siswa) => {
+            selectedSiswa.value = siswa;
+            siswaSearch.value = '';
+            siswaSuggestions.value = [];
+            fetchTagihanSiswa(siswa.id);
+        };
 
-            const updateTotal = () => {
-                totalBelanja.value = tagihanList.value
-                    .filter(t => t.selected)
-                    .reduce((sum, t) => sum + (parseFloat(t.bayar_input) || 0), 0);
-                calculateKembalian();
-            };
+        const clearSelectedSiswa = () => {
+            selectedSiswa.value = null;
+            tagihanList.value = [];
+            totalBelanja.value = 0;
+            hasTunggakanLain.value = false;
+        };
 
-            const calculateKembalian = () => {
-                if (checkoutForm.value.metode_pembayaran === 'Tunai' && cashReceived.value > 0) {
-                    changeAmount.value = Math.max(0, cashReceived.value - totalBelanja.value);
-                } else {
-                    changeAmount.value = 0;
-                }
-            };
-
-            const checkoutPembayaran = async () => {
-                const selectedItems = tagihanList.value
-                    .filter(t => t.selected)
-                    .map(t => ({
-                        tagihan_id: t.id,
-                        nominal_dibayar: t.bayar_input
+        const fetchTagihanSiswa = async (siswaId) => {
+            try {
+                const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/tagihan-siswa?siswa_id=${siswaId}`);
+                const res = await response.json();
+                if (res.success) {
+                    tagihanList.value = res.data.map(t => ({
+                        ...t,
+                        selected: false,
+                        bayar_input: t.nominal_tagihan - t.nominal_bayar
                     }));
 
-                if (selectedItems.length === 0) return;
-
-                loadingCheckout.value = true;
-
-                try {
-                    const response = await fetch('/SINTA-SaaS/api/v1/keuangan/bayar', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            siswa_id: selectedSiswa.value.id,
-                            items: selectedItems,
-                            metode_pembayaran: checkoutForm.value.metode_pembayaran,
-                            keterangan: checkoutForm.value.keterangan
-                        })
-                    });
-                    const res = await response.json();
-                    if (res.success) {
-                        // Set data print
-                        printData.value = {
-                            nomor_kwitansi: res.nomor_kwitansi,
-                            tanggal: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                            metode: checkoutForm.value.metode_pembayaran,
-                            nama_siswa: selectedSiswa.value.nama,
-                            nisn: selectedSiswa.value.nisn,
-                            kelas: selectedSiswa.value.nama_kelas,
-                            items: tagihanList.value.filter(t => t.selected).map(t => ({
-                                nama: t.nama_komponen + (t.bulan ? ` (${getBulanName(t.bulan)})` : ''),
-                                bayar: t.bayar_input
-                            })),
-                            total: totalBelanja.value
-                        };
-
-                        // Tampilkan modal print
-                        const modalEl = new bootstrap.Modal(document.getElementById('modalKwitansi'));
-                        modalEl.show();
-
-                        // Reload data tagihan
-                        fetchTagihanSiswa(selectedSiswa.value.id);
-                        totalBelanja.value = 0;
-                        cashReceived.value = '';
-                        changeAmount.value = 0;
-                        checkoutForm.value.keterangan = '';
-                    } else {
-                        alert(res.error || 'Gagal menyimpan transaksi.');
+                    // Cek apakah ada tunggakan lebih dari 1 bulan/tahun ajaran (tunggakan lama)
+                    if (tagihanList.value.length > 1) {
+                        hasTunggakanLain.value = true;
                     }
-                } catch (err) {
-                    alert('Terjadi kesalahan jaringan.');
-                } finally {
-                    loadingCheckout.value = false;
                 }
-            };
+            } catch (err) {
+                console.error(err);
+            }
+        };
 
-            const printKwitansi = () => {
-                const printContents = document.getElementById('printArea').innerHTML;
-                const originalContents = document.body.innerHTML;
-                
-                const win = window.open('', '', 'height=500, width=500');
-                win.document.write('<html><head><title>Cetak Kuitansi</title>');
-                win.document.write('<link rel="stylesheet" href="/SINTA-SaaS/assets/css/bootstrap.min.css">');
-                win.document.write('</head><body onload="window.print(); window.close();">');
-                win.document.write(printContents);
-                win.document.write('</body></html>');
-                win.document.close();
-            };
+        const toggleSelectTagihan = (t) => {
+            updateTotal();
+        };
 
-            // Helpers
-            const getBulanName = (bln) => {
-                const list = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-                return list[bln] || '';
-            };
+        const updateTotal = () => {
+            totalBelanja.value = tagihanList.value
+                .filter(t => t.selected)
+                .reduce((sum, t) => sum + (parseFloat(t.bayar_input) || 0), 0);
+            calculateKembalian();
+        };
 
-            const formatNumber = (num) => {
-                return new Intl.NumberFormat('id-ID').format(num);
-            };
+        const calculateKembalian = () => {
+            if (checkoutForm.value.metode_pembayaran === 'Tunai' && cashReceived.value > 0) {
+                changeAmount.value = Math.max(0, cashReceived.value - totalBelanja.value);
+            } else {
+                changeAmount.value = 0;
+            }
+        };
 
-            return {
-                siswaSearch,
-                siswaSuggestions,
-                selectedSiswa,
-                tagihanList,
-                totalBelanja,
-                cashReceived,
-                changeAmount,
-                hasTunggakanLain,
-                checkoutForm,
-                loadingCheckout,
-                printData,
-                searchSiswa,
-                selectSiswa,
-                clearSelectedSiswa,
-                toggleSelectTagihan,
-                updateTotal,
-                calculateKembalian,
-                checkoutPembayaran,
-                printKwitansi,
-                getBulanName,
-                formatNumber
-            };
-        }
-    });
+        const checkoutPembayaran = async () => {
+            const selectedItems = tagihanList.value
+                .filter(t => t.selected)
+                .map(t => ({
+                    tagihan_id: t.id,
+                    nominal_dibayar: t.bayar_input
+                }));
+
+            if (selectedItems.length === 0) return;
+
+            loadingCheckout.value = true;
+
+            try {
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/bayar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        siswa_id: selectedSiswa.value.id,
+                        items: selectedItems,
+                        metode_pembayaran: checkoutForm.value.metode_pembayaran,
+                        keterangan: checkoutForm.value.keterangan
+                    })
+                });
+                const res = await response.json();
+                if (res.success) {
+                    // Set data print
+                    printData.value = {
+                        nomor_kwitansi: res.nomor_kwitansi,
+                        tanggal: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                        metode: checkoutForm.value.metode_pembayaran,
+                        nama_siswa: selectedSiswa.value.nama,
+                        nisn: selectedSiswa.value.nisn,
+                        kelas: selectedSiswa.value.nama_kelas,
+                        items: tagihanList.value.filter(t => t.selected).map(t => ({
+                            nama: t.nama_komponen + (t.bulan ? ` (${getBulanName(t.bulan)})` : ''),
+                            bayar: t.bayar_input
+                        })),
+                        total: totalBelanja.value
+                    };
+
+                    // Tampilkan modal print
+                    const modalEl = new bootstrap.Modal(document.getElementById('modalKwitansi'));
+                    modalEl.show();
+
+                    // Reload data tagihan
+                    fetchTagihanSiswa(selectedSiswa.value.id);
+                    totalBelanja.value = 0;
+                    cashReceived.value = '';
+                    changeAmount.value = 0;
+                    checkoutForm.value.keterangan = '';
+                } else {
+                    alert(res.error || 'Gagal menyimpan transaksi.');
+                }
+            } catch (err) {
+                alert('Terjadi kesalahan jaringan.');
+            } finally {
+                loadingCheckout.value = false;
+            }
+        };
+
+        const printKwitansi = () => {
+            const printContents = document.getElementById('printArea').innerHTML;
+            const originalContents = document.body.innerHTML;
+            
+            const win = window.open('', '', 'height=500, width=500');
+            win.document.write('<html><head><title>Cetak Kuitansi</title>');
+            win.document.write('<link rel="stylesheet" href="/SINTA-SaaS/assets/css/bootstrap.min.css">');
+            win.document.write('</head><body onload="window.print(); window.close();">');
+            win.document.write(printContents);
+            win.document.write('</body></html>');
+            win.document.close();
+        };
+
+        // Helpers
+        const getBulanName = (bln) => {
+            const list = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            return list[bln] || '';
+        };
+
+        const formatNumber = (num) => {
+            return new Intl.NumberFormat('id-ID').format(num);
+        };
+
+        return {
+            siswaSearch,
+            siswaSuggestions,
+            selectedSiswa,
+            tagihanList,
+            totalBelanja,
+            cashReceived,
+            changeAmount,
+            hasTunggakanLain,
+            checkoutForm,
+            loadingCheckout,
+            printData,
+            searchSiswa,
+            selectSiswa,
+            clearSelectedSiswa,
+            toggleSelectTagihan,
+            updateTotal,
+            calculateKembalian,
+            checkoutPembayaran,
+            printKwitansi,
+            getBulanName,
+            formatNumber
+        };
+    }
 });
 </script>
 
