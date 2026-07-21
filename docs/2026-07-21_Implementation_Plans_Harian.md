@@ -209,3 +209,331 @@ CREATE TABLE IF NOT EXISTS `transaksi_spp_audit_log` (
 2. Simulasikan pendaftaran calon siswa baru dari dashboard depan PPDB.
 3. Pastikan pada dashboard admin kasir muncul tagihan pendaftaran atas nama calon siswa baru tersebut.
 4. Lakukan pelunasan di loket, pastikan struk tercetak dan status pendaftaran calon siswa ter-update otomatis di menu PPDB.
+
+---
+## [Pembuatan Seeder Full Modul Keuangan dan Pembayaran]
+**Waktu**: 11:15 WIB
+**Status**: Dieksekusi
+
+### Latar Belakang
+Pengguna meminta pembuatan data seeder penuh untuk modul Keuangan dan Pembayaran (SPP, Kegiatan Tengah Semester/KTS, Pembelian Buku, Sumbangan Sukarela, Uang Gedung/Pangkal, dan Formulir PPDB) untuk mendukung testing lokal aplikasi.
+
+### Proposed Changes
+
+#### [NEW] [2026_07_21_02_seed_spp_data.php](file:///C:/xampp/htdocs/SINTA-SaaS/database/migrations/2026_07_21_02_seed_spp_data.php)
+
+Berikut adalah kode PHP lengkap seeder migrasi yang direncanakan:
+
+```php
+<?php
+/**
+ * Migration Seeder: Seed Data Keuangan dan Pembayaran (SPP)
+ * Location: database/migrations/2026_07_21_02_seed_spp_data.php
+ */
+
+return [
+    'up' => function (PDO $pdo): void {
+        $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
+
+        // 1. Seed Pengaturan Modul Keuangan (Transaksi SPP Pengaturan)
+        $tenants = $pdo->query("SELECT id FROM tenants")->fetchAll(PDO::FETCH_COLUMN);
+        
+        $stmtSettings = $pdo->prepare("
+            INSERT INTO `transaksi_spp_pengaturan` (`tenant_id`, `nama_modul`, `istilah_tagihan`, `istilah_tunggakan`, `visibilitas_siswa`)
+            VALUES (?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE nama_modul=VALUES(nama_modul), istilah_tagihan=VALUES(istilah_tagihan), istilah_tunggakan=VALUES(istilah_tunggakan);
+        ");
+
+        foreach ($tenants as $tenantId) {
+            $stmtSettings->execute([
+                $tenantId,
+                'Keuangan & SPP',
+                'Tagihan',
+                'Tunggakan',
+                1
+            ]);
+        }
+
+        // 2. Seed Komponen Biaya (Transaksi SPP Komponen)
+        $komponenTemplates = [
+            ['nama_komponen' => 'SPP Bulanan', 'tipe_periode' => 'Bulanan'],
+            ['nama_komponen' => 'Kegiatan Tengah Semester (KTS)', 'tipe_periode' => 'Semester'],
+            ['nama_komponen' => 'Pembelian Buku Paket', 'tipe_periode' => 'Bebas'],
+            ['nama_komponen' => 'Sumbangan Sukarela', 'tipe_periode' => 'Bebas'],
+            ['nama_komponen' => 'Uang Pangkal / Gedung', 'tipe_periode' => 'Tahunan'],
+            ['nama_komponen' => 'Formulir Pendaftaran PPDB', 'tipe_periode' => 'Bebas'],
+        ];
+
+        $stmtKomponen = $pdo->prepare("
+            INSERT INTO `transaksi_spp_komponen` (`tenant_id`, `nama_komponen`, `tipe_periode`, `is_active`)
+            VALUES (?, ?, ?, 1)
+        ");
+
+        $pdo->exec("TRUNCATE TABLE `transaksi_spp_komponen`;");
+
+        foreach ($tenants as $tenantId) {
+            foreach ($komponenTemplates as $kt) {
+                $stmtKomponen->execute([
+                    $tenantId,
+                    $kt['nama_komponen'],
+                    $kt['tipe_periode']
+                ]);
+            }
+        }
+
+        // 3. Seed Tarif Default per Komponen (Transaksi SPP Tarif)
+        $allKomponen = $pdo->query("SELECT id, tenant_id, nama_komponen FROM `transaksi_spp_komponen`")->fetchAll(PDO::FETCH_ASSOC);
+        $allKelas = $pdo->query("SELECT id, tenant_id, id_jenjang FROM `kelas`")->fetchAll(PDO::FETCH_ASSOC);
+        $allJenjang = $pdo->query("SELECT id FROM `jenjang`")->fetchAll(PDO::FETCH_COLUMN);
+        $allTA = $pdo->query("SELECT id FROM `tahun_ajaran`")->fetchAll(PDO::FETCH_COLUMN);
+
+        $stmtTarif = $pdo->prepare("
+            INSERT INTO `transaksi_spp_tarif` (`tenant_id`, `komponen_id`, `kelas_id`, `jenjang_id`, `jalur_masuk`, `nominal`, `tahun_ajaran_id`)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ");
+
+        $pdo->exec("TRUNCATE TABLE `transaksi_spp_tarif`;");
+
+        $tarifMap = [
+            'SPP Bulanan' => 200000.00,
+            'Kegiatan Tengah Semester (KTS)' => 150000.00,
+            'Pembelian Buku Paket' => 450000.00,
+            'Sumbangan Sukarela' => 0.00,
+            'Uang Pangkal / Gedung' => 2500000.00,
+            'Formulir Pendaftaran PPDB' => 100000.00
+        ];
+
+        foreach ($allKomponen as $komp) {
+            $tid = $komp['tenant_id'];
+            $kid = $komp['id'];
+            $namaK = $komp['nama_komponen'];
+            $nominal = $tarifMap[$namaK] ?? 100000.00;
+
+            foreach ($allTA as $taId) {
+                if ($namaK === 'Formulir Pendaftaran PPDB') {
+                    foreach ($allJenjang as $jId) {
+                        $stmtTarif->execute([$tid, $kid, null, $jId, 'Reguler', $nominal, $taId]);
+                        $stmtTarif->execute([$tid, $kid, null, $jId, 'Prestasi', $nominal - 25000.00, $taId]);
+                    }
+                } elseif ($namaK === 'Uang Pangkal / Gedung') {
+                    foreach ($allJenjang as $jId) {
+                        $stmtTarif->execute([$tid, $kid, null, $jId, null, $nominal, $taId]);
+                    }
+                } else {
+                    foreach ($allKelas as $kls) {
+                        $stmtTarif->execute([$tid, $kid, $kls['id'], null, null, $nominal, $taId]);
+                    }
+                }
+            }
+        }
+
+        // 4. Seed Keringanan / Diskon (Transaksi SPP Keringanan)
+        $pdo->exec("TRUNCATE TABLE `transaksi_spp_keringanan`;");
+        
+        $stmtKeringanan = $pdo->prepare("
+            INSERT INTO `transaksi_spp_keringanan` (`tenant_id`, `siswa_id`, `komponen_id`, `tipe_keringanan`, `nilai`, `keterangan`)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ");
+
+        $siswaContoh = $pdo->query("
+            SELECT s.id, s.tenant_id, k.id as komponen_id 
+            FROM siswa s
+            JOIN `transaksi_spp_komponen` k ON s.tenant_id = k.tenant_id
+            WHERE k.nama_komponen = 'SPP Bulanan'
+            LIMIT 3
+        ")->fetchAll(PDO::FETCH_ASSOC);
+
+        if (isset($siswaContoh[0])) {
+            $stmtKeringanan->execute([
+                $siswaContoh[0]['tenant_id'],
+                $siswaContoh[0]['id'],
+                $siswaContoh[0]['komponen_id'],
+                'Nominal',
+                50000.00,
+                'Beasiswa Prestasi Akademik (Potongan SPP)'
+            ]);
+        }
+        if (isset($siswaContoh[1])) {
+            $stmtKeringanan->execute([
+                $siswaContoh[1]['tenant_id'],
+                $siswaContoh[1]['id'],
+                $siswaContoh[1]['komponen_id'],
+                'Persentase',
+                100.00,
+                'Beasiswa Penuh Siswa Asuh / Yatim Piatu'
+            ]);
+        }
+
+        // 5. Seed Tagihan Terbit (Transaksi SPP Tagihan)
+        $pdo->exec("TRUNCATE TABLE `transaksi_spp_tagihan`;");
+        
+        $stmtTagihan = $pdo->prepare("
+            INSERT INTO `transaksi_spp_tagihan` (`id`, `tenant_id`, `siswa_id`, `komponen_id`, `tarif_id`, `tahun_ajaran_id`, `bulan`, `nominal_tagihan`, `nominal_bayar`, `status_lunas`, `jatuh_tempo`)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+
+        $allTarifs = $pdo->query("
+            SELECT t.*, k.nama_komponen, k.tipe_periode 
+            FROM `transaksi_spp_tarif` t
+            JOIN `transaksi_spp_komponen` k ON t.komponen_id = k.id
+        ")->fetchAll(PDO::FETCH_ASSOC);
+
+        $siswaList = $pdo->query("SELECT id, tenant_id, id_kelas FROM siswa")->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($siswaList as $siswa) {
+            $tid = $siswa['tenant_id'];
+            $sid = $siswa['id'];
+            $klsId = $siswa['id_kelas'];
+
+            foreach ($allTarifs as $tarif) {
+                if ($tarif['tenant_id'] !== $tid) continue;
+                if ($tarif['kelas_id'] !== null && $tarif['kelas_id'] != $klsId) continue;
+
+                $tagihanId = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+                    mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+                    mt_rand(0, 0xffff),
+                    mt_rand(0, 0x0fff) | 0x4000,
+                    mt_rand(0, 0x3fff) | 0x8000,
+                    mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+                );
+
+                $nominalAsli = $tarif['nominal'];
+                $nominalTagihan = $nominalAsli;
+
+                $stmtCheckKeringanan = $pdo->prepare("SELECT tipe_keringanan, nilai FROM `transaksi_spp_keringanan` WHERE siswa_id = ? AND komponen_id = ? LIMIT 1");
+                $stmtCheckKeringanan->execute([$sid, $tarif['komponen_id']]);
+                $keringanan = $stmtCheckKeringanan->fetch(PDO::FETCH_ASSOC);
+                
+                if ($keringanan) {
+                    if ($keringanan['tipe_keringanan'] === 'Nominal') {
+                        $nominalTagihan = max(0.00, $nominalAsli - $keringanan['nilai']);
+                    } else {
+                        $nominalTagihan = max(0.00, $nominalAsli * (1 - ($keringanan['nilai'] / 100)));
+                    }
+                }
+
+                if ($tarif['nama_komponen'] === 'SPP Bulanan') {
+                    $bulanList = [7, 8, 9];
+                    foreach ($bulanList as $b) {
+                        $uuidBulan = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+                            mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+                            mt_rand(0, 0xffff),
+                            mt_rand(0, 0x0fff) | 0x4000,
+                            mt_rand(0, 0x3fff) | 0x8000,
+                            mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+                        );
+                        
+                        $nomBayar = 0.00;
+                        $statusLunas = 'Belum';
+                        
+                        if ($b == 7) {
+                            $nomBayar = $nominalTagihan;
+                            $statusLunas = 'Lunas';
+                        } elseif ($b == 8) {
+                            $nomBayar = round($nominalTagihan / 2, 2);
+                            $statusLunas = 'Cicil';
+                        }
+
+                        $stmtTagihan->execute([
+                            $uuidBulan, $tid, $sid, $tarif['komponen_id'], $tarif['id'], $tarif['tahun_ajaran_id'],
+                            $b, $nominalTagihan, $nomBayar, $statusLunas, "2026-0" . ($b) . "-10"
+                        ]);
+                    }
+                } elseif ($tarif['nama_komponen'] === 'Kegiatan Tengah Semester (KTS)') {
+                    $stmtTagihan->execute([
+                        $tagihanId, $tid, $sid, $tarif['komponen_id'], $tarif['id'], $tarif['tahun_ajaran_id'],
+                        null, $nominalTagihan, $nominalTagihan, 'Lunas', '2026-10-15'
+                    ]);
+                } elseif ($tarif['nama_komponen'] === 'Pembelian Buku Paket') {
+                    $stmtTagihan->execute([
+                        $tagihanId, $tid, $sid, $tarif['komponen_id'], $tarif['id'], $tarif['tahun_ajaran_id'],
+                        null, $nominalTagihan, 0.00, 'Belum', '2026-08-30'
+                    ]);
+                } elseif ($tarif['nama_komponen'] === 'Uang Pangkal / Gedung') {
+                    $stmtTagihan->execute([
+                        $tagihanId, $tid, $sid, $tarif['komponen_id'], $tarif['id'], $tarif['tahun_ajaran_id'],
+                        null, $nominalTagihan, 1000000.00, 'Cicil', '2026-12-31'
+                    ]);
+                }
+            }
+        }
+
+        // 6. Seed Ledger Pembayaran (Transaksi SPP Pembayaran)
+        $pdo->exec("TRUNCATE TABLE `transaksi_spp_pembayaran`;");
+
+        $stmtPembayaran = $pdo->prepare("
+            INSERT INTO `transaksi_spp_pembayaran` (`id`, `tenant_id`, `tagihan_id`, `siswa_id`, `nominal_dibayar`, `metode_pembayaran`, `kasir_id`, `nomor_kwitansi`, `keterangan`, `status_transaksi`)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Success')
+        ");
+
+        $tagihanBerbayar = $pdo->query("SELECT * FROM `transaksi_spp_tagihan` WHERE nominal_bayar > 0.00")->fetchAll(PDO::FETCH_ASSOC);
+
+        $kasirList = $pdo->query("
+            SELECT u.id, u.tenant_id 
+            FROM users u
+            JOIN roles r ON u.role_id = r.id
+            WHERE r.nama_role IN ('operator_sekolah', 'super_admin')
+        ")->fetchAll(PDO::FETCH_ASSOC);
+
+        $kasirMap = [];
+        foreach ($kasirList as $k) {
+            $kasirMap[$k['tenant_id'] ?? 'global'] = $k['id'];
+        }
+
+        $kwitansiCounter = 1;
+
+        foreach ($tagihanBerbayar as $tag) {
+            $tid = $tag['tenant_id'];
+            $sid = $tag['siswa_id'];
+            $tagId = $tag['id'];
+            $nominalBayar = $tag['nominal_bayar'];
+
+            $kasirId = $kasirMap[$tid] ?? ($kasirMap['global'] ?? null);
+            if (!$kasirId) continue;
+
+            $pembayaranId = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+                mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+                mt_rand(0, 0xffff),
+                mt_rand(0, 0x0fff) | 0x4000,
+                mt_rand(0, 0x3fff) | 0x8000,
+                mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+            );
+
+            $nomorKwitansi = "KW/SPP/" . date('Ymd') . "/" . str_pad($kwitansiCounter++, 4, '0', STR_PAD_LEFT);
+            $metode = ($kwitansiCounter % 2 == 0) ? 'Tunai' : 'Transfer';
+
+            $stmtPembayaran->execute([
+                $pembayaranId,
+                $tid,
+                $tagId,
+                $sid,
+                $nominalBayar,
+                $metode,
+                $kasirId,
+                $nomorKwitansi,
+                'Pembayaran uji coba seeder otomatis',
+            ]);
+        }
+
+        $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
+        echo "- Seeder data keuangan SPP berhasil dieksekusi.\n";
+    },
+
+    'down' => function (PDO $pdo): void {
+        $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
+        $pdo->exec("TRUNCATE TABLE `transaksi_spp_pembayaran`;");
+        $pdo->exec("TRUNCATE TABLE `transaksi_spp_tagihan`;");
+        $pdo->exec("TRUNCATE TABLE `transaksi_spp_keringanan`;");
+        $pdo->exec("TRUNCATE TABLE `transaksi_spp_tarif`;");
+        $pdo->exec("TRUNCATE TABLE `transaksi_spp_komponen`;");
+        $pdo->exec("TRUNCATE TABLE `transaksi_spp_pengaturan`;");
+        $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
+        echo "- Seeder data keuangan SPP berhasil di-rollback.\n";
+    }
+];
+```
+
+### Verification Plan
+- Menjalankan `php migrate.php` di CLI untuk mengeksekusi seeder.
+- Menjalankan kueri SQL pengecekan isi tabel untuk memastikan records terisi penuh secara dinamis sesuai relasi sekolah, kelas, dan siswa masing-masing.
+
