@@ -10,6 +10,21 @@
         </div>
     </div>
 
+    <!-- Tenant Selector Card (Super Admin Only) -->
+    <div v-if="isSuperAdmin" class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <label class="form-label fw-bold text-slate-700"><i class="bi bi-building-gear text-blue-600 me-2"></i> Pilih Sekolah (Tenant)</label>
+                <select class="form-select border-slate-200" v-model="selectedTenantId" @change="onTenantChange" style="height: 44px;">
+                    <option v-for="t in tenantsList" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
+                </select>
+            </div>
+            <div class="col-md-6 mt-3 mt-md-0 text-md-end text-muted fs-7">
+                Menerbitkan tagihan secara massal untuk target siswa pada sekolah yang dipilih.
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <div class="col-12 col-lg-8 mx-auto">
             <!-- Alert Feedback -->
@@ -32,7 +47,7 @@
                         <label class="form-label fw-semibold text-slate-700">Komponen Biaya <span class="text-danger">*</span></label>
                         <select class="form-select border-slate-200" v-model="form.komponen_id" @change="onKomponenChange" required style="height: 42px;">
                             <option value="" disabled>-- Pilih Komponen Biaya --</option>
-                            <option v-for="k in komponenList" :value="k.id">{{ k.nama_komponen }} ({{ k.tipe_periode }})</option>
+                            <option v-for="k in komponenList" :value="k.id" :disabled="k.is_active == 0">{{ k.nama_komponen }} ({{ k.tipe_periode }}) {{ k.is_active == 0 ? '(Non-Aktif)' : '' }}</option>
                         </select>
                     </div>
 
@@ -126,8 +141,11 @@
 <script id="data-ta" type="application/json">
     <?php echo json_encode($list_ta, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>
 </script>
-<script id="data-komponen" type="application/json">
-    <?php echo json_encode($list_komponen, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>
+<script id="user-session" type="application/json">
+    <?php echo json_encode([
+        'is_super_admin' => (($_SESSION['role_name'] ?? '') === 'super_admin'),
+        'tenant_id' => ($_SESSION['tenant_id'] ?? '')
+    ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>
 </script>
 
 <style>
@@ -140,10 +158,15 @@
 <script>
 window.VueAppRegistry.register('#keuangan-generate-app', {
     setup() {
-        const listKelas = JSON.parse(document.getElementById('data-kelas').textContent || '[]');
-        const listJenjang = JSON.parse(document.getElementById('data-jenjang').textContent || '[]');
-        const listTa = JSON.parse(document.getElementById('data-ta').textContent || '[]');
-        const komponenList = JSON.parse(document.getElementById('data-komponen').textContent || '[]');
+        const session = JSON.parse(document.getElementById('user-session').textContent || '{}');
+        const isSuperAdmin = session.is_super_admin;
+        const tenantsList = Vue.ref([]);
+        const selectedTenantId = Vue.ref(session.tenant_id || '');
+
+        const listKelas = Vue.ref(JSON.parse(document.getElementById('data-kelas').textContent || '[]'));
+        const listJenjang = Vue.ref(JSON.parse(document.getElementById('data-jenjang').textContent || '[]'));
+        const listTa = Vue.ref(JSON.parse(document.getElementById('data-ta').textContent || '[]'));
+        const komponenList = Vue.ref([]);
 
         const loading = Vue.ref(false);
         const successMsg = Vue.ref('');
@@ -160,8 +183,52 @@ window.VueAppRegistry.register('#keuangan-generate-app', {
             jenjang_id: ''
         });
 
+        // Helper query param
+        const getQueryParam = () => {
+            return isSuperAdmin && selectedTenantId.value ? `?tenant_id=${selectedTenantId.value}` : '';
+        };
+
+        const fetchTenants = async () => {
+            if (!isSuperAdmin) return;
+            try {
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/tenants');
+                const res = await response.json();
+                if (res.success) {
+                    tenantsList.value = res.data;
+                    const cached = localStorage.getItem('sinta_spp_selected_tenant_id');
+                    if (cached && tenantsList.value.some(t => t.id === cached)) {
+                        selectedTenantId.value = cached;
+                    } else if (tenantsList.value.length > 0) {
+                        selectedTenantId.value = tenantsList.value[0].id;
+                        localStorage.setItem('sinta_spp_selected_tenant_id', selectedTenantId.value);
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        const fetchKomponen = async () => {
+            try {
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/komponen' + getQueryParam());
+                const res = await response.json();
+                if (res.success) {
+                    komponenList.value = res.data;
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        const onTenantChange = () => {
+            localStorage.setItem('sinta_spp_selected_tenant_id', selectedTenantId.value);
+            fetchKomponen();
+            form.value.komponen_id = '';
+            resetTargets();
+        };
+
         const onKomponenChange = () => {
-            const selected = komponenList.find(k => k.id == form.value.komponen_id);
+            const selected = komponenList.value.find(k => k.id == form.value.komponen_id);
             if (selected && selected.tipe_periode === 'Bulanan') {
                 isBulanan.value = true;
                 form.value.bulan = '';
@@ -182,7 +249,8 @@ window.VueAppRegistry.register('#keuangan-generate-app', {
             errorMsg.value = '';
 
             try {
-                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/generate-tagihan', {
+                const tenantSuffix = isSuperAdmin && selectedTenantId.value ? `&tenant_id=${selectedTenantId.value}` : '';
+                const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/generate-tagihan?${tenantSuffix}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(form.value)
@@ -190,7 +258,6 @@ window.VueAppRegistry.register('#keuangan-generate-app', {
                 const res = await response.json();
                 if (res.success) {
                     successMsg.value = `Berhasil menerbitkan ${res.count} tagihan untuk target siswa terpilih!`;
-                    // Reset targets only, keep component configuration
                     resetTargets();
                 } else {
                     errorMsg.value = res.error || 'Gagal menerbitkan tagihan.';
@@ -202,15 +269,22 @@ window.VueAppRegistry.register('#keuangan-generate-app', {
             }
         };
 
-        Vue.onMounted(() => {
+        Vue.onMounted(async () => {
+            if (isSuperAdmin) {
+                await fetchTenants();
+            }
+            await fetchKomponen();
             // Select active TA by default
-            const activeTa = listTa.find(ta => ta.status === 'Aktif');
+            const activeTa = listTa.value.find(ta => ta.status === 'Aktif');
             if (activeTa) {
                 form.value.tahun_ajaran_id = activeTa.id;
             }
         });
 
         return {
+            isSuperAdmin,
+            tenantsList,
+            selectedTenantId,
             listKelas,
             listJenjang,
             listTa,
@@ -221,6 +295,7 @@ window.VueAppRegistry.register('#keuangan-generate-app', {
             isBulanan,
             targetType,
             form,
+            onTenantChange,
             onKomponenChange,
             resetTargets,
             generateTagihan

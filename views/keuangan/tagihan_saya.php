@@ -63,7 +63,7 @@ $customTunggakanTerm = $setting['istilah_tunggakan'] ?? 'Tunggakan';
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="t in tagihanList" :key="t.id">
+                    <tr v-for="t in paginatedTagihan" :key="t.id">
                         <td class="fw-bold text-slate-800">{{ t.nama_komponen }}</td>
                         <td>{{ t.tahun_ajaran }}</td>
                         <td>
@@ -84,6 +84,24 @@ $customTunggakanTerm = $setting['istilah_tunggakan'] ?? 'Tunggakan';
                     </tr>
                 </tbody>
             </table>
+        </div>
+
+        <!-- Pagination personal tagihan -->
+        <div class="d-flex justify-content-between align-items-center mt-3" v-if="totalPages > 1">
+            <span class="text-muted fs-8">Menampilkan Halaman {{ currentPage }} dari {{ totalPages }}</span>
+            <nav aria-label="Page navigation">
+                <ul class="pagination pagination-sm justify-content-end mb-0">
+                    <li class="page-item" :class="{ disabled: currentPage === 1 }">
+                        <a class="page-link" href="#" @click.prevent="currentPage--">Sebelumnya</a>
+                    </li>
+                    <li class="page-item" v-for="p in totalPages" :key="p" :class="{ active: currentPage === p }">
+                        <a class="page-link" href="#" @click.prevent="currentPage = p">{{ p }}</a>
+                    </li>
+                    <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+                        <a class="page-link" href="#" @click.prevent="currentPage++">Berikutnya</a>
+                    </li>
+                </ul>
+            </nav>
         </div>
     </div>
 </div>
@@ -124,6 +142,7 @@ $customTunggakanTerm = $setting['istilah_tunggakan'] ?? 'Tunggakan';
 }
 
 .fs-7 { font-size: 0.85rem; }
+.fs-8 { font-size: 0.75rem; }
 .bg-rose-50 { background-color: #fff1f2; }
 .text-rose-600 { color: #e11d48; }
 .bg-emerald-50 { background-color: #ecfdf5; }
@@ -138,12 +157,17 @@ window.VueAppRegistry.register('#keuangan-tagihan-saya-app', {
         const totalTunggakan = Vue.ref(0);
         const totalTerbayar = Vue.ref(0);
 
+        // Pagination
+        const currentPage = Vue.ref(1);
+        const pageSize = Vue.ref(8);
+
         const fetchTagihanSaya = async () => {
             try {
                 const response = await fetch('/SINTA-SaaS/api/v1/keuangan/tagihan-saya');
                 const res = await response.json();
                 if (res.success) {
                     tagihanList.value = res.data;
+                    currentPage.value = 1;
                     calculateTotals();
                 }
             } catch (err) {
@@ -155,6 +179,16 @@ window.VueAppRegistry.register('#keuangan-tagihan-saya-app', {
             totalTunggakan.value = tagihanList.value.reduce((sum, t) => sum + (parseFloat(t.nominal_tagihan) - parseFloat(t.nominal_bayar)), 0);
             totalTerbayar.value = tagihanList.value.reduce((sum, t) => sum + parseFloat(t.nominal_bayar), 0);
         };
+
+        // Computed Paginated list
+        const paginatedTagihan = Vue.computed(() => {
+            const start = (currentPage.value - 1) * pageSize.value;
+            return tagihanList.value.slice(start, start + pageSize.value);
+        });
+
+        const totalPages = Vue.computed(() => {
+            return Math.ceil(tagihanList.value.length / pageSize.value) || 1;
+        });
 
         const getStatusBadgeClass = (status) => {
             switch(status) {
@@ -181,6 +215,10 @@ window.VueAppRegistry.register('#keuangan-tagihan-saya-app', {
             tagihanList,
             totalTunggakan,
             totalTerbayar,
+            currentPage,
+            pageSize,
+            paginatedTagihan,
+            totalPages,
             getStatusBadgeClass,
             getBulanName,
             formatNumber

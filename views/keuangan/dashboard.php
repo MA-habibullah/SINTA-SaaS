@@ -10,6 +10,21 @@
         </div>
     </div>
 
+    <!-- Tenant Selector Card (Super Admin Only) -->
+    <div v-if="isSuperAdmin" class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <label class="form-label fw-bold text-slate-700"><i class="bi bi-building-gear text-blue-600 me-2"></i> Pilih Sekolah (Tenant)</label>
+                <select class="form-select border-slate-200" v-model="selectedTenantId" @change="onTenantChange" style="height: 44px;">
+                    <option v-for="t in tenantsList" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
+                </select>
+            </div>
+            <div class="col-md-6 mt-3 mt-md-0 text-md-end text-muted fs-7">
+                Menampilkan performa keuangan secara real-time untuk sekolah terpilih.
+            </div>
+        </div>
+    </div>
+
     <!-- Stats Cards -->
     <div class="row mb-4">
         <!-- Card 1: Pemasukan Hari Ini -->
@@ -97,6 +112,14 @@
     </div>
 </div>
 
+<!-- Data Injection -->
+<script id="user-session" type="application/json">
+    <?php echo json_encode([
+        'is_super_admin' => (($_SESSION['role_name'] ?? '') === 'super_admin'),
+        'tenant_id' => ($_SESSION['tenant_id'] ?? '')
+    ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>
+</script>
+
 <style>
 /* Styling Tabel Modern Borderless (Gambar 1) */
 .table {
@@ -146,6 +169,11 @@
 <script>
 window.VueAppRegistry.register('#keuangan-dashboard-app', {
     setup() {
+        const session = JSON.parse(document.getElementById('user-session').textContent || '{}');
+        const isSuperAdmin = session.is_super_admin;
+        const tenantsList = Vue.ref([]);
+        const selectedTenantId = Vue.ref(session.tenant_id || '');
+
         const metrics = Vue.ref({
             total_tunggakan: 0,
             pemasukan_hari_ini: 0,
@@ -153,9 +181,34 @@ window.VueAppRegistry.register('#keuangan-dashboard-app', {
             progres_kelas: []
         });
 
+        // Helper query param
+        const getQueryParam = () => {
+            return isSuperAdmin && selectedTenantId.value ? `?tenant_id=${selectedTenantId.value}` : '';
+        };
+
+        const fetchTenants = async () => {
+            if (!isSuperAdmin) return;
+            try {
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/tenants');
+                const res = await response.json();
+                if (res.success) {
+                    tenantsList.value = res.data;
+                    const cached = localStorage.getItem('sinta_spp_selected_tenant_id');
+                    if (cached && tenantsList.value.some(t => t.id === cached)) {
+                        selectedTenantId.value = cached;
+                    } else if (tenantsList.value.length > 0) {
+                        selectedTenantId.value = tenantsList.value[0].id;
+                        localStorage.setItem('sinta_spp_selected_tenant_id', selectedTenantId.value);
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
         const fetchMetrics = async () => {
             try {
-                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/dashboard-metrics');
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/dashboard-metrics' + getQueryParam());
                 const res = await response.json();
                 if (res.success) {
                     metrics.value = res.data;
@@ -163,6 +216,11 @@ window.VueAppRegistry.register('#keuangan-dashboard-app', {
             } catch (err) {
                 console.error(err);
             }
+        };
+
+        const onTenantChange = () => {
+            localStorage.setItem('sinta_spp_selected_tenant_id', selectedTenantId.value);
+            fetchMetrics();
         };
 
         const getPercentage = (bayar, tagihan) => {
@@ -175,12 +233,19 @@ window.VueAppRegistry.register('#keuangan-dashboard-app', {
             return new Intl.NumberFormat('id-ID').format(num || 0);
         };
 
-        Vue.onMounted(() => {
-            fetchMetrics();
+        Vue.onMounted(async () => {
+            if (isSuperAdmin) {
+                await fetchTenants();
+            }
+            await fetchMetrics();
         });
 
         return {
+            isSuperAdmin,
+            tenantsList,
+            selectedTenantId,
             metrics,
+            onTenantChange,
             getPercentage,
             formatNumber
         };

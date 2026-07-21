@@ -12,6 +12,21 @@
                 </div>
             </div>
 
+            <!-- Tenant Selector Card (Super Admin Only) -->
+            <div v-if="isSuperAdmin" class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-slate-700"><i class="bi bi-building-gear text-blue-600 me-2"></i> Pilih Sekolah (Tenant)</label>
+                        <select class="form-select border-slate-200" v-model="selectedTenantId" @change="onTenantChange" style="height: 44px;">
+                            <option v-for="t in tenantsList" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mt-3 mt-md-0 text-md-end text-muted fs-7">
+                        Menyesuaikan terminologi keuangan spesifik untuk sekolah terpilih.
+                    </div>
+                </div>
+            </div>
+
             <!-- Card Utama -->
             <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
                 <div class="p-4 bg-gradient-blue text-white d-flex align-items-center" style="background: linear-gradient(135deg, #1e40af, #3b82f6);">
@@ -82,6 +97,14 @@
     </div>
 </div>
 
+<!-- Data Injection -->
+<script id="user-session" type="application/json">
+    <?php echo json_encode([
+        'is_super_admin' => (($_SESSION['role_name'] ?? '') === 'super_admin'),
+        'tenant_id' => ($_SESSION['tenant_id'] ?? '')
+    ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>
+</script>
+
 <style>
 .fs-7 { font-size: 0.875rem; }
 .fs-8 { font-size: 0.75rem; }
@@ -93,6 +116,11 @@
 <script>
 window.VueAppRegistry.register('#keuangan-pengaturan-app', {
     setup() {
+        const session = JSON.parse(document.getElementById('user-session').textContent || '{}');
+        const isSuperAdmin = session.is_super_admin;
+        const tenantsList = Vue.ref([]);
+        const selectedTenantId = Vue.ref(session.tenant_id || '');
+
         const loading = Vue.ref(false);
         const successMsg = Vue.ref('');
         const errorMsg = Vue.ref('');
@@ -103,9 +131,34 @@ window.VueAppRegistry.register('#keuangan-pengaturan-app', {
             visibilitas_siswa: 1
         });
 
+        // Helper query param
+        const getQueryParam = () => {
+            return isSuperAdmin && selectedTenantId.value ? `?tenant_id=${selectedTenantId.value}` : '';
+        };
+
+        const fetchTenants = async () => {
+            if (!isSuperAdmin) return;
+            try {
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/tenants');
+                const res = await response.json();
+                if (res.success) {
+                    tenantsList.value = res.data;
+                    const cached = localStorage.getItem('sinta_spp_selected_tenant_id');
+                    if (cached && tenantsList.value.some(t => t.id === cached)) {
+                        selectedTenantId.value = cached;
+                    } else if (tenantsList.value.length > 0) {
+                        selectedTenantId.value = tenantsList.value[0].id;
+                        localStorage.setItem('sinta_spp_selected_tenant_id', selectedTenantId.value);
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
         const fetchSettings = async () => {
             try {
-                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/pengaturan');
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/pengaturan' + getQueryParam());
                 const res = await response.json();
                 if (res.success && res.data) {
                     form.value = res.data;
@@ -115,13 +168,19 @@ window.VueAppRegistry.register('#keuangan-pengaturan-app', {
             }
         };
 
+        const onTenantChange = () => {
+            localStorage.setItem('sinta_spp_selected_tenant_id', selectedTenantId.value);
+            fetchSettings();
+        };
+
         const saveSettings = async () => {
             loading.value = true;
             successMsg.value = '';
             errorMsg.value = '';
 
             try {
-                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/save-pengaturan', {
+                const tenantSuffix = isSuperAdmin && selectedTenantId.value ? `?tenant_id=${selectedTenantId.value}` : '';
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/save-pengaturan' + tenantSuffix, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -130,8 +189,7 @@ window.VueAppRegistry.register('#keuangan-pengaturan-app', {
                 });
                 const res = await response.json();
                 if (res.success) {
-                    successMsg.value = 'Pengaturan berhasil diperbarui secara global!';
-                    // Reload page/sidebar dynamically after delay to apply name change
+                    successMsg.value = 'Pengaturan berhasil diperbarui!';
                     setTimeout(() => {
                         window.location.reload();
                     }, 1200);
@@ -145,15 +203,22 @@ window.VueAppRegistry.register('#keuangan-pengaturan-app', {
             }
         };
 
-        Vue.onMounted(() => {
-            fetchSettings();
+        Vue.onMounted(async () => {
+            if (isSuperAdmin) {
+                await fetchTenants();
+            }
+            await fetchSettings();
         });
 
         return {
+            isSuperAdmin,
+            tenantsList,
+            selectedTenantId,
             loading,
             successMsg,
             errorMsg,
             form,
+            onTenantChange,
             saveSettings
         };
     }

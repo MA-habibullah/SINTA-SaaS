@@ -10,6 +10,21 @@
         </div>
     </div>
 
+    <!-- Tenant Selector Card (Super Admin Only) -->
+    <div v-if="isSuperAdmin" class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <label class="form-label fw-bold text-slate-700"><i class="bi bi-building-gear text-blue-600 me-2"></i> Pilih Sekolah (Tenant)</label>
+                <select class="form-select border-slate-200" v-model="selectedTenantId" @change="onTenantChange" style="height: 44px;">
+                    <option v-for="t in tenantsList" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
+                </select>
+            </div>
+            <div class="col-md-6 mt-3 mt-md-0 text-md-end text-muted fs-7">
+                Melakukan transaksi kasir langsung atas nama siswa pada sekolah target terpilih.
+            </div>
+        </div>
+    </div>
+
     <!-- Pencarian Siswa Utama -->
     <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
         <div class="row g-3 align-items-center">
@@ -123,7 +138,7 @@
                         </select>
                     </div>
 
-                    <!-- Input Jumlah Uang (Tunai) -->
+                    <!-- Input Uang (Tunai) -->
                     <div v-if="checkoutForm.metode_pembayaran === 'Tunai'">
                         <label class="form-label fw-semibold text-slate-700">Jumlah Uang Diterima (Bayar)</label>
                         <div class="input-group">
@@ -132,7 +147,7 @@
                         </div>
                     </div>
 
-                    <!-- Uang Kembalian -->
+                    <!-- Kembalian -->
                     <div class="p-3 bg-light rounded-3 d-flex justify-content-between align-items-center" v-if="checkoutForm.metode_pembayaran === 'Tunai'">
                         <span class="text-muted fs-7 fw-semibold">Uang Kembalian</span>
                         <span class="fw-bold text-success fs-5">Rp {{ formatNumber(changeAmount) }}</span>
@@ -214,6 +229,14 @@
     </div>
 </div>
 
+<!-- Data Injection -->
+<script id="user-session" type="application/json">
+    <?php echo json_encode([
+        'is_super_admin' => (($_SESSION['role_name'] ?? '') === 'super_admin'),
+        'tenant_id' => ($_SESSION['tenant_id'] ?? '')
+    ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>
+</script>
+
 <style>
 /* Styling Tabel Modern Borderless (Gambar 1) */
 .table {
@@ -261,6 +284,11 @@
 <script>
 window.VueAppRegistry.register('#keuangan-kasir-app', {
     setup() {
+        const session = JSON.parse(document.getElementById('user-session').textContent || '{}');
+        const isSuperAdmin = session.is_super_admin;
+        const tenantsList = Vue.ref([]);
+        const selectedTenantId = Vue.ref(session.tenant_id || '');
+
         const siswaSearch = Vue.ref('');
         const siswaSuggestions = Vue.ref([]);
         const selectedSiswa = Vue.ref(null);
@@ -292,6 +320,31 @@ window.VueAppRegistry.register('#keuangan-kasir-app', {
             total: 0
         });
 
+        // Helper to append tenant query parameter for super admin
+        const getQueryParam = () => {
+            return isSuperAdmin && selectedTenantId.value ? `?tenant_id=${selectedTenantId.value}` : '';
+        };
+
+        const fetchTenants = async () => {
+            if (!isSuperAdmin) return;
+            try {
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/tenants');
+                const res = await response.json();
+                if (res.success) {
+                    tenantsList.value = res.data;
+                    const cached = localStorage.getItem('sinta_spp_selected_tenant_id');
+                    if (cached && tenantsList.value.some(t => t.id === cached)) {
+                        selectedTenantId.value = cached;
+                    } else if (tenantsList.value.length > 0) {
+                        selectedTenantId.value = tenantsList.value[0].id;
+                        localStorage.setItem('sinta_spp_selected_tenant_id', selectedTenantId.value);
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
         // Autocomplete Search
         let searchTimeout = null;
         const searchSiswa = () => {
@@ -302,7 +355,8 @@ window.VueAppRegistry.register('#keuangan-kasir-app', {
             }
             searchTimeout = setTimeout(async () => {
                 try {
-                    const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/cari-siswa?q=${encodeURIComponent(siswaSearch.value)}`);
+                    const tenantSuffix = isSuperAdmin && selectedTenantId.value ? `&tenant_id=${selectedTenantId.value}` : '';
+                    const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/cari-siswa?q=${encodeURIComponent(siswaSearch.value)}${tenantSuffix}`);
                     const res = await response.json();
                     if (res.success) {
                         siswaSuggestions.value = res.data;
@@ -327,6 +381,11 @@ window.VueAppRegistry.register('#keuangan-kasir-app', {
             hasTunggakanLain.value = false;
         };
 
+        const onTenantChange = () => {
+            localStorage.setItem('sinta_spp_selected_tenant_id', selectedTenantId.value);
+            clearSelectedSiswa();
+        };
+
         const fetchTagihanSiswa = async (siswaId) => {
             try {
                 const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/tagihan-siswa?siswa_id=${siswaId}`);
@@ -338,7 +397,6 @@ window.VueAppRegistry.register('#keuangan-kasir-app', {
                         bayar_input: t.nominal_tagihan - t.nominal_bayar
                     }));
 
-                    // Cek apakah ada tunggakan lebih dari 1 bulan/tahun ajaran (tunggakan lama)
                     if (tagihanList.value.length > 1) {
                         hasTunggakanLain.value = true;
                     }
@@ -380,7 +438,8 @@ window.VueAppRegistry.register('#keuangan-kasir-app', {
             loadingCheckout.value = true;
 
             try {
-                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/bayar', {
+                const tenantSuffix = isSuperAdmin && selectedTenantId.value ? `?tenant_id=${selectedTenantId.value}` : '';
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/bayar' + tenantSuffix, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -407,11 +466,9 @@ window.VueAppRegistry.register('#keuangan-kasir-app', {
                         total: totalBelanja.value
                     };
 
-                    // Tampilkan modal print
                     const modalEl = new bootstrap.Modal(document.getElementById('modalKwitansi'));
                     modalEl.show();
 
-                    // Reload data tagihan
                     fetchTagihanSiswa(selectedSiswa.value.id);
                     totalBelanja.value = 0;
                     cashReceived.value = '';
@@ -440,7 +497,6 @@ window.VueAppRegistry.register('#keuangan-kasir-app', {
             win.document.close();
         };
 
-        // Helpers
         const getBulanName = (bln) => {
             const list = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
             return list[bln] || '';
@@ -450,7 +506,16 @@ window.VueAppRegistry.register('#keuangan-kasir-app', {
             return new Intl.NumberFormat('id-ID').format(num);
         };
 
+        Vue.onMounted(async () => {
+            if (isSuperAdmin) {
+                await fetchTenants();
+            }
+        });
+
         return {
+            isSuperAdmin,
+            tenantsList,
+            selectedTenantId,
             siswaSearch,
             siswaSuggestions,
             selectedSiswa,
@@ -465,6 +530,7 @@ window.VueAppRegistry.register('#keuangan-kasir-app', {
             searchSiswa,
             selectSiswa,
             clearSelectedSiswa,
+            onTenantChange,
             toggleSelectTagihan,
             updateTotal,
             calculateKembalian,

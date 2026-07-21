@@ -10,10 +10,25 @@
         </div>
     </div>
 
+    <!-- Tenant Selector Card (Super Admin Only) -->
+    <div v-if="isSuperAdmin" class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <label class="form-label fw-bold text-slate-700"><i class="bi bi-building-gear text-blue-600 me-2"></i> Pilih Sekolah (Tenant)</label>
+                <select class="form-select border-slate-200" v-model="selectedTenantId" @change="onTenantChange" style="height: 44px;">
+                    <option v-for="t in tenantsList" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
+                </select>
+            </div>
+            <div class="col-md-6 mt-3 mt-md-0 text-md-end text-muted fs-7">
+                Mengonfigurasi data potongan khusus untuk siswa terpilih pada sekolah target.
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <!-- Form Keringanan -->
         <div class="col-12 col-md-4 mb-4">
-            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
                 <h5 class="fw-bold text-slate-800 mb-4 border-bottom pb-2">Konfigurasi Keringanan Baru</h5>
                 
                 <form @submit.prevent="saveKeringanan" class="d-flex flex-column gap-3">
@@ -26,12 +41,12 @@
                         </div>
                         <ul class="dropdown-menu show w-100 shadow border-slate-200 p-0 overflow-hidden" v-if="siswaSuggestions.length > 0" style="display: block; max-height: 200px; overflow-y: auto; z-index: 1010;">
                             <li v-for="s in siswaSuggestions" :key="s.id">
-                                <a href="#" class="dropdown-item py-2 px-3 d-flex justify-content-between align-items-center" @click.prevent="selectSiswa(s)">
+                                <a href="#" class="dropdown-item py-2.5 px-3 d-flex justify-content-between align-items-center" @click.prevent="selectSiswa(s)">
                                     <div>
-                                        <div class="fw-bold text-slate-800">{{ s.nama }}</div>
+                                        <div class="fw-bold text-slate-800 fs-7">{{ s.nama }}</div>
                                         <small class="text-muted">NISN: {{ s.nisn }} | Kelas: {{ s.nama_kelas }}</small>
                                     </div>
-                                    <i class="bi bi-plus-circle text-blue-600"></i>
+                                    <i class="bi bi-plus-circle text-blue-600 fs-5"></i>
                                 </a>
                             </li>
                         </ul>
@@ -51,7 +66,7 @@
                         <label class="form-label fw-semibold text-slate-700">Komponen Biaya <span class="text-danger">*</span></label>
                         <select class="form-select border-slate-200" v-model="form.komponen_id" required style="height: 42px;">
                             <option value="" disabled>-- Pilih Komponen --</option>
-                            <option v-for="k in komponenList" :value="k.id">{{ k.nama_komponen }}</option>
+                            <option v-for="k in komponenList" :value="k.id" :disabled="k.is_active == 0">{{ k.nama_komponen }} {{ k.is_active == 0 ? '(Non-Aktif)' : '' }}</option>
                         </select>
                     </div>
 
@@ -89,7 +104,7 @@
 
         <!-- Tabel Keringanan -->
         <div class="col-12 col-md-8 mb-4">
-            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
                 <h5 class="fw-bold text-slate-800 mb-4 border-bottom pb-2">Daftar Keringanan Aktif</h5>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle">
@@ -104,7 +119,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="k in keringananList" :key="k.id">
+                            <tr v-for="k in paginatedKeringanan" :key="k.id">
                                 <td>
                                     <div class="fw-bold text-slate-800">{{ k.nama_siswa }}</div>
                                     <small class="text-muted">NISN: {{ k.nisn }}</small>
@@ -126,11 +141,29 @@
                                     </button>
                                 </td>
                             </tr>
-                            <tr v-if="keringananList.length === 0">
+                            <tr v-if="filteredKeringanan.length === 0">
                                 <td colspan="6" class="text-center py-4 text-muted">Belum ada keringanan/beasiswa terdaftar.</td>
                             </tr>
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Pagination Keringanan -->
+                <div class="d-flex justify-content-between align-items-center mt-3" v-if="totalKeringananPages > 1">
+                    <span class="text-muted fs-8">Menampilkan Halaman {{ currentPage }} dari {{ totalKeringananPages }}</span>
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination pagination-sm justify-content-end mb-0">
+                            <li class="page-item" :class="{ disabled: currentPage === 1 }">
+                                <a class="page-link" href="#" @click.prevent="currentPage--">Sebelumnya</a>
+                            </li>
+                            <li class="page-item" v-for="p in totalKeringananPages" :key="p" :class="{ active: currentPage === p }">
+                                <a class="page-link" href="#" @click.prevent="currentPage = p">{{ p }}</a>
+                            </li>
+                            <li class="page-item" :class="{ disabled: currentPage === totalKeringananPages }">
+                                <a class="page-link" href="#" @click.prevent="currentPage++">Berikutnya</a>
+                            </li>
+                        </ul>
+                    </nav>
                 </div>
             </div>
         </div>
@@ -140,6 +173,12 @@
 <!-- Data Injection -->
 <script id="data-komponen" type="application/json">
     <?php echo json_encode($list_komponen, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>
+</script>
+<script id="user-session" type="application/json">
+    <?php echo json_encode([
+        'is_super_admin' => (($_SESSION['role_name'] ?? '') === 'super_admin'),
+        'tenant_id' => ($_SESSION['tenant_id'] ?? '')
+    ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>
 </script>
 
 <style>
@@ -192,7 +231,13 @@
 <script>
 window.VueAppRegistry.register('#keuangan-keringanan-app', {
     setup() {
-        const komponenList = JSON.parse(document.getElementById('data-komponen').textContent || '[]');
+        const session = JSON.parse(document.getElementById('user-session').textContent || '{}');
+        const isSuperAdmin = session.is_super_admin;
+        const tenantsList = Vue.ref([]);
+        const selectedTenantId = Vue.ref(session.tenant_id || '');
+
+        const komponenList = Vue.ref([]);
+        const initialKomponen = JSON.parse(document.getElementById('data-komponen').textContent || '[]');
 
         const keringananList = Vue.ref([]);
         const loading = Vue.ref(false);
@@ -202,6 +247,10 @@ window.VueAppRegistry.register('#keuangan-keringanan-app', {
         const siswaSuggestions = Vue.ref([]);
         const selectedSiswa = Vue.ref(null);
 
+        // Pagination
+        const currentPage = Vue.ref(1);
+        const pageSize = Vue.ref(6);
+
         const form = Vue.ref({
             siswa_id: '',
             komponen_id: '',
@@ -209,6 +258,44 @@ window.VueAppRegistry.register('#keuangan-keringanan-app', {
             nilai: '',
             keterangan: ''
         });
+
+        // Helper to append tenant query parameter for super admin
+        const getQueryParam = () => {
+            return isSuperAdmin && selectedTenantId.value ? `?tenant_id=${selectedTenantId.value}` : '';
+        };
+
+        const fetchTenants = async () => {
+            if (!isSuperAdmin) return;
+            try {
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/tenants');
+                const res = await response.json();
+                if (res.success) {
+                    tenantsList.value = res.data;
+                    const cached = localStorage.getItem('sinta_spp_selected_tenant_id');
+                    if (cached && tenantsList.value.some(t => t.id === cached)) {
+                        selectedTenantId.value = cached;
+                    } else if (tenantsList.value.length > 0) {
+                        selectedTenantId.value = tenantsList.value[0].id;
+                        localStorage.setItem('sinta_spp_selected_tenant_id', selectedTenantId.value);
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        // Reload components list based on selected tenant
+        const fetchKomponen = async () => {
+            try {
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/komponen' + getQueryParam());
+                const res = await response.json();
+                if (res.success) {
+                    komponenList.value = res.data;
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
 
         // Search student dynamic lookup
         let searchTimeout = null;
@@ -221,7 +308,8 @@ window.VueAppRegistry.register('#keuangan-keringanan-app', {
 
             searchTimeout = setTimeout(async () => {
                 try {
-                    const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/cari-siswa?q=${encodeURIComponent(siswaSearch.value)}`);
+                    const tenantSuffix = isSuperAdmin && selectedTenantId.value ? `&tenant_id=${selectedTenantId.value}` : '';
+                    const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/cari-siswa?q=${encodeURIComponent(siswaSearch.value)}${tenantSuffix}`);
                     const res = await response.json();
                     if (res.success) {
                         siswaSuggestions.value = res.data;
@@ -246,20 +334,28 @@ window.VueAppRegistry.register('#keuangan-keringanan-app', {
 
         const fetchKeringanan = async () => {
             try {
-                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/keringanan');
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/keringanan' + getQueryParam());
                 const res = await response.json();
                 if (res.success) {
                     keringananList.value = res.data;
+                    currentPage.value = 1;
                 }
             } catch (err) {
                 console.error(err);
             }
         };
 
+        const onTenantChange = () => {
+            localStorage.setItem('sinta_spp_selected_tenant_id', selectedTenantId.value);
+            clearSelectedSiswa();
+            fetchKomponen();
+            fetchKeringanan();
+        };
+
         const saveKeringanan = async () => {
             loading.value = true;
             try {
-                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/keringanan', {
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/keringanan' + getQueryParam(), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(form.value)
@@ -272,6 +368,8 @@ window.VueAppRegistry.register('#keuangan-keringanan-app', {
                     form.value.nilai = '';
                     form.value.keterangan = '';
                     clearSelectedSiswa();
+                } else {
+                    alert(res.error || 'Gagal menyimpan beasiswa.');
                 }
             } catch (err) {
                 console.error(err);
@@ -283,37 +381,69 @@ window.VueAppRegistry.register('#keuangan-keringanan-app', {
         const deleteKeringanan = async (id) => {
             if (!confirm('Hapus konfigurasi beasiswa siswa ini?')) return;
             try {
-                const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/keringanan?id=${id}`, { method: 'DELETE' });
+                const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/keringanan?id=${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
                 const res = await response.json();
                 if (res.success) {
                     fetchKeringanan();
+                } else {
+                    alert(res.error || 'Gagal menghapus beasiswa.');
                 }
             } catch (err) {
                 console.error(err);
             }
         };
 
+        // Filtered and Paginated computed properties
+        const filteredKeringanan = Vue.computed(() => keringananList.value);
+
+        const paginatedKeringanan = Vue.computed(() => {
+            const start = (currentPage.value - 1) * pageSize.value;
+            return filteredKeringanan.value.slice(start, start + pageSize.value);
+        });
+
+        const totalKeringananPages = Vue.computed(() => {
+            return Math.ceil(filteredKeringanan.value.length / pageSize.value) || 1;
+        });
+
         const formatNumber = (num) => {
             return new Intl.NumberFormat('id-ID').format(num);
         };
 
-        Vue.onMounted(() => {
-            fetchKeringanan();
+        Vue.onMounted(async () => {
+            if (isSuperAdmin) {
+                await fetchTenants();
+            } else {
+                komponenList.value = initialKomponen;
+            }
+            await fetchKomponen();
+            await fetchKeringanan();
         });
 
         return {
+            isSuperAdmin,
+            tenantsList,
+            selectedTenantId,
             komponenList,
             keringananList,
             loading,
             siswaSearch,
             siswaSuggestions,
             selectedSiswa,
+            currentPage,
+            pageSize,
             form,
             searchSiswa,
             selectSiswa,
             clearSelectedSiswa,
+            onTenantChange,
             saveKeringanan,
             deleteKeringanan,
+            filteredKeringanan,
+            paginatedKeringanan,
+            totalKeringananPages,
             formatNumber
         };
     }

@@ -10,6 +10,47 @@
         </div>
     </div>
 
+    <!-- Tenant Selector Card (Super Admin Only) -->
+    <div v-if="isSuperAdmin" class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <label class="form-label fw-bold text-slate-700"><i class="bi bi-building-gear text-blue-600 me-2"></i> Pilih Sekolah (Tenant)</label>
+                <select class="form-select border-slate-200" v-model="selectedTenantId" @change="onTenantChange" style="height: 44px;">
+                    <option v-for="t in tenantsList" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
+                </select>
+            </div>
+            <div class="col-md-6 mt-3 mt-md-0 text-md-end text-muted fs-7">
+                Sebagai <strong>Super Admin</strong>, Anda dapat melihat dan mengelola komponen biaya serta konfigurasi tarif default per lembaga sekolah.
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Summary Row (Professional SaaS Design) -->
+    <div class="row mb-4">
+        <div class="col-12 col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white d-flex align-items-center flex-row">
+                <div class="me-3 p-3 bg-blue-50 text-blue-600 rounded-3">
+                    <i class="bi bi-grid-3x3-gap-fill fs-3"></i>
+                </div>
+                <div>
+                    <small class="text-muted fw-semibold">Total Komponen Biaya</small>
+                    <h4 class="fw-bold text-slate-800 mb-0">{{ komponenList.length }} Komponen ({{ activeComponentsCount }} Aktif)</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white d-flex align-items-center flex-row">
+                <div class="me-3 p-3 bg-emerald-50 text-emerald-600 rounded-3">
+                    <i class="bi bi-cash-coin fs-3"></i>
+                </div>
+                <div>
+                    <small class="text-muted fw-semibold">Total Aturan Tarif Default</small>
+                    <h4 class="fw-bold text-slate-800 mb-0">{{ tarifList.length }} Aturan Terdaftar</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Navigation Tabs -->
     <ul class="nav nav-tabs mb-4" id="masterTabs" role="tablist">
         <li class="nav-item" role="presentation">
@@ -32,7 +73,7 @@
             <div class="row">
                 <!-- Form Komponen (Left: 4-cols) -->
                 <div class="col-12 col-lg-4 mb-4">
-                    <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
                         <h5 class="fw-bold text-slate-800 mb-4 border-bottom pb-2">
                             {{ formKomp.id ? 'Edit Komponen' : 'Tambah Komponen Baru' }}
                         </h5>
@@ -60,7 +101,7 @@
 
                 <!-- Tabel Komponen (Right: 8-cols) -->
                 <div class="col-12 col-lg-8 mb-4">
-                    <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
                         <h5 class="fw-bold text-slate-800 mb-4 border-bottom pb-2">Daftar Komponen Biaya</h5>
                         <div class="table-responsive">
                             <table class="table table-hover align-middle">
@@ -68,16 +109,26 @@
                                     <tr>
                                         <th>Nama Komponen</th>
                                         <th>Tipe Periode</th>
+                                        <th class="text-center" style="width: 150px;">Status Aktif</th>
                                         <th class="text-center" style="width: 120px;">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="komp in komponenList" :key="komp.id">
-                                        <td class="fw-bold text-slate-800">{{ komp.nama_komponen }}</td>
+                                    <tr v-for="komp in paginatedKomponen" :key="komp.id">
+                                        <td class="fw-bold text-slate-800">
+                                            {{ komp.nama_komponen }}
+                                            <span v-if="komp.is_active == 0" class="badge bg-secondary ms-2">Non-Aktif</span>
+                                        </td>
                                         <td>
                                             <span class="badge rounded px-3 py-2" :class="getPeriodeBadgeClass(komp.tipe_periode)">
                                                 {{ komp.tipe_periode }}
                                             </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <!-- Dynamic Switch ON/OFF Toggle -->
+                                            <div class="form-check form-switch d-inline-block">
+                                                <input class="form-check-input" type="checkbox" role="switch" :checked="komp.is_active == 1" @change="toggleKompStatus(komp)" style="cursor: pointer; width: 44px; height: 22px;">
+                                            </div>
                                         </td>
                                         <td class="text-center">
                                             <button @click="editKomponen(komp)" class="btn btn-link text-primary p-0 me-3" title="Edit">
@@ -88,11 +139,29 @@
                                             </button>
                                         </td>
                                     </tr>
-                                    <tr v-if="komponenList.length === 0">
-                                        <td colspan="3" class="text-center py-4 text-muted">Belum ada komponen biaya terdaftar.</td>
+                                    <tr v-if="filteredKomponen.length === 0">
+                                        <td colspan="4" class="text-center py-4 text-muted">Belum ada komponen biaya terdaftar.</td>
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+
+                        <!-- Pagination Komponen -->
+                        <div class="d-flex justify-content-between align-items-center mt-3" v-if="totalKompPages > 1">
+                            <span class="text-muted fs-8">Menampilkan Halaman {{ kompPage }} dari {{ totalKompPages }}</span>
+                            <nav aria-label="Page navigation">
+                                <ul class="pagination pagination-sm justify-content-end mb-0">
+                                    <li class="page-item" :class="{ disabled: kompPage === 1 }">
+                                        <a class="page-link" href="#" @click.prevent="kompPage--">Sebelumnya</a>
+                                    </li>
+                                    <li class="page-item" v-for="p in totalKompPages" :key="p" :class="{ active: kompPage === p }">
+                                        <a class="page-link" href="#" @click.prevent="kompPage = p">{{ p }}</a>
+                                    </li>
+                                    <li class="page-item" :class="{ disabled: kompPage === totalKompPages }">
+                                        <a class="page-link" href="#" @click.prevent="kompPage++">Berikutnya</a>
+                                    </li>
+                                </ul>
+                            </nav>
                         </div>
                     </div>
                 </div>
@@ -104,14 +173,14 @@
             <div class="row">
                 <!-- Form Tarif (Left: 4-cols) -->
                 <div class="col-12 col-lg-4 mb-4">
-                    <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
                         <h5 class="fw-bold text-slate-800 mb-4 border-bottom pb-2">Tautkan Tarif Baru</h5>
                         <form @submit.prevent="saveTarif" class="d-flex flex-column gap-3">
                             <div>
                                 <label class="form-label fw-semibold text-slate-700">Komponen Biaya <span class="text-danger">*</span></label>
                                 <select class="form-select border-slate-200" v-model="formTarif.komponen_id" required style="height: 42px;">
                                     <option value="" disabled>-- Pilih Komponen --</option>
-                                    <option v-for="k in komponenList" :value="k.id">{{ k.nama_komponen }}</option>
+                                    <option v-for="k in komponenList" :value="k.id" :disabled="k.is_active == 0">{{ k.nama_komponen }} {{ k.is_active == 0 ? '(Non-Aktif)' : '' }}</option>
                                 </select>
                             </div>
                             <div>
@@ -184,7 +253,7 @@
 
                 <!-- Tabel Tarif (Right: 8-cols) -->
                 <div class="col-12 col-lg-8 mb-4">
-                    <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
                         <h5 class="fw-bold text-slate-800 mb-4 border-bottom pb-2">Daftar Tarif Default</h5>
                         <div class="table-responsive">
                             <table class="table table-hover align-middle">
@@ -198,7 +267,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="t in tarifList" :key="t.id">
+                                    <tr v-for="t in paginatedTarif" :key="t.id">
                                         <td class="fw-bold text-slate-800">{{ t.nama_komponen }}</td>
                                         <td>
                                             <span v-if="t.nama_kelas" class="badge bg-blue-100 text-blue-700 px-3 py-2">Kelas {{ t.nama_kelas }}</span>
@@ -214,11 +283,29 @@
                                             </button>
                                         </td>
                                     </tr>
-                                    <tr v-if="tarifList.length === 0">
+                                    <tr v-if="filteredTarif.length === 0">
                                         <td colspan="5" class="text-center py-4 text-muted">Belum ada tarif default dikonfigurasi.</td>
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+
+                        <!-- Pagination Tarif -->
+                        <div class="d-flex justify-content-between align-items-center mt-3" v-if="totalTarifPages > 1">
+                            <span class="text-muted fs-8">Menampilkan Halaman {{ tarifPage }} dari {{ totalTarifPages }}</span>
+                            <nav aria-label="Page navigation">
+                                <ul class="pagination pagination-sm justify-content-end mb-0">
+                                    <li class="page-item" :class="{ disabled: tarifPage === 1 }">
+                                        <a class="page-link" href="#" @click.prevent="tarifPage--">Sebelumnya</a>
+                                    </li>
+                                    <li class="page-item" v-for="p in totalTarifPages" :key="p" :class="{ active: tarifPage === p }">
+                                        <a class="page-link" href="#" @click.prevent="tarifPage = p">{{ p }}</a>
+                                    </li>
+                                    <li class="page-item" :class="{ disabled: tarifPage === totalTarifPages }">
+                                        <a class="page-link" href="#" @click.prevent="tarifPage++">Berikutnya</a>
+                                    </li>
+                                </ul>
+                            </nav>
                         </div>
                     </div>
                 </div>
@@ -237,6 +324,12 @@
 </script>
 <script id="data-ta" type="application/json">
     <?php echo json_encode($list_ta, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>
+</script>
+<script id="user-session" type="application/json">
+    <?php echo json_encode([
+        'is_super_admin' => (($_SESSION['role_name'] ?? '') === 'super_admin'),
+        'tenant_id' => ($_SESSION['tenant_id'] ?? '')
+    ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>
 </script>
 
 <style>
@@ -302,6 +395,7 @@
 }
 
 .fs-7 { font-size: 0.85rem; }
+.fs-8 { font-size: 0.75rem; }
 .text-slate-700 { color: #334155; }
 .text-slate-800 { color: #1e293b; }
 .border-slate-200 { border-color: #e2e8f0; }
@@ -317,21 +411,30 @@
 <script>
 window.VueAppRegistry.register('#keuangan-master-app', {
     setup() {
+        // Parse user session
+        const session = JSON.parse(document.getElementById('user-session').textContent || '{}');
+        const isSuperAdmin = session.is_super_admin;
+        const tenantsList = Vue.ref([]);
+        const selectedTenantId = Vue.ref(session.tenant_id || '');
+
         // Parsed injected list data
         const listKelas = JSON.parse(document.getElementById('data-kelas').textContent || '[]');
         const listJenjang = JSON.parse(document.getElementById('data-jenjang').textContent || '[]');
         const listTa = JSON.parse(document.getElementById('data-ta').textContent || '[]');
 
-        // Tab 1: Komponen State
+        // Tab 1: Komponen State & Pagination
         const komponenList = Vue.ref([]);
         const loadingKomp = Vue.ref(false);
         const formKomp = Vue.ref({
             id: 0,
             nama_komponen: '',
-            tipe_periode: 'Bulanan'
+            tipe_periode: 'Bulanan',
+            is_active: 1
         });
+        const kompPage = Vue.ref(1);
+        const kompPageSize = Vue.ref(5);
 
-        // Tab 2: Tarif State
+        // Tab 2: Tarif State & Pagination
         const tarifList = Vue.ref([]);
         const loadingTarif = Vue.ref(false);
         const tarifTargetType = Vue.ref('general');
@@ -343,14 +446,43 @@ window.VueAppRegistry.register('#keuangan-master-app', {
             jalur_masuk: '',
             nominal: ''
         });
+        const tarifPage = Vue.ref(1);
+        const tarifPageSize = Vue.ref(8);
+
+        // Helper to append tenant query parameter for super admin
+        const getQueryParam = () => {
+            return isSuperAdmin && selectedTenantId.value ? `?tenant_id=${selectedTenantId.value}` : '';
+        };
+
+        // Load list of tenants (for super admin)
+        const fetchTenants = async () => {
+            if (!isSuperAdmin) return;
+            try {
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/tenants');
+                const res = await response.json();
+                if (res.success) {
+                    tenantsList.value = res.data;
+                    const cached = localStorage.getItem('sinta_spp_selected_tenant_id');
+                    if (cached && tenantsList.value.some(t => t.id === cached)) {
+                        selectedTenantId.value = cached;
+                    } else if (tenantsList.value.length > 0) {
+                        selectedTenantId.value = tenantsList.value[0].id;
+                        localStorage.setItem('sinta_spp_selected_tenant_id', selectedTenantId.value);
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
 
         // Load all components
         const fetchKomponen = async () => {
             try {
-                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/komponen');
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/komponen' + getQueryParam());
                 const res = await response.json();
                 if (res.success) {
                     komponenList.value = res.data;
+                    kompPage.value = 1; // reset page
                 }
             } catch (err) {
                 console.error(err);
@@ -360,25 +492,84 @@ window.VueAppRegistry.register('#keuangan-master-app', {
         // Load all tariffs
         const fetchTarif = async () => {
             try {
-                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/tarif');
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/tarif' + getQueryParam());
                 const res = await response.json();
                 if (res.success) {
                     tarifList.value = res.data;
+                    tarifPage.value = 1; // reset page
                 }
             } catch (err) {
                 console.error(err);
             }
         };
 
+        // When super admin switches school
+        const onTenantChange = () => {
+            localStorage.setItem('sinta_spp_selected_tenant_id', selectedTenantId.value);
+            fetchKomponen();
+            fetchTarif();
+        };
+
+        // Toggle Komponen Status (ON/OFF)
+        const toggleKompStatus = async (item) => {
+            const nextStatus = item.is_active == 1 ? 0 : 1;
+            try {
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/komponen/toggle' + getQueryParam(), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: item.id,
+                        is_active: nextStatus
+                    })
+                });
+                const res = await response.json();
+                if (res.success) {
+                    item.is_active = nextStatus;
+                } else {
+                    alert(res.error || 'Gagal mengubah status komponen.');
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        // Computed totals and count metrics
+        const activeComponentsCount = Vue.computed(() => {
+            return komponenList.value.filter(k => k.is_active == 1).length;
+        });
+
+        // Filtered Lists for pagination
+        const filteredKomponen = Vue.computed(() => komponenList.value);
+        const filteredTarif = Vue.computed(() => tarifList.value);
+
+        // Paginated Lists
+        const paginatedKomponen = Vue.computed(() => {
+            const start = (kompPage.value - 1) * kompPageSize.value;
+            return filteredKomponen.value.slice(start, start + kompPageSize.value);
+        });
+
+        const totalKompPages = Vue.computed(() => {
+            return Math.ceil(filteredKomponen.value.length / kompPageSize.value) || 1;
+        });
+
+        const paginatedTarif = Vue.computed(() => {
+            const start = (tarifPage.value - 1) * tarifPageSize.value;
+            return filteredTarif.value.slice(start, start + tarifPageSize.value);
+        });
+
+        const totalTarifPages = Vue.computed(() => {
+            return Math.ceil(filteredTarif.value.length / tarifPageSize.value) || 1;
+        });
+
         // Reset form components
         const resetFormKomp = () => {
-            formKomp.value = { id: 0, nama_komponen: '', tipe_periode: 'Bulanan' };
+            formKomp.value = { id: 0, nama_komponen: '', tipe_periode: 'Bulanan', is_active: 1 };
         };
 
         const saveKomponen = async () => {
             loadingKomp.value = true;
             try {
-                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/komponen', {
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/komponen' + getQueryParam(), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(formKomp.value)
@@ -387,6 +578,8 @@ window.VueAppRegistry.register('#keuangan-master-app', {
                 if (res.success) {
                     fetchKomponen();
                     resetFormKomp();
+                } else {
+                    alert(res.error || 'Gagal menyimpan komponen.');
                 }
             } catch (err) {
                 console.error(err);
@@ -402,28 +595,32 @@ window.VueAppRegistry.register('#keuangan-master-app', {
         const deleteKomponen = async (id) => {
             if (!confirm('Apakah Anda yakin ingin menghapus komponen biaya ini? Semua tarif terkait akan terhapus.')) return;
             try {
-                const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/komponen?id=${id}`, { method: 'DELETE' });
+                const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/komponen?id=${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
                 const res = await response.json();
                 if (res.success) {
                     fetchKomponen();
                     fetchTarif();
+                } else {
+                    alert(res.error || 'Gagal menghapus komponen.');
                 }
             } catch (err) {
                 console.error(err);
             }
         };
 
-        // Reset dynamic fields when switching target types in Tarif Form
         const resetTarifTargets = () => {
-            formTarif.value.kelas_id = '';
-            formTarif.value.jenjang_id = '';
-            formTarif.value.jalur_masuk = '';
+            formTarif.value.kelas_id = null;
+            formTarif.value.jenjang_id = null;
+            formTarif.value.jalur_masuk = null;
         };
 
         const saveTarif = async () => {
             loadingTarif.value = true;
             try {
-                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/tarif', {
+                const response = await fetch('/SINTA-SaaS/api/v1/keuangan/tarif' + getQueryParam(), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(formTarif.value)
@@ -433,6 +630,8 @@ window.VueAppRegistry.register('#keuangan-master-app', {
                     fetchTarif();
                     formTarif.value.nominal = '';
                     resetTarifTargets();
+                } else {
+                    alert(res.error || 'Gagal menyimpan tarif.');
                 }
             } catch (err) {
                 console.error(err);
@@ -442,25 +641,30 @@ window.VueAppRegistry.register('#keuangan-master-app', {
         };
 
         const deleteTarif = async (id) => {
-            if (!confirm('Hapus tarif default ini?')) return;
+            if (!confirm('Apakah Anda yakin ingin menghapus tarif default ini?')) return;
             try {
-                const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/tarif?id=${id}`, { method: 'DELETE' });
+                const response = await fetch(`/SINTA-SaaS/api/v1/keuangan/tarif?id=${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
                 const res = await response.json();
                 if (res.success) {
                     fetchTarif();
+                } else {
+                    alert(res.error || 'Gagal menghapus tarif.');
                 }
             } catch (err) {
                 console.error(err);
             }
         };
 
-        // Helpers
-        const getPeriodeBadgeClass = (tipe) => {
-            switch(tipe) {
-                case 'Bulanan': return 'bg-primary text-white';
-                case 'Semester': return 'bg-warning text-dark';
-                case 'Tahunan': return 'bg-success text-white';
-                default: return 'bg-secondary text-white';
+        // Helper badges
+        const getPeriodeBadgeClass = (periode) => {
+            switch(periode) {
+                case 'Bulanan': return 'bg-blue-100 text-blue-700';
+                case 'Semester': return 'bg-purple-100 text-purple-700';
+                case 'Tahunan': return 'bg-teal-100 text-teal-700';
+                default: return 'bg-slate-100 text-slate-700';
             }
         };
 
@@ -468,32 +672,45 @@ window.VueAppRegistry.register('#keuangan-master-app', {
             return new Intl.NumberFormat('id-ID').format(num);
         };
 
-        Vue.onMounted(() => {
-            fetchKomponen();
-            fetchTarif();
-            
-            // Preselect active academic year
-            const activeTa = listTa.find(ta => ta.status === 'Aktif');
-            if (activeTa) {
-                formTarif.value.tahun_ajaran_id = activeTa.id;
+        Vue.onMounted(async () => {
+            if (isSuperAdmin) {
+                await fetchTenants();
             }
+            await fetchKomponen();
+            await fetchTarif();
         });
 
         return {
+            isSuperAdmin,
+            tenantsList,
+            selectedTenantId,
             listKelas,
             listJenjang,
             listTa,
             komponenList,
             loadingKomp,
             formKomp,
+            kompPage,
+            kompPageSize,
             tarifList,
             loadingTarif,
             tarifTargetType,
             formTarif,
+            tarifPage,
+            tarifPageSize,
+            onTenantChange,
+            toggleKompStatus,
+            activeComponentsCount,
+            filteredKomponen,
+            filteredTarif,
+            paginatedKomponen,
+            totalKompPages,
+            paginatedTarif,
+            totalTarifPages,
+            resetFormKomp,
             saveKomponen,
             editKomponen,
             deleteKomponen,
-            resetFormKomp,
             resetTarifTargets,
             saveTarif,
             deleteTarif,
