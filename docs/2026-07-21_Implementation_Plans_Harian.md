@@ -569,4 +569,101 @@ Mockup halaman pengujian mandiri di folder `scratch/` untuk memvalidasi struktur
 - Membuat berkas visualisasi layout di `scratch/test_compact_layout.php`.
 - Membuka halaman visualisasi di browser lokal untuk memvalidasi pemakaian sisa ruang vertikal layar, keterbacaan font kecil, kelancaran scroll internal tabel, dan responsivitas grid saat ukuran jendela diperkecil.
 
+---
+## [Penyelarasan Desain Compact, Premium, & Responsive di Seluruh Halaman Keuangan]
+**Waktu**: 16:00 WIB
+**Status**: Draft
+
+# Rencana Implementasi: Penyelarasan Desain Compact, Premium, & Responsive di Seluruh Halaman Keuangan
+
+Rencana ini bertujuan menyelaraskan seluruh tampilan antarmuka (UI/UX) pada halaman-halaman modul Keuangan & Pembayaran di aplikasi SINTA-SaaS agar memiliki bahasa desain yang konsisten dengan halaman **Atur Tarif & Biaya** (`master.php`). Setiap halaman akan menggunakan layout compact setinggi layar (`full-height`/`zero-scroll-global`) pada desktop, dan beralih ke layout stacked kolom natural yang responsif di smartphone.
+
+---
+
+## Deskripsi Rencana & Target Halaman
+
+Kami akan mendesain ulang 7 berkas tampilan keuangan berikut:
+1.  **Dashboard Keuangan** (`views/keuangan/dashboard.php`)
+2.  **Keringanan & Beasiswa** (`views/keuangan/keringanan.php`)
+3.  **Generate Tagihan Massal** (`views/keuangan/generate.php`)
+4.  **Loket Pembayaran Kasir** (`views/keuangan/kasir.php`)
+5.  **Laporan Keuangan** (`views/keuangan/laporan.php`)
+6.  **Pengaturan Istilah & Visibilitas** (`views/keuangan/pengaturan.php`)
+7.  **Tagihan Saya (Dashboard Siswa)** (`views/keuangan/tagihan_saya.php`)
+
+Setiap halaman di atas akan diubah untuk mengadopsi standar CSS kustom yang compact dan responsif.
+
+---
+
+## Rincian Perubahan Per Komponen
+
+### 1. File CSS & Layout Master Global (`views/layout/master.php`)
+Kami akan menaruh utility CSS kustom secara langsung di masing-masing file view agar bersifat modular dan independen, atau mendefinisikannya di bagian atas/bawah tag `<style>` masing-masing halaman.
+Setiap halaman akan mengimplementasikan model:
+*   `.workspace-container`: Membatasi tinggi halaman `height: calc(100vh - var(--header-height) - 1.5rem)` dan mematikan scroll global `overflow: hidden`.
+*   `.workspace-body`: Mengatur arah flex `display: flex; gap: 0.75rem; flex-grow: 1; overflow: hidden;`.
+*   `@media (max-width: 767.98px)`: Mengubah seluruh layout menjadi `height: auto`, `overflow: visible`, `flex-direction: column`, dan mengembalikan scroll manual secara vertikal agar terlihat cantik di smartphone.
+
+---
+
+## Rencana Berkas yang Diubah
+
+### [MODIFY] [dashboard.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/dashboard.php)
+*   **Perubahan**:
+    - Membungkus kontainer utama dengan kelas `.workspace-container`.
+    - Mengurangi padding stats card dari `p-4` menjadi `p-3` yang lebih hemat ruang.
+    - Memindahkan tabel rekapitulasi pelunasan kelas ke dalam kontainer `.table-compact-container` dengan `.table-compact` dan header kolom sticky agar data dapat di-scroll secara internal.
+    - Menambahkan query media HP untuk menata ulang grid statistik menjadi 1 kolom penuh di layar HP.
+
+### [MODIFY] [keringanan.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/keringanan.php)
+*   **Perubahan**:
+    - Mengubah total tata letak baris/kolom Bootstrap menjadi pembagian kolom flex 30% (`panel-form`) dan 70% (`panel-table`) seperti di halaman `master.php`.
+    - Menerapkan input `.form-compact` (padding kecil, tinggi 32px) dan tabel `.table-compact` dengan scrollbar internal.
+    - Menambahkan query media HP agar form dan tabel bertumpuk secara vertikal di smartphone.
+
+### [MODIFY] [generate.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/generate.php)
+*   **Perubahan**:
+    - Mengubah kontainer formulir generate menjadi `.panel-form` berukuran compact (misalnya dengan pembatas lebar maksimal `col-12 col-md-8 mx-auto` untuk desktop).
+    - Memadatkan ukuran label, input, select, dan alert info agar tidak memakan ruang kosong yang berlebih.
+    - Menyesuaikan tombol submit generator ke gaya compact.
+
+### [MODIFY] [kasir.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/kasir.php)
+*   **Perubahan**:
+    - Menyusun area transaksi pembayaran menjadi layout modular 65% Daftar Tagihan Siswa (`panel-table`) dan 35% Panel Pembayaran & Cetak Kuitansi (`panel-form`).
+    - Membuat panel daftar tagihan dapat di-scroll secara internal dengan header tabel sticky, sehingga kasir dapat membandingkan banyak tagihan dengan mudah.
+    - Mengintegrasikan panel pencarian siswa sebagai bagian dari header layout yang tersemat rapi.
+    - Menerapkan query media HP agar form checkout pembayaran bergeser ke bawah tabel tagihan secara otomatis di smartphone.
+
+### [MODIFY] [laporan.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/laporan.php)
+*   **Perubahan**:
+    - Memposisikan filter laporan (pilihan tanggal, cari nama, tombol ekspor) ke dalam baris toolbar compact yang diletakkan di dalam `.panel-header`.
+    - Memposisikan tabel list laporan pemasukan kasir dan tunggakan siswa ke dalam `.table-compact-container` 100% lebar layar.
+    - Mengatur agar tinggi area tabel laporan memanfaatkan sisa tinggi viewport secara dinamis pada desktop.
+
+### [MODIFY] [pengaturan.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/pengaturan.php)
+*   **Perubahan**:
+    - Mengemas panel konfigurasi nama modul, istilah tagihan/tunggakan, dan visibilitas siswa ke dalam `.panel-form` compact di tengah halaman (`col-12 col-md-7 mx-auto`).
+    - Mengaplikasikan desain input form 32px yang konsisten dengan halaman pengaturan lainnya.
+
+### [MODIFY] [tagihan_saya.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/tagihan_saya.php)
+*   **Perubahan**:
+    - Memadatkan visualisasi profil data siswa dan tagihan aktif.
+    - Menampilkan daftar tunggakan siswa dalam format `.table-compact` dengan tinggi dinamis.
+    - Membuat tata letak kartu tagihan ringkas yang sangat nyaman dibaca oleh siswa dari layar smartphone.
+
+---
+
+## Rencana Pengujian & Verifikasi
+
+### Manual Verification
+1.  **Pengujian Desktop (Resolusi Lebar)**:
+    - Buka setiap menu dari sidebar (Dashboard Keuangan, Atur Tarif & Biaya, Keringanan, Generate Tagihan, Loket Pembayaran, Laporan Keuangan, Pengaturan).
+    - Pastikan tinggi halaman terkunci (tidak ada scrollbar vertikal global di window browser luar) dan scrollbar internal tabel aktif.
+    - Pastikan semua tab navigasi dan tombol beroperasi secara interaktif tanpa galat konsol JS.
+2.  **Pengujian Smartphone (Resolusi Mobile)**:
+    - Gunakan mode "Inspect Element -> Device Toggle (HP)" atau akses lewat HP.
+    - Pastikan seluruh halaman otomatis bertumpuk (stacked) secara vertikal dengan lebar 100%.
+    - Pastikan data tabel dapat digeser secara horizontal jika melebihi lebar layar, dan halaman browser luar dapat di-scroll vertikal secara natural.
+
+
 

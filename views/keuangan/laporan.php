@@ -1,136 +1,256 @@
 
-<div id="keuangan-laporan-app" v-cloak class="container-fluid px-4 py-4">
+<div id="keuangan-laporan-app" v-cloak class="container-fluid px-3 py-3 workspace-container">
     <!-- Header -->
-    <div class="d-flex align-items-center justify-content-between mb-4">
+    <div class="d-flex align-items-center justify-content-between mb-2 header-section">
         <div>
-            <h2 class="fw-bold text-slate-800 mb-1">
+            <h5 class="fw-bold text-slate-800 mb-0" style="font-size: 1.1rem;">
                 <i class="bi bi-graph-up-arrow text-blue-600 me-2"></i> Laporan Keuangan Sekolah
-            </h2>
-            <p class="text-muted mb-0">Lihat rekapitulasi uang masuk harian/bulanan serta detail data tunggakan siswa.</p>
+            </h5>
+            <p class="text-muted mb-0" style="font-size: 0.72rem;">Lihat rekapitulasi uang masuk harian/bulanan serta detail data tunggakan siswa.</p>
         </div>
         <div class="d-flex gap-2">
-            <button @click="exportToExcel" class="btn btn-outline-success fw-bold"><i class="bi bi-file-earmark-excel me-2"></i> Ekspor Excel</button>
-            <button @click="printReport" class="btn btn-outline-primary fw-bold"><i class="bi bi-printer me-2"></i> Cetak Laporan</button>
+            <button @click="exportToExcel" class="btn btn-outline-success btn-compact"><i class="bi bi-file-earmark-excel me-1"></i> Ekspor Excel</button>
+            <button @click="printReport" class="btn btn-outline-primary btn-compact"><i class="bi bi-printer me-1"></i> Cetak</button>
         </div>
     </div>
 
     <!-- Navigation Tabs -->
-    <ul class="nav nav-tabs border-bottom border-slate-200 mb-4" id="laporanTabs" role="tablist">
+    <ul class="nav nav-tabs border-bottom border-slate-200 mb-2" id="laporanTabs" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active fw-bold text-slate-700 py-3" id="pemasukan-tab" data-bs-toggle="tab" data-bs-target="#pemasukan-pane" type="button" role="tab" @click="setTipe('pemasukan')">
+            <button class="nav-link active fw-bold text-slate-700 py-2" id="pemasukan-tab" data-bs-toggle="tab" data-bs-target="#pemasukan-pane" type="button" role="tab" @click="setTipe('pemasukan')" style="font-size: 0.8rem;">
                 <i class="bi bi-cash-stack me-2 text-emerald-600"></i> Rekap Pemasukan
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link fw-bold text-slate-700 py-3" id="tunggakan-tab" data-bs-toggle="tab" data-bs-target="#tunggakan-pane" type="button" role="tab" @click="setTipe('tunggakan')">
+            <button class="nav-link fw-bold text-slate-700 py-2" id="tunggakan-tab" data-bs-toggle="tab" data-bs-target="#tunggakan-pane" type="button" role="tab" @click="setTipe('tunggakan')" style="font-size: 0.8rem;">
                 <i class="bi bi-exclamation-triangle-fill me-2 text-rose-600"></i> Rekap Tunggakan
             </button>
         </li>
     </ul>
 
-    <!-- Tabs Content -->
-    <div class="tab-content bg-white card border-0 shadow-sm rounded-4 p-4" id="laporanTabsContent">
-        
-        <!-- Filter Form -->
-        <div class="row mb-4 bg-light p-3 rounded-3 mx-0">
-            <div class="col-md-4 mb-3 mb-md-0">
-                <label class="form-label fw-semibold text-slate-700">Filter Komponen</label>
-                <input type="text" class="form-control border-slate-200" v-model="filterText" placeholder="Cari komponen tagihan...">
-            </div>
-            <div class="col-md-4 mb-3 mb-md-0">
-                <label class="form-label fw-semibold text-slate-700">Pencarian Siswa</label>
-                <input type="text" class="form-control border-slate-200" v-model="filterSiswa" placeholder="Nama / NISN siswa...">
-            </div>
-            <div class="col-md-4" v-if="tipeReport === 'pemasukan'">
-                <label class="form-label fw-semibold text-slate-700">Filter Metode</label>
-                <select class="form-select border-slate-200" v-model="filterMetode">
-                    <option value="">Semua Metode</option>
-                    <option value="Tunai">Tunai</option>
-                    <option value="Transfer">Transfer Manual</option>
-                </select>
-            </div>
-        </div>
-
-        <!-- Tab 1: Rekap Pemasukan -->
-        <div class="tab-pane fade show active" id="pemasukan-pane" role="tabpanel" v-if="tipeReport === 'pemasukan'">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle" id="tableReport">
-                    <thead class="table-light text-slate-700">
-                        <tr>
-                            <th>No Kwitansi</th>
-                            <th>Nama Siswa</th>
-                            <th>Komponen</th>
-                            <th>Jumlah Bayar</th>
-                            <th>Metode</th>
-                            <th>Tanggal Bayar</th>
-                            <th>Kasir Staf</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="p in filteredList" :key="p.id">
-                            <td><span class="badge bg-slate-100 text-slate-800 fw-bold px-3 py-2 border border-slate-200">{{ p.nomor_kwitansi }}</span></td>
-                            <td>
-                                <div class="fw-bold text-slate-800">{{ p.nama_siswa }}</div>
-                                <small class="text-muted">NISN: {{ p.nisn }}</small>
-                            </td>
-                            <td>{{ p.nama_komponen }}</td>
-                            <td class="fw-bold text-emerald-600">Rp {{ formatNumber(p.nominal_dibayar) }}</td>
-                            <td>{{ p.metode_pembayaran }}</td>
-                            <td>{{ formatDate(p.tanggal_bayar) }}</td>
-                            <td>{{ p.nama_kasir }}</td>
-                        </tr>
-                        <tr v-if="filteredList.length === 0">
-                            <td colspan="7" class="text-center py-4 text-muted">Tidak ada transaksi pemasukan terdeteksi.</td>
-                        </tr>
-                    </tbody>
-                </table>
+    <!-- Workspace Body / Table Container -->
+    <div class="panel-table flex-grow-1 min-height-0">
+        <!-- Filter Form embedded in Panel Header -->
+        <div class="panel-header" style="padding: 0.4rem 0.75rem;">
+            <div class="row g-2 align-items-center w-100 mx-0 form-compact">
+                <div class="col-12 col-md-4 px-1">
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="form-label mb-0 text-nowrap" style="font-size: 0.7rem; min-width: 90px;">Komponen:</label>
+                        <input type="text" class="form-control" v-model="filterText" placeholder="Cari komponen...">
+                    </div>
+                </div>
+                <div class="col-12 col-md-4 px-1">
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="form-label mb-0 text-nowrap" style="font-size: 0.7rem; min-width: 90px;">Cari Siswa:</label>
+                        <input type="text" class="form-control" v-model="filterSiswa" placeholder="Nama / NISN...">
+                    </div>
+                </div>
+                <div class="col-12 col-md-4 px-1" v-if="tipeReport === 'pemasukan'">
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="form-label mb-0 text-nowrap" style="font-size: 0.7rem; min-width: 90px;">Metode:</label>
+                        <select class="form-select" v-model="filterMetode">
+                            <option value="">Semua Metode</option>
+                            <option value="Tunai">Tunai</option>
+                            <option value="Transfer">Transfer Manual</option>
+                        </select>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Tab 2: Rekap Tunggakan -->
-        <div class="tab-pane fade show active" id="tunggakan-pane" role="tabpanel" v-else>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle" id="tableReport">
-                    <thead class="table-light text-slate-700">
-                        <tr>
-                            <th>Nama Siswa</th>
-                            <th>Komponen Tagihan</th>
-                            <th>Tahun Ajaran</th>
-                            <th>Bulan</th>
-                            <th>Nominal Tagihan</th>
-                            <th>Sudah Dibayar</th>
-                            <th>Sisa Kekurangan</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="t in filteredList" :key="t.id">
-                            <td>
-                                <div class="fw-bold text-slate-800">{{ t.nama_siswa }}</div>
-                                <small class="text-muted">NISN: {{ t.nisn }}</small>
-                            </td>
-                            <td>{{ t.nama_komponen }}</td>
-                            <td>{{ t.tahun_ajaran }}</td>
-                            <td>{{ t.bulan ? getBulanName(t.bulan) : '-' }}</td>
-                            <td>Rp {{ formatNumber(t.nominal_tagihan) }}</td>
-                            <td class="text-success fw-semibold">Rp {{ formatNumber(t.nominal_bayar) }}</td>
-                            <td class="text-danger fw-bold">Rp {{ formatNumber(t.nominal_tagihan - t.nominal_bayar) }}</td>
-                        </tr>
-                        <tr v-if="filteredList.length === 0">
-                            <td colspan="7" class="text-center py-4 text-muted">Tidak ditemukan tunggakan aktif.</td>
-                        </tr>
-                    </tbody>
-                </table>
+        <div class="panel-content p-0">
+            <!-- Tab Content -->
+            <div class="tab-content h-100" id="laporanTabsContent">
+                
+                <!-- Tab 1: Rekap Pemasukan -->
+                <div class="tab-pane fade show active h-100" id="pemasukan-pane" role="tabpanel" v-if="tipeReport === 'pemasukan'">
+                    <div class="table-compact-container">
+                        <table class="table table-hover table-compact table-bordered" id="tableReport">
+                            <thead>
+                                <tr>
+                                    <th>No Kwitansi</th>
+                                    <th>Nama Siswa</th>
+                                    <th>Komponen</th>
+                                    <th>Jumlah Bayar</th>
+                                    <th>Metode</th>
+                                    <th>Tanggal Bayar</th>
+                                    <th>Kasir Staf</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="p in filteredList" :key="p.id">
+                                    <td><span class="badge bg-slate-100 text-slate-800 fw-bold px-2 py-1 border border-slate-200 badge-custom">{{ p.nomor_kwitansi }}</span></td>
+                                    <td>
+                                        <div class="fw-bold text-slate-800">{{ p.nama_siswa }}</div>
+                                        <small class="text-muted">NISN: {{ p.nisn }}</small>
+                                    </td>
+                                    <td>{{ p.nama_komponen }}</td>
+                                    <td class="fw-bold text-emerald-600">Rp {{ formatNumber(p.nominal_dibayar) }}</td>
+                                    <td>{{ p.metode_pembayaran }}</td>
+                                    <td>{{ formatDate(p.tanggal_bayar) }}</td>
+                                    <td>{{ p.nama_kasir }}</td>
+                                </tr>
+                                <tr v-if="filteredList.length === 0">
+                                    <td colspan="7" class="text-center py-4 text-muted">Tidak ada transaksi pemasukan terdeteksi.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Rekap Tunggakan -->
+                <div class="tab-pane fade show active h-100" id="tunggakan-pane" role="tabpanel" v-else>
+                    <div class="table-compact-container">
+                        <table class="table table-hover table-compact table-bordered" id="tableReport">
+                            <thead>
+                                <tr>
+                                    <th>Nama Siswa</th>
+                                    <th>Komponen Tagihan</th>
+                                    <th>Tahun Ajaran</th>
+                                    <th>Bulan</th>
+                                    <th>Nominal Tagihan</th>
+                                    <th>Sudah Dibayar</th>
+                                    <th>Sisa Kekurangan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="t in filteredList" :key="t.id">
+                                    <td>
+                                        <div class="fw-bold text-slate-800">{{ t.nama_siswa }}</div>
+                                        <small class="text-muted">NISN: {{ t.nisn }}</small>
+                                    </td>
+                                    <td>{{ t.nama_komponen }}</td>
+                                    <td>{{ t.tahun_ajaran }}</td>
+                                    <td>{{ t.bulan ? getBulanName(t.bulan) : '-' }}</td>
+                                    <td>Rp {{ formatNumber(t.nominal_tagihan) }}</td>
+                                    <td class="text-success fw-semibold">Rp {{ formatNumber(t.nominal_bayar) }}</td>
+                                    <td class="text-danger fw-bold">Rp {{ formatNumber(t.nominal_tagihan - t.nominal_bayar) }}</td>
+                                </tr>
+                                <tr v-if="filteredList.length === 0">
+                                    <td colspan="7" class="text-center py-4 text-muted">Tidak ditemukan tunggakan aktif.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
             </div>
         </div>
-
     </div>
 </div>
 
 <style>
+.workspace-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - var(--header-height) - 1.5rem);
+    overflow: hidden;
+}
+.panel-table {
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    overflow: hidden;
+    min-height: 0;
+}
+.panel-header {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid #e2e8f0;
+    background-color: #f8fafc;
+}
+.panel-content {
+    padding: 0;
+    overflow-y: auto;
+    flex-grow: 1;
+    min-height: 0;
+}
+.form-compact .form-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 0.2rem;
+}
+.form-compact .form-control,
+.form-compact .form-select {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.8rem;
+    border-radius: 6px;
+    border-color: #cbd5e1;
+    height: 32px;
+}
+.btn-compact {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+    border-radius: 6px;
+    font-weight: 600;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.table-compact-container {
+    overflow-y: auto;
+    flex-grow: 1;
+    min-height: 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+}
+.table-compact {
+    font-size: 0.8rem;
+    margin-bottom: 0;
+    width: 100%;
+}
+.table-compact th {
+    background-color: #f1f5f9;
+    color: #334155;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 2px solid #cbd5e1;
+    padding: 0.5rem 0.75rem;
+}
+.table-compact td {
+    padding: 0.4rem 0.75rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
+.badge-custom {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+}
 .fs-7 { font-size: 0.85rem; }
 .text-slate-700 { color: #334155; }
 .text-slate-800 { color: #1e293b; }
 .border-slate-200 { border-color: #e2e8f0; }
+
+/* Responsive Mobile Stack (HP) */
+@media (max-width: 767.98px) {
+    .workspace-container {
+        height: auto !important;
+        overflow: visible !important;
+    }
+    .panel-table {
+        overflow: visible !important;
+        margin-top: 0.5rem;
+    }
+    .panel-content {
+        overflow: visible !important;
+    }
+    .table-compact-container {
+        overflow-y: visible !important;
+        overflow-x: auto !important;
+    }
+    .table-compact th {
+        position: static !important;
+    }
+}
 </style>
 
 <script>
