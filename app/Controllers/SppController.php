@@ -125,6 +125,7 @@ class SppController extends BaseController {
                 SELECT k.nama_kelas,
                        SUM(t.nominal_tagihan) as total_tagihan,
                        SUM(t.nominal_bayar) as total_bayar
+                FROM transaksi_spp_tagihan t
                 JOIN siswa s ON t.siswa_id = s.id
                 JOIN kelas k ON s.id_kelas = k.id
                 WHERE t.tenant_id = ?
@@ -618,7 +619,7 @@ class SppController extends BaseController {
         try {
             if ($tipe === 'pemasukan') {
                 $stmt = $db->prepare("
-                    SELECT p.*, s.nama_lengkap as nama_siswa, s.nisn, k.nama_komponen, u.nama as nama_kasir
+                    SELECT p.*, s.nama_lengkap as nama_siswa, s.nisn, k.nama_komponen, u.nama_lengkap as nama_kasir
                     FROM transaksi_spp_pembayaran p
                     JOIN siswa s ON p.siswa_id = s.id
                     JOIN transaksi_spp_tagihan t ON p.tagihan_id = t.id
