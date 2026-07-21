@@ -464,6 +464,12 @@ try {
         case '/api/v1/keuangan/pengaturan':
             (new \App\Controllers\SppController())->apiGetPengaturan();
             break;
+        case '/api/v1/keuangan/tenants':
+            (new \App\Controllers\SppController())->apiTenants();
+            break;
+        case '/api/v1/keuangan/komponen/toggle':
+            (new \App\Controllers\SppController())->apiToggleKomponen();
+            break;
         case '/api/v1/keuangan/save-pengaturan':
             (new \App\Controllers\SppController())->apiSavePengaturan();
             break;

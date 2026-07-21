@@ -778,6 +778,56 @@ Kami akan menambahkan/memperbarui CSS berikut ke dalam blok `<style>` masing-mas
     - Buka Loket Kasir, Keringanan, Laporan, Dashboard, dan Tagihan Saya.
     - Pastikan semua tabel data tidak memiliki border tegak lurus (vertikal), memiliki warna latar header abu-abu tipis dengan teks kapital (uppercase), dan border bawah sel sangat halus.
 
+---
+## [Penyempurnaan Multi-Tenant, Filter, Toggle Status, dan Pagination Modul Keuangan SaaS]
+**Waktu**: 16:55 WIB
+**Status**: Draft
+
+### Latar Belakang & Analisis Masalah
+Pengguna meminta penambahan fitur SaaS profesional untuk peran `super_admin` agar dapat memilih sekolah (tenant) sasaran, menyaring jenis komponen biaya di laporan transaksi, menggunakan pagination pada seluruh tabel utama, dan melakukan kontrol status keaktifan komponen biaya melalui sakelar (toggle ON/OFF) dinamis.
+
+### Rencana Perubahan Kode (Proposed Changes)
+
+#### [MODIFY] [index.php](file:///C:/xampp/htdocs/SINTA-SaaS/index.php)
+- Menambahkan route API `/api/v1/keuangan/tenants` dan `/api/v1/keuangan/komponen/toggle`.
+
+#### [MODIFY] [SppController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/SppController.php)
+- Menambahkan endpoints `apiTenants()` dan `apiToggleKomponen()`.
+- Memperbarui `resolveTenantId()` dan endpoints terkait agar fleksibel terhadap input parameter `tenant_id` dari client.
+
+#### [MODIFY] [master.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/master.php)
+- Menambahkan Tenant Selector di atas tab.
+- Menambahkan sakelar Toggle ON/OFF keaktifan komponen biaya (`is_active`).
+- Menambahkan pagination client-side pada daftar komponen dan tarif.
+
+#### [MODIFY] [keringanan.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/keringanan.php)
+- Menambahkan Tenant Selector dan pagination pada daftar penerima beasiswa.
+
+#### [MODIFY] [generate.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/generate.php)
+- Menambahkan Tenant Selector dan sinkronisasi otomatis komponen, kelas, dan tahun ajaran per sekolah.
+
+#### [MODIFY] [kasir.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/kasir.php)
+- Menambahkan Tenant Selector dan sinkronisasi autocomplete pencarian siswa berdasarkan sekolah terpilih.
+
+#### [MODIFY] [laporan.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/laporan.php)
+- Menambahkan Tenant Selector dan filter jenis komponen biaya.
+- Menambahkan pagination pada tabel rekap pemasukan dan tunggakan.
+
+#### [MODIFY] [pengaturan.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/pengaturan.php)
+- Menambahkan Tenant Selector agar super_admin dapat menyesuaikan istilah finansial per sekolah secara terisolasi.
+
+#### [MODIFY] [dashboard.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/dashboard.php)
+- Menambahkan Tenant Selector untuk memperbarui metrik rekapitulasi pelunasan per sekolah.
+
+#### [MODIFY] [tagihan_saya.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/tagihan_saya.php)
+- Menambahkan pagination pada tabel rincian tagihan personal siswa.
+
+### Rencana Verifikasi & Pengujian
+- Menjalankan syntax checking `php -l`.
+- Menguji login super_admin untuk melihat sinkronisasi persistensi dropdown tenant menggunakan `localStorage` di lintas halaman keuangan.
+- Memastikan pagination berjalan mulus dan status sakelar komponen biaya ter-update langsung ke database.
+
+
 
 
 

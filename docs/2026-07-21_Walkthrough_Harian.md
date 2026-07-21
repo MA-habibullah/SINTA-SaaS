@@ -235,13 +235,22 @@ Hal ini memicu eksekusi kueri `INSERT` atau `UPDATE` dengan nilai `tenant_id = '
    - Membungkus method `apiKomponen()`, `apiTarif()`, dan `apiKeringanan()` di [SppController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/SppController.php) menggunakan blok `try-catch`.
    - Jika terjadi exception (misal masalah database atau kueri), sistem kini mengembalikan respons JSON terstandardisasi (`['success' => false, 'error' => $message]`) dengan status code `500` yang tepat, menghindari output error HTML mentah yang tidak terstruktur.
 
+---
+## [Penyempurnaan Multi-Tenant, Filter, Toggle Status, dan Pagination Modul Keuangan SaaS]
+**Waktu**: 17:00 WIB
+**Jenis**: Feature / SaaS Optimization
 
-
-
-
-
-
-
-
-
-
+### Ringkasan Pekerjaan:
+1. **Pendaftaran Rute API Baru**:
+   - Menambahkan rute `/api/v1/keuangan/tenants` dan `/api/v1/keuangan/komponen/toggle` di [index.php](file:///C:/xampp/htdocs/SINTA-SaaS/index.php).
+2. **Implementasi API di SppController**:
+   - Membuat method `apiTenants()` untuk query daftar tenant sekolah bagi super_admin di [SppController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/SppController.php).
+   - Membuat method `apiToggleKomponen()` untuk melakukan update status keaktifan komponen biaya.
+3. **Penyatuan Multi-Tenant Dropdown Selector**:
+   - Mengintegrasikan dropdown pemilih sekolah/tenant khusus untuk `super_admin` pada halaman Dashboard, Master, Keringanan, Generate, Kasir, Laporan, dan Pengaturan.
+   - Menggunakan sinkronisasi `localStorage` (`sinta_spp_selected_tenant_id`) agar pilihan sekolah tetap konsisten dan persisten saat super_admin berpindah halaman keuangan.
+4. **Sakelar ON/OFF Status Komponen**:
+   - Menyediakan sakelar toggle ON/OFF pada tabel Master Komponen di [views/keuangan/master.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/master.php) untuk mengaktifkan/menonaktifkan komponen secara asinkronus.
+5. **Dynamic Filters & Pagination**:
+   - Mengubah filter teks komponen menjadi dropdown pilihan Jenis Komponen Biaya dinamis di [views/keuangan/laporan.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/laporan.php).
+   - Mengintegrasikan navigasi halaman (pagination) client-side yang interaktif pada seluruh tabel utama keuangan di Master, Keringanan, Laporan, dan Tagihan Saya.

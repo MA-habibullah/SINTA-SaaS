@@ -60,6 +60,40 @@ class SppController extends BaseController {
         return $_SESSION['tenant_id'] ?? '';
     }
 
+    public function apiTenants(): void {
+        if (($_SESSION['role_name'] ?? '') !== 'super_admin') {
+            $this->jsonResponse(['success' => false, 'error' => 'Forbidden.'], 403);
+        }
+        try {
+            $db = Database::getConnection();
+            $tenants = $db->query("SELECT id, nama_sekolah FROM tenants ORDER BY nama_sekolah ASC")->fetchAll(PDO::FETCH_ASSOC);
+            $this->jsonResponse(['success' => true, 'data' => $tenants]);
+        } catch (\Throwable $e) {
+            $this->jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function apiToggleKomponen(): void {
+        try {
+            $tenantId = $this->resolveTenantId();
+            $raw = json_decode(file_get_contents('php://input'), true);
+            $id = (int)($raw['id'] ?? 0);
+            $isActive = (int)($raw['is_active'] ?? 0);
+
+            if (!$id) {
+                $this->jsonResponse(['success' => false, 'error' => 'ID komponen wajib diisi.'], 422);
+            }
+
+            $db = Database::getConnection();
+            $stmt = $db->prepare("UPDATE transaksi_spp_komponen SET is_active = ? WHERE id = ? AND tenant_id = ?");
+            $stmt->execute([$isActive, $id, $tenantId]);
+
+            $this->jsonResponse(['success' => true]);
+        } catch (\Throwable $e) {
+            $this->jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+
 
     // ----------------------------------------------------
     // PAGE RENDERERS
