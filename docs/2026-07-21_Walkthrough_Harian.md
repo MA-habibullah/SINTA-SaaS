@@ -136,6 +136,21 @@ Mendefinisikan variabel `$role = $_SESSION['role_name'] ?? '';` di baris awal ko
    - Peniadaan scrollbar window utama dengan mengaktifkan independent scrollbar hanya pada body tabel, menjaga agar header tabel tetap sticky melayang di atas saat data ditarik.
    - Dilengkapi Vue 3 CDN interaktif di sisi klien sehingga data tarif dapat ditambah, dihapus, difilter secara langsung, dan jam/tanggal aktif di header beroperasi dinamis.
 
+---
+## [Penerapan Redesain Layout Dashboard & Area Kerja Compact Full-Screen]
+**Waktu**: 15:15 WIB
+**Jenis**: Refactor
+
+### Ringkasan Pekerjaan:
+1. **Implementasi pada View Operasional**:
+   - Menerapkan desain compact full-screen layout pada berkas view utama [master.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/master.php) (Atur Tarif & Biaya).
+   - Membagi layout halaman secara efisien dengan rasio 30% Panel Form (kiri) dan 70% Panel Tabel Grid (kanan).
+   - Menghilangkan scrollbar global halaman dengan mengaktifkan scrollbar internal bodi tabel (`table-compact-container` + `overflow-y: auto`), memastikan header tabel tetap melayang statis (`position: sticky`).
+   - Menerapkan `.form-compact` untuk mengecilkan tinggi input dan padding elemen formulir.
+2. **Perbaikan Bug Kode Master**:
+   - Memperbaiki salah ketik (typo) pemanggilan variabel `loadingKompKomp` menjadi `loadingKomp.value` di penanganan block `finally` fungsi `saveKomponen()` yang sebelumnya memicu ReferenceError saat proses simpan selesai.
+
+
 
 
 
