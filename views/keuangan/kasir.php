@@ -1,69 +1,69 @@
 
-<div id="keuangan-kasir-app" v-cloak class="container-fluid px-3 py-3 workspace-container">
+<div id="keuangan-kasir-app" v-cloak class="container-fluid px-4 py-4">
     <!-- Header -->
-    <div class="d-flex align-items-center justify-content-between mb-2 header-section">
+    <div class="d-flex align-items-center justify-content-between mb-4">
         <div>
-            <h5 class="fw-bold text-slate-800 mb-0" style="font-size: 1.1rem;">
+            <h2 class="fw-bold text-slate-800 mb-1">
                 <i class="bi bi-cash-stack text-blue-600 me-2"></i> Loket Kasir Pembayaran
-            </h5>
-            <p class="text-muted mb-0" style="font-size: 0.72rem;">Loket kasir Tata Usaha untuk pencarian siswa, transaksi pembayaran parsial/cicil, dan cetak kuitansi.</p>
+            </h2>
+            <p class="text-muted mb-0">Loket kasir Tata Usaha untuk pencarian siswa, transaksi pembayaran parsial/cicil, dan cetak kuitansi.</p>
         </div>
     </div>
 
     <!-- Pencarian Siswa Utama -->
-    <div class="card border-slate-200 shadow-sm rounded-3 p-3 mb-2 bg-white search-section">
-        <div class="row g-2 align-items-center">
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+        <div class="row g-3 align-items-center">
             <div class="col-md-6 position-relative">
-                <label class="form-label fw-semibold text-slate-700 mb-1" style="font-size: 0.75rem;">Cari Nama Siswa atau NISN <span class="text-danger">*</span></label>
-                <div class="input-group input-group-sm">
+                <label class="form-label fw-semibold text-slate-700">Cari Nama Siswa atau NISN <span class="text-danger">*</span></label>
+                <div class="input-group">
                     <span class="input-group-text bg-light border-slate-200"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" class="form-control border-slate-200" v-model="siswaSearch" @input="searchSiswa" placeholder="Ketik nama / NISN untuk memulai transaksi...">
+                    <input type="text" class="form-control border-slate-200" v-model="siswaSearch" @input="searchSiswa" placeholder="Ketik nama / NISN untuk memulai transaksi..." style="height: 42px;">
                 </div>
                 <!-- Suggestions -->
-                <ul class="dropdown-menu show w-100 shadow border-slate-200 p-0 overflow-hidden" v-if="siswaSuggestions.length > 0" style="display: block; max-height: 200px; overflow-y: auto; z-index: 1010; font-size: 0.78rem;">
+                <ul class="dropdown-menu show w-100 shadow border-slate-200 p-0 overflow-hidden" v-if="siswaSuggestions.length > 0" style="display: block; max-height: 200px; overflow-y: auto; z-index: 1010;">
                     <li v-for="s in siswaSuggestions" :key="s.id">
-                        <a href="#" class="dropdown-item py-1.5 px-3 d-flex justify-content-between align-items-center" @click.prevent="selectSiswa(s)">
+                        <a href="#" class="dropdown-item py-2.5 px-3 d-flex justify-content-between align-items-center" @click.prevent="selectSiswa(s)">
                             <div>
                                 <div class="fw-bold text-slate-800">{{ s.nama }}</div>
                                 <small class="text-muted">NISN: {{ s.nisn }} | Kelas: {{ s.nama_kelas }}</small>
                             </div>
-                            <i class="bi bi-arrow-right-circle text-blue-600"></i>
+                            <i class="bi bi-arrow-right-circle text-blue-600 fs-5"></i>
                         </a>
                     </li>
                 </ul>
             </div>
             <div class="col-md-6" v-if="selectedSiswa">
-                <div class="p-2 bg-blue-50 border border-blue-100 rounded-3 d-flex align-items-center" style="height: 48px;">
-                    <div class="me-2 p-1.5 bg-white rounded-circle text-blue-600 shadow-sm d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                        <i class="bi bi-person-fill" style="font-size: 0.9rem;"></i>
+                <div class="p-3 bg-blue-50 border border-blue-100 rounded-3 d-flex align-items-center" style="height: 60px;">
+                    <div class="me-3 p-2 bg-white rounded-circle text-blue-600 shadow-sm d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <i class="bi bi-person-fill fs-4"></i>
                     </div>
                     <div>
-                        <h6 class="fw-bold text-slate-800 mb-0" style="font-size: 0.8rem; line-height: 1.2;">{{ selectedSiswa.nama }}</h6>
-                        <p class="text-muted mb-0" style="font-size: 0.65rem;">NISN: {{ selectedSiswa.nisn }} | Kelas: <span class="badge bg-blue-100 text-blue-700 px-1 py-0.5" style="font-size: 0.6rem;">{{ selectedSiswa.nama_kelas }}</span></p>
+                        <h5 class="fw-bold text-slate-800 mb-0 fs-7" style="line-height: 1.2;">{{ selectedSiswa.nama }}</h5>
+                        <p class="text-muted mb-0" style="font-size: 0.7rem;">NISN: {{ selectedSiswa.nisn }} | Kelas: <span class="badge bg-blue-100 text-blue-700 px-2 py-0.5" style="font-size: 0.65rem;">{{ selectedSiswa.nama_kelas }}</span></p>
                     </div>
-                    <button class="btn btn-sm btn-outline-danger ms-auto border-0 p-0" @click="clearSelectedSiswa"><i class="bi bi-x-circle fs-6"></i></button>
+                    <button class="btn btn-sm btn-outline-danger ms-auto border-0" @click="clearSelectedSiswa"><i class="bi bi-x-circle fs-5"></i></button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Pembayaran Area -->
-    <div class="workspace-body flex-grow-1 min-height-0" v-if="selectedSiswa">
-        <!-- List Tagihan Siswa (Left: 65%) -->
-        <div class="panel-table flex-grow-1 min-width-0" style="width: 65%;">
-            <div class="panel-header d-flex flex-column gap-1">
+    <div class="row" v-if="selectedSiswa">
+        <!-- List Tagihan Siswa (Left: 8-cols) -->
+        <div class="col-12 col-lg-8 mb-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
                 <!-- Notifikasi Rekomendasi Cross-Selling Tagihan Tertunda -->
-                <div v-if="hasTunggakanLain" class="alert alert-warning border-0 rounded p-2 mb-0 d-flex align-items-center" style="font-size: 0.72rem; line-height: 1.3;">
-                    <i class="bi bi-exclamation-circle-fill me-2 fs-6 text-warning"></i>
-                    <div>Siswa memiliki tunggakan periode sebelumnya. Silakan centang tunggakan tersebut untuk dilunasi sekalian.</div>
+                <div v-if="hasTunggakanLain" class="alert alert-warning border-0 rounded-3 d-flex align-items-center mb-4 p-3 shadow-sm">
+                    <i class="bi bi-exclamation-circle-fill me-3 fs-3 text-warning"></i>
+                    <div>
+                        <h6 class="fw-bold mb-1">Rekomendasi Pelunasan!</h6>
+                        <p class="mb-0 fs-7">Siswa memiliki tunggakan periode sebelumnya. Silakan centang tunggakan tersebut untuk dilunasi sekalian.</p>
+                    </div>
                 </div>
-                <div class="d-flex align-items-center justify-content-between">
-                    <span class="fw-bold text-slate-800" style="font-size: 0.82rem;"><i class="bi bi-list-task me-2 text-primary"></i> Daftar Kewajiban Pembayaran</span>
-                </div>
-            </div>
-            <div class="panel-content p-0">
-                <div class="table-compact-container">
-                    <table class="table table-hover table-compact table-bordered">
+
+                <h5 class="fw-bold text-slate-800 mb-3"><i class="bi bi-list-task me-2 text-primary"></i> Daftar Kewajiban Pembayaran</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
                         <thead>
                             <tr>
                                 <th style="width: 40px;">Pilih</th>
@@ -72,12 +72,12 @@
                                 <th>Bulan</th>
                                 <th>Nominal Awal</th>
                                 <th>Sisa Kekurangan</th>
-                                <th style="width: 140px;">Bayar (Rp)</th>
+                                <th style="width: 160px;">Bayar (Rp)</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-for="t in tagihanList" :key="t.id" :class="{'table-info-light': t.selected}">
-                                <td class="text-center">
+                                <td>
                                     <input class="form-check-input" type="checkbox" v-model="t.selected" @change="toggleSelectTagihan(t)">
                                 </td>
                                 <td class="fw-bold text-slate-800">{{ t.nama_komponen }}</td>
@@ -89,7 +89,7 @@
                                 <td>Rp {{ formatNumber(t.nominal_tagihan) }}</td>
                                 <td class="text-danger fw-semibold">Rp {{ formatNumber(t.nominal_tagihan - t.nominal_bayar) }}</td>
                                 <td>
-                                    <input type="number" class="form-control text-end px-2 py-0.5 border-slate-200" style="height: 26px; font-size: 0.78rem;" v-model.number="t.bayar_input" :max="t.nominal_tagihan - t.nominal_bayar" :disabled="!t.selected" @input="updateTotal">
+                                    <input type="number" class="form-control border-slate-200 text-end py-1 px-2" style="height: 34px;" v-model.number="t.bayar_input" :max="t.nominal_tagihan - t.nominal_bayar" :disabled="!t.selected" @input="updateTotal">
                                 </td>
                             </tr>
                             <tr v-if="tagihanList.length === 0">
@@ -101,24 +101,23 @@
             </div>
         </div>
 
-        <!-- Checkout Card (Right: 35%) -->
-        <div class="panel-form" style="width: 35%;">
-            <div class="panel-header">
-                <span class="fw-bold text-slate-800" style="font-size: 0.82rem;"><i class="bi bi-cart3 me-2 text-success"></i> Ringkasan Pembayaran</span>
-            </div>
-            <div class="panel-content form-compact">
-                <div class="mb-3 border-bottom pb-2">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="text-muted" style="font-size: 0.75rem;">Total Tagihan Terpilih</span>
-                        <span class="fw-bold text-slate-800" style="font-size: 1.05rem;">Rp {{ formatNumber(totalBelanja) }}</span>
+        <!-- Checkout Card (Right: 4-cols) -->
+        <div class="col-12 col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
+                <h5 class="fw-bold text-slate-800 mb-4 border-bottom pb-2"><i class="bi bi-cart3 me-2 text-success"></i> Ringkasan Pembayaran</h5>
+                
+                <div class="mb-4 bg-light p-3 rounded-3">
+                    <div class="d-flex justify-content-between mb-0">
+                        <span class="text-muted fw-semibold" style="font-size: 0.8rem;">Total Tagihan Terpilih</span>
+                        <span class="fw-bold text-slate-800 fs-5">Rp {{ formatNumber(totalBelanja) }}</span>
                     </div>
                 </div>
 
-                <form @submit.prevent="checkoutPembayaran" class="d-flex flex-column h-100 gap-2">
+                <form @submit.prevent="checkoutPembayaran" class="d-flex flex-column gap-3">
                     <!-- Metode Pembayaran -->
                     <div>
-                        <label class="form-label">Metode Pembayaran</label>
-                        <select class="form-select" v-model="checkoutForm.metode_pembayaran">
+                        <label class="form-label fw-semibold text-slate-700">Metode Pembayaran</label>
+                        <select class="form-select border-slate-200" v-model="checkoutForm.metode_pembayaran" style="height: 42px;">
                             <option value="Tunai">Tunai</option>
                             <option value="Transfer">Transfer Manual</option>
                         </select>
@@ -126,27 +125,27 @@
 
                     <!-- Input Jumlah Uang (Tunai) -->
                     <div v-if="checkoutForm.metode_pembayaran === 'Tunai'">
-                        <label class="form-label">Jumlah Uang Diterima (Bayar)</label>
+                        <label class="form-label fw-semibold text-slate-700">Jumlah Uang Diterima (Bayar)</label>
                         <div class="input-group">
-                            <span class="input-group-text bg-light fw-bold" style="font-size: 0.8rem;">Rp</span>
-                            <input type="number" class="form-control" v-model.number="cashReceived" placeholder="0" @input="calculateKembalian">
+                            <span class="input-group-text bg-light border-slate-200 fw-bold">Rp</span>
+                            <input type="number" class="form-control border-slate-200" v-model.number="cashReceived" placeholder="0" @input="calculateKembalian" style="height: 42px;">
                         </div>
                     </div>
 
                     <!-- Uang Kembalian -->
-                    <div class="p-2 bg-light rounded d-flex justify-content-between align-items-center" v-if="checkoutForm.metode_pembayaran === 'Tunai'">
-                        <span class="text-muted" style="font-size: 0.72rem;">Uang Kembalian</span>
-                        <span class="fw-bold text-success" style="font-size: 0.95rem;">Rp {{ formatNumber(changeAmount) }}</span>
+                    <div class="p-3 bg-light rounded-3 d-flex justify-content-between align-items-center" v-if="checkoutForm.metode_pembayaran === 'Tunai'">
+                        <span class="text-muted fs-7 fw-semibold">Uang Kembalian</span>
+                        <span class="fw-bold text-success fs-5">Rp {{ formatNumber(changeAmount) }}</span>
                     </div>
 
                     <!-- Keterangan -->
                     <div>
-                        <label class="form-label">Keterangan / Memo Pembayaran</label>
-                        <textarea class="form-control" v-model="checkoutForm.keterangan" rows="2" style="height: auto;" placeholder="Masukkan catatan opsional..."></textarea>
+                        <label class="form-label fw-semibold text-slate-700">Keterangan / Memo Pembayaran</label>
+                        <textarea class="form-control border-slate-200" v-model="checkoutForm.keterangan" rows="3" placeholder="Masukkan catatan opsional..."></textarea>
                     </div>
 
-                    <div class="mt-auto pt-2 border-top">
-                        <button type="submit" class="btn btn-success btn-compact w-100" style="height: 38px;" :disabled="loadingCheckout || totalBelanja <= 0">
+                    <div class="pt-2">
+                        <button type="submit" class="btn btn-success btn-lg fw-bold w-100 py-3" :disabled="loadingCheckout || totalBelanja <= 0">
                             <span v-if="loadingCheckout" class="spinner-border spinner-border-sm me-2" role="status"></span>
                             Bayar & Cetak Kwitansi
                         </button>
@@ -216,135 +215,40 @@
 </div>
 
 <style>
-.workspace-container {
-    display: flex;
-    flex-direction: column;
-    height: calc(100vh - var(--header-height) - 1.5rem);
-    overflow: hidden;
-}
-.workspace-body {
-    display: flex;
-    flex-grow: 1;
-    overflow: hidden;
-    gap: 0.75rem;
-    min-height: 0;
-}
-.panel-form {
-    display: flex;
-    flex-direction: column;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
-    overflow: hidden;
-}
-.panel-table {
-    display: flex;
-    flex-direction: column;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
-    overflow: hidden;
-    min-width: 0;
-}
-.panel-header {
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid #e2e8f0;
-    background-color: #f8fafc;
-}
-.panel-content {
-    padding: 0.6rem 0.75rem;
-    overflow-y: auto;
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-}
-.form-compact .form-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #475569;
-    margin-bottom: 0.2rem;
-}
-.form-compact .form-control,
-.form-compact .form-select {
-    padding: 0.35rem 0.6rem;
-    font-size: 0.8rem;
-    border-radius: 6px;
-    border-color: #cbd5e1;
-    height: 32px;
-}
-.form-compact .input-group .form-control {
-    height: 32px;
-}
-.form-compact .input-group-text {
-    padding: 0.35rem 0.6rem;
-    font-size: 0.8rem;
-}
-.form-compact .btn-compact {
-    padding: 0.35rem 0.75rem;
-    font-size: 0.8rem;
-    border-radius: 6px;
-    font-weight: 600;
-    height: 32px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-.table-compact-container {
-    overflow-y: auto;
-    flex-grow: 1;
-    min-height: 0;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 8px !important;
-    background: #ffffff;
-}
-.table-compact {
+/* Styling Tabel Modern Borderless (Gambar 1) */
+.table {
     border-collapse: collapse !important;
-    font-size: 0.8rem;
-    margin-bottom: 0;
     width: 100%;
 }
-.table-compact th {
+.table th {
     background-color: #f8fafc !important;
     color: #475569 !important;
     font-weight: 700 !important;
-    font-size: 0.72rem !important;
+    font-size: 0.75rem !important;
     text-transform: uppercase !important;
     letter-spacing: 0.05em !important;
-    position: sticky;
-    top: 0;
-    z-index: 10;
     border-bottom: 2px solid #e2e8f0 !important;
     border-top: none !important;
     border-left: none !important;
     border-right: none !important;
-    padding: 0.6rem 0.75rem !important;
+    padding: 0.75rem 1rem !important;
 }
-.table-compact td {
+.table td {
     border-bottom: 1px solid #f1f5f9 !important;
     border-top: none !important;
     border-left: none !important;
     border-right: none !important;
-    padding: 0.52rem 0.75rem !important;
-    vertical-align: middle;
-    white-space: nowrap;
+    padding: 0.85rem 1rem !important;
+    font-size: 0.8rem !important;
     color: #334155 !important;
-    background-color: transparent !important;
 }
-.table-compact tbody tr {
+.table tbody tr {
     transition: background-color 0.15s ease;
 }
-.table-compact tbody tr:hover {
+.table tbody tr:hover {
     background-color: #f8fafc !important;
 }
-.badge-custom {
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-}
+
 .fs-7 { font-size: 0.85rem; }
 .fs-8 { font-size: 0.75rem; }
 .bg-blue-50 { background-color: #eff6ff; }
@@ -352,36 +256,6 @@
 .text-blue-700 { color: #1d4ed8; }
 .border-slate-200 { border-color: #e2e8f0; }
 .table-info-light { background-color: #f8fafc !important; }
-
-/* Responsive Mobile Stack (HP) */
-@media (max-width: 767.98px) {
-    .workspace-container {
-        height: auto !important;
-        overflow: visible !important;
-    }
-    .workspace-body {
-        flex-direction: column !important;
-        height: auto !important;
-        overflow: visible !important;
-    }
-    .panel-form {
-        width: 100% !important;
-        min-width: auto !important;
-        overflow: visible !important;
-        margin-bottom: 1rem !important;
-    }
-    .panel-table {
-        width: 100% !important;
-        overflow: visible !important;
-    }
-    .table-compact-container {
-        overflow-y: visible !important;
-        overflow-x: auto !important;
-    }
-    .table-compact th {
-        position: static !important;
-    }
-}
 </style>
 
 <script>

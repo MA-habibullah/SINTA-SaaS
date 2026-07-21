@@ -1,74 +1,69 @@
 
-
-<div id="keuangan-master-app" v-cloak class="container-fluid px-3 py-3 workspace-container">
+<div id="keuangan-master-app" v-cloak class="container-fluid px-4 py-4">
     <!-- Header -->
-    <div class="d-flex align-items-center justify-content-between mb-2">
+    <div class="d-flex align-items-center justify-content-between mb-4">
         <div>
-            <h5 class="fw-bold text-slate-800 mb-0" style="font-size: 1.1rem;">
+            <h2 class="fw-bold text-slate-800 mb-1">
                 <i class="bi bi-tags-fill text-blue-600 me-2"></i> Master Tarif & Biaya Keuangan
-            </h5>
-            <p class="text-muted mb-0" style="font-size: 0.72rem;">Kelola komponen tagihan dan atur nominal tarif dasar yang berlaku di sekolah.</p>
+            </h2>
+            <p class="text-muted mb-0">Kelola komponen tagihan dan atur nominal tarif dasar yang berlaku di sekolah.</p>
         </div>
     </div>
 
     <!-- Navigation Tabs -->
-    <ul class="nav nav-tabs border-bottom border-slate-200 mb-3" id="masterTabs" role="tablist">
+    <ul class="nav nav-tabs mb-4" id="masterTabs" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active fw-bold text-slate-700 py-2" id="komponen-tab" data-bs-toggle="tab" data-bs-target="#komponen-pane" type="button" role="tab" style="font-size: 0.8rem;">
+            <button class="nav-link active fw-bold text-slate-700 py-3" id="komponen-tab" data-bs-toggle="tab" data-bs-target="#komponen-pane" type="button" role="tab">
                 <i class="bi bi-grid-3x3-gap-fill me-2 text-blue-600"></i> Komponen Biaya
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link fw-bold text-slate-700 py-2" id="tarif-tab" data-bs-toggle="tab" data-bs-target="#tarif-pane" type="button" role="tab" style="font-size: 0.8rem;">
+            <button class="nav-link fw-bold text-slate-700 py-3" id="tarif-tab" data-bs-toggle="tab" data-bs-target="#tarif-pane" type="button" role="tab">
                 <i class="bi bi-cash-coin me-2 text-emerald-600"></i> Tarif Acuan Default
             </button>
         </li>
     </ul>
 
     <!-- Tabs Content -->
-    <div class="tab-content flex-grow-1 min-height-0" id="masterTabsContent">
+    <div class="tab-content" id="masterTabsContent">
         
         <!-- Tab 1: Komponen Biaya -->
-        <div class="tab-pane fade show active h-100" id="komponen-pane" role="tabpanel">
-            <div class="workspace-body">
-                <!-- Form Komponen (Left: 30%) -->
-                <div class="panel-form">
-                    <div class="panel-header">
-                        <span class="fw-bold text-slate-800" style="font-size: 0.82rem;">
+        <div class="tab-pane fade show active" id="komponen-pane" role="tabpanel">
+            <div class="row">
+                <!-- Form Komponen (Left: 4-cols) -->
+                <div class="col-12 col-lg-4 mb-4">
+                    <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                        <h5 class="fw-bold text-slate-800 mb-4 border-bottom pb-2">
                             {{ formKomp.id ? 'Edit Komponen' : 'Tambah Komponen Baru' }}
-                        </span>
-                    </div>
-                    <div class="panel-content form-compact">
-                        <form @submit.prevent="saveKomponen" class="d-flex flex-column h-100 gap-2">
+                        </h5>
+                        <form @submit.prevent="saveKomponen" class="d-flex flex-column gap-3">
                             <div>
-                                <label class="form-label">Nama Komponen <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" v-model="formKomp.nama_komponen" placeholder="Contoh: SPP Bulanan, Uang Buku LKS, Kegiatan KTS" required>
+                                <label class="form-label fw-semibold text-slate-700">Nama Komponen <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control border-slate-200" v-model="formKomp.nama_komponen" placeholder="Contoh: SPP Bulanan, Uang Buku LKS, Kegiatan KTS" required style="height: 42px;">
                             </div>
-                            <div class="mb-2">
-                                <label class="form-label">Tipe Periode Pembayaran</label>
-                                <select class="form-select" v-model="formKomp.tipe_periode">
+                            <div>
+                                <label class="form-label fw-semibold text-slate-700">Tipe Periode Pembayaran</label>
+                                <select class="form-select border-slate-200" v-model="formKomp.tipe_periode" style="height: 42px;">
                                     <option value="Bulanan">Bulanan</option>
                                     <option value="Semester">Semester</option>
                                     <option value="Tahunan">Tahunan (Sekali di Awal)</option>
                                     <option value="Bebas">Bebas / Insidental / Sukarela</option>
                                 </select>
                             </div>
-                            <div class="mt-auto pt-2 border-top d-flex gap-2">
-                                <button type="button" v-if="formKomp.id" @click="resetFormKomp" class="btn btn-outline-secondary btn-compact flex-fill">Batal</button>
-                                <button type="submit" class="btn btn-primary btn-compact flex-fill" :disabled="loadingKomp">Simpan</button>
+                            <div class="pt-3 d-flex gap-2">
+                                <button type="button" v-if="formKomp.id" @click="resetFormKomp" class="btn btn-outline-secondary fw-semibold py-2.5 flex-fill">Batal</button>
+                                <button type="submit" class="btn btn-primary fw-bold py-2.5 flex-fill" :disabled="loadingKomp">Simpan</button>
                             </div>
                         </form>
                     </div>
                 </div>
 
-                <!-- Tabel Komponen (Right: 70%) -->
-                <div class="panel-table">
-                    <div class="panel-header">
-                        <span class="fw-bold text-slate-800" style="font-size: 0.82rem;">Daftar Komponen Biaya</span>
-                    </div>
-                    <div class="panel-content p-0">
-                        <div class="table-compact-container">
-                            <table class="table table-hover table-compact table-bordered">
+                <!-- Tabel Komponen (Right: 8-cols) -->
+                <div class="col-12 col-lg-8 mb-4">
+                    <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                        <h5 class="fw-bold text-slate-800 mb-4 border-bottom pb-2">Daftar Komponen Biaya</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
                                 <thead>
                                     <tr>
                                         <th>Nama Komponen</th>
@@ -80,16 +75,16 @@
                                     <tr v-for="komp in komponenList" :key="komp.id">
                                         <td class="fw-bold text-slate-800">{{ komp.nama_komponen }}</td>
                                         <td>
-                                            <span class="badge rounded px-2 py-1 badge-custom" :class="getPeriodeBadgeClass(komp.tipe_periode)">
+                                            <span class="badge rounded px-3 py-2" :class="getPeriodeBadgeClass(komp.tipe_periode)">
                                                 {{ komp.tipe_periode }}
                                             </span>
                                         </td>
                                         <td class="text-center">
                                             <button @click="editKomponen(komp)" class="btn btn-link text-primary p-0 me-3" title="Edit">
-                                                <i class="bi bi-pencil-square"></i>
+                                                <i class="bi bi-pencil-square fs-5"></i>
                                             </button>
                                             <button @click="deleteKomponen(komp.id)" class="btn btn-link text-danger p-0" title="Hapus">
-                                                <i class="bi bi-trash"></i>
+                                                <i class="bi bi-trash fs-5"></i>
                                             </button>
                                         </td>
                                     </tr>
@@ -105,25 +100,23 @@
         </div>
 
         <!-- Tab 2: Tarif Acuan Default -->
-        <div class="tab-pane fade h-100" id="tarif-pane" role="tabpanel">
-            <div class="workspace-body">
-                <!-- Form Tarif (Left: 30%) -->
-                <div class="panel-form">
-                    <div class="panel-header">
-                        <span class="fw-bold text-slate-800" style="font-size: 0.82rem;">Tautkan Tarif Baru</span>
-                    </div>
-                    <div class="panel-content form-compact">
-                        <form @submit.prevent="saveTarif" class="d-flex flex-column h-100 gap-2">
+        <div class="tab-pane fade" id="tarif-pane" role="tabpanel">
+            <div class="row">
+                <!-- Form Tarif (Left: 4-cols) -->
+                <div class="col-12 col-lg-4 mb-4">
+                    <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                        <h5 class="fw-bold text-slate-800 mb-4 border-bottom pb-2">Tautkan Tarif Baru</h5>
+                        <form @submit.prevent="saveTarif" class="d-flex flex-column gap-3">
                             <div>
-                                <label class="form-label">Komponen Biaya <span class="text-danger">*</span></label>
-                                <select class="form-select" v-model="formTarif.komponen_id" required>
+                                <label class="form-label fw-semibold text-slate-700">Komponen Biaya <span class="text-danger">*</span></label>
+                                <select class="form-select border-slate-200" v-model="formTarif.komponen_id" required style="height: 42px;">
                                     <option value="" disabled>-- Pilih Komponen --</option>
                                     <option v-for="k in komponenList" :value="k.id">{{ k.nama_komponen }}</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="form-label">Tahun Ajaran <span class="text-danger">*</span></label>
-                                <select class="form-select" v-model="formTarif.tahun_ajaran_id" required>
+                                <label class="form-label fw-semibold text-slate-700">Tahun Ajaran <span class="text-danger">*</span></label>
+                                <select class="form-select border-slate-200" v-model="formTarif.tahun_ajaran_id" required style="height: 42px;">
                                     <option value="" disabled>-- Pilih Tahun Ajaran --</option>
                                     <option v-for="ta in listTa" :value="ta.id">
                                         {{ ta.tahun_ajaran }} {{ ta.status === 'Aktif' ? '(Aktif)' : '' }}
@@ -133,70 +126,68 @@
                             
                             <!-- Filter Target -->
                             <div>
-                                <label class="form-label">Target Penerapan Tarif</label>
-                                <div class="form-check mb-1">
+                                <label class="form-label fw-semibold text-slate-700">Target Penerapan Tarif</label>
+                                <div class="form-check mb-2">
                                     <input class="form-check-input" type="radio" name="targetRadio" id="radioGeneral" value="general" v-model="tarifTargetType" @change="resetTarifTargets">
-                                    <label class="form-check-label text-slate-700" style="font-size: 0.72rem;" for="radioGeneral">Seluruh Siswa (General)</label>
+                                    <label class="form-check-label text-slate-700 fw-medium" for="radioGeneral">Seluruh Siswa (General)</label>
                                 </div>
-                                <div class="form-check mb-1">
+                                <div class="form-check mb-2">
                                     <input class="form-check-input" type="radio" name="targetRadio" id="radioKelas" value="kelas" v-model="tarifTargetType" @change="resetTarifTargets">
-                                    <label class="form-check-label text-slate-700" style="font-size: 0.72rem;" for="radioKelas">Spesifik per Kelas</label>
+                                    <label class="form-check-label text-slate-700 fw-medium" for="radioKelas">Spesifik per Kelas</label>
                                 </div>
-                                <div class="form-check mb-1">
+                                <div class="form-check mb-2">
                                     <input class="form-check-input" type="radio" name="targetRadio" id="radioJenjang" value="jenjang" v-model="tarifTargetType" @change="resetTarifTargets">
-                                    <label class="form-check-label text-slate-700" style="font-size: 0.72rem;" for="radioJenjang">Spesifik per Jenjang</label>
+                                    <label class="form-check-label text-slate-700 fw-medium" for="radioJenjang">Spesifik per Jenjang</label>
                                 </div>
-                                <div class="form-check mb-1">
+                                <div class="form-check mb-2">
                                     <input class="form-check-input" type="radio" name="targetRadio" id="radioJalur" value="jalur" v-model="tarifTargetType" @change="resetTarifTargets">
-                                    <label class="form-check-label text-slate-700" style="font-size: 0.72rem;" for="radioJalur">Spesifik per Jalur Masuk PPDB</label>
+                                    <label class="form-check-label text-slate-700 fw-medium" for="radioJalur">Spesifik per Jalur Masuk</label>
                                 </div>
                             </div>
 
                             <!-- Dropdown dinamis target -->
                             <div v-if="tarifTargetType === 'kelas'">
-                                <label class="form-label">Pilih Kelas <span class="text-danger">*</span></label>
-                                <select class="form-select" v-model="formTarif.kelas_id" required>
+                                <label class="form-label fw-semibold text-slate-700">Pilih Kelas <span class="text-danger">*</span></label>
+                                <select class="form-select border-slate-200" v-model="formTarif.kelas_id" required style="height: 42px;">
                                     <option value="" disabled>-- Pilih Kelas --</option>
                                     <option v-for="c in listKelas" :value="c.id">{{ c.nama_kelas }}</option>
                                 </select>
                             </div>
 
                             <div v-if="tarifTargetType === 'jenjang'">
-                                <label class="form-label">Pilih Jenjang <span class="text-danger">*</span></label>
-                                <select class="form-select" v-model="formTarif.jenjang_id" required>
+                                <label class="form-label fw-semibold text-slate-700">Pilih Jenjang <span class="text-danger">*</span></label>
+                                <select class="form-select border-slate-200" v-model="formTarif.jenjang_id" required style="height: 42px;">
                                     <option value="" disabled>-- Pilih Jenjang --</option>
                                     <option v-for="j in listJenjang" :value="j.id">{{ j.nama_jenjang }}</option>
                                 </select>
                             </div>
 
                             <div v-if="tarifTargetType === 'jalur'">
-                                <label class="form-label">Jalur Masuk PPDB <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" v-model="formTarif.jalur_masuk" placeholder="Contoh: Prestasi, KIP, Reguler" required>
+                                <label class="form-label fw-semibold text-slate-700">Jalur Masuk PPDB <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control border-slate-200" v-model="formTarif.jalur_masuk" placeholder="Contoh: Prestasi, KIP, Reguler" required style="height: 42px;">
                             </div>
 
                             <div>
-                                <label class="form-label">Nominal Tarif (Rp) <span class="text-danger">*</span></label>
+                                <label class="form-label fw-semibold text-slate-700">Nominal Tarif (Rp) <span class="text-danger">*</span></label>
                                 <div class="input-group">
-                                    <span class="input-group-text bg-light fw-bold" style="font-size: 0.8rem;">Rp</span>
-                                    <input type="number" class="form-control" v-model="formTarif.nominal" placeholder="0" required>
+                                    <span class="input-group-text bg-light border-slate-200 fw-bold">Rp</span>
+                                    <input type="number" class="form-control border-slate-200" v-model="formTarif.nominal" placeholder="0" required style="height: 42px;">
                                 </div>
                             </div>
 
-                            <div class="mt-auto pt-2 border-top">
-                                <button type="submit" class="btn btn-primary btn-compact w-100" :disabled="loadingTarif">Simpan Tarif</button>
+                            <div class="pt-3">
+                                <button type="submit" class="btn btn-primary fw-bold w-100 py-2.5" :disabled="loadingTarif">Simpan Tarif</button>
                             </div>
                         </form>
                     </div>
                 </div>
 
-                <!-- Tabel Tarif (Right: 70%) -->
-                <div class="panel-table">
-                    <div class="panel-header">
-                        <span class="fw-bold text-slate-800" style="font-size: 0.82rem;">Daftar Tarif Default</span>
-                    </div>
-                    <div class="panel-content p-0">
-                        <div class="table-compact-container">
-                            <table class="table table-hover table-compact table-bordered">
+                <!-- Tabel Tarif (Right: 8-cols) -->
+                <div class="col-12 col-lg-8 mb-4">
+                    <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                        <h5 class="fw-bold text-slate-800 mb-4 border-bottom pb-2">Daftar Tarif Default</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
                                 <thead>
                                     <tr>
                                         <th>Komponen</th>
@@ -210,16 +201,16 @@
                                     <tr v-for="t in tarifList" :key="t.id">
                                         <td class="fw-bold text-slate-800">{{ t.nama_komponen }}</td>
                                         <td>
-                                            <span v-if="t.nama_kelas" class="badge bg-blue-100 text-blue-700 px-2 py-1 badge-custom">Kelas {{ t.nama_kelas }}</span>
-                                            <span v-else-if="t.nama_jenjang" class="badge bg-purple-100 text-purple-700 px-2 py-1 badge-custom">Jenjang {{ t.nama_jenjang }}</span>
-                                            <span v-else-if="t.jalur_masuk" class="badge bg-teal-100 text-teal-700 px-2 py-1 badge-custom">Jalur {{ t.jalur_masuk }}</span>
-                                            <span v-else class="badge bg-slate-100 text-slate-700 px-2 py-1 badge-custom">Semua Siswa</span>
+                                            <span v-if="t.nama_kelas" class="badge bg-blue-100 text-blue-700 px-3 py-2">Kelas {{ t.nama_kelas }}</span>
+                                            <span v-else-if="t.nama_jenjang" class="badge bg-purple-100 text-purple-700 px-3 py-2">Jenjang {{ t.nama_jenjang }}</span>
+                                            <span v-else-if="t.jalur_masuk" class="badge bg-teal-100 text-teal-700 px-3 py-2">Jalur {{ t.jalur_masuk }}</span>
+                                            <span v-else class="badge bg-slate-100 text-slate-700 px-3 py-2">Semua Siswa</span>
                                         </td>
                                         <td class="fw-semibold text-slate-700">Rp {{ formatNumber(t.nominal) }}</td>
                                         <td>{{ t.tahun_ajaran }}</td>
                                         <td class="text-center">
                                             <button @click="deleteTarif(t.id)" class="btn btn-link text-danger p-0" title="Hapus">
-                                                <i class="bi bi-trash"></i>
+                                                <i class="bi bi-trash fs-5"></i>
                                             </button>
                                         </td>
                                     </tr>
@@ -249,91 +240,7 @@
 </script>
 
 <style>
-/* CSS khusus untuk tata letak compact full-height */
-.workspace-container {
-    display: flex;
-    flex-direction: column;
-    height: calc(100vh - var(--header-height) - 1.5rem);
-    overflow: hidden;
-}
-.workspace-body {
-    display: flex;
-    flex-grow: 1;
-    overflow: hidden;
-    gap: 0.75rem;
-    min-height: 0;
-}
-.panel-form {
-    width: 30%;
-    min-width: 290px;
-    display: flex;
-    flex-direction: column;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
-    overflow: hidden;
-}
-.panel-table {
-    width: 70%;
-    display: flex;
-    flex-direction: column;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
-    overflow: hidden;
-    flex-grow: 1;
-    min-width: 0;
-}
-.panel-header {
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid #e2e8f0;
-    background-color: #f8fafc;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-.panel-content {
-    padding: 0.6rem 0.75rem;
-    overflow-y: auto;
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-}
-.form-compact .form-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #475569;
-    margin-bottom: 0.2rem;
-}
-.form-compact .form-control,
-.form-compact .form-select {
-    padding: 0.35rem 0.6rem;
-    font-size: 0.8rem;
-    border-radius: 6px;
-    border-color: #cbd5e1;
-    height: 32px;
-}
-.form-compact .input-group .form-control {
-    height: 32px;
-}
-.form-compact .input-group-text {
-    padding: 0.35rem 0.6rem;
-    font-size: 0.8rem;
-}
-.form-compact .btn-compact {
-    padding: 0.35rem 0.75rem;
-    font-size: 0.8rem;
-    border-radius: 6px;
-    font-weight: 600;
-    height: 32px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-/* Penyelarasan Navtabs Minimalis Modern (Flat Underline) */
+/* Styling Navtabs Minimalis Datar (Gambar 1) */
 .nav-tabs {
     border-bottom: 1px solid #e2e8f0 !important;
 }
@@ -346,7 +253,8 @@
     color: #64748b !important;
     font-weight: 600 !important;
     background: transparent !important;
-    padding: 0.5rem 1rem !important;
+    padding: 0.8rem 1.2rem !important;
+    font-size: 0.85rem !important;
     transition: all 0.15s ease-in-out;
 }
 .nav-tabs .nav-link:hover {
@@ -359,59 +267,40 @@
     background: transparent !important;
 }
 
-.table-compact-container {
-    overflow-y: auto;
-    flex-grow: 1;
-    min-height: 0;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 8px !important;
-    background: #ffffff;
-}
-.table-compact {
+/* Styling Tabel Modern Borderless (Gambar 1) */
+.table {
     border-collapse: collapse !important;
-    font-size: 0.8rem;
-    margin-bottom: 0;
     width: 100%;
 }
-.table-compact th {
+.table th {
     background-color: #f8fafc !important;
     color: #475569 !important;
     font-weight: 700 !important;
-    font-size: 0.72rem !important;
+    font-size: 0.75rem !important;
     text-transform: uppercase !important;
     letter-spacing: 0.05em !important;
-    position: sticky;
-    top: 0;
-    z-index: 10;
     border-bottom: 2px solid #e2e8f0 !important;
     border-top: none !important;
     border-left: none !important;
     border-right: none !important;
-    padding: 0.6rem 0.75rem !important;
+    padding: 0.75rem 1rem !important;
 }
-.table-compact td {
+.table td {
     border-bottom: 1px solid #f1f5f9 !important;
     border-top: none !important;
     border-left: none !important;
     border-right: none !important;
-    padding: 0.52rem 0.75rem !important;
-    vertical-align: middle;
-    white-space: nowrap;
+    padding: 0.85rem 1rem !important;
+    font-size: 0.8rem !important;
     color: #334155 !important;
-    background-color: transparent !important;
 }
-.table-compact tbody tr {
+.table tbody tr {
     transition: background-color 0.15s ease;
 }
-.table-compact tbody tr:hover {
+.table tbody tr:hover {
     background-color: #f8fafc !important;
 }
-.badge-custom {
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-}
+
 .fs-7 { font-size: 0.85rem; }
 .text-slate-700 { color: #334155; }
 .text-slate-800 { color: #1e293b; }
@@ -423,36 +312,6 @@
 .bg-teal-100 { background-color: #ccfbf1; }
 .text-teal-700 { color: #0f766e; }
 .bg-slate-100 { background-color: #f1f5f9; }
-
-/* Responsive Mobile Stack (HP) */
-@media (max-width: 767.98px) {
-    .workspace-container {
-        height: auto !important;
-        overflow: visible !important;
-    }
-    .workspace-body {
-        flex-direction: column !important;
-        height: auto !important;
-        overflow: visible !important;
-    }
-    .panel-form {
-        width: 100% !important;
-        min-width: auto !important;
-        overflow: visible !important;
-        margin-bottom: 1rem !important;
-    }
-    .panel-table {
-        width: 100% !important;
-        overflow: visible !important;
-    }
-    .table-compact-container {
-        overflow-y: visible !important;
-        overflow-x: auto !important;
-    }
-    .table-compact th {
-        position: static !important;
-    }
-}
 </style>
 
 <script>

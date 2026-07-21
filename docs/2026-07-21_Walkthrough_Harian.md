@@ -199,6 +199,24 @@ Menerapkan gaya navigasi tabs minimalis dan tabel borderless tanpa garis kisi ve
    - Warna latar header kolom di-set ke abu-abu tipis (#f8fafc) dengan format tulisan kapital (uppercase), tebal, dan warna abu-abu gelap (#475569) agar kontras.
    - Menambahkan efek hover transisi warna baris yang halus ke `#f8fafc`.
 
+---
+## [Pengembalian Layout Halaman Keuangan ke Desain Card Native SINTA-SaaS]
+**Waktu**: 16:30 WIB
+**Jenis**: UI-UX Restoration
+
+### Ringkasan Pekerjaan:
+Mengembalikan struktur layout 7 halaman keuangan dari gaya side-by-side flex split-panels fixed-height (Gambar 2) ke layout card standard Bootstrap page-scrolling native (Gambar 1):
+1. **Pelepasan Boxed Panels & Fixed Height**:
+   - Menghapus pembungkus `.workspace-container` dan `.workspace-body` yang membatasi tinggi layar viewport secara paksa dan mematikan overflow.
+   - Mengembalikan layout agar bergulir (scrolling) secara alami mengikuti tinggi dokumen halaman browser, menghilangkan scrollbar ganda.
+2. **Restorasi Gaya Card SINTA-SaaS (Gambar 1)**:
+   - Memposisikan ulang form input dan tabel data ke dalam kartu standard Bootstrap (`card border-0 shadow-sm rounded-4 bg-white p-4 mb-4`) yang terbuka, bersih, dan menggunakan bayangan lembut.
+   - Menghilangkan header bar kartu abu-abu (`.panel-header`) yang kaku dan menggantinya dengan border tipis atau judul teks heading standard yang serasi.
+3. **Penyelarasan Desain Custom Underline Tabs & Tabel Tanpa Kisi Vertikal**:
+   - Memastikan tab navigasi custom flat underline yang rapi (garis bawah biru pada status aktif, tanpa folder border Bootstrap) tetap terjaga.
+   - Mempertahankan format tabel yang luas, bersih, dan modern tanpa garis pembatas vertikal dengan warna latar header `#f8fafc` sesuai referensi visual Gambar 1.
+
+
 
 
 
