@@ -92,4 +92,24 @@ Menghapus baris `<?php include __DIR__ . '/../layout/footer.php'; ?>` pada baris
 2. **Clock Initialization & Interval Cleanup**:
    Mengubah pembungkus inisialisasi jam `initHeaderClock()` di `views/layout/header.php` agar mengecek `document.readyState` dan langsung berjalan tanpa menunggu `DOMContentLoaded` jika dokumen sudah siap. Sebelum mendaftarkan interval waktu baru, skrip kini secara dinamis menghapus interval sebelumnya (`window.headerClockInterval`) untuk mencegah instansi ganda (leak) akibat eksekusi skrip berulang oleh Turbo.
 
+---
+## [Perbaikan Desain Double Header Modul Keuangan]
+**Waktu**: 11:00 WIB
+**Jenis**: Bug Fix
+
+### Masalah (Root Cause):
+Master layout utama aplikasi (`views/layout/master.php`) sudah menyertakan header global (`views/layout/header.php`) secara otomatis untuk semua halaman (baris 719). Namun, kedelapan (8) view baru pada modul keuangan juga melakukan include `views/layout/header.php` secara manual di baris pertama file. Hal ini menyebabkan komponen header dirender dua kali (double header), sehingga memicu kesalahan validasi DOM berupa duplikasi ID elemen formulir pencarian (`globalSearchBar`) serta gangguan rendering visual.
+
+### Perbaikan:
+Menghapus baris `<?php include __DIR__ . '/../layout/header.php'; ?>` (atau padanannya) pada baris pertama di kedelapan file view keuangan:
+1. `views/keuangan/dashboard.php`
+2. `views/keuangan/generate.php`
+3. `views/keuangan/kasir.php`
+4. `views/keuangan/keringanan.php`
+5. `views/keuangan/laporan.php`
+6. `views/keuangan/master.php`
+7. `views/keuangan/pengaturan.php`
+8. `views/keuangan/tagihan_saya.php`
+
+
 
