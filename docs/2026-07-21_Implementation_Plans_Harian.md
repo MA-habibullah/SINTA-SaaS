@@ -537,3 +537,36 @@ return [
 - Menjalankan `php migrate.php` di CLI untuk mengeksekusi seeder.
 - Menjalankan kueri SQL pengecekan isi tabel untuk memastikan records terisi penuh secara dinamis sesuai relasi sekolah, kelas, dan siswa masing-masing.
 
+---
+## [Redesain Layout Dashboard & Area Kerja Compact Full-Screen 30:70 Split]
+**Waktu**: 12:06 WIB
+**Status**: Draft
+
+### Latar Belakang
+Pada modul Keuangan dan Pembayaran aplikasi SINTA-SaaS, tata letak area konten utama (body content) saat ini menyisakan ruang putih kosong yang luas di bagian bawah layar. Pengguna membutuhkan redesain antarmuka agar elemen-elemen form input dan tabel tersaji secara terpadu, lebih padat (compact), responsif, dan membentang penuh mengisi tinggi layar kerja yang tersedia (full-screen layout), dengan rasio pembagian kolom 30% Form Input (kiri) dan 70% Tabel Data (kanan).
+
+### Proposed Changes
+
+#### [NEW] [test_compact_layout.php](file:///C:/xampp/htdocs/SINTA-SaaS/scratch/test_compact_layout.php)
+
+Mockup halaman pengujian mandiri di folder `scratch/` untuk memvalidasi struktur HTML/CSS compact layout sebelum diterapkan ke view operasional aplikasi.
+
+#### Rincian Desain & Struktur CSS:
+1. **Navigasi Sidebar**: Tetap menyertakan 8 menu utama modul keuangan (Dashboard Keuangan, Atur Tarif & Biaya, Keringanan & Beasiswa, Generate Tagihan, Loket Pembayaran, Laporan Keuangan, Pengaturan Keuangan, Tagihan Saya).
+2. **Kepadatan Informasi (Compactness)**:
+   - Margin dan padding elemen dikurangi (misal: padding panel 0.75rem, padding sel tabel 0.4rem).
+   - Ukuran font teks 0.8rem dan label 0.75rem untuk efisiensi ruang pandang.
+   - Form input berukuran ramping (input height dikurangi, border radius 6px).
+   - Tabel rapat (`table-compact` dengan status `table-sm`).
+3. **Grid System & Full-Height Layout**:
+   - Kontainer induk menggunakan flex-direction vertical setinggi `calc(100vh - var(--header-height) - 3rem)`.
+   - Scrollbar global disembunyikan (`overflow: hidden` pada container utama), dan scrollbar diaktifkan secara internal hanya pada kontainer bodi tabel (`overflow-y: auto`). Hal ini membuat header tabel bersifat melayang (`position: sticky`) saat data ditarik ke bawah.
+4. **Rasio Kolom 30:70**:
+   - Kolom Kiri: Panel form input (`width: 30%`).
+   - Kolom Kanan: Panel tabel grid data (`width: 70%`).
+
+### Verification Plan
+- Membuat berkas visualisasi layout di `scratch/test_compact_layout.php`.
+- Membuka halaman visualisasi di browser lokal untuk memvalidasi pemakaian sisa ruang vertikal layar, keterbacaan font kecil, kelancaran scroll internal tabel, dan responsivitas grid saat ukuran jendela diperkecil.
+
+
