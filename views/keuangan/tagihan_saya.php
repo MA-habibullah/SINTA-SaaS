@@ -1,5 +1,4 @@
 <?php
-include __DIR__ . '/../layout/header.php';
 
 $db = \App\Config\Database::getConnection();
 $tenantId = $_SESSION['tenant_id'] ?? '';

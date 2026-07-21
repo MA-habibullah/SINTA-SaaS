@@ -1,4 +1,3 @@
-<?php include __DIR__ . '/../layout/header.php'; ?>
 
 <div id="keuangan-generate-app" v-cloak class="container-fluid px-4 py-4">
     <div class="row">
