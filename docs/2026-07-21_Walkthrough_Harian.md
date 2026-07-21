@@ -182,6 +182,24 @@ Mendesain ulang 7 berkas tampilan keuangan berikut agar konsisten dengan `master
 6. **`pengaturan.php`**: Mengemas konfigurasi nama modul, terminologi, dan visibilitas siswa ke dalam `.panel-form` compact di tengah halaman dengan elemen masukan 32px.
 7. **`tagihan_saya.php`**: Merampingkan visualisasi profil siswa, menaruh metrik tagihan/tunggakan ke dalam kartu compact, dan menampilkan rincian dalam format `.table-compact` yang bersahabat untuk layar HP siswa.
 
+---
+## [Penyelarasan Desain Navtabs & Tabel Modul Keuangan]
+**Waktu**: 16:15 WIB
+**Jenis**: UI-UX Refinement
+
+### Ringkasan Pekerjaan:
+Menerapkan gaya navigasi tabs minimalis dan tabel borderless tanpa garis kisi vertikal di seluruh view modul keuangan:
+1. **Navtabs Minimalis (Flat Underline)**:
+   - Diterapkan pada `master.php` dan `laporan.php`.
+   - Menghapus outline border kotak bawaan Bootstrap, menyisakan garis bawah tipis (`1px solid #e2e8f0`).
+   - Memberikan indikator garis bawah biru tebal (`2px solid #2563eb`) dan teks biru tebal pada tab yang berstatus aktif, serta warna slate-gray yang bersih pada tab tidak aktif.
+2. **Borderless Table (`table-compact`)**:
+   - Diterapkan pada `master.php`, `keringanan.php`, `laporan.php`, `dashboard.php`, `kasir.php`, dan `tagihan_saya.php`.
+   - Menghilangkan garis kisi vertikal (hanya menyisakan garis bawah horizontal tipis `#f1f5f9`).
+   - Warna latar header kolom di-set ke abu-abu tipis (#f8fafc) dengan format tulisan kapital (uppercase), tebal, dan warna abu-abu gelap (#475569) agar kontras.
+   - Menambahkan efek hover transisi warna baris yang halus ke `#f8fafc`.
+
+
 
 
 

@@ -296,29 +296,48 @@
     overflow-y: auto;
     flex-grow: 1;
     min-height: 0;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    background: #ffffff;
 }
 .table-compact {
+    border-collapse: collapse !important;
     font-size: 0.8rem;
     margin-bottom: 0;
     width: 100%;
 }
 .table-compact th {
-    background-color: #f1f5f9;
-    color: #334155;
-    font-weight: 600;
+    background-color: #f8fafc !important;
+    color: #475569 !important;
+    font-weight: 700 !important;
+    font-size: 0.72rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
     position: sticky;
     top: 0;
     z-index: 10;
-    border-bottom: 2px solid #cbd5e1;
-    padding: 0.5rem 0.75rem;
+    border-bottom: 2px solid #e2e8f0 !important;
+    border-top: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    padding: 0.6rem 0.75rem !important;
 }
 .table-compact td {
-    padding: 0.4rem 0.75rem;
+    border-bottom: 1px solid #f1f5f9 !important;
+    border-top: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    padding: 0.52rem 0.75rem !important;
     vertical-align: middle;
-    border-bottom: 1px solid #e2e8f0;
     white-space: nowrap;
+    color: #334155 !important;
+    background-color: transparent !important;
+}
+.table-compact tbody tr {
+    transition: background-color 0.15s ease;
+}
+.table-compact tbody tr:hover {
+    background-color: #f8fafc !important;
 }
 .badge-custom {
     font-size: 0.7rem;
@@ -332,7 +351,7 @@
 .bg-blue-100 { background-color: #dbeafe; }
 .text-blue-700 { color: #1d4ed8; }
 .border-slate-200 { border-color: #e2e8f0; }
-.table-info-light { background-color: #f0f7ff !important; }
+.table-info-light { background-color: #f8fafc !important; }
 
 /* Responsive Mobile Stack (HP) */
 @media (max-width: 767.98px) {

@@ -665,5 +665,119 @@ Setiap halaman akan mengimplementasikan model:
     - Pastikan seluruh halaman otomatis bertumpuk (stacked) secara vertikal dengan lebar 100%.
     - Pastikan data tabel dapat digeser secara horizontal jika melebihi lebar layar, dan halaman browser luar dapat di-scroll vertikal secara natural.
 
+---
+## [Penyelarasan Gaya Navtabs & Tabel Modul Keuangan SINTA-SaaS]
+**Waktu**: 16:10 WIB
+**Status**: Draft
+
+# Rencana Implementasi: Penyelarasan Gaya Navtabs & Tabel Modul Keuangan SINTA-SaaS
+
+Rencana ini bertujuan menyelaraskan gaya **Navigasi Tabs (Navtabs)** dan **Tabel Data (Tables)** di seluruh halaman modul Keuangan & Pembayaran agar serupa dengan visual pada halaman Manajemen Pengguna (flat minimalis modern):
+1.  **Navtabs**: Menghapus outline tab folder default Bootstrap. Menggunakan gaya underline datar (flat underline) di mana tab yang aktif hanya diberi garis bawah biru (`2px solid #2563eb`) dan teks biru, sedangkan tab tidak aktif memiliki border bawah transparan dan teks slate-gray.
+2.  **Tables**: Menghapus garis kisi vertikal, menggunakan latar header `#f8fafc` dengan teks uppercase slate-gray, memberikan garis pembatas bawah baris yang sangat tipis (`1px solid #f1f5f9`), serta menambahkan efek hover row yang halus.
+
+---
+
+## Target Berkas yang Diubah
+
+Kami akan memperbarui bagian CSS `<style>` pada berkas-berkas berikut:
+1.  **Atur Tarif & Biaya** (`views/keuangan/master.php`)
+2.  **Keringanan & Beasiswa** (`views/keuangan/keringanan.php`)
+3.  **Laporan Keuangan** (`views/keuangan/laporan.php`)
+4.  **Dashboard Keuangan** (`views/keuangan/dashboard.php`)
+5.  **Loket Pembayaran Kasir** (`views/keuangan/kasir.php`)
+6.  **Tagihan Saya (Dashboard Siswa)** (`views/keuangan/tagihan_saya.php`)
+
+---
+
+## Detail Perubahan CSS untuk Penyelarasan Desain
+
+Kami akan menambahkan/memperbarui CSS berikut ke dalam blok `<style>` masing-masing berkas view di atas:
+
+### A. Penyelarasan Navtabs
+```css
+/* Penyelarasan Navtabs Minimalis Modern (Flat Underline) */
+.nav-tabs {
+    border-bottom: 1px solid #e2e8f0 !important;
+}
+.nav-tabs .nav-item {
+    margin-bottom: -1px;
+}
+.nav-tabs .nav-link {
+    border: none !important;
+    border-bottom: 2px solid transparent !important;
+    color: #64748b !important;
+    font-weight: 600 !important;
+    background: transparent !important;
+    padding: 0.6rem 1rem !important;
+    transition: all 0.15s ease-in-out;
+}
+.nav-tabs .nav-link:hover {
+    color: #1e293b !important;
+    border-bottom-color: #cbd5e1 !important;
+}
+.nav-tabs .nav-link.active {
+    color: #2563eb !important;
+    border-bottom-color: #2563eb !important;
+    background: transparent !important;
+}
+```
+
+### B. Penyelarasan Tabel (`.table-compact`)
+```css
+/* Penyelarasan Tabel Minimalis Tanpa Garis Vertikal */
+.table-compact-container {
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    overflow: hidden;
+    background: #ffffff;
+}
+.table-compact {
+    border-collapse: collapse !important;
+}
+.table-compact th {
+    background-color: #f8fafc !important;
+    color: #475569 !important;
+    font-weight: 700 !important;
+    font-size: 0.72rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+    border-top: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    padding: 0.6rem 0.75rem !important;
+}
+.table-compact td {
+    border-bottom: 1px solid #f1f5f9 !important;
+    border-top: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    padding: 0.52rem 0.75rem !important;
+    font-size: 0.78rem !important;
+    color: #334155 !important;
+    background-color: transparent !important;
+}
+.table-compact tbody tr {
+    transition: background-color 0.15s ease;
+}
+.table-compact tbody tr:hover {
+    background-color: #f8fafc !important;
+}
+```
+
+---
+
+## Rencana Pengujian & Verifikasi
+
+### Manual Verification
+1.  **Verifikasi Tab**:
+    - Klik tab di halaman Atur Tarif & Biaya (`master.php`) dan Laporan Keuangan (`laporan.php`).
+    - Pastikan perpindahan tab mulus dengan indikator garis bawah biru tanpa border kotak folder bawaan Bootstrap.
+2.  **Verifikasi Tabel**:
+    - Buka Loket Kasir, Keringanan, Laporan, Dashboard, dan Tagihan Saya.
+    - Pastikan semua tabel data tidak memiliki border tegak lurus (vertikal), memiliki warna latar header abu-abu tipis dengan teks kapital (uppercase), dan border bawah sel sangat halus.
+
+
 
 
