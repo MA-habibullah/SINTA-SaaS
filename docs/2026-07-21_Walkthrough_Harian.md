@@ -254,3 +254,20 @@ Hal ini memicu eksekusi kueri `INSERT` atau `UPDATE` dengan nilai `tenant_id = '
 5. **Dynamic Filters & Pagination**:
    - Mengubah filter teks komponen menjadi dropdown pilihan Jenis Komponen Biaya dinamis di [views/keuangan/laporan.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/laporan.php).
    - Mengintegrasikan navigasi halaman (pagination) client-side yang interaktif pada seluruh tabel utama keuangan di Master, Keringanan, Laporan, dan Tagihan Saya.
+
+---
+## [Perbaikan Tampilan Pagination (Sliding Window / Ellipsis)]
+**Waktu**: 17:25 WIB
+**Jenis**: Bug Fix / UI-UX Refinement
+
+### Masalah (Root Cause):
+Pencetakan tombol navigasi halaman (pagination) numerik sebelumnya merender seluruh total halaman secara berurutan (`v-for="p in totalPages"`). Ketika data berjumlah sangat banyak (misal ratusan halaman), jumlah tombol numerik yang tercetak melebar melampaui lebar wadah tabel (overflow horizontal) sehingga merusak estetika desain web dan fungsionalitas responsif.
+
+### Perbaikan:
+1. Menambahkan fungsi helper `getVisiblePages(current, total)` di setup Vue di masing-masing file view yang memiliki pagination. Fungsi ini membatasi jumlah tombol numerik yang ditampilkan secara dinamis di sekitar halaman aktif (dengan delta 2) dan mengganti halaman perantara yang jauh menggunakan tanda elipsis `...`.
+2. Menerapkan perubahan markup pagination dan computed property `visiblePages` / `visibleKompPages` / `visibleTarifPages` / `visibleKeringananPages` di empat berkas view operasional:
+   - **`views/keuangan/master.php`**
+   - **`views/keuangan/keringanan.php`**
+   - **`views/keuangan/laporan.php`**
+   - **`views/keuangan/tagihan_saya.php`**
+3. Menambahkan status `disabled` pada tombol elipsis `...` agar tidak dapat diklik dan merespons interaksi dengan tepat.

@@ -154,8 +154,9 @@
                                     <li class="page-item" :class="{ disabled: kompPage === 1 }">
                                         <a class="page-link" href="#" @click.prevent="kompPage--">Sebelumnya</a>
                                     </li>
-                                    <li class="page-item" v-for="p in totalKompPages" :key="p" :class="{ active: kompPage === p }">
-                                        <a class="page-link" href="#" @click.prevent="kompPage = p">{{ p }}</a>
+                                    <li class="page-item" v-for="p in visibleKompPages" :key="p" :class="{ active: kompPage === p, disabled: p === '...' }">
+                                        <span v-if="p === '...'" class="page-link">...</span>
+                                        <a v-else class="page-link" href="#" @click.prevent="kompPage = p">{{ p }}</a>
                                     </li>
                                     <li class="page-item" :class="{ disabled: kompPage === totalKompPages }">
                                         <a class="page-link" href="#" @click.prevent="kompPage++">Berikutnya</a>
@@ -298,8 +299,9 @@
                                     <li class="page-item" :class="{ disabled: tarifPage === 1 }">
                                         <a class="page-link" href="#" @click.prevent="tarifPage--">Sebelumnya</a>
                                     </li>
-                                    <li class="page-item" v-for="p in totalTarifPages" :key="p" :class="{ active: tarifPage === p }">
-                                        <a class="page-link" href="#" @click.prevent="tarifPage = p">{{ p }}</a>
+                                    <li class="page-item" v-for="p in visibleTarifPages" :key="p" :class="{ active: tarifPage === p, disabled: p === '...' }">
+                                        <span v-if="p === '...'" class="page-link">...</span>
+                                        <a v-else class="page-link" href="#" @click.prevent="tarifPage = p">{{ p }}</a>
                                     </li>
                                     <li class="page-item" :class="{ disabled: tarifPage === totalTarifPages }">
                                         <a class="page-link" href="#" @click.prevent="tarifPage++">Berikutnya</a>
@@ -561,6 +563,43 @@ window.VueAppRegistry.register('#keuangan-master-app', {
             return Math.ceil(filteredTarif.value.length / tarifPageSize.value) || 1;
         });
 
+        const getVisiblePages = (current, total) => {
+            const delta = 2;
+            const left = current - delta;
+            const right = current + delta + 1;
+            const range = [];
+            const rangeWithDots = [];
+            let l;
+
+            for (let i = 1; i <= total; i++) {
+                if (i === 1 || i === total || (i >= left && i < right)) {
+                    range.push(i);
+                }
+            }
+
+            for (const i of range) {
+                if (l) {
+                    if (i - l === 2) {
+                        rangeWithDots.push(l + 1);
+                    } else if (i - l > 2) {
+                        rangeWithDots.push('...');
+                    }
+                }
+                rangeWithDots.push(i);
+                l = i;
+            }
+
+            return rangeWithDots;
+        };
+
+        const visibleKompPages = Vue.computed(() => {
+            return getVisiblePages(kompPage.value, totalKompPages.value);
+        });
+
+        const visibleTarifPages = Vue.computed(() => {
+            return getVisiblePages(tarifPage.value, totalTarifPages.value);
+        });
+
         // Reset form components
         const resetFormKomp = () => {
             formKomp.value = { id: 0, nama_komponen: '', tipe_periode: 'Bulanan', is_active: 1 };
@@ -715,7 +754,9 @@ window.VueAppRegistry.register('#keuangan-master-app', {
             saveTarif,
             deleteTarif,
             getPeriodeBadgeClass,
-            formatNumber
+            formatNumber,
+            visibleKompPages,
+            visibleTarifPages
         };
     }
 });

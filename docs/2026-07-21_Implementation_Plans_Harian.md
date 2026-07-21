@@ -827,7 +827,29 @@ Pengguna meminta penambahan fitur SaaS profesional untuk peran `super_admin` aga
 - Menguji login super_admin untuk melihat sinkronisasi persistensi dropdown tenant menggunakan `localStorage` di lintas halaman keuangan.
 - Memastikan pagination berjalan mulus dan status sakelar komponen biaya ter-update langsung ke database.
 
+---
+## [Perbaikan Tampilan Pagination (Sliding Window / Ellipsis)]
+**Waktu**: 17:23 WIB
+**Status**: Dieksekusi
 
+### Latar Belakang & Analisis Masalah
+Saat jumlah halaman pada tabel data keuangan (Komponen Biaya, Tarif Acuan, Keringanan, Laporan, Tagihan Saya) bertambah sangat banyak (misal mencapai ratusan halaman), tombol pagination numerik yang dicetak menggunakan list per halaman (`v-for="p in totalPages"`) melebar melampaui lebar layar container (overflow horizontal), merusak desain antarmuka, dan mengganggu responsive layout.
 
+### Proposed Changes
 
+#### [MODIFY] [master.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/master.php)
+- Mengganti loop pencetakan tombol pagination langsung dari `totalKompPages` dan `totalTarifPages` ke `visibleKompPages` dan `visibleTarifPages`.
+- Menambahkan fungsi helper `getVisiblePages` pada Vue setup untuk menghitung kisaran tombol halaman (sliding window) di sekitar halaman saat ini dengan penambahan tombol ellipsis `...` apabila jarak halaman melebihi batas.
 
+#### [MODIFY] [keringanan.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/keringanan.php)
+- Mengimplementasikan `getVisiblePages` helper dan computed property `visibleKeringananPages` untuk batasan jumlah tombol halaman.
+
+#### [MODIFY] [laporan.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/laporan.php)
+- Mengimplementasikan `getVisiblePages` helper dan computed property `visiblePages` pada tabel transaksi/tunggakan keuangan.
+
+#### [MODIFY] [tagihan_saya.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/tagihan_saya.php)
+- Mengimplementasikan `getVisiblePages` helper dan computed property `visiblePages` pada tabel rincian tagihan personal siswa.
+
+### Rencana Verifikasi & Pengujian
+- Menjalankan syntax checking `php -l` di terminal untuk menjamin integritas kode.
+- Menguji kelancaran interaksi tombol halaman numerik, tombol "Sebelumnya", "Berikutnya", dan status tombol `...` yang dinonaktifkan (`disabled`).

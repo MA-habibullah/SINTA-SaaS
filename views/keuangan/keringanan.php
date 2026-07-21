@@ -156,8 +156,9 @@
                             <li class="page-item" :class="{ disabled: currentPage === 1 }">
                                 <a class="page-link" href="#" @click.prevent="currentPage--">Sebelumnya</a>
                             </li>
-                            <li class="page-item" v-for="p in totalKeringananPages" :key="p" :class="{ active: currentPage === p }">
-                                <a class="page-link" href="#" @click.prevent="currentPage = p">{{ p }}</a>
+                            <li class="page-item" v-for="p in visibleKeringananPages" :key="p" :class="{ active: currentPage === p, disabled: p === '...' }">
+                                <span v-if="p === '...'" class="page-link">...</span>
+                                <a v-else class="page-link" href="#" @click.prevent="currentPage = p">{{ p }}</a>
                             </li>
                             <li class="page-item" :class="{ disabled: currentPage === totalKeringananPages }">
                                 <a class="page-link" href="#" @click.prevent="currentPage++">Berikutnya</a>
@@ -408,6 +409,39 @@ window.VueAppRegistry.register('#keuangan-keringanan-app', {
             return Math.ceil(filteredKeringanan.value.length / pageSize.value) || 1;
         });
 
+        const getVisiblePages = (current, total) => {
+            const delta = 2;
+            const left = current - delta;
+            const right = current + delta + 1;
+            const range = [];
+            const rangeWithDots = [];
+            let l;
+
+            for (let i = 1; i <= total; i++) {
+                if (i === 1 || i === total || (i >= left && i < right)) {
+                    range.push(i);
+                }
+            }
+
+            for (const i of range) {
+                if (l) {
+                    if (i - l === 2) {
+                        rangeWithDots.push(l + 1);
+                    } else if (i - l > 2) {
+                        rangeWithDots.push('...');
+                    }
+                }
+                rangeWithDots.push(i);
+                l = i;
+            }
+
+            return rangeWithDots;
+        };
+
+        const visibleKeringananPages = Vue.computed(() => {
+            return getVisiblePages(currentPage.value, totalKeringananPages.value);
+        });
+
         const formatNumber = (num) => {
             return new Intl.NumberFormat('id-ID').format(num);
         };
@@ -444,6 +478,7 @@ window.VueAppRegistry.register('#keuangan-keringanan-app', {
             filteredKeringanan,
             paginatedKeringanan,
             totalKeringananPages,
+            visibleKeringananPages,
             formatNumber
         };
     }

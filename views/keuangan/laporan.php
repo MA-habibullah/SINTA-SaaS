@@ -149,8 +149,9 @@
                     <li class="page-item" :class="{ disabled: currentPage === 1 }">
                         <a class="page-link" href="#" @click.prevent="currentPage--">Sebelumnya</a>
                     </li>
-                    <li class="page-item" v-for="p in totalPages" :key="p" :class="{ active: currentPage === p }">
-                        <a class="page-link" href="#" @click.prevent="currentPage = p">{{ p }}</a>
+                    <li class="page-item" v-for="p in visiblePages" :key="p" :class="{ active: currentPage === p, disabled: p === '...' }">
+                        <span v-if="p === '...'" class="page-link">...</span>
+                        <a v-else class="page-link" href="#" @click.prevent="currentPage = p">{{ p }}</a>
                     </li>
                     <li class="page-item" :class="{ disabled: currentPage === totalPages }">
                         <a class="page-link" href="#" @click.prevent="currentPage++">Berikutnya</a>
@@ -351,6 +352,39 @@ window.VueAppRegistry.register('#keuangan-laporan-app', {
             return Math.ceil(filteredList.value.length / pageSize.value) || 1;
         });
 
+        const getVisiblePages = (current, total) => {
+            const delta = 2;
+            const left = current - delta;
+            const right = current + delta + 1;
+            const range = [];
+            const rangeWithDots = [];
+            let l;
+
+            for (let i = 1; i <= total; i++) {
+                if (i === 1 || i === total || (i >= left && i < right)) {
+                    range.push(i);
+                }
+            }
+
+            for (const i of range) {
+                if (l) {
+                    if (i - l === 2) {
+                        rangeWithDots.push(l + 1);
+                    } else if (i - l > 2) {
+                        rangeWithDots.push('...');
+                    }
+                }
+                rangeWithDots.push(i);
+                l = i;
+            }
+
+            return rangeWithDots;
+        };
+
+        const visiblePages = Vue.computed(() => {
+            return getVisiblePages(currentPage.value, totalPages.value);
+        });
+
         // Export to Excel simple layout
         const exportToExcel = () => {
             let html = '<table>';
@@ -426,6 +460,7 @@ window.VueAppRegistry.register('#keuangan-laporan-app', {
             pageSize,
             paginatedList,
             totalPages,
+            visiblePages,
             setTipe,
             onTenantChange,
             exportToExcel,
