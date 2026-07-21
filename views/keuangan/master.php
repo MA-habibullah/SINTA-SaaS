@@ -378,6 +378,36 @@
 .bg-teal-100 { background-color: #ccfbf1; }
 .text-teal-700 { color: #0f766e; }
 .bg-slate-100 { background-color: #f1f5f9; }
+
+/* Responsive Mobile Stack (HP) */
+@media (max-width: 767.98px) {
+    .workspace-container {
+        height: auto !important;
+        overflow: visible !important;
+    }
+    .workspace-body {
+        flex-direction: column !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+    .panel-form {
+        width: 100% !important;
+        min-width: auto !important;
+        overflow: visible !important;
+        margin-bottom: 1rem !important;
+    }
+    .panel-table {
+        width: 100% !important;
+        overflow: visible !important;
+    }
+    .table-compact-container {
+        overflow-y: visible !important;
+        overflow-x: auto !important;
+    }
+    .table-compact th {
+        position: static !important;
+    }
+}
 </style>
 
 <script>

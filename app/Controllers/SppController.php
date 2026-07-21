@@ -12,6 +12,44 @@ class SppController extends BaseController {
         SessionManager::requireLogin();
     }
 
+    private $parsedJsonBody = null;
+
+    /**
+     * Resolve Tenant ID dynamically for both normal tenants and super_admin
+     */
+    private function resolveTenantId(): string {
+        $role = $_SESSION['role_name'] ?? '';
+        if ($role === 'super_admin') {
+            // 1. Direct GET parameter
+            if (!empty($_GET['tenant_id'])) {
+                return $_GET['tenant_id'];
+            }
+            // 2. Direct POST parameter
+            if (!empty($_POST['tenant_id'])) {
+                return $_POST['tenant_id'];
+            }
+            // 3. JSON body input
+            if ($this->parsedJsonBody === null) {
+                $this->parsedJsonBody = json_decode(file_get_contents('php://input'), true) ?? [];
+            }
+            if (!empty($this->parsedJsonBody['tenant_id'])) {
+                return $this->parsedJsonBody['tenant_id'];
+            }
+            // 4. Referer URL query string (for AJAX requests)
+            if (!empty($_SERVER['HTTP_REFERER'])) {
+                $parts = parse_url($_SERVER['HTTP_REFERER']);
+                if (!empty($parts['query'])) {
+                    parse_str($parts['query'], $query);
+                    if (!empty($query['tenant_id'])) {
+                        return $query['tenant_id'];
+                    }
+                }
+            }
+        }
+        return $_SESSION['tenant_id'] ?? '';
+    }
+
+
     // ----------------------------------------------------
     // PAGE RENDERERS
     // ----------------------------------------------------
@@ -37,7 +75,7 @@ class SppController extends BaseController {
 
     public function keringanan(): void {
         $db = Database::getConnection();
-        $tenantId = $_SESSION['tenant_id'] ?? '';
+        $tenantId = $this->resolveTenantId();
         $komponen = $db->query("SELECT id, nama_komponen FROM transaksi_spp_komponen WHERE tenant_id = '{$tenantId}' ORDER BY nama_komponen ASC")->fetchAll(PDO::FETCH_ASSOC);
 
         $this->render('keuangan/keringanan', [
@@ -48,7 +86,7 @@ class SppController extends BaseController {
 
     public function generate(): void {
         $db = Database::getConnection();
-        $tenantId = $_SESSION['tenant_id'] ?? '';
+        $tenantId = $this->resolveTenantId();
         
         $kelas = $db->query("SELECT id, nama_kelas FROM kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
         $jenjang = $db->query("SELECT id, nama_jenjang FROM jenjang ORDER BY nama_jenjang ASC")->fetchAll(PDO::FETCH_ASSOC);
@@ -86,7 +124,7 @@ class SppController extends BaseController {
 
     // API: Dashboard Metrics
     public function apiDashboardMetrics(): void {
-        $tenantId = $_SESSION['tenant_id'] ?? '';
+        $tenantId = $this->resolveTenantId();
         $db = Database::getConnection();
 
         try {
@@ -151,7 +189,7 @@ class SppController extends BaseController {
 
     // API: CRUD Komponen Biaya
     public function apiKomponen(): void {
-        $tenantId = $_SESSION['tenant_id'] ?? '';
+        $tenantId = $this->resolveTenantId();
         $db = Database::getConnection();
         $method = $_SERVER['REQUEST_METHOD'];
 
@@ -189,7 +227,7 @@ class SppController extends BaseController {
 
     // API: CRUD Tarif Default
     public function apiTarif(): void {
-        $tenantId = $_SESSION['tenant_id'] ?? '';
+        $tenantId = $this->resolveTenantId();
         $db = Database::getConnection();
         $method = $_SERVER['REQUEST_METHOD'];
 
@@ -235,7 +273,7 @@ class SppController extends BaseController {
 
     // API: CRUD Keringanan & Beasiswa
     public function apiKeringanan(): void {
-        $tenantId = $_SESSION['tenant_id'] ?? '';
+        $tenantId = $this->resolveTenantId();
         $db = Database::getConnection();
         $method = $_SERVER['REQUEST_METHOD'];
 
@@ -282,7 +320,7 @@ class SppController extends BaseController {
             $this->jsonResponse(['success' => false, 'error' => 'Method not allowed.'], 405);
         }
 
-        $tenantId = $_SESSION['tenant_id'] ?? '';
+        $tenantId = $this->resolveTenantId();
         $raw = json_decode(file_get_contents('php://input'), true);
         
         $komponenId = (int)($raw['komponen_id'] ?? 0);
@@ -452,7 +490,7 @@ class SppController extends BaseController {
 
     // API: Cari Siswa Dinamis
     public function apiCariSiswa(): void {
-        $tenantId = $_SESSION['tenant_id'] ?? '';
+        $tenantId = $this->resolveTenantId();
         $query = trim($_GET['q'] ?? '');
 
         if (empty($query)) {
@@ -474,7 +512,7 @@ class SppController extends BaseController {
 
     // API: Get Tagihan Siswa Terpilih
     public function apiGetTagihanSiswa(): void {
-        $tenantId = $_SESSION['tenant_id'] ?? '';
+        $tenantId = $this->resolveTenantId();
         $siswaId = trim($_GET['siswa_id'] ?? '');
 
         if (empty($siswaId)) {
@@ -500,7 +538,7 @@ class SppController extends BaseController {
             $this->jsonResponse(['success' => false, 'error' => 'Method not allowed.'], 405);
         }
 
-        $tenantId = $_SESSION['tenant_id'] ?? '';
+        $tenantId = $this->resolveTenantId();
         $kasirId = $_SESSION['user_id'] ?? '';
         $raw = json_decode(file_get_contents('php://input'), true);
 
@@ -612,7 +650,7 @@ class SppController extends BaseController {
 
     // API: Laporan Pemasukan & Tunggakan
     public function apiLaporanRekap(): void {
-        $tenantId = $_SESSION['tenant_id'] ?? '';
+        $tenantId = $this->resolveTenantId();
         $db = Database::getConnection();
         $tipe = trim($_GET['tipe'] ?? 'pemasukan'); // pemasukan / tunggakan
 
@@ -651,7 +689,7 @@ class SppController extends BaseController {
 
     // API: Settings Terminology & Visibility
     public function apiGetPengaturan(): void {
-        $tenantId = $_SESSION['tenant_id'] ?? '';
+        $tenantId = $this->resolveTenantId();
         $db = Database::getConnection();
 
         try {
@@ -681,7 +719,7 @@ class SppController extends BaseController {
             $this->jsonResponse(['success' => false, 'error' => 'Method not allowed.'], 405);
         }
 
-        $tenantId = $_SESSION['tenant_id'] ?? '';
+        $tenantId = $this->resolveTenantId();
         $raw = json_decode(file_get_contents('php://input'), true);
 
         $namaModul = trim($raw['nama_modul'] ?? 'Keuangan & SPP');
@@ -718,7 +756,7 @@ class SppController extends BaseController {
 
     // API: Tagihan Saya (Dashboard Siswa)
     public function apiGetTagihanSaya(): void {
-        $tenantId = $_SESSION['tenant_id'] ?? '';
+        $tenantId = $this->resolveTenantId();
         $siswaId = $_SESSION['user_id'] ?? ''; // Jika siswa login, user_id menyimpan ID siswa
 
         if (empty($siswaId)) {
@@ -748,7 +786,7 @@ class SppController extends BaseController {
             $this->jsonResponse(['success' => false, 'error' => 'Method not allowed.'], 405);
         }
 
-        $tenantId = $_SESSION['tenant_id'] ?? '';
+        $tenantId = $this->resolveTenantId();
         $raw = json_decode(file_get_contents('php://input'), true);
 
         $siswaId = trim($raw['siswa_id'] ?? '');

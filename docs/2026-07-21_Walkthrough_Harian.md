@@ -150,6 +150,24 @@ Mendefinisikan variabel `$role = $_SESSION['role_name'] ?? '';` di baris awal ko
 2. **Perbaikan Bug Kode Master**:
    - Memperbaiki salah ketik (typo) pemanggilan variabel `loadingKompKomp` menjadi `loadingKomp.value` di penanganan block `finally` fungsi `saveKomponen()` yang sebelumnya memicu ReferenceError saat proses simpan selesai.
 
+---
+## [Perbaikan Galat API 500 Keuangan Komponen & Responsivitas Mobile Layout]
+**Waktu**: 15:49 WIB
+**Jenis**: Bug Fix / Responsive
+
+### Masalah (Root Cause):
+1. **Galat API 500 pada `/api/v1/keuangan/komponen`**:
+   Saat pengguna dengan peran `super_admin` (yang memiliki nilai `tenant_id = NULL` di database) mengakses modul keuangan atau menyimpan komponen biaya, kueri database memicu galat `Integrity constraint violation (FK fk_spp_komponen_tenant fails)` karena mencoba menginsert string kosong (`''`) sebagai tenant ID ke tabel `transaksi_spp_komponen`.
+2. **Masalah Tampilan di HP (Mobile)**:
+   Pada layar perangkat seluler (lebar < 768px), tata letak desktop compact split-screen (30% Form, 70% Tabel) dengan `flex-direction: row` dan `overflow: hidden` menyebabkan panel tabel data terdorong keluar layar secara horizontal dan tidak terlihat sama sekali.
+
+### Perbaikan:
+1. **Resolusi Dinamis Tenant ID**:
+   Mendefinisikan fungsi pembantu `resolveTenantId()` di dalam berkas [SppController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/SppController.php) untuk secara cerdas mendeteksi dan menggunakan `tenant_id` bagi `super_admin` berdasarkan parameter GET, parameter POST, JSON request body, atau melakukan parsing otomatis terhadap header referer halaman (`HTTP_REFERER`). Mengubah seluruh 15 pemanggilan `$_SESSION['tenant_id'] ?? ''` di pengontrol keuangan agar menggunakan pengurai dinamis ini.
+2. **Responsivitas HP (Mobile Media Query)**:
+   Menambahkan blok `@media (max-width: 767.98px)` pada CSS di berkas [master.php](file:///C:/xampp/htdocs/SINTA-SaaS/views/keuangan/master.php). Ketika diakses via ponsel, tata letak otomatis beralih menjadi susunan kolom vertikal (`flex-direction: column`), tinggi container diubah menjadi dinamis (`height: auto !important`), dan scrollbar global diaktifkan kembali (`overflow: visible !important`) sehingga form dan tabel ter-render penuh di HP dan dapat di-scroll ke bawah secara alami.
+
+
 
 
 
