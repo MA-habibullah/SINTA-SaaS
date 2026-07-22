@@ -297,6 +297,132 @@ try {
             $controller->delete();
             break;
 
+        // MODUL PERPUSTAKAAN (INTEGRATED LIBRARY SYSTEM)
+        case '/perpustakaan':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->dashboard();
+            break;
+
+        case '/perpustakaan/katalog':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->katalog();
+            break;
+
+        case '/perpustakaan/sirkulasi':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->sirkulasi();
+            break;
+
+        case '/perpustakaan/buku-paket':
+        case '/perpustakaan/event':
+        case '/perpustakaan/anggota':
+        case '/perpustakaan/denda':
+        case '/perpustakaan/opname':
+        case '/perpustakaan/laporan':
+        case '/perpustakaan/pengaturan':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->dashboard();
+            break;
+
+        case '/perpustakaan/opac':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->opacPublic();
+            break;
+
+        case '/perpustakaan/buku-tamu':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->bukuTamuPublic();
+            break;
+
+        case '/perpustakaan/riwayat-saya':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->riwayatSiswa();
+            break;
+
+        case '/api/v1/perpustakaan/sirkulasi/pinjam':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->apiPinjamReguler();
+            break;
+
+        case '/api/v1/perpustakaan/sirkulasi/kembali':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->apiKembaliReguler();
+            break;
+
+        case '/api/v1/perpustakaan/bebas-pustaka/cek':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->apiCekBebasPustaka();
+            break;
+
+        case '/api/v1/perpustakaan/anggota/sync':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->apiSyncAnggota();
+            break;
+
+        case '/api/v1/perpustakaan/summary':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->apiDashboardSummary();
+            break;
+
+        case '/api/v1/perpustakaan/rak':
+            $controller = new App\Controllers\PerpustakaanController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveRak();
+            } else {
+                $controller->apiGetRak();
+            }
+            break;
+
+        case '/api/v1/perpustakaan/katalog/simpan':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->apiSaveBibliografi();
+            break;
+
+        case '/api/v1/perpustakaan/denda':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->apiGetDenda();
+            break;
+
+        case '/api/v1/perpustakaan/denda/bayar':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->apiBayarDenda();
+            break;
+
+        case '/perpustakaan/baca-ebook':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->readEbook();
+            break;
+
+        case '/perpustakaan/kios-mandiri':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->kiosMandiri();
+            break;
+
+        case '/perpustakaan/kios-pintu':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->kiosPintu();
+            break;
+
+        case '/perpustakaan/cetak-label-thermal':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->cetakLabelThermal();
+            break;
+
+        case '/api/v1/perpustakaan/ulasan/simpan':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->apiSimpanUlasan();
+            break;
+
+        case '/api/v1/perpustakaan/duta-baca':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->apiGetDutaBaca();
+            break;
+
+        case '/api/v1/perpustakaan/cron/reminder':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->apiCronNotifReminder();
+            break;
+
         case '/api/v1/ekskul/tambah':
             $controller = new App\Controllers\EkskulController();
             $controller->store();
