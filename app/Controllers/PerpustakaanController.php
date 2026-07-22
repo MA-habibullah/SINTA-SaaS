@@ -338,7 +338,7 @@ class PerpustakaanController extends BaseController {
     }
 
     public function bukuTamuPublic(): void {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
             if (empty($input['nama_pengunjung'])) {
                 http_response_code(400);
@@ -361,7 +361,10 @@ class PerpustakaanController extends BaseController {
     // -------------------------------------------------------------------------
 
     public function riwayatSiswa(): void {
-        SessionManager::requireLogin();
+        if (empty($_SESSION['logged_in'])) {
+            header('Location: /SINTA-SaaS/login');
+            return;
+        }
         $siswaId = $_SESSION['siswa_id'] ?? null;
 
         if (!$siswaId) {
