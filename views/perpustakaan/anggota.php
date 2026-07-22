@@ -115,27 +115,30 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const btn = document.getElementById('btnDoSync');
-    if (btn) {
-        btn.addEventListener('click', function() {
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Memproses...';
-            const select = document.getElementById('syncTenantSelect');
-            const tid = select ? select.value : '<?= htmlspecialchars($data['active_tenant_id'] ?? '') ?>';
-            
-            fetch('/SINTA-SaaS/api/v1/perpustakaan/anggota/sync?tenant_id=' + encodeURIComponent(tid), { method: 'POST' })
-                .then(res => res.json())
-                .then(data => {
-                    alert(data.message || 'Sinkronisasi berhasil!');
-                    window.location.reload();
-                })
-                .catch(err => {
-                    alert('Gagal melakukan sinkronisasi: ' + err.message);
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="bi bi-play-fill me-1"></i> Mulai Sync Sekarang';
-                });
-        });
+(function() {
+    function handleSyncClick(e) {
+        const btn = e.target.closest('#btnDoSync');
+        if (!btn) return;
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Memproses...';
+        const select = document.getElementById('syncTenantSelect');
+        const tid = select ? select.value : '<?= htmlspecialchars($data['active_tenant_id'] ?? '') ?>';
+        
+        fetch('/SINTA-SaaS/api/v1/perpustakaan/anggota/sync?tenant_id=' + encodeURIComponent(tid), { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.message || 'Sinkronisasi berhasil!');
+                window.location.reload();
+            })
+            .catch(err => {
+                alert('Gagal melakukan sinkronisasi: ' + err.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-play-fill me-1"></i> Mulai Sync Sekarang';
+            });
     }
-});
+
+    document.removeEventListener('click', handleSyncClick);
+    document.addEventListener('click', handleSyncClick);
+})();
 </script>
