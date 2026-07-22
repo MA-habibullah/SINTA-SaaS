@@ -56,5 +56,5 @@
    - Menemukan peringatan **[LOW]** opsi `ini_set('display_errors', 1)` di [index.php](file:///C:/xampp/htdocs/SINTA-SaaS/index.php) aktif untuk dev lokal (wajib dinonaktifkan saat produksi).
 5. **Pengembangan QA Automation Suite Permanen & Eksekusi Perbaikan**:
    - Mengimplementasikan Rate Limiter pada [LoginController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/LoginController.php#L24) (batas max 5x percobaan gagal / 15 menit).
-   - Menambahkan Global Security Headers (`X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `CSP`) pada [index.php](file:///C:/xampp/htdocs/SINTA-SaaS/index.php#L1).
+   - Menambahkan Global Security Headers (`X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `CSP` dengan `font-src 'self' https: data:`) pada [index.php](file:///C:/xampp/htdocs/SINTA-SaaS/index.php#L1) untuk mendukung font Inter & Plus Jakarta Sans.
    - Dibuat skrip uji regresi keamanan otomatis permanen di [scratch/tests/test_security_audit.php](file:///C:/xampp/htdocs/SINTA-SaaS/scratch/tests/test_security_audit.php). Hasil uji terbaru: **8 Passed, 2 Warnings (Konfigurasi Dev/Env), 0 Failures**.

@@ -270,6 +270,6 @@ php scratch/tests/test_security_audit.php
 ```
 
 ##### Berkas yang Diperbarui:
-1. **[index.php](file:///C:/xampp/htdocs/SINTA-SaaS/index.php#L1)**: Ditambahkan HTTP Security Headers (`X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Content-Security-Policy`).
+1. **[index.php](file:///C:/xampp/htdocs/SINTA-SaaS/index.php#L1)**: Ditambahkan HTTP Security Headers (`X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Content-Security-Policy` lengkap dengan direktori `font-src 'self' https: data:` untuk mengizinkan font Google Fonts/Inter/Plus Jakarta Sans).
 2. **[LoginController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/LoginController.php#L24)**: Ditambahkan Rate Limiter per IP (Maksimal 5 percobaan gagal per 15 menit).
 3. **[scratch/tests/test_security_audit.php](file:///C:/xampp/htdocs/SINTA-SaaS/scratch/tests/test_security_audit.php)**: Skrip QA Automation suite permanen.
