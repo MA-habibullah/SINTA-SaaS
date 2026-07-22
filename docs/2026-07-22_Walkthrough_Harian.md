@@ -91,3 +91,30 @@
    - Mengimplementasikan kontrol Toggle Switch ON/OFF WhatsApp & Email Automation yang memverifikasi status `auto_notif_wa_aktif` sebelum menjalankan pengiriman notifikasi jatuh tempo.
 
 
+---
+## [Perbaikan Form Submit Hotwire Turbo Drive, Event Delegation Sync Anggota, Kolom Kelas & NISN, serta Edit Katalog & Export Excel (.xlsx)]
+**Waktu**: 20:30 WIB
+**Jenis**: Bug Fix / Feature / Refactor
+
+### Ringkasan Pekerjaan:
+1. **Perbaikan Form Submit Hotwire Turbo Drive (`Error: Form responses must redirect to another location`)**:
+   - Menambahkan atribut `data-turbo="false"` pada seluruh tag `<form>` modal di `katalog.php`, `buku_paket.php`, `event_osn.php`, `opname.php`, dan `pengaturan.php`.
+   - Menambahkan handler pengalihan HTTP 303 See Other Redirect (`header('Location: ...', true, 303);`) pada metode pengolahan `POST` di `PerpustakaanController.php`.
+
+2. **Perbaikan Tombol Sync Data Anggota (Dapodik/EMIS) via Event Delegation**:
+   - Mengubah pembungkus `DOMContentLoaded` menjadi `document.addEventListener('click', handleSyncClick)` (*Event Delegation*) pada `views/perpustakaan/anggota.php`.
+   - Mengatasi masalah tombol tidak merespon ketika pengguna berpindah halaman melalui navigasi Hotwire Turbo Drive.
+
+3. **Perbaikan Tampilan Data Anggota & Pengambilan Data Real-time (`getAnggotaList`)**:
+   - Mengubah `'anggota_list' => []` pada `PerpustakaanController::anggota()` menjadi `$this->model->getAnggotaList($this->tenantId)`.
+   - Memperbaiki kueri `LEFT JOIN` pada `syncAnggotaSiswa()` di `Perpustakaan.php` agar tidak mengulang nama parameter `:tenant_id` (`SQLSTATE[HY093]`).
+   - Menambahkan kolom **Kelas Aktif** (`k.nama_kelas` / `k.kode_kelas`) dan kolom **NISN / NIP** (`a.nisn` / `a.nip`) pada tabel keanggotaan.
+
+4. **Sistem Paginsasi Server-Side Lengkap**:
+   - Membatasi tampilan 10 data per halaman (`$perPage = 10`) dengan perhitungan offset, total data, dan total halaman secara presisi.
+   - Menambahkan baris navigasi paginsasi Bootstrap 5 interaktif (`« Pertama`, `‹ Sebelum`, `1`, `2`, `3`, `Berikut »`, `Terakhir »`) yang mempertahankan parameter tenant aktif.
+
+5. **Fitur Edit Katalog Buku & Export Data Katalog ke Excel (.xlsx)**:
+   - Menambahkan tombol **Edit** pada setiap baris tabel katalog buku yang mengisi modal `#modalTambahBuku` secara otomatis.
+   - Memperbaiki `apiSaveBibliografi()` di `PerpustakaanController.php` agar mendukung pembaharuan (`UPDATE`) katalog saat `book_id` dikirimkan.
+   - Menambahkan fitur **Download Excel (.xlsx)** pada rute `/perpustakaan/katalog/export-excel` yang menghasilkan file spreadsheet `.xls/.xlsx` lengkap dengan header tabel, gaya font, border, dan pembersihan pengarang JSON.
