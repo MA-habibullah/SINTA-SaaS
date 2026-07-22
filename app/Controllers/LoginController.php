@@ -21,8 +21,22 @@ class LoginController extends BaseController {
         $email = isset($input['email']) ? trim($input['email']) : '';
         $password = isset($input['password']) ? $input['password'] : '';
 
+        // Rate Limiting & Throttling: Proteksi Brute Force Login
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        $throttleKey = 'login_attempts_' . md5($ip);
+        $attempts = $_SESSION[$throttleKey] ?? ['count' => 0, 'first_attempt' => time()];
+        
+        if ($attempts['count'] >= 5 && (time() - $attempts['first_attempt']) < 900) {
+            $this->jsonResponse(['error' => 'Terlalu banyak percobaan login. Silakan coba lagi dalam 15 menit.'], 429);
+            return;
+        }
+
         // Validasi input minimal
         if (empty($email) || empty($password)) {
+            $_SESSION[$throttleKey] = [
+                'count' => ($attempts['count'] + 1),
+                'first_attempt' => $attempts['first_attempt']
+            ];
             $this->jsonResponse(['error' => 'Email dan password wajib diisi'], 400);
         }
 
@@ -40,12 +54,12 @@ class LoginController extends BaseController {
         }
 
         // Verifikasi status keaktifan user
-        if ($user['status'] !== 'active') {
+        if (($user['status'] ?? '') !== 'active') {
             $this->jsonResponse(['error' => 'Akun Anda ditangguhkan. Silakan hubungi admin sekolah.'], 403);
         }
 
         // Verifikasi status keaktifan tenant sekolah
-        if ($user['tenant_id'] !== null) {
+        if (!empty($user['tenant_id'])) {
             try {
                 $db = \App\Config\Database::getConnection();
                 $stmt = $db->prepare("SELECT status FROM tenants WHERE id = ? AND deleted_at IS NULL");

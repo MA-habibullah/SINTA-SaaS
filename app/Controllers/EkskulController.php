@@ -423,10 +423,8 @@ class EkskulController extends BaseController {
             $stmtUser = $db->prepare("INSERT INTO users (id, tenant_id, role_id, nama_lengkap, email, no_telp, password) VALUES (?, ?, ?, ?, ?, ?, ?)");
             $stmtUser->execute([$user_id, $tenant_id, $role_id, $nama_lengkap, $email, $no_telp ?: null, $hashed_password]);
 
-            if ($role_id) {
-                $stmtUserRole = $db->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
-                $stmtUserRole->execute([$user_id, $role_id]);
-            }
+            $stmtUserRole = $db->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
+            $stmtUserRole->execute([$user_id, $role_id]);
             
             $db->commit();
             $successMsg = urlencode('Guru Pembina "' . $nama_lengkap . '" berhasil ditambahkan.');

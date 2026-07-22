@@ -559,10 +559,7 @@ class Kelembagaan extends Model {
             $this->db->beginTransaction();
             $sql = "UPDATE {$dbTable} SET deleted_at = CURRENT_TIMESTAMP WHERE id = :id";
             $params = ['id' => $id];
-            if ($this->tenantId !== null && $table !== 'kurikulum') {
-                $sql .= " AND tenant_id = :tenant_id";
-                $params['tenant_id'] = $this->tenantId;
-            } elseif ($this->tenantId !== null && $table === 'kurikulum') {
+            if ($this->tenantId !== null) {
                 $sql .= " AND tenant_id = :tenant_id";
                 $params['tenant_id'] = $this->tenantId;
             }
@@ -595,10 +592,7 @@ class Kelembagaan extends Model {
             $this->db->beginTransaction();
             $sql = "UPDATE {$dbTable} SET deleted_at = NULL WHERE id = :id";
             $params = ['id' => $id];
-            if ($this->tenantId !== null && $table !== 'kurikulum') {
-                $sql .= " AND tenant_id = :tenant_id";
-                $params['tenant_id'] = $this->tenantId;
-            } elseif ($this->tenantId !== null && $table === 'kurikulum') {
+            if ($this->tenantId !== null) {
                 $sql .= " AND tenant_id = :tenant_id";
                 $params['tenant_id'] = $this->tenantId;
             }

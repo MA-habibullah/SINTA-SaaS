@@ -256,7 +256,7 @@ class Pengguna extends Model {
                     if ($f === 'kontak_email' && empty($val)) {
                         $val = $row['email'] ?? '';
                     }
-                    if ($val !== null && trim((string)$val) !== '') {
+                    if (trim((string)$val) !== '') {
                         $filled++;
                     }
                 }

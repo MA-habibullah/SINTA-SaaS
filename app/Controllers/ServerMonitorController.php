@@ -206,7 +206,7 @@ class ServerMonitorController extends BaseController
         if ($isLinux && is_readable('/proc/uptime')) {
             $contents      = file_get_contents('/proc/uptime');
             $parts         = explode(' ', $contents);
-            $uptimeSeconds = (int)($parts[0] ?? 0);
+            $uptimeSeconds = (int)$parts[0];
 
             $days    = floor($uptimeSeconds / 86400);
             $hours   = floor(($uptimeSeconds % 86400) / 3600);

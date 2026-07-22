@@ -1771,7 +1771,7 @@ class PDSSController extends BaseController {
                 $cid = $studentClassMap[$sid][$semester]['class_id'] ?? null;
 
                 $displayClass = $s['nama_kelas'];
-                if ($semester >= 1 && $semester <= 4) {
+                if ($semester <= 4) {
                     $displayClass = $studentClassMap[$sid][$semester]['nama_kelas'] ?? $s['nama_kelas'];
                 }
 
@@ -2056,9 +2056,7 @@ class PDSSController extends BaseController {
                 }
 
                 foreach ($studentGradesAccumulator as $sid => $data) {
-                    if ($data['count'] > 0) {
-                        $nilaiMap[$sid] = $data['sum'] / $data['count'];
-                    }
+                    $nilaiMap[$sid] = $data['sum'] / $data['count'];
                 }
             }
 

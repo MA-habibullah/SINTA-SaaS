@@ -234,7 +234,7 @@ class NilaiRaporController extends BaseController {
         if (!$tenantId && !empty($input['tenant_id'])) {
             $tenantId = $input['tenant_id'];
         }
-        if (!$tenantId && $kelasId) {
+        if (!$tenantId) {
             $stmtKelasTenant = $db->prepare("SELECT tenant_id FROM kelas WHERE id = :kelas_id LIMIT 1");
             $stmtKelasTenant->execute(['kelas_id' => $kelasId]);
             $tenantId = $stmtKelasTenant->fetchColumn() ?: null;
@@ -607,7 +607,7 @@ class NilaiRaporController extends BaseController {
         if (!$tenantId && !empty($_POST['tenant_id'])) {
             $tenantId = $_POST['tenant_id'];
         }
-        if (!$tenantId && $kelasId) {
+        if (!$tenantId) {
             $stmtKelasTenant = $db->prepare("SELECT tenant_id FROM kelas WHERE id = :kelas_id LIMIT 1");
             $stmtKelasTenant->execute(['kelas_id' => $kelasId]);
             $tenantId = $stmtKelasTenant->fetchColumn() ?: null;
@@ -757,8 +757,8 @@ class NilaiRaporController extends BaseController {
                         continue;
                     }
 
-                    $val = isset($data['nilai_akhir']) && $data['nilai_akhir'] !== '' ? (float)$data['nilai_akhir'] : null;
-                    $kkm = isset($data['kkm']) && $data['kkm'] !== '' ? (float)$data['kkm'] : null;
+                    $val = isset($data['nilai_akhir']) ? (float)$data['nilai_akhir'] : null;
+                    $kkm = isset($data['kkm']) ? (float)$data['kkm'] : null;
 
                     // Fetch existing JSON detail to merge
                     $stmtExist = $db->prepare("SELECT nilai_detail_json, kkm, nilai_akhir FROM detail_nilai_rapor WHERE siswa_id = ? AND mapel_id = ? AND kelas_id = ? AND tahun_ajaran = ? AND semester = ? AND tenant_id = ? AND deleted_at IS NULL LIMIT 1");
@@ -971,7 +971,7 @@ class NilaiRaporController extends BaseController {
             if (!$tenantId && !empty($_POST['tenant_id'])) {
                 $tenantId = $_POST['tenant_id'];
             }
-            if (!$tenantId && $kelasId) {
+            if (!$tenantId) {
                 $stmtKelasTenant = $db->prepare("SELECT tenant_id FROM kelas WHERE id = :kelas_id LIMIT 1");
                 $stmtKelasTenant->execute(['kelas_id' => $kelasId]);
                 $tenantId = $stmtKelasTenant->fetchColumn() ?: null;

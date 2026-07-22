@@ -146,7 +146,7 @@ class SiswaController extends BaseController {
                 $siswa = $this->siswaModel->findFullById($id);
                 $kesehatan = $this->siswaModel->getKesehatanSiswa($id);
                 if ($siswa) {
-                    if (is_array($siswa) && isset($siswa['password'])) {
+                    if (isset($siswa['password'])) {
                         unset($siswa['password']);
                     }
                     $this->jsonResponse([
@@ -736,10 +736,10 @@ class SiswaController extends BaseController {
         }
         
         // Proteksi: Siswa tidak boleh mengubah NAMA, NISN, dan NIS
-        if ($roleName === 'siswa') {
-            $input['nama_lengkap'] = $siswa['nama_lengkap'];
-            $input['nisn'] = $siswa['nisn'];
-            $input['nis'] = $siswa['nis'];
+        if ($roleName === 'siswa' && $siswa) {
+            $input['nama_lengkap'] = $siswa['nama_lengkap'] ?? '';
+            $input['nisn'] = $siswa['nisn'] ?? '';
+            $input['nis'] = $siswa['nis'] ?? '';
         }
 
         $errors = $this->validateSiswaData($input, $id, $currentStep);
@@ -925,7 +925,7 @@ class SiswaController extends BaseController {
         try {
             $this->siswaModel->delete($id);
             \App\Helpers\ActivityLogger::record('DELETE', 'siswa', $id, $siswa, null);
-            \App\Helpers\CacheInvalidator::clearStudentCache($id, $siswa['tenant_id']);
+            \App\Helpers\CacheInvalidator::clearStudentCache($id, $siswa['tenant_id'] ?? null);
             $this->redirectWithSuccess('Data siswa berhasil dihapus.', '/SINTA-SaaS/pengguna');
         } catch (\PDOException $e) {
             error_log("Gagal hapus siswa: " . $e->getMessage());

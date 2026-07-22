@@ -64,12 +64,12 @@ class AuthAdminController extends BaseController {
         }
 
         // Pastikan akun active
-        if ($user['status'] !== 'active') {
+        if (($user['status'] ?? '') !== 'active') {
             $this->jsonResponse(['error' => 'Akun ditangguhkan. Silakan hubungi administrator.'], 403);
         }
 
         // Deteksi Multi-Tenant: Admin Sekolah (memiliki tenant_id) vs Super Admin (tenant_id IS NULL)
-        if ($user['tenant_id'] !== null) {
+        if (!empty($user['tenant_id'])) {
             $db = Database::getConnection();
             $stmt = $db->prepare("SELECT status FROM tenants WHERE id = ? AND deleted_at IS NULL");
             $stmt->execute([$user['tenant_id']]);

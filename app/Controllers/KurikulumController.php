@@ -44,59 +44,23 @@ class KurikulumController extends BaseController {
         }
 
         // 1. Get list of Tahun Ajaran
-        $qTahun = "SELECT id, tahun_ajaran FROM tahun_ajaran WHERE is_active = 1";
-        if ($tenantId) {
-            $qTahun .= " AND tenant_id = :tenant_id";
-        }
-        $qTahun .= " AND deleted_at IS NULL ORDER BY tahun_ajaran DESC";
-        $stmtTahun = $db->prepare($qTahun);
-        if ($tenantId) {
-            $stmtTahun->execute(['tenant_id' => $tenantId]);
-        } else {
-            $stmtTahun->execute();
-        }
+        $stmtTahun = $db->prepare("SELECT id, tahun_ajaran FROM tahun_ajaran WHERE is_active = 1 AND tenant_id = :tenant_id AND deleted_at IS NULL ORDER BY tahun_ajaran DESC");
+        $stmtTahun->execute(['tenant_id' => $tenantId]);
         $tahunList = $stmtTahun->fetchAll(PDO::FETCH_ASSOC);
 
         // 2. Get list of Kelas
-        $qKelas = "SELECT id, nama_kelas, id_jenjang FROM kelas WHERE is_active = 1";
-        if ($tenantId) {
-            $qKelas .= " AND tenant_id = :tenant_id";
-        }
-        $qKelas .= " AND deleted_at IS NULL ORDER BY nama_kelas ASC";
-        $stmtKelas = $db->prepare($qKelas);
-        if ($tenantId) {
-            $stmtKelas->execute(['tenant_id' => $tenantId]);
-        } else {
-            $stmtKelas->execute();
-        }
+        $stmtKelas = $db->prepare("SELECT id, nama_kelas, id_jenjang FROM kelas WHERE is_active = 1 AND tenant_id = :tenant_id AND deleted_at IS NULL ORDER BY nama_kelas ASC");
+        $stmtKelas->execute(['tenant_id' => $tenantId]);
         $kelasList = $stmtKelas->fetchAll(PDO::FETCH_ASSOC);
 
         // 2.5 Get list of Jenjang
-        $qJenjang = "SELECT id, nama_jenjang FROM jenjang WHERE is_active = 1";
-        if ($tenantId) {
-            $qJenjang .= " AND tenant_id = :tenant_id";
-        }
-        $qJenjang .= " AND deleted_at IS NULL ORDER BY nama_jenjang ASC";
-        $stmtJenjang = $db->prepare($qJenjang);
-        if ($tenantId) {
-            $stmtJenjang->execute(['tenant_id' => $tenantId]);
-        } else {
-            $stmtJenjang->execute();
-        }
+        $stmtJenjang = $db->prepare("SELECT id, nama_jenjang FROM jenjang WHERE is_active = 1 AND tenant_id = :tenant_id AND deleted_at IS NULL ORDER BY nama_jenjang ASC");
+        $stmtJenjang->execute(['tenant_id' => $tenantId]);
         $jenjangList = $stmtJenjang->fetchAll(PDO::FETCH_ASSOC);
 
         // 3. Get list of Bank Mapel (Mata Pelajaran)
-        $qMapel = "SELECT id, kode_mapel, nama_mapel FROM mata_pelajaran WHERE is_active = 1";
-        if ($tenantId) {
-            $qMapel .= " AND tenant_id = :tenant_id";
-        }
-        $qMapel .= " AND deleted_at IS NULL ORDER BY nama_mapel ASC";
-        $stmtMapel = $db->prepare($qMapel);
-        if ($tenantId) {
-            $stmtMapel->execute(['tenant_id' => $tenantId]);
-        } else {
-            $stmtMapel->execute();
-        }
+        $stmtMapel = $db->prepare("SELECT id, kode_mapel, nama_mapel FROM mata_pelajaran WHERE is_active = 1 AND tenant_id = :tenant_id AND deleted_at IS NULL ORDER BY nama_mapel ASC");
+        $stmtMapel->execute(['tenant_id' => $tenantId]);
         $mapelList = $stmtMapel->fetchAll(PDO::FETCH_ASSOC);
 
         // 4. Fetch existing mapping and active curriculum if filters are provided
@@ -107,55 +71,28 @@ class KurikulumController extends BaseController {
         $activeKurikulumId = '';
 
         if (!empty($kelasId) && !empty($tahunAjaran) && !empty($semester)) {
-            $qExist = "SELECT kelompok_id, mapel_id FROM pemetaan_mapel WHERE kelas_id = :kelas_id AND tahun_ajaran = :tahun_ajaran AND semester = :semester";
-            if ($tenantId) {
-                $qExist .= " AND tenant_id = :tenant_id";
-            }
-            $qExist .= " AND deleted_at IS NULL";
-            $stmtExist = $db->prepare($qExist);
-            $params = [
+            $stmtExist = $db->prepare("SELECT kelompok_id, mapel_id FROM pemetaan_mapel WHERE kelas_id = :kelas_id AND tahun_ajaran = :tahun_ajaran AND semester = :semester AND tenant_id = :tenant_id AND deleted_at IS NULL");
+            $stmtExist->execute([
                 'kelas_id' => $kelasId,
                 'tahun_ajaran' => $tahunAjaran,
-                'semester' => $semester
-            ];
-            if ($tenantId) {
-                $params['tenant_id'] = $tenantId;
-            }
-            $stmtExist->execute($params);
+                'semester' => $semester,
+                'tenant_id' => $tenantId
+            ]);
             $existingMapping = $stmtExist->fetchAll(PDO::FETCH_ASSOC);
 
             // Fetch active curriculum for the class and academic year
-            $qActive = "SELECT kurikulum_id FROM kelas_kurikulum WHERE kelas_id = :kelas_id AND tahun_ajaran = :tahun_ajaran";
-            if ($tenantId) {
-                $qActive .= " AND tenant_id = :tenant_id";
-            }
-            $qActive .= " LIMIT 1";
-            $stmtActive = $db->prepare($qActive);
-            $activeParams = [
+            $stmtActive = $db->prepare("SELECT kurikulum_id FROM kelas_kurikulum WHERE kelas_id = :kelas_id AND tahun_ajaran = :tahun_ajaran AND tenant_id = :tenant_id LIMIT 1");
+            $stmtActive->execute([
                 'kelas_id' => $kelasId,
-                'tahun_ajaran' => $tahunAjaran
-            ];
-            if ($tenantId) {
-                $activeParams['tenant_id'] = $tenantId;
-            }
-            $stmtActive->execute($activeParams);
+                'tahun_ajaran' => $tahunAjaran,
+                'tenant_id' => $tenantId
+            ]);
             $activeKurikulumId = $stmtActive->fetchColumn() ?: '';
         }
 
         // Fetch dynamic ref_kurikulum options
-        $qRef = "SELECT id, nama_kurikulum, tipe_penilaian FROM ref_kurikulum WHERE is_active = 1";
-        if ($tenantId) {
-            $qRef .= " AND (tenant_id = :tenant_id OR tenant_id IS NULL)";
-        } else {
-            $qRef .= " AND tenant_id IS NULL";
-        }
-        $qRef .= " ORDER BY id ASC";
-        $stmtRef = $db->prepare($qRef);
-        if ($tenantId) {
-            $stmtRef->execute(['tenant_id' => $tenantId]);
-        } else {
-            $stmtRef->execute();
-        }
+        $stmtRef = $db->prepare("SELECT id, nama_kurikulum, tipe_penilaian FROM ref_kurikulum WHERE is_active = 1 AND (tenant_id = :tenant_id OR tenant_id IS NULL) ORDER BY id ASC");
+        $stmtRef->execute(['tenant_id' => $tenantId]);
         $kurikulumList = $stmtRef->fetchAll(PDO::FETCH_ASSOC);
 
         $this->jsonResponse([

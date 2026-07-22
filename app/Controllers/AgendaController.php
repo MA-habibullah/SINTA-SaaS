@@ -9,7 +9,6 @@ use PDO;
 
 class AgendaController extends BaseController {
     private AgendaModel $agendaModel;
-    private KategoriAgendaModel $kategoriModel;
 
     public function __construct() {
         parent::__construct();
@@ -24,7 +23,6 @@ class AgendaController extends BaseController {
         }
         
         $this->agendaModel = new AgendaModel($this->tenantId);
-        $this->kategoriModel = new KategoriAgendaModel($this->tenantId);
     }
 
     public function index(): void {
@@ -117,7 +115,7 @@ class AgendaController extends BaseController {
             $pics = [];
         } else {
             $activeTenantId = $this->tenantId;
-            if ($isSuperAdmin && $selectedTenant !== '') {
+            if ($isSuperAdmin) {
                 $activeTenantId = ($selectedTenant === 'global') ? null : $selectedTenant;
             }
             
@@ -283,7 +281,7 @@ class AgendaController extends BaseController {
             $this->redirectWithError("Agenda tidak ditemukan.");
         }
 
-        $lampiranPath = $existing['lampiran_file'];
+        $lampiranPath = $existing['lampiran_file'] ?? null;
         if (isset($_FILES['lampiran']) && $_FILES['lampiran']['error'] === UPLOAD_ERR_OK) {
             $newLampiran = $this->uploadLampiran($_FILES['lampiran']);
             if ($newLampiran) {

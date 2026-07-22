@@ -180,7 +180,7 @@ class PembinaanController extends BaseController {
         $height = $info[1];
         if ($width > 1280) {
             $newWidth = 1280;
-            $newHeight = floor($height * (1280 / $width));
+            $newHeight = (int)floor($height * (1280 / $width));
             $tmpImage = imagecreatetruecolor($newWidth, $newHeight);
             
             // Handle transparency for PNG
@@ -188,7 +188,9 @@ class PembinaanController extends BaseController {
                 imagealphablending($tmpImage, false);
                 imagesavealpha($tmpImage, true);
                 $transparent = imagecolorallocatealpha($tmpImage, 255, 255, 255, 127);
-                imagefilledrectangle($tmpImage, 0, 0, $newWidth, $newHeight, $transparent);
+                if ($transparent !== false) {
+                    imagefilledrectangle($tmpImage, 0, 0, $newWidth, $newHeight, $transparent);
+                }
             }
             
             imagecopyresampled($tmpImage, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
@@ -200,7 +202,7 @@ class PembinaanController extends BaseController {
             imagejpeg($image, $destination, $quality);
         } elseif ($info['mime'] == 'image/png') {
             // Convert JPEG quality (0-100) to PNG compression level (0-9)
-            $pngQuality = round((100 - $quality) / 10);
+            $pngQuality = (int)round((100 - $quality) / 10);
             imagepng($image, $destination, $pngQuality);
         }
         

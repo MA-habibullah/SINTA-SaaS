@@ -124,7 +124,7 @@ class SessionManager {
             }
 
             // Secure SaaS Gatekeeper: Check tenant status if not Super Admin
-            if (isset($_SESSION['tenant_id']) && $_SESSION['tenant_id'] !== null) {
+            if (!empty($_SESSION['tenant_id'])) {
                 try {
                     $db = \App\Config\Database::getConnection();
                     $stmt = $db->prepare("SELECT status FROM tenants WHERE id = ? AND deleted_at IS NULL");

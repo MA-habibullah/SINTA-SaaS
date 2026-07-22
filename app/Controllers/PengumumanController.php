@@ -143,7 +143,7 @@ class PengumumanController extends BaseController {
             $this->redirectWithError("Pengumuman tidak ditemukan.");
         }
 
-        $lampiranPath = $existing['lampiran_file'];
+        $lampiranPath = $existing['lampiran_file'] ?? null;
         if (isset($_FILES['lampiran']) && $_FILES['lampiran']['error'] === UPLOAD_ERR_OK) {
             $newLampiran = $this->uploadLampiran($_FILES['lampiran']);
             if ($newLampiran) {

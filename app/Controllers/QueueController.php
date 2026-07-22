@@ -327,6 +327,7 @@ class QueueController extends BaseController {
                 'success' => false,
                 'message' => 'Antrean kosong. Tidak ada tugas pending.'
             ]);
+            return;
         }
 
         $id = $job['id'];

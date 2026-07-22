@@ -2467,7 +2467,7 @@ class BKController extends BaseController {
 
             foreach ($trendData as $row) {
                 $parts = explode('-', $row['bulan']);
-                $year = $parts[0] ?? '';
+                $year = $parts[0];
                 $monthNum = $parts[1] ?? '';
                 $monthName = ($indoMonths[$monthNum] ?? $monthNum) . ' ' . $year;
                 $months[] = $monthName;

@@ -1441,7 +1441,7 @@ protected function _parsegif($file)
 	$im = imagecreatefromgif($file);
 	if(!$im)
 		$this->Error('Missing or incorrect image file: '.$file);
-	imageinterlace($im,0);
+	imageinterlace($im,false);
 	ob_start();
 	imagepng($im);
 	$data = ob_get_clean();

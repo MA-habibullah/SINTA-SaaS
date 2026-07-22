@@ -555,7 +555,7 @@ class Siswa extends Model {
                         'dokumen' => ['berkas_kk', 'berkas_akta', 'berkas_ijazah_sd', 'berkas_ijazah_smp', 'berkas_ijazah_sma']
                     ];
                     
-                    if (isset($requiredCheckKeys[$table])) {
+                    if (array_key_exists($table, $requiredCheckKeys)) {
                         $hasRequired = false;
                         foreach ($requiredCheckKeys[$table] as $reqKey) {
                             if (array_key_exists($reqKey, $data) && $data[$reqKey] !== '') {

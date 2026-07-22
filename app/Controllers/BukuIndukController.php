@@ -158,7 +158,7 @@ class BukuIndukController extends BaseController {
         if ($tenantId) {
             $where[] = "s.tenant_id = :tenant_id";
             $params['tenant_id'] = $tenantId;
-        } else if ($filterTenant) {
+        } else {
             $where[] = "s.tenant_id = :filter_tenant_id";
             $params['filter_tenant_id'] = $filterTenant;
         }
@@ -1529,7 +1529,7 @@ class BukuIndukController extends BaseController {
             
             // Verify tenant access for Admin
             $tenantId = \App\Core\SessionManager::getTenantId();
-            if ($role === 'Admin' && $siswa['tenant_id'] !== $tenantId) {
+            if ($role === 'admin' && $siswa['tenant_id'] !== $tenantId) {
                 throw new \Exception("Akses ditolak. Siswa berada di sekolah lain.");
             }
 
@@ -1786,7 +1786,7 @@ class BukuIndukController extends BaseController {
             $baseSem = $taMap[$ta] ?? 1;
             $smtIdx = (strpos($sem, 'genap') !== false) ? $baseSem + 1 : $baseSem;
             
-            if ($smtIdx >= 1 && $smtIdx <= 5) {
+            if ($smtIdx <= 5) {
                 $gradesMatrix[$row['siswa_id']][$row['mapel_id']][$smtIdx] = $row['nilai_akhir'];
             }
         }
@@ -2737,9 +2737,7 @@ class BukuIndukController extends BaseController {
             $stmt = $db->prepare("DELETE FROM riwayat_beasiswa WHERE id = ?");
             $stmt->execute([$id]);
 
-            if ($siswaId) {
-                \App\Helpers\CacheInvalidator::clearStudentCache($siswaId, $dbTenantId);
-            }
+            \App\Helpers\CacheInvalidator::clearStudentCache($siswaId, $dbTenantId);
 
             $this->jsonResponse(['success' => true, 'message' => 'Data beasiswa berhasil dihapus.']);
         } catch (\Throwable $e) {

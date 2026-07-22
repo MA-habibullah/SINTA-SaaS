@@ -435,14 +435,14 @@ class KampusController extends BaseController
                 for ($i = 1; $i < count($rows); $i++) {
                     $row = $rows[$i];
                     
-                    $namaProdi = isset($colMap['nama']) ? trim((string)($row[$colMap['nama']] ?? '')) : '';
-                    $namaKampus = isset($colMap['kampus']) ? trim((string)($row[$colMap['kampus']] ?? '')) : '';
+                    $namaProdi = trim((string)($row[$colMap['nama']] ?? ''));
+                    $namaKampus = trim((string)($row[$colMap['kampus']] ?? ''));
                     
                     if (empty($namaProdi) && empty($namaKampus)) {
                         continue;
                     }
 
-                    $kodeProdi = isset($colMap['kode']) ? trim((string)($row[$colMap['kode']] ?? '')) : '';
+                    $kodeProdi = trim((string)($row[$colMap['kode']] ?? ''));
                     if (empty($kodeProdi) || empty($namaProdi) || empty($namaKampus)) {
                         throw new \Exception("Format Excel tidak valid pada baris " . ($i + 1) . ". Kolom KODE, NAMA, dan Kampus wajib diisi.");
                     }
@@ -914,7 +914,7 @@ class KampusController extends BaseController
                 $namaKampus  = trim((string)($row[$colNamaKampus] ?? ''));
                 $kotaKampus  = $colKotaKampus  !== false ? trim((string)($row[$colKotaKampus]  ?? '')) : '';
                 $jenisKampus = $colJenisKampus  !== false ? trim((string)($row[$colJenisKampus] ?? 'PTN')) : 'PTN';
-                $kodeProdi   = $colKodeProdi    !== false ? trim((string)($row[$colKodeProdi]   ?? '')) : '';
+                $kodeProdi   = trim((string)($row[$colKodeProdi]   ?? ''));
                 $namaProdi   = trim((string)($row[$colNamaProdi] ?? ''));
                 $fakultas    = $colFakultas     !== false ? trim((string)($row[$colFakultas]    ?? '')) : '';
                 $jenjangRaw  = $colJenjang      !== false ? trim((string)($row[$colJenjang]     ?? 'Sarjana')) : 'Sarjana';
