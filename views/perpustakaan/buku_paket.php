@@ -88,7 +88,7 @@
                 <h5 class="modal-title fw-bold" id="modalDistribusiPaketLabel"><i class="bi bi-box-seam me-2"></i> Form Distribusi Buku Paket Pelajaran</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="/SINTA-SaaS/perpustakaan/buku-paket" method="POST">
+            <form action="/SINTA-SaaS/perpustakaan/buku-paket" method="POST" data-turbo="false">
                 <input type="hidden" name="tenant_id" value="<?= htmlspecialchars($data['active_tenant_id'] ?? '') ?>">
                 <div class="modal-body p-4">
                     <div class="row g-3">

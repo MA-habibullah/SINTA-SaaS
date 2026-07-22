@@ -123,6 +123,10 @@ class PerpustakaanController extends BaseController {
 
     public function bukuPaket(): void {
         $this->guardModul();
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+            header('Location: /SINTA-SaaS/perpustakaan/buku-paket?success=' . urlencode('Data distribusi paket berhasil disimpan.'), true, 303);
+            return;
+        }
         $data = [
             'title' => 'Peminjaman Buku Paket Pelajaran',
             'paket_list' => []
@@ -134,6 +138,10 @@ class PerpustakaanController extends BaseController {
 
     public function eventOSN(): void {
         $this->guardModul();
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+            header('Location: /SINTA-SaaS/perpustakaan/event?success=' . urlencode('Data event OSN berhasil disimpan.'), true, 303);
+            return;
+        }
         $data = [
             'title' => 'Event Khusus & Peminjaman OSN',
             'event_list' => []
@@ -167,6 +175,10 @@ class PerpustakaanController extends BaseController {
 
     public function opname(): void {
         $this->guardModul();
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+            header('Location: /SINTA-SaaS/perpustakaan/opname?success=' . urlencode('Sesi audit stock opname berhasil dimulai.'), true, 303);
+            return;
+        }
         $data = [
             'title' => 'Stock Opname & Audit Inventaris',
             'opname_list' => []
@@ -214,10 +226,11 @@ class PerpustakaanController extends BaseController {
         $this->guardModul();
         $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
         
-        $ok = $this->model->updatePengaturan($this->tenantId, $input);
+        $targetTenant = !empty($input['tenant_id']) ? $input['tenant_id'] : $this->tenantId;
+        $ok = $this->model->updatePengaturan($targetTenant, $input);
         
-        if (isset($_POST['nama_perpustakaan'])) {
-            header('Location: /SINTA-SaaS/perpustakaan/pengaturan?success=' . urlencode('Pengaturan perpustakaan berhasil disimpan.'));
+        if (isset($_POST['nama_perpustakaan']) || !empty($_POST)) {
+            header('Location: /SINTA-SaaS/perpustakaan/pengaturan?success=' . urlencode('Pengaturan perpustakaan berhasil disimpan.'), true, 303);
             return;
         }
 
@@ -318,12 +331,23 @@ class PerpustakaanController extends BaseController {
         $this->guardModul();
         $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
         if (empty($input['judul'])) {
+            if (isset($_POST['judul']) || !empty($_POST)) {
+                header('Location: /SINTA-SaaS/perpustakaan/katalog?error=' . urlencode('Judul buku wajib diisi.'), true, 303);
+                return;
+            }
             http_response_code(400);
             echo json_encode(['success' => false, 'error' => 'Judul buku wajib diisi.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
             return;
         }
 
-        $id = $this->model->saveBibliografi($this->tenantId, $input, $input['id'] ?? null);
+        $targetTenant = !empty($input['tenant_id']) ? $input['tenant_id'] : $this->tenantId;
+        $id = $this->model->saveBibliografi($targetTenant, $input, $input['id'] ?? null);
+
+        if (isset($_POST['judul']) || !empty($_POST)) {
+            header('Location: /SINTA-SaaS/perpustakaan/katalog?success=' . urlencode('Data katalog bibliografi berhasil disimpan.'), true, 303);
+            return;
+        }
+
         echo json_encode(['success' => true, 'id' => $id, 'message' => 'Data katalog bibliografi berhasil disimpan.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
     }
 

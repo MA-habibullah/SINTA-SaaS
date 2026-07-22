@@ -79,7 +79,7 @@
                 <h5 class="modal-title fw-bold" id="modalEventOSNLabel"><i class="bi bi-trophy me-2"></i> Pendaftaran Event OSN / Kontingen Lomba</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="/SINTA-SaaS/perpustakaan/event" method="POST">
+            <form action="/SINTA-SaaS/perpustakaan/event" method="POST" data-turbo="false">
                 <input type="hidden" name="tenant_id" value="<?= htmlspecialchars($data['active_tenant_id'] ?? '') ?>">
                 <div class="modal-body p-4">
                     <div class="row g-3">

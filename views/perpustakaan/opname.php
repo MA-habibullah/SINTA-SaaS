@@ -79,7 +79,7 @@
                 <h5 class="modal-title fw-bold" id="modalOpnameBaruLabel"><i class="bi bi-qr-code-scan me-2"></i> Buat Sesi Audit Stock Opname</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="/SINTA-SaaS/perpustakaan/opname" method="POST">
+            <form action="/SINTA-SaaS/perpustakaan/opname" method="POST" data-turbo="false">
                 <input type="hidden" name="tenant_id" value="<?= htmlspecialchars($data['active_tenant_id'] ?? '') ?>">
                 <div class="modal-body p-4">
                     <?php if ($data['is_super_admin'] ?? false): ?>

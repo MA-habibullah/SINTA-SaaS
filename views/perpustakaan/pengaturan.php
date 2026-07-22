@@ -23,7 +23,8 @@ $emailAktif = (int)($pengaturan['auto_notif_email_aktif'] ?? 0);
 <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
     <h5 class="fw-bold text-dark mb-4"><i class="bi bi-sliders text-primary me-2"></i> Parameter Aturan & Notifikasi</h5>
 
-    <form action="/api/v1/perpustakaan/pengaturan/simpan" method="POST">
+    <form action="/api/v1/perpustakaan/pengaturan/simpan" method="POST" data-turbo="false">
+        <input type="hidden" name="tenant_id" value="<?= htmlspecialchars($data['active_tenant_id'] ?? '') ?>">
         <div class="row g-3 mb-4">
             <div class="col-12 col-md-6">
                 <label class="form-label fw-semibold">Nama Perpustakaan</label>
