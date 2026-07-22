@@ -364,10 +364,12 @@ class PerpustakaanController extends BaseController {
         }
 
         $targetTenant = !empty($input['tenant_id']) ? $input['tenant_id'] : $this->tenantId;
-        $id = $this->model->saveBibliografi($targetTenant, $input, $input['id'] ?? null);
+        $bookId = !empty($input['id']) ? trim((string)$input['id']) : null;
+        $id = $this->model->saveBibliografi($targetTenant, $input, $bookId);
 
         if (isset($_POST['judul']) || !empty($_POST)) {
-            header('Location: /SINTA-SaaS/perpustakaan/katalog?success=' . urlencode('Data katalog bibliografi berhasil disimpan.'), true, 303);
+            $msg = $bookId ? 'Data katalog bibliografi berhasil diperbarui.' : 'Data katalog bibliografi berhasil disimpan.';
+            header('Location: /SINTA-SaaS/perpustakaan/katalog?success=' . urlencode($msg), true, 303);
             return;
         }
 
@@ -426,6 +428,49 @@ class PerpustakaanController extends BaseController {
         $this->guardModul();
         $res = $this->model->runCronNotifReminder($this->tenantId);
         echo json_encode($res, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    }
+
+    public function exportKatalogExcel(): void {
+        $this->guardModul();
+        $list = $this->model->getBibliografiList($this->tenantId);
+
+        header('Content-Type: application/vnd.ms-excel; charset=utf-8');
+        header('Content-Disposition: attachment; filename="Katalog_Koleksi_Buku_Perpustakaan_' . date('Y-m-d_H-i') . '.xls"');
+        header('Cache-Control: max-age=0');
+
+        echo "<!DOCTYPE html><html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:x='urn:schemas-microsoft-com:office:excel' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='UTF-8'><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Katalog Buku</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>";
+        echo "<table border='1' style='border-collapse:collapse; font-family:Arial, sans-serif;'>";
+        echo "<thead><tr style='background-color:#0d6efd; color:#ffffff; font-weight:bold; text-align:center;'>";
+        echo "<th style='padding:8px;'>No</th><th style='padding:8px;'>Sekolah / Tenant</th><th style='padding:8px;'>Judul Buku</th><th style='padding:8px;'>Pengarang / Penulis</th><th style='padding:8px;'>Penerbit</th><th style='padding:8px;'>Tahun Terbit</th><th style='padding:8px;'>Nomor ISBN</th><th style='padding:8px;'>Kode DDC</th><th style='padding:8px;'>Total Eksemplar</th><th style='padding:8px;'>Tersedia</th><th style='padding:8px;'>Status E-Book</th><th style='padding:8px;'>Tanggal Didaftarkan</th>";
+        echo "</tr></thead><tbody>";
+
+        foreach ($list as $i => $item) {
+            $pengarangRaw = $item['pengarang'] ?? ($item['penulis'] ?? '-');
+            if (is_string($pengarangRaw) && strpos($pengarangRaw, '[') === 0) {
+                $dec = json_decode($pengarangRaw, true);
+                if (is_array($dec)) {
+                    $pengarangRaw = implode(', ', $dec);
+                }
+            }
+
+            echo "<tr>";
+            echo "<td align='center' style='padding:6px;'>" . ($i + 1) . "</td>";
+            echo "<td style='padding:6px;'>" . htmlspecialchars($item['tenant_name'] ?? 'Sekolah Aktif', ENT_QUOTES, 'UTF-8') . "</td>";
+            echo "<td style='padding:6px;'><strong>" . htmlspecialchars($item['judul'], ENT_QUOTES, 'UTF-8') . "</strong></td>";
+            echo "<td style='padding:6px;'>" . htmlspecialchars($pengarangRaw, ENT_QUOTES, 'UTF-8') . "</td>";
+            echo "<td style='padding:6px;'>" . htmlspecialchars($item['penerbit'] ?? '-', ENT_QUOTES, 'UTF-8') . "</td>";
+            echo "<td align='center' style='padding:6px;'>" . htmlspecialchars((string)($item['tahun_terbit'] ?? '-'), ENT_QUOTES, 'UTF-8') . "</td>";
+            echo "<td style='padding:6px;'>'" . htmlspecialchars($item['isbn'] ?? '-', ENT_QUOTES, 'UTF-8') . "</td>";
+            echo "<td align='center' style='padding:6px;'>" . htmlspecialchars($item['klasifikasi_ddc'] ?? '000', ENT_QUOTES, 'UTF-8') . "</td>";
+            echo "<td align='center' style='padding:6px;'>" . (int)($item['total_eksemplar'] ?? 0) . "</td>";
+            echo "<td align='center' style='padding:6px;'>" . (int)($item['total_tersedia'] ?? 0) . "</td>";
+            echo "<td align='center' style='padding:6px;'>" . (!empty($item['is_ebook']) ? 'E-Book Digital' : 'Buku Fisik') . "</td>";
+            echo "<td align='center' style='padding:6px;'>" . htmlspecialchars($item['created_at'] ?? date('Y-m-d'), ENT_QUOTES, 'UTF-8') . "</td>";
+            echo "</tr>";
+        }
+
+        echo "</tbody></table></body></html>";
+        exit;
     }
 
     // -------------------------------------------------------------------------

@@ -443,6 +443,11 @@ try {
             $controller->cetakLabelThermal();
             break;
 
+        case '/perpustakaan/katalog/export-excel':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->exportKatalogExcel();
+            break;
+
         case '/perpustakaan/cetak-laporan-ddc':
             $controller = new App\Controllers\PerpustakaanController();
             $controller->cetakLaporanDdc();
