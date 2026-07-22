@@ -204,16 +204,18 @@ class Perpustakaan {
 
     public function getAnggotaList(string $tenantId): array {
         $sql = "SELECT a.*, COALESCE(s.nama_lengkap, a.nama_eksternal, 'Anggota Perpustakaan') as nama_lengkap,
+            k.nama_kelas, k.kode_kelas,
             t.nama_sekolah as tenant_name,
             COUNT(DISTINCT sirk.id) as pinjam_aktif,
             COALESCE(SUM(d.total_denda), 0) as total_denda
             FROM perpus_anggota a
             LEFT JOIN siswa s ON a.siswa_id = s.id
+            LEFT JOIN kelas k ON s.id_kelas = k.id
             LEFT JOIN tenants t ON a.tenant_id = t.id
             LEFT JOIN perpus_sirkulasi sirk ON a.id = sirk.anggota_id AND sirk.status IN ('Dipinjam', 'Terlambat')
             LEFT JOIN perpus_denda d ON a.id = d.anggota_id AND d.status = 'Belum Dibayar'
             WHERE a.tenant_id = :tenant_id
-            GROUP BY a.id, t.nama_sekolah, s.nama_lengkap
+            GROUP BY a.id, t.nama_sekolah, s.nama_lengkap, k.nama_kelas, k.kode_kelas
             ORDER BY a.created_at DESC";
 
         $stmt = $this->db->prepare($sql);

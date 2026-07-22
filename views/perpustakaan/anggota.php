@@ -29,6 +29,7 @@
                     <th>Sekolah / Tenant</th>
                     <th>Nomor Anggota</th>
                     <th>Nama Anggota</th>
+                    <th>Kelas Aktif</th>
                     <th>Tipe / Peran</th>
                     <th>Status Pinjaman</th>
                     <th>Tanggungan Denda</th>
@@ -39,7 +40,7 @@
             <tbody>
                 <?php if (empty($data['anggota_list'])): ?>
                     <tr>
-                        <td colspan="9" class="text-center text-muted py-4">
+                        <td colspan="10" class="text-center text-muted py-4">
                             <i class="bi bi-person-bounding-box fs-3 d-block mb-2"></i> Belum ada data anggota terdaftar. Klik <strong>Sync Data Anggota</strong> untuk mengimpor dari data pokok siswa/guru.
                         </td>
                     </tr>
@@ -54,6 +55,11 @@
                             </td>
                             <td><code><?= htmlspecialchars($a['no_anggota'], ENT_QUOTES, 'UTF-8') ?></code></td>
                             <td><strong><?= htmlspecialchars($a['nama_lengkap'] ?? '-', ENT_QUOTES, 'UTF-8') ?></strong></td>
+                            <td>
+                                <span class="badge bg-primary-subtle text-primary border">
+                                    <i class="bi bi-door-open me-1"></i><?= htmlspecialchars($a['nama_kelas'] ?? ($a['kode_kelas'] ?? 'Umum / Staf'), ENT_QUOTES, 'UTF-8') ?>
+                                </span>
+                            </td>
                             <td><span class="badge bg-secondary"><?= htmlspecialchars($a['tipe_anggota'] ?? 'Siswa', ENT_QUOTES, 'UTF-8') ?></span></td>
                             <td><?= (int)($a['pinjam_aktif'] ?? 0) ?> Buku</td>
                             <td>Rp <?= number_format((float)($a['total_denda'] ?? 0)) ?></td>
