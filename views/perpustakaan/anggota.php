@@ -57,12 +57,12 @@
                                 <?php endif; ?>
                             </td>
                             <td class="text-center">
-                                <button class="btn btn-outline-primary btn-sm rounded-2 me-1" title="Cetak Kartu Anggota Digital QR">
+                                <a href="/SINTA-SaaS/perpustakaan/cetak-label-thermal?barcode=<?= urlencode($a['no_anggota']) ?>" target="_blank" class="btn btn-outline-primary btn-sm rounded-2 me-1" title="Cetak Kartu Anggota Digital QR">
                                     <i class="bi bi-qr-code me-1"></i> Kartu
-                                </button>
-                                <button class="btn btn-outline-success btn-sm rounded-2" title="Cetak Surat Bebas Pustaka">
+                                </a>
+                                <a href="/SINTA-SaaS/perpustakaan/cetak-laporan-peminjaman" class="btn btn-outline-success btn-sm rounded-2" title="Cetak Surat Bebas Pustaka">
                                     <i class="bi bi-file-earmark-check me-1"></i> Surat Bebas
-                                </button>
+                                </a>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -71,3 +71,47 @@
         </table>
     </div>
 </div>
+
+<!-- Modal Sync Data Anggota -->
+<div class="modal fade" id="modalSyncDapodik" tabindex="-1" aria-labelledby="modalSyncDapodikLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-primary text-white rounded-top-4">
+                <h5 class="modal-title fw-bold" id="modalSyncDapodikLabel"><i class="bi bi-arrow-repeat me-2"></i> Sinkronisasi Anggota Dapodik/EMIS</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <i class="bi bi-cloud-arrow-down text-primary display-3 d-block mb-3"></i>
+                <h5 class="fw-bold text-dark">Impor Data Siswa & Guru</h5>
+                <p class="text-muted fs-7">Sistem akan secara otomatis mendaftarkan seluruh siswa dan guru aktif ke dalam basis data perpustakaan digital.</p>
+            </div>
+            <div class="modal-footer bg-light rounded-bottom-4">
+                <button type="button" class="btn btn-secondary rounded-3 px-4" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-primary rounded-3 px-4" id="btnDoSync"><i class="bi bi-play-fill me-1"></i> Mulai Sync Sekarang</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const btn = document.getElementById('btnDoSync');
+    if (btn) {
+        btn.addEventListener('click', function() {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Memproses...';
+            fetch('/SINTA-SaaS/api/v1/perpustakaan/anggota/sync', { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    alert(data.message || 'Sinkronisasi berhasil!');
+                    window.location.reload();
+                })
+                .catch(err => {
+                    alert('Gagal melakukan sinkronisasi: ' + err.message);
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-play-fill me-1"></i> Mulai Sync Sekarang';
+                });
+        });
+    }
+});
+</script>

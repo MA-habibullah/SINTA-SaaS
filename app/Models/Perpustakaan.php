@@ -420,8 +420,11 @@ class Perpustakaan {
         $params = ['tenant_id' => $tenantId];
 
         if ($query !== '') {
-            $sql .= " AND (b.judul LIKE :q OR b.penulis LIKE :q OR b.isbn LIKE :q OR b.klasifikasi_ddc LIKE :q)";
-            $params['q'] = '%' . $query . '%';
+            $sql .= " AND (b.judul LIKE :q1 OR b.penulis LIKE :q2 OR b.isbn LIKE :q3 OR b.klasifikasi_ddc LIKE :q4)";
+            $params['q1'] = '%' . $query . '%';
+            $params['q2'] = '%' . $query . '%';
+            $params['q3'] = '%' . $query . '%';
+            $params['q4'] = '%' . $query . '%';
         }
 
         $sql .= " GROUP BY b.id ORDER BY b.judul ASC LIMIT " . (int)$limit . " OFFSET " . (int)$offset;

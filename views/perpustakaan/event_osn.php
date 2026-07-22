@@ -51,14 +51,52 @@
                             <td><?= htmlspecialchars($ev['tanggal_kembali_rencana'] ?? '-', ENT_QUOTES, 'UTF-8') ?></td>
                             <td><span class="badge bg-success">Aktif / Berjalan</span></td>
                             <td class="text-center">
-                                <button class="btn btn-outline-primary btn-sm rounded-2">
+                                <a href="/SINTA-SaaS/perpustakaan/cetak-laporan-peminjaman" class="btn btn-outline-primary btn-sm rounded-2">
                                     <i class="bi bi-file-earmark-text me-1"></i> Cetak Berita Acara
-                                </button>
+                                </a>
                             </td>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </tbody>
         </table>
+    </div>
+</div>
+
+<!-- Modal Tambah Event OSN -->
+<div class="modal fade" id="modalEventOSN" tabindex="-1" aria-labelledby="modalEventOSNLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-warning text-dark rounded-top-4">
+                <h5 class="modal-title fw-bold" id="modalEventOSNLabel"><i class="bi bi-trophy me-2"></i> Pendaftaran Event OSN / Kontingen Lomba</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="/SINTA-SaaS/perpustakaan/event" method="POST">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Nama Event / Olimpiade <span class="text-danger">*</span></label>
+                            <input type="text" name="nama_event" class="form-control rounded-3" placeholder="Contoh: OSN Fisika Tingkat Provinsi" required>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Bidang Studi / Subjek</label>
+                            <input type="text" name="bidang" class="form-control rounded-3" placeholder="Contoh: Fisika / Matematika / Biologi">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Siswa Peserta (Kontingen)</label>
+                            <input type="text" name="nama_siswa" class="form-control rounded-3" placeholder="Nama Siswa">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Batas Waktu Pengembalian</label>
+                            <input type="date" name="tanggal_kembali_rencana" class="form-control rounded-3" value="<?= date('Y-m-d', strtotime('+30 days')) ?>">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-secondary rounded-3 px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning rounded-3 px-4 fw-semibold"><i class="bi bi-save me-1"></i> Simpan Event</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>

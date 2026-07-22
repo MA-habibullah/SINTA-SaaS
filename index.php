@@ -443,6 +443,21 @@ try {
             $controller->cetakLabelThermal();
             break;
 
+        case '/perpustakaan/cetak-laporan-ddc':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->cetakLaporanDdc();
+            break;
+
+        case '/perpustakaan/cetak-laporan-peminjaman':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->cetakLaporanPeminjaman();
+            break;
+
+        case '/perpustakaan/cetak-laporan-kunjungan':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->cetakLaporanKunjungan();
+            break;
+
         case '/api/v1/perpustakaan/ulasan/simpan':
             $controller = new App\Controllers\PerpustakaanController();
             $controller->apiSimpanUlasan();

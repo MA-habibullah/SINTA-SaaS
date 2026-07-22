@@ -13,7 +13,7 @@
             <i class="bi bi-arrow-left me-1"></i> Kembali ke Dashboard
         </a>
         <button type="button" class="btn btn-primary btn-sm rounded-3 px-3 py-2 fs-7" data-bs-toggle="modal" data-bs-target="#modalOpnameBaru">
-            <i class="bi bi-qr-code-scan me-1"></i> Mula Sesi Opname Baru
+            <i class="bi bi-qr-code-scan me-1"></i> Mulai Sesi Opname Baru
         </button>
     </div>
 </div>
@@ -51,14 +51,46 @@
                             <td><span class="badge bg-danger"><?= (int)$op['total_selisih'] ?> Hilang</span></td>
                             <td><span class="badge bg-success">Selesai</span></td>
                             <td class="text-center">
-                                <button class="btn btn-outline-primary btn-sm rounded-2">
+                                <a href="/SINTA-SaaS/perpustakaan/cetak-laporan-ddc" class="btn btn-outline-primary btn-sm rounded-2">
                                     <i class="bi bi-file-earmark-bar-graph me-1"></i> Laporan Audit
-                                </button>
+                                </a>
                             </td>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </tbody>
         </table>
+    </div>
+</div>
+
+<!-- Modal Mulai Sesi Opname Baru -->
+<div class="modal fade" id="modalOpnameBaru" tabindex="-1" aria-labelledby="modalOpnameBaruLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-primary text-white rounded-top-4">
+                <h5 class="modal-title fw-bold" id="modalOpnameBaruLabel"><i class="bi bi-qr-code-scan me-2"></i> Buat Sesi Audit Stock Opname</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="/SINTA-SaaS/perpustakaan/opname" method="POST">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Judul Sesi Audit Opname <span class="text-danger">*</span></label>
+                        <input type="text" name="nama_sesi" class="form-control rounded-3" value="Stock Opname Semester <?= date('Y') ?>" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Petugas Pustakawan</label>
+                        <input type="text" name="petugas" class="form-control rounded-3" value="Tim Pustakawan Utama">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Tanggal Audit</label>
+                        <input type="date" name="tanggal" class="form-control rounded-3" value="<?= date('Y-m-d') ?>">
+                    </div>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-secondary rounded-3 px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4"><i class="bi bi-play-fill me-1"></i> Mulai Sesi Audit</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>

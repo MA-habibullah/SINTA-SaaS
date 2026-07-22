@@ -20,9 +20,9 @@
         <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
             <h5 class="fw-bold text-primary mb-2"><i class="bi bi-journal-bookmark me-2"></i> Laporan Rekap Klasifikasi DDC</h5>
             <p class="text-muted fs-7">Rekapitulasi jumlah judul & eksemplar buku berdasarkan 10 kelas utama Klasifikasi Persepuluhan Dewey (DDC).</p>
-            <button class="btn btn-outline-primary rounded-3 mt-auto">
+            <a href="/SINTA-SaaS/perpustakaan/cetak-laporan-ddc" target="_blank" class="btn btn-outline-primary rounded-3 mt-auto">
                 <i class="bi bi-printer me-1"></i> Cetak Laporan DDC
-            </button>
+            </a>
         </div>
     </div>
 
@@ -30,9 +30,9 @@
         <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
             <h5 class="fw-bold text-success mb-2"><i class="bi bi-person-lines-fill me-2"></i> Laporan Peminjaman Per Siswa / Kelas</h5>
             <p class="text-muted fs-7">Daftar rinci riwayat buku yang pernah dipinjam oleh setiap siswa untuk keperluan kelulusan/kenaikan kelas.</p>
-            <button class="btn btn-outline-success rounded-3 mt-auto">
+            <a href="/SINTA-SaaS/perpustakaan/cetak-laporan-peminjaman" target="_blank" class="btn btn-outline-success rounded-3 mt-auto">
                 <i class="bi bi-printer me-1"></i> Cetak Rekap Per Siswa
-            </button>
+            </a>
         </div>
     </div>
 
@@ -40,9 +40,9 @@
         <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
             <h5 class="fw-bold text-warning mb-2"><i class="bi bi-graph-up-arrow me-2"></i> Laporan Kunjungan & Duta Baca</h5>
             <p class="text-muted fs-7">Grafik & rekapitulasi statistik pengunjung buku tamu harian serta perangkingan siswa paling rajin membaca.</p>
-            <button class="btn btn-outline-warning text-dark rounded-3 mt-auto fw-semibold">
+            <a href="/SINTA-SaaS/perpustakaan/cetak-laporan-kunjungan" target="_blank" class="btn btn-outline-warning text-dark rounded-3 mt-auto fw-semibold">
                 <i class="bi bi-printer me-1"></i> Cetak Statistik Kunjungan
-            </button>
+            </a>
         </div>
     </div>
 </div>

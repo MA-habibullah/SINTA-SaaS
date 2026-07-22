@@ -88,14 +88,60 @@
                             <td><?= (int)($p['total_siswa'] ?? 0) ?> Siswa</td>
                             <td><span class="badge bg-success">Berjalan (Semester 1)</span></td>
                             <td class="text-center">
-                                <button class="btn btn-outline-primary btn-sm rounded-2 me-1" title="Cetak Laporan Peminjaman Per Siswa">
+                                <a href="/SINTA-SaaS/perpustakaan/cetak-laporan-peminjaman" class="btn btn-outline-primary btn-sm rounded-2 me-1" title="Cetak Laporan Peminjaman Per Siswa">
                                     <i class="bi bi-printer me-1"></i> Cetak Laporan
-                                </button>
+                                </a>
                             </td>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </tbody>
         </table>
+    </div>
+</div>
+
+<!-- Modal Distribusi Paket Baru -->
+<div class="modal fade" id="modalDistribusiPaket" tabindex="-1" aria-labelledby="modalDistribusiPaketLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-primary text-white rounded-top-4">
+                <h5 class="modal-title fw-bold" id="modalDistribusiPaketLabel"><i class="bi bi-box-seam me-2"></i> Form Distribusi Buku Paket Pelajaran</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="/SINTA-SaaS/perpustakaan/buku-paket" method="POST">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Nama Paket Pelajaran <span class="text-danger">*</span></label>
+                            <input type="text" name="nama_paket" class="form-control rounded-3" placeholder="Contoh: Paket Teks Kurikulum Merdeka Kelas X" required>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Target Kelas</label>
+                            <select name="kelas" class="form-select rounded-3" required>
+                                <option value="X-IPA-1">X IPA 1</option>
+                                <option value="X-IPA-2">X IPA 2</option>
+                                <option value="XI-IPA-1">XI IPA 1</option>
+                                <option value="XII-IPA-1">XII IPA 1</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Tahun Ajaran & Semester</label>
+                            <input type="text" name="tahun_ajaran" class="form-control rounded-3" value="2026/2027 Ganjil">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Durasi Peminjaman</label>
+                            <select name="durasi" class="form-select rounded-3">
+                                <option value="1 Semester">1 Semester</option>
+                                <option value="1 Tahun Ajaran">1 Tahun Ajaran</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-secondary rounded-3 px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4"><i class="bi bi-check-circle me-1"></i> Simpan & Distribusikan</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>

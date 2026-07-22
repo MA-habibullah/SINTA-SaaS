@@ -84,3 +84,55 @@
         </table>
     </div>
 </div>
+
+<!-- Modal Tambah Judul Buku -->
+<div class="modal fade" id="modalTambahBuku" tabindex="-1" aria-labelledby="modalTambahBukuLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-primary text-white rounded-top-4">
+                <h5 class="modal-title fw-bold" id="modalTambahBukuLabel"><i class="bi bi-book me-2"></i> Tambah Judul Buku Baru</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="/SINTA-SaaS/api/v1/perpustakaan/katalog/simpan" method="POST" id="formTambahBuku">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-8">
+                            <label class="form-label fw-semibold">Judul Buku <span class="text-danger">*</span></label>
+                            <input type="text" name="judul" class="form-control rounded-3" placeholder="Contoh: Matematika Diskrit SMA" required>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fw-semibold">Kode DDC</label>
+                            <input type="text" name="klasifikasi_ddc" class="form-control rounded-3" placeholder="Contoh: 510">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Nama Pengarang / Penulis</label>
+                            <input type="text" name="pengarang" class="form-control rounded-3" placeholder="Contoh: Prof. Yohanes Surya">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Penerbit & Tahun</label>
+                            <div class="input-group">
+                                <input type="text" name="penerbit" class="form-control rounded-3" placeholder="Nama Penerbit">
+                                <input type="number" name="tahun_terbit" class="form-control rounded-3" placeholder="Tahun" value="<?= date('Y') ?>">
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Nomor ISBN</label>
+                            <input type="text" name="isbn" class="form-control rounded-3" placeholder="978-602-xxxx-xx-x">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Tipe Koleksi</label>
+                            <select name="is_ebook" class="form-select rounded-3">
+                                <option value="0">Buku Fisik cetak</option>
+                                <option value="1">E-Book Digital (PDF Reader)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-secondary rounded-3 px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4"><i class="bi bi-save me-1"></i> Simpan Buku</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
