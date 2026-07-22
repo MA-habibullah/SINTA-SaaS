@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Migration: Add Missing Roles
  * 
