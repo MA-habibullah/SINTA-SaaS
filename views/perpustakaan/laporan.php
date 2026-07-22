@@ -15,6 +15,8 @@
     </div>
 </div>
 
+<?php include __DIR__ . '/_tenant_filter.php'; ?>
+
 <div class="row g-3 mb-4">
     <div class="col-12 col-md-6 col-xl-4">
         <div class="card border-0 shadow-sm rounded-4 p-4 h-100">

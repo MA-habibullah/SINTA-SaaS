@@ -73,11 +73,12 @@ class Perpustakaan {
     // -------------------------------------------------------------------------
 
     public function getBibliografiList(string $tenantId, array $filters = [], int $limit = 50, int $offset = 0): array {
-        $sql = "SELECT b.*, 
+        $sql = "SELECT b.*, t.nama_sekolah as tenant_name,
             COUNT(e.id) as total_eksemplar,
             SUM(CASE WHEN e.status = 'Tersedia' THEN 1 ELSE 0 END) as total_tersedia
             FROM perpus_bibliografi b
             LEFT JOIN perpus_eksemplar e ON b.id = e.bibliografi_id
+            LEFT JOIN tenants t ON b.tenant_id = t.id
             WHERE b.tenant_id = :tenant_id AND b.deleted_at IS NULL";
 
         $params = ['tenant_id' => $tenantId];
@@ -92,7 +93,7 @@ class Perpustakaan {
             $params['jenis_buku'] = $filters['jenis_buku'];
         }
 
-        $sql .= " GROUP BY b.id ORDER BY b.created_at DESC LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
+        $sql .= " GROUP BY b.id, t.nama_sekolah ORDER BY b.created_at DESC LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);

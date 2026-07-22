@@ -18,12 +18,15 @@
     </div>
 </div>
 
+<?php include __DIR__ . '/_tenant_filter.php'; ?>
+
 <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
                     <th>No</th>
+                    <th>Sekolah / Tenant</th>
                     <th>Nama Event / Lomba</th>
                     <th>Bidang Studi / Cabang</th>
                     <th>Siswa Peserta (Kontingen)</th>
@@ -36,7 +39,7 @@
             <tbody>
                 <?php if (empty($data['event_list'])): ?>
                     <tr>
-                        <td colspan="8" class="text-center text-muted py-4">
+                        <td colspan="9" class="text-center text-muted py-4">
                             <i class="bi bi-trophy fs-3 d-block mb-2 text-warning"></i> Belum ada event khusus/OSN terdaftar. Klik <strong>Tambah Event OSN / Lomba</strong> untuk mendaftarkan kontingen.
                         </td>
                     </tr>
@@ -44,6 +47,11 @@
                     <?php foreach ($data['event_list'] as $idx => $ev): ?>
                         <tr>
                             <td><?= $idx + 1 ?></td>
+                            <td>
+                                <span class="badge bg-light text-dark border">
+                                    <i class="bi bi-building me-1 text-primary"></i><?= htmlspecialchars($ev['tenant_name'] ?? 'Sekolah Aktif') ?>
+                                </span>
+                            </td>
                             <td><strong><?= htmlspecialchars($ev['nama_event'], ENT_QUOTES, 'UTF-8') ?></strong></td>
                             <td><span class="badge bg-warning-subtle text-dark"><?= htmlspecialchars($ev['bidang'] ?? '-', ENT_QUOTES, 'UTF-8') ?></span></td>
                             <td><?= htmlspecialchars($ev['nama_siswa'] ?? '-', ENT_QUOTES, 'UTF-8') ?></td>
@@ -72,8 +80,21 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form action="/SINTA-SaaS/perpustakaan/event" method="POST">
+                <input type="hidden" name="tenant_id" value="<?= htmlspecialchars($data['active_tenant_id'] ?? '') ?>">
                 <div class="modal-body p-4">
                     <div class="row g-3">
+                        <?php if ($data['is_super_admin'] ?? false): ?>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Target Sekolah / Tenant <span class="text-danger">*</span></label>
+                                <select name="tenant_id" class="form-select rounded-3 bg-light border-warning" required>
+                                    <?php foreach ($data['tenants'] as $t): ?>
+                                        <option value="<?= htmlspecialchars($t['id']) ?>" <?= ($t['id'] === ($data['active_tenant_id'] ?? '')) ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($t['nama_sekolah']) ?> (<?= htmlspecialchars($t['npsn']) ?>)
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        <?php endif; ?>
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-semibold">Nama Event / Olimpiade <span class="text-danger">*</span></label>
                             <input type="text" name="nama_event" class="form-control rounded-3" placeholder="Contoh: OSN Fisika Tingkat Provinsi" required>
@@ -81,14 +102,6 @@
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-semibold">Bidang Studi / Subjek</label>
                             <input type="text" name="bidang" class="form-control rounded-3" placeholder="Contoh: Fisika / Matematika / Biologi">
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label fw-semibold">Siswa Peserta (Kontingen)</label>
-                            <input type="text" name="nama_siswa" class="form-control rounded-3" placeholder="Nama Siswa">
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label fw-semibold">Batas Waktu Pengembalian</label>
-                            <input type="date" name="tanggal_kembali_rencana" class="form-control rounded-3" value="<?= date('Y-m-d', strtotime('+30 days')) ?>">
                         </div>
                     </div>
                 </div>

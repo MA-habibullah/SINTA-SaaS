@@ -20,17 +20,35 @@ class PerpustakaanController extends BaseController {
     private function guardModul(): void {
         $db = \App\Config\Database::getConnection();
 
-        if (!$this->tenantId) {
+        $roleName = $_SESSION['role_name'] ?? 'guest';
+
+        if ($roleName === 'super_admin') {
+            if (isset($_GET['tenant_id']) && !empty($_GET['tenant_id'])) {
+                $_SESSION['active_tenant_id'] = $_GET['tenant_id'];
+                $_SESSION['tenant_id'] = $_GET['tenant_id'];
+            } elseif (isset($_POST['tenant_id']) && !empty($_POST['tenant_id'])) {
+                $_SESSION['active_tenant_id'] = $_POST['tenant_id'];
+                $_SESSION['tenant_id'] = $_POST['tenant_id'];
+            }
+
+            $this->tenantId = $_SESSION['active_tenant_id'] ?? ($_SESSION['tenant_id'] ?? null);
+
+            if (!$this->tenantId) {
+                $stmtDefault = $db->query("SELECT id FROM tenants WHERE deleted_at IS NULL ORDER BY created_at ASC LIMIT 1");
+                $this->tenantId = $stmtDefault->fetchColumn() ?: '00000000-0000-0000-0000-000000000000';
+                $_SESSION['active_tenant_id'] = $this->tenantId;
+                $_SESSION['tenant_id'] = $this->tenantId;
+            }
+        } else {
             $this->tenantId = $_SESSION['tenant_id'] ?? null;
         }
 
         if (!$this->tenantId) {
-            // Fallback for Super Admin / localhost dev: pick default or first available tenant
             $stmtDefault = $db->query("SELECT id FROM tenants WHERE deleted_at IS NULL ORDER BY created_at ASC LIMIT 1");
             $this->tenantId = $stmtDefault->fetchColumn() ?: '00000000-0000-0000-0000-000000000000';
         }
 
-        // Auto-enable module for the tenant to ensure zero HTTP 400/403 errors
+        // Auto-enable module for the active tenant to ensure zero errors
         try {
             $stmt = $db->prepare("SELECT enable_perpustakaan FROM tenants WHERE id = :tid LIMIT 1");
             $stmt->execute(['tid' => $this->tenantId]);
@@ -42,6 +60,23 @@ class PerpustakaanController extends BaseController {
         } catch (\PDOException $e) {
             // Fail-safe pass
         }
+    }
+
+    private function getTenantsForSuperAdmin(): array {
+        try {
+            $db = \App\Config\Database::getConnection();
+            $stmt = $db->query("SELECT id, nama_sekolah, npsn FROM tenants WHERE deleted_at IS NULL ORDER BY nama_sekolah ASC");
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    private function attachTenantViewData(array &$data): void {
+        $isSuperAdmin = (($_SESSION['role_name'] ?? '') === 'super_admin');
+        $data['is_super_admin'] = $isSuperAdmin;
+        $data['tenants'] = $isSuperAdmin ? $this->getTenantsForSuperAdmin() : [];
+        $data['active_tenant_id'] = $this->tenantId;
     }
 
     // -------------------------------------------------------------------------
@@ -58,6 +93,7 @@ class PerpustakaanController extends BaseController {
             'summary' => $summary,
             'pengaturan' => $pengaturan
         ];
+        $this->attachTenantViewData($data);
         $contentView = __DIR__ . '/../../views/perpustakaan/dashboard.php';
         require __DIR__ . '/../../views/layout/master.php';
     }
@@ -70,6 +106,7 @@ class PerpustakaanController extends BaseController {
             'title' => 'Katalog & Koleksi Buku',
             'list' => $list
         ];
+        $this->attachTenantViewData($data);
         $contentView = __DIR__ . '/../../views/perpustakaan/katalog.php';
         require __DIR__ . '/../../views/layout/master.php';
     }
@@ -79,6 +116,7 @@ class PerpustakaanController extends BaseController {
         $data = [
             'title' => 'Sirkulasi Reguler'
         ];
+        $this->attachTenantViewData($data);
         $contentView = __DIR__ . '/../../views/perpustakaan/sirkulasi.php';
         require __DIR__ . '/../../views/layout/master.php';
     }
@@ -89,6 +127,7 @@ class PerpustakaanController extends BaseController {
             'title' => 'Peminjaman Buku Paket Pelajaran',
             'paket_list' => []
         ];
+        $this->attachTenantViewData($data);
         $contentView = __DIR__ . '/../../views/perpustakaan/buku_paket.php';
         require __DIR__ . '/../../views/layout/master.php';
     }
@@ -99,6 +138,7 @@ class PerpustakaanController extends BaseController {
             'title' => 'Event Khusus & Peminjaman OSN',
             'event_list' => []
         ];
+        $this->attachTenantViewData($data);
         $contentView = __DIR__ . '/../../views/perpustakaan/event_osn.php';
         require __DIR__ . '/../../views/layout/master.php';
     }
@@ -109,6 +149,7 @@ class PerpustakaanController extends BaseController {
             'title' => 'Keanggotaan & Bebas Pustaka',
             'anggota_list' => []
         ];
+        $this->attachTenantViewData($data);
         $contentView = __DIR__ . '/../../views/perpustakaan/anggota.php';
         require __DIR__ . '/../../views/layout/master.php';
     }
@@ -119,6 +160,7 @@ class PerpustakaanController extends BaseController {
             'title' => 'Denda & Billing Integrasi SPP',
             'denda_list' => []
         ];
+        $this->attachTenantViewData($data);
         $contentView = __DIR__ . '/../../views/perpustakaan/denda.php';
         require __DIR__ . '/../../views/layout/master.php';
     }
@@ -129,6 +171,7 @@ class PerpustakaanController extends BaseController {
             'title' => 'Stock Opname & Audit Inventaris',
             'opname_list' => []
         ];
+        $this->attachTenantViewData($data);
         $contentView = __DIR__ . '/../../views/perpustakaan/opname.php';
         require __DIR__ . '/../../views/layout/master.php';
     }
@@ -138,6 +181,7 @@ class PerpustakaanController extends BaseController {
         $data = [
             'title' => 'Laporan Perpustakaan & Akreditasi'
         ];
+        $this->attachTenantViewData($data);
         $contentView = __DIR__ . '/../../views/perpustakaan/laporan.php';
         require __DIR__ . '/../../views/layout/master.php';
     }
@@ -149,6 +193,7 @@ class PerpustakaanController extends BaseController {
             'title' => 'Pengaturan Perpustakaan',
             'pengaturan' => $pengaturan
         ];
+        $this->attachTenantViewData($data);
         $contentView = __DIR__ . '/../../views/perpustakaan/pengaturan.php';
         require __DIR__ . '/../../views/layout/master.php';
     }

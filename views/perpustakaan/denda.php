@@ -15,6 +15,8 @@
     </div>
 </div>
 
+<?php include __DIR__ . '/_tenant_filter.php'; ?>
+
 <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">

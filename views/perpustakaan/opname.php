@@ -18,12 +18,15 @@
     </div>
 </div>
 
+<?php include __DIR__ . '/_tenant_filter.php'; ?>
+
 <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
                     <th>No</th>
+                    <th>Sekolah / Tenant</th>
                     <th>Judul Sesi Opname</th>
                     <th>Tanggal Pelaksanaan</th>
                     <th>Petugas Pustakawan</th>
@@ -36,7 +39,7 @@
             <tbody>
                 <?php if (empty($data['opname_list'])): ?>
                     <tr>
-                        <td colspan="8" class="text-center text-muted py-4">
+                        <td colspan="9" class="text-center text-muted py-4">
                             <i class="bi bi-qr-code-scan fs-3 d-block mb-2 text-primary"></i> Belum ada sesi stock opname aktif. Klik <strong>Mulai Sesi Opname Baru</strong> untuk audit fisik rak.
                         </td>
                     </tr>
@@ -44,6 +47,11 @@
                     <?php foreach ($data['opname_list'] as $idx => $op): ?>
                         <tr>
                             <td><?= $idx + 1 ?></td>
+                            <td>
+                                <span class="badge bg-light text-dark border">
+                                    <i class="bi bi-building me-1 text-primary"></i><?= htmlspecialchars($op['tenant_name'] ?? 'Sekolah Aktif') ?>
+                                </span>
+                            </td>
                             <td><strong><?= htmlspecialchars($op['nama_sesi'], ENT_QUOTES, 'UTF-8') ?></strong></td>
                             <td><?= htmlspecialchars($op['tanggal'] ?? '-', ENT_QUOTES, 'UTF-8') ?></td>
                             <td><?= htmlspecialchars($op['petugas'] ?? '-', ENT_QUOTES, 'UTF-8') ?></td>
@@ -72,7 +80,20 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form action="/SINTA-SaaS/perpustakaan/opname" method="POST">
+                <input type="hidden" name="tenant_id" value="<?= htmlspecialchars($data['active_tenant_id'] ?? '') ?>">
                 <div class="modal-body p-4">
+                    <?php if ($data['is_super_admin'] ?? false): ?>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Target Sekolah / Tenant <span class="text-danger">*</span></label>
+                            <select name="tenant_id" class="form-select rounded-3 bg-light border-primary" required>
+                                <?php foreach ($data['tenants'] as $t): ?>
+                                    <option value="<?= htmlspecialchars($t['id']) ?>" <?= ($t['id'] === ($data['active_tenant_id'] ?? '')) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($t['nama_sekolah']) ?> (<?= htmlspecialchars($t['npsn']) ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    <?php endif; ?>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Judul Sesi Audit Opname <span class="text-danger">*</span></label>
                         <input type="text" name="nama_sesi" class="form-control rounded-3" value="Stock Opname Semester <?= date('Y') ?>" required>
@@ -80,10 +101,6 @@
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Petugas Pustakawan</label>
                         <input type="text" name="petugas" class="form-control rounded-3" value="Tim Pustakawan Utama">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Tanggal Audit</label>
-                        <input type="date" name="tanggal" class="form-control rounded-3" value="<?= date('Y-m-d') ?>">
                     </div>
                 </div>
                 <div class="modal-footer bg-light rounded-bottom-4">

@@ -18,12 +18,15 @@
     </div>
 </div>
 
+<?php include __DIR__ . '/_tenant_filter.php'; ?>
+
 <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
                     <th>No</th>
+                    <th>Sekolah / Tenant</th>
                     <th>Nomor Anggota</th>
                     <th>Nama Anggota</th>
                     <th>Tipe / Peran</th>
@@ -36,7 +39,7 @@
             <tbody>
                 <?php if (empty($data['anggota_list'])): ?>
                     <tr>
-                        <td colspan="8" class="text-center text-muted py-4">
+                        <td colspan="9" class="text-center text-muted py-4">
                             <i class="bi bi-person-bounding-box fs-3 d-block mb-2"></i> Belum ada data anggota terdaftar. Klik <strong>Sync Data Anggota</strong> untuk mengimpor dari data pokok siswa/guru.
                         </td>
                     </tr>
@@ -44,6 +47,11 @@
                     <?php foreach ($data['anggota_list'] as $idx => $a): ?>
                         <tr>
                             <td><?= $idx + 1 ?></td>
+                            <td>
+                                <span class="badge bg-light text-dark border">
+                                    <i class="bi bi-building me-1 text-primary"></i><?= htmlspecialchars($a['tenant_name'] ?? 'Sekolah Aktif') ?>
+                                </span>
+                            </td>
                             <td><code><?= htmlspecialchars($a['no_anggota'], ENT_QUOTES, 'UTF-8') ?></code></td>
                             <td><strong><?= htmlspecialchars($a['nama_lengkap'] ?? '-', ENT_QUOTES, 'UTF-8') ?></strong></td>
                             <td><span class="badge bg-secondary"><?= htmlspecialchars($a['tipe_anggota'] ?? 'Siswa', ENT_QUOTES, 'UTF-8') ?></span></td>
@@ -84,6 +92,19 @@
                 <i class="bi bi-cloud-arrow-down text-primary display-3 d-block mb-3"></i>
                 <h5 class="fw-bold text-dark">Impor Data Siswa & Guru</h5>
                 <p class="text-muted fs-7">Sistem akan secara otomatis mendaftarkan seluruh siswa dan guru aktif ke dalam basis data perpustakaan digital.</p>
+                
+                <?php if ($data['is_super_admin'] ?? false): ?>
+                    <div class="text-start mt-3">
+                        <label class="form-label fw-semibold">Target Sekolah / Tenant <span class="text-danger">*</span></label>
+                        <select id="syncTenantSelect" class="form-select rounded-3 bg-light border-primary">
+                            <?php foreach ($data['tenants'] as $t): ?>
+                                <option value="<?= htmlspecialchars($t['id']) ?>" <?= ($t['id'] === ($data['active_tenant_id'] ?? '')) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($t['nama_sekolah']) ?> (<?= htmlspecialchars($t['npsn']) ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                <?php endif; ?>
             </div>
             <div class="modal-footer bg-light rounded-bottom-4">
                 <button type="button" class="btn btn-secondary rounded-3 px-4" data-bs-dismiss="modal">Batal</button>
@@ -100,7 +121,10 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', function() {
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Memproses...';
-            fetch('/SINTA-SaaS/api/v1/perpustakaan/anggota/sync', { method: 'POST' })
+            const select = document.getElementById('syncTenantSelect');
+            const tid = select ? select.value : '<?= htmlspecialchars($data['active_tenant_id'] ?? '') ?>';
+            
+            fetch('/SINTA-SaaS/api/v1/perpustakaan/anggota/sync?tenant_id=' + encodeURIComponent(tid), { method: 'POST' })
                 .then(res => res.json())
                 .then(data => {
                     alert(data.message || 'Sinkronisasi berhasil!');

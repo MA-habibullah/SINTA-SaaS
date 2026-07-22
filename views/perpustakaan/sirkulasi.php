@@ -18,6 +18,8 @@
     </div>
 </div>
 
+<?php include __DIR__ . '/_tenant_filter.php'; ?>
+
 <div class="row g-4">
     <!-- Form Scanner Peminjaman -->
     <div class="col-12 col-lg-6">

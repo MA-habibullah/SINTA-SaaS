@@ -18,6 +18,8 @@
     </div>
 </div>
 
+<?php include __DIR__ . '/_tenant_filter.php'; ?>
+
 <!-- Table Card -->
 <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
     <div class="table-responsive">
@@ -25,6 +27,7 @@
             <thead class="table-light">
                 <tr>
                     <th>No</th>
+                    <th>Sekolah / Tenant</th>
                     <th>Judul Buku</th>
                     <th>Pengarang / Penerbit</th>
                     <th>ISBN / DDC</th>
@@ -37,7 +40,7 @@
             <tbody>
                 <?php if (empty($data['list'])): ?>
                     <tr>
-                        <td colspan="8" class="text-center text-muted py-4">
+                        <td colspan="9" class="text-center text-muted py-4">
                             <i class="bi bi-inbox fs-3 d-block mb-2"></i> Belum ada koleksi buku terdaftar. Klik <strong>Tambah Judul Buku</strong> untuk menambahkan.
                         </td>
                     </tr>
@@ -45,6 +48,11 @@
                     <?php foreach ($data['list'] as $i => $item): ?>
                         <tr>
                             <td><?= $i + 1 ?></td>
+                            <td>
+                                <span class="badge bg-light text-dark border">
+                                    <i class="bi bi-building me-1 text-primary"></i><?= htmlspecialchars($item['tenant_name'] ?? 'Sekolah Aktif') ?>
+                                </span>
+                            </td>
                             <td>
                                 <strong><?= htmlspecialchars($item['judul'], ENT_QUOTES, 'UTF-8') ?></strong>
                             </td>
@@ -94,8 +102,21 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form action="/SINTA-SaaS/api/v1/perpustakaan/katalog/simpan" method="POST" id="formTambahBuku">
+                <input type="hidden" name="tenant_id" value="<?= htmlspecialchars($data['active_tenant_id'] ?? '') ?>">
                 <div class="modal-body p-4">
                     <div class="row g-3">
+                        <?php if ($data['is_super_admin'] ?? false): ?>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Target Sekolah / Tenant <span class="text-danger">*</span></label>
+                                <select name="tenant_id" class="form-select rounded-3 bg-light border-primary" required>
+                                    <?php foreach ($data['tenants'] as $t): ?>
+                                        <option value="<?= htmlspecialchars($t['id']) ?>" <?= ($t['id'] === ($data['active_tenant_id'] ?? '')) ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($t['nama_sekolah']) ?> (<?= htmlspecialchars($t['npsn']) ?>)
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        <?php endif; ?>
                         <div class="col-12 col-md-8">
                             <label class="form-label fw-semibold">Judul Buku <span class="text-danger">*</span></label>
                             <input type="text" name="judul" class="form-control rounded-3" placeholder="Contoh: Matematika Diskrit SMA" required>

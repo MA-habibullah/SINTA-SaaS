@@ -18,6 +18,8 @@ $emailAktif = (int)($pengaturan['auto_notif_email_aktif'] ?? 0);
     </div>
 </div>
 
+<?php include __DIR__ . '/_tenant_filter.php'; ?>
+
 <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
     <h5 class="fw-bold text-dark mb-4"><i class="bi bi-sliders text-primary me-2"></i> Parameter Aturan & Notifikasi</h5>
 
