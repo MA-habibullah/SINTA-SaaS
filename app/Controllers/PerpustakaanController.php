@@ -83,6 +83,65 @@ class PerpustakaanController extends BaseController {
         require __DIR__ . '/../../views/layout/master.php';
     }
 
+    public function bukuPaket(): void {
+        $this->guardModul();
+        $data = [
+            'title' => 'Peminjaman Buku Paket Pelajaran',
+            'paket_list' => []
+        ];
+        $contentView = __DIR__ . '/../../views/perpustakaan/buku_paket.php';
+        require __DIR__ . '/../../views/layout/master.php';
+    }
+
+    public function eventOSN(): void {
+        $this->guardModul();
+        $data = [
+            'title' => 'Event Khusus & Peminjaman OSN',
+            'event_list' => []
+        ];
+        $contentView = __DIR__ . '/../../views/perpustakaan/event_osn.php';
+        require __DIR__ . '/../../views/layout/master.php';
+    }
+
+    public function anggota(): void {
+        $this->guardModul();
+        $data = [
+            'title' => 'Keanggotaan & Bebas Pustaka',
+            'anggota_list' => []
+        ];
+        $contentView = __DIR__ . '/../../views/perpustakaan/anggota.php';
+        require __DIR__ . '/../../views/layout/master.php';
+    }
+
+    public function denda(): void {
+        $this->guardModul();
+        $data = [
+            'title' => 'Denda & Billing Integrasi SPP',
+            'denda_list' => []
+        ];
+        $contentView = __DIR__ . '/../../views/perpustakaan/denda.php';
+        require __DIR__ . '/../../views/layout/master.php';
+    }
+
+    public function opname(): void {
+        $this->guardModul();
+        $data = [
+            'title' => 'Stock Opname & Audit Inventaris',
+            'opname_list' => []
+        ];
+        $contentView = __DIR__ . '/../../views/perpustakaan/opname.php';
+        require __DIR__ . '/../../views/layout/master.php';
+    }
+
+    public function laporan(): void {
+        $this->guardModul();
+        $data = [
+            'title' => 'Laporan Perpustakaan & Akreditasi'
+        ];
+        $contentView = __DIR__ . '/../../views/perpustakaan/laporan.php';
+        require __DIR__ . '/../../views/layout/master.php';
+    }
+
     public function pengaturan(): void {
         $this->guardModul();
         $pengaturan = $this->model->getPengaturan($this->tenantId);

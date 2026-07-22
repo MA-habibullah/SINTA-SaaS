@@ -314,14 +314,38 @@ try {
             break;
 
         case '/perpustakaan/buku-paket':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->bukuPaket();
+            break;
+
         case '/perpustakaan/event':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->eventOSN();
+            break;
+
         case '/perpustakaan/anggota':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->anggota();
+            break;
+
         case '/perpustakaan/denda':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->denda();
+            break;
+
         case '/perpustakaan/opname':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->opname();
+            break;
+
         case '/perpustakaan/laporan':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->laporan();
+            break;
+
         case '/perpustakaan/pengaturan':
             $controller = new App\Controllers\PerpustakaanController();
-            $controller->dashboard();
+            $controller->pengaturan();
             break;
 
         case '/perpustakaan/opac':
