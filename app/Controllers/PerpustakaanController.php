@@ -45,27 +45,56 @@ class PerpustakaanController extends BaseController {
     }
 
     // -------------------------------------------------------------------------
-    // 1. DASHBOARD & VIEWS OPERATOR
+    // 1. DASHBOARD & VIEWS OPERATOR (HTML LAYOUT RENDER)
     // -------------------------------------------------------------------------
 
     public function dashboard(): void {
         $this->guardModul();
+        $summary = $this->model->getDashboardSummary($this->tenantId);
         $pengaturan = $this->model->getPengaturan($this->tenantId);
 
-        header('Content-Type: text/html; charset=utf-8');
-        echo "<h1>📚 Dashboard Perpustakaan — " . htmlspecialchars($pengaturan['nama_perpustakaan'] ?? 'Perpustakaan Digital', ENT_QUOTES, 'UTF-8') . "</h1>";
-        echo "<p>Sistem Perpustakaan Terintegrasi (ILS) SINTA-SaaS Aktif.</p>";
-        echo "<ul>";
-        echo "<li><a href='/SINTA-SaaS/perpustakaan/katalog'>📖 Katalog & Koleksi</a></li>";
-        echo "<li><a href='/SINTA-SaaS/perpustakaan/sirkulasi'>🔄 Sirkulasi Reguler</a></li>";
-        echo "<li><a href='/SINTA-SaaS/perpustakaan/buku-paket'>📦 Buku Paket Pelajaran</a></li>";
-        echo "<li><a href='/SINTA-SaaS/perpustakaan/event'>🏆 Event Khusus (OSN)</a></li>";
-        echo "<li><a href='/SINTA-SaaS/perpustakaan/anggota'>👥 Keanggotaan & Bebas Pustaka</a></li>";
-        echo "<li><a href='/SINTA-SaaS/perpustakaan/opac' target='_blank'>🌐 OPAC Publik</a></li>";
-        echo "</ul>";
+        $data = [
+            'title' => 'Dashboard Perpustakaan',
+            'summary' => $summary,
+            'pengaturan' => $pengaturan
+        ];
+        $contentView = __DIR__ . '/../../views/perpustakaan/dashboard.php';
+        require __DIR__ . '/../../views/layout/master.php';
     }
 
     public function katalog(): void {
+        $this->guardModul();
+        $list = $this->model->getBibliografiList($this->tenantId);
+        
+        $data = [
+            'title' => 'Katalog & Koleksi Buku',
+            'list' => $list
+        ];
+        $contentView = __DIR__ . '/../../views/perpustakaan/katalog.php';
+        require __DIR__ . '/../../views/layout/master.php';
+    }
+
+    public function sirkulasi(): void {
+        $this->guardModul();
+        $data = [
+            'title' => 'Sirkulasi Reguler'
+        ];
+        $contentView = __DIR__ . '/../../views/perpustakaan/sirkulasi.php';
+        require __DIR__ . '/../../views/layout/master.php';
+    }
+
+    public function pengaturan(): void {
+        $this->guardModul();
+        $pengaturan = $this->model->getPengaturan($this->tenantId);
+        $data = [
+            'title' => 'Pengaturan Perpustakaan',
+            'pengaturan' => $pengaturan
+        ];
+        $contentView = __DIR__ . '/../../views/perpustakaan/pengaturan.php';
+        require __DIR__ . '/../../views/layout/master.php';
+    }
+
+    public function apiGetKatalog(): void {
         $this->guardModul();
         $list = $this->model->getBibliografiList($this->tenantId);
         
@@ -77,18 +106,19 @@ class PerpustakaanController extends BaseController {
         ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
     }
 
-    public function sirkulasi(): void {
+    public function apiSavePengaturan(): void {
         $this->guardModul();
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode([
-            'success' => true,
-            'message' => 'Layar Sirkulasi Reguler Siap digabungkan dengan UI Scanner.'
-        ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
-    }
+        $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+        
+        $ok = $this->model->updatePengaturan($this->tenantId, $input);
+        
+        if (isset($_POST['nama_perpustakaan'])) {
+            header('Location: /SINTA-SaaS/perpustakaan/pengaturan?success=' . urlencode('Pengaturan perpustakaan berhasil disimpan.'));
+            return;
+        }
 
-    // -------------------------------------------------------------------------
-    // 2. API ENDPOINTS (AJAX / FETCH)
-    // -------------------------------------------------------------------------
+        echo json_encode(['success' => $ok, 'message' => $ok ? 'Pengaturan berhasil disimpan.' : 'Gagal menyimpan pengaturan.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    }
 
     public function apiPinjamReguler(): void {
         $this->guardModul();

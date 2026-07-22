@@ -373,9 +373,19 @@ try {
             }
             break;
 
+        case '/api/v1/perpustakaan/katalog':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->apiGetKatalog();
+            break;
+
         case '/api/v1/perpustakaan/katalog/simpan':
             $controller = new App\Controllers\PerpustakaanController();
             $controller->apiSaveBibliografi();
+            break;
+
+        case '/api/v1/perpustakaan/pengaturan/simpan':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->apiSavePengaturan();
             break;
 
         case '/api/v1/perpustakaan/denda':
