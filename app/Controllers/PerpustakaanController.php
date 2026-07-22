@@ -407,23 +407,23 @@ class PerpustakaanController extends BaseController {
 
     public function opacPublic(): void {
         $query = $_GET['q'] ?? '';
-        $list = [];
+        $tenantId = $this->tenantId ?: ($_SESSION['tenant_id'] ?? null);
 
-        if ($this->tenantId) {
-            $list = $this->model->searchOpacPublic($this->tenantId, $query);
+        if (!$tenantId) {
+            $db = \App\Config\Database::getConnection();
+            $stmtDefault = $db->query("SELECT id FROM tenants WHERE deleted_at IS NULL ORDER BY created_at ASC LIMIT 1");
+            $tenantId = $stmtDefault->fetchColumn() ?: '00000000-0000-0000-0000-000000000000';
         }
 
-        header('Content-Type: text/html; charset=utf-8');
-        echo "<!DOCTYPE html><html lang='id'><head><meta charset='UTF-8'><title>OPAC Publik — Katalog Perpustakaan</title></head><body>";
-        echo "<h1>🌐 OPAC Publik — Katalog Perpustakaan</h1>";
-        echo "<form method='GET' action=''><input type='text' name='q' value='" . htmlspecialchars($query, ENT_QUOTES, 'UTF-8') . "' placeholder='Cari judul, pengarang, DDC...'> <button type='submit'>Cari</button></form>";
-        echo "<hr>";
-        echo "<p>Total Hasil: " . count($list) . " koleksi</p>";
-        echo "<ul>";
-        foreach ($list as $b) {
-            echo "<li><strong>" . htmlspecialchars($b['judul'], ENT_QUOTES, 'UTF-8') . "</strong> (DDC: " . htmlspecialchars($b['klasifikasi_ddc'] ?? '-', ENT_QUOTES, 'UTF-8') . ") — Tersedia: " . (int)$b['total_tersedia'] . " dari " . (int)$b['total_eksemplar'] . " eksemplar</li>";
-        }
-        echo "</ul></body></html>";
+        $list = $this->model->searchOpacPublic($tenantId, $query);
+
+        $data = [
+            'title' => 'OPAC Publik — Katalog Perpustakaan Digital',
+            'query' => $query,
+            'list'  => $list
+        ];
+
+        require __DIR__ . '/../../views/perpustakaan/opac_public.php';
     }
 
     public function bukuTamuPublic(): void {
