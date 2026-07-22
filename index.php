@@ -2,7 +2,7 @@
 // Secure by Design: Global Security Headers
 header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
-header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:; connect-src 'self' https:;");
+header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' https: data:; connect-src 'self' data: blob: https:; worker-src 'self' blob:;");
 
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
