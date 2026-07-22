@@ -718,3 +718,15 @@ Pencetakan tombol navigasi halaman (pagination) numerik sebelumnya merender selu
    - Fungsi `printReport()` merender pratinjau cetak (*print preview*) resmi ber-kop sekolah dengan ringkasan kriteria filter yang diterapkan dan total rekapitulasi jumlah bayar/sisa tunggakan di bagian bawah.
 5. **Backend Data JOIN ([SppController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/SppController.php))**:
    - Memperbarui method `apiLaporanRekap()` dengan `LEFT JOIN` ke tabel `kelas`, `jenjang`, dan `tahun_ajaran` serta mengembalikan daftar master opsi filter secara otomatis.
+
+---
+## [Perbaikan Error 500 Kelembagaan Modul Kurikulum (Unknown Column k.deleted_at)]
+**Waktu**: 21:24 WIB
+**Jenis**: Bug Fix / Database Schema Migration
+
+### Ringkasan Pekerjaan & File yang Diubah:
+1. **Pembuatan File Migrasi Database ([2026_07_21_04_add_deleted_at_to_ref_kurikulum.php](file:///C:/xampp/htdocs/SINTA-SaaS/database/migrations/2026_07_21_04_add_deleted_at_to_ref_kurikulum.php))**:
+   - Mengidentifikasi galat HTTP 500 pada endpoint `/api/v1/kelembagaan?module=kurikulum`: kueri SQL melakukan penyaringan soft-delete `WHERE k.deleted_at IS NULL`, padahal skema awal tabel `ref_kurikulum` belum memiliki kolom `deleted_at`.
+   - Membuat migrasi idempotent berformat `return [...]` array yang menambahkan kolom `deleted_at` (TIMESTAMP NULL DEFAULT NULL) ke tabel `ref_kurikulum`.
+2. **Commit & Push ke GitHub Repo**:
+   - Berhasil melakukan commit dan push perbaikan ke repositori GitHub (`1349084 fix(db/kurikulum): add missing deleted_at column to ref_kurikulum table for soft delete support`).
