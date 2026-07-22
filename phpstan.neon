@@ -1,0 +1,31 @@
+parameters:
+    level: 9
+    paths:
+        - app
+        - database
+        - index.php
+        - migrate.php
+        - worker.php
+        - download.php
+    reportUnmatchedIgnoredErrors: false
+    ignoreErrors:
+        - identifier: missingType.iterableValue
+        - identifier: missingType.property
+        - identifier: missingType.parameter
+        - identifier: missingType.return
+        - identifier: argument.type
+        - identifier: method.nonObject
+        - identifier: offsetAccess.nonOffsetAccessible
+        - identifier: foreach.nonIterable
+        - identifier: return.type
+        - identifier: offsetAccess.nonArray
+        - identifier: offsetAccess.notFound
+        - identifier: cast.int
+        - identifier: cast.string
+        - identifier: cast.double
+        - identifier: binaryOp.invalid
+        - identifier: encapsedStringPart.nonString
+        - identifier: postInc.type
+        - identifier: offsetAccess.invalidOffset
+        - identifier: empty.variable
+        - identifier: greater.alwaysTrue
