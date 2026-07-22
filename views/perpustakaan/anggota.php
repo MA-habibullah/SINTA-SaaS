@@ -2,11 +2,22 @@
 /**
  * View: Keanggotaan Perpustakaan & Bebas Pustaka
  */
+$pagination = $data['pagination'] ?? [
+    'current_page' => 1,
+    'per_page' => 10,
+    'total_records' => 0,
+    'total_pages' => 1,
+    'from' => 0,
+    'to' => 0
+];
+$currentPage = $pagination['current_page'];
+$totalPages = $pagination['total_pages'];
+$activeTenantId = $data['active_tenant_id'] ?? '';
 ?>
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-2 pb-2 mb-4 border-bottom">
     <div>
         <h2 class="fw-bold text-dark mb-1">👥 Keanggotaan & Surat Bebas Pustaka</h2>
-        <p class="text-muted fs-7 mb-0">Verifikasi Anggota Perpustakaan, Cetak Kartu Digital, & Penerbitan Surat Bebas Pustaka Kelulusan.</p>
+        <p class="text-muted fs-7 mb-0">Verifikasi Anggota Perpustakaan, NISN Siswa, Cetak Kartu Digital, & Penerbitan Surat Bebas Pustaka.</p>
     </div>
     <div class="btn-toolbar gap-2 mb-2 mb-md-0">
         <a href="/SINTA-SaaS/perpustakaan" class="btn btn-outline-secondary btn-sm rounded-3 px-3 py-2 fs-7">
@@ -20,6 +31,7 @@
 
 <?php include __DIR__ . '/_tenant_filter.php'; ?>
 
+<!-- Data Table Card -->
 <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
@@ -28,6 +40,7 @@
                     <th>No</th>
                     <th>Sekolah / Tenant</th>
                     <th>Nomor Anggota</th>
+                    <th>NISN / NIP</th>
                     <th>Nama Anggota</th>
                     <th>Kelas Aktif</th>
                     <th>Tipe / Peran</th>
@@ -40,20 +53,25 @@
             <tbody>
                 <?php if (empty($data['anggota_list'])): ?>
                     <tr>
-                        <td colspan="10" class="text-center text-muted py-4">
+                        <td colspan="11" class="text-center text-muted py-4">
                             <i class="bi bi-person-bounding-box fs-3 d-block mb-2"></i> Belum ada data anggota terdaftar. Klik <strong>Sync Data Anggota</strong> untuk mengimpor dari data pokok siswa/guru.
                         </td>
                     </tr>
                 <?php else: ?>
                     <?php foreach ($data['anggota_list'] as $idx => $a): ?>
                         <tr>
-                            <td><?= $idx + 1 ?></td>
+                            <td><?= ($pagination['from'] > 0 ? $pagination['from'] : 1) + $idx ?></td>
                             <td>
                                 <span class="badge bg-light text-dark border">
                                     <i class="bi bi-building me-1 text-primary"></i><?= htmlspecialchars($a['tenant_name'] ?? 'Sekolah Aktif') ?>
                                 </span>
                             </td>
                             <td><code><?= htmlspecialchars($a['no_anggota'], ENT_QUOTES, 'UTF-8') ?></code></td>
+                            <td>
+                                <span class="badge bg-light text-dark border fw-normal font-monospace">
+                                    <i class="bi bi-card-text me-1 text-secondary"></i><?= htmlspecialchars($a['nisn'] ?? ($a['nip'] ?? '-'), ENT_QUOTES, 'UTF-8') ?>
+                                </span>
+                            </td>
                             <td><strong><?= htmlspecialchars($a['nama_lengkap'] ?? '-', ENT_QUOTES, 'UTF-8') ?></strong></td>
                             <td>
                                 <span class="badge bg-primary-subtle text-primary border">
@@ -84,6 +102,57 @@
             </tbody>
         </table>
     </div>
+
+    <!-- Pagination Navigation Footer -->
+    <?php if ($pagination['total_records'] > 0): ?>
+        <div class="d-flex flex-wrap align-items-center justify-content-between pt-4 mt-2 border-top gap-3">
+            <div class="fs-7 text-muted">
+                Menampilkan <span class="fw-bold text-dark"><?= $pagination['from'] ?></span> sampai <span class="fw-bold text-dark"><?= $pagination['to'] ?></span> dari <span class="fw-bold text-dark"><?= number_format($pagination['total_records']) ?></span> total anggota.
+            </div>
+            <nav aria-label="Navigasi Halaman Anggota">
+                <ul class="pagination pagination-sm mb-0 gap-1">
+                    <!-- First Page -->
+                    <li class="page-item <?= ($currentPage <= 1) ? 'disabled' : '' ?>">
+                        <a class="page-link rounded-3 px-3 py-1.5" href="?page=1<?= !empty($activeTenantId) ? '&tenant_id=' . urlencode($activeTenantId) : '' ?>" aria-label="Pertama">
+                            « Pertama
+                        </a>
+                    </li>
+                    <!-- Previous Page -->
+                    <li class="page-item <?= ($currentPage <= 1) ? 'disabled' : '' ?>">
+                        <a class="page-link rounded-3 px-3 py-1.5" href="?page=<?= max(1, $currentPage - 1) ?><?= !empty($activeTenantId) ? '&tenant_id=' . urlencode($activeTenantId) : '' ?>" aria-label="Sebelumnya">
+                            ‹ Sebelum
+                        </a>
+                    </li>
+
+                    <!-- Page Numbers -->
+                    <?php 
+                    $startPage = max(1, $currentPage - 2);
+                    $endPage = min($totalPages, $currentPage + 2);
+                    for ($p = $startPage; $p <= $endPage; $p++): 
+                    ?>
+                        <li class="page-item <?= ($p === $currentPage) ? 'active' : '' ?>">
+                            <a class="page-link rounded-3 px-3 py-1.5 <?= ($p === $currentPage) ? 'fw-bold bg-primary border-primary text-white' : '' ?>" href="?page=<?= $p ?><?= !empty($activeTenantId) ? '&tenant_id=' . urlencode($activeTenantId) : '' ?>">
+                                <?= $p ?>
+                            </a>
+                        </li>
+                    <?php endfor; ?>
+
+                    <!-- Next Page -->
+                    <li class="page-item <?= ($currentPage >= $totalPages) ? 'disabled' : '' ?>">
+                        <a class="page-link rounded-3 px-3 py-1.5" href="?page=<?= min($totalPages, $currentPage + 1) ?><?= !empty($activeTenantId) ? '&tenant_id=' . urlencode($activeTenantId) : '' ?>" aria-label="Berikutnya">
+                            Berikut »
+                        </a>
+                    </li>
+                    <!-- Last Page -->
+                    <li class="page-item <?= ($currentPage >= $totalPages) ? 'disabled' : '' ?>">
+                        <a class="page-link rounded-3 px-3 py-1.5" href="?page=<?= $totalPages ?><?= !empty($activeTenantId) ? '&tenant_id=' . urlencode($activeTenantId) : '' ?>" aria-label="Terakhir">
+                            Terakhir »
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    <?php endif; ?>
 </div>
 
 <!-- Modal Sync Data Anggota -->

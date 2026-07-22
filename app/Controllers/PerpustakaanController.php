@@ -153,10 +153,32 @@ class PerpustakaanController extends BaseController {
 
     public function anggota(): void {
         $this->guardModul();
-        $list = $this->model->getAnggotaList($this->tenantId);
+        $fullList = $this->model->getAnggotaList($this->tenantId);
+
+        // Pagination calculation
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $perPage = 10;
+        $totalRecords = count($fullList);
+        $totalPages = max(1, (int)ceil($totalRecords / $perPage));
+
+        if ($page > $totalPages) {
+            $page = $totalPages;
+        }
+
+        $offset = ($page - 1) * $perPage;
+        $paginatedList = array_slice($fullList, $offset, $perPage);
+
         $data = [
             'title' => 'Keanggotaan & Bebas Pustaka',
-            'anggota_list' => $list
+            'anggota_list' => $paginatedList,
+            'pagination' => [
+                'current_page' => $page,
+                'per_page' => $perPage,
+                'total_records' => $totalRecords,
+                'total_pages' => $totalPages,
+                'from' => $totalRecords > 0 ? $offset + 1 : 0,
+                'to' => min($offset + $perPage, $totalRecords)
+            ]
         ];
         $this->attachTenantViewData($data);
         $contentView = __DIR__ . '/../../views/perpustakaan/anggota.php';
