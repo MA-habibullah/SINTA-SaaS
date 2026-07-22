@@ -12,6 +12,7 @@ if (empty($roles)) {
     $roles = [''];
 }
 $sidebarMenus = [];
+$unreadBadgeCount = 0;
 
 // Helper untuk mengecek active state berdasarkan path url
 $isActive = function($paths) use ($requestUri) {
@@ -33,6 +34,20 @@ $isActive = function($paths) use ($requestUri) {
     return '';
 };
 
+// Role normalization helper
+$normalizedRoles = [];
+foreach ($roles as $r) {
+    $clean = strtolower(trim((string)$r));
+    $normalizedRoles[] = $clean;
+    if (in_array($clean, ['super_admin', 'superadmin', 'admin', 'super admin'], true)) {
+        $normalizedRoles[] = 'super_admin';
+        $normalizedRoles[] = 'superadmin';
+        $normalizedRoles[] = 'admin';
+        $normalizedRoles[] = 'operator_sekolah';
+    }
+}
+$roles = array_values(array_unique($normalizedRoles));
+
 // Pemuatan data menu dinamis dari database (Secure by Design - prepared statements)
 if (!empty($roles)) {
     try {
@@ -51,18 +66,18 @@ if (!empty($roles)) {
             $sql = "SELECT DISTINCT m.* 
                     FROM menus m
                     JOIN tenant_menu_access tma ON m.id = tma.menu_id
-                    WHERE tma.tenant_id = ?
+                    WHERE (tma.tenant_id = ? OR tma.tenant_id = '00000000-0000-0000-0000-000000000000')
                       AND (
                           m.id IN (
                               SELECT rma.menu_id 
                               FROM role_menu_access rma
                               JOIN roles r ON rma.role_id = r.id
-                              WHERE r.nama_role IN ($inClause) AND rma.tenant_id = ?
+                              WHERE r.nama_role IN ($inClause) AND (rma.tenant_id = ? OR rma.tenant_id = '00000000-0000-0000-0000-000000000000')
                           )
                           OR m.id IN (
                               SELECT uma.menu_id 
                               FROM user_menu_access uma 
-                              WHERE uma.user_id = ? AND uma.tenant_id = ?
+                              WHERE uma.user_id = ? AND (uma.tenant_id = ? OR uma.tenant_id = '00000000-0000-0000-0000-000000000000')
                           )
                       )
                     ORDER BY m.parent_id ASC, m.urutan ASC";
@@ -77,7 +92,7 @@ if (!empty($roles)) {
                     JOIN role_menu_access rma ON m.id = rma.menu_id
                     JOIN roles r ON rma.role_id = r.id
                     WHERE r.nama_role IN ($inClause)
-                      AND rma.tenant_id = '00000000-0000-0000-0000-000000000000'
+                      AND (rma.tenant_id = '00000000-0000-0000-0000-000000000000' OR rma.tenant_id IS NOT NULL)
                     ORDER BY m.parent_id ASC, m.urutan ASC";
             $stmt = $db->prepare($sql);
             $stmt->execute($roles);
