@@ -102,6 +102,20 @@ return [
 - **Gunakan** `IF NOT EXISTS` / `IF EXISTS` / `SHOW COLUMNS` untuk membuat migrasi idempotent (aman dijalankan berulang)
 - **Gunakan** `SET FOREIGN_KEY_CHECKS = 0` di awal dan `= 1` di akhir jika ada operasi DROP/CREATE tabel dengan foreign key
 
+## Static Analysis & Security Audit Verification (WAJIB)
+Setiap kali selesai melakukan pembuatan fitur baru, refactoring, modifikasi kode, atau pembetulan bug (*bug fix*), agen WAJIB secara otomatis menjalankan 2 langkah verifikasi berikut sebelum menyatakan pekerjaan selesai:
+1. **PHPStan Static Analysis**: Jalankan analisis statis PHPStan pada berkas yang diubah atau direktori aplikasi:
+   ```powershell
+   vendor/bin/phpstan analyse <path-file-atau-folder> --level=5
+   ```
+   Pastikan tidak ada error atau warning yang tersisa (`[OK] No errors`).
+2. **Automated Security Audit Script**: Jalankan skrip uji regresi keamanan otomatis suite:
+   ```powershell
+   php scratch/tests/test_security_audit.php
+   ```
+   Pastikan hasilnya menunjukkan `Failed Checks: 0`.
+
+
 
 
 
