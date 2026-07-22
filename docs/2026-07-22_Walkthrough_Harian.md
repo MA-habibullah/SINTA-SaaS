@@ -58,3 +58,36 @@
    - Mengimplementasikan Rate Limiter pada [LoginController.php](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/LoginController.php#L24) (batas max 5x percobaan gagal / 15 menit).
    - Menambahkan Global Security Headers (`X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `CSP` dengan `font-src 'self' https: data:`) pada [index.php](file:///C:/xampp/htdocs/SINTA-SaaS/index.php#L1) untuk mendukung font Inter & Plus Jakarta Sans.
    - Dibuat skrip uji regresi keamanan otomatis permanen di [scratch/tests/test_security_audit.php](file:///C:/xampp/htdocs/SINTA-SaaS/scratch/tests/test_security_audit.php). Hasil uji terbaru: **8 Passed, 2 Warnings (Konfigurasi Dev/Env), 0 Failures**.
+
+---
+## [Implementasi Modul Perpustakaan (Integrated Library System / ILS) SINTA-SaaS]
+**Waktu**: 19:42 WIB
+**Jenis**: Feature / Architecture / Database Migration
+
+### Ringkasan Pekerjaan:
+1. **Pembuatan 18 Tabel Database Modul Perpustakaan (Prefix `perpus_`)**:
+   - Berhasil mengeksekusi migrasi [2026_07_22_00_create_library_module.php](file:///C:/xampp/htdocs/SINTA-SaaS/database/migrations/2026_07_22_00_create_library_module.php) yang menambahkan kolom `enable_perpustakaan` dan `max_koleksi_buku` pada tabel `tenants` serta 18 tabel baru dengan prefix `perpus_`:
+     - `perpus_bibliografi`, `perpus_eksemplar`, `perpus_lokasi_rak`, `perpus_anggota`, `perpus_sirkulasi`, `perpus_denda`, `perpus_reservasi`, `perpus_paket_buku`, `perpus_paket_item`, `perpus_distribusi_paket`, `perpus_event_pinjam`, `perpus_event_detail`, `perpus_pengaturan`, `perpus_buku_tamu`, `perpus_opname`, `perpus_opname_detail`, `perpus_notifikasi`, dan `perpus_kategori_ddc`.
+   - Menggunakan `COLLATE=utf8mb4_general_ci` yang 100% cocok dengan skema tabel inti SINTA-SaaS (`tenants`, `siswa`, `users`).
+
+2. **Seeding Menu & Hak Akses Dinamis**:
+   - Berhasil mengeksekusi migrasi [2026_07_22_01_seed_library_menus.php](file:///C:/xampp/htdocs/SINTA-SaaS/database/migrations/2026_07_22_01_seed_library_menus.php) untuk mendaftarkan Menu ID 80 s.d 91 (Parent Menu 📚 Perpustakaan & Sub-menu, serta 📖 Perpustakaan Saya untuk Siswa/Guru).
+   - Berhasil mengeksekusi migrasi [2026_07_22_02_seed_ddc_master.php](file:///C:/xampp/htdocs/SINTA-SaaS/database/migrations/2026_07_22_02_seed_ddc_master.php) yang meng-seed 20 klasifikasi utama Dewey Decimal Classification (DDC).
+
+3. **Pengembangan Backend MVC & Routing**:
+   - Dibuat Model [App\Models\Perpustakaan](file:///C:/xampp/htdocs/SINTA-SaaS/app/Models/Perpustakaan.php) untuk mengelola logika query multi-tenant, sirkulasi reguler, buku paket, event khusus, denda, OPAC, dan bebas pustaka.
+   - Dibuat Controller [App\Controllers\PerpustakaanController](file:///C:/xampp/htdocs/SINTA-SaaS/app/Controllers/PerpustakaanController.php) yang menangani view dashboard, sirkulasi, OPAC publik, dan endpoint API standar JSON response.
+   - Diperbarui [index.php](file:///C:/xampp/htdocs/SINTA-SaaS/index.php#L300) untuk mendaftarkan rute publik `/perpustakaan/opac` dan `/perpustakaan/buku-tamu` (bebas login) serta rute privat `/perpustakaan/*` & API `/api/v1/perpustakaan/*`.
+
+4. **Pengujian & Verifikasi**:
+   - PHPStan Level 5 Static Analysis pada `Perpustakaan.php` & `PerpustakaanController.php`: **`[OK] No errors`**.
+   - Automated Security & QA Test (`php scratch/tests/test_security_audit.php`): **8 Passed, 2 Warnings (Dev/Env), 0 Failures**.
+   - **Pemeriksaan Menyeluruh Sub-modul**: Fitur Manajemen Rak Fisik, Distribusi Buku Paket Massal, Event Khusus OSN, Denda & Billing SPP, OPAC Publik, Buku Tamu, dan Dashboard Summary API telah terintegrasi 100% lengkap.
+
+5. **Pengembangan Fitur Lanjutan E-Perpus & Toggle Notifikasi WhatsApp/Email**:
+   - Berhasil mengeksekusi migrasi [2026_07_22_03_advanced_library_features.php](file:///C:/xampp/htdocs/SINTA-SaaS/database/migrations/2026_07_22_03_advanced_library_features.php) yang menambahkan kolom E-Book (`file_ebook`, `is_ebook`), kolom Toggle Switch Notifikasi (`auto_notif_wa_aktif`, `auto_notif_email_aktif`), serta tabel `perpus_ulasan` & `perpus_notifikasi_log`.
+   - Mengimplementasikan E-Book HTML5 Reader dengan Watermark Dinamis NISN + Nama Siswa + Sekolah untuk perlindungan hak cipta anti-pembajakan.
+   - Mengimplementasikan Kios Peminjaman Mandiri (`/perpustakaan/kios-mandiri`), Kios Presensi Pintu (`/perpustakaan/kios-pintu`), dan Generator Cetak Stiker Thermal Barcode (`/perpustakaan/cetak-label-thermal`).
+   - Mengimplementasikan kontrol Toggle Switch ON/OFF WhatsApp & Email Automation yang memverifikasi status `auto_notif_wa_aktif` sebelum menjalankan pengiriman notifikasi jatuh tempo.
+
+
