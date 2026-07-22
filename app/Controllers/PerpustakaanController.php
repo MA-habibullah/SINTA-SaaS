@@ -267,6 +267,8 @@ class PerpustakaanController extends BaseController {
         echo json_encode(['success' => true, 'id' => $id, 'message' => 'Data lokasi rak berhasil disimpan.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
     }
 
+
+
     public function apiSaveBibliografi(): void {
         $this->guardModul();
         $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;

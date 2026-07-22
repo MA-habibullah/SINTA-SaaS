@@ -407,6 +407,7 @@ try {
             $controller->apiSaveBibliografi();
             break;
 
+        case '/api/v1/perpustakaan/pengaturan':
         case '/api/v1/perpustakaan/pengaturan/simpan':
             $controller = new App\Controllers\PerpustakaanController();
             $controller->apiSavePengaturan();

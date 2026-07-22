@@ -154,6 +154,25 @@
     <script>
         window.vueApps = window.vueApps || {};
 
+        // Safe Bootstrap 5 Modal initialization under Hotwire Turbo Drive
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                const _Modal = bootstrap.Modal;
+                _Modal.getOrCreateInstance = function(element, config) {
+                    if (!element) return null;
+                    try {
+                        let inst = _Modal.getInstance(element);
+                        if (!inst) {
+                            inst = new _Modal(element, config || {});
+                        }
+                        return inst;
+                    } catch (e) {
+                        return new _Modal(element, config || {});
+                    }
+                };
+            }
+        });
+
         // Fix for WAI-ARIA accessibility error: Blocked aria-hidden on an element because its descendant retained focus
         document.addEventListener('hide.bs.modal', function() {
             if (document.activeElement && typeof document.activeElement.blur === 'function') {
