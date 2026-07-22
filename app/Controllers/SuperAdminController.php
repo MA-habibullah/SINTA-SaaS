@@ -143,7 +143,7 @@ class SuperAdminController extends BaseController {
 
         } catch (\Throwable $e) {
             // Rollback jika terjadi kegagalan sistem
-            if ($db->inTransaction()) {
+            if (isset($db) && $db->inTransaction()) {
                 $db->rollBack();
             }
             error_log("Failed to save tenant menu access: " . $e->getMessage());

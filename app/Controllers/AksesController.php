@@ -370,7 +370,7 @@ class AksesController extends BaseController {
             $db->commit();
             echo json_encode(['success' => true, 'message' => 'Hak akses khusus pengguna berhasil diperbarui.']);
         } catch (\Throwable $e) {
-            if ($db->inTransaction()) $db->rollBack();
+            if (isset($db) && $db->inTransaction()) $db->rollBack();
             http_response_code(500);
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }

@@ -694,6 +694,7 @@ function MultiCell($w, $h, $txt, $border=0, $align='J', $fill=false)
 	$i = 0;
 	$j = 0;
 	$l = 0;
+	$ls = 0;
 	$ns = 0;
 	$nl = 1;
 	while($i<$nb)
@@ -1294,6 +1295,7 @@ protected function _parsepngstream($f, $file)
 	$bpc = ord($this->_readstream($f,1));
 	if($bpc>8)
 		$this->Error('16-bit depth not supported: '.$file);
+	$colspace = '';
 	$ct = ord($this->_readstream($f,1));
 	if($ct==0 || $ct==4)
 		$colspace = 'DeviceGray';
@@ -1638,6 +1640,7 @@ protected function _putfonts()
 			}
 		}
 		// ToUnicode CMap
+		$cmapkey = '';
 		if(isset($font['uv']))
 		{
 			if(isset($font['enc']))

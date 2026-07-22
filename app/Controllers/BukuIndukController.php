@@ -522,10 +522,11 @@ class BukuIndukController extends BaseController {
             die("<h1>Not Found</h1><p>Data siswa tidak ditemukan.</p>");
         }
 
+        $db = \App\Config\Database::getConnection();
+
         // Dapatkan nama-nama wilayah (Provinsi, Kota, Kecamatan, Kelurahan) secara human readable jika ada
         if (!empty($siswa['id_kelurahan'])) {
             try {
-                $db = \App\Config\Database::getConnection();
                 $stmt = $db->prepare("
                     SELECT kl.nama_kelurahan, kc.nama_kecamatan, kt.nama_kota, pr.nama_provinsi
                     FROM kelurahan kl
@@ -634,6 +635,7 @@ class BukuIndukController extends BaseController {
 
         $archiveFilename = "identitas_rapor.html";
         $this->renderOrGetArchive($siswa['id'], $siswa['tenant_id'], $archiveFilename, function() use ($siswa, $showQrCode, $urlVerifikasi) {
+            $_unused = [$siswa, $showQrCode, $urlVerifikasi];
             // Load the print view directly (no layout wrapper)
             require __DIR__ . '/../../views/print_rapot.php';
         });
@@ -664,10 +666,11 @@ class BukuIndukController extends BaseController {
             $siswaModel->setTenantId($siswa['tenant_id']);
         }
 
+        $db = \App\Config\Database::getConnection();
+
         // Dapatkan nama-nama wilayah (Provinsi, Kota, Kecamatan, Kelurahan) secara human readable jika ada
         if (!empty($siswa['id_kelurahan'])) {
             try {
-                $db = \App\Config\Database::getConnection();
                 $stmt = $db->prepare("
                     SELECT kl.nama_kelurahan, kc.nama_kecamatan, kt.nama_kota, pr.nama_provinsi
                     FROM kelurahan kl
@@ -807,6 +810,7 @@ class BukuIndukController extends BaseController {
 
         $archiveFilename = "buku_induk.html";
         $this->renderOrGetArchive($siswa['id'], $siswa['tenant_id'], $archiveFilename, function() use ($siswa, $showQrCode, $urlVerifikasi, $tempat, $tanggal) {
+            $_unused = [$siswa, $showQrCode, $urlVerifikasi, $tempat, $tanggal];
             // Load the print view directly
             require __DIR__ . '/../../views/print_buku_induk.php';
         });
@@ -943,8 +947,9 @@ class BukuIndukController extends BaseController {
             die("<h1>Not Found</h1><p>Data siswa tidak ditemukan.</p>");
         }
 
+        $db = \App\Config\Database::getConnection();
+
         try {
-            $db = \App\Config\Database::getConnection();
             $stmtTenant = $db->prepare("SELECT * FROM tenants WHERE id = ?");
             $stmtTenant->execute([$siswa['tenant_id']]);
             $tenantInfo = $stmtTenant->fetch(PDO::FETCH_ASSOC);
@@ -1082,6 +1087,7 @@ class BukuIndukController extends BaseController {
         $archiveFilename = "rapor_{$semester}_{$cleanTa}.html";
 
         $this->renderOrGetArchive($siswa['id'], $siswa['tenant_id'], $archiveFilename, function() use ($siswa, $grades, $tipePenilaian, $namaKurikulum, $sikapK13, $showQrCode, $urlVerifikasi) {
+            $_unused = [$siswa, $grades, $namaKurikulum, $sikapK13, $showQrCode, $urlVerifikasi];
             // Load correct layout
             if ($tipePenilaian === 'klasik') {
                 require __DIR__ . '/../../views/print_rapot_ktsp.php';
@@ -1109,8 +1115,9 @@ class BukuIndukController extends BaseController {
             die("<h1>Not Found</h1><p>Data siswa tidak ditemukan.</p>");
         }
 
+        $db = \App\Config\Database::getConnection();
+
         try {
-            $db = \App\Config\Database::getConnection();
             $stmtTenant = $db->prepare("SELECT * FROM tenants WHERE id = ?");
             $stmtTenant->execute([$siswa['tenant_id']]);
             $tenantInfo = $stmtTenant->fetch(PDO::FETCH_ASSOC);
@@ -1160,6 +1167,7 @@ class BukuIndukController extends BaseController {
 
         $archiveFilename = "transkrip.html";
         $this->renderOrGetArchive($siswa['id'], $siswa['tenant_id'], $archiveFilename, function() use ($siswa, $kurikulum, $showQrCode, $urlVerifikasi) {
+            $_unused = [$siswa, $showQrCode, $urlVerifikasi];
             if (stripos($kurikulum, 'Merdeka') !== false) {
                 require __DIR__ . '/../../views/print_transkrip_merdeka.php';
             } else {

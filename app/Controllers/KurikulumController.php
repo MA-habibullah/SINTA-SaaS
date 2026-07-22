@@ -182,21 +182,21 @@ class KurikulumController extends BaseController {
         $kurikulumId = $input['kurikulum_id'] ?? '';
         $mappings = $input['mappings'] ?? []; // Expected format: [ ['kelompok_id' => 'Group A', 'mapel_ids' => [1, 2]], ... ]
 
-        if (empty($kelasId) || empty($tahunAjaran) || empty($semester)) {
-            $this->jsonResponse(['status' => 'error', 'message' => 'Parameter kelas_id, tahun_ajaran, dan semester wajib diisi.'], 400);
-            return;
-        }
-
         // Resolve tenant_id
         $db = \App\Config\Database::getConnection();
         $tenantId = SessionManager::getTenantId();
         if (!$tenantId && !empty($input['tenant_id'])) {
             $tenantId = $input['tenant_id'];
         }
-        if (!$tenantId && !empty($kelasId)) {
+        if (!$tenantId && $kelasId) {
             $stmtKelasTenant = $db->prepare("SELECT tenant_id FROM kelas WHERE id = :kelas_id LIMIT 1");
             $stmtKelasTenant->execute(['kelas_id' => $kelasId]);
             $tenantId = $stmtKelasTenant->fetchColumn() ?: null;
+        }
+
+        if (empty($kelasId) || empty($tahunAjaran) || empty($semester)) {
+            $this->jsonResponse(['status' => 'error', 'message' => 'Parameter kelas_id, tahun_ajaran, dan semester wajib diisi.'], 400);
+            return;
         }
 
         if (!$tenantId) {
@@ -279,6 +279,18 @@ class KurikulumController extends BaseController {
         $tahunAjaran = $input['tahun_ajaran'] ?? '';
         $semester = $input['semester'] ?? '';
 
+        // Resolve tenant_id
+        $db = \App\Config\Database::getConnection();
+        $tenantId = SessionManager::getTenantId();
+        if (!$tenantId && !empty($input['tenant_id'])) {
+            $tenantId = $input['tenant_id'];
+        }
+        if (!$tenantId && $targetKelasId) {
+            $stmtKelasTenant = $db->prepare("SELECT tenant_id FROM kelas WHERE id = :kelas_id LIMIT 1");
+            $stmtKelasTenant->execute(['kelas_id' => $targetKelasId]);
+            $tenantId = $stmtKelasTenant->fetchColumn() ?: null;
+        }
+
         if (empty($sourceKelasId) || empty($targetKelasId) || empty($tahunAjaran) || empty($semester)) {
             $this->jsonResponse(['status' => 'error', 'message' => 'Parameter source_kelas_id, target_kelas_id, tahun_ajaran, dan semester wajib diisi.'], 400);
             return;
@@ -287,18 +299,6 @@ class KurikulumController extends BaseController {
         if ($sourceKelasId == $targetKelasId) {
             $this->jsonResponse(['status' => 'error', 'message' => 'Kelas sumber dan kelas tujuan tidak boleh sama.'], 400);
             return;
-        }
-
-        // Resolve tenant_id
-        $db = \App\Config\Database::getConnection();
-        $tenantId = SessionManager::getTenantId();
-        if (!$tenantId && !empty($input['tenant_id'])) {
-            $tenantId = $input['tenant_id'];
-        }
-        if (!$tenantId && !empty($targetKelasId)) {
-            $stmtKelasTenant = $db->prepare("SELECT tenant_id FROM kelas WHERE id = :kelas_id LIMIT 1");
-            $stmtKelasTenant->execute(['kelas_id' => $targetKelasId]);
-            $tenantId = $stmtKelasTenant->fetchColumn() ?: null;
         }
 
         if (!$tenantId) {

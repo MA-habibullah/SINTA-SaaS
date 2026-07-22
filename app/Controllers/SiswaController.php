@@ -235,6 +235,7 @@ class SiswaController extends BaseController {
             if (!isset($_FILES[$key])) {
                 continue;
             }
+            $fieldLabel = ucwords(str_replace('_', ' ', $key));
             if ($_FILES[$key]['error'] !== UPLOAD_ERR_OK) {
                 if ($_FILES[$key]['error'] !== UPLOAD_ERR_NO_FILE) {
                     $errors[$key] = "Gagal mengunggah {$fieldLabel} (Kode Error: " . $_FILES[$key]['error'] . "). Mungkin ukuran file melebihi batas maksimal server.";
@@ -245,7 +246,6 @@ class SiswaController extends BaseController {
             $tmpPath   = $_FILES[$key]['tmp_name'];
             $origName  = $_FILES[$key]['name'];
             $fileSize  = $_FILES[$key]['size'];
-            $fieldLabel = ucwords(str_replace('_', ' ', $key));
 
             // 0. Security check: Only Admins/Super Admins can upload statements
             $roleName = $_SESSION['role_name'] ?? '';

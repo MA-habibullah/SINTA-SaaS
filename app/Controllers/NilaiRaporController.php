@@ -27,6 +27,10 @@ class NilaiRaporController extends BaseController {
     public function getGrid(): void {
         $db = \App\Config\Database::getConnection();
         
+        $kelasId = $_GET['kelas_id'] ?? '';
+        $tahunAjaran = $_GET['tahun_ajaran'] ?? '';
+        $semester = $_GET['semester'] ?? '';
+
         // Resolve tenant_id
         $tenantId = SessionManager::getTenantId();
         if (!$tenantId && !empty($_GET['tenant_id'])) {
@@ -42,10 +46,6 @@ class NilaiRaporController extends BaseController {
             $this->jsonResponse(['error' => 'Tenant ID tidak terdeteksi.'], 400);
             return;
         }
-
-        $kelasId = $_GET['kelas_id'] ?? '';
-        $tahunAjaran = $_GET['tahun_ajaran'] ?? '';
-        $semester = $_GET['semester'] ?? '';
 
         if (empty($kelasId) || empty($tahunAjaran) || empty($semester)) {
             $this->jsonResponse(['error' => 'Parameter kelas_id, tahun_ajaran, dan semester wajib diisi.'], 400);
@@ -234,7 +234,7 @@ class NilaiRaporController extends BaseController {
         if (!$tenantId && !empty($input['tenant_id'])) {
             $tenantId = $input['tenant_id'];
         }
-        if (!$tenantId && !empty($kelasId)) {
+        if (!$tenantId && $kelasId) {
             $stmtKelasTenant = $db->prepare("SELECT tenant_id FROM kelas WHERE id = :kelas_id LIMIT 1");
             $stmtKelasTenant->execute(['kelas_id' => $kelasId]);
             $tenantId = $stmtKelasTenant->fetchColumn() ?: null;
@@ -607,7 +607,7 @@ class NilaiRaporController extends BaseController {
         if (!$tenantId && !empty($_POST['tenant_id'])) {
             $tenantId = $_POST['tenant_id'];
         }
-        if (!$tenantId && !empty($kelasId)) {
+        if (!$tenantId && $kelasId) {
             $stmtKelasTenant = $db->prepare("SELECT tenant_id FROM kelas WHERE id = :kelas_id LIMIT 1");
             $stmtKelasTenant->execute(['kelas_id' => $kelasId]);
             $tenantId = $stmtKelasTenant->fetchColumn() ?: null;
@@ -971,7 +971,7 @@ class NilaiRaporController extends BaseController {
             if (!$tenantId && !empty($_POST['tenant_id'])) {
                 $tenantId = $_POST['tenant_id'];
             }
-            if (!$tenantId && !empty($kelasId)) {
+            if (!$tenantId && $kelasId) {
                 $stmtKelasTenant = $db->prepare("SELECT tenant_id FROM kelas WHERE id = :kelas_id LIMIT 1");
                 $stmtKelasTenant->execute(['kelas_id' => $kelasId]);
                 $tenantId = $stmtKelasTenant->fetchColumn() ?: null;
@@ -1104,6 +1104,7 @@ class NilaiRaporController extends BaseController {
                         continue;
                     }
 
+                    $val = $rawVal;
                     if ($type === 'nilai_akhir' || $type === 'kkm') {
                         if (!is_numeric($rawVal)) {
                             $rowErrors[] = "Nilai '{$rawVal}' pada {$type} mapel '{$mapelName}' bukan angka.";

@@ -972,7 +972,7 @@ class BKController extends BaseController {
                 'message' => "Pilihan penjurusan {$pilihan['nama_siswa']} berhasil di-{$aksi}.",
             ]);
         } catch (\Throwable $e) {
-            if (isset($db) && $db->inTransaction()) $db->rollBack();
+            if ($db->inTransaction()) $db->rollBack();
             error_log('[BKController::apiVerifikasiPenjurusan] ' . $e->getMessage());
             $this->jsonResponse(['error' => 'Operasi gagal. Coba lagi.'], 500);
         }
@@ -1075,7 +1075,7 @@ class BKController extends BaseController {
                 'jurusan_baru' => $jurusanBaru['nama_jurusan'],
             ]);
         } catch (\Throwable $e) {
-            if (isset($db) && $db->inTransaction()) $db->rollBack();
+            if ($db->inTransaction()) $db->rollBack();
             error_log('[BKController::apiOverridePenjurusan] ' . $e->getMessage());
             $this->jsonResponse(['error' => 'Override gagal. ' . $e->getMessage()], 500);
         }
@@ -1137,7 +1137,7 @@ class BKController extends BaseController {
             $db->commit();
             $this->jsonResponse(['success' => true, 'message' => "Pilihan berhasil di-{$aksiLabel}.", 'dikunci' => $dikunci]);
         } catch (\Throwable $e) {
-            if (isset($db) && $db->inTransaction()) $db->rollBack();
+            if ($db->inTransaction()) $db->rollBack();
             error_log('[BKController::apiToggleKunci] ' . $e->getMessage());
             $this->jsonResponse(['error' => 'Operasi gagal.'], 500);
         }
@@ -1421,6 +1421,9 @@ class BKController extends BaseController {
         $db = \App\Config\Database::getConnection();
 
         try {
+            $oldPathsToDelete = [];
+            $newUploadedPaths = [];
+
             // Ambil data prestasi saat ini
             $stmtGet = $db->prepare("SELECT * FROM prestasi_siswa WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL LIMIT 1");
             $stmtGet->execute([$idPrestasi, $tenantId]);
@@ -1481,9 +1484,6 @@ class BKController extends BaseController {
             $firstSiswaId = $siswaIds[0];
             $basePath     = "tenants/{$tenantId}/prestasi/{$firstSiswaId}/{$tahunAjaranId}/";
             $uploadDir    = __DIR__ . '/../../storage/app/public/' . $basePath;
-
-            $oldPathsToDelete = [];
-            $newUploadedPaths = [];
 
             // Helper upload file baru dan jadwalkan hapus file lama
             $fileKeys = [
@@ -1615,7 +1615,7 @@ class BKController extends BaseController {
 
             $this->jsonResponse(['success' => true, 'message' => 'Data prestasi siswa berhasil diperbarui.']);
         } catch (\Throwable $e) {
-            if (isset($db) && $db->inTransaction()) $db->rollBack();
+            if ($db->inTransaction()) $db->rollBack();
             // Hapus berkas baru jika gagal
             foreach ($newUploadedPaths as $newFile) {
                 if (file_exists($newFile)) {

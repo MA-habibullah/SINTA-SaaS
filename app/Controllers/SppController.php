@@ -600,12 +600,13 @@ class SppController extends BaseController {
     // API: Preview Target Siswa & Nominal sebelum Generate Tagihan
     public function apiPreviewGenerate(): void {
         $tenantId = $this->resolveTenantId();
+        $raw = array_merge($_GET, json_decode(file_get_contents('php://input'), true) ?? []);
         
-        $komponenId = (int)($_GET['komponen_id'] ?? 0);
-        $tahunAjaranId = (int)($_GET['tahun_ajaran_id'] ?? 0);
-        $bulan = !empty($_GET['bulan']) ? (int)$_GET['bulan'] : null;
-        $kelasId = !empty($_GET['kelas_id']) ? (int)$_GET['kelas_id'] : null;
-        $jenjangId = !empty($_GET['jenjang_id']) ? (int)$_GET['jenjang_id'] : null;
+        $komponenId = (int)($raw['komponen_id'] ?? $_GET['komponen_id'] ?? 0);
+        $tahunAjaranId = (int)($raw['tahun_ajaran_id'] ?? $_GET['tahun_ajaran_id'] ?? 0);
+        $bulan = !empty($raw['bulan']) ? (int)$raw['bulan'] : (!empty($_GET['bulan']) ? (int)$_GET['bulan'] : null);
+        $kelasId = !empty($raw['kelas_id']) ? (int)$raw['kelas_id'] : (!empty($_GET['kelas_id']) ? (int)$_GET['kelas_id'] : null);
+        $jenjangId = !empty($raw['jenjang_id']) ? (int)$raw['jenjang_id'] : (!empty($_GET['jenjang_id']) ? (int)$_GET['jenjang_id'] : null);
 
         if (!$komponenId || !$tahunAjaranId) {
             $this->jsonResponse(['success' => false, 'error' => 'Komponen dan tahun ajaran wajib diisi.'], 422);

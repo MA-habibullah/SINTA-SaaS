@@ -398,7 +398,7 @@ class PDSSController extends BaseController {
             $db->commit();
             $this->jsonResponse(['success' => true, 'message' => 'Konfigurasi mata pelajaran PDSS berhasil disimpan.']);
         } catch (\Throwable $e) {
-            if ($db->inTransaction()) {
+            if (isset($db) && $db->inTransaction()) {
                 $db->rollBack();
             }
             error_log('[PDSSController::apiSavePdssMapels] ' . $e->getMessage());
@@ -618,19 +618,6 @@ class PDSSController extends BaseController {
             $stmtSiswa = $db->prepare($sqlSiswa);
             $stmtSiswa->execute($paramsSiswa);
             $students = $stmtSiswa->fetchAll(PDO::FETCH_ASSOC);
-
-            if (empty($configMapels)) {
-                $this->jsonResponse([
-                    'success' => true,
-                    'accreditation' => $accreditation,
-                    'mapel_not_configured' => true,
-                    'locks' => $locks,
-                    'years' => $years,
-                    'total_configured_semesters' => 0,
-                    'data' => []
-                ]);
-                return;
-            }
 
             if (empty($students)) {
                 $this->jsonResponse([
@@ -1269,7 +1256,7 @@ class PDSSController extends BaseController {
             $db->commit();
             $this->jsonResponse(['success' => true, 'message' => 'Seeding data target kampus berhasil diselesaikan.']);
         } catch (\Throwable $e) {
-            if ($db->inTransaction()) {
+            if (isset($db) && $db->inTransaction()) {
                 $db->rollBack();
             }
             error_log('[PDSSController::apiSeedTargetKampus] ' . $e->getMessage());
