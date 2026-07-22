@@ -153,9 +153,10 @@ class PerpustakaanController extends BaseController {
 
     public function anggota(): void {
         $this->guardModul();
+        $list = $this->model->getAnggotaList($this->tenantId);
         $data = [
             'title' => 'Keanggotaan & Bebas Pustaka',
-            'anggota_list' => []
+            'anggota_list' => $list
         ];
         $this->attachTenantViewData($data);
         $contentView = __DIR__ . '/../../views/perpustakaan/anggota.php';

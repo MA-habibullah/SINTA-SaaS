@@ -202,12 +202,31 @@ class Perpustakaan {
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
-    public function syncAnggotaSiswa(string $tenantId): int {
-        // Auto register all active students as library members if not exist yet
-        $stmt = $this->db->prepare("SELECT s.id, s.nisn, s.nama_lengkap FROM siswa s 
-            LEFT JOIN perpus_anggota a ON s.id = a.siswa_id AND a.tenant_id = :tenant_id
-            WHERE s.tenant_id = :tenant_id AND s.status = 'Aktif' AND a.id IS NULL");
+    public function getAnggotaList(string $tenantId): array {
+        $sql = "SELECT a.*, COALESCE(s.nama_lengkap, a.nama_eksternal, 'Anggota Perpustakaan') as nama_lengkap,
+            t.nama_sekolah as tenant_name,
+            COUNT(DISTINCT sirk.id) as pinjam_aktif,
+            COALESCE(SUM(d.total_denda), 0) as total_denda
+            FROM perpus_anggota a
+            LEFT JOIN siswa s ON a.siswa_id = s.id
+            LEFT JOIN tenants t ON a.tenant_id = t.id
+            LEFT JOIN perpus_sirkulasi sirk ON a.id = sirk.anggota_id AND sirk.status IN ('Dipinjam', 'Terlambat')
+            LEFT JOIN perpus_denda d ON a.id = d.anggota_id AND d.status = 'Belum Dibayar'
+            WHERE a.tenant_id = :tenant_id
+            GROUP BY a.id, t.nama_sekolah, s.nama_lengkap
+            ORDER BY a.created_at DESC";
+
+        $stmt = $this->db->prepare($sql);
         $stmt->execute(['tenant_id' => $tenantId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function syncAnggotaSiswa(string $tenantId): int {
+        // Auto register all students as library members if not exist yet
+        $stmt = $this->db->prepare("SELECT s.id, s.nisn, s.nama_lengkap FROM siswa s 
+            LEFT JOIN perpus_anggota a ON s.id = a.siswa_id AND a.tenant_id = :tid1
+            WHERE s.tenant_id = :tid2 AND (s.deleted_at IS NULL) AND a.id IS NULL");
+        $stmt->execute(['tid1' => $tenantId, 'tid2' => $tenantId]);
         $unregistered = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $count = 0;
@@ -226,7 +245,7 @@ class Perpustakaan {
                     'no_anggota' => $noAnggota
                 ]);
                 $count++;
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // Ignore duplicate
             }
         }
