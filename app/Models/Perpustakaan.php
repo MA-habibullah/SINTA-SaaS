@@ -574,6 +574,22 @@ class Perpustakaan {
         return $id;
     }
 
+    public function getPaketBukuList(string $tenantId): array {
+        $stmt = $this->db->prepare("SELECT p.*, t.nama_sekolah as tenant_name,
+            k.nama_kelas as kelas,
+            ta.tahun_ajaran,
+            (SELECT COUNT(*) FROM perpus_paket_item WHERE paket_id = p.id) as total_buku,
+            (SELECT COUNT(DISTINCT siswa_id) FROM perpus_distribusi_paket WHERE paket_id = p.id) as total_siswa
+            FROM perpus_paket_buku p
+            LEFT JOIN tenants t ON p.tenant_id = t.id
+            LEFT JOIN kelas k ON p.kelas_id = k.id
+            LEFT JOIN tahun_ajaran ta ON p.tahun_ajaran_id = ta.id
+            WHERE p.tenant_id = :tenant_id
+            ORDER BY p.created_at DESC");
+        $stmt->execute(['tenant_id' => $tenantId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     // -------------------------------------------------------------------------
     // 8. EVENT KHUSUS (OSN, OLIMPIADE)
     // -------------------------------------------------------------------------
@@ -597,6 +613,23 @@ class Perpustakaan {
         ]);
 
         return $id;
+    }
+
+    public function getEventList(string $tenantId): array {
+        $stmt = $this->db->prepare("SELECT ev.*, t.nama_sekolah as tenant_name,
+            ed.id as detail_id, ed.tanggal_kembali_rencana, ed.status as detail_status,
+            s.nama_lengkap as nama_siswa,
+            b.judul as judul_buku,
+            ev.kategori as bidang
+            FROM perpus_event_pinjam ev
+            LEFT JOIN tenants t ON ev.tenant_id = t.id
+            LEFT JOIN perpus_event_detail ed ON ev.id = ed.event_id
+            LEFT JOIN siswa s ON ed.siswa_id = s.id
+            LEFT JOIN perpus_bibliografi b ON ed.bibliografi_id = b.id
+            WHERE ev.tenant_id = :tenant_id
+            ORDER BY ev.created_at DESC");
+        $stmt->execute(['tenant_id' => $tenantId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     // -------------------------------------------------------------------------
@@ -754,6 +787,80 @@ class Perpustakaan {
             'wa_status' => $waAktif ? 'ON' : 'OFF',
             'email_status' => $emailAktif ? 'ON' : 'OFF'
         ];
+    }
+
+    // -------------------------------------------------------------------------
+    // 13. USULAN BUKU / PENGADAAN
+    // -------------------------------------------------------------------------
+
+    public function getUsulanBukuList(string $tenantId): array {
+        $stmt = $this->db->prepare("SELECT * FROM perpus_usulan_buku WHERE tenant_id = :tenant_id ORDER BY created_at DESC");
+        $stmt->execute(['tenant_id' => $tenantId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function saveUsulanBuku(string $tenantId, array $data, ?string $id = null): string {
+        if ($id) {
+            $stmt = $this->db->prepare("UPDATE perpus_usulan_buku SET 
+                judul = :judul,
+                pengarang = :pengarang,
+                penerbit = :penerbit,
+                pengusul_nama = :pengusul_nama,
+                tanggal_usulan = :tanggal_usulan,
+                status = :status
+                WHERE id = :id AND tenant_id = :tenant_id");
+            $stmt->execute([
+                'judul' => $data['judul'],
+                'pengarang' => $data['pengarang'] ?? null,
+                'penerbit' => $data['penerbit'] ?? null,
+                'pengusul_nama' => $data['pengusul_nama'] ?? 'Umum',
+                'tanggal_usulan' => $data['tanggal_usulan'] ?? date('Y-m-d'),
+                'status' => $data['status'] ?? 'Diajukan',
+                'id' => $id,
+                'tenant_id' => $tenantId
+            ]);
+            return $id;
+        } else {
+            $newId = $this->generateUuid();
+            $stmt = $this->db->prepare("INSERT INTO perpus_usulan_buku 
+                (id, tenant_id, judul, pengarang, penerbit, pengusul_nama, tanggal_usulan, status)
+                VALUES (:id, :tenant_id, :judul, :pengarang, :penerbit, :pengusul_nama, :tanggal_usulan, :status)");
+            $stmt->execute([
+                'id' => $newId,
+                'tenant_id' => $tenantId,
+                'judul' => $data['judul'],
+                'pengarang' => $data['pengarang'] ?? null,
+                'penerbit' => $data['penerbit'] ?? null,
+                'pengusul_nama' => $data['pengusul_nama'] ?? 'Umum',
+                'tanggal_usulan' => $data['tanggal_usulan'] ?? date('Y-m-d'),
+                'status' => $data['status'] ?? 'Diajukan'
+            ]);
+            return $newId;
+        }
+    }
+
+    public function deleteUsulanBuku(string $tenantId, string $id): bool {
+        $stmt = $this->db->prepare("DELETE FROM perpus_usulan_buku WHERE id = :id AND tenant_id = :tenant_id");
+        return $stmt->execute(['id' => $id, 'tenant_id' => $tenantId]);
+    }
+
+    // -------------------------------------------------------------------------
+    // 14. BUKU TAMU / VISITOR LOGS
+    // -------------------------------------------------------------------------
+
+    public function getVisitorLogs(string $tenantId): array {
+        $stmt = $this->db->prepare("SELECT * FROM perpus_buku_tamu WHERE tenant_id = :tenant_id ORDER BY tanggal DESC, jam_masuk DESC LIMIT 100");
+        $stmt->execute(['tenant_id' => $tenantId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // -------------------------------------------------------------------------
+    // 15. KATEGORI DDC
+    // -------------------------------------------------------------------------
+
+    public function getKategoriDdcList(): array {
+        $stmt = $this->db->query("SELECT * FROM perpus_kategori_ddc ORDER BY kode ASC");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     // -------------------------------------------------------------------------

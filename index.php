@@ -423,6 +423,27 @@ try {
             $controller->apiBayarDenda();
             break;
 
+        case '/api/v1/perpustakaan/usulan':
+            $controller = new App\Controllers\PerpustakaanController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveUsulan();
+            } elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+                $controller->apiDeleteUsulan();
+            } else {
+                $controller->apiGetUsulan();
+            }
+            break;
+
+        case '/api/v1/perpustakaan/visitor-logs':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->apiGetVisitorLogs();
+            break;
+
+        case '/api/v1/perpustakaan/ddc-categories':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->apiGetDdcCategories();
+            break;
+
         case '/perpustakaan/baca-ebook':
             $controller = new App\Controllers\PerpustakaanController();
             $controller->readEbook();

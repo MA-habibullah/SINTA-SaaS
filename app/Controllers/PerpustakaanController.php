@@ -25,27 +25,28 @@ class PerpustakaanController extends BaseController {
         if ($roleName === 'super_admin') {
             if (isset($_GET['tenant_id']) && !empty($_GET['tenant_id'])) {
                 $_SESSION['active_tenant_id'] = $_GET['tenant_id'];
-                $_SESSION['tenant_id'] = $_GET['tenant_id'];
             } elseif (isset($_POST['tenant_id']) && !empty($_POST['tenant_id'])) {
                 $_SESSION['active_tenant_id'] = $_POST['tenant_id'];
-                $_SESSION['tenant_id'] = $_POST['tenant_id'];
             }
 
-            $this->tenantId = $_SESSION['active_tenant_id'] ?? ($_SESSION['tenant_id'] ?? null);
+            $sessionTenant = $_SESSION['active_tenant_id'] ?? ($_SESSION['tenant_id'] ?? null);
+            $this->tenantId = is_string($sessionTenant) ? $sessionTenant : null;
 
             if (!$this->tenantId) {
                 $stmtDefault = $db->query("SELECT id FROM tenants WHERE deleted_at IS NULL ORDER BY created_at ASC LIMIT 1");
-                $this->tenantId = $stmtDefault->fetchColumn() ?: '00000000-0000-0000-0000-000000000000';
+                $col = $stmtDefault->fetchColumn();
+                $this->tenantId = is_string($col) ? $col : '00000000-0000-0000-0000-000000000000';
                 $_SESSION['active_tenant_id'] = $this->tenantId;
-                $_SESSION['tenant_id'] = $this->tenantId;
             }
         } else {
-            $this->tenantId = $_SESSION['tenant_id'] ?? null;
+            $sessionTenant = $_SESSION['tenant_id'] ?? null;
+            $this->tenantId = is_string($sessionTenant) ? $sessionTenant : null;
         }
 
         if (!$this->tenantId) {
             $stmtDefault = $db->query("SELECT id FROM tenants WHERE deleted_at IS NULL ORDER BY created_at ASC LIMIT 1");
-            $this->tenantId = $stmtDefault->fetchColumn() ?: '00000000-0000-0000-0000-000000000000';
+            $col = $stmtDefault->fetchColumn();
+            $this->tenantId = is_string($col) ? $col : '00000000-0000-0000-0000-000000000000';
         }
 
         // Auto-enable module for the active tenant to ensure zero errors
@@ -101,10 +102,16 @@ class PerpustakaanController extends BaseController {
     public function katalog(): void {
         $this->guardModul();
         $list = $this->model->getBibliografiList($this->tenantId);
+        $rakList = $this->model->getLokasiRakList($this->tenantId);
+        $ddcCategories = $this->model->getKategoriDdcList();
+        $usulanList = $this->model->getUsulanBukuList($this->tenantId);
         
         $data = [
-            'title' => 'Katalog & Koleksi Buku',
-            'list' => $list
+            'title' => 'Katalog & Inventori Perpustakaan',
+            'list' => $list,
+            'rak_list' => $rakList,
+            'ddc_categories' => $ddcCategories,
+            'usulan_list' => $usulanList
         ];
         $this->attachTenantViewData($data);
         $contentView = __DIR__ . '/../../views/perpustakaan/katalog.php';
@@ -113,8 +120,15 @@ class PerpustakaanController extends BaseController {
 
     public function sirkulasi(): void {
         $this->guardModul();
+        $paketList = $this->model->getPaketBukuList($this->tenantId);
+        $eventList = $this->model->getEventList($this->tenantId);
+        $dendaList = $this->model->getDendaList($this->tenantId);
+
         $data = [
-            'title' => 'Sirkulasi Reguler'
+            'title' => 'Sirkulasi & Layanan Perpustakaan',
+            'paket_list' => $paketList,
+            'event_list' => $eventList,
+            'denda_list' => $dendaList
         ];
         $this->attachTenantViewData($data);
         $contentView = __DIR__ . '/../../views/perpustakaan/sirkulasi.php';
@@ -123,37 +137,71 @@ class PerpustakaanController extends BaseController {
 
     public function bukuPaket(): void {
         $this->guardModul();
-        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
-            header('Location: /SINTA-SaaS/perpustakaan/buku-paket?success=' . urlencode('Data distribusi paket berhasil disimpan.'), true, 303);
-            return;
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $db = \App\Config\Database::getConnection();
+            $targetTenant = !empty($_POST['tenant_id']) ? $_POST['tenant_id'] : $this->tenantId;
+            
+            // Resolve kelas_id from name
+            $kelasName = $_POST['kelas'] ?? '';
+            $stmtK = $db->prepare("SELECT id FROM kelas WHERE nama_kelas = :name OR kode_kelas = :name LIMIT 1");
+            $stmtK->execute(['name' => $kelasName]);
+            $kelasId = $stmtK->fetchColumn() ?: null;
+
+            // Get default tahun_ajaran_id
+            $stmtTa = $db->query("SELECT id FROM tahun_ajaran ORDER BY tahun_ajaran DESC LIMIT 1");
+            $taId = $stmtTa->fetchColumn();
+            if (!is_string($taId)) {
+                $taId = '00000000-0000-0000-0000-000000000000';
+            }
+
+            $user = $_SESSION['user_id'] ?? 'SYSTEM';
+
+            $data = [
+                'nama_paket' => $_POST['nama_paket'] ?? 'Buku Paket',
+                'kelas_id' => $kelasId,
+                'tahun_ajaran_id' => $taId,
+                'semester' => 1,
+                'durasi_pinjam' => '1 Semester',
+                'tanggal_mulai' => date('Y-m-d'),
+                'tanggal_selesai' => date('Y-m-d', strtotime('+180 days')),
+                'keterangan' => 'Didistribusikan secara massal'
+            ];
+
+            $this->model->createPaketBuku($targetTenant, $data, $user);
+            header('Location: /SINTA-SaaS/perpustakaan/sirkulasi?success=' . urlencode('Distribusi paket buku pelajaran berhasil disimpan.'), true, 303);
+            exit();
         }
-        $data = [
-            'title' => 'Peminjaman Buku Paket Pelajaran',
-            'paket_list' => []
-        ];
-        $this->attachTenantViewData($data);
-        $contentView = __DIR__ . '/../../views/perpustakaan/buku_paket.php';
-        require __DIR__ . '/../../views/layout/master.php';
+        header('Location: /SINTA-SaaS/perpustakaan/sirkulasi');
+        exit();
     }
 
     public function eventOSN(): void {
         $this->guardModul();
-        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
-            header('Location: /SINTA-SaaS/perpustakaan/event?success=' . urlencode('Data event OSN berhasil disimpan.'), true, 303);
-            return;
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $targetTenant = !empty($_POST['tenant_id']) ? $_POST['tenant_id'] : $this->tenantId;
+            $user = $_SESSION['user_id'] ?? 'SYSTEM';
+
+            $data = [
+                'nama_event' => $_POST['nama_event'] ?? 'Event OSN',
+                'kategori' => $_POST['bidang'] ?? 'OSN',
+                'tanggal_mulai' => date('Y-m-d'),
+                'tanggal_selesai' => date('Y-m-d', strtotime('+30 days')),
+                'penanggung_jawab' => 'Pustakawan',
+                'keterangan' => 'Event Pinjam'
+            ];
+
+            $this->model->createEventPinjam($targetTenant, $data, $user);
+            header('Location: /SINTA-SaaS/perpustakaan/sirkulasi?success=' . urlencode('Pendaftaran event OSN / Lomba berhasil disimpan.'), true, 303);
+            exit();
         }
-        $data = [
-            'title' => 'Event Khusus & Peminjaman OSN',
-            'event_list' => []
-        ];
-        $this->attachTenantViewData($data);
-        $contentView = __DIR__ . '/../../views/perpustakaan/event_osn.php';
-        require __DIR__ . '/../../views/layout/master.php';
+        header('Location: /SINTA-SaaS/perpustakaan/sirkulasi');
+        exit();
     }
 
     public function anggota(): void {
         $this->guardModul();
         $fullList = $this->model->getAnggotaList($this->tenantId);
+        $pengaturan = $this->model->getPengaturan($this->tenantId);
 
         // Pagination calculation
         $page = max(1, (int)($_GET['page'] ?? 1));
@@ -169,8 +217,9 @@ class PerpustakaanController extends BaseController {
         $paginatedList = array_slice($fullList, $offset, $perPage);
 
         $data = [
-            'title' => 'Keanggotaan & Bebas Pustaka',
+            'title' => 'Administrasi & Keanggotaan Perpustakaan',
             'anggota_list' => $paginatedList,
+            'pengaturan' => $pengaturan,
             'pagination' => [
                 'current_page' => $page,
                 'per_page' => $perPage,
@@ -186,51 +235,23 @@ class PerpustakaanController extends BaseController {
     }
 
     public function denda(): void {
-        $this->guardModul();
-        $data = [
-            'title' => 'Denda & Billing Integrasi SPP',
-            'denda_list' => []
-        ];
-        $this->attachTenantViewData($data);
-        $contentView = __DIR__ . '/../../views/perpustakaan/denda.php';
-        require __DIR__ . '/../../views/layout/master.php';
+        header('Location: /SINTA-SaaS/perpustakaan/sirkulasi');
+        exit();
     }
 
     public function opname(): void {
-        $this->guardModul();
-        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
-            header('Location: /SINTA-SaaS/perpustakaan/opname?success=' . urlencode('Sesi audit stock opname berhasil dimulai.'), true, 303);
-            return;
-        }
-        $data = [
-            'title' => 'Stock Opname & Audit Inventaris',
-            'opname_list' => []
-        ];
-        $this->attachTenantViewData($data);
-        $contentView = __DIR__ . '/../../views/perpustakaan/opname.php';
-        require __DIR__ . '/../../views/layout/master.php';
+        header('Location: /SINTA-SaaS/perpustakaan/katalog');
+        exit();
     }
 
     public function laporan(): void {
-        $this->guardModul();
-        $data = [
-            'title' => 'Laporan Perpustakaan & Akreditasi'
-        ];
-        $this->attachTenantViewData($data);
-        $contentView = __DIR__ . '/../../views/perpustakaan/laporan.php';
-        require __DIR__ . '/../../views/layout/master.php';
+        header('Location: /SINTA-SaaS/perpustakaan/anggota');
+        exit();
     }
 
     public function pengaturan(): void {
-        $this->guardModul();
-        $pengaturan = $this->model->getPengaturan($this->tenantId);
-        $data = [
-            'title' => 'Pengaturan Perpustakaan',
-            'pengaturan' => $pengaturan
-        ];
-        $this->attachTenantViewData($data);
-        $contentView = __DIR__ . '/../../views/perpustakaan/pengaturan.php';
-        require __DIR__ . '/../../views/layout/master.php';
+        header('Location: /SINTA-SaaS/perpustakaan/anggota');
+        exit();
     }
 
     public function apiGetKatalog(): void {
@@ -643,5 +664,56 @@ class PerpustakaanController extends BaseController {
         echo "<h3>Pinjaman Reguler Aktif: " . count($bebas['pinjaman_reguler']) . "</h3>";
         echo "<h3>Pinjaman Buku Paket: " . count($bebas['pinjaman_paket']) . "</h3>";
         echo "<h3>Tanggungan Denda: " . count($bebas['denda_tanggungan']) . "</h3>";
+    }
+
+    public function apiGetUsulan(): void {
+        $this->guardModul();
+        $list = $this->model->getUsulanBukuList($this->tenantId);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => true, 'data' => $list], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    }
+
+    public function apiSaveUsulan(): void {
+        $this->guardModul();
+        $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+        if (empty($input['judul'])) {
+            http_response_code(400);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'Judul buku wajib diisi.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            return;
+        }
+
+        $id = $this->model->saveUsulanBuku($this->tenantId, $input, $input['id'] ?? null);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => true, 'id' => $id, 'message' => 'Data usulan buku berhasil disimpan.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    }
+
+    public function apiDeleteUsulan(): void {
+        $this->guardModul();
+        $id = $_GET['id'] ?? '';
+        if (empty($id)) {
+            http_response_code(400);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'Parameter id wajib diisi.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            return;
+        }
+
+        $res = $this->model->deleteUsulanBuku($this->tenantId, $id);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => $res], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    }
+
+    public function apiGetVisitorLogs(): void {
+        $this->guardModul();
+        $list = $this->model->getVisitorLogs($this->tenantId);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => true, 'data' => $list], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    }
+
+    public function apiGetDdcCategories(): void {
+        $this->guardModul();
+        $list = $this->model->getKategoriDdcList();
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => true, 'data' => $list], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
     }
 }
