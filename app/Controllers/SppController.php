@@ -105,51 +105,33 @@ class SppController extends BaseController {
 
     public function master(): void {
         $db = Database::getConnection();
+        $tenantId = $this->resolveTenantId();
         
         $kelas = $db->query("SELECT id, nama_kelas FROM kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
         $jenjang = $db->query("SELECT id, nama_jenjang FROM jenjang ORDER BY nama_jenjang ASC")->fetchAll(PDO::FETCH_ASSOC);
         $tahunAjaran = $db->query("SELECT id, tahun_ajaran, IF(is_active = 1, 'Aktif', 'Non-Aktif') as status FROM tahun_ajaran ORDER BY tahun_ajaran DESC")->fetchAll(PDO::FETCH_ASSOC);
+        
+        $stmtKomp = $db->prepare("SELECT id, nama_komponen, tipe_periode, is_active FROM transaksi_spp_komponen WHERE tenant_id = ? ORDER BY nama_komponen ASC");
+        $stmtKomp->execute([$tenantId]);
+        $komponen = $stmtKomp->fetchAll(PDO::FETCH_ASSOC);
 
         $this->render('keuangan/master', [
-            'title' => 'Master Tarif & Biaya',
-            'list_kelas' => $kelas,
-            'list_jenjang' => $jenjang,
-            'list_ta' => $tahunAjaran
-        ]);
-    }
-
-    public function keringanan(): void {
-        $db = Database::getConnection();
-        $tenantId = $this->resolveTenantId();
-        $stmt = $db->prepare("SELECT id, nama_komponen FROM transaksi_spp_komponen WHERE tenant_id = ? ORDER BY nama_komponen ASC");
-        $stmt->execute([$tenantId]);
-        $komponen = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        $this->render('keuangan/keringanan', [
-            'title' => 'Keringanan & Beasiswa',
-            'list_komponen' => $komponen
-        ]);
-    }
-
-    public function generate(): void {
-        $db = Database::getConnection();
-        $tenantId = $this->resolveTenantId();
-        
-        $kelas = $db->query("SELECT id, nama_kelas FROM kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC);
-        $jenjang = $db->query("SELECT id, nama_jenjang FROM jenjang ORDER BY nama_jenjang ASC")->fetchAll(PDO::FETCH_ASSOC);
-        $tahunAjaran = $db->query("SELECT id, tahun_ajaran, IF(is_active = 1, 'Aktif', 'Non-Aktif') as status FROM tahun_ajaran ORDER BY tahun_ajaran DESC")->fetchAll(PDO::FETCH_ASSOC);
-        
-        $stmt = $db->prepare("SELECT id, nama_komponen, tipe_periode FROM transaksi_spp_komponen WHERE tenant_id = ? AND is_active = 1 ORDER BY nama_komponen ASC");
-        $stmt->execute([$tenantId]);
-        $komponen = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        $this->render('keuangan/generate', [
-            'title' => 'Generate Tagihan Massal',
+            'title' => 'Master Keuangan',
             'list_kelas' => $kelas,
             'list_jenjang' => $jenjang,
             'list_ta' => $tahunAjaran,
             'list_komponen' => $komponen
         ]);
+    }
+
+    public function keringanan(): void {
+        header('Location: /SINTA-SaaS/keuangan/master');
+        exit();
+    }
+
+    public function generate(): void {
+        header('Location: /SINTA-SaaS/keuangan/master');
+        exit();
     }
 
     public function kasir(): void {
@@ -161,7 +143,8 @@ class SppController extends BaseController {
     }
 
     public function pengaturan(): void {
-        $this->render('keuangan/pengaturan', ['title' => 'Pengaturan Modul Keuangan']);
+        header('Location: /SINTA-SaaS/keuangan/master');
+        exit();
     }
 
     public function tagihanSaya(): void {
