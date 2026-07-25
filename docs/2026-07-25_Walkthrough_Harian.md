@@ -189,3 +189,27 @@ Halaman aplikasi SINTA-SaaS (seperti dashboard perpustakaan, keuangan, dan tabel
 ### Verifikasi Hasil:
 * **PHPStan Static Analysis Level 9:** Lulus 100% (`[OK] No errors`).
 * **Automated Security Audit:** Lulus 100% (`Failed Checks: 0`).
+
+---
+## [Feature: Pemenuhan Standar Akreditasi (SNP) Modul Perpustakaan]
+**Waktu**: 20:51 WIB
+**Jenis**: Feature / Accreditation Support
+
+### Deskripsi Masalah & Kebutuhan Akreditasi:
+Untuk lulus akreditasi Perpustakaan Sekolah dengan nilai terbaik (Grade A) dari Perpustakaan Nasional RI (Perpusnas), sistem perpustakaan digital harus menyediakan pencatatan media/terbitan berkala yang dilanggan aktif, log diklat kompetensi pustakawan, serta dashboard yang menganalisis kelayakan rasio koleksi fiksi vs non-fiksi (wajib minimal 60% non-fiksi).
+
+### Solusi Perbaikan & Peningkatan:
+1. **Migrasi Database Baru (`2026_07_25_02_add_perpus_accreditation_tables.php`):**
+   * Membuat tabel `perpus_serial_berkala` untuk pencatatan surat kabar, majalah, dan terbitan berkala.
+   * Membuat tabel `perpus_staf_kompetensi` untuk log pelatihan sertifikasi kompetensi staf.
+2. **Dashboard Rasio Fiksi vs Non-Fiksi:**
+   * Di dalam [Perpustakaan.php](file:///c:/xampp/htdocs/SINTA-SaaS/app/Models/Perpustakaan.php), diimplementasikan method `getAccreditationStats()` untuk menghitung secara presisi persentase judul non-fiksi dan fiksi yang terdaftar.
+   * Di dalam [dashboard.php](file:///c:/xampp/htdocs/SINTA-SaaS/views/perpustakaan/dashboard.php), ditambahkan widget indikator progres bar dan status kelayakan akreditasi otomatis.
+3. **Tab 6: Serial & Berkala di Katalog:**
+   * Ditambahkan tab menu baru pada [katalog.php](file:///c:/xampp/htdocs/SINTA-SaaS/views/perpustakaan/katalog.php) beserta form CRUD interaktif dan penanganan fetch AJAX untuk memproses data langganan koran/majalah.
+4. **Tab 6: Kompetensi Pustakawan di Administrasi:**
+   * Ditambahkan tab menu baru pada [anggota.php](file:///c:/xampp/htdocs/SINTA-SaaS/views/perpustakaan/anggota.php) beserta form CRUD interaktif dan penanganan fetch AJAX untuk memproses diklat staf.
+
+### Verifikasi Hasil:
+* **PHPStan Static Analysis Level 9:** Lulus 100% (`[OK] No errors`).
+* **Automated Security Audit:** Lulus 100% (`Failed Checks: 0`).

@@ -411,3 +411,66 @@ Penyusunan ulang berkas `anggota.php` menggunakan layout Navtabs bergaya Buku In
    php scratch/tests/test_security_audit.php
    ```
 
+---
+## [Akreditasi Perpustakaan Sekolah (SNP)]
+**Waktu**: 20:45 WIB
+**Status**: Draft
+
+# Rencana Implementasi: Pemenuhan Standar Akreditasi (SNP) Modul Perpustakaan
+
+Peningkatan fitur perpustakaan digital SINTA-SaaS agar sepenuhnya siap mendukung evaluasi instrumen **Standar Nasional Perpustakaan (SNP)** oleh Perpustakaan Nasional RI (Perpusnas), mencakup analisis rasio fiksi/non-fiksi, pencatatan surat kabar berkala, dan log diklat kompetensi pustakawan.
+
+## User Review Required
+
+> [!IMPORTANT]
+> - **Penambahan Tabel Database Baru:**
+>   * `perpus_serial_berkala`: untuk pencatatan surat kabar, majalah, dan berkala.
+>   * `perpus_staf_kompetensi`: untuk log sertifikat diklat kompetensi kepala dan staf perpustakaan.
+> - **Penyelarasan Tampilan Dashboard & Tab:**
+>   * Tab baru **6. Serial & Berkala** di menu **Katalog & Inventori** (`katalog.php`).
+>   * Tab baru **6. Kompetensi Pustakawan** di menu **Administrasi & Keanggotaan** (`anggota.php`).
+>   * Widget rasio koleksi fiksi/non-fiksi (Standar 60/40) di **Dashboard Perpustakaan** (`dashboard.php`).
+
+## Proposed Changes
+
+### Database Migrations
+#### [NEW] [2026_07_25_02_add_perpus_accreditation_tables.php](file:///c:/xampp/htdocs/SINTA-SaaS/database/migrations/2026_07_25_02_add_perpus_accreditation_tables.php)
+* Membuat tabel `perpus_serial_berkala` dan `perpus_staf_kompetensi` dengan foreign key ke `tenants(id)`.
+
+### Backend Components
+#### [MODIFY] [Perpustakaan.php](file:///c:/xampp/htdocs/SINTA-SaaS/app/Models/Perpustakaan.php)
+* Menambahkan method `getAccreditationStats(string $tenantId)`.
+* Menambahkan method CRUD untuk `perpus_serial_berkala`.
+* Menambahkan method CRUD untuk `perpus_staf_kompetensi`.
+
+#### [MODIFY] [PerpustakaanController.php](file:///c:/xampp/htdocs/SINTA-SaaS/app/Controllers/PerpustakaanController.php)
+* Memperbarui `dashboard()`, `katalog()`, dan `anggota()` untuk menyuntikkan data pendukung akreditasi.
+* Membuat API endpoints `/api/v1/perpustakaan/serial` dan `/api/v1/perpustakaan/kompetensi`.
+
+### Frontend Views
+#### [MODIFY] [dashboard.php](file:///c:/xampp/htdocs/SINTA-SaaS/views/perpustakaan/dashboard.php)
+* Menambahkan card visual indikator akreditasi rasio fiksi vs non-fiksi (Standar $\ge 60\%$ non-fiksi).
+* Memperbarui link navigasi ke sub-menu agar langsung ke tab target.
+
+#### [MODIFY] [katalog.php](file:///c:/xampp/htdocs/SINTA-SaaS/views/perpustakaan/katalog.php)
+* Menambahkan tab **6. Serial & Berkala** berisi tabel daftar langganan koran/majalah beserta form CRUD.
+
+#### [MODIFY] [anggota.php](file:///c:/xampp/htdocs/SINTA-SaaS/views/perpustakaan/anggota.php)
+* Menambahkan tab **6. Kompetensi Pustakawan** berisi log diklat kompetensi pustakawan beserta form penambahan data.
+
+## Verification Plan
+
+### Automated Tests
+* Menjalankan static analysis PHPStan:
+  ```powershell
+  vendor/bin/phpstan analyse --level=9
+  ```
+* Menjalankan suite regresi keamanan:
+  ```powershell
+  php scratch/tests/test_security_audit.php
+  ```
+
+### Manual Verification
+* Verifikasi visualisasi rasio fiksi vs non-fiksi di Dashboard Perpustakaan.
+* Verifikasi pengisian form dan penyimpanan data di tab Serial & Berkala serta tab Kompetensi Pustakawan.
+
