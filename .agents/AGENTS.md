@@ -45,17 +45,26 @@ Setiap kali ada rencana implementasi (*implementation plan*) yang telah diselesa
 ## Walkthroughs
 Setiap kali pekerjaan diselesaikan, dokumen penjelasan hasil akhir (*walkthrough*) wajib **ditambahkan (append)** ke dalam **satu file gabungan per hari** di folder `C:\xampp\htdocs\SINTA-SaaS\docs` dengan format nama: `YYYY-MM-DD_Walkthrough_Harian.md` (contoh: `2026-07-17_Walkthrough_Harian.md`).
 
+> ⚠️ **PERINGATAN KRITIS**: Jangan pernah hanya menyimpan rangkuman atau deskripsi singkat. Seluruh konten penjelasan hasil akhir (walkthrough.md) — termasuk semua file yang diubah/dibuat, hasil pengujian static analysis, dan regresi keamanan — WAJIB disertakan secara lengkap verbatim (apa adanya) di dalam file harian. File harian adalah **satu-satunya sumber kebenaran** untuk semua penjelasan hasil akhir; file walkthrough terpisah per fitur tidak boleh menjadi satu-satunya tempat penyimpanan.
+
 **Aturan file walkthrough harian:**
 - **Satu file per hari** — jika file `YYYY-MM-DD_Walkthrough_Harian.md` sudah ada, tambahkan (*append*) entri baru di bawahnya. Jangan membuat file baru per tugas.
 - Setiap entri dipisahkan dengan garis pemisah `---` dan diberi subjudul `## [Nama Perbaikan/Tugas]` beserta waktu penyelesaiannya.
-- Format setiap entri:
+- **Format setiap entri (WAJIB LENGKAP):**
   ```
   ---
   ## [Nama Perbaikan atau Tugas]
   **Waktu**: HH:MM WIB
   **Jenis**: Bug Fix / Feature / Refactor / dll.
-  [Deskripsi singkat apa yang dikerjakan, root cause (jika bug), dan file yang diubah]
+
+  [SELURUH ISI WALKTHROUGH ARTIFACT DITEMPEL DI SINI — VERBATIM]
+  Mencakup:
+  - Deskripsi dan root cause (jika bug)
+  - Semua file yang diubah / dibuat
+  - Seluruh visualisasi / screenshot (jika ada)
+  - Hasil pengujian & verifikasi lengkap (PHPStan + security audit)
   ```
+- **DILARANG** hanya mengisi dengan satu baris ringkasan. Jika walkthrough memiliki 100 baris konten, maka semua 100 baris tersebut harus ada di file harian.
 
 ## Git Commits and Pushing
 Ketika melakukan push ke repositori GitHub, selalu kelompokkan dan distribusikan perubahan ke dalam commit-commit yang terpisah secara atomik berdasarkan modul, fitur, menu, atau perbaikan bug masing-masing (jangan menggabungkan seluruh perubahan besar ke dalam satu commit tunggal).

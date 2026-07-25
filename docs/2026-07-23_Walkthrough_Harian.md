@@ -33,3 +33,12 @@
 - `views/perpustakaan/opname.php`
 - `views/perpustakaan/laporan.php`
 - `views/perpustakaan/pengaturan.php`
+
+---
+## [Instalasi dan Troubleshooting Wazuh 4.14 di Ubuntu 22.04 LTS]
+**Waktu**: 18:49 WIB
+**Jenis**: Bug Fix / Troubleshooting / SysAdmin
+Membantu pengguna mengatasi masalah kegagalan instalasi all-in-one Wazuh pada mesin virtual Ubuntu 22.04 LTS di VirtualBox. Masalah disebabkan oleh keterbatasan kapasitas VHD (10 GB) dan kerusakan/lock database dpkg pada wazuh-manager. Menambahkan kapasitas disk menjadi 50 GB di VirtualBox, memperluas partisi sistem file LVM di Linux, membersihkan status dpkg yang rusak, dan berhasil menginstal versi stabil terbaru Wazuh 4.14. Selain itu, membantu melakukan konfigurasi Wazuh Agent pada server aplikasi Ubuntu 24.04 (Noble Numbat) agar terhubung ke Wazuh Manager secara dinamis, serta menyediakan opsi kustomisasi nama agen. Dokumentasi interaktif (HTML) dan ringkasan telah disimpan.
+- Berkas yang diubah/ditambahkan:
+  - `C:\xampp\htdocs\SINTA-SaaS\scratch\wazuh\dokumentasi_instalasi_wazuh.md` [NEW]
+  - `C:\xampp\htdocs\SINTA-SaaS\scratch\wazuh\dokumentasi_instalasi_wazuh.html` [NEW]
