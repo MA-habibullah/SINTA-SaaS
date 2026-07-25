@@ -88,11 +88,13 @@ class PerpustakaanController extends BaseController {
         $this->guardModul();
         $summary = $this->model->getDashboardSummary($this->tenantId);
         $pengaturan = $this->model->getPengaturan($this->tenantId);
+        $ratio = $this->model->getAccreditationStats($this->tenantId);
 
         $data = [
             'title' => 'Dashboard Perpustakaan',
             'summary' => $summary,
-            'pengaturan' => $pengaturan
+            'pengaturan' => $pengaturan,
+            'ratio' => $ratio
         ];
         $this->attachTenantViewData($data);
         $contentView = __DIR__ . '/../../views/perpustakaan/dashboard.php';
@@ -105,13 +107,15 @@ class PerpustakaanController extends BaseController {
         $rakList = $this->model->getLokasiRakList($this->tenantId);
         $ddcCategories = $this->model->getKategoriDdcList();
         $usulanList = $this->model->getUsulanBukuList($this->tenantId);
+        $serialList = $this->model->getSerialBerkalaList($this->tenantId);
         
         $data = [
             'title' => 'Katalog & Inventori Perpustakaan',
             'list' => $list,
             'rak_list' => $rakList,
             'ddc_categories' => $ddcCategories,
-            'usulan_list' => $usulanList
+            'usulan_list' => $usulanList,
+            'serial_list' => $serialList
         ];
         $this->attachTenantViewData($data);
         $contentView = __DIR__ . '/../../views/perpustakaan/katalog.php';
@@ -202,6 +206,7 @@ class PerpustakaanController extends BaseController {
         $this->guardModul();
         $fullList = $this->model->getAnggotaList($this->tenantId);
         $pengaturan = $this->model->getPengaturan($this->tenantId);
+        $kompetensiList = $this->model->getStafKompetensiList($this->tenantId);
 
         // Pagination calculation
         $page = max(1, (int)($_GET['page'] ?? 1));
@@ -220,6 +225,7 @@ class PerpustakaanController extends BaseController {
             'title' => 'Administrasi & Keanggotaan Perpustakaan',
             'anggota_list' => $paginatedList,
             'pengaturan' => $pengaturan,
+            'kompetensi_list' => $kompetensiList,
             'pagination' => [
                 'current_page' => $page,
                 'per_page' => $perPage,
@@ -715,5 +721,97 @@ class PerpustakaanController extends BaseController {
         $list = $this->model->getKategoriDdcList();
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['success' => true, 'data' => $list], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    }
+
+    public function apiGetSerial(): void {
+        $this->guardModul();
+        $list = $this->model->getSerialBerkalaList($this->tenantId);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => true, 'data' => $list], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    }
+
+    public function apiSaveSerial(): void {
+        $this->guardModul();
+        $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+        if (empty($input['nama_media'])) {
+            http_response_code(400);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'Nama media wajib diisi.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            return;
+        }
+
+        $data = [
+            'nama_media' => strip_tags($input['nama_media']),
+            'jenis' => strip_tags($input['jenis'] ?? 'Surat Kabar'),
+            'frekuensi' => strip_tags($input['frekuensi'] ?? 'Harian'),
+            'issn' => !empty($input['issn']) ? strip_tags($input['issn']) : null,
+            'tanggal_berlangganan' => !empty($input['tanggal_berlangganan']) ? strip_tags($input['tanggal_berlangganan']) : date('Y-m-d'),
+            'status_aktif' => isset($input['status_aktif']) ? (int)$input['status_aktif'] : 1
+        ];
+
+        $id = $this->model->saveSerialBerkala($this->tenantId, $data, !empty($input['id']) ? $input['id'] : null);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => true, 'id' => $id, 'message' => 'Data media berkala berhasil disimpan.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    }
+
+    public function apiDeleteSerial(): void {
+        $this->guardModul();
+        $id = $_GET['id'] ?? '';
+        if (empty($id)) {
+            http_response_code(400);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'Parameter id wajib diisi.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            return;
+        }
+
+        $res = $this->model->deleteSerialBerkala($this->tenantId, $id);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => $res], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    }
+
+    public function apiGetKompetensi(): void {
+        $this->guardModul();
+        $list = $this->model->getStafKompetensiList($this->tenantId);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => true, 'data' => $list], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    }
+
+    public function apiSaveKompetensi(): void {
+        $this->guardModul();
+        $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+        if (empty($input['nama_staf']) || empty($input['nama_kegiatan']) || empty($input['jabatan']) || empty($input['penyelenggara'])) {
+            http_response_code(400);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'Semua kolom wajib diisi kecuali No Sertifikat.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            return;
+        }
+
+        $data = [
+            'nama_staf' => strip_tags($input['nama_staf']),
+            'jabatan' => strip_tags($input['jabatan']),
+            'nama_kegiatan' => strip_tags($input['nama_kegiatan']),
+            'penyelenggara' => strip_tags($input['penyelenggara']),
+            'tanggal_kegiatan' => !empty($input['tanggal_kegiatan']) ? strip_tags($input['tanggal_kegiatan']) : date('Y-m-d'),
+            'sertifikat_no' => !empty($input['sertifikat_no']) ? strip_tags($input['sertifikat_no']) : null
+        ];
+
+        $id = $this->model->saveStafKompetensi($this->tenantId, $data, !empty($input['id']) ? $input['id'] : null);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => true, 'id' => $id, 'message' => 'Data diklat kompetensi berhasil disimpan.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    }
+
+    public function apiDeleteKompetensi(): void {
+        $this->guardModul();
+        $id = $_GET['id'] ?? '';
+        if (empty($id)) {
+            http_response_code(400);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'Parameter id wajib diisi.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            return;
+        }
+
+        $res = $this->model->deleteStafKompetensi($this->tenantId, $id);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => $res], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
     }
 }

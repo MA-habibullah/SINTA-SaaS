@@ -434,6 +434,28 @@ try {
             }
             break;
 
+        case '/api/v1/perpustakaan/serial':
+            $controller = new App\Controllers\PerpustakaanController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveSerial();
+            } elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+                $controller->apiDeleteSerial();
+            } else {
+                $controller->apiGetSerial();
+            }
+            break;
+
+        case '/api/v1/perpustakaan/kompetensi':
+            $controller = new App\Controllers\PerpustakaanController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveKompetensi();
+            } elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+                $controller->apiDeleteKompetensi();
+            } else {
+                $controller->apiGetKompetensi();
+            }
+            break;
+
         case '/api/v1/perpustakaan/visitor-logs':
             $controller = new App\Controllers\PerpustakaanController();
             $controller->apiGetVisitorLogs();

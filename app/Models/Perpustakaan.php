@@ -864,6 +864,147 @@ class Perpustakaan {
     }
 
     // -------------------------------------------------------------------------
+    // 16. AKREDITASI & STATISTIK SNP (FIKSI VS NON-FIKSI RATIO)
+    // -------------------------------------------------------------------------
+
+    public function getAccreditationStats(string $tenantId): array {
+        $stmt = $this->db->prepare("SELECT 
+            COUNT(*) as total,
+            SUM(CASE WHEN jenis_buku = 'Fiksi' THEN 1 ELSE 0 END) as fiksi,
+            SUM(CASE WHEN jenis_buku IN ('Umum', 'Non-Fiksi', 'Referensi', 'Paket Pelajaran', 'OSN', 'Majalah', 'Lainnya') THEN 1 ELSE 0 END) as non_fiksi
+            FROM perpus_bibliografi
+            WHERE tenant_id = :tid AND deleted_at IS NULL");
+        $stmt->execute(['tid' => $tenantId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $total = (int)($row['total'] ?? 0);
+        $fiksi = (int)($row['fiksi'] ?? 0);
+        $nonFiksi = (int)($row['non_fiksi'] ?? 0);
+
+        $pctFiksi = $total > 0 ? round(($fiksi / $total) * 100, 1) : 0.0;
+        $pctNonFiksi = $total > 0 ? round(($nonFiksi / $total) * 100, 1) : 0.0;
+
+        return [
+            'total_judul' => $total,
+            'total_fiksi' => $fiksi,
+            'total_non_fiksi' => $nonFiksi,
+            'persen_fiksi' => $pctFiksi,
+            'persen_non_fiksi' => $pctNonFiksi,
+            'is_layak_akreditasi' => ($pctNonFiksi >= 60.0)
+        ];
+    }
+
+    // -------------------------------------------------------------------------
+    // 17. SERIAL & MEDIA BERKALA
+    // -------------------------------------------------------------------------
+
+    public function getSerialBerkalaList(string $tenantId): array {
+        $stmt = $this->db->prepare("SELECT * FROM perpus_serial_berkala WHERE tenant_id = :tid ORDER BY created_at DESC");
+        $stmt->execute(['tid' => $tenantId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function saveSerialBerkala(string $tenantId, array $data, ?string $id = null): string {
+        if ($id) {
+            $stmt = $this->db->prepare("UPDATE perpus_serial_berkala SET 
+                nama_media = :nama,
+                jenis = :jenis,
+                frekuensi = :frekuensi,
+                issn = :issn,
+                tanggal_berlangganan = :tgl,
+                status_aktif = :status
+                WHERE id = :id AND tenant_id = :tenant_id");
+            $stmt->execute([
+                'nama' => $data['nama_media'],
+                'jenis' => $data['jenis'] ?? 'Surat Kabar',
+                'frekuensi' => $data['frekuensi'] ?? 'Harian',
+                'issn' => $data['issn'] ?? null,
+                'tgl' => $data['tanggal_berlangganan'] ?? date('Y-m-d'),
+                'status' => (int)($data['status_aktif'] ?? 1),
+                'id' => $id,
+                'tenant_id' => $tenantId
+            ]);
+            return $id;
+        } else {
+            $newId = $this->generateUuid();
+            $stmt = $this->db->prepare("INSERT INTO perpus_serial_berkala 
+                (id, tenant_id, nama_media, jenis, frekuensi, issn, tanggal_berlangganan, status_aktif)
+                VALUES (:id, :tenant_id, :nama, :jenis, :frekuensi, :issn, :tgl, :status)");
+            $stmt->execute([
+                'id' => $newId,
+                'tenant_id' => $tenantId,
+                'nama' => $data['nama_media'],
+                'jenis' => $data['jenis'] ?? 'Surat Kabar',
+                'frekuensi' => $data['frekuensi'] ?? 'Harian',
+                'issn' => $data['issn'] ?? null,
+                'tgl' => $data['tanggal_berlangganan'] ?? date('Y-m-d'),
+                'status' => (int)($data['status_aktif'] ?? 1)
+            ]);
+            return $newId;
+        }
+    }
+
+    public function deleteSerialBerkala(string $tenantId, string $id): bool {
+        $stmt = $this->db->prepare("DELETE FROM perpus_serial_berkala WHERE id = :id AND tenant_id = :tenant_id");
+        return $stmt->execute(['id' => $id, 'tenant_id' => $tenantId]);
+    }
+
+    // -------------------------------------------------------------------------
+    // 18. LOG SERTIFIKASI & KOMPETENSI STAFF
+    // -------------------------------------------------------------------------
+
+    public function getStafKompetensiList(string $tenantId): array {
+        $stmt = $this->db->prepare("SELECT * FROM perpus_staf_kompetensi WHERE tenant_id = :tid ORDER BY tanggal_kegiatan DESC");
+        $stmt->execute(['tid' => $tenantId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function saveStafKompetensi(string $tenantId, array $data, ?string $id = null): string {
+        if ($id) {
+            $stmt = $this->db->prepare("UPDATE perpus_staf_kompetensi SET 
+                nama_staf = :nama_staf,
+                jabatan = :jabatan,
+                nama_kegiatan = :nama_kegiatan,
+                penyelenggara = :penyelenggara,
+                tanggal_kegiatan = :tgl,
+                sertifikat_no = :sertifikat_no
+                WHERE id = :id AND tenant_id = :tenant_id");
+            $stmt->execute([
+                'nama_staf' => $data['nama_staf'],
+                'jabatan' => $data['jabatan'],
+                'nama_kegiatan' => $data['nama_kegiatan'],
+                'penyelenggara' => $data['penyelenggara'],
+                'tgl' => $data['tanggal_kegiatan'] ?? date('Y-m-d'),
+                'sertifikat_no' => $data['sertifikat_no'] ?? null,
+                'id' => $id,
+                'tenant_id' => $tenantId
+            ]);
+            return $id;
+        } else {
+            $newId = $this->generateUuid();
+            $stmt = $this->db->prepare("INSERT INTO perpus_staf_kompetensi 
+                (id, tenant_id, nama_staf, jabatan, nama_kegiatan, penyelenggara, tanggal_kegiatan, sertifikat_no)
+                VALUES (:id, :tenant_id, :nama_staf, :jabatan, :nama_kegiatan, :penyelenggara, :tgl, :sertifikat_no)");
+            $stmt->execute([
+                'id' => $newId,
+                'tenant_id' => $tenantId,
+                'nama_staf' => $data['nama_staf'],
+                'jabatan' => $data['jabatan'],
+                'nama_kegiatan' => $data['nama_kegiatan'],
+                'penyelenggara' => $data['penyelenggara'],
+                'tgl' => $data['tanggal_kegiatan'] ?? date('Y-m-d'),
+                'sertifikat_no' => $data['sertifikat_no'] ?? null
+            ]);
+            return $newId;
+        }
+    }
+
+    public function deleteStafKompetensi(string $tenantId, string $id): bool {
+        $stmt = $this->db->prepare("DELETE FROM perpus_staf_kompetensi WHERE id = :id AND tenant_id = :tenant_id");
+        return $stmt->execute(['id' => $id, 'tenant_id' => $tenantId]);
+    }
+
+    // -------------------------------------------------------------------------
     // UTILITY HELPER
     // -------------------------------------------------------------------------
 
