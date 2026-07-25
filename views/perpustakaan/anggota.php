@@ -61,6 +61,11 @@ $emailAktif = (int)($pengaturan['auto_notif_email_aktif'] ?? 0);
                         <i class="bi bi-sliders me-2 text-danger"></i>5. Pengaturan & WA Toggle
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" id="kompetensi-tab" data-bs-toggle="tab" data-bs-target="#kompetensi-pane" type="button" role="tab" aria-controls="kompetensi-pane" aria-selected="false">
+                        <i class="bi bi-award me-2" style="color: #7c3aed;"></i>6. Kompetensi Pustakawan
+                    </button>
+                </li>
             </ul>
         </div>
     </div>
@@ -399,6 +404,70 @@ $emailAktif = (int)($pengaturan['auto_notif_email_aktif'] ?? 0);
         </div>
     </div>
 
+    <!-- Tab 6: Kompetensi Pustakawan -->
+    <div class="tab-pane fade" id="kompetensi-pane" role="tabpanel" aria-labelledby="kompetensi-tab">
+        <div class="card border-0 shadow-sm rounded-4 p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-dark mb-0"><i class="bi bi-award text-primary me-2"></i> Log Diklat & Sertifikasi Kompetensi Pengelola Perpustakaan</h5>
+                <button type="button" class="btn btn-primary btn-sm rounded-3 px-3 fs-7" id="btnTambahKompetensiModal" data-bs-toggle="modal" data-bs-target="#modalTambahKompetensi">
+                    <i class="bi bi-plus-circle me-1"></i> Tambah Log Kompetensi
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="kompetensiTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>No</th>
+                            <th>Nama Pengelola / Staf</th>
+                            <th>Jabatan</th>
+                            <th>Nama Kegiatan / Diklat</th>
+                            <th>Penyelenggara</th>
+                            <th>Tanggal Kegiatan</th>
+                            <th>No. Sertifikat</th>
+                            <th class="text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($data['kompetensi_list'])): ?>
+                            <tr>
+                                <td colspan="8" class="text-center text-muted py-4">
+                                    <i class="bi bi-award fs-3 d-block mb-2 text-secondary"></i> Belum ada log kompetensi/diklat terdaftar.
+                                </td>
+                            </tr>
+                        <?php else: ?>
+                            <?php foreach ($data['kompetensi_list'] as $idx => $kp): ?>
+                                <tr>
+                                    <td><?= $idx + 1 ?></td>
+                                    <td><strong><?= htmlspecialchars($kp['nama_staf'], ENT_QUOTES, 'UTF-8') ?></strong></td>
+                                    <td><span class="badge bg-light text-dark border"><?= htmlspecialchars($kp['jabatan'], ENT_QUOTES, 'UTF-8') ?></span></td>
+                                    <td><?= htmlspecialchars($kp['nama_kegiatan'], ENT_QUOTES, 'UTF-8') ?></td>
+                                    <td><?= htmlspecialchars($kp['penyelenggara'], ENT_QUOTES, 'UTF-8') ?></td>
+                                    <td><?= htmlspecialchars($kp['tanggal_kegiatan'], ENT_QUOTES, 'UTF-8') ?></td>
+                                    <td><span class="badge bg-success-subtle text-success border font-monospace"><?= htmlspecialchars($kp['sertifikat_no'] ?? '-', ENT_QUOTES, 'UTF-8') ?></span></td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-outline-warning btn-sm rounded-2 me-1 btn-edit-kompetensi"
+                                                data-id="<?= htmlspecialchars($kp['id'], ENT_QUOTES, 'UTF-8') ?>"
+                                                data-nama_staf="<?= htmlspecialchars($kp['nama_staf'], ENT_QUOTES, 'UTF-8') ?>"
+                                                data-jabatan="<?= htmlspecialchars($kp['jabatan'], ENT_QUOTES, 'UTF-8') ?>"
+                                                data-nama_kegiatan="<?= htmlspecialchars($kp['nama_kegiatan'], ENT_QUOTES, 'UTF-8') ?>"
+                                                data-penyelenggara="<?= htmlspecialchars($kp['penyelenggara'], ENT_QUOTES, 'UTF-8') ?>"
+                                                data-tanggal="<?= htmlspecialchars($kp['tanggal_kegiatan'], ENT_QUOTES, 'UTF-8') ?>"
+                                                data-sertifikat="<?= htmlspecialchars($kp['sertifikat_no'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger btn-sm rounded-2 btn-delete-kompetensi" data-id="<?= htmlspecialchars($kp['id'], ENT_QUOTES, 'UTF-8') ?>">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <!-- Modal Sync Dapodik -->
@@ -418,6 +487,52 @@ $emailAktif = (int)($pengaturan['auto_notif_email_aktif'] ?? 0);
                 <button type="button" class="btn btn-secondary rounded-3 px-4" data-bs-dismiss="modal">Batal</button>
                 <button type="button" class="btn btn-primary rounded-3 px-4" id="btnSyncAnggotaAction"><i class="bi bi-arrow-repeat me-1"></i> Jalankan Sinkronisasi</button>
             </div>
+        </div>
+    </div>
+<!-- Modal Tambah / Edit Kompetensi Pustakawan -->
+<div class="modal fade" id="modalTambahKompetensi" tabindex="-1" aria-labelledby="modalTambahKompetensiLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-primary text-white rounded-top-4">
+                <h5 class="modal-title fw-bold" id="modalTambahKompetensiLabel"><i class="bi bi-award me-2"></i> Tambah Log Kompetensi</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="/SINTA-SaaS/api/v1/perpustakaan/kompetensi" method="POST" id="formSaveKompetensi" data-turbo="false">
+                <input type="hidden" name="id" id="kompetensi_id" value="">
+                <input type="hidden" name="tenant_id" value="<?= htmlspecialchars($data['active_tenant_id'] ?? '') ?>">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nama Pengelola / Staf <span class="text-danger">*</span></label>
+                        <input type="text" name="nama_staf" id="kompetensi_nama_staf" class="form-control rounded-3" required placeholder="Contoh: Ahmad Fauzi, S.I.Pust.">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Jabatan di Perpustakaan <span class="text-danger">*</span></label>
+                        <input type="text" name="jabatan" id="kompetensi_jabatan" class="form-control rounded-3" required placeholder="Contoh: Kepala Perpustakaan, Staf IT">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nama Kegiatan / Pelatihan / Diklat <span class="text-danger">*</span></label>
+                        <input type="text" name="nama_kegiatan" id="kompetensi_kegiatan" class="form-control rounded-3" required placeholder="Contoh: Diklat Kepala Perpustakaan Sekolah 120 JP">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Penyelenggara Kegiatan <span class="text-danger">*</span></label>
+                        <input type="text" name="penyelenggara" id="kompetensi_penyelenggara" class="form-control rounded-3" required placeholder="Contoh: Perpustakaan Nasional RI">
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Tanggal Pelaksanaan <span class="text-danger">*</span></label>
+                            <input type="date" name="tanggal_kegiatan" id="kompetensi_tanggal" class="form-control rounded-3" value="<?= date('Y-m-d') ?>" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Nomor Sertifikat</label>
+                            <input type="text" name="sertifikat_no" id="kompetensi_sertifikat" class="form-control rounded-3" placeholder="Contoh: SER-992/PN/2026">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-secondary rounded-3 px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4"><i class="bi bi-save me-1"></i> Simpan Log</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -548,6 +663,90 @@ function initAnggotaHandlers() {
     if (tamuTab) {
         tamuTab.addEventListener('click', loadVisitorLogs);
     }
+
+    // 4. Staf Kompetensi Form Submit Handler (Fetch)
+    const formSaveKompetensi = document.getElementById('formSaveKompetensi');
+    if (formSaveKompetensi) {
+        formSaveKompetensi.onsubmit = function(e) {
+            e.preventDefault();
+            const payload = {
+                id: document.getElementById('kompetensi_id').value,
+                nama_staf: document.getElementById('kompetensi_nama_staf').value,
+                jabatan: document.getElementById('kompetensi_jabatan').value,
+                nama_kegiatan: document.getElementById('kompetensi_kegiatan').value,
+                penyelenggara: document.getElementById('kompetensi_penyelenggara').value,
+                tanggal_kegiatan: document.getElementById('kompetensi_tanggal').value,
+                sertifikat_no: document.getElementById('kompetensi_sertifikat').value
+            };
+
+            fetch('/SINTA-SaaS/api/v1/perpustakaan/kompetensi', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    alert(res.message || 'Data diklat kompetensi berhasil disimpan.');
+                    window.location.reload();
+                } else {
+                    alert('Gagal menyimpan data: ' + (res.error || 'Unknown error'));
+                }
+            })
+            .catch(err => console.error(err));
+        };
+    }
+
+    // 5. Reset Staf Kompetensi form on Add click
+    const addKompetensiBtn = document.getElementById('btnTambahKompetensiModal');
+    if (addKompetensiBtn) {
+        addKompetensiBtn.onclick = function() {
+            document.getElementById('modalTambahKompetensiLabel').innerHTML = '<i class="bi bi-award me-2"></i> Tambah Log Kompetensi';
+            document.getElementById('kompetensi_id').value = '';
+            if (formSaveKompetensi) formSaveKompetensi.reset();
+        };
+    }
+
+    // 6. Edit Staf Kompetensi Button Handler
+    const editKompetensiBtns = document.querySelectorAll('.btn-edit-kompetensi');
+    editKompetensiBtns.forEach(btn => {
+        btn.onclick = function() {
+            document.getElementById('modalTambahKompetensiLabel').innerHTML = '<i class="bi bi-pencil-square me-2"></i> Edit Log Kompetensi';
+            document.getElementById('kompetensi_id').value = this.dataset.id;
+            document.getElementById('kompetensi_nama_staf').value = this.dataset.nama_staf;
+            document.getElementById('kompetensi_jabatan').value = this.dataset.jabatan;
+            document.getElementById('kompetensi_kegiatan').value = this.dataset.nama_kegiatan;
+            document.getElementById('kompetensi_penyelenggara').value = this.dataset.penyelenggara;
+            document.getElementById('kompetensi_tanggal').value = this.dataset.tanggal;
+            document.getElementById('kompetensi_sertifikat').value = this.dataset.sertifikat;
+
+            const modal = new bootstrap.Modal(document.getElementById('modalTambahKompetensi'));
+            modal.show();
+        };
+    });
+
+    // 7. Delete Staf Kompetensi Button Handler
+    const deleteKompetensiBtns = document.querySelectorAll('.btn-delete-kompetensi');
+    deleteKompetensiBtns.forEach(btn => {
+        btn.onclick = function() {
+            const id = this.dataset.id;
+            if (confirm('Apakah Anda yakin ingin menghapus log kompetensi staf ini?')) {
+                fetch('/SINTA-SaaS/api/v1/perpustakaan/kompetensi?id=' + encodeURIComponent(id), {
+                    method: 'DELETE'
+                })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) {
+                        alert('Log kompetensi berhasil dihapus.');
+                        window.location.reload();
+                    } else {
+                        alert('Gagal menghapus: ' + (res.error || 'Unknown error'));
+                    }
+                })
+                .catch(err => console.error(err));
+            }
+        };
+    });
 }
 
 function loadVisitorLogs() {

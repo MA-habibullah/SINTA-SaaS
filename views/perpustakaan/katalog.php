@@ -47,6 +47,11 @@
                         <i class="bi bi-lightbulb me-2 text-danger"></i>5. Usulan Pengadaan Buku
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" id="serial-tab" data-bs-toggle="tab" data-bs-target="#serial-pane" type="button" role="tab" aria-controls="serial-pane" aria-selected="false">
+                        <i class="bi bi-newspaper me-2" style="color: #7c3aed;"></i>6. Serial & Terbitan Berkala
+                    </button>
+                </li>
             </ul>
         </div>
     </div>
@@ -412,6 +417,76 @@
         </div>
     </div>
 
+    <!-- Tab 6: Serial & Berkala -->
+    <div class="tab-pane fade" id="serial-pane" role="tabpanel" aria-labelledby="serial-tab">
+        <div class="card border-0 shadow-sm rounded-4 p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-dark mb-0"><i class="bi bi-newspaper text-primary me-2"></i> Daftar Surat Kabar, Majalah, & Terbitan Berkala</h5>
+                <button type="button" class="btn btn-primary btn-sm rounded-3 px-3 fs-7" id="btnTambahSerialModal" data-bs-toggle="modal" data-bs-target="#modalTambahSerial">
+                    <i class="bi bi-plus-circle me-1"></i> Tambah Media Berkala
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="serialTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>No</th>
+                            <th>Nama Media</th>
+                            <th>Jenis</th>
+                            <th>Frekuensi Terbit</th>
+                            <th>ISSN</th>
+                            <th>Tanggal Mulai Langganan</th>
+                            <th>Status Keaktifan</th>
+                            <th class="text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($data['serial_list'])): ?>
+                            <tr>
+                                <td colspan="8" class="text-center text-muted py-4">
+                                    <i class="bi bi-newspaper fs-3 d-block mb-2 text-secondary"></i> Belum ada data koran/majalah terdaftar.
+                                </td>
+                            </tr>
+                        <?php else: ?>
+                            <?php foreach ($data['serial_list'] as $idx => $sr): ?>
+                                <tr>
+                                    <td><?= $idx + 1 ?></td>
+                                    <td><strong><?= htmlspecialchars($sr['nama_media'], ENT_QUOTES, 'UTF-8') ?></strong></td>
+                                    <td><span class="badge bg-light text-dark border"><?= htmlspecialchars($sr['jenis'], ENT_QUOTES, 'UTF-8') ?></span></td>
+                                    <td><?= htmlspecialchars($sr['frekuensi'], ENT_QUOTES, 'UTF-8') ?></td>
+                                    <td><?= htmlspecialchars($sr['issn'] ?? '-', ENT_QUOTES, 'UTF-8') ?></td>
+                                    <td><?= htmlspecialchars($sr['tanggal_berlangganan'], ENT_QUOTES, 'UTF-8') ?></td>
+                                    <td>
+                                        <?php if ($sr['status_aktif']): ?>
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle me-1"></i> Aktif</span>
+                                        <?php else: ?>
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle"><i class="bi bi-x-circle me-1"></i> Non-Aktif</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-outline-warning btn-sm rounded-2 me-1 btn-edit-serial"
+                                                data-id="<?= htmlspecialchars($sr['id'], ENT_QUOTES, 'UTF-8') ?>"
+                                                data-nama="<?= htmlspecialchars($sr['nama_media'], ENT_QUOTES, 'UTF-8') ?>"
+                                                data-jenis="<?= htmlspecialchars($sr['jenis'], ENT_QUOTES, 'UTF-8') ?>"
+                                                data-frekuensi="<?= htmlspecialchars($sr['frekuensi'], ENT_QUOTES, 'UTF-8') ?>"
+                                                data-issn="<?= htmlspecialchars($sr['issn'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                                data-tanggal="<?= htmlspecialchars($sr['tanggal_berlangganan'], ENT_QUOTES, 'UTF-8') ?>"
+                                                data-status="<?= htmlspecialchars($sr['status_aktif'], ENT_QUOTES, 'UTF-8') ?>">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger btn-sm rounded-2 btn-delete-serial" data-id="<?= htmlspecialchars($sr['id'], ENT_QUOTES, 'UTF-8') ?>">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <!-- Modal Tambah / Edit Judul Buku -->
@@ -568,6 +643,64 @@
     </div>
 </div>
 
+<!-- Modal Tambah / Edit Serial Berkala -->
+<div class="modal fade" id="modalTambahSerial" tabindex="-1" aria-labelledby="modalTambahSerialLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-primary text-white rounded-top-4">
+                <h5 class="modal-title fw-bold" id="modalTambahSerialLabel"><i class="bi bi-newspaper me-2"></i> Tambah Media Berkala</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="/SINTA-SaaS/api/v1/perpustakaan/serial" method="POST" id="formSaveSerial" data-turbo="false">
+                <input type="hidden" name="id" id="serial_id" value="">
+                <input type="hidden" name="tenant_id" value="<?= htmlspecialchars($data['active_tenant_id'] ?? '') ?>">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nama Media / Publikasi <span class="text-danger">*</span></label>
+                        <input type="text" name="nama_media" id="serial_nama" class="form-control rounded-3" required placeholder="Contoh: Jawa Pos, Gatra, Jurnal Ilmiah">
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Jenis Media</label>
+                            <select name="jenis" id="serial_jenis" class="form-select rounded-3">
+                                <option value="Surat Kabar">Surat Kabar (Koran)</option>
+                                <option value="Majalah">Majalah</option>
+                                <option value="Jurnal">Jurnal Ilmiah</option>
+                                <option value="Lainnya">Lainnya</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Frekuensi Terbit</label>
+                            <input type="text" name="frekuensi" id="serial_frekuensi" class="form-control rounded-3" value="Harian" required placeholder="Contoh: Harian, Mingguan">
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">ISSN / Reg ID</label>
+                            <input type="text" name="issn" id="serial_issn" class="form-control rounded-3" placeholder="Contoh: 0124-5678">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Tanggal Berlangganan <span class="text-danger">*</span></label>
+                            <input type="date" name="tanggal_berlangganan" id="serial_tanggal" class="form-control rounded-3" value="<?= date('Y-m-d') ?>" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Status Langganan</label>
+                        <select name="status_aktif" id="serial_status" class="form-select rounded-3">
+                            <option value="1">Aktif Berlangganan</option>
+                            <option value="0">Berhenti</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-secondary rounded-3 px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4"><i class="bi bi-save me-1"></i> Simpan Media</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <style>
 /* Sleek Scrollable Underline Nav Tabs */
 .nav-tabs-wrapper {
@@ -699,7 +832,91 @@ function initKatalogHandlers() {
         };
     });
 
-    // 5. Search DDC Client Side Filter
+    // 6. Serial & Berkala Form Submit Handler (Fetch)
+    const formSaveSerial = document.getElementById('formSaveSerial');
+    if (formSaveSerial) {
+        formSaveSerial.onsubmit = function(e) {
+            e.preventDefault();
+            const payload = {
+                id: document.getElementById('serial_id').value,
+                nama_media: document.getElementById('serial_nama').value,
+                jenis: document.getElementById('serial_jenis').value,
+                frekuensi: document.getElementById('serial_frekuensi').value,
+                issn: document.getElementById('serial_issn').value,
+                tanggal_berlangganan: document.getElementById('serial_tanggal').value,
+                status_aktif: document.getElementById('serial_status').value
+            };
+
+            fetch('/SINTA-SaaS/api/v1/perpustakaan/serial', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    alert(res.message || 'Data media berkala berhasil disimpan.');
+                    window.location.reload();
+                } else {
+                    alert('Gagal menyimpan data: ' + (res.error || 'Unknown error'));
+                }
+            })
+            .catch(err => console.error(err));
+        };
+    }
+
+    // 7. Reset Serial form on Add click
+    const addSerialBtn = document.getElementById('btnTambahSerialModal');
+    if (addSerialBtn) {
+        addSerialBtn.onclick = function() {
+            document.getElementById('modalTambahSerialLabel').innerHTML = '<i class="bi bi-newspaper me-2"></i> Tambah Media Berkala';
+            document.getElementById('serial_id').value = '';
+            if (formSaveSerial) formSaveSerial.reset();
+        };
+    }
+
+    // 8. Edit Serial Button Handler
+    const editSerialBtns = document.querySelectorAll('.btn-edit-serial');
+    editSerialBtns.forEach(btn => {
+        btn.onclick = function() {
+            document.getElementById('modalTambahSerialLabel').innerHTML = '<i class="bi bi-pencil-square me-2"></i> Edit Media Berkala';
+            document.getElementById('serial_id').value = this.dataset.id;
+            document.getElementById('serial_nama').value = this.dataset.nama;
+            document.getElementById('serial_jenis').value = this.dataset.jenis;
+            document.getElementById('serial_frekuensi').value = this.dataset.frekuensi;
+            document.getElementById('serial_issn').value = this.dataset.issn;
+            document.getElementById('serial_tanggal').value = this.dataset.tanggal;
+            document.getElementById('serial_status').value = this.dataset.status;
+
+            const modal = new bootstrap.Modal(document.getElementById('modalTambahSerial'));
+            modal.show();
+        };
+    });
+
+    // 9. Delete Serial Button Handler
+    const deleteSerialBtns = document.querySelectorAll('.btn-delete-serial');
+    deleteSerialBtns.forEach(btn => {
+        btn.onclick = function() {
+            const id = this.dataset.id;
+            if (confirm('Apakah Anda yakin ingin menghapus media berkala ini?')) {
+                fetch('/SINTA-SaaS/api/v1/perpustakaan/serial?id=' + encodeURIComponent(id), {
+                    method: 'DELETE'
+                })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) {
+                        alert('Media berkala berhasil dihapus.');
+                        window.location.reload();
+                    } else {
+                        alert('Gagal menghapus: ' + (res.error || 'Unknown error'));
+                    }
+                })
+                .catch(err => console.error(err));
+            }
+        };
+    });
+
+    // 10. Search DDC Client Side Filter
     const searchDdc = document.getElementById('searchDdcInput');
     if (searchDdc) {
         searchDdc.oninput = function() {

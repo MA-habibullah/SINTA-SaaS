@@ -64,6 +64,44 @@
     </div>
 </div>
 
+<!-- Accreditation Indicator (SNP Perpusnas) -->
+<div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+    <div class="row align-items-center">
+        <div class="col-12 col-lg-7">
+            <h5 class="fw-bold text-dark mb-1">
+                <i class="bi bi-patch-check-fill text-primary me-2"></i> Indikator Akreditasi SNP (Perpusnas RI)
+            </h5>
+            <p class="text-muted fs-7 mb-3">
+                Standar Nasional Perpustakaan RI mensyaratkan minimal **60% koleksi non-fiksi** untuk akreditasi optimal.
+            </p>
+            <div class="mb-2 d-flex justify-content-between fs-7 fw-semibold">
+                <span>Rasio Koleksi Non-Fiksi</span>
+                <span class="text-primary"><?= $data['ratio']['persen_non_fiksi'] ?? 0 ?>%</span>
+            </div>
+            <div class="progress rounded-pill mb-3" style="height: 12px;">
+                <div class="progress-bar bg-primary progress-bar-striped progress-bar-animated" role="progressbar" style="width: <?= $data['ratio']['persen_non_fiksi'] ?? 0 ?>%" aria-valuenow="<?= $data['ratio']['persen_non_fiksi'] ?? 0 ?>" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <div class="d-flex align-items-center gap-4 text-muted fs-8">
+                <div><span class="badge bg-light text-dark border me-1"><?= number_format($data['ratio']['total_non_fiksi'] ?? 0) ?></span> Non-Fiksi / Pengayaan</div>
+                <div><span class="badge bg-light text-dark border me-1"><?= number_format($data['ratio']['total_fiksi'] ?? 0) ?></span> Fiksi / Sastra</div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-5 text-center mt-3 mt-lg-0 border-start-lg">
+            <div class="p-3 rounded-4 bg-light d-inline-block w-100 max-w-sm">
+                <?php if (!empty($data['ratio']['is_layak_akreditasi'])): ?>
+                    <div class="text-success fs-1 mb-1"><i class="bi bi-check-circle-fill"></i></div>
+                    <h6 class="fw-bold text-success mb-1">Rasio Memenuhi Syarat (A)</h6>
+                    <small class="text-muted fs-8">Persentase Non-Fiksi telah mencapai <?= $data['ratio']['persen_non_fiksi'] ?? 0 ?>% (Min 60%)</small>
+                <?php else: ?>
+                    <div class="text-warning fs-1 mb-1"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                    <h6 class="fw-bold text-warning mb-1">Peringatan Akreditasi</h6>
+                    <small class="text-muted fs-8">Koleksi Non-Fiksi baru <?= $data['ratio']['persen_non_fiksi'] ?? 0 ?>% (Target Min 60%). Segera tambah buku pengayaan!</small>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Main Submenu Access Grid -->
 <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
     <h5 class="fw-bold text-dark mb-3"><i class="bi bi-grid-fill text-primary me-2"></i> Modul Operasional Perpustakaan</h5>
@@ -95,7 +133,7 @@
             </a>
         </div>
         <div class="col-12 col-md-4">
-            <a href="/SINTA-SaaS/perpustakaan/buku-paket" class="card border-0 shadow-sm rounded-3 p-3 text-decoration-none text-dark h-100 hover-elevation">
+            <a href="/SINTA-SaaS/perpustakaan/sirkulasi" class="card border-0 shadow-sm rounded-3 p-3 text-decoration-none text-dark h-100 hover-elevation">
                 <div class="d-flex align-items-center gap-3">
                     <div class="p-3 bg-info-subtle text-info rounded-3">
                         <i class="bi bi-box-seam fs-3"></i>
@@ -108,7 +146,7 @@
             </a>
         </div>
         <div class="col-12 col-md-4">
-            <a href="/SINTA-SaaS/perpustakaan/event" class="card border-0 shadow-sm rounded-3 p-3 text-decoration-none text-dark h-100 hover-elevation">
+            <a href="/SINTA-SaaS/perpustakaan/sirkulasi" class="card border-0 shadow-sm rounded-3 p-3 text-decoration-none text-dark h-100 hover-elevation">
                 <div class="d-flex align-items-center gap-3">
                     <div class="p-3 bg-warning-subtle text-warning rounded-3">
                         <i class="bi bi-trophy fs-3"></i>
@@ -134,7 +172,7 @@
             </a>
         </div>
         <div class="col-12 col-md-4">
-            <a href="/SINTA-SaaS/perpustakaan/pengaturan" class="card border-0 shadow-sm rounded-3 p-3 text-decoration-none text-dark h-100 hover-elevation">
+            <a href="/SINTA-SaaS/perpustakaan/anggota" class="card border-0 shadow-sm rounded-3 p-3 text-decoration-none text-dark h-100 hover-elevation">
                 <div class="d-flex align-items-center gap-3">
                     <div class="p-3 bg-secondary-subtle text-secondary rounded-3">
                         <i class="bi bi-gear fs-3"></i>
