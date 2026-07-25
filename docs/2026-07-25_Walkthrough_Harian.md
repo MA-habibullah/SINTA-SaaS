@@ -213,3 +213,26 @@ Untuk lulus akreditasi Perpustakaan Sekolah dengan nilai terbaik (Grade A) dari 
 ### Verifikasi Hasil:
 * **PHPStan Static Analysis Level 9:** Lulus 100% (`[OK] No errors`).
 * **Automated Security Audit:** Lulus 100% (`Failed Checks: 0`).
+
+---
+## [Bug Fix: Menu Dashboard Perpustakaan Tidak Tampil di Sidebar]
+**Waktu**: 20:55 WIB
+**Jenis**: Bug Fix / Database Migration
+
+### Root Cause:
+Di dalam database tabel `menus`, menu **Perpustakaan** (id=80) memiliki empat sub-menu (Katalog & Inventori, Sirkulasi & Layanan, Administrasi & Keanggotaan, OPAC Publik), namun **tidak ada** sub-menu "Dashboard" yang mengarah ke `/SINTA-SaaS/perpustakaan`. URL induk parent hanya muncul sebagai pemicu dropdown collapse — bukan tautan langsung — sehingga halaman dashboard perpustakaan tidak bisa diakses dari sidebar.
+
+### Solusi:
+Membuat file migrasi baru [2026_07_25_03_add_perpustakaan_dashboard_menu.php](file:///c:/xampp/htdocs/SINTA-SaaS/database/migrations/2026_07_25_03_add_perpustakaan_dashboard_menu.php) yang:
+1. Menyisipkan sub-menu baru `Dashboard` (`icon: bi-grid-fill`, `urutan: 0`) sebagai anak dari parent Perpustakaan (`parent_id = 80`) dengan URL `/SINTA-SaaS/perpustakaan`.
+2. Menyalin seluruh hak akses dari sub-menu Katalog (id=81) — baik `tenant_menu_access` maupun `role_menu_access` — ke menu baru, sehingga hak akses `operator_sekolah` dan `super_admin` otomatis terpenuhi tanpa perlu konfigurasi manual.
+3. Migrasi dieksekusi dengan `php migrate.php up` dan dikonfirmasi berhasil.
+
+### File yang Diubah:
+- **[BARU]** [2026_07_25_03_add_perpustakaan_dashboard_menu.php](file:///c:/xampp/htdocs/SINTA-SaaS/database/migrations/2026_07_25_03_add_perpustakaan_dashboard_menu.php)
+
+### Verifikasi Hasil:
+* **PHPStan Static Analysis Level 9:** Lulus 100% (`[OK] No errors`, 169 files).
+* **Automated Security Audit:** Lulus 100% (`Failed Checks: 0`).
+* **Jumlah Menu di DB:** Bertambah dari 44 → 45 menus (dikonfirmasi oleh security audit RouteGuard).
+
