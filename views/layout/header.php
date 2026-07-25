@@ -56,6 +56,11 @@ if ($tenantId) {
 
     <!-- Right-side User Dropdown Actions -->
     <div class="d-flex align-items-center gap-3">
+        <!-- Viewport Mode Toggle Switch -->
+        <button class="btn btn-outline-secondary btn-sm rounded-pill px-3 py-1.5 fs-8 d-flex align-items-center gap-1.5 shadow-sm transition" id="btnToggleViewport" onclick="toggleViewportMode()" title="Ganti Mode Tampilan (Desktop / Mobile)">
+            <span id="txtViewportMode">📱 Mode Mobile</span>
+        </button>
+
         <!-- Real-time Digital Clock (Premium Aesthetic) -->
         <div class="d-none d-lg-flex align-items-center bg-light px-3 py-1.5 rounded-pill border text-muted fw-medium fs-8" id="header-clock-container" style="font-size: 0.775rem;">
             <i class="bi bi-clock-fill text-primary me-2"></i>

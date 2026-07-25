@@ -2,7 +2,16 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta id="viewport-meta" name="viewport" content="width=device-width, initial-scale=1.0">
+    <script data-turbo-track="reload">
+        (function() {
+            const pref = localStorage.getItem('sinta_viewport_preference');
+            const meta = document.getElementById('viewport-meta');
+            if (pref === 'desktop' && meta) {
+                meta.setAttribute('content', 'width=1200, initial-scale=0.1');
+            }
+        })();
+    </script>
     <title><?= htmlspecialchars($data['title'] ?? ($stats['title'] ?? 'SINTA-SaaS SaaS')) ?></title>
     
     <!-- JS Error Tracker: Persists errors to LocalStorage for debugging -->
@@ -773,6 +782,93 @@
         <i class="bi bi-question-lg fs-4"></i>
     </a>
 <?php endif; ?>
+
+    <!-- Script Viewport Mode Switcher & Detection -->
+    <script>
+        function isMobileOrTablet() {
+            const ua = navigator.userAgent || navigator.vendor || window.opera;
+            return (/android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua));
+        }
+
+        function checkViewportSuggestion() {
+            const pref = localStorage.getItem('sinta_viewport_preference');
+            if (isMobileOrTablet() && !pref) {
+                setTimeout(function() {
+                    if (window.Swal) {
+                        Swal.fire({
+                            title: 'Optimasi Tampilan',
+                            text: 'Apakah Anda ingin mengaktifkan Mode Desktop untuk pengalaman terbaik SINTA-SaaS?',
+                            icon: 'question',
+                            showCancelButton: true,
+                            confirmButtonText: '🖥️ Ya, Mode Desktop',
+                            cancelButtonText: '📱 Tetap Mobile',
+                            confirmButtonColor: '#2563eb',
+                            cancelButtonColor: '#64748b',
+                            allowOutsideClick: false
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                localStorage.setItem('sinta_viewport_preference', 'desktop');
+                                const meta = document.getElementById('viewport-meta');
+                                if (meta) {
+                                    meta.setAttribute('content', 'width=1200, initial-scale=0.1');
+                                }
+                                window.location.reload();
+                            } else {
+                                localStorage.setItem('sinta_viewport_preference', 'mobile');
+                            }
+                        });
+                    }
+                }, 1500);
+            }
+        }
+
+        function initViewportButton() {
+            const btn = document.getElementById('btnToggleViewport');
+            const txt = document.getElementById('txtViewportMode');
+            if (!btn || !txt) return;
+
+            const pref = localStorage.getItem('sinta_viewport_preference') || 'mobile';
+            if (pref === 'desktop') {
+                txt.innerHTML = '🖥️ Mode Desktop';
+                btn.classList.remove('btn-outline-secondary');
+                btn.classList.add('btn-primary');
+            } else {
+                txt.innerHTML = '📱 Mode Mobile';
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-outline-secondary');
+            }
+        }
+
+        function toggleViewportMode() {
+            const current = localStorage.getItem('sinta_viewport_preference') || 'mobile';
+            const next = current === 'desktop' ? 'mobile' : 'desktop';
+            localStorage.setItem('sinta_viewport_preference', next);
+            
+            const meta = document.getElementById('viewport-meta');
+            if (meta) {
+                if (next === 'desktop') {
+                    meta.setAttribute('content', 'width=1200, initial-scale=0.1');
+                } else {
+                    meta.setAttribute('content', 'width=device-width, initial-scale=1.0');
+                }
+            }
+            window.location.reload();
+        }
+
+        // Run detection and button initializer
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                checkViewportSuggestion();
+                initViewportButton();
+            });
+        } else {
+            checkViewportSuggestion();
+            initViewportButton();
+        }
+        document.addEventListener('turbo:load', function() {
+            initViewportButton();
+        });
+    </script>
 
 </body>
 </html>
