@@ -82,3 +82,41 @@ Ini aman karena di aplikasi SINTA-SaaS, aksi sub-halaman (edit, detail, dsb.) se
 * **PHPStan Static Analysis Level 9:** Lulus 100% (`[OK] No errors`).
 * **Automated Security Audit:** Lulus 100% (`Failed Checks: 0`).
 * **Git Commit:** `fix(sidebar): use pure exact-match in isActive - remove prefix match to stop Dashboard staying active on sub-pages`
+
+---
+## [Feature & Enhancement: Dropdown Klasifikasi DDC & Upload E-Book Digital + Cover Buku]
+**Waktu**: 16:02 WIB
+**Jenis**: Feature / UI & Backend Enhancement
+
+### Fitur & Perbaikan:
+1. **Dropdown Klasifikasi DDC (Searchable & Filterable)**:
+   - Mengubah input teks biasa Kode DDC pada modal Tambah/Edit Judul Buku menjadi `<select>` dropdown interaktif yang dimuat dinamis dari data `perpus_kategori_ddc` database.
+   - Dilengkapi filter pencarian instan (*client-side live search*) untuk mencari kode DDC atau deskripsi nama kategori DDC.
+   - Menyediakan indikator badge DDC terpilih beserta tombol hapus (*clear button*).
+
+2. **Upload Cover Buku**:
+   - Menambahkan input upload berkas cover gambar (`JPG`, `PNG`, `WebP`, maks 2MB).
+   - Dilengkapi preview gambar langsung (*FileReader preview*) sebelum disimpan.
+   - Menampilkan thumbnail cover gambar yang sudah tersimpan saat mengedit katalog.
+
+3. **Upload E-Book Digital (PDF / EPUB)**:
+   - Menambahkan dropdown status media buku: `📚 Buku Fisik Saja`, `💻 E-Book Digital`, `📚💻 Fisik + E-Book Digital`.
+   - Menampilkan card upload berkas e-book secara dinamis (*conditional rendering*) hanya ketika status E-Book Digital dipilih.
+   - Mendukung upload berkas e-book berformat `.pdf` atau `.epub` hingga kapasitas 50MB.
+
+4. **Penanganan Backend & Model (Security Audit Compliant)**:
+   - Mengubah form modal menjadi `enctype="multipart/form-data"`.
+   - Di `PerpustakaanController::apiSaveBibliografi()`, dilakukan penanganan upload dengan validasi MIME type aman menggunakan PHP `finfo` (mencegah *File Upload Vulnerability*).
+   - Berkas fisik disimpan terenkapsulasi di `storage/perpustakaan/covers/` dan `storage/perpustakaan/ebooks/`.
+   - Di `Perpustakaan::saveBibliografi()`, kolom `cover`, `file_ebook`, dan `is_ebook` disimpan ke database dengan parameterized PDO statement.
+
+### Berkas yang Diubah:
+- **[views/perpustakaan/katalog.php](file:///c:/xampp/htdocs/SINTA-SaaS/views/perpustakaan/katalog.php)**: Penyesuaian modal form, DDC searchable dropdown, upload cover & ebook, JavaScript handlers.
+- **[app/Controllers/PerpustakaanController.php](file:///c:/xampp/htdocs/SINTA-SaaS/app/Controllers/PerpustakaanController.php)**: Pemrosesan upload berkas cover dan ebook dengan validasi MIME & ukuran.
+- **[app/Models/Perpustakaan.php](file:///c:/xampp/htdocs/SINTA-SaaS/app/Models/Perpustakaan.php)**: Update query SQL `INSERT` & `UPDATE` untuk menyimpan path cover & file ebook.
+
+### Verifikasi Hasil:
+* **PHPStan Static Analysis Level 9:** Lulus 100% (`[OK] No errors`, 3 files checked).
+* **Automated Security Audit:** Lulus 100% (`Failed Checks: 0`).
+* **Git Commit:** `feat(perpustakaan): add DDC dropdown search & ebook/cover upload handling in book catalog modal`
+
