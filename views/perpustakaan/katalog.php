@@ -512,198 +512,196 @@
 <!-- Modal Tambah / Edit Judul Buku -->
 <div class="modal fade" id="modalTambahBuku" tabindex="-1" aria-labelledby="modalTambahBukuLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-            <form action="/SINTA-SaaS/api/v1/perpustakaan/katalog/simpan" method="POST" id="formTambahBuku" enctype="multipart/form-data" data-turbo="false" class="d-flex flex-column h-100 mb-0">
-                <div class="modal-header bg-primary text-white rounded-top-4 flex-shrink-0">
-                    <h5 class="modal-title fw-bold" id="modalTambahBukuLabel"><i class="bi bi-book me-2"></i> Tambah Judul Buku Baru</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <input type="hidden" name="id" id="book_id_input" value="">
-                <input type="hidden" name="tenant_id" value="<?= htmlspecialchars($data['active_tenant_id'] ?? '') ?>">
-                <div class="modal-body p-4 flex-grow-1 overflow-auto">
-                    <div class="row g-3">
-                        <?php if ($data['is_super_admin'] ?? false): ?>
-                            <div class="col-12">
-                                <label class="form-label fw-semibold">Target Sekolah / Tenant <span class="text-danger">*</span></label>
-                                <select name="tenant_id" id="book_tenant_select" class="form-select rounded-3 bg-light border-primary" required>
-                                    <?php foreach ($data['tenants'] as $t): ?>
-                                        <option value="<?= htmlspecialchars($t['id']) ?>" <?= ($t['id'] === ($data['active_tenant_id'] ?? '')) ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars($t['nama_sekolah']) ?> (<?= htmlspecialchars($t['npsn']) ?>)
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        <?php endif; ?>
-
-                        <!-- Judul Buku & Judul Seri -->
-                        <div class="col-12 col-md-8">
-                            <label class="form-label fw-semibold">Judul Buku <span class="text-danger">*</span></label>
-                            <input type="text" name="judul" id="book_judul_input" class="form-control rounded-3" placeholder="Contoh: Pemrograman Web Modern PHP 8 & Vue 3" required>
-                        </div>
-                        <div class="col-12 col-md-4">
-                            <label class="form-label fw-semibold">Judul Seri / Jilid</label>
-                            <input type="text" name="judul_seri" id="book_seri_input" class="form-control rounded-3" placeholder="Contoh: Jilid 2A / Seri Sains">
-                        </div>
-
-                        <!-- Nomor Panggil & DDC Dropdown -->
-                        <div class="col-12 col-md-6">
-                            <label class="form-label fw-semibold">Nomor Panggil (Call Number)</label>
-                            <input type="text" name="nomor_panggil" id="book_panggil_input" class="form-control rounded-3" placeholder="Contoh: 005 HAB p">
-                            <small class="text-muted fs-8">Format standar: [Kode DDC] [3 Huruf Pengarang] [1 Huruf Judul]</small>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label fw-semibold">Klasifikasi DDC</label>
-                            <div class="position-relative">
-                                <input type="text" id="book_ddc_search" class="form-control rounded-3 rounded-bottom-0" placeholder="🔍 Cari kode / nama DDC..." autocomplete="off">
-                                <select name="klasifikasi_ddc" id="book_ddc_input" class="form-select rounded-3 rounded-top-0" size="4" style="max-height:120px; overflow-y:auto; border-top: 1px solid #dee2e6;">
-                                    <option value="">-- Pilih Klasifikasi DDC --</option>
-                                    <?php foreach ($data['ddc_categories'] as $ddc): ?>
-                                        <option value="<?= htmlspecialchars($ddc['kode']) ?>" data-search="<?= htmlspecialchars(strtolower($ddc['kode'] . ' ' . $ddc['nama'])) ?>">
-                                            <?= htmlspecialchars($ddc['kode']) ?> — <?= htmlspecialchars($ddc['nama']) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div id="book_ddc_selected_badge" class="mt-1 d-none">
-                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-1 fs-8">
-                                    <i class="bi bi-check2-circle me-1"></i>
-                                    <span id="book_ddc_selected_label">-</span>
-                                    <button type="button" class="btn-close btn-close-sm ms-1 py-0" id="book_ddc_clear" style="font-size:0.55rem;" aria-label="Hapus"></button>
-                                </span>
-                            </div>
-                        </div>
-
-                        <!-- Pengarang & Edisi -->
-                        <div class="col-12 col-md-8">
-                            <label class="form-label fw-semibold">Nama Pengarang / Penulis</label>
-                            <input type="text" name="pengarang" id="book_pengarang_input" class="form-control rounded-3" placeholder="Contoh: Habibullah M.Kom">
-                        </div>
-                        <div class="col-12 col-md-4">
-                            <label class="form-label fw-semibold">Edisi / Cetakan</label>
-                            <input type="text" name="edisi" id="book_edisi_input" class="form-control rounded-3" placeholder="Contoh: Edisi Revisi 2024">
-                        </div>
-
-                        <!-- Penerbit, Kota, & Tahun -->
-                        <div class="col-12 col-md-5">
-                            <label class="form-label fw-semibold">Penerbit</label>
-                            <input type="text" name="penerbit" id="book_penerbit_input" class="form-control rounded-3" placeholder="Contoh: Informatika">
-                        </div>
-                        <div class="col-12 col-md-4">
-                            <label class="form-label fw-semibold">Kota Terbit</label>
-                            <input type="text" name="kota_terbit" id="book_kota_input" class="form-control rounded-3" placeholder="Contoh: Bandung">
-                        </div>
-                        <div class="col-12 col-md-3">
-                            <label class="form-label fw-semibold">Tahun Terbit</label>
-                            <input type="number" name="tahun_terbit" id="book_tahun_input" class="form-control rounded-3" placeholder="Tahun" value="<?= date('Y') ?>">
-                        </div>
-
-                        <!-- ISBN & Bahasa -->
-                        <div class="col-12 col-md-6">
-                            <label class="form-label fw-semibold">ISBN / ISSN</label>
-                            <input type="text" name="isbn" id="book_isbn_input" class="form-control rounded-3" placeholder="978-...">
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label fw-semibold">Bahasa Buku</label>
-                            <select name="bahasa" id="book_bahasa_input" class="form-select rounded-3">
-                                <option value="Indonesia">Bahasa Indonesia</option>
-                                <option value="Inggris">Bahasa Inggris</option>
-                                <option value="Arab">Bahasa Arab</option>
-                                <option value="Jawa">Bahasa Jawa / Daerah</option>
-                                <option value="Lainnya">Lainnya</option>
-                            </select>
-                        </div>
-
-                        <!-- Halaman & Dimensi -->
-                        <div class="col-12 col-md-6">
-                            <label class="form-label fw-semibold">Jumlah Halaman</label>
-                            <input type="number" name="halaman" id="book_halaman_input" class="form-control rounded-3" placeholder="Contoh: 254">
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label fw-semibold">Dimensi / Ukuran Buku</label>
-                            <input type="text" name="dimensi" id="book_dimensi_input" class="form-control rounded-3" placeholder="Contoh: 21 cm / 21 x 29 cm">
-                        </div>
-
-                        <!-- Jenis Buku & Status OPAC Publik -->
-                        <div class="col-12 col-md-6">
-                            <label class="form-label fw-semibold">Jenis Buku</label>
-                            <select name="jenis_buku" id="book_jenis_input" class="form-select rounded-3">
-                                <option value="Umum">Umum / Pengayaan</option>
-                                <option value="Non-Fiksi">Non-Fiksi</option>
-                                <option value="Fiksi">Fiksi / Sastra</option>
-                                <option value="Paket Pelajaran">Paket Pelajaran (Buku Teks)</option>
-                                <option value="Referensi">Referensi (Kamus, Ensiklopedi)</option>
-                                <option value="OSN">OSN / Olimpiade</option>
-                                <option value="Majalah">Majalah / Berkala</option>
-                                <option value="Lainnya">Lainnya</option>
-                            </select>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label fw-semibold">Status Publikasi OPAC</label>
-                            <select name="status_opac" id="book_opac_input" class="form-select rounded-3">
-                                <option value="1">🌐 Tampilkan di Katalog OPAC Publik</option>
-                                <option value="0">🔒 Sembunyikan dari OPAC (Khusus Internal)</option>
-                            </select>
-                        </div>
-
-                        <!-- Subjek / Topik / Kata Kunci -->
+        <form action="/SINTA-SaaS/api/v1/perpustakaan/katalog/simpan" method="POST" id="formTambahBuku" enctype="multipart/form-data" data-turbo="false" class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-primary text-white rounded-top-4">
+                <h5 class="modal-title fw-bold" id="modalTambahBukuLabel"><i class="bi bi-book me-2"></i> Tambah Judul Buku Baru</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <input type="hidden" name="id" id="book_id_input" value="">
+            <input type="hidden" name="tenant_id" value="<?= htmlspecialchars($data['active_tenant_id'] ?? '') ?>">
+            <div class="modal-body p-4">
+                <div class="row g-3">
+                    <?php if ($data['is_super_admin'] ?? false): ?>
                         <div class="col-12">
-                            <label class="form-label fw-semibold">Subjek / Kata Kunci Topik</label>
-                            <input type="text" name="subjek" id="book_subjek_input" class="form-control rounded-3" placeholder="Contoh: Matematika; Aljabar; SMA (Pisahkan dengan titik koma)">
-                        </div>
-
-                        <!-- Abstrak / Sinopsis Buku -->
-                        <div class="col-12">
-                            <label class="form-label fw-semibold">Abstrak / Ringkasan Sinopsis Buku</label>
-                            <textarea name="abstrak" id="book_abstrak_input" class="form-control rounded-3" rows="3" placeholder="Tuliskan gambaran ringkas isi buku..."></textarea>
-                        </div>
-
-                        <!-- Status Media Buku -->
-                        <div class="col-12 col-md-6">
-                            <label class="form-label fw-semibold">Status Media Buku</label>
-                            <select name="is_ebook" id="book_ebook_select" class="form-select rounded-3">
-                                <option value="0">📚 Buku Fisik Saja</option>
-                                <option value="1">💻 E-Book Digital</option>
-                                <option value="2">📚💻 Fisik + E-Book Digital</option>
+                            <label class="form-label fw-semibold">Target Sekolah / Tenant <span class="text-danger">*</span></label>
+                            <select name="tenant_id" id="book_tenant_select" class="form-select rounded-3 bg-light border-primary" required>
+                                <?php foreach ($data['tenants'] as $t): ?>
+                                    <option value="<?= htmlspecialchars($t['id']) ?>" <?= ($t['id'] === ($data['active_tenant_id'] ?? '')) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($t['nama_sekolah']) ?> (<?= htmlspecialchars($t['npsn']) ?>)
+                                    </option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
+                    <?php endif; ?>
 
-                        <!-- Upload Cover Buku -->
-                        <div class="col-12 col-md-6" id="sectionUploadCover">
-                            <label class="form-label fw-semibold">Cover Buku <span class="text-muted fw-normal">(JPG/PNG, maks 2MB)</span></label>
-                            <input type="file" name="cover_file" id="book_cover_file" class="form-control rounded-3" accept="image/jpeg,image/png,image/webp">
-                            <div id="cover_preview_wrap" class="mt-2 d-none">
-                                <img id="cover_preview_img" src="" alt="Preview Cover" class="rounded-3 border" style="max-height:100px; max-width:80px; object-fit:cover;">
-                            </div>
-                            <div id="cover_existing_wrap" class="mt-2 d-none">
-                                <small class="text-muted"><i class="bi bi-image me-1"></i>Cover saat ini:</small><br>
-                                <img id="cover_existing_img" src="" alt="Cover saat ini" class="rounded-3 border mt-1" style="max-height:80px; max-width:64px; object-fit:cover;">
-                            </div>
-                        </div>
-
-                        <!-- Section Upload E-Book (muncul hanya jika E-Book dipilih) -->
-                        <div class="col-12" id="sectionEbookUpload" style="display:none;">
-                            <div class="card border-0 bg-info-subtle rounded-4 p-3">
-                                <h6 class="fw-bold text-info mb-3"><i class="bi bi-file-earmark-pdf me-2"></i>Upload File E-Book Digital</h6>
-                                <div class="mb-2">
-                                    <label class="form-label fw-semibold mb-1">File E-Book <span class="text-danger">*</span> <span class="text-muted fw-normal">(PDF/EPUB, maks 50MB)</span></label>
-                                    <input type="file" name="ebook_file" id="book_ebook_file" class="form-control rounded-3" accept=".pdf,.epub">
-                                    <div id="ebook_existing_wrap" class="mt-2 d-none">
-                                        <small class="text-success"><i class="bi bi-file-earmark-check me-1"></i> File ebook sudah ada. Upload baru untuk mengganti.</small>
-                                        <br><small class="text-muted" id="ebook_existing_name"></small>
-                                    </div>
-                                </div>
-                                <small class="text-muted fs-8"><i class="bi bi-shield-check me-1"></i>File hanya dapat diakses oleh anggota terdaftar perpustakaan.</small>
-                            </div>
-                        </div>
-
+                    <!-- Judul Buku & Judul Seri -->
+                    <div class="col-12 col-md-8">
+                        <label class="form-label fw-semibold">Judul Buku <span class="text-danger">*</span></label>
+                        <input type="text" name="judul" id="book_judul_input" class="form-control rounded-3" placeholder="Contoh: Pemrograman Web Modern PHP 8 & Vue 3" required>
                     </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label fw-semibold">Judul Seri / Jilid</label>
+                        <input type="text" name="judul_seri" id="book_seri_input" class="form-control rounded-3" placeholder="Contoh: Jilid 2A / Seri Sains">
+                    </div>
+
+                    <!-- Nomor Panggil & DDC Dropdown -->
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-semibold">Nomor Panggil (Call Number)</label>
+                        <input type="text" name="nomor_panggil" id="book_panggil_input" class="form-control rounded-3" placeholder="Contoh: 005 HAB p">
+                        <small class="text-muted fs-8">Format standar: [Kode DDC] [3 Huruf Pengarang] [1 Huruf Judul]</small>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-semibold">Klasifikasi DDC</label>
+                        <div class="position-relative">
+                            <input type="text" id="book_ddc_search" class="form-control rounded-3 rounded-bottom-0" placeholder="🔍 Cari kode / nama DDC..." autocomplete="off">
+                            <select name="klasifikasi_ddc" id="book_ddc_input" class="form-select rounded-3 rounded-top-0" size="4" style="max-height:120px; overflow-y:auto; border-top: 1px solid #dee2e6;">
+                                <option value="">-- Pilih Klasifikasi DDC --</option>
+                                <?php foreach ($data['ddc_categories'] as $ddc): ?>
+                                    <option value="<?= htmlspecialchars($ddc['kode']) ?>" data-search="<?= htmlspecialchars(strtolower($ddc['kode'] . ' ' . $ddc['nama'])) ?>">
+                                        <?= htmlspecialchars($ddc['kode']) ?> — <?= htmlspecialchars($ddc['nama']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div id="book_ddc_selected_badge" class="mt-1 d-none">
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-1 fs-8">
+                                <i class="bi bi-check2-circle me-1"></i>
+                                <span id="book_ddc_selected_label">-</span>
+                                <button type="button" class="btn-close btn-close-sm ms-1 py-0" id="book_ddc_clear" style="font-size:0.55rem;" aria-label="Hapus"></button>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Pengarang & Edisi -->
+                    <div class="col-12 col-md-8">
+                        <label class="form-label fw-semibold">Nama Pengarang / Penulis</label>
+                        <input type="text" name="pengarang" id="book_pengarang_input" class="form-control rounded-3" placeholder="Contoh: Habibullah M.Kom">
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label fw-semibold">Edisi / Cetakan</label>
+                        <input type="text" name="edisi" id="book_edisi_input" class="form-control rounded-3" placeholder="Contoh: Edisi Revisi 2024">
+                    </div>
+
+                    <!-- Penerbit, Kota, & Tahun -->
+                    <div class="col-12 col-md-5">
+                        <label class="form-label fw-semibold">Penerbit</label>
+                        <input type="text" name="penerbit" id="book_penerbit_input" class="form-control rounded-3" placeholder="Contoh: Informatika">
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label fw-semibold">Kota Terbit</label>
+                        <input type="text" name="kota_terbit" id="book_kota_input" class="form-control rounded-3" placeholder="Contoh: Bandung">
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label fw-semibold">Tahun Terbit</label>
+                        <input type="number" name="tahun_terbit" id="book_tahun_input" class="form-control rounded-3" placeholder="Tahun" value="<?= date('Y') ?>">
+                    </div>
+
+                    <!-- ISBN & Bahasa -->
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-semibold">ISBN / ISSN</label>
+                        <input type="text" name="isbn" id="book_isbn_input" class="form-control rounded-3" placeholder="978-...">
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-semibold">Bahasa Buku</label>
+                        <select name="bahasa" id="book_bahasa_input" class="form-select rounded-3">
+                            <option value="Indonesia">Bahasa Indonesia</option>
+                            <option value="Inggris">Bahasa Inggris</option>
+                            <option value="Arab">Bahasa Arab</option>
+                            <option value="Jawa">Bahasa Jawa / Daerah</option>
+                            <option value="Lainnya">Lainnya</option>
+                        </select>
+                    </div>
+
+                    <!-- Halaman & Dimensi -->
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-semibold">Jumlah Halaman</label>
+                        <input type="number" name="halaman" id="book_halaman_input" class="form-control rounded-3" placeholder="Contoh: 254">
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-semibold">Dimensi / Ukuran Buku</label>
+                        <input type="text" name="dimensi" id="book_dimensi_input" class="form-control rounded-3" placeholder="Contoh: 21 cm / 21 x 29 cm">
+                    </div>
+
+                    <!-- Jenis Buku & Status OPAC Publik -->
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-semibold">Jenis Buku</label>
+                        <select name="jenis_buku" id="book_jenis_input" class="form-select rounded-3">
+                            <option value="Umum">Umum / Pengayaan</option>
+                            <option value="Non-Fiksi">Non-Fiksi</option>
+                            <option value="Fiksi">Fiksi / Sastra</option>
+                            <option value="Paket Pelajaran">Paket Pelajaran (Buku Teks)</option>
+                            <option value="Referensi">Referensi (Kamus, Ensiklopedi)</option>
+                            <option value="OSN">OSN / Olimpiade</option>
+                            <option value="Majalah">Majalah / Berkala</option>
+                            <option value="Lainnya">Lainnya</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-semibold">Status Publikasi OPAC</label>
+                        <select name="status_opac" id="book_opac_input" class="form-select rounded-3">
+                            <option value="1">🌐 Tampilkan di Katalog OPAC Publik</option>
+                            <option value="0">🔒 Sembunyikan dari OPAC (Khusus Internal)</option>
+                        </select>
+                    </div>
+
+                    <!-- Subjek / Topik / Kata Kunci -->
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Subjek / Kata Kunci Topik</label>
+                        <input type="text" name="subjek" id="book_subjek_input" class="form-control rounded-3" placeholder="Contoh: Matematika; Aljabar; SMA (Pisahkan dengan titik koma)">
+                    </div>
+
+                    <!-- Abstrak / Sinopsis Buku -->
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Abstrak / Ringkasan Sinopsis Buku</label>
+                        <textarea name="abstrak" id="book_abstrak_input" class="form-control rounded-3" rows="3" placeholder="Tuliskan gambaran ringkas isi buku..."></textarea>
+                    </div>
+
+                    <!-- Status Media Buku -->
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-semibold">Status Media Buku</label>
+                        <select name="is_ebook" id="book_ebook_select" class="form-select rounded-3">
+                            <option value="0">📚 Buku Fisik Saja</option>
+                            <option value="1">💻 E-Book Digital</option>
+                            <option value="2">📚💻 Fisik + E-Book Digital</option>
+                        </select>
+                    </div>
+
+                    <!-- Upload Cover Buku -->
+                    <div class="col-12 col-md-6" id="sectionUploadCover">
+                        <label class="form-label fw-semibold">Cover Buku <span class="text-muted fw-normal">(JPG/PNG, maks 2MB)</span></label>
+                        <input type="file" name="cover_file" id="book_cover_file" class="form-control rounded-3" accept="image/jpeg,image/png,image/webp">
+                        <div id="cover_preview_wrap" class="mt-2 d-none">
+                            <img id="cover_preview_img" src="" alt="Preview Cover" class="rounded-3 border" style="max-height:100px; max-width:80px; object-fit:cover;">
+                        </div>
+                        <div id="cover_existing_wrap" class="mt-2 d-none">
+                            <small class="text-muted"><i class="bi bi-image me-1"></i>Cover saat ini:</small><br>
+                            <img id="cover_existing_img" src="" alt="Cover saat ini" class="rounded-3 border mt-1" style="max-height:80px; max-width:64px; object-fit:cover;">
+                        </div>
+                    </div>
+
+                    <!-- Section Upload E-Book (muncul hanya jika E-Book dipilih) -->
+                    <div class="col-12" id="sectionEbookUpload" style="display:none;">
+                        <div class="card border-0 bg-info-subtle rounded-4 p-3">
+                            <h6 class="fw-bold text-info mb-3"><i class="bi bi-file-earmark-pdf me-2"></i>Upload File E-Book Digital</h6>
+                            <div class="mb-2">
+                                <label class="form-label fw-semibold mb-1">File E-Book <span class="text-danger">*</span> <span class="text-muted fw-normal">(PDF/EPUB, maks 50MB)</span></label>
+                                <input type="file" name="ebook_file" id="book_ebook_file" class="form-control rounded-3" accept=".pdf,.epub">
+                                <div id="ebook_existing_wrap" class="mt-2 d-none">
+                                    <small class="text-success"><i class="bi bi-file-earmark-check me-1"></i> File ebook sudah ada. Upload baru untuk mengganti.</small>
+                                    <br><small class="text-muted" id="ebook_existing_name"></small>
+                                </div>
+                            </div>
+                            <small class="text-muted fs-8"><i class="bi bi-shield-check me-1"></i>File hanya dapat diakses oleh anggota terdaftar perpustakaan.</small>
+                        </div>
+                    </div>
+
                 </div>
-                <div class="modal-footer bg-light rounded-bottom-4 flex-shrink-0">
-                    <button type="button" class="btn btn-secondary rounded-3 px-4" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary rounded-3 px-4"><i class="bi bi-save me-1"></i> Simpan Katalog</button>
-                </div>
-            </form>
-        </div>
+            </div>
+            <div class="modal-footer bg-light rounded-bottom-4">
+                <button type="button" class="btn btn-secondary rounded-3 px-4" data-bs-dismiss="modal">Batal</button>
+                <button type="submit" class="btn btn-primary rounded-3 px-4"><i class="bi bi-save me-1"></i> Simpan Katalog</button>
+            </div>
+        </form>
     </div>
 </div>
 
