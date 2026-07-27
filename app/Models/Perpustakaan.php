@@ -246,13 +246,16 @@ class Perpustakaan {
                     e.*,
                     r.kode as rak_kode, r.nama as rak_nama, r.gedung as rak_gedung, r.lantai as rak_lantai, r.ruangan as rak_ruangan, r.nama_rak, r.baris as rak_baris,
                     s_aktif.id as sirkulasi_aktif_id, s_aktif.no_transaksi, s_aktif.tanggal_pinjam as pinjam_aktif_tgl, s_aktif.tanggal_kembali_rencana as pinjam_aktif_jatuh_tempo, s_aktif.status as pinjam_aktif_status,
-                    a_aktif.nama_lengkap as peminjam_aktif_nama, a_aktif.no_anggota as peminjam_aktif_no_anggota, a_aktif.tipe_anggota as peminjam_aktif_tipe,
+                    COALESCE(s_sw_aktif.nama_lengkap, u_aktif.nama_lengkap, a_aktif.nama_eksternal, 'Anggota Perpustakaan') as peminjam_aktif_nama,
+                    a_aktif.no_anggota as peminjam_aktif_no_anggota, a_aktif.tipe_anggota as peminjam_aktif_tipe,
                     s_last.tanggal_pinjam as last_pinjam_tgl, s_last.tanggal_kembali_aktual as last_kembali_tgl,
-                    a_last.nama_lengkap as last_peminjam_nama
+                    COALESCE(s_sw_last.nama_lengkap, u_last.nama_lengkap, a_last.nama_eksternal, 'Anggota Perpustakaan') as last_peminjam_nama
                 FROM perpus_eksemplar e
                 LEFT JOIN perpus_lokasi_rak r ON e.lokasi_rak_id = r.id
                 LEFT JOIN perpus_sirkulasi s_aktif ON e.id = s_aktif.eksemplar_id AND s_aktif.status IN ('Dipinjam', 'Terlambat')
                 LEFT JOIN perpus_anggota a_aktif ON s_aktif.anggota_id = a_aktif.id
+                LEFT JOIN siswa s_sw_aktif ON a_aktif.siswa_id = s_sw_aktif.id
+                LEFT JOIN users u_aktif ON a_aktif.user_id = u_aktif.id
                 LEFT JOIN (
                     SELECT eksemplar_id, MAX(created_at) as max_created
                     FROM perpus_sirkulasi
@@ -260,6 +263,8 @@ class Perpustakaan {
                 ) s_max ON e.id = s_max.eksemplar_id
                 LEFT JOIN perpus_sirkulasi s_last ON s_max.eksemplar_id = s_last.eksemplar_id AND s_max.max_created = s_last.created_at
                 LEFT JOIN perpus_anggota a_last ON s_last.anggota_id = a_last.id
+                LEFT JOIN siswa s_sw_last ON a_last.siswa_id = s_sw_last.id
+                LEFT JOIN users u_last ON a_last.user_id = u_last.id
                 WHERE e.bibliografi_id = :bib_id AND e.tenant_id = :tenant_id
                 ORDER BY e.created_at ASC";
 
