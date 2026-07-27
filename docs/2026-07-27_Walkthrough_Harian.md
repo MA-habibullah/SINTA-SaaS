@@ -159,4 +159,29 @@ Ini aman karena di aplikasi SINTA-SaaS, aksi sub-halaman (edit, detail, dsb.) se
 * **Automated Security Audit:** Lulus 100% (`Failed Checks: 0`).
 * **Git Commit:** `feat(perpustakaan): add full eksemplar lifecycle audit, purchase tracking, borrowing history, and write-off (afkir) management`
 
+---
+## [Bug Fix: SQL Error Unknown Column 'a_aktif.nama_lengkap' pada API Traceability]
+**Waktu**: 16:22 WIB
+**Jenis**: Bug Fix / SQL Query Resolution
+
+### Deskripsi & Root Cause:
+Saat tombol **Audit & Tracking Lifecycle Eksemplar** diklik, API `/api/v1/perpustakaan/katalog/traceability` mengembalikan HTTP 500 dengan error `Unknown column 'a_aktif.nama_lengkap' in 'field list'`.
+
+**Root cause**: Tabel `perpus_anggota` tidak memiliki kolom `nama_lengkap` secara langsung. Nama anggota disimpan terpisah tergantung tipe anggota:
+- Siswa: `siswa.nama_lengkap` (via `siswa_id`)
+- Guru/Staf: `users.nama_lengkap` (via `user_id`)
+- Eksternal: `perpus_anggota.nama_eksternal`
+
+### Solusi Perbaikan:
+Memperbarui kueri SQL di [app/Models/Perpustakaan.php](file:///c:/xampp/htdocs/SINTA-SaaS/app/Models/Perpustakaan.php) pada method `getBibliografiTraceability()`:
+- Menambahkan `LEFT JOIN siswa s_sw_aktif ON a_aktif.siswa_id = s_sw_aktif.id` dan `LEFT JOIN users u_aktif ON a_aktif.user_id = u_aktif.id`.
+- Menambahkan `LEFT JOIN siswa s_sw_last ON a_last.siswa_id = s_sw_last.id` dan `LEFT JOIN users u_last ON a_last.user_id = u_last.id`.
+- Menggunakan `COALESCE(s_sw_aktif.nama_lengkap, u_aktif.nama_lengkap, a_aktif.nama_eksternal, 'Anggota Perpustakaan') as peminjam_aktif_nama`.
+
+### Verifikasi Hasil:
+* **PHPStan Static Analysis Level 9:** Lulus 100% (`[OK] No errors`).
+* **Automated Security Audit:** Lulus 100% (`Failed Checks: 0`).
+* **Git Commit:** `fix(perpustakaan): fix unknown column a_aktif.nama_lengkap error in getBibliografiTraceability query`
+
+
 
