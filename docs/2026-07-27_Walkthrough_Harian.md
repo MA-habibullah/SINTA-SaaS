@@ -120,3 +120,43 @@ Ini aman karena di aplikasi SINTA-SaaS, aksi sub-halaman (edit, detail, dsb.) se
 * **Automated Security Audit:** Lulus 100% (`Failed Checks: 0`).
 * **Git Commit:** `feat(perpustakaan): add DDC dropdown search & ebook/cover upload handling in book catalog modal`
 
+---
+## [Feature: Audit Lifecycle, Perolehan BOS/BPOPP/Sumbangan, Peminjaman Real-time, & Penghapusan/Afkir Buku Perpustakaan]
+**Waktu**: 16:19 WIB
+**Jenis**: Feature / Database Migration & Traceability Audit
+
+### Fitur & Implementasi:
+1. **Migrasi Database (`2026_07_27_01_enhance_perpus_eksemplar_audit.php`)**:
+   - Memperluas ENUM `sumber_buku` pada tabel `perpus_eksemplar` untuk mencakup: `'Dana BOS'`, `'Dana BPOPP'`, `'Sumbangan Siswa'`, `'Sumbangan Alumni'`, `'Hibah Pemerintah'`, `'Hibah Pemda'`, `'Pembelian Mandiri'`, `'Sumbangan Perorangan'`, `'Bantuan Lainnya'`.
+   - Menambahkan kolom `sumber_pemberi` (`VARCHAR(255)`): Menyimpan nama vendor, alumni, atau instansi penyumbang.
+   - Memperluas ENUM `kondisi`: menambahkan `'Afkir/Dihapuskan'`.
+   - Memperluas ENUM `status`: menambahkan `'Dihapuskan/Afkir'`, `'Di Gudang'`.
+   - Menambahkan kolom `tanggal_penghapusan` (`DATE`) & `alasan_penghapusan` (`TEXT`) untuk audit buku yang sudah tidak ada/dibuang.
+
+2. **Backend Traceability Engine (`Perpustakaan::getBibliografiTraceability()`)**:
+   - Menyediakan API Endpoint `GET /api/v1/perpustakaan/katalog/traceability?id={id}`.
+   - Menghitung KPI Audit: Total Unit, Tersedia di Rak, Dipinjam, Rusak, Afkir/Dihapuskan, Total Nilai Investasi (Rp), dan breakdown per sumber perolehan.
+   - Melakukan JOIN ke `perpus_sirkulasi`, `perpus_anggota`, dan `perpus_lokasi_rak` untuk mengetahui:
+     - Siapa peminjam aktif saat ini, tanggal pinjam, dan tenggat kembali.
+     - Siapa peminjam terakhir dan kapan terakhir kali buku tersebut dipinjam/dibaca.
+     - Posisi fisik presisi (Gedung, Ruangan, Rak, Baris) atau posisi di Gudang / Ruang Perbaikan / Penghapusan.
+
+3. **User Interface Modal Audit & Unit Management (`katalog.php`)**:
+   - Menambahkan tombol **"🔍 Audit"** di setiap baris tabel katalog buku.
+   - **Modal Audit & Tracking Lifecycle Eksemplar**: Menampilkan ringkasan KPI, breakdown perolehan, dan tabel tracking detail per barcode/nomor induk.
+   - **Modal Edit / Tambah Unit Eksemplar**: Menikomodasi penambahan unit baru, pengisian sumber perolehan (BOS/BPOPP/Alumni), vendor pemberi, harga perolehan, serta form alasan & tanggal penghapusan/afkir.
+
+### Berkas yang Diubah / Dibuat:
+- **[BARU]** [database/migrations/2026_07_27_01_enhance_perpus_eksemplar_audit.php](file:///c:/xampp/htdocs/SINTA-SaaS/database/migrations/2026_07_27_01_enhance_perpus_eksemplar_audit.php)
+- **[app/Models/Perpustakaan.php](file:///c:/xampp/htdocs/SINTA-SaaS/app/Models/Perpustakaan.php)**: Tambah method `getBibliografiTraceability()` dan penyesuaian `saveEksemplar()`.
+- **[app/Controllers/PerpustakaanController.php](file:///c:/xampp/htdocs/SINTA-SaaS/app/Controllers/PerpustakaanController.php)**: Tambah method API `apiGetBibliografiTraceability()` dan `apiSaveEksemplar()`.
+- **[index.php](file:///c:/xampp/htdocs/SINTA-SaaS/index.php)**: Registrasi rute API `/api/v1/perpustakaan/katalog/traceability` & `/api/v1/perpustakaan/eksemplar/simpan`.
+- **[views/perpustakaan/katalog.php](file:///c:/xampp/htdocs/SINTA-SaaS/views/perpustakaan/katalog.php)**: Tombol Audit, Modal Audit Lifecycle, Modal Edit Unit Eksemplar, & JavaScript handlers.
+
+### Verifikasi Hasil:
+* **Database Migration:** Executed successfully (`Sukses: Semua migrasi berhasil diterapkan`).
+* **PHPStan Static Analysis Level 9:** Lulus 100% (`[OK] No errors`, 3 files checked).
+* **Automated Security Audit:** Lulus 100% (`Failed Checks: 0`).
+* **Git Commit:** `feat(perpustakaan): add full eksemplar lifecycle audit, purchase tracking, borrowing history, and write-off (afkir) management`
+
+
