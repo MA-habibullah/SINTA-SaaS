@@ -225,9 +225,39 @@ Pada tampilan formulir *Edit Katalog Buku Lengkap*, tombol footer (*Batal* & *Si
 2. Membungkus `<form>` secara rapi di dalam `.modal-content` dengan class `d-flex flex-column h-100 mb-0`, `.modal-header` (`flex-shrink-0`), `.modal-body` (`flex-grow-1 overflow-auto`), dan `.modal-footer` (`flex-shrink-0`).
 
 ### Verifikasi Hasil:
-* **PHPStan Static Analysis Level 9:** Lulus 100% (`[OK] No errors`).
 * **Automated Security Audit:** Lulus 100% (`Failed Checks: 0`).
 * **Git Commit:** `fix(perpustakaan): fix modalTambahBuku HTML layout overflow issue & restore clean scrollable modal dialog footer`
+
+---
+## [Bug Fix & UI Architecture: Restorasi Scroll Modal Body & Tombol Footer Batal / Simpan]
+**Waktu**: 16:31 WIB
+**Jenis**: Bug Fix / Bootstrap 5 Modal Architecture Fix
+
+### Deskripsi & Root Cause:
+Pada formulir *Tambah / Edit Judul Buku Baru*, area isi modal tidak bisa di-scroll dan tombol footer (**Batal** & **Simpan Katalog**) hilang / terdorong keluar dari bagian bawah layar.
+
+**Root cause**:
+Dalam arsitektur Bootstrap 5 `modal-dialog-scrollable`, aturan CSS otomatis (`.modal-dialog-scrollable .modal-content` & `.modal-dialog-scrollable .modal-body`) mewajibkan `.modal-body` dan `.modal-footer` menjadi **anak langsung (direct child)** dari elemen bertipe `.modal-content`.
+Ketika tag `<form>` berada di *dalam* `<div class="modal-content">`, selector CSS `.modal-dialog-scrollable > .modal-content > .modal-body` gagal mencocokkan `.modal-body` yang ada di dalam `<form>`, sehingga `overflow-y: auto` dari Bootstrap tidak aktif dan tinggi modal membengkak melebihi layar.
+
+### Solusi Perbaikan:
+Mengubah tag `<form>` di [views/perpustakaan/katalog.php](file:///c:/xampp/htdocs/SINTA-SaaS/views/perpustakaan/katalog.php) agar bertindak **langsung sebagai `.modal-content`**:
+```html
+<form action="..." method="POST" id="formTambahBuku" enctype="multipart/form-data" class="modal-content border-0 shadow-lg rounded-4">
+    <div class="modal-header">...</div>
+    <div class="modal-body p-4">...</div>
+    <div class="modal-footer bg-light rounded-bottom-4">...</div>
+</form>
+```
+Hasil perbaikan:
+1. `.modal-body` kembali menjadi anak langsung dari `.modal-content`, sehingga aturan CSS `overflow-y: auto` Bootstrap 5 aktif 100% secara alami. Pengguna kini dapat melakukan scroll mouse/touchpad/drag dengan sangat lancar dari judul buku hingga upload e-book.
+2. `.modal-footer` yang berisi tombol **Batal** dan **Simpan Katalog** kembali terkunci (*sticky footer*) secara permanen di bagian bawah kartu modal, selalu terlihat jelas di layar.
+
+### Verifikasi Hasil:
+* **PHPStan Static Analysis Level 9:** Lulus 100% (`[OK] No errors`).
+* **Automated Security Audit:** Lulus 100% (`Failed Checks: 0`).
+* **Git Commit:** `fix(perpustakaan): set form as native modal-content in modalTambahBuku to fix scrollable body and make Batal and Simpan buttons permanently visible`
+
 
 
 
