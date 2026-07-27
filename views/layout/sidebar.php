@@ -14,15 +14,17 @@ if (empty($roles)) {
 $sidebarMenus = [];
 $unreadBadgeCount = 0;
 
-// Helper untuk mengecek active state berdasarkan path url
-// Menggunakan exact-boundary match agar URL /perpustakaan tidak aktif
-// ketika sedang berada di /perpustakaan/sirkulasi.
+// Helper untuk mengecek active state berdasarkan path url.
+// Menggunakan EXACT MATCH murni: URL menu harus sama persis dengan
+// path URL saat ini (tanpa query string). Ini mencegah menu parent
+// (mis. Dashboard /perpustakaan) aktif saat di sub-halaman
+// (mis. /perpustakaan/sirkulasi).
 $isActive = function($paths) use ($requestUri) {
     if (empty($paths) || $paths === '#') {
         return '';
     }
 
-    // Ambil hanya bagian path dari REQUEST_URI (tanpa query string)
+    // Ambil hanya bagian path dari REQUEST_URI (tanpa query string dan trailing slash)
     $currentPath = parse_url($requestUri, PHP_URL_PATH);
     $currentPath = rtrim((string)$currentPath, '/');
 
@@ -30,22 +32,12 @@ $isActive = function($paths) use ($requestUri) {
         if ($path === '#' || $path === '') {
             return false;
         }
-        // Normalisasi: hapus query string dari url menu jika ada
-        $menuPath = strtok($path, '?');
-        $menuPath = rtrim((string)$menuPath, '/');
+        // Normalisasi: hapus query string dari url menu, hapus trailing slash
+        $menuPath = (string)strtok($path, '?');
+        $menuPath = rtrim($menuPath, '/');
 
-        // Exact match: path saat ini == path menu
-        if ($currentPath === $menuPath) {
-            return true;
-        }
-        // Prefix match: path saat ini dimulai dengan path menu diikuti '/'
-        // Ini berlaku untuk sub-halaman (misal /perpustakaan/katalog/edit)
-        // TAPI tidak boleh cocok jika path menu adalah parent yang lebih pendek
-        // dari sub-menu yang terpisah (misal /perpustakaan vs /perpustakaan/sirkulasi)
-        if (str_starts_with($currentPath, $menuPath . '/')) {
-            return true;
-        }
-        return false;
+        // Pure exact match: path saat ini harus sama persis dengan path menu
+        return $currentPath === $menuPath;
     };
 
     if (is_array($paths)) {
