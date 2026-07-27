@@ -205,9 +205,30 @@ Formulir Modal **Tambah / Edit Judul Buku Baru** telah disempurnakan dengan inpu
 - **[app/Models/Perpustakaan.php](file:///c:/xampp/htdocs/SINTA-SaaS/app/Models/Perpustakaan.php)**: Pembaruan method `saveBibliografi()` untuk memproses `judul_seri`, `dimensi`, `bahasa`, `subjek`, `abstrak`, `nomor_panggil`, `edisi`, `kota_terbit`, dan `status_opac`.
 
 ### Verifikasi Hasil:
-* **PHPStan Static Analysis Level 9:** Lulus 100% (`[OK] No errors`, 3 files checked).
 * **Automated Security Audit:** Lulus 100% (`Failed Checks: 0`).
 * **Git Commit:** `feat(perpustakaan): enhance book catalog form with complete bibliografi fields (call number, series title, edition, city, pages, dimensions, language, subjects, abstract, OPAC status)`
+
+---
+## [Bug Fix & UI Polish: Perbaikan Layout Flexbox & Struktur HTML Modal Edit Katalog]
+**Waktu**: 16:28 WIB
+**Jenis**: Bug Fix / UI Layout Polish
+
+### Deskripsi & Root Cause:
+Pada tampilan formulir *Edit Katalog Buku Lengkap*, tombol footer (*Batal* & *Simpan Katalog*) terdorong keluar dari kartu modal ke pojok kanan bawah layar.
+
+**Root cause**:
+- Terdapat duplikasi tag HTML `cover_existing_wrap` dan 3 penutup tag `</div>` ekstra yang menutup container modal secara prematur.
+- Tag `<form>` pada `modal-dialog-scrollable` tidak menggunakan utility class Flexbox Bootstrap 5 (`d-flex flex-column h-100 mb-0`), sehingga `.modal-body` dan `.modal-footer` tidak terbungkus secara terstruktur.
+
+### Solusi Perbaikan:
+1. Membersihkan tag `</div>` ekstra dan duplikasi elemen di [views/perpustakaan/katalog.php](file:///c:/xampp/htdocs/SINTA-SaaS/views/perpustakaan/katalog.php).
+2. Membungkus `<form>` secara rapi di dalam `.modal-content` dengan class `d-flex flex-column h-100 mb-0`, `.modal-header` (`flex-shrink-0`), `.modal-body` (`flex-grow-1 overflow-auto`), dan `.modal-footer` (`flex-shrink-0`).
+
+### Verifikasi Hasil:
+* **PHPStan Static Analysis Level 9:** Lulus 100% (`[OK] No errors`).
+* **Automated Security Audit:** Lulus 100% (`Failed Checks: 0`).
+* **Git Commit:** `fix(perpustakaan): fix modalTambahBuku HTML layout overflow issue & restore clean scrollable modal dialog footer`
+
 
 
 
