@@ -49,3 +49,36 @@ Fungsi `$isActive` direkonstruksi menggunakan logika **exact-boundary matching**
 * **PHPStan Static Analysis Level 9:** Lulus 100% (`[OK] No errors`).
 * **Automated Security Audit:** Lulus 100% (`Failed Checks: 0`).
 * **Git Commit:** `fix(sidebar): replace str_contains with exact-boundary match in isActive to prevent double-active menu`
+
+---
+## [Bug Fix: Menu Dashboard Perpustakaan Tetap Aktif Meski di Halaman Lain (Round 2)]
+**Waktu**: 15:44 WIB
+**Jenis**: Bug Fix / Frontend Logic
+
+### Root Cause (Iterasi 2):
+Fix sebelumnya (`str_starts_with($currentPath, $menuPath . '/')`) masih tidak cukup. Logika **prefix match** tetap membuat Dashboard (`/SINTA-SaaS/perpustakaan`) aktif ketika berada di `/SINTA-SaaS/perpustakaan/sirkulasi`, karena URL tersebut memang diawali `/SINTA-SaaS/perpustakaan/`.
+
+### Solusi Final:
+**Hapus prefix match sepenuhnya.** Ganti ke **pure exact match** murni di [sidebar.php](file:///c:/xampp/htdocs/SINTA-SaaS/views/layout/sidebar.php):
+
+```php
+// Pure exact match: path saat ini harus sama persis dengan path menu
+return $currentPath === $menuPath;
+```
+
+Ini aman karena di aplikasi SINTA-SaaS, aksi sub-halaman (edit, detail, dsb.) selalu menggunakan **query string** (`?action=edit&id=...`) — bukan path segment baru — sehingga exact match sudah cukup untuk semua kasus navigasi.
+
+### Perilaku Setelah Fix:
+
+| URL yang Dibuka | Menu Aktif |
+|---|---|
+| `/SINTA-SaaS/perpustakaan` | ✅ Dashboard saja |
+| `/SINTA-SaaS/perpustakaan/sirkulasi` | ✅ Sirkulasi & Layanan saja |
+| `/SINTA-SaaS/perpustakaan/katalog` | ✅ Katalog & Inventori saja |
+| `/SINTA-SaaS/perpustakaan/anggota` | ✅ Administrasi & Keanggotaan saja |
+
+### Verifikasi Hasil:
+* **PHP Syntax Check:** `No syntax errors detected`
+* **PHPStan Static Analysis Level 9:** Lulus 100% (`[OK] No errors`).
+* **Automated Security Audit:** Lulus 100% (`Failed Checks: 0`).
+* **Git Commit:** `fix(sidebar): use pure exact-match in isActive - remove prefix match to stop Dashboard staying active on sub-pages`
