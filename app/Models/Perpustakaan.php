@@ -101,28 +101,37 @@ class Perpustakaan {
     }
 
     public function saveBibliografi(string $tenantId, array $data, ?string $id = null): string {
-        $penulisJson = is_array($data['penulis']) ? json_encode($data['penulis'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) : json_encode([$data['penulis'] ?? '']);
-        $subjekJson = is_array($data['subjek']) ? json_encode($data['subjek'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) : json_encode([]);
+        $pengarangInput = $data['pengarang'] ?? ($data['penulis'] ?? '');
+        $penulisJson = is_array($pengarangInput) ? json_encode($pengarangInput, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) : json_encode([$pengarangInput]);
+
+        $subjekInput = $data['subjek'] ?? [];
+        if (is_string($subjekInput)) {
+            $subjekInput = array_map('trim', explode(';', $subjekInput));
+        }
+        $subjekJson = is_array($subjekInput) ? json_encode($subjekInput, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) : json_encode([]);
 
         if ($id) {
             // Build SET dynamically: only update cover/file_ebook if new paths are provided
             $setCover = isset($data['cover']) ? ', cover = :cover' : '';
             $setEbook = isset($data['file_ebook']) ? ', file_ebook = :file_ebook' : '';
             $stmt = $this->db->prepare("UPDATE perpus_bibliografi SET
-                isbn = :isbn, judul = :judul, edisi = :edisi, penulis = :penulis, penerbit = :penerbit,
-                kota_terbit = :kota_terbit, tahun_terbit = :tahun_terbit, halaman = :halaman,
+                isbn = :isbn, judul = :judul, judul_seri = :judul_seri, edisi = :edisi, penulis = :penulis, penerbit = :penerbit,
+                kota_terbit = :kota_terbit, tahun_terbit = :tahun_terbit, halaman = :halaman, dimensi = :dimensi, bahasa = :bahasa,
                 klasifikasi_ddc = :ddc, nomor_panggil = :panggil, subjek = :subjek, abstrak = :abstrak,
                 jenis_buku = :jenis, status_opac = :opac, is_ebook = :is_ebook$setCover$setEbook
                 WHERE id = :id AND tenant_id = :tenant_id");
             $params = [
                 'isbn' => $data['isbn'] ?? null,
                 'judul' => $data['judul'],
+                'judul_seri' => $data['judul_seri'] ?? null,
                 'edisi' => $data['edisi'] ?? null,
                 'penulis' => $penulisJson,
                 'penerbit' => $data['penerbit'] ?? null,
                 'kota_terbit' => $data['kota_terbit'] ?? null,
-                'tahun_terbit' => $data['tahun_terbit'] ?? null,
-                'halaman' => $data['halaman'] ?? null,
+                'tahun_terbit' => !empty($data['tahun_terbit']) ? (int)$data['tahun_terbit'] : null,
+                'halaman' => !empty($data['halaman']) ? (int)$data['halaman'] : null,
+                'dimensi' => $data['dimensi'] ?? null,
+                'bahasa' => $data['bahasa'] ?? 'Indonesia',
                 'ddc' => $data['klasifikasi_ddc'] ?? null,
                 'panggil' => $data['nomor_panggil'] ?? null,
                 'subjek' => $subjekJson,
@@ -140,19 +149,22 @@ class Perpustakaan {
         } else {
             $newId = $this->generateUuid();
             $stmt = $this->db->prepare("INSERT INTO perpus_bibliografi
-                (id, tenant_id, isbn, judul, edisi, penulis, penerbit, kota_terbit, tahun_terbit, halaman, klasifikasi_ddc, nomor_panggil, subjek, abstrak, jenis_buku, status_opac, is_ebook, cover, file_ebook)
-                VALUES (:id, :tenant_id, :isbn, :judul, :edisi, :penulis, :penerbit, :kota_terbit, :tahun_terbit, :halaman, :ddc, :panggil, :subjek, :abstrak, :jenis, :opac, :is_ebook, :cover, :file_ebook)");
+                (id, tenant_id, isbn, judul, judul_seri, edisi, penulis, penerbit, kota_terbit, tahun_terbit, halaman, dimensi, bahasa, klasifikasi_ddc, nomor_panggil, subjek, abstrak, jenis_buku, status_opac, is_ebook, cover, file_ebook)
+                VALUES (:id, :tenant_id, :isbn, :judul, :judul_seri, :edisi, :penulis, :penerbit, :kota_terbit, :tahun_terbit, :halaman, :dimensi, :bahasa, :ddc, :panggil, :subjek, :abstrak, :jenis, :opac, :is_ebook, :cover, :file_ebook)");
             $stmt->execute([
                 'id' => $newId,
                 'tenant_id' => $tenantId,
                 'isbn' => $data['isbn'] ?? null,
                 'judul' => $data['judul'],
+                'judul_seri' => $data['judul_seri'] ?? null,
                 'edisi' => $data['edisi'] ?? null,
                 'penulis' => $penulisJson,
                 'penerbit' => $data['penerbit'] ?? null,
                 'kota_terbit' => $data['kota_terbit'] ?? null,
-                'tahun_terbit' => $data['tahun_terbit'] ?? null,
-                'halaman' => $data['halaman'] ?? null,
+                'tahun_terbit' => !empty($data['tahun_terbit']) ? (int)$data['tahun_terbit'] : null,
+                'halaman' => !empty($data['halaman']) ? (int)$data['halaman'] : null,
+                'dimensi' => $data['dimensi'] ?? null,
+                'bahasa' => $data['bahasa'] ?? 'Indonesia',
                 'ddc' => $data['klasifikasi_ddc'] ?? null,
                 'panggil' => $data['nomor_panggil'] ?? null,
                 'subjek' => $subjekJson,

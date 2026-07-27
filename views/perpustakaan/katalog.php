@@ -144,16 +144,29 @@
                                             <i class="bi bi-search me-1"></i> Audit
                                         </button>
                                         <button type="button" class="btn btn-outline-warning btn-sm rounded-2 me-1 btn-edit-katalog"
-                                                data-id="<?= htmlspecialchars($item['id'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-                                                data-judul="<?= htmlspecialchars($item['judul'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-                                                data-ddc="<?= htmlspecialchars($item['klasifikasi_ddc'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-                                                data-pengarang="<?= htmlspecialchars($pengarangShow, ENT_QUOTES, 'UTF-8') ?>"
-                                                data-penerbit="<?= htmlspecialchars($item['penerbit'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-                                                data-tahun="<?= htmlspecialchars((string)($item['tahun_terbit'] ?? date('Y')), ENT_QUOTES, 'UTF-8') ?>"
-                                                data-isbn="<?= htmlspecialchars($item['isbn'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-                                                data-ebook="<?= !empty($item['is_ebook']) ? '1' : '0' ?>"
-                                                data-tenant="<?= htmlspecialchars($item['tenant_id'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-                                                title="Edit Katalog Buku">
+                                                 data-id="<?= htmlspecialchars($item['id'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                                 data-judul="<?= htmlspecialchars($item['judul'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                                 data-judul_seri="<?= htmlspecialchars($item['judul_seri'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                                 data-ddc="<?= htmlspecialchars($item['klasifikasi_ddc'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                                 data-panggil="<?= htmlspecialchars($item['nomor_panggil'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                                 data-pengarang="<?= htmlspecialchars($pengarangShow, ENT_QUOTES, 'UTF-8') ?>"
+                                                 data-penerbit="<?= htmlspecialchars($item['penerbit'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                                 data-kota="<?= htmlspecialchars($item['kota_terbit'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                                 data-tahun="<?= htmlspecialchars((string)($item['tahun_terbit'] ?? date('Y')), ENT_QUOTES, 'UTF-8') ?>"
+                                                 data-edisi="<?= htmlspecialchars($item['edisi'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                                 data-halaman="<?= htmlspecialchars((string)($item['halaman'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"
+                                                 data-dimensi="<?= htmlspecialchars($item['dimensi'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                                 data-bahasa="<?= htmlspecialchars($item['bahasa'] ?? 'Indonesia', ENT_QUOTES, 'UTF-8') ?>"
+                                                 data-isbn="<?= htmlspecialchars($item['isbn'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                                 data-jenis="<?= htmlspecialchars($item['jenis_buku'] ?? 'Umum', ENT_QUOTES, 'UTF-8') ?>"
+                                                 data-subjek="<?= htmlspecialchars(is_array($item['subjek'] ?? null) ? implode('; ', $item['subjek']) : (is_string($item['subjek'] ?? null) && strpos($item['subjek'], '[') === 0 ? implode('; ', json_decode($item['subjek'], true) ?: [$item['subjek']]) : ($item['subjek'] ?? '')), ENT_QUOTES, 'UTF-8') ?>"
+                                                 data-abstrak="<?= htmlspecialchars($item['abstrak'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                                 data-opac="<?= htmlspecialchars((string)($item['status_opac'] ?? 1), ENT_QUOTES, 'UTF-8') ?>"
+                                                 data-ebook="<?= !empty($item['is_ebook']) ? (string)$item['is_ebook'] : '0' ?>"
+                                                 data-cover="<?= htmlspecialchars($item['cover'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                                 data-ebook_file="<?= htmlspecialchars($item['file_ebook'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                                 data-tenant="<?= htmlspecialchars($item['tenant_id'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                                 title="Edit Katalog Buku Lengkap">
                                             <i class="bi bi-pencil"></i>
                                         </button>
                                         <a href="/SINTA-SaaS/perpustakaan/cetak-label-thermal?barcode=<?= urlencode($item['isbn'] ?? 'BOOK-1') ?>" target="_blank" class="btn btn-outline-dark btn-sm rounded-2 me-1" title="Cetak Barcode Thermal">
@@ -522,18 +535,27 @@
                             </div>
                         <?php endif; ?>
 
-                        <!-- Judul Buku -->
-                        <div class="col-12">
+                        <!-- Judul Buku & Judul Seri -->
+                        <div class="col-12 col-md-8">
                             <label class="form-label fw-semibold">Judul Buku <span class="text-danger">*</span></label>
                             <input type="text" name="judul" id="book_judul_input" class="form-control rounded-3" placeholder="Contoh: Matematika Diskrit SMA" required>
                         </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fw-semibold">Judul Seri / Jilid</label>
+                            <input type="text" name="judul_seri" id="book_seri_input" class="form-control rounded-3" placeholder="Contoh: Jilid 2A / Seri Sains">
+                        </div>
 
-                        <!-- DDC Dropdown (Searchable) -->
+                        <!-- Nomor Panggil & DDC Dropdown -->
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Nomor Panggil (Call Number)</label>
+                            <input type="text" name="nomor_panggil" id="book_panggil_input" class="form-control rounded-3" placeholder="Contoh: 510 SUR m">
+                            <small class="text-muted fs-8">Format standar: [Kode DDC] [3 Huruf Pengarang] [1 Huruf Judul]</small>
+                        </div>
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-semibold">Klasifikasi DDC</label>
                             <div class="position-relative">
                                 <input type="text" id="book_ddc_search" class="form-control rounded-3 rounded-bottom-0" placeholder="🔍 Cari kode / nama DDC..." autocomplete="off">
-                                <select name="klasifikasi_ddc" id="book_ddc_input" class="form-select rounded-3 rounded-top-0" size="4" style="max-height:130px; overflow-y:auto; border-top: 1px solid #dee2e6;">
+                                <select name="klasifikasi_ddc" id="book_ddc_input" class="form-select rounded-3 rounded-top-0" size="4" style="max-height:120px; overflow-y:auto; border-top: 1px solid #dee2e6;">
                                     <option value="">-- Pilih Klasifikasi DDC --</option>
                                     <?php foreach ($data['ddc_categories'] as $ddc): ?>
                                         <option value="<?= htmlspecialchars($ddc['kode']) ?>" data-search="<?= htmlspecialchars(strtolower($ddc['kode'] . ' ' . $ddc['nama'])) ?>">
@@ -551,7 +573,57 @@
                             </div>
                         </div>
 
-                        <!-- Jenis Buku -->
+                        <!-- Pengarang & Edisi -->
+                        <div class="col-12 col-md-8">
+                            <label class="form-label fw-semibold">Nama Pengarang / Penulis</label>
+                            <input type="text" name="pengarang" id="book_pengarang_input" class="form-control rounded-3" placeholder="Contoh: Prof. Yohanes Surya">
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fw-semibold">Edisi / Cetakan</label>
+                            <input type="text" name="edisi" id="book_edisi_input" class="form-control rounded-3" placeholder="Contoh: Edisi Revisi 2024">
+                        </div>
+
+                        <!-- Penerbit, Kota, & Tahun -->
+                        <div class="col-12 col-md-5">
+                            <label class="form-label fw-semibold">Penerbit</label>
+                            <input type="text" name="penerbit" id="book_penerbit_input" class="form-control rounded-3" placeholder="Penerbit">
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fw-semibold">Kota Terbit</label>
+                            <input type="text" name="kota_terbit" id="book_kota_input" class="form-control rounded-3" placeholder="Contoh: Jakarta">
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <label class="form-label fw-semibold">Tahun Terbit</label>
+                            <input type="number" name="tahun_terbit" id="book_tahun_input" class="form-control rounded-3" placeholder="Tahun" value="<?= date('Y') ?>">
+                        </div>
+
+                        <!-- ISBN & Bahasa -->
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">ISBN / ISSN</label>
+                            <input type="text" name="isbn" id="book_isbn_input" class="form-control rounded-3" placeholder="978-...">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Bahasa Buku</label>
+                            <select name="bahasa" id="book_bahasa_input" class="form-select rounded-3">
+                                <option value="Indonesia">Bahasa Indonesia</option>
+                                <option value="Inggris">Bahasa Inggris</option>
+                                <option value="Arab">Bahasa Arab</option>
+                                <option value="Jawa">Bahasa Jawa / Daerah</option>
+                                <option value="Lainnya">Lainnya</option>
+                            </select>
+                        </div>
+
+                        <!-- Halaman & Dimensi -->
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Jumlah Halaman</label>
+                            <input type="number" name="halaman" id="book_halaman_input" class="form-control rounded-3" placeholder="Contoh: 254">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Dimensi / Ukuran Buku</label>
+                            <input type="text" name="dimensi" id="book_dimensi_input" class="form-control rounded-3" placeholder="Contoh: 21 cm / 21 x 29 cm">
+                        </div>
+
+                        <!-- Jenis Buku & Status OPAC Publik -->
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-semibold">Jenis Buku</label>
                             <select name="jenis_buku" id="book_jenis_input" class="form-select rounded-3">
@@ -565,26 +637,24 @@
                                 <option value="Lainnya">Lainnya</option>
                             </select>
                         </div>
-
-                        <!-- Pengarang -->
                         <div class="col-12 col-md-6">
-                            <label class="form-label fw-semibold">Nama Pengarang / Penulis</label>
-                            <input type="text" name="pengarang" id="book_pengarang_input" class="form-control rounded-3" placeholder="Contoh: Prof. Yohanes Surya">
+                            <label class="form-label fw-semibold">Status Publikasi OPAC</label>
+                            <select name="status_opac" id="book_opac_input" class="form-select rounded-3">
+                                <option value="1">🌐 Tampilkan di Katalog OPAC Publik</option>
+                                <option value="0">🔒 Sembunyikan dari OPAC (Khusus Internal)</option>
+                            </select>
                         </div>
 
-                        <!-- Penerbit & Tahun -->
-                        <div class="col-12 col-md-6">
-                            <label class="form-label fw-semibold">Penerbit & Tahun</label>
-                            <div class="input-group">
-                                <input type="text" name="penerbit" id="book_penerbit_input" class="form-control rounded-start-3" placeholder="Penerbit">
-                                <input type="number" name="tahun_terbit" id="book_tahun_input" class="form-control rounded-end-3" placeholder="Tahun" style="max-width:90px;" value="<?= date('Y') ?>">
-                            </div>
+                        <!-- Subjek / Topik / Kata Kunci -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Subjek / Kata Kunci Topik</label>
+                            <input type="text" name="subjek" id="book_subjek_input" class="form-control rounded-3" placeholder="Contoh: Matematika; Aljabar; SMA (Pisahkan dengan titik koma)">
                         </div>
 
-                        <!-- ISBN -->
-                        <div class="col-12 col-md-6">
-                            <label class="form-label fw-semibold">ISBN</label>
-                            <input type="text" name="isbn" id="book_isbn_input" class="form-control rounded-3" placeholder="978-...">
+                        <!-- Abstrak / Sinopsis Buku -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Abstrak / Ringkasan Sinopsis Buku</label>
+                            <textarea name="abstrak" id="book_abstrak_input" class="form-control rounded-3" rows="2" placeholder="Tuliskan gambaran ringkas isi buku..."></textarea>
                         </div>
 
                         <!-- Status Media Buku -->
@@ -605,6 +675,10 @@
                                 <img id="cover_preview_img" src="" alt="Preview Cover" class="rounded-3 border" style="max-height:100px; max-width:80px; object-fit:cover;">
                             </div>
                             <div id="cover_existing_wrap" class="mt-2 d-none">
+                                <small class="text-muted"><i class="bi bi-image me-1"></i>Cover saat ini:</small><br>
+                                <img id="cover_existing_img" src="" alt="Cover saat ini" class="rounded-3 border mt-1" style="max-height:80px; max-width:64px; object-fit:cover;">
+                            </div>
+                        </div>
                                 <small class="text-muted"><i class="bi bi-image me-1"></i>Cover saat ini:</small><br>
                                 <img id="cover_existing_img" src="" alt="Cover saat ini" class="rounded-3 border mt-1" style="max-height:80px; max-width:64px; object-fit:cover;">
                             </div>
@@ -1073,28 +1147,52 @@ function initKatalogHandlers() {
     const editKatalogBtns = document.querySelectorAll('.btn-edit-katalog');
     editKatalogBtns.forEach(btn => {
         btn.onclick = function() {
-            document.getElementById('modalTambahBukuLabel').innerHTML = '<i class="bi bi-pencil-square me-2"></i> Edit Katalog Buku';
+            document.getElementById('modalTambahBukuLabel').innerHTML = '<i class="bi bi-pencil-square me-2"></i> Edit Katalog Buku Lengkap';
             document.getElementById('book_id_input').value = this.dataset.id;
-            document.getElementById('book_judul_input').value = this.dataset.judul;
-            document.getElementById('book_pengarang_input').value = this.dataset.pengarang;
-            document.getElementById('book_penerbit_input').value = this.dataset.penerbit;
-            document.getElementById('book_tahun_input').value = this.dataset.tahun;
-            document.getElementById('book_isbn_input').value = this.dataset.isbn;
+            document.getElementById('book_judul_input').value = this.dataset.judul || '';
+            const seriEl = document.getElementById('book_seri_input');
+            if (seriEl) seriEl.value = this.dataset.judul_seri || '';
+            const panggilEl = document.getElementById('book_panggil_input');
+            if (panggilEl) panggilEl.value = this.dataset.panggil || '';
+            document.getElementById('book_pengarang_input').value = this.dataset.pengarang || '';
+            const edisiEl = document.getElementById('book_edisi_input');
+            if (edisiEl) edisiEl.value = this.dataset.edisi || '';
+            document.getElementById('book_penerbit_input').value = this.dataset.penerbit || '';
+            const kotaEl = document.getElementById('book_kota_input');
+            if (kotaEl) kotaEl.value = this.dataset.kota || '';
+            document.getElementById('book_tahun_input').value = this.dataset.tahun || new Date().getFullYear();
+            const halamanEl = document.getElementById('book_halaman_input');
+            if (halamanEl) halamanEl.value = this.dataset.halaman || '';
+            const dimensiEl = document.getElementById('book_dimensi_input');
+            if (dimensiEl) dimensiEl.value = this.dataset.dimensi || '';
+            const bahasaEl = document.getElementById('book_bahasa_input');
+            if (bahasaEl) bahasaEl.value = this.dataset.bahasa || 'Indonesia';
+            document.getElementById('book_isbn_input').value = this.dataset.isbn || '';
 
             // Set DDC dropdown nilai
             const ddcSel = document.getElementById('book_ddc_input');
             const ddcVal = this.dataset.ddc || '';
-            ddcSel.value = ddcVal;
+            if (ddcSel) ddcSel.value = ddcVal;
             updateDdcBadge(ddcVal);
 
             // Set jenis buku
             const jenisSel = document.getElementById('book_jenis_input');
             if (jenisSel) jenisSel.value = this.dataset.jenis || 'Umum';
 
+            // Set subjek & abstrak
+            const subjekEl = document.getElementById('book_subjek_input');
+            if (subjekEl) subjekEl.value = this.dataset.subjek || '';
+            const abstrakEl = document.getElementById('book_abstrak_input');
+            if (abstrakEl) abstrakEl.value = this.dataset.abstrak || '';
+
+            // Set status OPAC
+            const opacEl = document.getElementById('book_opac_input');
+            if (opacEl) opacEl.value = this.dataset.opac || '1';
+
             // Set ebook select + toggle upload section
             const ebookSel = document.getElementById('book_ebook_select');
             const ebookVal = this.dataset.ebook || '0';
-            ebookSel.value = ebookVal;
+            if (ebookSel) ebookSel.value = ebookVal;
             toggleEbookSection(ebookVal);
 
             // Tampilkan cover existing jika ada
