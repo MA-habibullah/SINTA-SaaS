@@ -179,9 +179,36 @@ Memperbarui kueri SQL di [app/Models/Perpustakaan.php](file:///c:/xampp/htdocs/S
 - Menggunakan `COALESCE(s_sw_aktif.nama_lengkap, u_aktif.nama_lengkap, a_aktif.nama_eksternal, 'Anggota Perpustakaan') as peminjam_aktif_nama`.
 
 ### Verifikasi Hasil:
-* **PHPStan Static Analysis Level 9:** Lulus 100% (`[OK] No errors`).
 * **Automated Security Audit:** Lulus 100% (`Failed Checks: 0`).
 * **Git Commit:** `fix(perpustakaan): fix unknown column a_aktif.nama_lengkap error in getBibliografiTraceability query`
+
+---
+## [Feature & UI Enhancement: Penyempurnaan Formulir Tambah & Edit Katalog Buku Perpustakaan]
+**Waktu**: 16:24 WIB
+**Jenis**: Feature / UI & Model Cataloging Standardisation (Perpusnas & AACR2 Standard)
+
+### Fitur & Inputan Baru:
+Formulir Modal **Tambah / Edit Judul Buku Baru** telah disempurnakan dengan inputan lengkap sesuai standar katalog Perpustakaan Nasional (Perpusnas RI) & AACR2:
+
+1. **Judul Seri / Jilid** (`judul_seri`): Memfasilitasi buku berseri atau berjilid (misal: *Jilid 2A*, *Seri Olim Matematika*).
+2. **Nomor Panggil (Call Number)** (`nomor_panggil`): Input format standar perpustakaan (misal: `510 SUR m` atau `813 PRA b`).
+3. **Edisi / Cetakan** (`edisi`): Menyimpan informasi edisi/cetakan (misal: *Edisi Revisi 2024*, *Cetakan ke-3*).
+4. **Kota Terbit** (`kota_terbit`): Kota domisili penerbit (misal: *Jakarta*, *Surabaya*, *Bandung*).
+5. **Jumlah Halaman & Dimensi Buku** (`halaman`, `dimensi`): Informasi deskripsi fisik (misal: *254 hlm*, *21 cm*).
+6. **Bahasa Buku** (`bahasa`): Dropdown bahasa koleksi (*Bahasa Indonesia*, *Inggris*, *Arab*, *Jawa/Daerah*, *Lainnya*).
+7. **Status Publikasi OPAC Publik** (`status_opac`): Pilihan visibilitas di OPAC (*🌐 Tampilkan Publik* vs *🔒 Sembunyikan Khusus Internal*).
+8. **Subjek / Kata Kunci Topik** (`subjek`): Input kata kunci topik dipisahkan titik koma (misal: *Matematika; Aljabar; SMA*).
+9. **Abstrak / Sinopsis Buku** (`abstrak`): Textarea ringkasan gambaran isi buku.
+
+### Berkas yang Diubah:
+- **[views/perpustakaan/katalog.php](file:///c:/xampp/htdocs/SINTA-SaaS/views/perpustakaan/katalog.php)**: Penyempurnaan elemen form modal `modalTambahBuku`, penambahan atribut `data-` pada `.btn-edit-katalog`, dan pembaruan handler JavaScript.
+- **[app/Models/Perpustakaan.php](file:///c:/xampp/htdocs/SINTA-SaaS/app/Models/Perpustakaan.php)**: Pembaruan method `saveBibliografi()` untuk memproses `judul_seri`, `dimensi`, `bahasa`, `subjek`, `abstrak`, `nomor_panggil`, `edisi`, `kota_terbit`, dan `status_opac`.
+
+### Verifikasi Hasil:
+* **PHPStan Static Analysis Level 9:** Lulus 100% (`[OK] No errors`, 3 files checked).
+* **Automated Security Audit:** Lulus 100% (`Failed Checks: 0`).
+* **Git Commit:** `feat(perpustakaan): enhance book catalog form with complete bibliografi fields (call number, series title, edition, city, pages, dimensions, language, subjects, abstract, OPAC status)`
+
 
 
 
