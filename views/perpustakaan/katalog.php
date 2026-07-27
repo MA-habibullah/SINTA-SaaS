@@ -137,6 +137,12 @@
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-center">
+                                        <button type="button" class="btn btn-outline-info btn-sm rounded-2 me-1 btn-audit-katalog"
+                                                data-id="<?= htmlspecialchars($item['id'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                                data-judul="<?= htmlspecialchars($item['judul'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                                title="Audit & Tracking Unit Eksemplar">
+                                            <i class="bi bi-search me-1"></i> Audit
+                                        </button>
                                         <button type="button" class="btn btn-outline-warning btn-sm rounded-2 me-1 btn-edit-katalog"
                                                 data-id="<?= htmlspecialchars($item['id'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
                                                 data-judul="<?= htmlspecialchars($item['judul'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
@@ -777,6 +783,214 @@
     </div>
 </div>
 
+<!-- Modal Audit & Tracking Lifecycle Eksemplar -->
+<div class="modal fade" id="modalAuditEksemplar" tabindex="-1" aria-labelledby="modalAuditEksemplarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-dark text-white rounded-top-4">
+                <h5 class="modal-title fw-bold" id="modalAuditEksemplarLabel"><i class="bi bi-shield-check text-info me-2"></i> Audit & Tracking Lifecycle Eksemplar</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-light-subtle">
+                <!-- Book Summary Bar -->
+                <div class="card border-0 shadow-sm rounded-4 mb-4 p-3 bg-white">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <span class="badge bg-primary-subtle text-primary border me-2">DDC: <span id="audit_book_ddc">-</span></span>
+                            <h5 class="fw-bold mb-1 text-dark d-inline" id="audit_book_judul">Loading...</h5>
+                            <small class="d-block text-muted mt-1"><i class="bi bi-person me-1"></i>Pengarang: <span id="audit_book_pengarang">-</span> | Penerbit: <span id="audit_book_penerbit">-</span> | ISBN: <span id="audit_book_isbn">-</span></small>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-primary rounded-3 btn-sm" id="btnTambahEksemplarModal">
+                                <i class="bi bi-plus-circle me-1"></i> Tambah Unit Eksemplar Baru
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Audit Summary KPI Cards -->
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-md-2">
+                        <div class="card border-0 shadow-sm rounded-4 p-3 text-center bg-white">
+                            <small class="text-muted fw-semibold d-block mb-1">Total Unit</small>
+                            <h4 class="fw-bold mb-0 text-dark" id="audit_stat_total">0</h4>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="card border-0 shadow-sm rounded-4 p-3 text-center bg-white">
+                            <small class="text-muted fw-semibold d-block mb-1">Tersedia di Rak</small>
+                            <h4 class="fw-bold mb-0 text-success" id="audit_stat_tersedia">0</h4>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="card border-0 shadow-sm rounded-4 p-3 text-center bg-white">
+                            <small class="text-muted fw-semibold d-block mb-1">Dipinjam</small>
+                            <h4 class="fw-bold mb-0 text-warning" id="audit_stat_dipinjam">0</h4>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="card border-0 shadow-sm rounded-4 p-3 text-center bg-white">
+                            <small class="text-muted fw-semibold d-block mb-1">Kondisi Rusak</small>
+                            <h4 class="fw-bold mb-0 text-danger" id="audit_stat_rusak">0</h4>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="card border-0 shadow-sm rounded-4 p-3 text-center bg-white">
+                            <small class="text-muted fw-semibold d-block mb-1">Afkir / Dibuang</small>
+                            <h4 class="fw-bold mb-0 text-secondary" id="audit_stat_afkir">0</h4>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <div class="card border-0 shadow-sm rounded-4 p-3 text-center bg-white">
+                            <small class="text-muted fw-semibold d-block mb-1">Total Investasi</small>
+                            <h6 class="fw-bold mb-0 text-primary" id="audit_stat_investasi">Rp 0</h6>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table Tracking Eksemplar -->
+                <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-list-columns-reverse me-2"></i>Rincian Unit Eksemplar & Tracking Lifecycle</h6>
+                        <span class="badge bg-light text-dark border fs-8" id="audit_breakdown_sumber">BOS: 0 | BPOPP: 0 | Sumbangan: 0</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 fs-8" id="tableAuditEksemplar">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Barcode / No. Induk</th>
+                                    <th>Perolehan & Sumber Dana</th>
+                                    <th>Lokasi Fisik (Rak/Gudang)</th>
+                                    <th>Status Peminjam Aktif</th>
+                                    <th>Terakhir Dipinjam / Dibaca</th>
+                                    <th>Kondisi & Status Audit</th>
+                                    <th class="text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="audit_eksemplar_tbody">
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-4"><i class="bi bi-arrow-repeat spin me-2"></i>Memuat data audit eksemplar...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light rounded-bottom-4">
+                <button type="button" class="btn btn-secondary rounded-3 px-4" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Edit / Tambah Unit Eksemplar -->
+<div class="modal fade" id="modalEditEksemplar" tabindex="-1" aria-labelledby="modalEditEksemplarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-primary text-white rounded-top-4">
+                <h5 class="modal-title fw-bold" id="modalEditEksemplarLabel"><i class="bi bi-box-seam me-2"></i> Tambah / Edit Unit Eksemplar</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="/SINTA-SaaS/api/v1/perpustakaan/eksemplar/simpan" method="POST" id="formSaveEksemplar" data-turbo="false">
+                <input type="hidden" name="id" id="eks_id_input" value="">
+                <input type="hidden" name="bibliografi_id" id="eks_bib_id_input" value="">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Kode Barcode <span class="text-danger">*</span></label>
+                            <input type="text" name="barcode" id="eks_barcode_input" class="form-control rounded-3" placeholder="Contoh: B-2026-001" required>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Nomor Induk Inventaris</label>
+                            <input type="text" name="nomor_induk" id="eks_no_induk_input" class="form-control rounded-3" placeholder="Contoh: IND-0012">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Tanggal Masuk / Beli</label>
+                            <input type="date" name="tanggal_masuk" id="eks_tgl_masuk_input" class="form-control rounded-3" value="<?= date('Y-m-d') ?>">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Harga Perolehan (Rp)</label>
+                            <input type="number" name="harga_perolehan" id="eks_harga_input" class="form-control rounded-3" placeholder="0">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Sumber Perolehan Dana</label>
+                            <select name="sumber_buku" id="eks_sumber_select" class="form-select rounded-3">
+                                <option value="Dana BOS">Dana BOS</option>
+                                <option value="Dana BPOPP">Dana BPOPP</option>
+                                <option value="Sumbangan Siswa">Sumbangan Siswa</option>
+                                <option value="Sumbangan Alumni">Sumbangan Alumni</option>
+                                <option value="Hibah Pemerintah">Hibah Pemerintah</option>
+                                <option value="Hibah Pemda">Hibah Pemda</option>
+                                <option value="Pembelian Mandiri">Pembelian Mandiri</option>
+                                <option value="Sumbangan Perorangan">Sumbangan Perorangan</option>
+                                <option value="Bantuan Lainnya">Bantuan Lainnya</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Sumber Pemberi / Vendor</label>
+                            <input type="text" name="sumber_pemberi" id="eks_pemberi_input" class="form-control rounded-3" placeholder="Contoh: PT Gramedia / Alumni 2024">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Lokasi Rak Penempatan</label>
+                            <select name="lokasi_rak_id" id="eks_rak_select" class="form-select rounded-3">
+                                <option value="">-- Tanpa Rak (Di Gudang) --</option>
+                                <?php foreach ($data['rak_list'] as $rak): ?>
+                                    <option value="<?= htmlspecialchars($rak['id']) ?>">
+                                        <?= htmlspecialchars($rak['nama']) ?> (Rak <?= htmlspecialchars($rak['nama_rak'] ?? $rak['kode']) ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Kondisi Fisik</label>
+                            <select name="kondisi" id="eks_kondisi_select" class="form-select rounded-3">
+                                <option value="Baik">Baik</option>
+                                <option value="Rusak Ringan">Rusak Ringan</option>
+                                <option value="Rusak Berat">Rusak Berat</option>
+                                <option value="Afkir/Dihapuskan">Afkir / Dihapuskan</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Status Eksemplar</label>
+                            <select name="status" id="eks_status_select" class="form-select rounded-3">
+                                <option value="Tersedia">Tersedia</option>
+                                <option value="Dipinjam Reguler">Dipinjam Reguler</option>
+                                <option value="Di Gudang">Di Gudang</option>
+                                <option value="Diperbaiki">Diperbaiki</option>
+                                <option value="Rusak">Rusak</option>
+                                <option value="Hilang">Hilang</option>
+                                <option value="Dihapuskan/Afkir">Dihapuskan / Afkir</option>
+                            </select>
+                        </div>
+
+                        <!-- Section Penghapusan / Afkir (Muncul jika status/kondisi Afkir) -->
+                        <div class="col-12" id="sectionPenghapusanEksemplar" style="display:none;">
+                            <div class="card border-0 bg-danger-subtle rounded-4 p-3">
+                                <h6 class="fw-bold text-danger mb-2"><i class="bi bi-trash me-2"></i>Data Audit Penghapusan / Afkir</h6>
+                                <div class="row g-2">
+                                    <div class="col-12 col-md-5">
+                                        <label class="form-label fw-semibold mb-1">Tanggal Penghapusan</label>
+                                        <input type="date" name="tanggal_penghapusan" id="eks_tgl_hapus_input" class="form-control rounded-3" value="<?= date('Y-m-d') ?>">
+                                    </div>
+                                    <div class="col-12 col-md-7">
+                                        <label class="form-label fw-semibold mb-1">Alasan Penghapusan / Afkir</label>
+                                        <input type="text" name="alasan_penghapusan" id="eks_alasan_hapus_input" class="form-control rounded-3" placeholder="Contoh: Halaman terlepas total / Banjir">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-secondary rounded-3 px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4"><i class="bi bi-save me-1"></i> Simpan Unit Eksemplar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <style>
 /* Sleek Scrollable Underline Nav Tabs */
 .nav-tabs-wrapper {
@@ -1124,5 +1338,208 @@ function initKatalogHandlers() {
             });
         };
     }
+
+    // 11. Audit Lifecycle & Traceability Eksemplar Handler
+    let activeAuditBibliografiId = '';
+    const auditBtns = document.querySelectorAll('.btn-audit-katalog');
+    auditBtns.forEach(btn => {
+        btn.onclick = function() {
+            activeAuditBibliografiId = this.dataset.id || '';
+            const judul = this.dataset.judul || 'Buku';
+            document.getElementById('audit_book_judul').textContent = judul;
+            document.getElementById('audit_book_pengarang').textContent = '...';
+            document.getElementById('audit_book_penerbit').textContent = '...';
+            document.getElementById('audit_book_isbn').textContent = '...';
+            document.getElementById('audit_book_ddc').textContent = '-';
+            document.getElementById('audit_eksemplar_tbody').innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4"><i class="bi bi-arrow-repeat spin me-2"></i>Memuat data audit eksemplar...</td></tr>';
+
+            const auditModal = new bootstrap.Modal(document.getElementById('modalAuditEksemplar'));
+            auditModal.show();
+
+            fetchTraceabilityData(activeAuditBibliografiId);
+        };
+    });
+
+    function fetchTraceabilityData(bibId) {
+        if (!bibId) return;
+        fetch('/SINTA-SaaS/api/v1/perpustakaan/katalog/traceability?id=' + encodeURIComponent(bibId))
+            .then(r => r.json())
+            .then(res => {
+                if (!res.success) {
+                    alert('Gagal memuat data audit: ' + (res.error || 'Unknown error'));
+                    return;
+                }
+                const b = res.buku || {};
+                const stats = res.stats || {};
+                const items = res.items || [];
+
+                document.getElementById('audit_book_judul').textContent = b.judul || '-';
+                document.getElementById('audit_book_pengarang').textContent = b.pengarang || b.penulis || '-';
+                document.getElementById('audit_book_penerbit').textContent = (b.penerbit || '-') + ' (' + (b.tahun_terbit || '-') + ')';
+                document.getElementById('audit_book_isbn').textContent = b.isbn || '-';
+                document.getElementById('audit_book_ddc').textContent = b.klasifikasi_ddc || '000';
+
+                document.getElementById('audit_stat_total').textContent = stats.total_unit || 0;
+                document.getElementById('audit_stat_tersedia').textContent = stats.tersedia || 0;
+                document.getElementById('audit_stat_dipinjam').textContent = stats.dipinjam || 0;
+                document.getElementById('audit_stat_rusak').textContent = stats.rusak || 0;
+                document.getElementById('audit_stat_afkir').textContent = stats.afkir_dihapuskan || 0;
+                document.getElementById('audit_stat_investasi').textContent = 'Rp ' + Number(stats.total_investasi || 0).toLocaleString('id-ID');
+
+                // Breakdown sumber
+                const bySumber = stats.by_sumber || {};
+                let sumberTxt = [];
+                for (let s in bySumber) {
+                    sumberTxt.push(s + ': ' + bySumber[s]);
+                }
+                document.getElementById('audit_breakdown_sumber').textContent = sumberTxt.length ? sumberTxt.join(' | ') : 'Belum ada data perolehan';
+
+                // Render table rows
+                const tbody = document.getElementById('audit_eksemplar_tbody');
+                if (items.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4"><i class="bi bi-info-circle me-1"></i> Belum ada unit eksemplar terdaftar untuk buku ini. Silakan klik <strong>Tambah Unit Eksemplar Baru</strong>.</td></tr>';
+                    return;
+                }
+
+                let html = '';
+                items.forEach((item) => {
+                    // 1. Barcode & No Induk
+                    const barcodeStr = item.barcode ? `<span class="fw-bold text-dark">${escapeHtml(item.barcode)}</span>` : '-';
+                    const noIndukStr = item.nomor_induk ? `<br><small class="text-muted">No. Induk: ${escapeHtml(item.nomor_induk)}</small>` : '';
+
+                    // 2. Perolehan & Sumber Dana
+                    const sumberDana = escapeHtml(item.sumber_buku || 'Dana BOS');
+                    const sumberPemberi = item.sumber_pemberi ? `<br><small class="text-muted"><i class="bi bi-building me-1"></i>${escapeHtml(item.sumber_pemberi)}</small>` : '';
+                    const tglMasuk = item.tanggal_masuk ? `<br><small class="text-muted"><i class="bi bi-calendar3 me-1"></i>${item.tanggal_masuk}</small>` : '';
+                    const hargaStr = item.harga_perolehan > 0 ? `<br><small class="text-primary fw-semibold">Rp ${Number(item.harga_perolehan).toLocaleString('id-ID')}</small>` : '';
+
+                    // 3. Lokasi Fisik
+                    let lokasiStr = '';
+                    if (item.rak_nama) {
+                        lokasiStr = `<span class="badge bg-light text-dark border"><i class="bi bi-geo-alt me-1 text-primary"></i>${escapeHtml(item.rak_nama)}</span>`;
+                        if (item.rak_ruangan || item.rak_baris) {
+                            lokasiStr += `<br><small class="text-muted">${escapeHtml(item.rak_ruangan || '')} (Baris: ${escapeHtml(item.rak_baris || '-')})</small>`;
+                        }
+                    } else {
+                        lokasiStr = `<span class="badge bg-secondary-subtle text-secondary border"><i class="bi bi-box me-1"></i>Di Gudang / Tanpa Rak</span>`;
+                    }
+
+                    // 4. Status Peminjam Aktif
+                    let pinjamAktifStr = '<span class="text-muted">-</span>';
+                    if (item.peminjam_aktif_nama) {
+                        pinjamAktifStr = `<span class="fw-bold text-warning-emphasis"><i class="bi bi-person-fill me-1"></i>${escapeHtml(item.peminjam_aktif_nama)}</span>`;
+                        pinjamAktifStr += `<br><small class="text-muted">Pinjam: ${item.pinjam_aktif_tgl || '-'} | Kembali: ${item.pinjam_aktif_jatuh_tempo || '-'}</small>`;
+                    } else if (item.status === 'Tersedia') {
+                        pinjamAktifStr = `<span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Siap Dipinjam</span>`;
+                    }
+
+                    // 5. Terakhir Dipinjam / Dibaca
+                    let lastBorrowStr = '<span class="text-muted">-</span>';
+                    if (item.last_peminjam_nama) {
+                        lastBorrowStr = `<span class="text-dark fw-semibold">${escapeHtml(item.last_peminjam_nama)}</span>`;
+                        lastBorrowStr += `<br><small class="text-muted"><i class="bi bi-clock-history me-1"></i>${item.last_pinjam_tgl || '-'}</small>`;
+                    }
+
+                    // 6. Kondisi & Status Audit
+                    let kondisiBadge = `<span class="badge bg-success-subtle text-success border">${escapeHtml(item.kondisi || 'Baik')}</span>`;
+                    if (item.kondisi === 'Rusak Ringan') kondisiBadge = `<span class="badge bg-warning-subtle text-warning border">Rusak Ringan</span>`;
+                    if (item.kondisi === 'Rusak Berat') kondisiBadge = `<span class="badge bg-danger-subtle text-danger border">Rusak Berat</span>`;
+                    if (item.kondisi === 'Afkir/Dihapuskan' || item.status === 'Dihapuskan/Afkir') {
+                        kondisiBadge = `<span class="badge bg-dark text-white"><i class="bi bi-trash me-1"></i>Afkir / Dihapuskan</span>`;
+                        if (item.tanggal_penghapusan || item.alasan_penghapusan) {
+                            kondisiBadge += `<br><small class="text-danger d-block mt-1">Tgl: ${item.tanggal_penghapusan || '-'}<br>Alasan: ${escapeHtml(item.alasan_penghapusan || '-')}</small>`;
+                        }
+                    }
+
+                    let statusBadge = `<small class="text-muted d-block mt-1">${escapeHtml(item.status || 'Tersedia')}</small>`;
+
+                    html += `<tr>
+                        <td>${barcodeStr}${noIndukStr}</td>
+                        <td><span class="badge bg-info-subtle text-info border">${sumberDana}</span>${sumberPemberi}${tglMasuk}${hargaStr}</td>
+                        <td>${lokasiStr}</td>
+                        <td>${pinjamAktifStr}</td>
+                        <td>${lastBorrowStr}</td>
+                        <td>${kondisiBadge}${statusBadge}</td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-outline-warning btn-sm rounded-2 btn-edit-eksemplar-item"
+                                    data-item='${JSON.stringify(item).replace(/'/g, "&apos;")}'
+                                    title="Edit Unit Eksemplar">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        </td>
+                    </tr>`;
+                });
+
+                tbody.innerHTML = html;
+
+                // Attach edit item listeners
+                document.querySelectorAll('.btn-edit-eksemplar-item').forEach(b => {
+                    b.onclick = function() {
+                        const dataItem = JSON.parse(this.dataset.item);
+                        openModalEditEksemplar(dataItem);
+                    };
+                });
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('audit_eksemplar_tbody').innerHTML = '<tr><td colspan="7" class="text-center text-danger py-4">Gagal memuat data audit. Silakan coba lagi.</td></tr>';
+            });
+    }
+
+    // Modal Tambah Eksemplar Baru
+    const btnTambahEks = document.getElementById('btnTambahEksemplarModal');
+    if (btnTambahEks) {
+        btnTambahEks.onclick = function() {
+            openModalEditEksemplar({ bibliografi_id: activeAuditBibliografiId });
+        };
+    }
+
+    function openModalEditEksemplar(item) {
+        item = item || {};
+        document.getElementById('modalEditEksemplarLabel').innerHTML = item.id ? '<i class="bi bi-pencil-square me-2"></i> Edit Data Unit Eksemplar' : '<i class="bi bi-box-seam me-2"></i> Tambah Unit Eksemplar Baru';
+        document.getElementById('eks_id_input').value = item.id || '';
+        document.getElementById('eks_bib_id_input').value = item.bibliografi_id || activeAuditBibliografiId;
+        document.getElementById('eks_barcode_input').value = item.barcode || ('B-' + Math.floor(Date.now() / 1000));
+        document.getElementById('eks_no_induk_input').value = item.nomor_induk || '';
+        document.getElementById('eks_tgl_masuk_input').value = item.tanggal_masuk || new Date().toISOString().split('T')[0];
+        document.getElementById('eks_harga_input').value = item.harga_perolehan || 0;
+        document.getElementById('eks_sumber_select').value = item.sumber_buku || 'Dana BOS';
+        document.getElementById('eks_pemberi_input').value = item.sumber_pemberi || '';
+        document.getElementById('eks_rak_select').value = item.lokasi_rak_id || '';
+        document.getElementById('eks_kondisi_select').value = item.kondisi || 'Baik';
+        document.getElementById('eks_status_select').value = item.status || 'Tersedia';
+        document.getElementById('eks_tgl_hapus_input').value = item.tanggal_penghapusan || new Date().toISOString().split('T')[0];
+        document.getElementById('eks_alasan_hapus_input').value = item.alasan_penghapusan || '';
+
+        togglePenghapusanSection();
+
+        const modalEks = new bootstrap.Modal(document.getElementById('modalEditEksemplar'));
+        modalEks.show();
+    }
+
+    // Toggle section penghapusan afkir
+    const kondisiSel = document.getElementById('eks_kondisi_select');
+    const statusSel = document.getElementById('eks_status_select');
+    function togglePenghapusanSection() {
+        const sec = document.getElementById('sectionPenghapusanEksemplar');
+        if (!sec) return;
+        const isAfkir = (kondisiSel && kondisiSel.value === 'Afkir/Dihapuskan') || (statusSel && statusSel.value === 'Dihapuskan/Afkir');
+        sec.style.display = isAfkir ? '' : 'none';
+    }
+
+    if (kondisiSel) kondisiSel.onchange = togglePenghapusanSection;
+    if (statusSel) statusSel.onchange = togglePenghapusanSection;
+
+    // Helper escapeHtml
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
 }
 </script>

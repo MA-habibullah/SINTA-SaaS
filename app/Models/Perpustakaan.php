@@ -167,26 +167,148 @@ class Perpustakaan {
         }
     }
 
-    public function saveEksemplar(string $tenantId, array $data): string {
-        $id = $this->generateUuid();
-        $stmt = $this->db->prepare("INSERT INTO perpus_eksemplar 
-            (id, tenant_id, bibliografi_id, barcode, nomor_induk, tanggal_masuk, sumber_buku, lokasi_rak_id, kondisi, status, harga_perolehan)
-            VALUES (:id, :tenant_id, :bibliografi_id, :barcode, :nomor_induk, :tanggal_masuk, :sumber_buku, :lokasi_rak_id, :kondisi, 'Tersedia', :harga)");
-        
-        $stmt->execute([
-            'id' => $id,
-            'tenant_id' => $tenantId,
-            'bibliografi_id' => $data['bibliografi_id'],
-            'barcode' => $data['barcode'],
-            'nomor_induk' => $data['nomor_induk'],
-            'tanggal_masuk' => $data['tanggal_masuk'] ?? date('Y-m-d'),
-            'sumber_buku' => $data['sumber_buku'] ?? 'Dana BOS',
-            'lokasi_rak_id' => $data['lokasi_rak_id'] ?? null,
-            'kondisi' => $data['kondisi'] ?? 'Baik',
-            'harga' => $data['harga_perolehan'] ?? 0
-        ]);
+    public function saveEksemplar(string $tenantId, array $data, ?string $id = null): string {
+        if ($id) {
+            $stmt = $this->db->prepare("UPDATE perpus_eksemplar SET
+                barcode = :barcode,
+                nomor_induk = :nomor_induk,
+                tanggal_masuk = :tanggal_masuk,
+                sumber_buku = :sumber_buku,
+                sumber_pemberi = :sumber_pemberi,
+                lokasi_rak_id = :lokasi_rak_id,
+                kondisi = :kondisi,
+                status = :status,
+                harga_perolehan = :harga_perolehan,
+                tanggal_penghapusan = :tanggal_penghapusan,
+                alasan_penghapusan = :alasan_penghapusan,
+                updated_at = CURRENT_TIMESTAMP
+                WHERE id = :id AND tenant_id = :tenant_id");
+            $stmt->execute([
+                'barcode' => $data['barcode'],
+                'nomor_induk' => $data['nomor_induk'],
+                'tanggal_masuk' => $data['tanggal_masuk'] ?? date('Y-m-d'),
+                'sumber_buku' => $data['sumber_buku'] ?? 'Dana BOS',
+                'sumber_pemberi' => $data['sumber_pemberi'] ?? null,
+                'lokasi_rak_id' => !empty($data['lokasi_rak_id']) ? $data['lokasi_rak_id'] : null,
+                'kondisi' => $data['kondisi'] ?? 'Baik',
+                'status' => $data['status'] ?? 'Tersedia',
+                'harga_perolehan' => (float)($data['harga_perolehan'] ?? 0),
+                'tanggal_penghapusan' => !empty($data['tanggal_penghapusan']) ? $data['tanggal_penghapusan'] : null,
+                'alasan_penghapusan' => $data['alasan_penghapusan'] ?? null,
+                'id' => $id,
+                'tenant_id' => $tenantId
+            ]);
+            return $id;
+        } else {
+            $newId = $this->generateUuid();
+            $stmt = $this->db->prepare("INSERT INTO perpus_eksemplar 
+                (id, tenant_id, bibliografi_id, barcode, nomor_induk, tanggal_masuk, sumber_buku, sumber_pemberi, lokasi_rak_id, kondisi, status, harga_perolehan, tanggal_penghapusan, alasan_penghapusan)
+                VALUES (:id, :tenant_id, :bibliografi_id, :barcode, :nomor_induk, :tanggal_masuk, :sumber_buku, :sumber_pemberi, :lokasi_rak_id, :kondisi, :status, :harga, :tanggal_penghapusan, :alasan_penghapusan)");
+            
+            $stmt->execute([
+                'id' => $newId,
+                'tenant_id' => $tenantId,
+                'bibliografi_id' => $data['bibliografi_id'],
+                'barcode' => $data['barcode'],
+                'nomor_induk' => $data['nomor_induk'],
+                'tanggal_masuk' => $data['tanggal_masuk'] ?? date('Y-m-d'),
+                'sumber_buku' => $data['sumber_buku'] ?? 'Dana BOS',
+                'sumber_pemberi' => $data['sumber_pemberi'] ?? null,
+                'lokasi_rak_id' => !empty($data['lokasi_rak_id']) ? $data['lokasi_rak_id'] : null,
+                'kondisi' => $data['kondisi'] ?? 'Baik',
+                'status' => $data['status'] ?? 'Tersedia',
+                'harga' => (float)($data['harga_perolehan'] ?? 0),
+                'tanggal_penghapusan' => !empty($data['tanggal_penghapusan']) ? $data['tanggal_penghapusan'] : null,
+                'alasan_penghapusan' => $data['alasan_penghapusan'] ?? null
+            ]);
 
-        return $id;
+            return $newId;
+        }
+    }
+
+    /**
+     * Mengambil data audit & pelacakan presisi (traceability) seluruh eksemplar buku
+     *
+     * @return array<string, mixed>
+     */
+    public function getBibliografiTraceability(string $tenantId, string $bibliografiId): array {
+        // 1. Info dasar bibliografi
+        $stmtB = $this->db->prepare("SELECT * FROM perpus_bibliografi WHERE id = :id AND tenant_id = :tenant_id LIMIT 1");
+        $stmtB->execute(['id' => $bibliografiId, 'tenant_id' => $tenantId]);
+        $buku = $stmtB->fetch(PDO::FETCH_ASSOC);
+
+        if (!$buku) {
+            return ['success' => false, 'error' => 'Judul buku tidak ditemukan.'];
+        }
+
+        // 2. Daftar eksemplar lengkap dengan lokasi, peminjam aktif, dan peminjam terakhir
+        $sql = "SELECT 
+                    e.*,
+                    r.kode as rak_kode, r.nama as rak_nama, r.gedung as rak_gedung, r.lantai as rak_lantai, r.ruangan as rak_ruangan, r.nama_rak, r.baris as rak_baris,
+                    s_aktif.id as sirkulasi_aktif_id, s_aktif.no_transaksi, s_aktif.tanggal_pinjam as pinjam_aktif_tgl, s_aktif.tanggal_kembali_rencana as pinjam_aktif_jatuh_tempo, s_aktif.status as pinjam_aktif_status,
+                    a_aktif.nama_lengkap as peminjam_aktif_nama, a_aktif.no_anggota as peminjam_aktif_no_anggota, a_aktif.tipe_anggota as peminjam_aktif_tipe,
+                    s_last.tanggal_pinjam as last_pinjam_tgl, s_last.tanggal_kembali_aktual as last_kembali_tgl,
+                    a_last.nama_lengkap as last_peminjam_nama
+                FROM perpus_eksemplar e
+                LEFT JOIN perpus_lokasi_rak r ON e.lokasi_rak_id = r.id
+                LEFT JOIN perpus_sirkulasi s_aktif ON e.id = s_aktif.eksemplar_id AND s_aktif.status IN ('Dipinjam', 'Terlambat')
+                LEFT JOIN perpus_anggota a_aktif ON s_aktif.anggota_id = a_aktif.id
+                LEFT JOIN (
+                    SELECT eksemplar_id, MAX(created_at) as max_created
+                    FROM perpus_sirkulasi
+                    GROUP BY eksemplar_id
+                ) s_max ON e.id = s_max.eksemplar_id
+                LEFT JOIN perpus_sirkulasi s_last ON s_max.eksemplar_id = s_last.eksemplar_id AND s_max.max_created = s_last.created_at
+                LEFT JOIN perpus_anggota a_last ON s_last.anggota_id = a_last.id
+                WHERE e.bibliografi_id = :bib_id AND e.tenant_id = :tenant_id
+                ORDER BY e.created_at ASC";
+
+        $stmtE = $this->db->prepare($sql);
+        $stmtE->execute(['bib_id' => $bibliografiId, 'tenant_id' => $tenantId]);
+        $items = $stmtE->fetchAll(PDO::FETCH_ASSOC);
+
+        // 3. Hitung statistik ringkas perolehan & kondisi
+        $stats = [
+            'total_unit' => count($items),
+            'tersedia' => 0,
+            'dipinjam' => 0,
+            'rusak' => 0,
+            'afkir_dihapuskan' => 0,
+            'total_investasi' => 0.0,
+            'by_sumber' => [],
+            'by_kondisi' => []
+        ];
+
+        foreach ($items as $item) {
+            $status = (string)($item['status'] ?? '');
+            $kondisi = (string)($item['kondisi'] ?? '');
+            $sumber = (string)($item['sumber_buku'] ?? 'Lainnya');
+            $harga = (float)($item['harga_perolehan'] ?? 0);
+
+            $stats['total_investasi'] += $harga;
+
+            if ($status === 'Tersedia') {
+                $stats['tersedia']++;
+            } elseif (in_array($status, ['Dipinjam Reguler', 'Dipinjam Paket', 'Dipinjam Event'], true) || !empty($item['pinjam_aktif_nama'])) {
+                $stats['dipinjam']++;
+            }
+
+            if (in_array($kondisi, ['Rusak Ringan', 'Rusak Berat'], true)) {
+                $stats['rusak']++;
+            } elseif ($kondisi === 'Afkir/Dihapuskan' || $status === 'Dihapuskan/Afkir') {
+                $stats['afkir_dihapuskan']++;
+            }
+
+            $stats['by_sumber'][$sumber] = ($stats['by_sumber'][$sumber] ?? 0) + 1;
+            $stats['by_kondisi'][$kondisi] = ($stats['by_kondisi'][$kondisi] ?? 0) + 1;
+        }
+
+        return [
+            'success' => true,
+            'buku' => $buku,
+            'stats' => $stats,
+            'items' => $items
+        ];
     }
 
     public function getEksemplarByBarcode(string $tenantId, string $barcode): ?array {

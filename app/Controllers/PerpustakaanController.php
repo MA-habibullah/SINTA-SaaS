@@ -451,6 +451,45 @@ class PerpustakaanController extends BaseController {
         echo json_encode(['success' => true, 'id' => $id, 'message' => 'Data katalog bibliografi berhasil disimpan.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
     }
 
+    public function apiGetBibliografiTraceability(): void {
+        $this->guardModul();
+        $id = $_GET['id'] ?? '';
+        if (empty($id)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Parameter ID buku (id) wajib diisi.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            return;
+        }
+
+        $res = $this->model->getBibliografiTraceability($this->tenantId, $id);
+        echo json_encode($res, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    }
+
+    public function apiSaveEksemplar(): void {
+        $this->guardModul();
+        $input = !empty($_POST) ? $_POST : (json_decode(file_get_contents('php://input'), true) ?? []);
+        if (empty($input['bibliografi_id']) || empty($input['barcode'])) {
+            if (!empty($_POST)) {
+                header('Location: /SINTA-SaaS/perpustakaan/katalog?error=' . urlencode('Bibliografi ID dan Barcode wajib diisi.'), true, 303);
+                return;
+            }
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Bibliografi ID dan Barcode wajib diisi.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            return;
+        }
+
+        $eksemplarId = !empty($input['id']) ? trim((string)$input['id']) : null;
+        $id = $this->model->saveEksemplar($this->tenantId, $input, $eksemplarId);
+
+        if (!empty($_POST)) {
+            $msg = $eksemplarId ? 'Data eksemplar berhasil diperbarui.' : 'Data eksemplar baru berhasil ditambahkan.';
+            header('Location: /SINTA-SaaS/perpustakaan/katalog?success=' . urlencode($msg), true, 303);
+            return;
+        }
+
+        echo json_encode(['success' => true, 'id' => $id, 'message' => 'Data eksemplar berhasil disimpan.'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    }
+
+
     public function apiGetDenda(): void {
         $this->guardModul();
         $status = $_GET['status'] ?? 'Belum Dibayar';

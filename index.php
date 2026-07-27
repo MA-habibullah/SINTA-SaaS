@@ -407,6 +407,16 @@ try {
             $controller->apiSaveBibliografi();
             break;
 
+        case '/api/v1/perpustakaan/katalog/traceability':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->apiGetBibliografiTraceability();
+            break;
+
+        case '/api/v1/perpustakaan/eksemplar/simpan':
+            $controller = new App\Controllers\PerpustakaanController();
+            $controller->apiSaveEksemplar();
+            break;
+
         case '/api/v1/perpustakaan/pengaturan':
         case '/api/v1/perpustakaan/pengaturan/simpan':
             $controller = new App\Controllers\PerpustakaanController();
