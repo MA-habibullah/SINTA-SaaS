@@ -100,6 +100,17 @@ class Perpustakaan {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function getBibliografiById(string $tenantId, string $id): ?array {
+        $stmt = $this->db->prepare("SELECT b.*, t.nama_sekolah as tenant_name
+            FROM perpus_bibliografi b
+            LEFT JOIN tenants t ON b.tenant_id = t.id
+            WHERE b.id = :id AND b.tenant_id = :tenant_id AND b.deleted_at IS NULL
+            LIMIT 1");
+        $stmt->execute(['id' => $id, 'tenant_id' => $tenantId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
     public function saveBibliografi(string $tenantId, array $data, ?string $id = null): string {
         $pengarangInput = $data['pengarang'] ?? ($data['penulis'] ?? '');
         $penulisJson = is_array($pengarangInput) ? json_encode($pengarangInput, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) : json_encode([$pengarangInput]);

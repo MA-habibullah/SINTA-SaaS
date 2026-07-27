@@ -1,3 +1,4 @@
+<?php $data = $data ?? []; ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -207,7 +208,7 @@
                                 <?php endif; ?>
                             </div>
                             <?php if (!empty($book['is_ebook'])): ?>
-                                <a href="/SINTA-SaaS/perpustakaan/baca-ebook" class="btn btn-sm btn-primary rounded-pill px-3 fs-8">
+                                <a href="/SINTA-SaaS/perpustakaan/baca-ebook?id=<?= htmlspecialchars($book['id'], ENT_QUOTES, 'UTF-8') ?>" class="btn btn-sm btn-primary rounded-pill px-3 fs-8" target="_blank">
                                     <i class="bi bi-eye me-1"></i> Baca Online
                                 </a>
                             <?php endif; ?>

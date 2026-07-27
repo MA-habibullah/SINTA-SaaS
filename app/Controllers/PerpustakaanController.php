@@ -122,6 +122,51 @@ class PerpustakaanController extends BaseController {
         require __DIR__ . '/../../views/layout/master.php';
     }
 
+    public function readEbook(): void {
+        $this->guardModul();
+        $id = $_GET['id'] ?? '';
+
+        if (empty($id)) {
+            header('Location: /SINTA-SaaS/perpustakaan/katalog?error=' . urlencode('Parameter ID buku tidak valid.'));
+            exit();
+        }
+
+        $buku = $this->model->getBibliografiById($this->tenantId, $id);
+        if (!$buku || empty($buku['file_ebook'])) {
+            header('Location: /SINTA-SaaS/perpustakaan/katalog?error=' . urlencode('Buku ini belum memiliki file E-Book digital yang diunggah.'));
+            exit();
+        }
+
+        $filePath = __DIR__ . '/../../' . ltrim($buku['file_ebook'], '/\\');
+        if (!file_exists($filePath)) {
+            header('Location: /SINTA-SaaS/perpustakaan/katalog?error=' . urlencode('File E-Book tidak ditemukan pada direktori penyimpanan server.'));
+            exit();
+        }
+
+        // Mode stream untuk viewer PDF/EPUB
+        if (!empty($_GET['stream'])) {
+            $finfo = new \finfo(FILEINFO_MIME_TYPE);
+            $mime = $finfo->file($filePath);
+            header('Content-Type: ' . $mime);
+            header('Content-Length: ' . filesize($filePath));
+            header('Content-Disposition: inline; filename="' . basename($filePath) . '"');
+            header('Cache-Control: private, max-age=3600, must-revalidate');
+            readfile($filePath);
+            exit();
+        }
+
+        // Render Reader View UI
+        $data = [
+            'title' => 'Baca E-Book Digital: ' . ($buku['judul'] ?? 'Digital Reader'),
+            'buku' => $buku,
+            'stream_url' => '/SINTA-SaaS/perpustakaan/baca-ebook?id=' . urlencode($id) . '&stream=1',
+            'user_name' => $_SESSION['nama_lengkap'] ?? $_SESSION['username'] ?? 'Anggota Perpustakaan'
+        ];
+        $this->attachTenantViewData($data);
+        $contentView = __DIR__ . '/../../views/perpustakaan/baca_ebook.php';
+        require __DIR__ . '/../../views/layout/master.php';
+    }
+
     public function sirkulasi(): void {
         $this->guardModul();
         $paketList = $this->model->getPaketBukuList($this->tenantId);
@@ -591,32 +636,6 @@ class PerpustakaanController extends BaseController {
     // 4. VIEWS E-BOOK READER, KIOS MANDIRI, THERMAL PRINT
     // -------------------------------------------------------------------------
 
-    public function readEbook(): void {
-        SessionManager::requireLogin();
-        $nisn = $_SESSION['nisn'] ?? ($_SESSION['username'] ?? 'AKUN-SISWA');
-        $namaSiswa = $_SESSION['nama_lengkap'] ?? ($_SESSION['nama_user'] ?? 'Siswa');
-
-        header('Content-Type: text/html; charset=utf-8');
-        echo "<!DOCTYPE html><html lang='id'><head><meta charset='UTF-8'><title>E-Perpus Reader — SINTA-SaaS</title>";
-        echo "<style>
-            body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background: #121212; color: #fff; }
-            .watermark-overlay {
-                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-                pointer-events: none; opacity: 0.15; font-size: 24px; font-weight: bold;
-                display: flex; align-items: center; justify-content: center; transform: rotate(-30deg);
-                text-align: center; color: #00ffcc; z-index: 9999;
-            }
-            .reader-box { max-width: 900px; margin: auto; background: #1e1e1e; padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        </style>";
-        echo "</head><body>";
-        echo "<div class='watermark-overlay'>PROPERTI HAK CIPTA SINTA-SaaS<br>DIBACA OLEH: " . htmlspecialchars($namaSiswa, ENT_QUOTES, 'UTF-8') . " (" . htmlspecialchars($nisn, ENT_QUOTES, 'UTF-8') . ")<br>" . date('d/m/Y H:i') . "</div>";
-        echo "<div class='reader-box'>";
-        echo "<h2>📖 E-Perpus Digital Reader</h2>";
-        echo "<p style='color: #00ffcc;'>Protected Document — Dynamic Watermark Active</p>";
-        echo "<hr style='border-color: #333;'>";
-        echo "<p>Modul E-Book Player siap meng-render dokumen PDF via PDF.js Canvas secara aman tanpa opsi Save/Download.</p>";
-        echo "</div></body></html>";
-    }
 
     public function kiosMandiri(): void {
         require __DIR__ . '/../../views/perpustakaan/kios_mandiri.php';

@@ -173,7 +173,7 @@
                                             <i class="bi bi-printer"></i>
                                         </a>
                                         <?php if (!empty($item['is_ebook'])): ?>
-                                            <a href="/SINTA-SaaS/perpustakaan/baca-ebook" class="btn btn-outline-primary btn-sm rounded-2" title="Baca E-Book Watermark">
+                                            <a href="/SINTA-SaaS/perpustakaan/baca-ebook?id=<?= htmlspecialchars($item['id'], ENT_QUOTES, 'UTF-8') ?>" class="btn btn-outline-primary btn-sm rounded-2" title="Baca E-Book Digital Watermark" target="_blank">
                                                 <i class="bi bi-eye"></i>
                                             </a>
                                         <?php endif; ?>
