@@ -105,13 +105,16 @@ class Perpustakaan {
         $subjekJson = is_array($data['subjek']) ? json_encode($data['subjek'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) : json_encode([]);
 
         if ($id) {
+            // Build SET dynamically: only update cover/file_ebook if new paths are provided
+            $setCover = isset($data['cover']) ? ', cover = :cover' : '';
+            $setEbook = isset($data['file_ebook']) ? ', file_ebook = :file_ebook' : '';
             $stmt = $this->db->prepare("UPDATE perpus_bibliografi SET
                 isbn = :isbn, judul = :judul, edisi = :edisi, penulis = :penulis, penerbit = :penerbit,
                 kota_terbit = :kota_terbit, tahun_terbit = :tahun_terbit, halaman = :halaman,
                 klasifikasi_ddc = :ddc, nomor_panggil = :panggil, subjek = :subjek, abstrak = :abstrak,
-                jenis_buku = :jenis, status_opac = :opac
+                jenis_buku = :jenis, status_opac = :opac, is_ebook = :is_ebook$setCover$setEbook
                 WHERE id = :id AND tenant_id = :tenant_id");
-            $stmt->execute([
+            $params = [
                 'isbn' => $data['isbn'] ?? null,
                 'judul' => $data['judul'],
                 'edisi' => $data['edisi'] ?? null,
@@ -126,15 +129,19 @@ class Perpustakaan {
                 'abstrak' => $data['abstrak'] ?? null,
                 'jenis' => $data['jenis_buku'] ?? 'Umum',
                 'opac' => (int)($data['status_opac'] ?? 1),
+                'is_ebook' => (int)($data['is_ebook'] ?? 0),
                 'id' => $id,
                 'tenant_id' => $tenantId
-            ]);
+            ];
+            if (isset($data['cover'])) $params['cover'] = $data['cover'];
+            if (isset($data['file_ebook'])) $params['file_ebook'] = $data['file_ebook'];
+            $stmt->execute($params);
             return $id;
         } else {
             $newId = $this->generateUuid();
-            $stmt = $this->db->prepare("INSERT INTO perpus_bibliografi 
-                (id, tenant_id, isbn, judul, edisi, penulis, penerbit, kota_terbit, tahun_terbit, halaman, klasifikasi_ddc, nomor_panggil, subjek, abstrak, jenis_buku, status_opac)
-                VALUES (:id, :tenant_id, :isbn, :judul, :edisi, :penulis, :penerbit, :kota_terbit, :tahun_terbit, :halaman, :ddc, :panggil, :subjek, :abstrak, :jenis, :opac)");
+            $stmt = $this->db->prepare("INSERT INTO perpus_bibliografi
+                (id, tenant_id, isbn, judul, edisi, penulis, penerbit, kota_terbit, tahun_terbit, halaman, klasifikasi_ddc, nomor_panggil, subjek, abstrak, jenis_buku, status_opac, is_ebook, cover, file_ebook)
+                VALUES (:id, :tenant_id, :isbn, :judul, :edisi, :penulis, :penerbit, :kota_terbit, :tahun_terbit, :halaman, :ddc, :panggil, :subjek, :abstrak, :jenis, :opac, :is_ebook, :cover, :file_ebook)");
             $stmt->execute([
                 'id' => $newId,
                 'tenant_id' => $tenantId,
@@ -151,7 +158,10 @@ class Perpustakaan {
                 'subjek' => $subjekJson,
                 'abstrak' => $data['abstrak'] ?? null,
                 'jenis' => $data['jenis_buku'] ?? 'Umum',
-                'opac' => (int)($data['status_opac'] ?? 1)
+                'opac' => (int)($data['status_opac'] ?? 1),
+                'is_ebook' => (int)($data['is_ebook'] ?? 0),
+                'cover' => $data['cover'] ?? null,
+                'file_ebook' => $data['file_ebook'] ?? null,
             ]);
             return $newId;
         }

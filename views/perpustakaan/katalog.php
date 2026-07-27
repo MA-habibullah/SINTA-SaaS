@@ -1,6 +1,7 @@
 <?php
 /**
  * View: Katalog & Inventori Terpadu
+ * @phpstan-var array<string, mixed> $data
  */
 ?>
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-2 pb-2 mb-4 border-bottom">
@@ -491,13 +492,13 @@
 
 <!-- Modal Tambah / Edit Judul Buku -->
 <div class="modal fade" id="modalTambahBuku" tabindex="-1" aria-labelledby="modalTambahBukuLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg rounded-4">
             <div class="modal-header bg-primary text-white rounded-top-4">
                 <h5 class="modal-title fw-bold" id="modalTambahBukuLabel"><i class="bi bi-book me-2"></i> Tambah Judul Buku Baru</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="/SINTA-SaaS/api/v1/perpustakaan/katalog/simpan" method="POST" id="formTambahBuku" data-turbo="false">
+            <form action="/SINTA-SaaS/api/v1/perpustakaan/katalog/simpan" method="POST" id="formTambahBuku" enctype="multipart/form-data" data-turbo="false">
                 <input type="hidden" name="id" id="book_id_input" value="">
                 <input type="hidden" name="tenant_id" value="<?= htmlspecialchars($data['active_tenant_id'] ?? '') ?>">
                 <div class="modal-body p-4">
@@ -514,36 +515,111 @@
                                 </select>
                             </div>
                         <?php endif; ?>
-                        <div class="col-12 col-md-8">
+
+                        <!-- Judul Buku -->
+                        <div class="col-12">
                             <label class="form-label fw-semibold">Judul Buku <span class="text-danger">*</span></label>
                             <input type="text" name="judul" id="book_judul_input" class="form-control rounded-3" placeholder="Contoh: Matematika Diskrit SMA" required>
                         </div>
-                        <div class="col-12 col-md-4">
-                            <label class="form-label fw-semibold">Kode DDC</label>
-                            <input type="text" name="klasifikasi_ddc" id="book_ddc_input" class="form-control rounded-3" placeholder="Contoh: 510">
+
+                        <!-- DDC Dropdown (Searchable) -->
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Klasifikasi DDC</label>
+                            <div class="position-relative">
+                                <input type="text" id="book_ddc_search" class="form-control rounded-3 rounded-bottom-0" placeholder="🔍 Cari kode / nama DDC..." autocomplete="off">
+                                <select name="klasifikasi_ddc" id="book_ddc_input" class="form-select rounded-3 rounded-top-0" size="4" style="max-height:130px; overflow-y:auto; border-top: 1px solid #dee2e6;">
+                                    <option value="">-- Pilih Klasifikasi DDC --</option>
+                                    <?php foreach ($data['ddc_categories'] as $ddc): ?>
+                                        <option value="<?= htmlspecialchars($ddc['kode']) ?>" data-search="<?= htmlspecialchars(strtolower($ddc['kode'] . ' ' . $ddc['nama'])) ?>">
+                                            <?= htmlspecialchars($ddc['kode']) ?> — <?= htmlspecialchars($ddc['nama']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div id="book_ddc_selected_badge" class="mt-1 d-none">
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-1 fs-8">
+                                    <i class="bi bi-check2-circle me-1"></i>
+                                    <span id="book_ddc_selected_label">-</span>
+                                    <button type="button" class="btn-close btn-close-sm ms-1 py-0" id="book_ddc_clear" style="font-size:0.55rem;" aria-label="Hapus"></button>
+                                </span>
+                            </div>
                         </div>
+
+                        <!-- Jenis Buku -->
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Jenis Buku</label>
+                            <select name="jenis_buku" id="book_jenis_input" class="form-select rounded-3">
+                                <option value="Umum">Umum / Pengayaan</option>
+                                <option value="Non-Fiksi">Non-Fiksi</option>
+                                <option value="Fiksi">Fiksi / Sastra</option>
+                                <option value="Paket Pelajaran">Paket Pelajaran (Buku Teks)</option>
+                                <option value="Referensi">Referensi (Kamus, Ensiklopedi)</option>
+                                <option value="OSN">OSN / Olimpiade</option>
+                                <option value="Majalah">Majalah / Berkala</option>
+                                <option value="Lainnya">Lainnya</option>
+                            </select>
+                        </div>
+
+                        <!-- Pengarang -->
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-semibold">Nama Pengarang / Penulis</label>
                             <input type="text" name="pengarang" id="book_pengarang_input" class="form-control rounded-3" placeholder="Contoh: Prof. Yohanes Surya">
                         </div>
+
+                        <!-- Penerbit & Tahun -->
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-semibold">Penerbit & Tahun</label>
                             <div class="input-group">
                                 <input type="text" name="penerbit" id="book_penerbit_input" class="form-control rounded-start-3" placeholder="Penerbit">
-                                <input type="number" name="tahun_terbit" id="book_tahun_input" class="form-control rounded-end-3" placeholder="Tahun" value="<?= date('Y') ?>">
+                                <input type="number" name="tahun_terbit" id="book_tahun_input" class="form-control rounded-end-3" placeholder="Tahun" style="max-width:90px;" value="<?= date('Y') ?>">
                             </div>
                         </div>
+
+                        <!-- ISBN -->
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-semibold">ISBN</label>
                             <input type="text" name="isbn" id="book_isbn_input" class="form-control rounded-3" placeholder="978-...">
                         </div>
+
+                        <!-- Status Media Buku -->
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-semibold">Status Media Buku</label>
                             <select name="is_ebook" id="book_ebook_select" class="form-select rounded-3">
-                                <option value="0">Buku Fisik Saja</option>
-                                <option value="1">E-Book Digital</option>
+                                <option value="0">📚 Buku Fisik Saja</option>
+                                <option value="1">💻 E-Book Digital</option>
+                                <option value="2">📚💻 Fisik + E-Book Digital</option>
                             </select>
                         </div>
+
+                        <!-- Upload Cover Buku (selalu tampil) -->
+                        <div class="col-12 col-md-6" id="sectionUploadCover">
+                            <label class="form-label fw-semibold">Cover Buku <span class="text-muted fw-normal">(JPG/PNG, maks 2MB)</span></label>
+                            <input type="file" name="cover_file" id="book_cover_file" class="form-control rounded-3" accept="image/jpeg,image/png,image/webp">
+                            <div id="cover_preview_wrap" class="mt-2 d-none">
+                                <img id="cover_preview_img" src="" alt="Preview Cover" class="rounded-3 border" style="max-height:100px; max-width:80px; object-fit:cover;">
+                            </div>
+                            <div id="cover_existing_wrap" class="mt-2 d-none">
+                                <small class="text-muted"><i class="bi bi-image me-1"></i>Cover saat ini:</small><br>
+                                <img id="cover_existing_img" src="" alt="Cover saat ini" class="rounded-3 border mt-1" style="max-height:80px; max-width:64px; object-fit:cover;">
+                            </div>
+                        </div>
+
+                        <!-- Section Upload E-Book (muncul hanya jika E-Book dipilih) -->
+                        <div class="col-12" id="sectionEbookUpload" style="display:none;">
+                            <div class="card border-0 bg-info-subtle rounded-4 p-3">
+                                <h6 class="fw-bold text-info mb-3"><i class="bi bi-file-earmark-pdf me-2"></i>Upload File E-Book Digital</h6>
+                                <div class="mb-2">
+                                    <label class="form-label fw-semibold mb-1">File E-Book <span class="text-danger">*</span> <span class="text-muted fw-normal">(PDF/EPUB, maks 50MB)</span></label>
+                                    <input type="file" name="ebook_file" id="book_ebook_file" class="form-control rounded-3" accept=".pdf,.epub">
+                                    <div id="ebook_existing_wrap" class="mt-2 d-none">
+                                        <small class="text-success"><i class="bi bi-file-earmark-check me-1"></i> File ebook sudah ada. Upload baru untuk mengganti.</small>
+                                        <br><small class="text-muted" id="ebook_existing_name"></small>
+                                    </div>
+                                </div>
+                                <small class="text-muted fs-8"><i class="bi bi-shield-check me-1"></i>File hanya dapat diakses oleh anggota terdaftar perpustakaan.</small>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
                 <div class="modal-footer bg-light rounded-bottom-4">
@@ -742,6 +818,34 @@
 </style>
 
 <script>
+// Helper: Update DDC selection badge
+function updateDdcBadge(val) {
+    const badgeWrap = document.getElementById('book_ddc_selected_badge');
+    const badgeLabel = document.getElementById('book_ddc_selected_label');
+    const ddcSel = document.getElementById('book_ddc_input');
+    if (!badgeWrap || !badgeLabel) return;
+    if (val && ddcSel) {
+        const opt = ddcSel.querySelector('option[value="' + val + '"]');
+        const text = opt ? opt.textContent.trim() : val;
+        badgeLabel.textContent = text;
+        badgeWrap.classList.remove('d-none');
+    } else {
+        badgeWrap.classList.add('d-none');
+    }
+}
+
+// Helper: Toggle ebook upload section visibility
+function toggleEbookSection(val) {
+    const section = document.getElementById('sectionEbookUpload');
+    const ebookFileInput = document.getElementById('book_ebook_file');
+    if (!section) return;
+    const isEbook = (val === '1' || val === '2');
+    section.style.display = isEbook ? '' : 'none';
+    if (ebookFileInput) {
+        ebookFileInput.required = (val === '1'); // wajib hanya jika pure ebook, opsional jika fisik+ebook
+    }
+}
+
 document.addEventListener('turbo:load', function() {
     initKatalogHandlers();
 });
@@ -758,12 +862,46 @@ function initKatalogHandlers() {
             document.getElementById('modalTambahBukuLabel').innerHTML = '<i class="bi bi-pencil-square me-2"></i> Edit Katalog Buku';
             document.getElementById('book_id_input').value = this.dataset.id;
             document.getElementById('book_judul_input').value = this.dataset.judul;
-            document.getElementById('book_ddc_input').value = this.dataset.ddc;
             document.getElementById('book_pengarang_input').value = this.dataset.pengarang;
             document.getElementById('book_penerbit_input').value = this.dataset.penerbit;
             document.getElementById('book_tahun_input').value = this.dataset.tahun;
             document.getElementById('book_isbn_input').value = this.dataset.isbn;
-            document.getElementById('book_ebook_select').value = this.dataset.ebook;
+
+            // Set DDC dropdown nilai
+            const ddcSel = document.getElementById('book_ddc_input');
+            const ddcVal = this.dataset.ddc || '';
+            ddcSel.value = ddcVal;
+            updateDdcBadge(ddcVal);
+
+            // Set jenis buku
+            const jenisSel = document.getElementById('book_jenis_input');
+            if (jenisSel) jenisSel.value = this.dataset.jenis || 'Umum';
+
+            // Set ebook select + toggle upload section
+            const ebookSel = document.getElementById('book_ebook_select');
+            const ebookVal = this.dataset.ebook || '0';
+            ebookSel.value = ebookVal;
+            toggleEbookSection(ebookVal);
+
+            // Tampilkan cover existing jika ada
+            const coverPath = this.dataset.cover || '';
+            const coverExistWrap = document.getElementById('cover_existing_wrap');
+            if (coverPath && coverExistWrap) {
+                document.getElementById('cover_existing_img').src = '/SINTA-SaaS/' + coverPath;
+                coverExistWrap.classList.remove('d-none');
+            } else if (coverExistWrap) {
+                coverExistWrap.classList.add('d-none');
+            }
+
+            // Tampilkan ebook existing jika ada
+            const ebookPath = this.dataset.ebook_file || '';
+            const ebookExistWrap = document.getElementById('ebook_existing_wrap');
+            if (ebookPath && ebookExistWrap) {
+                document.getElementById('ebook_existing_name').textContent = ebookPath.split('/').pop();
+                ebookExistWrap.classList.remove('d-none');
+            } else if (ebookExistWrap) {
+                ebookExistWrap.classList.add('d-none');
+            }
 
             const modal = new bootstrap.Modal(document.getElementById('modalTambahBuku'));
             modal.show();
@@ -777,6 +915,64 @@ function initKatalogHandlers() {
             document.getElementById('modalTambahBukuLabel').innerHTML = '<i class="bi bi-book me-2"></i> Tambah Judul Buku Baru';
             document.getElementById('book_id_input').value = '';
             document.getElementById('formTambahBuku').reset();
+            // Reset DDC badge
+            updateDdcBadge('');
+            // Reset ebook section
+            toggleEbookSection('0');
+            // Reset cover preview
+            const prevWrap = document.getElementById('cover_preview_wrap');
+            if (prevWrap) prevWrap.classList.add('d-none');
+            const existWrap = document.getElementById('cover_existing_wrap');
+            if (existWrap) existWrap.classList.add('d-none');
+            const ebookExistWrap = document.getElementById('ebook_existing_wrap');
+            if (ebookExistWrap) ebookExistWrap.classList.add('d-none');
+        };
+    }
+
+    // DDC Search Filter (client-side live filter pada <select>)
+    const ddcSearch = document.getElementById('book_ddc_search');
+    const ddcSelect = document.getElementById('book_ddc_input');
+    if (ddcSearch && ddcSelect) {
+        ddcSearch.oninput = function() {
+            const q = this.value.toLowerCase().trim();
+            Array.from(ddcSelect.options).forEach(opt => {
+                if (!opt.dataset.search) { opt.style.display = ''; return; } // placeholder
+                opt.style.display = (q === '' || opt.dataset.search.includes(q)) ? '' : 'none';
+            });
+        };
+        ddcSelect.onchange = function() {
+            updateDdcBadge(this.value);
+        };
+    }
+
+    // DDC Clear badge button
+    const ddcClear = document.getElementById('book_ddc_clear');
+    if (ddcClear) {
+        ddcClear.onclick = function() {
+            if (ddcSelect) { ddcSelect.value = ''; }
+            if (ddcSearch) { ddcSearch.value = ''; ddcSearch.dispatchEvent(new Event('input')); }
+            updateDdcBadge('');
+        };
+    }
+
+    // E-Book section toggle
+    const ebookSelectEl = document.getElementById('book_ebook_select');
+    if (ebookSelectEl) {
+        ebookSelectEl.onchange = function() { toggleEbookSection(this.value); };
+    }
+
+    // Cover file preview
+    const coverFileInput = document.getElementById('book_cover_file');
+    if (coverFileInput) {
+        coverFileInput.onchange = function() {
+            const file = this.files[0];
+            const prevWrap = document.getElementById('cover_preview_wrap');
+            const prevImg = document.getElementById('cover_preview_img');
+            if (file && prevWrap && prevImg) {
+                const reader = new FileReader();
+                reader.onload = e => { prevImg.src = e.target.result; prevWrap.classList.remove('d-none'); };
+                reader.readAsDataURL(file);
+            }
         };
     }
 

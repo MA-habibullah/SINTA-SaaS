@@ -379,9 +379,12 @@ class PerpustakaanController extends BaseController {
 
     public function apiSaveBibliografi(): void {
         $this->guardModul();
-        $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+
+        // Ambil data dari POST (form multipart/form-data atau JSON)
+        $input = !empty($_POST) ? $_POST : (json_decode(file_get_contents('php://input'), true) ?? []);
+
         if (empty($input['judul'])) {
-            if (isset($_POST['judul']) || !empty($_POST)) {
+            if (!empty($_POST)) {
                 header('Location: /SINTA-SaaS/perpustakaan/katalog?error=' . urlencode('Judul buku wajib diisi.'), true, 303);
                 return;
             }
@@ -392,9 +395,54 @@ class PerpustakaanController extends BaseController {
 
         $targetTenant = !empty($input['tenant_id']) ? $input['tenant_id'] : $this->tenantId;
         $bookId = !empty($input['id']) ? trim((string)$input['id']) : null;
+
+        // ---- Handle Upload Cover Buku ----
+        if (!empty($_FILES['cover_file']['tmp_name']) && $_FILES['cover_file']['error'] === UPLOAD_ERR_OK) {
+            $file = $_FILES['cover_file'];
+            $allowedMime = ['image/jpeg', 'image/png', 'image/webp'];
+            $finfo = new \finfo(FILEINFO_MIME_TYPE);
+            $mime = $finfo->file($file['tmp_name']);
+            if (!in_array($mime, $allowedMime, true)) {
+                header('Location: /SINTA-SaaS/perpustakaan/katalog?error=' . urlencode('Format cover tidak valid. Gunakan JPG, PNG, atau WebP.'), true, 303);
+                return;
+            }
+            if ($file['size'] > 2 * 1024 * 1024) { // maks 2MB
+                header('Location: /SINTA-SaaS/perpustakaan/katalog?error=' . urlencode('Ukuran file cover maksimal 2MB.'), true, 303);
+                return;
+            }
+            $ext = match ($mime) { 'image/png' => 'png', 'image/webp' => 'webp', default => 'jpg' };
+            $coverDir = __DIR__ . '/../../storage/perpustakaan/covers/';
+            if (!is_dir($coverDir)) mkdir($coverDir, 0755, true);
+            $newName = 'cover_' . preg_replace('/[^a-z0-9]/', '_', strtolower(substr($input['judul'] ?? 'buku', 0, 30))) . '_' . time() . '.' . $ext;
+            move_uploaded_file($file['tmp_name'], $coverDir . $newName);
+            $input['cover'] = 'storage/perpustakaan/covers/' . $newName;
+        }
+
+        // ---- Handle Upload File E-Book ----
+        if (!empty($_FILES['ebook_file']['tmp_name']) && $_FILES['ebook_file']['error'] === UPLOAD_ERR_OK) {
+            $file = $_FILES['ebook_file'];
+            $allowedMime = ['application/pdf', 'application/epub+zip'];
+            $finfo = new \finfo(FILEINFO_MIME_TYPE);
+            $mime = $finfo->file($file['tmp_name']);
+            if (!in_array($mime, $allowedMime, true)) {
+                header('Location: /SINTA-SaaS/perpustakaan/katalog?error=' . urlencode('Format ebook tidak valid. Gunakan PDF atau EPUB.'), true, 303);
+                return;
+            }
+            if ($file['size'] > 50 * 1024 * 1024) { // maks 50MB
+                header('Location: /SINTA-SaaS/perpustakaan/katalog?error=' . urlencode('Ukuran file ebook maksimal 50MB.'), true, 303);
+                return;
+            }
+            $ext = ($mime === 'application/epub+zip') ? 'epub' : 'pdf';
+            $ebookDir = __DIR__ . '/../../storage/perpustakaan/ebooks/';
+            if (!is_dir($ebookDir)) mkdir($ebookDir, 0755, true);
+            $newName = 'ebook_' . preg_replace('/[^a-z0-9]/', '_', strtolower(substr($input['judul'] ?? 'buku', 0, 30))) . '_' . time() . '.' . $ext;
+            move_uploaded_file($file['tmp_name'], $ebookDir . $newName);
+            $input['file_ebook'] = 'storage/perpustakaan/ebooks/' . $newName;
+        }
+
         $id = $this->model->saveBibliografi($targetTenant, $input, $bookId);
 
-        if (isset($_POST['judul']) || !empty($_POST)) {
+        if (!empty($_POST)) {
             $msg = $bookId ? 'Data katalog bibliografi berhasil diperbarui.' : 'Data katalog bibliografi berhasil disimpan.';
             header('Location: /SINTA-SaaS/perpustakaan/katalog?success=' . urlencode($msg), true, 303);
             return;
