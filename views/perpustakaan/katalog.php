@@ -512,15 +512,15 @@
 <!-- Modal Tambah / Edit Judul Buku -->
 <div class="modal fade" id="modalTambahBuku" tabindex="-1" aria-labelledby="modalTambahBukuLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-header bg-primary text-white rounded-top-4">
-                <h5 class="modal-title fw-bold" id="modalTambahBukuLabel"><i class="bi bi-book me-2"></i> Tambah Judul Buku Baru</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="/SINTA-SaaS/api/v1/perpustakaan/katalog/simpan" method="POST" id="formTambahBuku" enctype="multipart/form-data" data-turbo="false">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <form action="/SINTA-SaaS/api/v1/perpustakaan/katalog/simpan" method="POST" id="formTambahBuku" enctype="multipart/form-data" data-turbo="false" class="d-flex flex-column h-100 mb-0">
+                <div class="modal-header bg-primary text-white rounded-top-4 flex-shrink-0">
+                    <h5 class="modal-title fw-bold" id="modalTambahBukuLabel"><i class="bi bi-book me-2"></i> Tambah Judul Buku Baru</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
                 <input type="hidden" name="id" id="book_id_input" value="">
                 <input type="hidden" name="tenant_id" value="<?= htmlspecialchars($data['active_tenant_id'] ?? '') ?>">
-                <div class="modal-body p-4">
+                <div class="modal-body p-4 flex-grow-1 overflow-auto">
                     <div class="row g-3">
                         <?php if ($data['is_super_admin'] ?? false): ?>
                             <div class="col-12">
@@ -538,7 +538,7 @@
                         <!-- Judul Buku & Judul Seri -->
                         <div class="col-12 col-md-8">
                             <label class="form-label fw-semibold">Judul Buku <span class="text-danger">*</span></label>
-                            <input type="text" name="judul" id="book_judul_input" class="form-control rounded-3" placeholder="Contoh: Matematika Diskrit SMA" required>
+                            <input type="text" name="judul" id="book_judul_input" class="form-control rounded-3" placeholder="Contoh: Pemrograman Web Modern PHP 8 & Vue 3" required>
                         </div>
                         <div class="col-12 col-md-4">
                             <label class="form-label fw-semibold">Judul Seri / Jilid</label>
@@ -548,7 +548,7 @@
                         <!-- Nomor Panggil & DDC Dropdown -->
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-semibold">Nomor Panggil (Call Number)</label>
-                            <input type="text" name="nomor_panggil" id="book_panggil_input" class="form-control rounded-3" placeholder="Contoh: 510 SUR m">
+                            <input type="text" name="nomor_panggil" id="book_panggil_input" class="form-control rounded-3" placeholder="Contoh: 005 HAB p">
                             <small class="text-muted fs-8">Format standar: [Kode DDC] [3 Huruf Pengarang] [1 Huruf Judul]</small>
                         </div>
                         <div class="col-12 col-md-6">
@@ -576,7 +576,7 @@
                         <!-- Pengarang & Edisi -->
                         <div class="col-12 col-md-8">
                             <label class="form-label fw-semibold">Nama Pengarang / Penulis</label>
-                            <input type="text" name="pengarang" id="book_pengarang_input" class="form-control rounded-3" placeholder="Contoh: Prof. Yohanes Surya">
+                            <input type="text" name="pengarang" id="book_pengarang_input" class="form-control rounded-3" placeholder="Contoh: Habibullah M.Kom">
                         </div>
                         <div class="col-12 col-md-4">
                             <label class="form-label fw-semibold">Edisi / Cetakan</label>
@@ -586,11 +586,11 @@
                         <!-- Penerbit, Kota, & Tahun -->
                         <div class="col-12 col-md-5">
                             <label class="form-label fw-semibold">Penerbit</label>
-                            <input type="text" name="penerbit" id="book_penerbit_input" class="form-control rounded-3" placeholder="Penerbit">
+                            <input type="text" name="penerbit" id="book_penerbit_input" class="form-control rounded-3" placeholder="Contoh: Informatika">
                         </div>
                         <div class="col-12 col-md-4">
                             <label class="form-label fw-semibold">Kota Terbit</label>
-                            <input type="text" name="kota_terbit" id="book_kota_input" class="form-control rounded-3" placeholder="Contoh: Jakarta">
+                            <input type="text" name="kota_terbit" id="book_kota_input" class="form-control rounded-3" placeholder="Contoh: Bandung">
                         </div>
                         <div class="col-12 col-md-3">
                             <label class="form-label fw-semibold">Tahun Terbit</label>
@@ -654,7 +654,7 @@
                         <!-- Abstrak / Sinopsis Buku -->
                         <div class="col-12">
                             <label class="form-label fw-semibold">Abstrak / Ringkasan Sinopsis Buku</label>
-                            <textarea name="abstrak" id="book_abstrak_input" class="form-control rounded-3" rows="2" placeholder="Tuliskan gambaran ringkas isi buku..."></textarea>
+                            <textarea name="abstrak" id="book_abstrak_input" class="form-control rounded-3" rows="3" placeholder="Tuliskan gambaran ringkas isi buku..."></textarea>
                         </div>
 
                         <!-- Status Media Buku -->
@@ -667,7 +667,7 @@
                             </select>
                         </div>
 
-                        <!-- Upload Cover Buku (selalu tampil) -->
+                        <!-- Upload Cover Buku -->
                         <div class="col-12 col-md-6" id="sectionUploadCover">
                             <label class="form-label fw-semibold">Cover Buku <span class="text-muted fw-normal">(JPG/PNG, maks 2MB)</span></label>
                             <input type="file" name="cover_file" id="book_cover_file" class="form-control rounded-3" accept="image/jpeg,image/png,image/webp">
@@ -675,10 +675,6 @@
                                 <img id="cover_preview_img" src="" alt="Preview Cover" class="rounded-3 border" style="max-height:100px; max-width:80px; object-fit:cover;">
                             </div>
                             <div id="cover_existing_wrap" class="mt-2 d-none">
-                                <small class="text-muted"><i class="bi bi-image me-1"></i>Cover saat ini:</small><br>
-                                <img id="cover_existing_img" src="" alt="Cover saat ini" class="rounded-3 border mt-1" style="max-height:80px; max-width:64px; object-fit:cover;">
-                            </div>
-                        </div>
                                 <small class="text-muted"><i class="bi bi-image me-1"></i>Cover saat ini:</small><br>
                                 <img id="cover_existing_img" src="" alt="Cover saat ini" class="rounded-3 border mt-1" style="max-height:80px; max-width:64px; object-fit:cover;">
                             </div>
@@ -702,7 +698,7 @@
 
                     </div>
                 </div>
-                <div class="modal-footer bg-light rounded-bottom-4">
+                <div class="modal-footer bg-light rounded-bottom-4 flex-shrink-0">
                     <button type="button" class="btn btn-secondary rounded-3 px-4" data-bs-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-primary rounded-3 px-4"><i class="bi bi-save me-1"></i> Simpan Katalog</button>
                 </div>
