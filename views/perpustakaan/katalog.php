@@ -3,6 +3,51 @@
  * View: Katalog & Inventori Terpadu
  * @phpstan-var array<string, mixed> $data
  */
+if (!function_exists('renderPerpusPagination')) {
+    function renderPerpusPagination(array $pagination, string $label = 'data'): void {
+        $totalRecords = isset($pagination['total_records']) ? (int)$pagination['total_records'] : 0;
+        if (empty($pagination) || $totalRecords <= 0) return;
+        $page = (int)($pagination['current_page'] ?? 1);
+        $totalPages = (int)($pagination['total_pages'] ?? 1);
+        $param = isset($pagination['param']) && is_string($pagination['param']) ? $pagination['param'] : 'page';
+        $from = (int)($pagination['from'] ?? 0);
+        $to = (int)($pagination['to'] ?? 0);
+        ?>
+        <div class="card-footer bg-white border-top py-3 d-flex flex-column flex-md-row align-items-center justify-content-between gap-2 rounded-bottom-4">
+            <div class="text-muted fs-8">
+                Menampilkan <span class="fw-bold text-dark"><?= $from ?></span> sampai <span class="fw-bold text-dark"><?= $to ?></span> dari <span class="fw-bold text-dark"><?= number_format($totalRecords) ?></span> total <?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?>.
+            </div>
+            <?php if ($totalPages > 1): ?>
+                <nav aria-label="Page navigation">
+                    <ul class="pagination pagination-sm mb-0 gap-1">
+                        <li class="page-item <?= ($page <= 1) ? 'disabled' : '' ?>">
+                            <a class="page-link rounded-2" href="?<?= http_build_query(array_merge($_GET, [$param => 1])) ?>"><i class="bi bi-chevron-double-left"></i></a>
+                        </li>
+                        <li class="page-item <?= ($page <= 1) ? 'disabled' : '' ?>">
+                            <a class="page-link rounded-2" href="?<?= http_build_query(array_merge($_GET, [$param => max(1, $page - 1)])) ?>"><i class="bi bi-chevron-left"></i></a>
+                        </li>
+                        <?php
+                        $startP = max(1, $page - 2);
+                        $endP = min($totalPages, $page + 2);
+                        for ($p = $startP; $p <= $endP; $p++):
+                        ?>
+                            <li class="page-item <?= ($p === $page) ? 'active' : '' ?>">
+                                <a class="page-link rounded-2" href="?<?= http_build_query(array_merge($_GET, [$param => $p])) ?>"><?= $p ?></a>
+                            </li>
+                        <?php endfor; ?>
+                        <li class="page-item <?= ($page >= $totalPages) ? 'disabled' : '' ?>">
+                            <a class="page-link rounded-2" href="?<?= http_build_query(array_merge($_GET, [$param => min($totalPages, $page + 1)])) ?>"><i class="bi bi-chevron-right"></i></a>
+                        </li>
+                        <li class="page-item <?= ($page >= $totalPages) ? 'disabled' : '' ?>">
+                            <a class="page-link rounded-2" href="?<?= http_build_query(array_merge($_GET, [$param => $totalPages])) ?>"><i class="bi bi-chevron-double-right"></i></a>
+                        </li>
+                    </ul>
+                </nav>
+            <?php endif; ?>
+        </div>
+        <?php
+    }
+}
 ?>
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-2 pb-2 mb-4 border-bottom">
     <div>
@@ -172,11 +217,22 @@
                                         <a href="/SINTA-SaaS/perpustakaan/cetak-label-thermal?barcode=<?= urlencode($item['isbn'] ?? 'BOOK-1') ?>" target="_blank" class="btn btn-outline-dark btn-sm rounded-2 me-1" title="Cetak Barcode Thermal">
                                             <i class="bi bi-printer"></i>
                                         </a>
-                                        <?php if (!empty($item['is_ebook'])): ?>
-                                            <a href="/SINTA-SaaS/perpustakaan/baca-ebook?id=<?= htmlspecialchars($item['id'], ENT_QUOTES, 'UTF-8') ?>" class="btn btn-outline-primary btn-sm rounded-2" title="Baca E-Book Digital Watermark" target="_blank">
-                                                <i class="bi bi-eye"></i>
-                                            </a>
-                                        <?php endif; ?>
+                                        <?php if (!empty($item['is_ebook']) && !empty($item['file_ebook'])): ?>
+                                             <button type="button" class="btn btn-outline-primary btn-sm rounded-2 btn-read-ebook"
+                                                     data-id="<?= htmlspecialchars($item['id'], ENT_QUOTES, 'UTF-8') ?>"
+                                                     data-judul="<?= htmlspecialchars($item['judul'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                                     data-pengarang="<?= htmlspecialchars($pengarangShow, ENT_QUOTES, 'UTF-8') ?>"
+                                                     data-isbn="<?= htmlspecialchars($item['isbn'] ?? '-', ENT_QUOTES, 'UTF-8') ?>"
+                                                     title="Baca E-Book Digital (Modal Popup)">
+                                                 <i class="bi bi-eye"></i>
+                                             </button>
+                                         <?php elseif (!empty($item['is_ebook'])): ?>
+                                              <button type="button" class="btn btn-outline-warning btn-sm rounded-2 btn-edit-katalog"
+                                                      data-id="<?= htmlspecialchars($item['id'], ENT_QUOTES, 'UTF-8') ?>"
+                                                      title="Upload File E-Book PDF">
+                                                  <i class="bi bi-upload"></i>
+                                              </button>
+                                          <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -184,6 +240,7 @@
                     </tbody>
                 </table>
             </div>
+            <?php renderPerpusPagination($data['pagination'] ?? [], 'katalog buku'); ?>
         </div>
     </div>
 
@@ -244,6 +301,7 @@
                     </tbody>
                 </table>
             </div>
+            <?php renderPerpusPagination($data['opname_pagination'] ?? [], 'sesi opname'); ?>
         </div>
     </div>
 
@@ -434,6 +492,7 @@
                     </tbody>
                 </table>
             </div>
+            <?php renderPerpusPagination($data['usulan_pagination'] ?? [], 'usulan buku'); ?>
         </div>
     </div>
 
@@ -504,6 +563,7 @@
                     </tbody>
                 </table>
             </div>
+            <?php renderPerpusPagination($data['serial_pagination'] ?? [], 'terbitan berkala'); ?>
         </div>
     </div>
 
@@ -702,6 +762,75 @@
                 <button type="submit" class="btn btn-primary rounded-3 px-4"><i class="bi bi-save me-1"></i> Simpan Katalog</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Modal Popup Reader E-Book Digital -->
+<div class="modal fade" id="modalBacaEbook" tabindex="-1" aria-labelledby="modalBacaEbookLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-dark text-white rounded-top-4">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-book-half text-info fs-4"></i>
+                    <div>
+                        <h6 class="modal-title fw-bold mb-0 text-white" id="modal_ebook_title">Baca E-Book Digital</h6>
+                        <small class="text-white-50 fs-8" id="modal_ebook_meta">Penulis: - • ISBN: -</small>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1 fs-8">
+                        <i class="bi bi-shield-check me-1"></i> Watermark Protected
+                    </span>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+            <!-- PDF.js Toolbar Controls -->
+            <div class="bg-secondary text-white p-2 d-flex flex-wrap align-items-center justify-content-between border-bottom gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-dark border-secondary" id="pdf_prev_page" title="Halaman Sebelumnya">
+                        <i class="bi bi-chevron-left"></i> Prev
+                    </button>
+                    <span class="fs-8 text-white">Halaman <strong id="pdf_page_num" class="text-warning">1</strong> / <span id="pdf_page_count" class="text-white">1</span></span>
+                    <button type="button" class="btn btn-sm btn-dark border-secondary" id="pdf_next_page" title="Halaman Selanjutnya">
+                        Next <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-dark border-secondary" id="pdf_zoom_out" title="Perkecil Zoom">
+                        <i class="bi bi-zoom-out"></i>
+                    </button>
+                    <span class="fs-8 text-white"><strong id="pdf_zoom_val" class="text-info">100%</strong></span>
+                    <button type="button" class="btn btn-sm btn-dark border-secondary" id="pdf_zoom_in" title="Perbesar Zoom">
+                        <i class="bi bi-zoom-in"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body p-0 position-relative bg-dark" style="height: 70vh; min-height: 480px; overflow-y: auto;">
+                <!-- Security Watermark Overlay -->
+                <div class="position-absolute top-50 start-50 translate-middle pointer-events-none opacity-25 text-center user-select-none" style="z-index: 10; transform: translate(-50%, -50%) rotate(-25deg); width: 100%;">
+                    <h2 class="fw-black text-white text-uppercase m-0">PERPUSTAKAAN DIGITAL SINTA-SaaS</h2>
+                    <p class="fw-bold text-white mb-0">Diakses oleh: <?= htmlspecialchars($_SESSION['nama_lengkap'] ?? ($_SESSION['username'] ?? 'Anggota Perpustakaan'), ENT_QUOTES, 'UTF-8') ?> — <?= date('d M Y H:i') ?> WIB</p>
+                    <p class="fs-8 text-white">Dilarang Menggandakan / Mengedarkan Tanpa Izin Lisensi Perpustakaan</p>
+                </div>
+                <!-- E-Book PDF Canvas Container -->
+                <div class="d-flex justify-content-center p-3" style="min-height: 100%;">
+                    <canvas id="pdf_render_canvas" class="shadow-lg rounded-2 bg-white my-auto"></canvas>
+                </div>
+                <div id="pdf_loading_spinner" class="position-absolute top-50 start-50 translate-middle text-white text-center">
+                    <div class="spinner-border text-info mb-2" role="status"></div>
+                    <div class="fs-8">Memuat Dokumen E-Book Digital...</div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light rounded-bottom-4 justify-content-between">
+                <small class="text-muted fs-8"><i class="bi bi-info-circle me-1"></i>Gunakan tombol Prev/Next atau Zoom untuk membaca e-book.</small>
+                <div>
+                    <a id="modal_ebook_fullscreen_link" href="#" target="_blank" class="btn btn-outline-primary rounded-3 px-3 me-2">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> Buka Fullscreen
+                    </a>
+                    <button type="button" class="btn btn-secondary rounded-3 px-4" data-bs-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -1098,8 +1227,12 @@
     background: transparent !important;
 }
 </style>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
+if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
 // Helper: Update DDC selection badge
 function updateDdcBadge(val) {
     const badgeWrap = document.getElementById('book_ddc_selected_badge');
@@ -1136,7 +1269,116 @@ document.addEventListener('DOMContentLoaded', function() {
     initKatalogHandlers();
 });
 
+// PDF.js State Variables (Hotwire Turbo-safe)
+var pdfDoc = null,
+    pageNum = 1,
+    pageRendering = false,
+    pageNumPending = null,
+    pdfScale = 1.2;
+
+function renderPdfPage(num) {
+    pageRendering = true;
+    const canvas = document.getElementById('pdf_render_canvas');
+    if (!canvas || !pdfDoc) return;
+    const ctx = canvas.getContext('2d');
+
+    pdfDoc.getPage(num).then(function(page) {
+        const viewport = page.getViewport({ scale: pdfScale });
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        const renderContext = {
+            canvasContext: ctx,
+            viewport: viewport
+        };
+        const renderTask = page.render(renderContext);
+
+        renderTask.promise.then(function() {
+            pageRendering = false;
+            if (pageNumPending !== null) {
+                renderPdfPage(pageNumPending);
+                pageNumPending = null;
+            }
+        });
+    }).catch(function(err) {
+        pageRendering = false;
+    });
+
+    const numEl = document.getElementById('pdf_page_num');
+    if (numEl) numEl.textContent = num;
+}
+
+function queueRenderPdfPage(num) {
+    if (pageRendering) {
+        pageNumPending = num;
+    } else {
+        renderPdfPage(num);
+    }
+}
+
+function loadPdfDocument(url) {
+    const spinner = document.getElementById('pdf_loading_spinner');
+    if (spinner) spinner.style.display = 'block';
+
+    if (typeof pdfjsLib === 'undefined') {
+        if (spinner) spinner.innerHTML = '<div class="text-danger p-3"><i class="bi bi-exclamation-triangle fs-1"></i><p>Pustaka PDF.js sedang dimuat. Silakan coba kembali.</p></div>';
+        return;
+    }
+
+    pdfjsLib.getDocument(url).promise.then(function(pdfDoc_) {
+        pdfDoc = pdfDoc_;
+        const countEl = document.getElementById('pdf_page_count');
+        if (countEl) countEl.textContent = pdfDoc.numPages;
+        if (spinner) spinner.style.display = 'none';
+        pageNum = 1;
+        renderPdfPage(pageNum);
+    }).catch(function(err) {
+        console.error("Gagal memuat PDF via PDF.js:", err);
+        if (spinner) spinner.innerHTML = '<div class="text-danger p-3"><i class="bi bi-exclamation-triangle fs-1"></i><p class="mb-0 fw-bold">Gagal memuat file PDF.</p><small class="text-white-50">Silakan klik Buka Fullscreen untuk membaca secara langsung.</small></div>';
+    });
+}
+
 function initKatalogHandlers() {
+    // Controls for PDF Viewer
+    const prevBtn = document.getElementById('pdf_prev_page');
+    if (prevBtn) {
+        prevBtn.onclick = function() {
+            if (pageNum <= 1) return;
+            pageNum--;
+            queueRenderPdfPage(pageNum);
+        };
+    }
+
+    const nextBtn = document.getElementById('pdf_next_page');
+    if (nextBtn) {
+        nextBtn.onclick = function() {
+            if (!pdfDoc || pageNum >= pdfDoc.numPages) return;
+            pageNum++;
+            queueRenderPdfPage(pageNum);
+        };
+    }
+
+    const zoomInBtn = document.getElementById('pdf_zoom_in');
+    if (zoomInBtn) {
+        zoomInBtn.onclick = function() {
+            pdfScale += 0.25;
+            const valEl = document.getElementById('pdf_zoom_val');
+            if (valEl) valEl.textContent = Math.round(pdfScale * 100) + '%';
+            queueRenderPdfPage(pageNum);
+        };
+    }
+
+    const zoomOutBtn = document.getElementById('pdf_zoom_out');
+    if (zoomOutBtn) {
+        zoomOutBtn.onclick = function() {
+            if (pdfScale <= 0.5) return;
+            pdfScale -= 0.25;
+            const valEl = document.getElementById('pdf_zoom_val');
+            if (valEl) valEl.textContent = Math.round(pdfScale * 100) + '%';
+            queueRenderPdfPage(pageNum);
+        };
+    }
+
     // 1. Edit Katalog Handler
     const editKatalogBtns = document.querySelectorAll('.btn-edit-katalog');
     editKatalogBtns.forEach(btn => {
@@ -1211,6 +1453,40 @@ function initKatalogHandlers() {
 
             const modal = new bootstrap.Modal(document.getElementById('modalTambahBuku'));
             modal.show();
+        };
+    });
+
+    // 1b. Baca E-Book Modal Popup Handler dengan PDF.js
+    const readEbookBtns = document.querySelectorAll('.btn-read-ebook');
+    readEbookBtns.forEach(btn => {
+        btn.onclick = function() {
+            const id = this.dataset.id;
+            const judul = this.dataset.judul || 'E-Book Digital';
+            const pengarang = this.dataset.pengarang || '-';
+            const isbn = this.dataset.isbn || '-';
+            const streamUrl = '/SINTA-SaaS/perpustakaan/baca-ebook?id=' + encodeURIComponent(id) + '&stream=1';
+            const fullUrl = '/SINTA-SaaS/perpustakaan/baca-ebook?id=' + encodeURIComponent(id);
+
+            const titleEl = document.getElementById('modal_ebook_title');
+            if (titleEl) titleEl.textContent = judul;
+
+            const metaEl = document.getElementById('modal_ebook_meta');
+            if (metaEl) metaEl.textContent = 'Penulis: ' + pengarang + ' • ISBN: ' + isbn;
+
+            const linkEl = document.getElementById('modal_ebook_fullscreen_link');
+            if (linkEl) linkEl.href = fullUrl;
+
+            // Reset state
+            pdfDoc = null;
+            pageNum = 1;
+            pdfScale = 1.2;
+            const valEl = document.getElementById('pdf_zoom_val');
+            if (valEl) valEl.textContent = '120%';
+
+            const modal = new bootstrap.Modal(document.getElementById('modalBacaEbook'));
+            modal.show();
+
+            loadPdfDocument(streamUrl);
         };
     });
 
@@ -1432,7 +1708,7 @@ function initKatalogHandlers() {
     }
 
     // 11. Audit Lifecycle & Traceability Eksemplar Handler
-    let activeAuditBibliografiId = '';
+    var activeAuditBibliografiId = '';
     const auditBtns = document.querySelectorAll('.btn-audit-katalog');
     auditBtns.forEach(btn => {
         btn.onclick = function() {

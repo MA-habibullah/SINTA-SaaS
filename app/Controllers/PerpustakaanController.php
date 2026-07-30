@@ -80,6 +80,35 @@ class PerpustakaanController extends BaseController {
         $data['active_tenant_id'] = $this->tenantId;
     }
 
+    /**
+     * Helper pagination array terstandardisasi untuk seluruh modul perpustakaan.
+     *
+     * @param array<int, array<string, mixed>> $fullList
+     * @return array{list: array<int, array<string, mixed>>, pagination: array<string, mixed>}
+     */
+    private function paginateArray(array $fullList, int $perPage = 10, string $pageParam = 'page'): array {
+        $page = isset($_GET[$pageParam]) ? max(1, (int)$_GET[$pageParam]) : 1;
+        $totalRecords = count($fullList);
+        $totalPages = max(1, (int)ceil($totalRecords / $perPage));
+        if ($page > $totalPages && $totalRecords > 0) {
+            $page = $totalPages;
+        }
+        $offset = ($page - 1) * $perPage;
+        $paginatedList = array_slice($fullList, $offset, $perPage);
+        return [
+            'list' => $paginatedList,
+            'pagination' => [
+                'current_page' => $page,
+                'per_page' => $perPage,
+                'total_records' => $totalRecords,
+                'total_pages' => $totalPages,
+                'from' => $totalRecords > 0 ? $offset + 1 : 0,
+                'to' => min($offset + $perPage, $totalRecords),
+                'param' => $pageParam
+            ]
+        ];
+    }
+
     // -------------------------------------------------------------------------
     // 1. DASHBOARD & VIEWS OPERATOR (HTML LAYOUT RENDER)
     // -------------------------------------------------------------------------
@@ -103,19 +132,26 @@ class PerpustakaanController extends BaseController {
 
     public function katalog(): void {
         $this->guardModul();
-        $list = $this->model->getBibliografiList($this->tenantId);
+        $rawList = $this->model->getBibliografiList($this->tenantId);
         $rakList = $this->model->getLokasiRakList($this->tenantId);
         $ddcCategories = $this->model->getKategoriDdcList();
-        $usulanList = $this->model->getUsulanBukuList($this->tenantId);
-        $serialList = $this->model->getSerialBerkalaList($this->tenantId);
-        
+        $rawUsulanList = $this->model->getUsulanBukuList($this->tenantId);
+        $rawSerialList = $this->model->getSerialBerkalaList($this->tenantId);
+
+        $pagedKatalog = $this->paginateArray($rawList, 10, 'page');
+        $pagedUsulan  = $this->paginateArray($rawUsulanList, 10, 'usulan_page');
+        $pagedSerial  = $this->paginateArray($rawSerialList, 10, 'serial_page');
+
         $data = [
             'title' => 'Katalog & Inventori Perpustakaan',
-            'list' => $list,
+            'list' => $pagedKatalog['list'],
+            'pagination' => $pagedKatalog['pagination'],
             'rak_list' => $rakList,
             'ddc_categories' => $ddcCategories,
-            'usulan_list' => $usulanList,
-            'serial_list' => $serialList
+            'usulan_list' => $pagedUsulan['list'],
+            'usulan_pagination' => $pagedUsulan['pagination'],
+            'serial_list' => $pagedSerial['list'],
+            'serial_pagination' => $pagedSerial['pagination']
         ];
         $this->attachTenantViewData($data);
         $contentView = __DIR__ . '/../../views/perpustakaan/katalog.php';
@@ -145,11 +181,16 @@ class PerpustakaanController extends BaseController {
 
         // Mode stream untuk viewer PDF/EPUB
         if (!empty($_GET['stream'])) {
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
             $finfo = new \finfo(FILEINFO_MIME_TYPE);
             $mime = $finfo->file($filePath);
             header('Content-Type: ' . $mime);
-            header('Content-Length: ' . filesize($filePath));
+            header('Content-Length: ' . (string)filesize($filePath));
             header('Content-Disposition: inline; filename="' . basename($filePath) . '"');
+            header('Accept-Ranges: bytes');
+            header('X-Content-Type-Options: nosniff');
             header('Cache-Control: private, max-age=3600, must-revalidate');
             readfile($filePath);
             exit();
@@ -169,15 +210,22 @@ class PerpustakaanController extends BaseController {
 
     public function sirkulasi(): void {
         $this->guardModul();
-        $paketList = $this->model->getPaketBukuList($this->tenantId);
-        $eventList = $this->model->getEventList($this->tenantId);
-        $dendaList = $this->model->getDendaList($this->tenantId);
+        $rawPaket = $this->model->getPaketBukuList($this->tenantId);
+        $rawEvent = $this->model->getEventList($this->tenantId);
+        $rawDenda = $this->model->getDendaList($this->tenantId);
+
+        $pagedPaket = $this->paginateArray($rawPaket, 10, 'paket_page');
+        $pagedEvent = $this->paginateArray($rawEvent, 10, 'event_page');
+        $pagedDenda = $this->paginateArray($rawDenda, 10, 'denda_page');
 
         $data = [
             'title' => 'Sirkulasi & Layanan Perpustakaan',
-            'paket_list' => $paketList,
-            'event_list' => $eventList,
-            'denda_list' => $dendaList
+            'paket_list' => $pagedPaket['list'],
+            'paket_pagination' => $pagedPaket['pagination'],
+            'event_list' => $pagedEvent['list'],
+            'event_pagination' => $pagedEvent['pagination'],
+            'denda_list' => $pagedDenda['list'],
+            'denda_pagination' => $pagedDenda['pagination']
         ];
         $this->attachTenantViewData($data);
         $contentView = __DIR__ . '/../../views/perpustakaan/sirkulasi.php';
@@ -722,12 +770,14 @@ class PerpustakaanController extends BaseController {
             $tenantId = $stmtDefault->fetchColumn() ?: '00000000-0000-0000-0000-000000000000';
         }
 
-        $list = $this->model->searchOpacPublic($tenantId, $query);
+        $rawList = $this->model->searchOpacPublic($tenantId, $query);
+        $pagedOpac = $this->paginateArray($rawList, 12, 'page');
 
         $data = [
             'title' => 'OPAC Publik — Katalog Perpustakaan Digital',
             'query' => $query,
-            'list'  => $list
+            'list'  => $pagedOpac['list'],
+            'pagination' => $pagedOpac['pagination']
         ];
 
         require __DIR__ . '/../../views/perpustakaan/opac_public.php';

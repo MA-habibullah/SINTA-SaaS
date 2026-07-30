@@ -207,7 +207,7 @@
                                     <span class="badge bg-danger-subtle text-danger fs-8"><i class="bi bi-x-circle me-1"></i> Dipinjam Semua</span>
                                 <?php endif; ?>
                             </div>
-                            <?php if (!empty($book['is_ebook'])): ?>
+                            <?php if (!empty($book['is_ebook']) && !empty($book['file_ebook'])): ?>
                                 <a href="/SINTA-SaaS/perpustakaan/baca-ebook?id=<?= htmlspecialchars($book['id'], ENT_QUOTES, 'UTF-8') ?>" class="btn btn-sm btn-primary rounded-pill px-3 fs-8" target="_blank">
                                     <i class="bi bi-eye me-1"></i> Baca Online
                                 </a>
@@ -218,6 +218,51 @@
             <?php endforeach; ?>
         <?php endif; ?>
     </div>
+
+    <!-- OPAC Pagination Bar -->
+    <?php if (!empty($data['pagination']) && ($data['pagination']['total_records'] ?? 0) > 0): ?>
+        <?php
+        $pagination = $data['pagination'];
+        $page = (int)($pagination['current_page'] ?? 1);
+        $totalPages = (int)($pagination['total_pages'] ?? 1);
+        $param = $pagination['param'] ?? 'page';
+        $from = $pagination['from'] ?? 0;
+        $to = $pagination['to'] ?? 0;
+        $totalRecords = $pagination['total_records'] ?? 0;
+        ?>
+        <div class="card border-0 shadow-sm rounded-4 mt-4 p-3 d-flex flex-column flex-md-row align-items-center justify-content-between gap-2 bg-white">
+            <div class="text-muted fs-8">
+                Menampilkan <span class="fw-bold text-dark"><?= $from ?></span> sampai <span class="fw-bold text-dark"><?= $to ?></span> dari <span class="fw-bold text-dark"><?= number_format($totalRecords) ?></span> total katalog buku OPAC.
+            </div>
+            <?php if ($totalPages > 1): ?>
+                <nav aria-label="OPAC Page navigation">
+                    <ul class="pagination pagination-sm mb-0 gap-1">
+                        <li class="page-item <?= ($page <= 1) ? 'disabled' : '' ?>">
+                            <a class="page-link rounded-pill px-3" href="?<?= http_build_query(array_merge($_GET, [$param => 1])) ?>"><i class="bi bi-chevron-double-left"></i> Awal</a>
+                        </li>
+                        <li class="page-item <?= ($page <= 1) ? 'disabled' : '' ?>">
+                            <a class="page-link rounded-pill px-3" href="?<?= http_build_query(array_merge($_GET, [$param => max(1, $page - 1)])) ?>"><i class="bi bi-chevron-left"></i> Prev</a>
+                        </li>
+                        <?php
+                        $startP = max(1, $page - 2);
+                        $endP = min($totalPages, $page + 2);
+                        for ($p = $startP; $p <= $endP; $p++):
+                        ?>
+                            <li class="page-item <?= ($p === $page) ? 'active' : '' ?>">
+                                <a class="page-link rounded-circle text-center px-0" style="width: 32px; height: 32px; line-height: 20px;" href="?<?= http_build_query(array_merge($_GET, [$param => $p])) ?>"><?= $p ?></a>
+                            </li>
+                        <?php endfor; ?>
+                        <li class="page-item <?= ($page >= $totalPages) ? 'disabled' : '' ?>">
+                            <a class="page-link rounded-pill px-3" href="?<?= http_build_query(array_merge($_GET, [$param => min($totalPages, $page + 1)])) ?>">Next <i class="bi bi-chevron-right"></i></a>
+                        </li>
+                        <li class="page-item <?= ($page >= $totalPages) ? 'disabled' : '' ?>">
+                            <a class="page-link rounded-pill px-3" href="?<?= http_build_query(array_merge($_GET, [$param => $totalPages])) ?>">Akhir <i class="bi bi-chevron-double-right"></i></a>
+                        </li>
+                    </ul>
+                </nav>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
 </main>
 
 <!-- Footer Section -->

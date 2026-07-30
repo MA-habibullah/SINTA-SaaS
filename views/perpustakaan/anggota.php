@@ -159,42 +159,43 @@ $emailAktif = (int)($pengaturan['auto_notif_email_aktif'] ?? 0);
                     <div class="fs-7 text-muted">
                         Menampilkan <span class="fw-bold text-dark"><?= $pagination['from'] ?></span> sampai <span class="fw-bold text-dark"><?= $pagination['to'] ?></span> dari <span class="fw-bold text-dark"><?= number_format($pagination['total_records']) ?></span> total anggota.
                     </div>
-                    <nav aria-label="Navigasi Halaman Anggota">
-                        <ul class="pagination pagination-sm mb-0 gap-1">
-                            <li class="page-item <?= ($currentPage <= 1) ? 'disabled' : '' ?>">
-                                <a class="page-link rounded-3 px-3 py-1.5" href="?page=1<?= !empty($activeTenantId) ? '&tenant_id=' . urlencode($activeTenantId) : '' ?>">
-                                    « Pertama
-                                </a>
-                            </li>
-                            <li class="page-item <?= ($currentPage <= 1) ? 'disabled' : '' ?>">
-                                <a class="page-link rounded-3 px-3 py-1.5" href="?page=<?= max(1, $currentPage - 1) ?><?= !empty($activeTenantId) ? '&tenant_id=' . urlencode($activeTenantId) : '' ?>">
-                                    ‹ Sebelum
-                                </a>
-                            </li>
-                            <?php 
-                            $startPage = max(1, $currentPage - 2);
-                            $endPage = min($totalPages, $currentPage + 2);
-                            for ($p = $startPage; $p <= $endPage; $p++): 
-                            ?>
-                                <li class="page-item <?= ($p === $currentPage) ? 'active' : '' ?>">
-                                    <a class="page-link rounded-3 px-3 py-1.5 <?= ($p === $currentPage) ? 'fw-bold bg-primary border-primary text-white' : '' ?>" href="?page=<?= $p ?><?= !empty($activeTenantId) ? '&tenant_id=' . urlencode($activeTenantId) : '' ?>">
-                                        <?= $p ?>
+                    <?php if ($totalPages > 1): ?>
+                        <nav aria-label="Navigasi Halaman Anggota">
+                            <ul class="pagination pagination-sm mb-0 gap-1">
+                                <li class="page-item <?= ($currentPage <= 1) ? 'disabled' : '' ?>">
+                                    <a class="page-link rounded-3 px-3 py-1.5" href="?<?= http_build_query(array_merge($_GET, ['page' => 1])) ?>">
+                                        « Pertama
                                     </a>
                                 </li>
-                            <?php endfor; ?>
-                            <li class="page-item <?= ($currentPage >= $totalPages) ? 'disabled' : '' ?>">
-                                <a class="page-link rounded-3 px-3 py-1.5" href="?page=<?= min($totalPages, $currentPage + 1) ?><?= !empty($activeTenantId) ? '&tenant_id=' . urlencode($activeTenantId) : '' ?>">
-                                    Berikut »
-                                </a>
-                            </li>
-                            <li class="page-item <?= ($currentPage >= $totalPages) ? 'disabled' : '' ?>">
-                                <a class="page-link rounded-3 px-3 py-1.5" href="?page=<?= $totalPages ?><?= !empty($activeTenantId) ? '&tenant_id=' . urlencode($activeTenantId) : '' ?>">
-                                    Terakhir »
-                                </a>
-                            </li>
-                        </ul>
-                    </nav>
-                </div>
+                                <li class="page-item <?= ($currentPage <= 1) ? 'disabled' : '' ?>">
+                                    <a class="page-link rounded-3 px-3 py-1.5" href="?<?= http_build_query(array_merge($_GET, ['page' => max(1, $currentPage - 1)])) ?>">
+                                        ‹ Sebelum
+                                    </a>
+                                </li>
+                                <?php 
+                                $startPage = max(1, $currentPage - 2);
+                                $endPage = min($totalPages, $currentPage + 2);
+                                for ($p = $startPage; $p <= $endPage; $p++): 
+                                ?>
+                                    <li class="page-item <?= ($p === $currentPage) ? 'active' : '' ?>">
+                                        <a class="page-link rounded-3 px-3 py-1.5 <?= ($p === $currentPage) ? 'fw-bold bg-primary border-primary text-white' : '' ?>" href="?<?= http_build_query(array_merge($_GET, ['page' => $p])) ?>">
+                                            <?= $p ?>
+                                        </a>
+                                    </li>
+                                <?php endfor; ?>
+                                <li class="page-item <?= ($currentPage >= $totalPages) ? 'disabled' : '' ?>">
+                                    <a class="page-link rounded-3 px-3 py-1.5" href="?<?= http_build_query(array_merge($_GET, ['page' => min($totalPages, $currentPage + 1)])) ?>">
+                                        Berikut ›
+                                    </a>
+                                </li>
+                                <li class="page-item <?= ($currentPage >= $totalPages) ? 'disabled' : '' ?>">
+                                    <a class="page-link rounded-3 px-3 py-1.5" href="?<?= http_build_query(array_merge($_GET, ['page' => $totalPages])) ?>">
+                                        Terakhir »
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                    <?php endif; ?>
             <?php endif; ?>
         </div>
     </div>

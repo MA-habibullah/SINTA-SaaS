@@ -1,7 +1,53 @@
 <?php
 /**
  * View: Sirkulasi & Layanan Terpadu
+ * @phpstan-var array<string, mixed> $data
  */
+if (!function_exists('renderPerpusPagination')) {
+    function renderPerpusPagination(array $pagination, string $label = 'data'): void {
+        $totalRecords = isset($pagination['total_records']) ? (int)$pagination['total_records'] : 0;
+        if (empty($pagination) || $totalRecords <= 0) return;
+        $page = (int)($pagination['current_page'] ?? 1);
+        $totalPages = (int)($pagination['total_pages'] ?? 1);
+        $param = isset($pagination['param']) && is_string($pagination['param']) ? $pagination['param'] : 'page';
+        $from = (int)($pagination['from'] ?? 0);
+        $to = (int)($pagination['to'] ?? 0);
+        ?>
+        <div class="card-footer bg-white border-top py-3 d-flex flex-column flex-md-row align-items-center justify-content-between gap-2 rounded-bottom-4">
+            <div class="text-muted fs-8">
+                Menampilkan <span class="fw-bold text-dark"><?= $from ?></span> sampai <span class="fw-bold text-dark"><?= $to ?></span> dari <span class="fw-bold text-dark"><?= number_format($totalRecords) ?></span> total <?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?>.
+            </div>
+            <?php if ($totalPages > 1): ?>
+                <nav aria-label="Page navigation">
+                    <ul class="pagination pagination-sm mb-0 gap-1">
+                        <li class="page-item <?= ($page <= 1) ? 'disabled' : '' ?>">
+                            <a class="page-link rounded-2" href="?<?= http_build_query(array_merge($_GET, [$param => 1])) ?>"><i class="bi bi-chevron-double-left"></i></a>
+                        </li>
+                        <li class="page-item <?= ($page <= 1) ? 'disabled' : '' ?>">
+                            <a class="page-link rounded-2" href="?<?= http_build_query(array_merge($_GET, [$param => max(1, $page - 1)])) ?>"><i class="bi bi-chevron-left"></i></a>
+                        </li>
+                        <?php
+                        $startP = max(1, $page - 2);
+                        $endP = min($totalPages, $page + 2);
+                        for ($p = $startP; $p <= $endP; $p++):
+                        ?>
+                            <li class="page-item <?= ($p === $page) ? 'active' : '' ?>">
+                                <a class="page-link rounded-2" href="?<?= http_build_query(array_merge($_GET, [$param => $p])) ?>"><?= $p ?></a>
+                            </li>
+                        <?php endfor; ?>
+                        <li class="page-item <?= ($page >= $totalPages) ? 'disabled' : '' ?>">
+                            <a class="page-link rounded-2" href="?<?= http_build_query(array_merge($_GET, [$param => min($totalPages, $page + 1)])) ?>"><i class="bi bi-chevron-right"></i></a>
+                        </li>
+                        <li class="page-item <?= ($page >= $totalPages) ? 'disabled' : '' ?>">
+                            <a class="page-link rounded-2" href="?<?= http_build_query(array_merge($_GET, [$param => $totalPages])) ?>"><i class="bi bi-chevron-double-right"></i></a>
+                        </li>
+                    </ul>
+                </nav>
+            <?php endif; ?>
+        </div>
+        <?php
+    }
+}
 ?>
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-2 pb-2 mb-4 border-bottom">
     <div>
@@ -163,6 +209,7 @@
                     </tbody>
                 </table>
             </div>
+            <?php renderPerpusPagination($data['paket_pagination'] ?? [], 'buku paket'); ?>
         </div>
     </div>
 
@@ -223,6 +270,7 @@
                     </tbody>
                 </table>
             </div>
+            <?php renderPerpusPagination($data['event_pagination'] ?? [], 'event osn'); ?>
         </div>
     </div>
 
@@ -282,6 +330,7 @@
                     </tbody>
                 </table>
             </div>
+            <?php renderPerpusPagination($data['denda_pagination'] ?? [], 'tagihan denda'); ?>
         </div>
     </div>
 
