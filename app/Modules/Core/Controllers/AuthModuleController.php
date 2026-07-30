@@ -58,11 +58,27 @@ class AuthModuleController extends BaseController {
             $userModel = new UserModel();
             $user = $userModel->findByEmailAndTenant($email, $this->tenantId);
 
+            // Jika tidak ditemukan via tenantId, coba fallback cari by email saja (Super Admin global)
+            if (!$user) {
+                $db = Database::getConnection();
+                $stmt = $db->prepare("
+                    SELECT u.id, u.tenant_id, u.role_id, u.nama_lengkap, u.username, u.email,
+                           u.password_hash as password, u.is_active, r.nama_role
+                    FROM core.users u
+                    JOIN core.roles r ON u.role_id = r.id
+                    WHERE u.email = ?
+                    LIMIT 1
+                ");
+                $stmt->execute([$email]);
+                $user = $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+            }
+
             if (!$user) {
                 $this->jsonResponse(false, null, $genericError, 200);
             }
 
-            if (($user['status'] ?? 'active') !== 'active') {
+            // Cek is_active (boolean PostgreSQL)
+            if (isset($user['is_active']) && $user['is_active'] == false) {
                 $this->jsonResponse(false, null, 'Akun ditangguhkan. Silakan hubungi administrator.', 200);
             }
 
