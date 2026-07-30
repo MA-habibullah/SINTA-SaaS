@@ -53,24 +53,29 @@ App\Helpers\SessionTracker::track();
 // ✅ Global Error Handler: Tangkap semua PHP/SQL error & simpan ke DB system_errors
 App\Helpers\ErrorTracker::register(true);
 
-// 3. Routing Sederhana
-$request_uri = $_SERVER['REQUEST_URI'];
-$path = parse_url($request_uri, PHP_URL_PATH);
+// 3. Routing Sederhana Dinamis
+$request_uri = $_SERVER['REQUEST_URI'] ?? '/';
+$path = parse_url($request_uri, PHP_URL_PATH) ?? '/';
 
-// Bersihkan path dari sub-folder XAMPP / Laragon (e.g. /sinta/login atau /sinta-saas/login -> /login)
-$project_folders = ['/SINTA-SaaS', '/sinta'];
-foreach ($project_folders as $folder) {
-    if (strncasecmp($path, $folder, strlen($folder)) === 0) {
-        $path = substr($path, strlen($folder));
-        break;
-    }
+// Deteksi Base URL secara otomatis dari Script Name
+$scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+$baseUrl = rtrim(dirname($scriptName), '/\\');
+
+// Bersihkan path dari base URL folder (misal: /sinta, /SINTA, /SINTA-SaaS)
+if (!empty($baseUrl) && $baseUrl !== '/' && strncasecmp($path, $baseUrl, strlen($baseUrl)) === 0) {
+    $path = substr($path, strlen($baseUrl));
 }
 
-// Standardisasi path kosong atau slash saja
+// Standardisasi path kosong, null, atau slash saja
 if (empty($path) || $path === '/') {
     $path = '/login';
 }
 
+// Ensure trailing slash removal except for root
+$path = rtrim($path, '/');
+if (empty($path)) {
+    $path = '/login';
+}
 
 // 4. Map Halaman & Endpoint API (Dilindungi Try-Catch untuk Response API yang Konsisten)
 try {
@@ -78,7 +83,7 @@ try {
     if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true && ($_SESSION['role_name'] ?? '') === 'siswa') {
         $isFirstLogin = $_SESSION['is_first_login'] ?? false;
         if ($isFirstLogin && !in_array($path, ['/siswa/ubah-password', '/siswa/logout', '/api/v1/siswa/ubah-password'])) {
-            header('Location: /SINTA-SaaS/siswa/ubah-password');
+            header('Location: ' . $baseUrl . '/siswa/ubah-password');
             exit;
         }
     }
@@ -117,30 +122,90 @@ try {
         case '/login':
             // Jika sudah login sebagai siswa, langsung lempar ke dashboard
             if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true && ($_SESSION['role_name'] ?? '') === 'siswa') {
-                header('Location: /SINTA-SaaS/dashboard');
+                header('Location: ' . $baseUrl . '/dashboard');
                 exit;
             }
-            $controller = new App\Controllers\AuthSiswaController();
+            $controller = new App\Modules\Siswa\Controllers\SiswaAuthModuleController();
             $controller->loginView();
             break;
 
         case '/siswa/login':
-            header('Location: /SINTA-SaaS/login');
+            header('Location: ' . $baseUrl . '/login');
             exit;
 
         case '/admin':
             // Jika sudah login sebagai admin/super_admin, langsung lempar ke dashboard
             if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true && ($_SESSION['role_name'] ?? '') !== 'siswa') {
-                header('Location: /SINTA-SaaS/dashboard');
+                header('Location: ' . $baseUrl . '/dashboard');
                 exit;
             }
-            $controller = new App\Controllers\AuthAdminController();
-            $controller->loginView();
+            $controller = new App\Modules\Core\Controllers\AuthModuleController();
+            $controller->adminLoginView();
             break;
 
         case '/api/v1/siswa/login':
-            $controller = new App\Controllers\AuthSiswaController();
+            $controller = new App\Modules\Siswa\Controllers\SiswaAuthModuleController();
             $controller->loginApi();
+            break;
+
+        case '/bk':
+            $controller = new App\Modules\Bk\Controllers\BkModuleController();
+            $controller->indexView();
+            break;
+
+        case '/kesiswaan/ekskul':
+            $controller = new App\Modules\Kesiswaan\Controllers\KesiswaanModuleController();
+            $controller->ekskulIndex();
+            break;
+
+        case '/api/v1/kesiswaan/ekskul':
+            $controller = new App\Modules\Kesiswaan\Controllers\KesiswaanModuleController();
+            $controller->getEkskulApi();
+            break;
+
+        case '/api/v1/nilai-rapor/siswa':
+            $controller = new App\Modules\Akademik\Controllers\RaporModuleController();
+            $controller->getNilaiRaporSiswa();
+            break;
+
+        case '/kepegawaian/ptk':
+            $controller = new App\Modules\Kepegawaian\Controllers\KepegawaianModuleController();
+            $controller->getDaftarPtk();
+            break;
+
+        case '/keuangan/tagihan':
+            $controller = new App\Modules\Keuangan\Controllers\KeuanganModuleController();
+            $controller->getTagihanSiswa();
+            break;
+
+        case '/perpustakaan':
+            $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
+            $controller->indexView();
+            break;
+
+        case '/api/v1/perpustakaan/katalog':
+            $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
+            $controller->getKatalogApi();
+            break;
+
+        case '/api/v1/sarpras/inventaris':
+            $controller = new App\Modules\Sarpras\Controllers\SarprasModuleController();
+            $controller->getInventarisApi();
+            break;
+
+        case '/api/v1/persuratan/surat-masuk':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->getSuratMasukApi();
+            break;
+
+        case '/api/v1/sistem/audit-log':
+            $controller = new App\Modules\Sistem\Controllers\SistemModuleController();
+            $controller->getAuditLogApi();
+            break;
+
+        case '/api/v1/cms/landing-sections':
+            $controller = new App\Modules\Cms\Controllers\CmsModuleController();
+            $controller->getLandingSectionsApi();
             break;
 
         case '/siswa/ubah-password':
@@ -1786,9 +1851,9 @@ try {
             break;
 
         case '/api/v1/auth/login':
-            // Panggil API Login Admin
-            $controller = new App\Controllers\AuthAdminController();
-            $controller->login();
+            // Panggil API Login Admin (Modular Core Architecture)
+            $controller = new App\Modules\Core\Controllers\AuthModuleController();
+            $controller->loginAdminApi();
             break;
 
         case '/api/v1/auth/logout':

@@ -2,7 +2,7 @@
 
 namespace App\Modules\Akademik\Controllers;
 
-use App\Controllers\BaseController;
+use App\Core\BaseController;
 use App\Modules\Akademik\Services\RaporService;
 
 class RaporModuleController extends BaseController {

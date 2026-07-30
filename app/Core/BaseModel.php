@@ -8,6 +8,11 @@ use PDO;
 abstract class BaseModel {
     protected static string $table = '';
     protected static string $schema = 'public';
+    protected PDO $db;
+
+    public function __construct() {
+        $this->db = Database::getConnection();
+    }
 
     public static function getTableName(): string {
         if (!empty(static::$schema) && static::$schema !== 'public') {

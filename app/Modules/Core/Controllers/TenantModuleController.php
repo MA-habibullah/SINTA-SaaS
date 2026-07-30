@@ -2,7 +2,7 @@
 
 namespace App\Modules\Core\Controllers;
 
-use App\Controllers\BaseController;
+use App\Core\BaseController;
 use App\Modules\Core\Services\TenantService;
 
 class TenantModuleController extends BaseController {

@@ -14,10 +14,10 @@ Saat merancang fitur baru atau memodifikasi modul yang ada, terapkan arsitektur 
 
 # Custom Rules
 ## Testing and Checking Files
-Selalu simpan file percobaan, pengujian (*testing*), atau pengecekan (seperti file dengan awalan `test_`, `check_`, `grant_`, dsb.) HANYA ke dalam folder `C:\xampp\htdocs\SINTA-SaaS\scratch`. Jangan pernah menyimpan file-file sementara ini di *root directory* atau direktori inti aplikasi lainnya.
+Selalu simpan file percobaan, pengujian (*testing*), atau pengecekan (seperti file dengan awalan `test_`, `check_`, `grant_`, dsb.) HANYA ke dalam folder `C:\laragon\www\sinta\scratch`. Jangan pernah menyimpan file-file sementara ini di *root directory* atau direktori inti aplikasi lainnya.
 
 ## Implementation Plans
-Setiap kali ada rencana implementasi (*implementation plan*) yang telah diselesaikan atau dijalankan, **SELURUH ISI plan** (bukan hanya ringkasan) wajib **ditambahkan (append)** ke dalam **satu file gabungan per hari** di folder `C:\xampp\htdocs\SINTA-SaaS\docs` dengan format nama: `YYYY-MM-DD_Implementation_Plans_Harian.md` (contoh: `2026-07-17_Implementation_Plans_Harian.md`).
+Setiap kali ada rencana implementasi (*implementation plan*) yang telah diselesaikan atau dijalankan, **SELURUH ISI plan** (bukan hanya ringkasan) wajib **ditambahkan (append)** ke dalam **satu file gabungan per hari** di folder `C:\laragon\www\sinta\scratch\docs` dengan format nama: `YYYY-MM-DD_Implementation_Plans_Harian.md` (contoh: `2026-07-17_Implementation_Plans_Harian.md`).
 
 > ⚠️ **PERINGATAN KRITIS**: Jangan pernah hanya menyimpan rangkuman atau deskripsi singkat. Seluruh konten plan — termasuk semua kode SQL, kode PHP, kode JavaScript, tabel, diagram, dan verification plan — WAJIB disertakan secara lengkap verbatim (apa adanya) di dalam file harian. File harian adalah **satu-satunya sumber kebenaran** untuk semua rencana implementasi; file plan terpisah per fitur tidak boleh menjadi satu-satunya tempat penyimpanan.
 
@@ -43,7 +43,7 @@ Setiap kali ada rencana implementasi (*implementation plan*) yang telah diselesa
 
 
 ## Walkthroughs
-Setiap kali pekerjaan diselesaikan, dokumen penjelasan hasil akhir (*walkthrough*) wajib **ditambahkan (append)** ke dalam **satu file gabungan per hari** di folder `C:\xampp\htdocs\SINTA-SaaS\docs` dengan format nama: `YYYY-MM-DD_Walkthrough_Harian.md` (contoh: `2026-07-17_Walkthrough_Harian.md`).
+Setiap kali pekerjaan diselesaikan, dokumen penjelasan hasil akhir (*walkthrough*) wajib **ditambahkan (append)** ke dalam **satu file gabungan per hari** di folder `C:\laragon\www\sinta\scratch\docs` dengan format nama: `YYYY-MM-DD_Walkthrough_Harian.md` (contoh: `2026-07-17_Walkthrough_Harian.md`).
 
 > ⚠️ **PERINGATAN KRITIS**: Jangan pernah hanya menyimpan rangkuman atau deskripsi singkat. Seluruh konten penjelasan hasil akhir (walkthrough.md) — termasuk semua file yang diubah/dibuat, hasil pengujian static analysis, dan regresi keamanan — WAJIB disertakan secara lengkap verbatim (apa adanya) di dalam file harian. File harian adalah **satu-satunya sumber kebenaran** untuk semua penjelasan hasil akhir; file walkthrough terpisah per fitur tidak boleh menjadi satu-satunya tempat penyimpanan.
 
@@ -123,8 +123,3 @@ Setiap kali selesai melakukan pembuatan fitur baru, refactoring, modifikasi kode
    php scratch/tests/test_security_audit.php
    ```
    Pastikan hasilnya menunjukkan `Failed Checks: 0`.
-
-
-
-
-

@@ -2,7 +2,7 @@
 
 namespace App\Modules\Kepegawaian\Controllers;
 
-use App\Controllers\BaseController;
+use App\Core\BaseController;
 use App\Modules\Kepegawaian\Models\PtkIdentitasModel;
 use App\Modules\Kepegawaian\Models\DokumenPtkModel;
 

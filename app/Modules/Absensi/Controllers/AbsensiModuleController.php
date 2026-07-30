@@ -2,7 +2,7 @@
 
 namespace App\Modules\Absensi\Controllers;
 
-use App\Controllers\BaseController;
+use App\Core\BaseController;
 use App\Modules\Absensi\Models\PresensiSiswaModel;
 use App\Modules\Absensi\Models\PresensiPtkModel;
 

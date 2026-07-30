@@ -2,7 +2,7 @@
 
 namespace App\Modules\Keuangan\Controllers;
 
-use App\Controllers\BaseController;
+use App\Core\BaseController;
 use App\Modules\Keuangan\Models\TagihanSiswaModel;
 use App\Modules\Keuangan\Models\TransaksiPembayaranModel;
 

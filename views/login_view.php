@@ -9,9 +9,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Bootstrap 5 CSS -->
-    <link href="/SINTA-SaaS/assets/css/bootstrap.min.css" rel="stylesheet">
+    <link href="assets/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
-    <link href="/SINTA-SaaS/assets/css/bootstrap-icons.css" rel="stylesheet">
+    <link href="assets/css/bootstrap-icons.css" rel="stylesheet">
     
     <style>
         body {
@@ -81,9 +81,9 @@
         }
     </style>
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="/SINTA-SaaS/favicon.ico">
-    <link rel="shortcut icon" type="image/x-icon" href="/SINTA-SaaS/favicon.ico">
-    <link rel="apple-touch-icon" href="/SINTA-SaaS/apple-touch-icon.png">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
 </head>
 <body>
 
@@ -233,7 +233,7 @@
 
             <!-- Link to Student Portal -->
             <div class="text-center mt-3 pt-3 border-top" style="border-color: rgba(255, 255, 255, 0.1) !important;">
-                <a href="/SINTA-SaaS/login" class="text-decoration-none text-muted-custom hover:text-white" style="font-size: 0.85rem; transition: color 0.2s;">
+                <a href="login" class="text-decoration-none text-muted-custom hover:text-white" style="font-size: 0.85rem; transition: color 0.2s;">
                     <i class="bi bi-mortarboard me-1.5"></i>Login Khusus Siswa
                 </a>
             </div>
@@ -241,9 +241,9 @@
     </div>
 
     <!-- Bootstrap Bundle JS -->
-    <script src="/SINTA-SaaS/assets/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/bootstrap.bundle.min.js"></script>
     <!-- Vue 3 Global Build -->
-    <script src="/SINTA-SaaS/assets/js/vue.global.prod.js"></script>
+    <script src="assets/js/vue.global.prod.js"></script>
 
     <script>
 {
@@ -289,7 +289,7 @@
                     },
                     fetchTenants(append = false) {
                         this.loadingTenants = true;
-                        fetch(`/SINTA-SaaS/api/v1/tenant/search?q=${encodeURIComponent(this.searchQuery)}&page=${this.page}&limit=10`)
+                        fetch(`api/v1/tenant/search?q=${encodeURIComponent(this.searchQuery)}&page=${this.page}&limit=10`)
                         .then(res => res.json())
                         .then(resData => {
                             this.loadingTenants = false;
@@ -343,7 +343,7 @@
                                 headers['X-Tenant-ID'] = this.form.tenant_id;
                             }
 
-                            const response = await fetch('/SINTA-SaaS/api/v1/auth/login', {
+                            const response = await fetch('api/v1/auth/login', {
                                 method: 'POST',
                                 headers: headers,
                                 body: JSON.stringify({
@@ -354,15 +354,15 @@
 
                             const data = await response.json();
 
-                            if (!response.ok) {
-                                throw new Error(data.error || 'Terjadi kesalahan sistem.');
+                            if (response.ok && data.success) {
+                                window.location.href = data.redirect || 'dashboard';
+                            } else {
+                                this.errorMsg = data.error || 'Email atau password salah.';
+                                this.loading = false;
                             }
 
-                            // Login sukses, arahkan ke dashboard
-                            window.location.href = '/SINTA-SaaS/dashboard';
-
                         } catch (err) {
-                            this.errorMsg = err.message;
+                            this.errorMsg = err.message || 'Terjadi kesalahan sistem.';
                             this.loading = false;
                         }
                     }

@@ -2,7 +2,7 @@
 
 namespace App\Modules\Siswa\Controllers;
 
-use App\Controllers\BaseController;
+use App\Core\BaseController;
 use App\Modules\Siswa\Services\SiswaService;
 
 class SiswaModuleController extends BaseController {

@@ -103,22 +103,22 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" data-turbo-track="reload">
     
     <!-- Bootstrap 5.3 CSS -->
-    <link href="/SINTA-SaaS/assets/css/bootstrap.min.css" rel="stylesheet" data-turbo-track="reload">
+    <link href="assets/css/bootstrap.min.css" rel="stylesheet" data-turbo-track="reload">
     
     <!-- Bootstrap Icons -->
-    <link href="/SINTA-SaaS/assets/css/bootstrap-icons.css" rel="stylesheet" data-turbo-track="reload">
+    <link href="assets/css/bootstrap-icons.css" rel="stylesheet" data-turbo-track="reload">
     
     <!-- jQuery 3.7.0 -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js" data-turbo-track="reload"></script>
     
     <!-- Bootstrap Bundle with Popper -->
-    <script src="/SINTA-SaaS/assets/js/bootstrap.bundle.min.js" data-turbo-track="reload"></script>
+    <script src="assets/js/bootstrap.bundle.min.js" data-turbo-track="reload"></script>
     
     <!-- Vue 3 Global Build -->
-    <script src="/SINTA-SaaS/assets/js/vue.global.prod.js" data-turbo-track="reload"></script>
+    <script src="assets/js/vue.global.prod.js" data-turbo-track="reload"></script>
     
     <!-- Axios (API Requests client) -->
-    <script src="/SINTA-SaaS/assets/js/axios.min.js" data-turbo-track="reload"></script>
+    <script src="assets/js/axios.min.js" data-turbo-track="reload"></script>
     
     <!-- Tailwind CSS (Play CDN) with Preflight disabled to prevent conflicts with Bootstrap -->
     <script data-turbo-track="reload">
@@ -148,16 +148,16 @@
         };
     </script>
     <script src="https://unpkg.com/core-js-bundle@3.37.1/minified.js"></script>
-    <link rel="stylesheet" href="/SINTA-SaaS/assets/css/tailwind.css">
+    <link rel="stylesheet" href="assets/css/tailwind.css">
 
     <!-- Hotwire Turbo Drive -->
-    <script src="/SINTA-SaaS/assets/js/turbo.es2017-umd.js" defer data-turbo-track="reload"></script>
+    <script src="assets/js/turbo.es2017-umd.js" defer data-turbo-track="reload"></script>
     
     <!-- SweetAlert2 (Loaded globally to support all pages offline) -->
-    <script src="/SINTA-SaaS/assets/js/sweetalert2.all.min.js" data-turbo-track="reload"></script>
+    <script src="assets/js/sweetalert2.all.min.js" data-turbo-track="reload"></script>
     
     <!-- Chart.js (Loaded globally to support offline graphs without race conditions) -->
-    <script src="/SINTA-SaaS/assets/js/chart.umd.js" data-turbo-track="reload"></script>
+    <script src="assets/js/chart.umd.js" data-turbo-track="reload"></script>
     
     <!-- Vue 3 Lifecycle Registry and Turbo Drive Integration -->
     <script>
