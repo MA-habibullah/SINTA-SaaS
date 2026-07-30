@@ -2,8 +2,7 @@
 
 /**
  * Migration PostgreSQL Schema 16: CMS (8 Tabel)
- * SSOT Reference: docs/portal_schema/cms.html
- * Format: return ['up' => closure, 'down' => closure] (WAJIB AGENTS.md)
+ * Format: return ['up' => closure, 'down' => closure]
  */
 
 return [
@@ -12,93 +11,92 @@ return [
         $pdo->exec("CREATE SCHEMA IF NOT EXISTS cms;");
 
         $pdo->exec("
-
-            CREATE TABLE IF NOT EXISTS cms.cms_settings (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                tenant_id UUID NULL REFERENCES core.tenants(id) ON DELETE CASCADE,
-                nama_cms_settings VARCHAR(255) NULL,
-                kategori VARCHAR(100) NULL,
-                deskripsi TEXT NULL,
-                is_active BOOLEAN NOT NULL DEFAULT true,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
-
             CREATE TABLE IF NOT EXISTS cms.cms_banners (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                tenant_id UUID NULL REFERENCES core.tenants(id) ON DELETE CASCADE,
+                tenant_id UUID NULL,
                 nama_cms_banners VARCHAR(255) NULL,
                 kategori VARCHAR(100) NULL,
                 deskripsi TEXT NULL,
                 is_active BOOLEAN NOT NULL DEFAULT true,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS cms.cms_posts (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                tenant_id UUID NULL REFERENCES core.tenants(id) ON DELETE CASCADE,
-                nama_cms_posts VARCHAR(255) NULL,
-                kategori VARCHAR(100) NULL,
-                deskripsi TEXT NULL,
-                is_active BOOLEAN NOT NULL DEFAULT true,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP
             );
 
             CREATE TABLE IF NOT EXISTS cms.cms_categories (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                tenant_id UUID NULL REFERENCES core.tenants(id) ON DELETE CASCADE,
+                tenant_id UUID NULL,
                 nama_cms_categories VARCHAR(255) NULL,
                 kategori VARCHAR(100) NULL,
                 deskripsi TEXT NULL,
                 is_active BOOLEAN NOT NULL DEFAULT true,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS cms.cms_pages (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                tenant_id UUID NULL REFERENCES core.tenants(id) ON DELETE CASCADE,
-                nama_cms_pages VARCHAR(255) NULL,
-                kategori VARCHAR(100) NULL,
-                deskripsi TEXT NULL,
-                is_active BOOLEAN NOT NULL DEFAULT true,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP
             );
 
             CREATE TABLE IF NOT EXISTS cms.cms_galleries (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                tenant_id UUID NULL REFERENCES core.tenants(id) ON DELETE CASCADE,
+                tenant_id UUID NULL,
                 nama_cms_galleries VARCHAR(255) NULL,
                 kategori VARCHAR(100) NULL,
                 deskripsi TEXT NULL,
                 is_active BOOLEAN NOT NULL DEFAULT true,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS cms.cms_widgets (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                tenant_id UUID NULL REFERENCES core.tenants(id) ON DELETE CASCADE,
-                nama_cms_widgets VARCHAR(255) NULL,
-                kategori VARCHAR(100) NULL,
-                deskripsi TEXT NULL,
-                is_active BOOLEAN NOT NULL DEFAULT true,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP
             );
 
             CREATE TABLE IF NOT EXISTS cms.cms_menus (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                tenant_id UUID NULL REFERENCES core.tenants(id) ON DELETE CASCADE,
+                tenant_id UUID NULL,
                 nama_cms_menus VARCHAR(255) NULL,
                 kategori VARCHAR(100) NULL,
                 deskripsi TEXT NULL,
                 is_active BOOLEAN NOT NULL DEFAULT true,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS cms.cms_pages (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                tenant_id UUID NULL,
+                nama_cms_pages VARCHAR(255) NULL,
+                kategori VARCHAR(100) NULL,
+                deskripsi TEXT NULL,
+                is_active BOOLEAN NOT NULL DEFAULT true,
+                created_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS cms.cms_posts (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                tenant_id UUID NULL,
+                nama_cms_posts VARCHAR(255) NULL,
+                kategori VARCHAR(100) NULL,
+                deskripsi TEXT NULL,
+                is_active BOOLEAN NOT NULL DEFAULT true,
+                created_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS cms.cms_settings (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                tenant_id UUID NULL,
+                nama_cms_settings VARCHAR(255) NULL,
+                kategori VARCHAR(100) NULL,
+                deskripsi TEXT NULL,
+                is_active BOOLEAN NOT NULL DEFAULT true,
+                created_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS cms.cms_widgets (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                tenant_id UUID NULL,
+                nama_cms_widgets VARCHAR(255) NULL,
+                kategori VARCHAR(100) NULL,
+                deskripsi TEXT NULL,
+                is_active BOOLEAN NOT NULL DEFAULT true,
+                created_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP
             );
 
         ");

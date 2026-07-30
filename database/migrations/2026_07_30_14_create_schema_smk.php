@@ -2,8 +2,7 @@
 
 /**
  * Migration PostgreSQL Schema 14: SMK (5 Tabel)
- * SSOT Reference: docs/portal_schema/smk.html
- * Format: return ['up' => closure, 'down' => closure] (WAJIB AGENTS.md)
+ * Format: return ['up' => closure, 'down' => closure]
  */
 
 return [
@@ -12,60 +11,59 @@ return [
         $pdo->exec("CREATE SCHEMA IF NOT EXISTS smk;");
 
         $pdo->exec("
-
             CREATE TABLE IF NOT EXISTS smk.mitra_dudi (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                tenant_id UUID NULL REFERENCES core.tenants(id) ON DELETE CASCADE,
+                tenant_id UUID NULL,
                 nama_mitra_dudi VARCHAR(255) NULL,
                 kategori VARCHAR(100) NULL,
                 deskripsi TEXT NULL,
                 is_active BOOLEAN NOT NULL DEFAULT true,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS smk.pkl_penempatan (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                tenant_id UUID NULL REFERENCES core.tenants(id) ON DELETE CASCADE,
-                nama_pkl_penempatan VARCHAR(255) NULL,
-                kategori VARCHAR(100) NULL,
-                deskripsi TEXT NULL,
-                is_active BOOLEAN NOT NULL DEFAULT true,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP
             );
 
             CREATE TABLE IF NOT EXISTS smk.pkl_jurnal_harian (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                tenant_id UUID NULL REFERENCES core.tenants(id) ON DELETE CASCADE,
+                tenant_id UUID NULL,
                 nama_pkl_jurnal_harian VARCHAR(255) NULL,
                 kategori VARCHAR(100) NULL,
                 deskripsi TEXT NULL,
                 is_active BOOLEAN NOT NULL DEFAULT true,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS smk.pkl_penempatan (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                tenant_id UUID NULL,
+                nama_pkl_penempatan VARCHAR(255) NULL,
+                kategori VARCHAR(100) NULL,
+                deskripsi TEXT NULL,
+                is_active BOOLEAN NOT NULL DEFAULT true,
+                created_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP
             );
 
             CREATE TABLE IF NOT EXISTS smk.pkl_penilaian (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                tenant_id UUID NULL REFERENCES core.tenants(id) ON DELETE CASCADE,
+                tenant_id UUID NULL,
                 nama_pkl_penilaian VARCHAR(255) NULL,
                 kategori VARCHAR(100) NULL,
                 deskripsi TEXT NULL,
                 is_active BOOLEAN NOT NULL DEFAULT true,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP
             );
 
             CREATE TABLE IF NOT EXISTS smk.ukk_penilaian (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                tenant_id UUID NULL REFERENCES core.tenants(id) ON DELETE CASCADE,
+                tenant_id UUID NULL,
                 nama_ukk_penilaian VARCHAR(255) NULL,
                 kategori VARCHAR(100) NULL,
                 deskripsi TEXT NULL,
                 is_active BOOLEAN NOT NULL DEFAULT true,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP
             );
 
         ");
