@@ -54,16 +54,26 @@ class SiswaAuthModuleController extends BaseController {
         try {
             $db = Database::getConnection();
 
+            $query = "
+                SELECT s.id, s.tenant_id, s.nisn, s.nis, s.nama_lengkap,
+                       s.password, s.is_first_login, s.is_active, s.status_siswa,
+                       t.nama_sekolah, t.status AS tenant_status
+                FROM siswa.siswa s
+                JOIN core.tenants t ON t.id = s.tenant_id
+                WHERE s.nisn = :nisn
+            ";
+
+            $params = ['nisn' => $nisn];
+
             if ($this->tenantId !== null) {
-                $stmt = $db->prepare("SELECT * FROM siswa.siswa WHERE nisn = :nisn AND tenant_id = :tenant_id LIMIT 1");
-                $stmt->execute([
-                    'nisn' => $nisn,
-                    'tenant_id' => $this->tenantId
-                ]);
-            } else {
-                $stmt = $db->prepare("SELECT * FROM siswa.siswa WHERE nisn = :nisn LIMIT 1");
-                $stmt->execute(['nisn' => $nisn]);
+                $query .= " AND s.tenant_id = :tenant_id";
+                $params['tenant_id'] = $this->tenantId;
             }
+
+            $query .= " LIMIT 1";
+
+            $stmt = $db->prepare($query);
+            $stmt->execute($params);
             $siswa = $stmt->fetch(PDO::FETCH_ASSOC);
 
             $genericError = 'NISN atau Password yang Anda masukkan salah.';
@@ -72,11 +82,11 @@ class SiswaAuthModuleController extends BaseController {
                 $this->jsonResponse(false, null, $genericError, 200);
             }
 
-            $stmtTenant = $db->prepare("SELECT status, nama_sekolah FROM core.tenants WHERE id = :tenant_id LIMIT 1");
-            $stmtTenant->execute(['tenant_id' => $siswa['tenant_id']]);
-            $tenant = $stmtTenant->fetch(PDO::FETCH_ASSOC);
+            if (!$siswa['is_active'] || $siswa['status_siswa'] !== 'aktif') {
+                $this->jsonResponse(false, null, 'Akun siswa tidak aktif atau telah lulus/pindah.', 200);
+            }
 
-            if (!$tenant || $tenant['status'] !== 'active') {
+            if ($siswa['tenant_status'] !== 'active') {
                 $this->jsonResponse(false, null, 'Akses sekolah Anda sedang ditangguhkan atau dinonaktifkan. Silakan hubungi operator sekolah.', 200);
             }
 
@@ -90,7 +100,7 @@ class SiswaAuthModuleController extends BaseController {
             $_SESSION['logged_in'] = true;
             $_SESSION['user_id'] = $siswa['id'];
             $_SESSION['tenant_id'] = $siswa['tenant_id'];
-            $_SESSION['nama_sekolah'] = $tenant['nama_sekolah'];
+            $_SESSION['nama_sekolah'] = $siswa['nama_sekolah'];
             $_SESSION['role_name'] = 'siswa';
             $_SESSION['roles'] = ['siswa'];
             $_SESSION['nama_lengkap'] = $siswa['nama_lengkap'];
