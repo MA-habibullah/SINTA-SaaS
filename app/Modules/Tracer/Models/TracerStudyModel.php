@@ -6,7 +6,7 @@ use App\Core\BaseModel;
 use PDO;
 
 class TracerStudyModel extends BaseModel {
-    protected static string $table = 'tracer_study';
+    protected static string $table = 'tracer_study_alumni';
     protected static string $schema = 'tracer';
 
     public static function getTracerBySiswa(string $tenantId, string $siswaId): array {

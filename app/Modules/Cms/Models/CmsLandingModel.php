@@ -6,7 +6,7 @@ use App\Core\BaseModel;
 use PDO;
 
 class CmsLandingModel extends BaseModel {
-    protected static string $table = 'landing_section';
+    protected static string $table = 'cms_pages';
     protected static string $schema = 'cms';
 
     public static function getSections(string $tenantId): array {

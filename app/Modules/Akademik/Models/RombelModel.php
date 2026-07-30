@@ -6,7 +6,7 @@ use App\Core\BaseModel;
 use PDO;
 
 class RombelModel extends BaseModel {
-    protected static string $table = 'rombel';
+    protected static string $table = 'kelas';
     protected static string $schema = 'akademik';
 
     public static function findById(string $tenantId, string $rombelId): ?array {

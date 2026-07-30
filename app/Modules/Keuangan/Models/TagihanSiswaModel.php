@@ -6,7 +6,7 @@ use App\Core\BaseModel;
 use PDO;
 
 class TagihanSiswaModel extends BaseModel {
-    protected static string $table = 'tagihan_siswa';
+    protected static string $table = 'transaksi_spp_tagihan';
     protected static string $schema = 'keuangan';
 
     public static function getTagihanUnpaid(string $tenantId, string $siswaId): array {

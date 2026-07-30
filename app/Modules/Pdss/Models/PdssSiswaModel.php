@@ -6,7 +6,7 @@ use App\Core\BaseModel;
 use PDO;
 
 class PdssSiswaModel extends BaseModel {
-    protected static string $table = 'pdss_siswa_eligible';
+    protected static string $table = 'pdss_manual_eligible';
     protected static string $schema = 'pdss';
 
     public static function getEligibleSiswa(string $tenantId, string $tahunAjaranId): array {

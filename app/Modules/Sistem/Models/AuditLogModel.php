@@ -6,7 +6,7 @@ use App\Core\BaseModel;
 use PDO;
 
 class AuditLogModel extends BaseModel {
-    protected static string $table = 'audit_log';
+    protected static string $table = 'activity_logs';
     protected static string $schema = 'sistem';
 
     public static function getLogs(string $tenantId, int $limit = 50, int $offset = 0): array {

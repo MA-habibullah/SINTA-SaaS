@@ -6,7 +6,7 @@ use App\Core\BaseModel;
 use PDO;
 
 class InventarisBarangModel extends BaseModel {
-    protected static string $table = 'inventaris_barang';
+    protected static string $table = 'barang_modal';
     protected static string $schema = 'sarpras';
 
     public static function getInventaris(string $tenantId, int $limit = 50, int $offset = 0): array {

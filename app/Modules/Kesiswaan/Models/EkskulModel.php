@@ -6,7 +6,7 @@ use App\Core\BaseModel;
 use PDO;
 
 class EkskulModel extends BaseModel {
-    protected static string $table = 'ekstrakurikuler';
+    protected static string $table = 'master_ekskul';
     protected static string $schema = 'kesiswaan';
 
     public static function getActiveEkskul(string $tenantId): array {
