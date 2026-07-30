@@ -210,13 +210,39 @@ class BaseController {
     }
 
     /**
-     * Send JSON Response
+     * Standardized JSON Response (Strict AGENTS.md Anti-Credential Leakage)
      */
-    protected function jsonResponse(mixed $data, int $statusCode = 200): void {
-        header('Content-Type: application/json; charset=utf-8');
+    protected function jsonResponse(bool $success, mixed $data = null, ?string $error = null, int $statusCode = 200): void {
         http_response_code($statusCode);
-        echo json_encode($data);
+        header('Content-Type: application/json; charset=utf-8');
+
+        // Sensitif Unset Guard
+        if (is_array($data)) {
+            $data = $this->sanitizeDataArray($data);
+        }
+
+        echo json_encode([
+            'success' => $success,
+            'data'    => $data,
+            'error'   => $error
+        ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
         exit;
+    }
+
+    /**
+     * Recursive credential & sensitive token scrubber
+     */
+    private function sanitizeDataArray(array $arr): array {
+        foreach ($arr as $key => &$val) {
+            if (in_array(strtolower((string)$key), ['password', 'password_hash', 'token', 'remember_token', 'api_key'], true)) {
+                unset($arr[$key]);
+                continue;
+            }
+            if (is_array($val)) {
+                $val = $this->sanitizeDataArray($val);
+            }
+        }
+        return $arr;
     }
 
     /**

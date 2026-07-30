@@ -4,28 +4,19 @@ header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
 header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' https: data:; connect-src 'self' data: blob: https:; worker-src 'self' blob:;");
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 // Load Composer Autoloader if available
 if (file_exists(__DIR__ . '/vendor/autoload.php')) {
     require_once __DIR__ . '/vendor/autoload.php';
 }
 
-/**
- * Front Controller & Router
- * Entry point untuk semua request aplikasi SINTA-SaaS
- */
-
-// 1. Definisikan Autoloader Kelas PSR-4 Sederhana (Tanpa Composer)
+// 1. Definisikan Autoloader Kelas PSR-4 Sederhana
 spl_autoload_register(function ($class) {
     $prefix = 'App\\';
     $base_dir = __DIR__ . '/app/';
 
     $len = strlen($prefix);
     if (strncmp($prefix, $class, $len) !== 0) {
-        return; // Bukan namespace kita
+        return;
     }
 
     $relative_class = substr($class, $len);
@@ -36,12 +27,28 @@ spl_autoload_register(function ($class) {
     }
 });
 
+// Load Environment Configuration (.env)
+App\Core\Env::load(__DIR__);
+
+// Dynamic Error Display based on APP_DEBUG environment
+$appDebug = getenv('APP_DEBUG') ?: ($_ENV['APP_DEBUG'] ?? 'false');
+if ($appDebug === 'true') {
+    ini_set('display_errors', '1');
+    ini_set('display_startup_errors', '1');
+    error_reporting(E_ALL);
+} else {
+    ini_set('display_errors', '0');
+    ini_set('display_startup_errors', '0');
+    error_reporting(0);
+}
+
 // 2. Mulai Session Aman
 use App\Core\SessionManager;
 SessionManager::start();
 
 // Lacak Sesi Aktif Pengguna
 App\Helpers\SessionTracker::track();
+
 
 // ✅ Global Error Handler: Tangkap semua PHP/SQL error & simpan ke DB system_errors
 App\Helpers\ErrorTracker::register(true);
@@ -50,21 +57,20 @@ App\Helpers\ErrorTracker::register(true);
 $request_uri = $_SERVER['REQUEST_URI'];
 $path = parse_url($request_uri, PHP_URL_PATH);
 
-// Bersihkan path dari sub-folder XAMPP (case-insensitive, e.g. /sinta-saas/login -> /login)
-$project_folder = '/SINTA-SaaS';
-if (strncasecmp($path, $project_folder, strlen($project_folder)) === 0) {
-    $path = substr($path, strlen($project_folder));
-}
-
-if (str_starts_with($path, '/api/')) {
-    $logMsg = date('Y-m-d H:i:s') . " - " . $_SERVER['REQUEST_METHOD'] . " - " . $path . " - GET: " . json_encode($_GET) . " - POST: " . json_encode($_POST) . " - INPUT: " . file_get_contents('php://input') . "\n";
-    @file_put_contents(__DIR__ . '/scratch/api_requests.log', $logMsg, FILE_APPEND);
+// Bersihkan path dari sub-folder XAMPP / Laragon (e.g. /sinta/login atau /sinta-saas/login -> /login)
+$project_folders = ['/SINTA-SaaS', '/sinta'];
+foreach ($project_folders as $folder) {
+    if (strncasecmp($path, $folder, strlen($folder)) === 0) {
+        $path = substr($path, strlen($folder));
+        break;
+    }
 }
 
 // Standardisasi path kosong atau slash saja
 if (empty($path) || $path === '/') {
     $path = '/login';
 }
+
 
 // 4. Map Halaman & Endpoint API (Dilindungi Try-Catch untuk Response API yang Konsisten)
 try {

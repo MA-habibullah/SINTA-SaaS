@@ -28,22 +28,38 @@ spl_autoload_register(function ($class) {
     }
 });
 
+// Load Environment Configuration (.env)
+App\Core\Env::load(__DIR__);
+
 use App\Config\Database;
 
 try {
     $pdo = Database::getConnection();
+
     echo "=========================================\n";
     echo "Koneksi Database Berhasil Diperoleh.\n";
     echo "=========================================\n";
 
-    // 2. Buat tabel log pencatat migrasi jika belum ada di database
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS migrations (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            migration VARCHAR(255) NOT NULL,
-            executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB;
-    ");
+    // 2. Buat tabel log pencatat migrasi jika belum ada di database (MySQL / PostgreSQL Compatible)
+    $driver = getenv('DB_DRIVER') ?: ($_ENV['DB_DRIVER'] ?? 'mysql');
+    if ($driver === 'pgsql') {
+        $pdo->exec("CREATE SCHEMA IF NOT EXISTS core;");
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS public.migrations (
+                id SERIAL PRIMARY KEY,
+                migration VARCHAR(255) NOT NULL,
+                executed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+        ");
+    } else {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS migrations (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                migration VARCHAR(255) NOT NULL,
+                executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB;
+        ");
+    }
 
     // Tentukan direktori letak file migrasi
     $migrationsDir = __DIR__ . '/database/migrations';
@@ -58,6 +74,7 @@ try {
     // Ambil data migrasi yang sudah pernah terdaftar/dieksekusi
     $stmt = $pdo->query("SELECT migration FROM migrations");
     $executedMigrations = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
 
     // Dapatkan aksi dari argumen terminal (default: up)
     $action = $argv[1] ?? 'up';
