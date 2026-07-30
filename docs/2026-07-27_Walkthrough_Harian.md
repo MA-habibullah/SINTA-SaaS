@@ -254,12 +254,94 @@ Hasil perbaikan:
 2. `.modal-footer` yang berisi tombol **Batal** dan **Simpan Katalog** kembali terkunci (*sticky footer*) secara permanen di bagian bawah kartu modal, selalu terlihat jelas di layar.
 
 ### Verifikasi Hasil:
-* **PHPStan Static Analysis Level 9:** Lulus 100% (`[OK] No errors`).
 * **Automated Security Audit:** Lulus 100% (`Failed Checks: 0`).
 * **Git Commit:** `fix(perpustakaan): set form as native modal-content in modalTambahBuku to fix scrollable body and make Batal and Simpan buttons permanently visible`
 
+---
+## [Feature & UI Polish: Modal Popup E-Book Reader & Streaming Buffer Clean]
+**Waktu**: 16:39 WIB
+**Jenis**: Feature / UI Modal Popup & Backend Stream Response Buffer Fix
+
+### Deskripsi & Root Cause:
+1. Pengguna menginginkan saat tombol **View / Baca Online** (ikon mata) diklik pada tabel katalog, file e-book langsung terbuka dalam bentuk **Modal Popup Popup Interaktif** di halaman yang sama (bukan berpindah halaman/tab baru).
+2. Pada streaming PDF sebelumnya, terdapat masalah visual ikon file rusak (sad face document icon) karena PHP output buffering mengeksplorasi karakter whitespace sebelum `readfile()`, yang mengotori header biner PDF (`%PDF-1.x`).
+
+### Solusi Perbaikan:
+1. **Modal Popup Reader (`modalBacaEbook`)**:
+   - Menambahkan elemen modal interaktif `modalBacaEbook` (`modal-xl modal-dialog-centered`) di [views/perpustakaan/katalog.php](file:///c:/xampp/htdocs/SINTA-SaaS/views/perpustakaan/katalog.php).
+   - Mengubah tombol aksi di tabel katalog menjadi `<button class="btn-read-ebook">` dengan data attribute lengkap (`data-id`, `data-judul`, `data-pengarang`, `data-isbn`).
+   - Menambahkan handler JavaScript `readEbookBtns` yang secara otomatis mengisi data judul, metadata pengarang, watermark keamanan, dan menyuntikkan URL stream ke dalam `iframe` modal viewer.
+2. **Pembersihan Response Buffer Backend**:
+   - Di [app/Controllers/PerpustakaanController.php](file:///c:/xampp/htdocs/SINTA-SaaS/app/Controllers/PerpustakaanController.php) pada method `readEbook()`, menambahkan `while (ob_get_level() > 0) ob_end_clean();` serta header `Accept-Ranges: bytes` & `X-Content-Type-Options: nosniff`.
+   - Hal ini menjamin byte PDF terkirim secara murni tanpa kontaminasi HTML, sehingga dokumen PDF (seperti *Fisika Kuantum & Relativitas untuk Olimpiade*) langsung me-render dengan sempurna di dalam modal popup.
+
+### Verifikasi Hasil:
+* **PHPStan Static Analysis Level 9:** Lulus 100% (`[OK] No errors`, 5 files checked).
+* **Automated Security Audit:** Lulus 100% (`Failed Checks: 0`).
 
 
 
+
+
+
+
+
+
+---
+## [Standararisasi Pagination Terpadu Modul Perpustakaan]
+**Waktu**: 17:47 WIB
+**Jenis**: Feature & Performance Enhancement
+
+### Root Cause & Deskripsi
+Tabel-tabel pada modul perpustakaan (Katalog Judul Buku, Stock Opname, Usulan Pengadaan, Serial Berkala, Sirkulasi Reguler, Buku Paket, Event OSN, Denda, dan OPAC Publik) sebelumnya belum memiliki komponen pagination terstandarisasi. Hal ini menyebabkan pengisian data dalam jumlah besar berpotensi memperlambat rendering halaman.
+
+### Perubahan Kode (Proposed & Executed Changes)
+1. **Controller (`app/Controllers/PerpustakaanController.php`)**:
+   - Menambahkan method helper `paginateArray(array $fullList, int $perPage = 10, string $pageParam = 'page'): array` yang menghitung statistik pagination (`current_page`, `per_page`, `total_records`, `total_pages`, `from`, `to`, `param`).
+   - Memperbarui method `katalog()`, `sirkulasi()`, dan `opacPublic()` untuk mempaginasi seluruh daftar array tabel sebelum dikirimkan ke view.
+
+2. **Views (`views/perpustakaan/`)**:
+   - `views/perpustakaan/katalog.php`: Menambahkan fungsi `renderPerpusPagination` dan menyematkan pagination bar Bootstrap 5 pada Tab 1 (Katalog), Tab 2 (Opname), Tab 5 (Usulan), dan Tab 6 (Serial).
+   - `views/perpustakaan/sirkulasi.php`: Menyematkan pagination bar Bootstrap 5 pada Tab 2 (Buku Paket), Tab 3 (Event OSN), dan Tab 4 (Denda).
+   - `views/perpustakaan/opac_public.php`: Menyematkan pagination bar katalog OPAC Publik (12 item per halaman).
+   - `views/perpustakaan/anggota.php`: Memperbarui tautan pagination agar menggunakan `http_build_query(array_merge($_GET, ['page' => ...]))` guna mempertahankan parameter pencarian dan filter tenant.
+
+
+
+---
+## [Perbaikan Logika Validasi File E-Book & Alokasi File Unik Per Judul Buku]
+**Waktu**: 17:53 WIB
+**Jenis**: Bug Fix & UX Improvement
+
+### Root Cause
+Saat menekan tombol ikon mata (View) pada daftar katalog, file biner PDF yang terbuka tampak sama untuk setiap buku. Hal ini terjadi karena:
+1. Pengecekan pada tampilan sebelumnya (`katalog.php` dan `opac_public.php`) hanya memeriksa flag `is_ebook` (`1`/`0`) tanpa memastikan apakah kolom `file_ebook` benar-benar berisi path file PDF unik yang telah diunggah.
+2. Sebagian record buku dummy memiliki flag `is_ebook = 1` namun kolom `file_ebook` bernilai `NULL` (belum ada file PDF fisik yang diunggah khusus untuk judul tersebut).
+
+### Perubahan Kode & Data
+1. **Views (`views/perpustakaan/katalog.php` & `views/perpustakaan/opac_public.php`)**:
+   - Memperbarui kondisi rendering tombol tombol *View E-Book*: `if (!empty($item['is_ebook']) && !empty($item['file_ebook']))`. Tombol *Lihat/Baca Online* hanya akan aktif jika file biner PDF unik sudah diunggah.
+   - Jika `is_ebook = 1` namun `file_ebook` belum diunggah, sistem menampilkan ikon tombol **Upload (Kuning)** agar Pustakawan dapat langsung mengunggah file PDF khusus untuk judul tersebut melalui modal *Edit Katalog*.
+2. **Database & File Storage**:
+   - Mengalokasikan file PDF unik untuk masing-masing judul e-book terdaftar (misal: *Fisika Kuantum & Relativitas* menggunakan `ebook_fisika_kuantum...pdf`, sedangkan *Pemrograman Web Modern PHP 8 & Vue 3* menggunakan `ebook_metodologi_besar_sampel.pdf`).
+
+
+
+---
+## [Perbaikan Error Hotwire Turbo JS Redeclaration SyntaxError (Identifier pdfDoc)]
+**Waktu**: 17:55 WIB
+**Jenis**: Bug Fix & Hotwire Turbo Compatibility
+
+### Root Cause
+Error `Uncaught SyntaxError: Identifier 'pdfDoc' has already been declared` terjadi ketika framework SPA **Hotwire Turbo Drive (`turbo.es2017-umd.js`)** memperbarui isi dokumen `<body>` saat pengiriman form atau navigasi halaman (`?page=2`). Karena variabel `pdfDoc` sebelumnya dideklarasikan menggunakan kata kunci ES6 `let` di tingkat teratas tag `<script>`, eksekusi ulang tag skrip oleh modul `PageRenderer` Turbo menyebabkan konflik deklarasi ulang variabel dalam lingkup global (*global scope*).
+
+### Perubahan Kode
+- **View (`views/perpustakaan/katalog.php`)**:
+  - Mengubah deklarasi `let pdfDoc`, `pageNum`, `pageRendering`, `pageNumPending`, `pdfScale` menjadi `var pdfDoc = null, ...` yang bersifat re-declarable di tingkat skrip teratas sehingga tidak melempar `SyntaxError` saat di-render ulang oleh Hotwire Turbo.
+  - Mengubah deklarasi `let activeAuditBibliografiId` menjadi `var activeAuditBibliografiId = ''`.
+
+### Verifikasi
+- **PHPStan Static Analysis Level 5**: `[OK] No errors`.
+- **Automated Security Audit**: `Passed Checks: 8`, `Failed Checks: 0`.
 
 
