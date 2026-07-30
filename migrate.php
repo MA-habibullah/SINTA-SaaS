@@ -72,9 +72,8 @@ try {
     sort($files); 
 
     // Ambil data migrasi yang sudah pernah terdaftar/dieksekusi
-    $stmt = $pdo->query("SELECT migration FROM migrations");
+    $stmt = $pdo->query($driver === 'pgsql' ? "SELECT migration FROM public.migrations" : "SELECT migration FROM migrations");
     $executedMigrations = $stmt->fetchAll(PDO::FETCH_COLUMN);
-
 
     // Dapatkan aksi dari argumen terminal (default: up)
     $action = $argv[1] ?? 'up';
@@ -82,39 +81,59 @@ try {
     if ($action === 'fresh') {
         echo "=========================================\n";
         echo "PERINGATAN: Menjalankan Perintah FRESH!\n";
-        echo "Semua tabel aplikasi akan dihapus & di-migrate ulang.\n";
+        echo "Semua schema & tabel aplikasi akan dihapus & di-migrate ulang.\n";
         echo "=========================================\n";
 
-        // Nonaktifkan pemeriksaan foreign key sementara untuk drop aman
-        $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
-
-        // Ambil semua tabel secara dinamis
-        $stmt = $pdo->query("SHOW TABLES");
-        $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        
-        foreach ($tables as $table) {
-            $pdo->exec("DROP TABLE IF EXISTS `{$table}`;");
-            echo "Menghapus tabel: {$table}...\n";
+        if ($driver === 'pgsql') {
+            $pdo->exec("
+                DROP SCHEMA IF EXISTS core CASCADE;
+                DROP SCHEMA IF EXISTS cms CASCADE;
+                DROP SCHEMA IF EXISTS akademik CASCADE;
+                DROP SCHEMA IF EXISTS siswa CASCADE;
+                DROP SCHEMA IF EXISTS kesiswaan CASCADE;
+                DROP SCHEMA IF EXISTS bk CASCADE;
+                DROP SCHEMA IF EXISTS pdss CASCADE;
+                DROP SCHEMA IF EXISTS tracer CASCADE;
+                DROP SCHEMA IF EXISTS kepegawaian CASCADE;
+                DROP SCHEMA IF EXISTS keuangan CASCADE;
+                DROP SCHEMA IF EXISTS perpustakaan CASCADE;
+                DROP SCHEMA IF EXISTS sarpras CASCADE;
+                DROP SCHEMA IF EXISTS persuratan CASCADE;
+                DROP SCHEMA IF EXISTS absensi CASCADE;
+                DROP SCHEMA IF EXISTS smk CASCADE;
+                DROP SCHEMA IF EXISTS sistem CASCADE;
+                DROP TABLE IF EXISTS public.migrations CASCADE;
+            ");
+            echo "Seluruh Schema PostgreSQL berhasil di-drop.\n";
+            $pdo->exec("CREATE SCHEMA IF NOT EXISTS core;");
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS public.migrations (
+                    id SERIAL PRIMARY KEY,
+                    migration VARCHAR(255) NOT NULL,
+                    executed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+            ");
+        } else {
+            $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
+            $stmt = $pdo->query("SHOW TABLES");
+            $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            foreach ($tables as $table) {
+                $pdo->exec("DROP TABLE IF EXISTS `{$table}`;");
+            }
+            $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS migrations (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    migration VARCHAR(255) NOT NULL,
+                    executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB;
+            ");
         }
 
-        // Aktifkan kembali pemeriksaan foreign key
-        $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
-        echo "Semua tabel berhasil dihapus.\n";
-        echo "Menginisialisasi ulang database...\n";
-
-        // Buat kembali tabel log migrations
-        $pdo->exec("
-            CREATE TABLE IF NOT EXISTS migrations (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                migration VARCHAR(255) NOT NULL,
-                executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB;
-        ");
-
-        // Reset list migrasi yang tereksekusi agar memicu migration ulang dari awal
         $executedMigrations = [];
         $action = 'up';
     }
+
 
     if ($action === 'rollback') {
         // Jalankan aksi rollback (down) untuk file migrasi terakhir
@@ -135,7 +154,8 @@ try {
                 $migrationData['down']($pdo);
                 
                 // Hapus dari catatan log migrasi
-                $stmt = $pdo->prepare("DELETE FROM migrations WHERE migration = :migration");
+                $queryDel = $driver === 'pgsql' ? "DELETE FROM public.migrations WHERE migration = :migration" : "DELETE FROM migrations WHERE migration = :migration";
+                $stmt = $pdo->prepare($queryDel);
                 $stmt->execute(['migration' => $lastMigration]);
                 
                 echo "Sukses: Rollback untuk {$lastMigration} selesai.\n";
@@ -150,7 +170,7 @@ try {
         $newMigrations = [];
         foreach ($files as $file) {
             $filename = basename($file);
-            if (!in_array($filename, $executedMigrations)) {
+            if (!in_array($filename, $executedMigrations, true)) {
                 $newMigrations[] = $file;
             }
         }
@@ -170,8 +190,10 @@ try {
                 $migrationData['up']($pdo);
                 
                 // Catat dalam log migrations agar tidak dijalankan ulang
-                $stmt = $pdo->prepare("INSERT INTO migrations (migration) VALUES (:migration)");
+                $queryIns = $driver === 'pgsql' ? "INSERT INTO public.migrations (migration) VALUES (:migration)" : "INSERT INTO migrations (migration) VALUES (:migration)";
+                $stmt = $pdo->prepare($queryIns);
                 $stmt->execute(['migration' => $filename]);
+
                 
                 echo "Sukses: Migrasi {$filename} selesai.\n";
             } else {
