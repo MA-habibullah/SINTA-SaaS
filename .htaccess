@@ -1,11 +1,10 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteBase /SINTA-SaaS/
 
     # Jangan mengarahkan request jika file atau direktori fisik memang ada di server
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
 
-    # Arahkan seluruh request sisa (seperti /api/v1/... atau /dashboard) ke index.php
+    # Arahkan seluruh request sisa (seperti /login, /admin, /api/v1/...) ke index.php
     RewriteRule ^(.*)$ index.php [L,QSA]
 </IfModule>
