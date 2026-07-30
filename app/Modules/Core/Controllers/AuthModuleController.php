@@ -54,6 +54,37 @@ class AuthModuleController extends BaseController {
 
         $genericError = 'Email atau password salah.';
 
+        // --- Rate Limiting: Max 5 login attempts per IP per 15 menit ---
+        $throttleKey   = 'login_attempts_' . md5($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+        $throttleTime  = 'login_attempts_time_' . md5($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+        $maxAttempts   = 5;
+        $windowSeconds = 900; // 15 menit
+
+        \App\Core\SessionManager::start();
+        $attempts  = (int)($_SESSION[$throttleKey]  ?? 0);
+        $firstTime = (int)($_SESSION[$throttleTime] ?? 0);
+
+        // Reset window jika sudah lewat 15 menit
+        if ($firstTime > 0 && (time() - $firstTime) > $windowSeconds) {
+            $_SESSION[$throttleKey]  = 0;
+            $_SESSION[$throttleTime] = 0;
+            $attempts = 0;
+        }
+
+        // Blokir jika sudah melebihi batas
+        if ($attempts >= $maxAttempts) {
+            $remaining = $windowSeconds - (time() - $firstTime);
+            $this->jsonResponse(false, null, "Terlalu banyak percobaan login. Coba lagi dalam " . ceil($remaining / 60) . " menit.", 429);
+        }
+
+        // Catat percobaan pertama
+        if ($attempts === 0) {
+            $_SESSION[$throttleTime] = time();
+        }
+        // --- End Rate Limiting ---
+
+
+
         try {
             $userModel = new UserModel();
             $user = $userModel->findByEmailAndTenant($email, $this->tenantId);
@@ -74,6 +105,7 @@ class AuthModuleController extends BaseController {
             }
 
             if (!$user) {
+                $_SESSION[$throttleKey] = ($attempts + 1);
                 $this->jsonResponse(false, null, $genericError, 200);
             }
 
@@ -94,8 +126,13 @@ class AuthModuleController extends BaseController {
             }
 
             if (!password_verify($password, $user['password'])) {
+                $_SESSION[$throttleKey] = ($attempts + 1);
                 $this->jsonResponse(false, null, $genericError, 200);
             }
+
+            // Login berhasil — reset throttle counter
+            $_SESSION[$throttleKey]  = 0;
+            $_SESSION[$throttleTime] = 0;
 
             SessionManager::start();
             session_regenerate_id(true);
