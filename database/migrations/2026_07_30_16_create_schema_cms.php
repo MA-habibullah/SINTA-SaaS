@@ -14,7 +14,7 @@ return [
             CREATE TABLE IF NOT EXISTS cms.cms_banners (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 tenant_id UUID NULL,
-                nama_cms_banners VARCHAR(255) NULL,
+                judul VARCHAR(255) NULL,
                 kategori VARCHAR(100) NULL,
                 deskripsi TEXT NULL,
                 is_active BOOLEAN NOT NULL DEFAULT true,

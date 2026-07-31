@@ -14,7 +14,7 @@ return [
             CREATE TABLE IF NOT EXISTS sistem.activity_logs (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 tenant_id UUID NULL,
-                nama_activity_logs VARCHAR(255) NULL,
+                aktivitas VARCHAR(255) NULL,
                 kategori VARCHAR(100) NULL,
                 deskripsi TEXT NULL,
                 is_active BOOLEAN NOT NULL DEFAULT true,
@@ -25,7 +25,7 @@ return [
             CREATE TABLE IF NOT EXISTS sistem.agenda_sekolah (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 tenant_id UUID NULL,
-                nama_agenda_sekolah VARCHAR(255) NULL,
+                judul VARCHAR(255) NULL,
                 kategori VARCHAR(100) NULL,
                 deskripsi TEXT NULL,
                 is_active BOOLEAN NOT NULL DEFAULT true,
@@ -36,9 +36,12 @@ return [
             CREATE TABLE IF NOT EXISTS sistem.pengumuman (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 tenant_id UUID NULL,
-                nama_pengumuman VARCHAR(255) NULL,
-                kategori VARCHAR(100) NULL,
+                judul VARCHAR(255) NOT NULL,
                 deskripsi TEXT NULL,
+                kategori_id UUID NULL,
+                created_by UUID NULL,
+                visibilitas VARCHAR(50) DEFAULT 'public',
+                target_roles TEXT NULL,
                 is_active BOOLEAN NOT NULL DEFAULT true,
                 created_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP
@@ -47,7 +50,7 @@ return [
             CREATE TABLE IF NOT EXISTS sistem.system_errors (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 tenant_id UUID NULL,
-                nama_system_errors VARCHAR(255) NULL,
+                error_message VARCHAR(255) NULL,
                 kategori VARCHAR(100) NULL,
                 deskripsi TEXT NULL,
                 is_active BOOLEAN NOT NULL DEFAULT true,
@@ -69,7 +72,7 @@ return [
             CREATE TABLE IF NOT EXISTS sistem.ticket_faqs (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 tenant_id UUID NULL,
-                nama_ticket_faqs VARCHAR(255) NULL,
+                pertanyaan VARCHAR(255) NULL,
                 kategori VARCHAR(100) NULL,
                 deskripsi TEXT NULL,
                 is_active BOOLEAN NOT NULL DEFAULT true,
@@ -80,7 +83,7 @@ return [
             CREATE TABLE IF NOT EXISTS sistem.ticket_replies (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 tenant_id UUID NULL,
-                nama_ticket_replies VARCHAR(255) NULL,
+                reply_text VARCHAR(255) NULL,
                 kategori VARCHAR(100) NULL,
                 deskripsi TEXT NULL,
                 is_active BOOLEAN NOT NULL DEFAULT true,
@@ -91,7 +94,7 @@ return [
             CREATE TABLE IF NOT EXISTS sistem.tickets (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 tenant_id UUID NULL,
-                nama_tickets VARCHAR(255) NULL,
+                judul VARCHAR(255) NULL,
                 kategori VARCHAR(100) NULL,
                 deskripsi TEXT NULL,
                 is_active BOOLEAN NOT NULL DEFAULT true,
