@@ -34,9 +34,9 @@
                 type: type, message: message, source: source, lineno: lineno, stack: error ? error.stack : ''
             });
             if (navigator.sendBeacon) {
-                navigator.sendBeacon('/SINTA-SaaS/api/v1/log-js-error', payload);
+                navigator.sendBeacon('<?= $this->getBaseUrl() ?>/api/v1/log-js-error', payload);
             } else {
-                fetch('/SINTA-SaaS/api/v1/log-js-error', { method: 'POST', body: payload, keepalive: true }).catch(e=>{});
+                fetch('<?= $this->getBaseUrl() ?>/api/v1/log-js-error', { method: 'POST', body: payload, keepalive: true }).catch(e=>{});
             }
         }
         window.addEventListener('error', function(e) {
@@ -103,22 +103,22 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" data-turbo-track="reload">
     
     <!-- Bootstrap 5.3 CSS -->
-    <link href="assets/css/bootstrap.min.css" rel="stylesheet" data-turbo-track="reload">
+    <link href="<?= $this->getBaseUrl() ?>/assets/css/bootstrap.min.css" rel="stylesheet" data-turbo-track="reload">
     
     <!-- Bootstrap Icons -->
-    <link href="assets/css/bootstrap-icons.css" rel="stylesheet" data-turbo-track="reload">
+    <link href="<?= $this->getBaseUrl() ?>/assets/css/bootstrap-icons.css" rel="stylesheet" data-turbo-track="reload">
     
     <!-- jQuery 3.7.0 -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js" data-turbo-track="reload"></script>
     
     <!-- Bootstrap Bundle with Popper -->
-    <script src="assets/js/bootstrap.bundle.min.js" data-turbo-track="reload"></script>
+    <script src="<?= $this->getBaseUrl() ?>/assets/js/bootstrap.bundle.min.js" data-turbo-track="reload"></script>
     
     <!-- Vue 3 Global Build -->
-    <script src="assets/js/vue.global.prod.js" data-turbo-track="reload"></script>
+    <script src="<?= $this->getBaseUrl() ?>/assets/js/vue.global.prod.js" data-turbo-track="reload"></script>
     
     <!-- Axios (API Requests client) -->
-    <script src="assets/js/axios.min.js" data-turbo-track="reload"></script>
+    <script src="<?= $this->getBaseUrl() ?>/assets/js/axios.min.js" data-turbo-track="reload"></script>
     
     <!-- Tailwind CSS (Play CDN) with Preflight disabled to prevent conflicts with Bootstrap -->
     <script data-turbo-track="reload">
@@ -148,16 +148,16 @@
         };
     </script>
     <script src="https://unpkg.com/core-js-bundle@3.37.1/minified.js"></script>
-    <link rel="stylesheet" href="assets/css/tailwind.css">
+    <link rel="stylesheet" href="<?= $this->getBaseUrl() ?>/assets/css/tailwind.css">
 
     <!-- Hotwire Turbo Drive -->
-    <script src="assets/js/turbo.es2017-umd.js" defer data-turbo-track="reload"></script>
+    <script src="<?= $this->getBaseUrl() ?>/assets/js/turbo.es2017-umd.js" defer data-turbo-track="reload"></script>
     
     <!-- SweetAlert2 (Loaded globally to support all pages offline) -->
-    <script src="assets/js/sweetalert2.all.min.js" data-turbo-track="reload"></script>
+    <script src="<?= $this->getBaseUrl() ?>/assets/js/sweetalert2.all.min.js" data-turbo-track="reload"></script>
     
     <!-- Chart.js (Loaded globally to support offline graphs without race conditions) -->
-    <script src="assets/js/chart.umd.js" data-turbo-track="reload"></script>
+    <script src="<?= $this->getBaseUrl() ?>/assets/js/chart.umd.js" data-turbo-track="reload"></script>
     
     <!-- Vue 3 Lifecycle Registry and Turbo Drive Integration -->
     <script>
@@ -196,7 +196,7 @@
                 error => {
                     const status = error.response ? error.response.status : null;
                     if (status === 401) {
-                        window.location.href = '/SINTA-SaaS/login';
+                        window.location.href = '<?= $this->getBaseUrl() ?>/login';
                         return new Promise(() => {}); // Gantung request agar tidak memicu error modal/alert lain di halaman
                     }
                     const statusText = status || 'Network / Timeout Error';
@@ -739,9 +739,9 @@
         }
     </style>
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="/SINTA-SaaS/favicon.ico">
-    <link rel="shortcut icon" type="image/x-icon" href="/SINTA-SaaS/favicon.ico">
-    <link rel="apple-touch-icon" href="/SINTA-SaaS/apple-touch-icon.png">
+    <link rel="icon" type="image/x-icon" href="<?= $this->getBaseUrl() ?>/favicon.ico">
+    <link rel="shortcut icon" type="image/x-icon" href="<?= $this->getBaseUrl() ?>/favicon.ico">
+    <link rel="apple-touch-icon" href="<?= $this->getBaseUrl() ?>/apple-touch-icon.png">
 </head>
 <body>
 
@@ -778,7 +778,7 @@
 
 <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true && strpos($_SERVER['REQUEST_URI'] ?? '', '/bantuan') === false): ?>
     <!-- Floating Help Widget (FAB) -->
-    <a href="/SINTA-SaaS/bantuan" class="fab-help" title="Butuh Bantuan?">
+    <a href="<?= $this->getBaseUrl() ?>/bantuan" class="fab-help" title="Butuh Bantuan?">
         <i class="bi bi-question-lg fs-4"></i>
     </a>
 <?php endif; ?>

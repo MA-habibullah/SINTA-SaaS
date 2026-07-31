@@ -1,0 +1,481 @@
+<?php
+/**
+ * Layout Component: Sidebar (Dinamis Berbasis RBAC)
+ * Menu dimuat dari database secara real-time berdasarkan peran (role) user aktif di session.
+ */
+/** @var \App\Core\Controller $this */
+use App\Config\Database;
+
+$requestUri = $_SERVER['REQUEST_URI'];
+$roles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
+$roles = array_filter(array_map('trim', $roles));
+if (empty($roles)) {
+    $roles = [''];
+}
+$sidebarMenus = [];
+$unreadBadgeCount = 0;
+
+// Helper untuk mengecek active state berdasarkan path url.
+// Menggunakan EXACT MATCH murni: URL menu harus sama persis dengan
+// path URL saat ini (tanpa query string). Ini mencegah menu parent
+// (mis. Dashboard /perpustakaan) aktif saat di sub-halaman
+// (mis. /perpustakaan/sirkulasi).
+$isActive = function($paths) use ($requestUri) {
+    if (empty($paths) || $paths === '#') {
+        return '';
+    }
+
+    // Ambil hanya bagian path dari REQUEST_URI (tanpa query string dan trailing slash)
+    $currentPath = parse_url($requestUri, PHP_URL_PATH);
+    $currentPath = rtrim((string)$currentPath, '/');
+
+    $checkPath = function(string $path) use ($currentPath): bool {
+        if ($path === '#' || $path === '') {
+            return false;
+        }
+        // Normalisasi: hapus query string dari url menu, hapus trailing slash
+        $menuPath = (string)strtok($path, '?');
+        $menuPath = rtrim($menuPath, '/');
+
+        // Pure exact match: path saat ini harus sama persis dengan path menu
+        return $currentPath === $menuPath;
+    };
+
+    if (is_array($paths)) {
+        foreach ($paths as $path) {
+            if ($checkPath((string)$path)) {
+                return 'active';
+            }
+        }
+    } else {
+        if ($checkPath((string)$paths)) {
+            return 'active';
+        }
+    }
+    return '';
+};
+
+// Role normalization helper
+$normalizedRoles = [];
+foreach ($roles as $r) {
+    $clean = strtolower(trim((string)$r));
+    $normalizedRoles[] = $clean;
+    if (in_array($clean, ['super_admin', 'superadmin', 'admin', 'super admin'], true)) {
+        $normalizedRoles[] = 'super_admin';
+        $normalizedRoles[] = 'superadmin';
+        $normalizedRoles[] = 'admin';
+        $normalizedRoles[] = 'operator_sekolah';
+        $normalizedRoles[] = 'super_admin';
+    }
+}
+$roles = array_values(array_unique($normalizedRoles));
+
+// Pemuatan data menu dinamis dari database (Secure by Design - prepared statements)
+if (!empty($roles)) {
+    try {
+        $db = Database::getConnection();
+        $tenantId = $_SESSION['tenant_id'] ?? null;
+        
+        if ($tenantId) {
+            // Cek apakah tenant ini memiliki kustomisasi di role_menu_access
+            $stmtCheckCustom = $db->prepare("SELECT COUNT(*) FROM core.role_menu_access WHERE tenant_id = :tenant_id");
+            $stmtCheckCustom->execute(['tenant_id' => $tenantId]);
+            $hasCustomAccess = (int)$stmtCheckCustom->fetchColumn() > 0;
+            $accessTenantId = $hasCustomAccess ? $tenantId : '00000000-0000-0000-0000-000000000000';
+
+            // Ambil menu yang terpetakan untuk salah satu role user saat ini DAN diaktifkan untuk sekolah/tenant ini
+            $inClause = implode(',', array_fill(0, count($roles), '?'));
+            $sql = "SELECT DISTINCT m.* 
+                    FROM core.menus m
+                    JOIN core.tenant_menu_access tma ON m.id = tma.menu_id
+                    WHERE (tma.tenant_id = ? OR tma.tenant_id = '00000000-0000-0000-0000-000000000000')
+                      AND (
+                          m.id IN (
+                              SELECT rma.menu_id 
+                              FROM core.role_menu_access rma
+                              JOIN core.roles r ON rma.role_id = r.id
+                              WHERE LOWER(r.nama_role) IN ($inClause) AND (rma.tenant_id = ? OR rma.tenant_id = '00000000-0000-0000-0000-000000000000')
+                          )
+                          OR m.id IN (
+                              SELECT uma.menu_id 
+                              FROM core.user_menu_access uma 
+                              WHERE uma.user_id = ? AND (uma.tenant_id = ? OR uma.tenant_id = '00000000-0000-0000-0000-000000000000')
+                          )
+                      )
+                    ORDER BY m.parent_id ASC, m.urutan ASC";
+            $stmt = $db->prepare($sql);
+            $params = array_merge([$tenantId], $roles, [$accessTenantId, $_SESSION['user_id'] ?? '', $tenantId]);
+            $stmt->execute($params);
+        } else {
+            // Tanpa filter tenant (untuk Super Admin yang mengelola seluruh platform, gunakan fallback default)
+            $inClause = implode(',', array_fill(0, count($roles), '?'));
+            $sql = "SELECT DISTINCT m.* 
+                    FROM core.menus m
+                    JOIN core.role_menu_access rma ON m.id = rma.menu_id
+                    JOIN core.roles r ON rma.role_id = r.id
+                    WHERE LOWER(r.nama_role) IN ($inClause)
+                      AND (rma.tenant_id = '00000000-0000-0000-0000-000000000000' OR rma.tenant_id IS NOT NULL)
+                    ORDER BY m.parent_id ASC, m.urutan ASC";
+            $stmt = $db->prepare($sql);
+            $stmt->execute($roles);
+        }
+        $allMenus = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Rekonstruksi array menu datar menjadi pohon hirarki (Parent-Child)
+        $buildTree = function(array $menus, ?string $parentId = null) use (&$buildTree) {
+            $branch = [];
+            foreach ($menus as $menu) {
+                if ($menu['parent_id'] == $parentId) {
+                    $children = $buildTree($menus, $menu['id']);
+                    $menu['children'] = $children ?: [];
+                    $branch[] = $menu;
+                }
+            }
+            return $branch;
+        };
+        
+        $sidebarMenus = $buildTree($allMenus);
+
+        // Kustomisasi Istilah & Visibilitas Modul Keuangan (SPP) secara Dinamis
+        $customModulName = 'Keuangan & Pembayaran';
+        $visibilitasSiswa = 1;
+        if (!empty($_SESSION['tenant_id'])) {
+            try {
+                $stmtSet = $db->prepare("SELECT nama_modul, visibilitas_siswa FROM keuangan.transaksi_spp_pengaturan WHERE tenant_id = ?");
+                $stmtSet->execute([$_SESSION['tenant_id']]);
+                $setting = $stmtSet->fetch(PDO::FETCH_ASSOC);
+                if ($setting) {
+                    $customModulName = $setting['nama_modul'];
+                    $visibilitasSiswa = (int)$setting['visibilitas_siswa'];
+                }
+            } catch (\Throwable $e) {}
+        }
+
+        $filteredSidebarMenus = [];
+        foreach ($sidebarMenus as $menu) {
+            if ($menu['nama_menu'] == 'Keuangan') {
+                $menu['nama_menu'] = $customModulName;
+                if ($visibilitasSiswa === 0 && in_array('siswa', $roles)) {
+                    continue; // Sembunyikan modul keuangan dari dashboard siswa jika diset private
+                }
+            }
+            $filteredSidebarMenus[] = $menu;
+        }
+        $sidebarMenus = $filteredSidebarMenus;
+
+
+
+        if (in_array('siswa', $roles)) {
+            $siswaId = $_SESSION['user_id'] ?? '';
+
+            // Cek status siswa dari DB (BUKAN dari session, untuk mencegah session tampering)
+            $statusSiswa = 'Aktif'; // default
+            if (!empty($siswaId)) {
+                try {
+                    $stmtStatus = $db->prepare("SELECT status FROM siswa.siswa WHERE id = ? AND deleted_at IS NULL LIMIT 1");
+                    $stmtStatus->execute([$siswaId]);
+                    $statusSiswa = $stmtStatus->fetchColumn() ?: 'Aktif';
+                } catch (\Throwable $e) {
+                    // Fail-safe: jika DB error, anggap aktif (tidak tampilkan menu tracer)
+                }
+            }
+
+            // Inject URL dinamis untuk menu siswa:
+            // - "Data Diri" → redirect ke halaman edit profil siswa (dengan user_id)
+            // - "Data Pokok / Core Dapodik" (url=#) → redirect ke halaman profil siswa
+            // Menu lainnya tetap berasal dari database (role_menu_access), sehingga
+            // konfigurasi di halaman /konfigurasi/akses tetap berlaku.
+            foreach ($sidebarMenus as &$menu) {
+                // Inject URL untuk "Data Diri"
+                if (stripos($menu['nama_menu'], 'Data Diri') !== false && !empty($siswaId)) {
+                    $menu['url'] = '<?= $this->getBaseUrl() ?>/pengguna';
+                }
+                // Inject URL untuk "Data Pokok / Core Dapodik" (parent dengan url=#)
+                // Untuk siswa, tampilkan profil mereka sendiri
+                if ((stripos($menu['nama_menu'], 'Data Pokok') !== false || stripos($menu['nama_menu'], 'Core Dapodik') !== false) && !empty($siswaId)) {
+                    $menu['url'] = '<?= $this->getBaseUrl() ?>/pengguna';
+                    $menu['children'] = []; // Hilangkan sub-menu (Pengguna, Master Data, dll tidak relevan untuk siswa)
+                }
+                // Inject URL dinamis juga di children jika ada
+                if (!empty($menu['children'])) {
+                    foreach ($menu['children'] as &$child) {
+                        if (stripos($child['nama_menu'], 'Data Diri') !== false && !empty($siswaId)) {
+                            $child['url'] = '<?= $this->getBaseUrl() ?>/pengguna';
+                        }
+                    }
+                    unset($child);
+                }
+            }
+            unset($menu);
+
+
+            // Tambahkan menu Tracer Study HANYA jika status siswa adalah 'Lulus'
+            // dan menu ini belum ada di $sidebarMenus dari database
+            $tracerExists = false;
+            foreach ($sidebarMenus as $m) {
+                if (stripos($m['nama_menu'], 'Tracer') !== false) {
+                    $tracerExists = true;
+                    break;
+                }
+            }
+            if ($statusSiswa === 'Lulus' && !$tracerExists) {
+                $sidebarMenus[] = [
+                    'id'        => 99,
+                    'nama_menu' => 'Tracer Study',
+                    'url'       => '<?= $this->getBaseUrl() ?>/tracer-study',
+                    'icon'      => 'bi bi-mortarboard-fill',
+                    'badge'     => 'BARU',
+                    'children'  => []
+                ];
+            }
+        }
+
+        // Ambil jumlah unread tickets untuk badge sidebar
+        $unreadBadgeCount = 0;
+        if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
+            if (($_SESSION['role_name'] ?? '') === 'super_admin') {
+                $stmtUnread = $db->prepare("SELECT COUNT(*) FROM sistem.tickets WHERE admin_unread = 1");
+                $stmtUnread->execute();
+            } else {
+                $stmtUnread = $db->prepare("SELECT COUNT(*) FROM sistem.tickets WHERE user_unread = 1 AND tenant_id = ? AND user_id = ?");
+                $stmtUnread->execute([$_SESSION['tenant_id'] ?? null, $_SESSION['user_id'] ?? null]);
+            }
+            $unreadBadgeCount = (int)$stmtUnread->fetchColumn();
+        }
+
+    } catch (\Throwable $e) {
+        error_log("Gagal memuat sidebar dinamis: " . $e->getMessage());
+    }
+}
+?>
+<aside id="sidebar" class="sidebar">
+    <div class="sidebar-wrapper d-flex flex-column h-100">
+        
+        <!-- Menu Navigasi (Compact Padding & Small Font) -->
+        <div class="flex-grow-1 overflow-y-auto py-3">
+            <ul class="nav flex-column gap-1 px-2">
+                
+                <?php 
+                if (empty($sidebarMenus)): 
+                ?>
+                    <li class="px-3 text-muted fs-8 text-center py-4">
+                        <i class="bi bi-shield-lock d-block mb-1 fs-5"></i> Tidak ada menu yang diizinkan.
+                    </li>
+                <?php 
+                else:
+                    foreach ($sidebarMenus as $menu):
+                        // Cek apakah menu bertindak sebagai parent yang memiliki anak
+                        if (!empty($menu['children'])):
+                            // Cek keaktifan anak-anak menu secara otomatis
+                            $hasActiveChild = false;
+                            foreach ($menu['children'] as $child) {
+                                if ($isActive($child['url']) === 'active') {
+                                    $hasActiveChild = true;
+                                    break;
+                                }
+                            }
+                            $collapseShow = $hasActiveChild ? 'show' : '';
+                            $ariaExpanded = $hasActiveChild ? 'true' : 'false';
+                            $parentActive = $hasActiveChild ? 'active' : '';
+                ?>
+                            <li class="nav-item">
+                                <!-- Induk Menu Collapsible -->
+                                <a class="nav-link-item d-flex justify-content-between align-items-center <?= $parentActive ?>" 
+                                   data-bs-toggle="collapse" 
+                                   href="#menuCollapse<?= $menu['id'] ?>" 
+                                   role="button" 
+                                   aria-expanded="<?= $ariaExpanded ?>" 
+                                   aria-controls="menuCollapse<?= $menu['id'] ?>">
+                                    <div>
+                                        <i class="<?= htmlspecialchars($menu['icon'] ?? 'bi bi-folder-fill') ?>"></i>
+                                        <span class="nav-label"><?= htmlspecialchars($menu['nama_menu']) ?></span>
+                                    </div>
+                                    <i class="bi bi-chevron-down nav-label arrow-icon" style="font-size: 0.7rem; transition: transform 0.2s ease;"></i>
+                                </a>
+                                
+                                <!-- Container Sub-menu (Collapsible) -->
+                                <div class="collapse <?= $collapseShow ?>" id="menuCollapse<?= $menu['id'] ?>">
+                                    <ul class="nav flex-column ps-3 pt-1 gap-1">
+                                        <?php 
+                                        foreach ($menu['children'] as $child): 
+                                            $activeClass = $isActive($child['url']);
+                                        ?>
+                                            <li class="nav-item">
+                                                <a href="<?= ($child['url'] === '#' || empty($child['url'])) ? '#' : $this->getBaseUrl() . htmlspecialchars($child['url']) ?>" class="nav-link-item <?= $activeClass ?>"
+                                                   <?= ($child['url'] === '#' || empty($child['url'])) ? 'onclick="showSimulationAlert(\'' . htmlspecialchars($child['nama_menu'], ENT_QUOTES, 'UTF-8') . '\'); return false;"' : '' ?>>
+                                                    <i class="<?= htmlspecialchars($child['icon'] ?? 'bi bi-circle') ?>"></i>
+                                                    <span class="nav-label"><?= htmlspecialchars($child['nama_menu']) ?></span>
+                                                </a>
+                                            </li>
+                                        <?php 
+                                        endforeach; 
+                                        ?>
+                                    </ul>
+                                </div>
+                            </li>
+
+                <?php 
+                        else: 
+                            // Render menu utama mandiri (Tanpa Sub-menu, misal: Dashboard)
+                            $activeClass = $isActive($menu['url']);
+                ?>
+                            <li class="nav-item">
+                                <a href="<?= ($menu['url'] === '#' || empty($menu['url'])) ? '#' : $this->getBaseUrl() . htmlspecialchars($menu['url']) ?>" class="nav-link-item <?= $activeClass ?>"
+                                   <?= ($menu['url'] === '#' || empty($menu['url'])) ? 'onclick="showSimulationAlert(\'' . htmlspecialchars($menu['nama_menu'], ENT_QUOTES, 'UTF-8') . '\'); return false;"' : '' ?>>
+                                    <i class="<?= htmlspecialchars($menu['icon'] ?? 'bi bi-circle') ?>"></i>
+                                    <span class="nav-label"><?= htmlspecialchars($menu['nama_menu']) ?></span>
+                                     <?php if ($menu['id'] == 61 && $unreadBadgeCount > 0): ?>
+                                     <span class="ms-auto badge rounded-pill bg-danger" style="font-size:0.6rem;padding:2px 6px;">
+                                         <?= $unreadBadgeCount ?>
+                                     </span>
+                                     <?php elseif (!empty($menu['badge'])): ?>
+                                     <span class="ms-auto badge rounded-pill text-bg-success" style="font-size:0.6rem;padding:2px 6px;">
+                                         <?= htmlspecialchars($menu['badge']) ?>
+                                     </span>
+                                     <?php endif; ?>
+                                </a>
+                            </li>
+                <?php 
+                        endif;
+                    endforeach;
+                endif;
+                ?>
+
+                <!-- CSS Tambahan Khusus Submenu & Chevron Rotation -->
+                <style>
+                    /* Fix collision between Bootstrap and Tailwind collapse classes */
+                    .collapse {
+                        visibility: visible !important;
+                    }
+
+                    .nav-link-item[aria-expanded="true"] .arrow-icon {
+                        transform: rotate(180deg);
+                    }
+                </style>
+
+            </ul>
+        </div>
+        
+        <!-- Sidebar Footer Info (Hidden when collapsed) -->
+        <div class="sidebar-footer p-3 border-top border-light text-center">
+            <div class="nav-label fs-9 text-muted fw-bold">SINTA PLATFORM</div>
+        </div>
+
+    </div>
+
+<!-- PREMIUM SIDEBAR UI INJECTION -->
+<style>
+/* Sidebar Container with Glassmorphism */
+#sidebar {
+    background: linear-gradient(145deg, rgba(255,255,255,0.9), rgba(248,250,252,0.95));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-right: 1px solid rgba(226,232,240,0.8);
+    box-shadow: 4px 0 24px rgba(0,0,0,0.02);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Base Nav Item Styling */
+#sidebar .nav-item {
+    margin-bottom: 0.25rem;
+}
+
+#sidebar .nav-link-item {
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    color: #475569;
+    font-weight: 500;
+    transition: all 0.25s ease;
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+}
+
+#sidebar .nav-link-item i {
+    font-size: 1.15rem;
+    margin-right: 0.75rem;
+    color: #64748b;
+    transition: all 0.25s ease;
+}
+
+#sidebar .nav-link-item .nav-label {
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    letter-spacing: -0.01em;
+}
+
+/* Hover State - Dynamic Micro Animations */
+#sidebar .nav-link-item:hover {
+    background: rgba(239, 246, 255, 0.6);
+    color: #1e40af;
+    transform: translateX(3px);
+}
+
+#sidebar .nav-link-item:hover i {
+    color: #3b82f6;
+    transform: scale(1.1);
+}
+
+/* Active State - Vibrant Gradients */
+#sidebar .nav-link-item.active {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+#sidebar .nav-link-item.active i {
+    color: #ffffff;
+}
+
+/* Sub-menu styling */
+#sidebar .collapse .nav-link-item {
+    padding: 0.6rem 1rem 0.6rem 2.5rem;
+    font-size: 0.9rem;
+    border-radius: 0.5rem;
+    opacity: 0.85;
+}
+
+#sidebar .collapse .nav-link-item:hover {
+    opacity: 1;
+    background: rgba(226, 232, 240, 0.5);
+    color: #0f172a;
+    transform: translateX(4px);
+}
+
+#sidebar .collapse .nav-link-item.active {
+    background: rgba(59, 130, 246, 0.1);
+    color: #2563eb;
+    font-weight: 600;
+    box-shadow: none;
+    opacity: 1;
+    border-left: 3px solid #3b82f6;
+}
+
+#sidebar .collapse .nav-link-item.active i {
+    color: #2563eb;
+}
+
+/* Badge Enhancements */
+#sidebar .badge {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+/* Custom Scrollbar for Sidebar */
+#sidebar .overflow-y-auto::-webkit-scrollbar {
+    width: 5px;
+}
+#sidebar .overflow-y-auto::-webkit-scrollbar-track {
+    background: transparent;
+}
+#sidebar .overflow-y-auto::-webkit-scrollbar-thumb {
+    background: rgba(203, 213, 225, 0.5);
+    border-radius: 10px;
+}
+#sidebar .overflow-y-auto:hover::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.8);
+}
+</style>
+</aside>
