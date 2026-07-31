@@ -1,3 +1,22 @@
+## Modular Architecture & PostgreSQL Multi-Schema
+Saat merombak, membuat file Model, atau membuat Controller baru, agen WAJIB mematuhi standar arsitektur berikut:
+
+**1. Struktur Direktori dan Namespace:**
+- Modul berlokasi di `C:\laragon\www\sinta\app\Modules\`.
+- Setiap modul (misal: `Sistem`, `Core`, `Akademik`) harus menempati sub-folder `Controllers/` dan `Models/`.
+- File Model wajib menggunakan namespace `App\Modules\[NamaModul]\Models`.
+- File Controller wajib menggunakan namespace `App\Modules\[NamaModul]\Controllers`.
+
+**2. Pendefinisian Model PostgreSQL:**
+- Model harus secara eksplisit mendefinisikan koneksi ke skema PostgreSQL yang tepat (misalnya: `protected $table = 'sistem.nama_tabel';` atau selalu menyertakan prefix skema pada string SQL).
+- Sesuaikan konfigurasi *primary key* dan *auto-increment* (terutama jika menggunakan `UUID` via fungsi PostgreSQL `gen_random_uuid()`).
+- Terapkan *casts* atau konversi tipe data yang sangat ketat untuk nilai pengembalian, terutama untuk tipe data `Boolean`, `Integer`, atau kolom `JSON` (karena PostgreSQL jauh lebih *strict* (*type-safe*) dibanding MySQL).
+
+**3. Pendefinisian Controller:**
+- Controller digunakan untuk menangani operasi CRUD atau logika bisnis terpusat yang memanggil instansiasi Model.
+- Pastikan Controller menjaga batasan arsitektur (tidak mencampuradukkan logika manipulasi database kotor secara langsung tanpa melalui Model/PDO parameterized statement).
+
+
 ## Security Guidelines (Anti-XSS & Data Protection)
 Saat menulis, memodifikasi, atau membenahi program, agen wajib selalu menerapkan langkah-langkah keamanan data krusial:
 - **Pencegahan Kebocoran Kredensial**: Hapus data sensitif (seperti hash password, token, api_key) menggunakan `unset()` di PHP/sisi server sebelum mengirim data tersebut ke client-side JavaScript.
@@ -66,8 +85,9 @@ Setiap kali pekerjaan diselesaikan, dokumen penjelasan hasil akhir (*walkthrough
   ```
 - **DILARANG** hanya mengisi dengan satu baris ringkasan. Jika walkthrough memiliki 100 baris konten, maka semua 100 baris tersebut harus ada di file harian.
 
-## Git Commits and Pushing
-Ketika melakukan push ke repositori GitHub, selalu kelompokkan dan distribusikan perubahan ke dalam commit-commit yang terpisah secara atomik berdasarkan modul, fitur, menu, atau perbaikan bug masing-masing (jangan menggabungkan seluruh perubahan besar ke dalam satu commit tunggal).
+## Git Commits and Pushing (OPSIONAL)
+*(Tidak wajib dieksekusi. Hanya lakukan proses git commit dan push jika ada instruksi eksplisit dari pengguna).*
+Ketika pengguna menginstruksikan untuk melakukan push ke repositori GitHub, selalu kelompokkan dan distribusikan perubahan ke dalam commit-commit yang terpisah secara atomik berdasarkan modul, fitur, menu, atau perbaikan bug masing-masing (jangan menggabungkan seluruh perubahan besar ke dalam satu commit tunggal).
 
 ## Database Migration Rules (WAJIB)
 Setiap kali membuat file migrasi baru di folder `database/migrations/`, wajib menggunakan **format `return [...]` array** — BUKAN format skrip imperatif langsung. Ini adalah persyaratan teknis mutlak dari `migrate.php` agar migrasi dapat dideteksi, dieksekusi, dan dicatat ke tabel `migrations` dengan benar.
@@ -108,11 +128,12 @@ return [
 - **Jangan** memanggil `require_once` Database di dalam file migrasi — `$pdo` sudah di-inject otomatis
 - **Jangan** memanggil `exit()` di dalam closure `up`/`down` — lempar `Exception` jika ada error fatal
 - **Selalu** sertakan fungsi `down` untuk rollback, meskipun isinya hanya komentar
-- **Gunakan** `IF NOT EXISTS` / `IF EXISTS` / `SHOW COLUMNS` untuk membuat migrasi idempotent (aman dijalankan berulang)
-- **Gunakan** `SET FOREIGN_KEY_CHECKS = 0` di awal dan `= 1` di akhir jika ada operasi DROP/CREATE tabel dengan foreign key
+- **Gunakan** `IF NOT EXISTS` / `IF EXISTS` untuk operasi tabel/kolom agar migrasi bersifat *idempotent* (aman dijalankan berulang kali).
+- **Gunakan** `CASCADE` pada operasi `DROP TABLE` jika tabel tersebut memiliki *foreign key* yang saling terikat (PostgreSQL tidak mendukung perintah `SET FOREIGN_KEY_CHECKS = 0` seperti di MySQL).
 
-## Static Analysis & Security Audit Verification (WAJIB)
-Setiap kali selesai melakukan pembuatan fitur baru, refactoring, modifikasi kode, atau pembetulan bug (*bug fix*), agen WAJIB secara otomatis menjalankan 2 langkah verifikasi berikut sebelum menyatakan pekerjaan selesai:
+## Static Analysis & Security Audit Verification (OPSIONAL)
+*(Tidak wajib dieksekusi di setiap akhir sesi. Hanya jalankan langkah verifikasi ini jika pengguna secara spesifik memintanya).*
+Ketika pengguna meminta verifikasi, agen wajib secara otomatis menjalankan 2 langkah berikut:
 1. **PHPStan Static Analysis**: Jalankan analisis statis PHPStan pada berkas yang diubah atau direktori aplikasi:
    ```powershell
    vendor/bin/phpstan analyse <path-file-atau-folder> --level=5
@@ -123,3 +144,4 @@ Setiap kali selesai melakukan pembuatan fitur baru, refactoring, modifikasi kode
    php scratch/tests/test_security_audit.php
    ```
    Pastikan hasilnya menunjukkan `Failed Checks: 0`.
+
