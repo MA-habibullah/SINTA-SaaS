@@ -41,9 +41,26 @@ class BaseController {
     }
 
     /**
+     * Backward-compatible render method for legacy MVC controllers (loads master layout)
+     */
+    protected function render(string $view, array $data = []): void {
+        extract($data);
+        $contentView = __DIR__ . '/../../views/' . $view . '.php';
+        if (!file_exists($contentView)) {
+            error_log("View not found: " . $contentView);
+        }
+        require_once __DIR__ . '/../../views/layout/master.php';
+    }
+
+    /**
      * Dapatkan Base URL dinamis dari lingkungan server
      */
     protected function getBaseUrl(): string {
+        $appUrl = getenv('APP_URL') ?: ($_ENV['APP_URL'] ?? '');
+        if (!empty($appUrl)) {
+            $parsed = parse_url($appUrl, PHP_URL_PATH);
+            return $parsed ? rtrim($parsed, '/') : '';
+        }
         $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
         return rtrim(dirname($scriptName), '/\\');
     }
@@ -58,7 +75,34 @@ class BaseController {
         exit;
     }
 
-    protected function jsonResponse(bool $success, mixed $data = null, ?string $error = null, int $statusCode = 200): void {
+    protected function jsonResponse(mixed $success, mixed $data = null, ?string $error = null, int $statusCode = 200): void {
+        
+        // Handle array payload (backward compatibility for controllers passing arrays directly)
+        if (is_array($success)) {
+            $payload = $success;
+            $statusCode = is_int($data) ? $data : 200;
+            
+            if (isset($payload['error']) || isset($payload['errors'])) {
+                $success = false;
+                $error = $payload['error'] ?? json_encode($payload['errors']);
+                $data = null;
+            } else if (array_key_exists('success', $payload) && array_key_exists('data', $payload)) {
+                $success = (bool)$payload['success'];
+                $data = $payload['data'];
+                $error = $payload['error'] ?? null;
+            } else if (array_key_exists('data', $payload) && count($payload) === 1) {
+                // Just ['data' => ...]
+                $success = true;
+                $data = $payload['data'];
+            } else {
+                // Raw data array like ['data' => [], 'total' => 100]
+                $success = true;
+                $data = $payload;
+            }
+        } else {
+            $success = (bool)$success;
+        }
+
         http_response_code($statusCode);
         header('Content-Type: application/json; charset=utf-8');
 

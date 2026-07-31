@@ -151,7 +151,7 @@ class ErrorTracker
         http_response_code(500);
         
         $isApiRequest = (
-            str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/SINTA-SaaS/api/') ||
+            str_starts_with($_SERVER['REQUEST_URI'] ?? '', rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\') . '/api/') ||
             strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'xmlhttprequest' ||
             str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json')
         );
@@ -309,11 +309,11 @@ HTML;
                 : json_encode([['raw' => (string)$trace]]);
 
             $stmt = $db->prepare("
-                INSERT INTO `system_errors`
-                    (`id`, `tenant_id`, `error_level`, `message`, `file`, `line`,
-                     `trace`, `request_url`, `request_method`, `user_agent`, `ip_address`, `context`)
+                INSERT INTO sistem.system_errors
+                    (id, tenant_id, error_level, message, file, line,
+                     trace, request_url, request_method, user_agent, ip_address, context)
                 VALUES
-                    (UUID(), :tenant_id, :error_level, :message, :file, :line,
+                    (gen_random_uuid(), :tenant_id, :error_level, :message, :file, :line,
                      :trace, :request_url, :request_method, :user_agent, :ip_address, :context)
             ");
 
@@ -347,7 +347,7 @@ HTML;
         http_response_code(500);
 
         $isApiRequest = (
-            str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/SINTA-SaaS/api/') ||
+            str_starts_with($_SERVER['REQUEST_URI'] ?? '', rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\') . '/api/') ||
             strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'xmlhttprequest' ||
             str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json')
         );
@@ -360,23 +360,22 @@ HTML;
                 'success' => false,
             ]);
         } else {
+            $baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
             echo <<<HTML
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>500 — Kesalahan Sistem</title>
+    <title>Sistem Sedang Sibuk</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f8fafc; display: flex;
-               align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-        .container { text-align: center; padding: 2rem; max-width: 520px; }
-        .icon { font-size: 4rem; margin-bottom: 1rem; }
-        h1 { color: #1e293b; font-size: 1.75rem; margin-bottom: 0.5rem; }
-        p  { color: #64748b; line-height: 1.6; margin-bottom: 1.5rem; }
-        a  { display: inline-block; padding: 0.625rem 1.5rem; background: #2563eb;
-             color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; }
-        a:hover { background: #1d4ed8; }
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; text-align: center; }
+        .container { max-width: 500px; padding: 40px; background-color: #1e293b; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid #334155; }
+        .icon { font-size: 64px; margin-bottom: 20px; color: #ef4444; }
+        h1 { font-size: 24px; font-weight: 600; margin-bottom: 15px; color: #f1f5f9; }
+        p { font-size: 15px; color: #94a3b8; line-height: 1.6; margin-bottom: 25px; }
+        a { display: inline-block; padding: 10px 20px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px; font-weight: 500; transition: background-color 0.2s; }
+        a:hover { background-color: #2563eb; }
     </style>
 </head>
 <body>
@@ -384,7 +383,7 @@ HTML;
         <div class="icon">⚙️</div>
         <h1>Terjadi Kesalahan Sistem</h1>
         <p>Tim kami sedang menangani masalah ini. Silakan coba beberapa saat lagi atau hubungi administrator platform.</p>
-        <a href="/SINTA-SaaS/dashboard">Kembali ke Dashboard</a>
+        <a href="{$baseUrl}/dashboard">Kembali ke Dashboard</a>
     </div>
 </body>
 </html>

@@ -173,10 +173,10 @@ try {
             $controller->getDaftarPtk();
             break;
 
-        case '/keuangan/tagihan':
+        /* case '/keuangan/tagihan':
             $controller = new App\Modules\Keuangan\Controllers\KeuanganModuleController();
             $controller->getTagihanSiswa();
-            break;
+            break; */
 
         case '/perpustakaan':
             $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
@@ -239,7 +239,7 @@ try {
             break;
 
         case '/pengguna/download-excel':
-            $controller = new App\Controllers\PenggunaController();
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
             $controller->downloadExcel();
             break;
 
@@ -249,22 +249,22 @@ try {
             break;
             
         case '/informasi/pengumuman':
-            $controller = new App\Controllers\PengumumanController();
+            $controller = new App\Modules\Core\Controllers\PengumumanModuleController();
             $controller->index();
             break;
             
         case '/informasi/pengumuman/kategori/store':
-            $controller = new App\Controllers\PengumumanController();
+            $controller = new App\Modules\Core\Controllers\PengumumanModuleController();
             $controller->storeKategori();
             break;
             
         case '/informasi/pengumuman/kategori/update':
-            $controller = new App\Controllers\PengumumanController();
+            $controller = new App\Modules\Core\Controllers\PengumumanModuleController();
             $controller->updateKategori();
             break;
             
         case '/informasi/pengumuman/kategori/delete':
-            $controller = new App\Controllers\PengumumanController();
+            $controller = new App\Modules\Core\Controllers\PengumumanModuleController();
             $controller->deleteKategori();
             break;
             
@@ -274,54 +274,54 @@ try {
             break;
             
         case '/informasi/pengumuman/store':
-            $controller = new App\Controllers\PengumumanController();
+            $controller = new App\Modules\Core\Controllers\PengumumanModuleController();
             $controller->store();
             break;
             
         case '/informasi/pengumuman/update':
-            $controller = new App\Controllers\PengumumanController();
+            $controller = new App\Modules\Core\Controllers\PengumumanModuleController();
             $controller->update();
             break;
             
         case '/informasi/pengumuman/delete':
-            $controller = new App\Controllers\PengumumanController();
+            $controller = new App\Modules\Core\Controllers\PengumumanModuleController();
             $controller->delete();
             break;
             
-        case '/pembinaan':
+        /* case '/pembinaan':
             $controller = new App\Controllers\PembinaanController();
             $controller->index();
-            break;
+            break; */
             
-        case '/pembinaan/store':
+        /* case '/pembinaan/store':
             $controller = new App\Controllers\PembinaanController();
             $controller->store();
-            break;
+            break; */
             
-        case '/pembinaan/jadwal':
+        /* case '/pembinaan/jadwal':
             $controller = new App\Controllers\PembinaanController();
             $controller->jadwalkan_sesi();
-            break;
+            break; */
             
-        case '/pembinaan/sesi':
+        /* case '/pembinaan/sesi':
             $controller = new App\Controllers\PembinaanController();
             $controller->sesi();
-            break;
+            break; */
             
-        case '/pembinaan/sesi/simpan':
+        /* case '/pembinaan/sesi/simpan':
             $controller = new App\Controllers\PembinaanController();
             $controller->simpan_sesi();
-            break;
+            break; */
             
-        case '/pembinaan/evaluasi':
+        /* case '/pembinaan/evaluasi':
             $controller = new App\Controllers\PembinaanController();
             $controller->evaluasi();
-            break;
+            break; */
             
-        case '/pembinaan/cetak':
+        /* case '/pembinaan/cetak':
             $controller = new App\Controllers\PembinaanController();
             $controller->cetak();
-            break;
+            break; */
 
         case '/konseling':
             $controller = new App\Controllers\GuruKonselingController();
@@ -674,7 +674,7 @@ try {
 
         case '/dashboard':
             // Panggil DashboardController
-            $controller = new App\Controllers\DashboardController();
+            $controller = new App\Modules\Core\Controllers\DashboardModuleController();
             $controller->index();
             break;
 
@@ -689,144 +689,144 @@ try {
             break;
 
         // Rute Pusat Bantuan (Ticketing System)
-        case '/bantuan':
+        /* case '/bantuan':
             (new \App\Controllers\BantuanController())->index();
-            break;
-        case '/api/v1/bantuan/buat':
+            break; */
+        /* case '/api/v1/bantuan/buat':
             (new \App\Controllers\BantuanController())->apiCreateTicket();
-            break;
-        case '/api/v1/bantuan/list':
+            break; */
+        /* case '/api/v1/bantuan/list':
             (new \App\Controllers\BantuanController())->apiListTickets();
-            break;
-        case '/api/v1/bantuan/detail':
+            break; */
+        /* case '/api/v1/bantuan/detail':
             (new \App\Controllers\BantuanController())->apiGetTicketDetail();
-            break;
-        case '/api/v1/bantuan/balas':
+            break; */
+        /* case '/api/v1/bantuan/balas':
             (new \App\Controllers\BantuanController())->apiReplyTicket();
-            break;
-        case '/api/v1/bantuan/update-status':
+            break; */
+        /* case '/api/v1/bantuan/update-status':
             (new \App\Controllers\BantuanController())->apiUpdateStatus();
-            break;
-        case '/api/v1/bantuan/faq-lookup':
+            break; */
+        /* case '/api/v1/bantuan/faq-lookup':
             (new \App\Controllers\BantuanController())->apiFaqLookup();
-            break;
-        case '/api/v1/bantuan/canned-responses':
+            break; */
+        /* case '/api/v1/bantuan/canned-responses':
             (new \App\Controllers\BantuanController())->apiGetCannedResponses();
-            break;
-        case '/api/v1/bantuan/unread-count':
+            break; */
+        /* case '/api/v1/bantuan/unread-count':
             (new \App\Controllers\BantuanController())->apiGetUnreadCount();
-            break;
+            break; */
 
         // Rute Modul Keuangan & SPP Dinamis
-        case '/keuangan/dashboard':
+        /* case '/keuangan/dashboard':
             (new \App\Controllers\SppController())->dashboard();
-            break;
-        case '/keuangan/master':
+            break; */
+        /* case '/keuangan/master':
             (new \App\Controllers\SppController())->master();
-            break;
-        case '/keuangan/keringanan':
+            break; */
+        /* case '/keuangan/keringanan':
             (new \App\Controllers\SppController())->keringanan();
-            break;
-        case '/keuangan/generate':
+            break; */
+        /* case '/keuangan/generate':
             (new \App\Controllers\SppController())->generate();
-            break;
-        case '/keuangan/kasir':
+            break; */
+        /* case '/keuangan/kasir':
             (new \App\Controllers\SppController())->kasir();
-            break;
-        case '/keuangan/laporan':
+            break; */
+        /* case '/keuangan/laporan':
             (new \App\Controllers\SppController())->laporan();
-            break;
-        case '/keuangan/pengaturan':
+            break; */
+        /* case '/keuangan/pengaturan':
             (new \App\Controllers\SppController())->pengaturan();
-            break;
-        case '/keuangan/tagihan-saya':
+            break; */
+        /* case '/keuangan/tagihan-saya':
             (new \App\Controllers\SppController())->tagihanSaya();
-            break;
-        case '/keuangan/audit-log':
+            break; */
+        /* case '/keuangan/audit-log':
             (new \App\Controllers\SppController())->auditLog();
-            break;
+            break; */
 
         // API Modul Keuangan & SPP Dinamis
-        case '/api/v1/keuangan/dashboard-metrics':
+        /* case '/api/v1/keuangan/dashboard-metrics':
             (new \App\Controllers\SppController())->apiDashboardMetrics();
-            break;
-        case '/api/v1/keuangan/komponen':
+            break; */
+        /* case '/api/v1/keuangan/komponen':
             (new \App\Controllers\SppController())->apiKomponen();
-            break;
-        case '/api/v1/keuangan/tarif':
+            break; */
+        /* case '/api/v1/keuangan/tarif':
             (new \App\Controllers\SppController())->apiTarif();
-            break;
-        case '/api/v1/keuangan/keringanan':
+            break; */
+        /* case '/api/v1/keuangan/keringanan':
             (new \App\Controllers\SppController())->apiKeringanan();
-            break;
-        case '/api/v1/keuangan/generate-tagihan':
+            break; */
+        /* case '/api/v1/keuangan/generate-tagihan':
             (new \App\Controllers\SppController())->apiGenerateTagihan();
-            break;
-        case '/api/v1/keuangan/preview-generate':
+            break; */
+        /* case '/api/v1/keuangan/preview-generate':
             (new \App\Controllers\SppController())->apiPreviewGenerate();
-            break;
-        case '/api/v1/keuangan/daftar-tagihan':
+            break; */
+        /* case '/api/v1/keuangan/daftar-tagihan':
             (new \App\Controllers\SppController())->apiDaftarTagihan();
-            break;
-        case '/api/v1/keuangan/tahun-ajaran':
+            break; */
+        /* case '/api/v1/keuangan/tahun-ajaran':
             (new \App\Controllers\SppController())->apiTahunAjaran();
-            break;
-        case '/api/v1/keuangan/kelas':
+            break; */
+        /* case '/api/v1/keuangan/kelas':
             (new \App\Controllers\SppController())->apiKelas();
-            break;
-        case '/api/v1/keuangan/jenjang':
+            break; */
+        /* case '/api/v1/keuangan/jenjang':
             (new \App\Controllers\SppController())->apiJenjang();
-            break;
-        case '/api/v1/keuangan/export-tagihan-excel':
+            break; */
+        /* case '/api/v1/keuangan/export-tagihan-excel':
             (new \App\Controllers\SppController())->apiExportTagihanExcel();
-            break;
-        case '/api/v1/keuangan/edit-tagihan-nominal':
+            break; */
+        /* case '/api/v1/keuangan/edit-tagihan-nominal':
             (new \App\Controllers\SppController())->apiEditTagihanNominal();
-            break;
-        case '/api/v1/keuangan/hapus-tagihan':
+            break; */
+        /* case '/api/v1/keuangan/hapus-tagihan':
             (new \App\Controllers\SppController())->apiHapusTagihan();
-            break;
-        case '/api/v1/keuangan/cari-siswa':
+            break; */
+        /* case '/api/v1/keuangan/cari-siswa':
             (new \App\Controllers\SppController())->apiCariSiswa();
-            break;
-        case '/api/v1/keuangan/tagihan-siswa':
+            break; */
+        /* case '/api/v1/keuangan/tagihan-siswa':
             (new \App\Controllers\SppController())->apiGetTagihanSiswa();
-            break;
-        case '/api/v1/keuangan/bayar':
+            break; */
+        /* case '/api/v1/keuangan/bayar':
             (new \App\Controllers\SppController())->apiBayarTagihan();
-            break;
-        case '/api/v1/keuangan/batal-pembayaran':
+            break; */
+        /* case '/api/v1/keuangan/batal-pembayaran':
             (new \App\Controllers\SppController())->apiBatalPembayaran();
-            break;
-        case '/api/v1/keuangan/laporan-rekap':
+            break; */
+        /* case '/api/v1/keuangan/laporan-rekap':
             (new \App\Controllers\SppController())->apiLaporanRekap();
-            break;
-        case '/api/v1/keuangan/pengaturan':
+            break; */
+        /* case '/api/v1/keuangan/pengaturan':
             (new \App\Controllers\SppController())->apiGetPengaturan();
-            break;
-        case '/api/v1/keuangan/tenants':
+            break; */
+        /* case '/api/v1/keuangan/tenants':
             (new \App\Controllers\SppController())->apiTenants();
-            break;
-        case '/api/v1/keuangan/komponen/toggle':
+            break; */
+        /* case '/api/v1/keuangan/komponen/toggle':
             (new \App\Controllers\SppController())->apiToggleKomponen();
-            break;
-        case '/api/v1/keuangan/save-pengaturan':
+            break; */
+        /* case '/api/v1/keuangan/save-pengaturan':
             (new \App\Controllers\SppController())->apiSavePengaturan();
-            break;
-        case '/api/v1/keuangan/tagihan-saya':
+            break; */
+        /* case '/api/v1/keuangan/tagihan-saya':
             (new \App\Controllers\SppController())->apiGetTagihanSaya();
-            break;
-        case '/api/v1/keuangan/audit-log':
+            break; */
+        /* case '/api/v1/keuangan/audit-log':
             (new \App\Controllers\SppController())->apiAuditLog();
-            break;
-        case '/api/v1/keuangan/buat-tagihan-ppdb':
+            break; */
+        /* case '/api/v1/keuangan/buat-tagihan-ppdb':
             (new \App\Controllers\SppController())->apiCreatePpdbInvoice();
-            break;
+            break; */
 
 
 
         case '/buku-induk':
-            $controller = new App\Controllers\BukuIndukController();
+            $controller = new App\Modules\Siswa\Controllers\BukuIndukModuleController();
             $controller->index();
             break;
 
@@ -837,47 +837,47 @@ try {
             break;
 
         case '/api/v1/verify-transkrip/data':
-            $controller = new App\Controllers\BukuIndukController();
+            $controller = new App\Modules\Siswa\Controllers\BukuIndukModuleController();
             $controller->verifyTranskripApi();
             break;
 
         case '/api/v1/cetak/request-token':
-            $controller = new App\Controllers\BukuIndukController();
+            $controller = new App\Modules\Siswa\Controllers\BukuIndukModuleController();
             $controller->requestCetakToken();
             break;
 
         case '/api/v1/buku-induk':
-            $controller = new App\Controllers\BukuIndukController();
+            $controller = new App\Modules\Siswa\Controllers\BukuIndukModuleController();
             $controller->fetchApi();
             break;
 
         case '/api/v1/buku-induk/detail':
-            $controller = new App\Controllers\BukuIndukController();
+            $controller = new App\Modules\Siswa\Controllers\BukuIndukModuleController();
             $controller->fetchDetailApi();
             break;
 
         case '/api/v1/buku-induk/archive/upload':
-            $controller = new App\Controllers\BukuIndukController();
+            $controller = new App\Modules\Siswa\Controllers\BukuIndukModuleController();
             $controller->compileImagesToPdfApi();
             break;
 
         case '/api/v1/buku-induk/archive/list':
-            $controller = new App\Controllers\BukuIndukController();
+            $controller = new App\Modules\Siswa\Controllers\BukuIndukModuleController();
             $controller->fetchDocumentsApi();
             break;
 
         case '/api/v1/buku-induk/archive/delete':
-            $controller = new App\Controllers\BukuIndukController();
+            $controller = new App\Modules\Siswa\Controllers\BukuIndukModuleController();
             $controller->deleteDocumentApi();
             break;
 
         case '/api/v1/buku-induk/archive/view':
-            $controller = new App\Controllers\BukuIndukController();
+            $controller = new App\Modules\Siswa\Controllers\BukuIndukModuleController();
             $controller->viewDocumentApi();
             break;
 
         case '/api/v1/buku_induk/matrix_cetak':
-            $controller = new App\Controllers\BukuIndukController();
+            $controller = new App\Modules\Siswa\Controllers\BukuIndukModuleController();
             $controller->fetchCetakMatrixApi();
             break;
 
@@ -931,7 +931,7 @@ try {
             break;
 
         case '/api/v1/riwayat-kepsek':
-            $controller = new App\Controllers\BukuIndukController();
+            $controller = new App\Modules\Siswa\Controllers\BukuIndukModuleController();
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $controller->storeRiwayatKepsek();
             } elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
@@ -942,12 +942,12 @@ try {
             break;
 
         case '/api/v1/buku-induk/clear-archive':
-            $controller = new App\Controllers\BukuIndukController();
+            $controller = new App\Modules\Siswa\Controllers\BukuIndukModuleController();
             $controller->clearArchiveApi();
             break;
 
         case '/api/v1/buku-induk/beasiswa':
-            $controller = new App\Controllers\BukuIndukController();
+            $controller = new App\Modules\Siswa\Controllers\BukuIndukModuleController();
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $controller->storeBeasiswaApi();
             } elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
@@ -958,74 +958,39 @@ try {
             break;
 
         case '/cetak-rapot':
-            $controller = new App\Controllers\BukuIndukController();
+            $controller = new App\Modules\Siswa\Controllers\BukuIndukModuleController();
             $controller->printRapot();
             break;
 
         case '/cetak-buku-induk':
-            $controller = new App\Controllers\BukuIndukController();
+            $controller = new App\Modules\Siswa\Controllers\BukuIndukModuleController();
             $controller->printBukuInduk();
             break;
 
         case '/cetak-rapot-semester':
-            $controller = new App\Controllers\BukuIndukController();
+            $controller = new App\Modules\Siswa\Controllers\BukuIndukModuleController();
             $controller->printRapotSemester();
             break;
 
         case '/cetak-transkrip-nilai':
-            $controller = new App\Controllers\BukuIndukController();
+            $controller = new App\Modules\Siswa\Controllers\BukuIndukModuleController();
             $controller->printTranskripNilai();
             break;
 
         case '/verify-transkrip':
-            $controller = new App\Controllers\BukuIndukController();
+            $controller = new App\Modules\Siswa\Controllers\BukuIndukModuleController();
             $controller->verifyTranskrip();
             break;
 
         case '/cetak-rapot-kelas':
-            $controller = new App\Controllers\BukuIndukController();
+            $controller = new App\Modules\Siswa\Controllers\BukuIndukModuleController();
             $controller->printRapotKelas();
             break;
 
-        case '/siswa/tambah':
-            // Panggil SiswaController - Render Form Tambah
-            $controller = new App\Controllers\SiswaController();
-            $controller->tambah();
-            break;
-
-        case '/siswa/simpan':
-            // Panggil SiswaController - Proses Simpan Baru
-            $controller = new App\Controllers\SiswaController();
-            $controller->store();
-            break;
-
-        case '/siswa/save-draft':
-            // Panggil SiswaController - Simpan Draft
-            $controller = new App\Controllers\SiswaController();
-            $controller->saveDraft();
-            break;
-
-        case '/siswa/edit':
-            // Panggil SiswaController - Render Form Edit
-            $controller = new App\Controllers\SiswaController();
-            $controller->edit();
-            break;
-
-        case '/siswa/update':
-            // Panggil SiswaController - Proses Update
-            $controller = new App\Controllers\SiswaController();
-            $controller->update();
-            break;
-
-        case '/siswa/hapus':
-            // Panggil SiswaController - Proses Hapus (Soft Delete)
-            $controller = new App\Controllers\SiswaController();
-            $controller->delete();
-            break;
 
         case '/api/v1/siswa/delete':
             // API: Hapus Siswa (Soft Delete) via AJAX
-            $controller = new App\Controllers\BukuIndukController();
+            $controller = new App\Modules\Siswa\Controllers\BukuIndukModuleController();
             $controller->deleteSiswaApi();
             break;
 
@@ -1034,12 +999,12 @@ try {
         // ================================================================
         case '/tracer-study':
             // Halaman Tracer Study / Portofolio Alumni
-            $controller = new App\Controllers\TracerController();
+            $controller = new App\Modules\Alumni\Controllers\TracerModuleController();
             $controller->index();
             break;
 
         case '/api/v1/tracer/kuliah':
-            $controller = new App\Controllers\TracerController();
+            $controller = new App\Modules\Alumni\Controllers\TracerModuleController();
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $controller->storeKuliah();
             } else {
@@ -1048,7 +1013,7 @@ try {
             break;
 
         case '/api/v1/tracer/pekerjaan':
-            $controller = new App\Controllers\TracerController();
+            $controller = new App\Modules\Alumni\Controllers\TracerModuleController();
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $controller->storePekerjaan();
             } else {
@@ -1058,13 +1023,13 @@ try {
 
         case '/api/v1/tracer/kuliah/delete':
             // API: Hapus riwayat kuliah (hanya admin/guru_bk)
-            $controller = new App\Controllers\TracerController();
+            $controller = new App\Modules\Alumni\Controllers\TracerModuleController();
             $controller->deleteKuliah();
             break;
 
         case '/api/v1/tracer/pekerjaan/delete':
             // API: Hapus riwayat pekerjaan (hanya admin/guru_bk)
-            $controller = new App\Controllers\TracerController();
+            $controller = new App\Modules\Alumni\Controllers\TracerModuleController();
             $controller->deletePekerjaan();
             break;
 
@@ -1546,49 +1511,49 @@ try {
 
         case '/master-data':
             // Panggil KelembagaanController - Halaman Sentral Kelembagaan
-            $controller = new App\Controllers\KelembagaanController();
+            $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
             $controller->index();
             break;
 
         case '/api/v1/kelembagaan':
             // API: Ambil data terpaginasi
-            $controller = new App\Controllers\KelembagaanController();
+            $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
             $controller->fetchApi();
             break;
 
         case '/api/v1/kelembagaan/options':
             // API: Ambil data opsi relasi
-            $controller = new App\Controllers\KelembagaanController();
+            $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
             $controller->getOptionsApi();
             break;
 
         case '/api/v1/kelembagaan/tenants':
             // API: Ambil daftar tenant/sekolah untuk Super Admin
-            $controller = new App\Controllers\KelembagaanController();
+            $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
             $controller->getTenantsApi();
             break;
 
         case '/api/v1/kelembagaan/simpan':
             // API: Simpan/Update data
-            $controller = new App\Controllers\KelembagaanController();
+            $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
             $controller->storeApi();
             break;
 
         case '/api/v1/kelembagaan/hapus':
             // API: Soft Delete
-            $controller = new App\Controllers\KelembagaanController();
+            $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
             $controller->deleteApi();
             break;
 
         case '/api/v1/kelembagaan/restore':
             // API: Restore
-            $controller = new App\Controllers\KelembagaanController();
+            $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
             $controller->restoreApi();
             break;
 
         case '/api/v1/kelembagaan/toggle-status':
             // API: Toggle Status Aktif
-            $controller = new App\Controllers\KelembagaanController();
+            $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
             $controller->toggleStatusApi();
             break;
 
@@ -1672,27 +1637,27 @@ try {
         // ERROR MONITOR ROUTES — SUPER ADMIN ONLY
         // ================================================================
         case '/super-admin/error-monitor':
-            $controller = new App\Controllers\ErrorMonitorController();
+            $controller = new App\Modules\Core\Controllers\ErrorMonitorModuleController();
             $controller->index();
             break;
 
         case '/api/v1/error-monitor':
-            $controller = new App\Controllers\ErrorMonitorController();
+            $controller = new App\Modules\Core\Controllers\ErrorMonitorModuleController();
             $controller->fetchApi();
             break;
 
         case '/api/v1/error-monitor/clear':
-            $controller = new App\Controllers\ErrorMonitorController();
+            $controller = new App\Modules\Core\Controllers\ErrorMonitorModuleController();
             $controller->clearAll();
             break;
 
         case '/api/v1/error-monitor/delete':
-            $controller = new App\Controllers\ErrorMonitorController();
+            $controller = new App\Modules\Core\Controllers\ErrorMonitorModuleController();
             $controller->deleteOne();
             break;
 
         case '/api/v1/error-monitor/log-client':
-            $controller = new App\Controllers\ErrorMonitorController();
+            $controller = new App\Modules\Core\Controllers\ErrorMonitorModuleController();
             $controller->logClientErrorApi();
             break;
 
@@ -1762,91 +1727,91 @@ try {
 
         case '/pengguna':
             // Panggil PenggunaController - Halaman Sentral Pengguna
-            $controller = new App\Controllers\PenggunaController();
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
             $controller->index();
             break;
 
         case '/api/v1/pengguna':
             // API: Ambil data terpaginasi pengguna
-            $controller = new App\Controllers\PenggunaController();
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
             $controller->fetchApi();
             break;
 
         case '/api/v1/pengguna/tenants':
             // API: Ambil daftar tenant/sekolah untuk Super Admin
-            $controller = new App\Controllers\PenggunaController();
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
             $controller->getTenantsApi();
             break;
 
         case '/api/v1/pengguna/kelas':
             // API: Ambil daftar kelas/rombel untuk dropdown filter
-            $controller = new App\Controllers\PenggunaController();
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
             $controller->getKelasApi();
             break;
 
         case '/api/v1/pengguna/simpan':
             // API: Simpan/Update data pengguna
-            $controller = new App\Controllers\PenggunaController();
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
             $controller->storeApi();
             break;
 
         case '/api/v1/pengguna/quick-add-siswa':
             // API: Registrasi Cepat Siswa
-            $controller = new App\Controllers\PenggunaController();
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
             $controller->quickStoreSiswaApi();
             break;
 
         case '/api/v1/pengguna/hapus':
             // API: Soft Delete pengguna
-            $controller = new App\Controllers\PenggunaController();
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
             $controller->deleteApi();
             break;
 
         case '/api/v1/pengguna/restore':
             // API: Restore pengguna
-            $controller = new App\Controllers\PenggunaController();
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
             $controller->restoreApi();
             break;
 
         case '/api/v1/pengguna/toggle-status':
             // API: Toggle Status Aktif pengguna
-            $controller = new App\Controllers\PenggunaController();
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
             $controller->toggleStatusApi();
             break;
 
         case '/api/v1/pengguna/aksi/kelas':
             // API: Ambil daftar kelas untuk dropdown panel Naikkan Kelas & Luluskan Siswa
-            $controller = new App\Controllers\PenggunaController();
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
             $controller->getKelasAksiApi();
             break;
 
         case '/api/v1/pengguna/tahun-ajaran':
             // API: Ambil daftar tahun ajaran untuk filter aksi
-            $controller = new App\Controllers\PenggunaController();
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
             $controller->apiTahunAjaran();
             break;
 
         case '/api/v1/pengguna/aksi/siswa':
             // API: Ambil daftar siswa aktif berdasarkan kelas (checklist panel aksi)
-            $controller = new App\Controllers\PenggunaController();
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
             $controller->getSiswaUntukAksiApi();
             break;
 
         case '/api/v1/pengguna/aksi/naikkan-kelas':
             // API: Eksekusi kenaikan kelas massal
-            $controller = new App\Controllers\PenggunaController();
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
             $controller->naikkanKelasApi();
             break;
 
         case '/api/v1/pengguna/aksi/tinggal-kelas':
             // API: Eksekusi tinggal kelas siswa massal
-            $controller = new App\Controllers\PenggunaController();
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
             $controller->tinggalKelasApi();
             break;
 
         case '/api/v1/pengguna/aksi/luluskan':
             // API: Eksekusi kelulusan siswa massal
-            $controller = new App\Controllers\PenggunaController();
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
             $controller->luluskanSiswaApi();
             break;
 
@@ -1901,8 +1866,8 @@ try {
                 header('Content-Type: application/json; charset=utf-8');
                 echo json_encode(['error' => 'Endpoint tidak ditemukan']);
             } else {
-                echo "<h1>404 Halaman Tidak Ditemukan</h1>";
-                echo "<p>Halaman yang Anda cari tidak ada pada server ini.</p>";
+                $controller = new App\Modules\Core\Controllers\UnderConstructionController();
+                $controller->index();
             }
             break;
     }

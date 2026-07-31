@@ -32,8 +32,9 @@ class RouteGuard {
 
             // Normalisasi URL path agar cocok dengan data seed tabel menus (contoh: /pengguna menjadi /SINTA-SaaS/pengguna)
             $normalizedPath = $path;
-            if (!str_starts_with($normalizedPath, '/SINTA-SaaS')) {
-                $normalizedPath = '/SINTA-SaaS' . $normalizedPath;
+            $baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
+            if (!str_starts_with($normalizedPath, $baseUrl)) {
+                $normalizedPath = $baseUrl . $normalizedPath;
             }
 
             // 3. Cari menu_id berdasarkan path URL yang diakses
@@ -119,7 +120,7 @@ class RouteGuard {
         $tenantId = $_SESSION['tenant_id'] ?? null;
         
         $path = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
-        $project_folder = '/SINTA-SaaS';
+        $project_folder = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
         if (strncasecmp($path, $project_folder, strlen($project_folder)) === 0) {
             $path = substr($path, strlen($project_folder));
         }

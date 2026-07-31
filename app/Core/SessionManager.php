@@ -162,13 +162,15 @@ class SessionManager {
                 echo json_encode(['error' => 'Unauthorized access. Please login.']);
                 exit;
             } else {
-                $redirectUrl = '/SINTA-SaaS/login';
+                $baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
+                $redirectUrl = $baseUrl . '/login';
                 // Jika mengakses halaman khusus admin/staf/pengguna, arahkan ke login admin
                 $path = parse_url($requestUri, PHP_URL_PATH);
                 $adminPaths = ['/pengguna', '/super-admin', '/konfigurasi', '/master-data', '/siswa/tambah', '/siswa/edit', '/siswa/hapus'];
                 foreach ($adminPaths as $adminPath) {
                     if (str_contains($path, $adminPath)) {
-                        $redirectUrl = '/SINTA-SaaS/admin';
+                        $baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
+                        $redirectUrl = $baseUrl . '/admin';
                         break;
                     }
                 }

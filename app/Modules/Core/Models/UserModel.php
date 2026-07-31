@@ -42,18 +42,18 @@ class UserModel extends BaseModel {
             }
         } catch (\Throwable $e) {
             if ($tenantId === null) {
-                $sql = "SELECT u.*, r.nama_role FROM users u JOIN roles r ON u.role_id = r.id WHERE u.email = :email AND u.tenant_id IS NULL";
+            $sql = "SELECT u.*, r.nama_role FROM core.users u JOIN core.roles r ON u.role_id = r.id WHERE u.email = :email AND u.tenant_id IS NULL";
                 $stmt = $this->db->prepare($sql);
                 $stmt->execute(['email' => $email]);
                 return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
             } else {
-                $sql = "SELECT u.*, r.nama_role FROM users u JOIN roles r ON u.role_id = r.id WHERE u.email = :email AND u.tenant_id = :tenant_id";
+            $sql = "SELECT u.*, r.nama_role FROM core.users u JOIN core.roles r ON u.role_id = r.id WHERE u.email = :email AND u.tenant_id = :tenant_id";
                 $stmt = $this->db->prepare($sql);
                 $stmt->execute(['email' => $email, 'tenant_id' => $tenantId]);
                 $user = $stmt->fetch(PDO::FETCH_ASSOC);
                 if ($user) return $user;
 
-                $sqlSuper = "SELECT u.*, r.nama_role FROM users u JOIN roles r ON u.role_id = r.id WHERE u.email = :email AND u.tenant_id IS NULL";
+            $sqlSuper = "SELECT u.*, r.nama_role FROM core.users u JOIN core.roles r ON u.role_id = r.id WHERE u.email = :email AND u.tenant_id IS NULL";
                 $stmtSuper = $this->db->prepare($sqlSuper);
                 $stmtSuper->execute(['email' => $email]);
                 return $stmtSuper->fetch(PDO::FETCH_ASSOC) ?: null;
