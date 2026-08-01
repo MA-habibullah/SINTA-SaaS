@@ -343,7 +343,10 @@
                                 headers['X-Tenant-ID'] = this.form.tenant_id;
                             }
 
-                            const response = await fetch('api/v1/auth/login', {
+                            const appBaseUrl = "<?php echo rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\'); ?>";
+                            const loginEndpoint = (appBaseUrl && appBaseUrl !== '/') ? (appBaseUrl + '/api/v1/auth/login') : '/api/v1/auth/login';
+
+                            const response = await fetch(loginEndpoint, {
                                 method: 'POST',
                                 headers: headers,
                                 body: JSON.stringify({

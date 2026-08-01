@@ -2703,7 +2703,7 @@ const { ref, computed, onMounted, nextTick } = Vue;
 const _tenantId  = <?= json_encode($tenantId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 const _userRole  = <?= json_encode($userRole, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 const _userId    = <?= json_encode($_SESSION['user_id'] ?? '', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-const _baseUrl   = '<?= $baseUrl ?>';
+const _baseUrl   = '<?php echo $baseUrl ?? rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\'); ?>';
 const _tahunAjaranList = <?= json_encode($tahunAjaranList, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 
 window.VueAppRegistry.register('#bkApp', {

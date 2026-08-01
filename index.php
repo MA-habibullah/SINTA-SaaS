@@ -1717,13 +1717,145 @@ case '/api/v1/keuangan/dashboard-metrics':
             $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
             $controller->getKelasAksiApi();
             break;
+        case '/super-admin/tenants_old':
+            // Halaman: Kelola Sekolah (SaaS Tenant Management)
+            $controller = new App\Modules\Core\Controllers\TenantManagementModuleController();
+            $controller->index();
+            break;
+
+        // ================================================================
+        // ERROR MONITOR ROUTES — SUPER ADMIN ONLY
+        // ================================================================
+        case '/super-admin/error-monitor':
+            $controller = new App\Modules\Core\Controllers\ErrorMonitorModuleController();
+            $controller->index();
+            break;
+
+        case '/api/v1/error-monitor':
+            $controller = new App\Modules\Core\Controllers\ErrorMonitorModuleController();
+            $controller->fetchApi();
+            break;
+
+        case '/api/v1/error-monitor/clear':
+            $controller = new App\Modules\Core\Controllers\ErrorMonitorModuleController();
+            $controller->clearAll();
+            break;
+
+        case '/api/v1/error-monitor/delete':
+            break;
+
+
+        case '/api/v1/super-admin/tenant-menus/fetch':
+            // API: Ambil menu & status centang per-sekolah
+            $controller = new App\Modules\Sistem\Controllers\SuperAdminModuleController();
+            $controller->fetchTenantMenus();
+            break;
+
+        case '/api/v1/super-admin/tenant-menus/save':
+            // API: Simpan/update menu per-sekolah
+            $controller = new App\Modules\Sistem\Controllers\SuperAdminModuleController();
+            $controller->saveTenantMenuAccess();
+            break;
+
+        case '/api/v1/super-admin/tenants':
+            // API: Ambil daftar seluruh sekolah (tenants)
+            $controller = new App\Modules\Core\Controllers\TenantManagementModuleController();
+            $controller->fetchApi();
+            break;
+
+        case '/api/v1/super-admin/tenants/simpan':
+            // API: Simpan (Tambah Baru / Update) Sekolah (SaaS Tenant)
+            $controller = new App\Modules\Core\Controllers\TenantManagementModuleController();
+            $controller->storeApi();
+            break;
+
+        case '/api/v1/super-admin/tenants/hapus':
+            // API: Hapus Sekolah (Soft Delete)
+            $controller = new App\Modules\Core\Controllers\TenantManagementModuleController();
+            $controller->deleteApi();
+            break;
+
+        case '/api/v1/super-admin/tenants/toggle-status':
+            // API: Ubah Status Akses Tenant (active / inactive / suspended)
+            $controller = new App\Modules\Core\Controllers\TenantManagementModuleController();
+            $controller->toggleStatusApi();
+            break;
+
+        case '/smk/pkl':
+            $controller = new App\Modules\Smk\Controllers\SmkModuleController();
+            $controller->indexView();
+            break;
+
+        case '/api/v1/smk/pkl':
+            $controller = new App\Modules\Smk\Controllers\SmkModuleController();
+            $controller->getPklApi();
+            break;
+
+        case '/pengguna':
+            // Panggil PenggunaController - Halaman Sentral Pengguna
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
+            $controller->index();
+            break;
+
+        case '/api/v1/pengguna':
+            // API: Ambil data terpaginasi pengguna
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
+            $controller->fetchApi();
+            break;
+
+        case '/api/v1/pengguna/tenants':
+            // API: Ambil daftar tenant/sekolah untuk Super Admin
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
+            $controller->getTenantsApi();
+            break;
+
+        case '/api/v1/pengguna/kelas':
+            // API: Ambil daftar kelas/rombel untuk dropdown filter
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
+            $controller->getKelasApi();
+            break;
+
+        case '/api/v1/pengguna/simpan':
+            // API: Simpan/Update data pengguna
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
+            $controller->storeApi();
+            break;
+
+        case '/api/v1/pengguna/quick-add-siswa':
+            // API: Registrasi Cepat Siswa
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
+            $controller->quickStoreSiswaApi();
+            break;
+
+        case '/api/v1/pengguna/hapus':
+            // API: Soft Delete pengguna
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
+            $controller->deleteApi();
+            break;
+
+        case '/api/v1/pengguna/restore':
+            // API: Restore pengguna
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
+            $controller->restoreApi();
+            break;
+
+        case '/api/v1/pengguna/toggle-status':
+            // API: Toggle Status Aktif pengguna
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
+            $controller->toggleStatusApi();
+            break;
+
+        case '/api/v1/pengguna/aksi/kelas':
+            // API: Ambil daftar kelas untuk dropdown panel Naikkan Kelas & Luluskan Siswa
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
+            $controller->getKelasAksiApi();
+            break;
 
         case '/api/v1/pengguna/tahun-ajaran':
             // API: Ambil daftar tahun ajaran untuk filter aksi
             $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
             $controller->apiTahunAjaran();
             break;
-
         case '/api/v1/pengguna/aksi/siswa':
             // API: Ambil daftar siswa aktif berdasarkan kelas (checklist panel aksi)
             $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
@@ -1749,6 +1881,18 @@ case '/api/v1/keuangan/dashboard-metrics':
             break;
 
         case '/api/v1/auth/login':
+        case '/admin/api/v1/auth/login':
+            $controller = new App\Modules\Core\Controllers\AuthModuleController();
+            $controller->loginAdminApi();
+            break;
+
+        case '/api/v1/auth/logout':
+        case '/admin/api/v1/auth/logout':
+        case '/logout':
+        case '/admin/logout':
+            $controller = new App\Modules\Core\Controllers\AuthModuleController();
+            $controller->logout();
+            break;
 
         case '/api/v1/pdss/simulasi/setting':
             $ctrl = new App\Modules\Pdss\Controllers\PdssDetailModuleController();

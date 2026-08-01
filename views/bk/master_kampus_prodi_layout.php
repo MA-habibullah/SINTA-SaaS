@@ -295,7 +295,7 @@ if (window.VueAppRegistry.register) {
     window.VueAppRegistry.register('#kampusProdiFlatApp', {
         data() {
         return {
-            baseUrl: '<?= $baseUrl ?>',
+            baseUrl: '<?php echo $baseUrl ?? rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\'); ?>',
             tenantId: '<?= htmlspecialchars($tenantId) ?>',
             canWrite: <?= json_encode($canWrite, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
             loading: false,
