@@ -1041,7 +1041,7 @@ $tenantList = $data['tenant_list'] ?? $tenantList ?? $tenant_list ?? [];
 <!-- Vue 3 Interactive Routing & Lifecycle Scripts -->
 <script>
 {
-    const _baseUrl = '/SINTA-SaaS';
+    const _baseUrl = '<?= rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\') ?>';
     const _userRole = <?= json_encode($data['user_role'] ?? 'siswa', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
     const _canWrite = <?= json_encode($data['can_write'] ?? false, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
     const _currentTenantId = <?= json_encode($tenantId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;

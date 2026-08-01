@@ -433,8 +433,21 @@
             </div>
 
             <!-- Table Pagination Footer -->
-            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3">
-                <span class="fs-8 text-muted">Menampilkan {{ from }} s.d. {{ to }} dari {{ total }} baris</span>
+            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3" v-if="total > 0">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="fs-8 text-muted">Menampilkan {{ from }} s.d. {{ to }} dari {{ total }} baris</span>
+                    <div class="d-flex align-items-center gap-1 ms-2">
+                        <label for="main-perpage" class="fs-8 text-muted mb-0">Tampilkan:</label>
+                        <select id="main-perpage" name="main_perpage" class="form-select form-select-sm py-0 px-2 rounded-2 fs-8" style="width: auto; height: 28px;" v-model="perPage" @change="fetchData(1)">
+                            <option :value="10">10</option>
+                            <option :value="25">25</option>
+                            <option :value="50">50</option>
+                            <option :value="80">80</option>
+                            <option :value="120">120</option>
+                        </select>
+                        <span class="fs-8 text-muted">per hal</span>
+                    </div>
+                </div>
                 <nav v-if="totalPages > 1">
                     <ul class="pagination pagination-sm m-0">
                         <li class="page-item" :class="{disabled: currentPage === 1}">
@@ -1123,6 +1136,18 @@
                     </select>
                 </div>
 
+                <!-- Filter Status Siswa -->
+                <div class="col-12 col-md-3">
+                    <label for="pr-status" class="aksi-label"><i class="bi bi-funnel me-1"></i> Status Siswa</label>
+                    <select id="pr-status" name="pr_status" class="form-select form-select-sm rounded-3" v-model="filterStatus" @change="fetchData(1)">
+                        <option value="Aktif">Aktif</option>
+                        <option value="Lulus">Lulus (Alumni)</option>
+                        <option value="Pindah">Pindah</option>
+                        <option value="Putus Sekolah">Putus Sekolah</option>
+                        <option value="">Semua Status</option>
+                    </select>
+                </div>
+
                 <!-- Input Tempat -->
                 <div class="col-12 col-md-3">
                     <label for="pr-tempat" class="aksi-label"><i class="bi bi-geo-alt me-1"></i> Tempat Tanda Tangan <span class="text-danger">*</span></label>
@@ -1155,7 +1180,7 @@
                 <!-- Bulk Actions -->
                 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2" v-if="listData.length > 0">
                     <div>
-                        <span class="text-muted fs-8">Total: <strong>{{ total }}</strong> siswa aktif ditemukan.</span>
+                        <span class="text-muted fs-8">Total: <strong>{{ total }}</strong> siswa (Status: {{ filterStatus || 'Semua Status' }}) ditemukan.</span>
                     </div>
                     <button class="btn btn-success btn-sm rounded-3 px-4 d-flex align-items-center gap-1.5" @click="printBulk">
                         <i class="bi bi-printer-fill"></i>
@@ -1165,7 +1190,7 @@
 
                 <div v-if="listData.length === 0" class="aksi-empty-state text-center py-5">
                     <i class="bi bi-person-slash fs-1 text-muted opacity-50"></i>
-                    <p class="text-muted mt-2 mb-0">Tidak ada siswa aktif di kelas ini.</p>
+                    <p class="text-muted mt-2 mb-0">Tidak ada siswa (Status: {{ filterStatus || 'Semua Status' }}) di kelas ini.</p>
                 </div>
 
                 <div class="table-responsive" v-if="listData.length > 0">
@@ -1176,6 +1201,7 @@
                                 <th>Nama Lengkap</th>
                                 <th>NISN</th>
                                 <th>NIS</th>
+                                <th class="text-center" style="width: 120px;">Status</th>
                                 <th class="text-center" style="width: 150px;">Aksi</th>
                             </tr>
                         </thead>
@@ -1193,6 +1219,11 @@
                                 <td><span class="badge bg-light text-dark border font-monospace">{{ item.nisn || '-' }}</span></td>
                                 <td><span class="badge bg-light text-dark border font-monospace">{{ item.nis || '-' }}</span></td>
                                 <td class="text-center">
+                                    <span class="badge rounded-pill px-2.5 py-1" :class="getStatusBadgeClass(item.status)">
+                                        {{ item.status || 'Aktif' }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
                                     <button class="btn btn-sm btn-outline-primary rounded-2 px-3 py-1 fs-8 d-inline-flex align-items-center gap-1" @click="printSingle(item.id)">
                                         <i class="bi bi-printer"></i> Cetak
                                     </button>
@@ -1203,9 +1234,22 @@
                 </div>
 
                 <!-- Pagination -->
-                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3 mt-3" v-if="totalPages > 1">
-                    <span class="fs-8 text-muted">Menampilkan {{ from }} s.d. {{ to }} dari {{ total }} baris</span>
-                    <nav>
+                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3 mt-3" v-if="total > 0">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="fs-8 text-muted">Menampilkan {{ from }} s.d. {{ to }} dari {{ total }} baris</span>
+                        <div class="d-flex align-items-center gap-1 ms-2">
+                            <label for="pr-perpage" class="fs-8 text-muted mb-0">Tampilkan:</label>
+                            <select id="pr-perpage" name="pr_perpage" class="form-select form-select-sm py-0 px-2 rounded-2 fs-8" style="width: auto; height: 28px;" v-model="perPage" @change="fetchData(1)">
+                                <option :value="10">10</option>
+                                <option :value="25">25</option>
+                                <option :value="50">50</option>
+                                <option :value="80">80</option>
+                                <option :value="120">120</option>
+                            </select>
+                            <span class="fs-8 text-muted">per hal</span>
+                        </div>
+                    </div>
+                    <nav v-if="totalPages > 1">
                         <ul class="pagination pagination-sm m-0">
                             <li class="page-item" :class="{disabled: currentPage === 1}">
                                 <a class="page-link" href="#" @click.prevent="fetchData(currentPage - 1)">&laquo;</a>
@@ -1716,7 +1760,7 @@
                 }
 
                 if (this.activeTab === 'siswa' || this.activeTab === 'mutasi' || this.activeTab === 'profile_rapot') {
-                    params.status = this.activeTab === 'profile_rapot' ? 'Aktif' : this.filterStatus;
+                    params.status = this.filterStatus;
                     params.id_kelas = this.filterKelas;
                 }
 
@@ -2381,6 +2425,14 @@
                 if (this.$refs.bulkPhotoFile) {
                     this.$refs.bulkPhotoFile.value = '';
                 }
+            },
+            getStatusBadgeClass(status) {
+                if (!status) return 'bg-success-subtle text-success border border-success-subtle';
+                const s = String(status).toLowerCase();
+                if (s.includes('lulus')) return 'bg-primary-subtle text-primary border border-primary-subtle';
+                if (s.includes('pindah')) return 'bg-warning-subtle text-warning-emphasis border border-warning-subtle';
+                if (s.includes('putus')) return 'bg-danger-subtle text-danger border border-danger-subtle';
+                return 'bg-success-subtle text-success border border-success-subtle';
             }
         }
     });

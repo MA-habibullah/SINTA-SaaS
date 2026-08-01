@@ -104,7 +104,7 @@ $tenants      = $data['tenants'] ?? [];
                         <th>Path / URL</th>
                         <th style="width: 100px;">Ikon</th>
                         <!-- Render headers for each role -->
-                        <?php foreach ($data['roles'] as $role): ?>
+                        <?php foreach (($data['roles'] ?? []) as $role): ?>
                             <th class="text-center" style="width: 140px;">
                                 <span class="badge bg-secondary-subtle text-secondary px-2 py-1 text-uppercase" style="font-size: 0.725rem;">
                                     <?= htmlspecialchars(str_replace('_', ' ', $role['nama_role'])) ?>
@@ -116,7 +116,7 @@ $tenants      = $data['tenants'] ?? [];
                     <?php
                     // Bangun struktur tree: Parent → Children
                     // agar urutan tampilan identik dengan halaman tenant_menus (gambar 2)
-                    $allMenus  = array_values($data['menus']);
+                    $allMenus  = array_values($data['menus'] ?? []);
                     $parents   = array_filter($allMenus, fn($m) => $m['parent_id'] === null);
                     $childMap  = [];
                     foreach ($allMenus as $m) {

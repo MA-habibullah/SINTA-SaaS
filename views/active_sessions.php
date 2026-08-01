@@ -371,9 +371,10 @@
                         }
                     });
                     if (response.data && response.data.success) {
-                        onlineUsers.value = response.data.online_users;
-                        chartRawData.value = response.data.chart_data;
-                        auditChartRawData.value = response.data.audit_chart_data || [];
+                        const payload = response.data.data || response.data;
+                        onlineUsers.value = payload.online_users || [];
+                        chartRawData.value = payload.chart_data || [];
+                        auditChartRawData.value = payload.audit_chart_data || [];
                         onlinePage.value = 1;
                         
                         // Render or update chart
@@ -397,7 +398,8 @@
                         }
                     });
                     if (response.data && response.data.success) {
-                        auditLogs.value = response.data.audit_logs;
+                        const payload = response.data.data || response.data;
+                        auditLogs.value = payload.audit_logs || payload || [];
                         auditPage.value = 1;
                     }
                 } catch (err) {
@@ -416,6 +418,9 @@
                 if (myChart) {
                     myChart.destroy();
                 }
+
+                if (!Array.isArray(chartRawData.value)) chartRawData.value = [];
+                if (!Array.isArray(auditChartRawData.value)) auditChartRawData.value = [];
 
                 // If empty data, provide dummy labels to draw empty chart grid
                 if (chartRawData.value.length === 0 && auditChartRawData.value.length === 0) {

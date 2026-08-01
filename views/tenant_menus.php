@@ -200,9 +200,11 @@
                 axios.get('<?= $this->getBaseUrl() ?>/api/v1/super-admin/tenant-menus/fetch')
                 .then(response => {
                     this.isLoading = false;
-                    if (response.data.success) {
-                        this.tenants = response.data.tenants || [];
-                        this.menus = response.data.menus || [];
+                    const resData = response.data;
+                    if (resData && (resData.success || resData.data)) {
+                        const payload = resData.data || resData;
+                        this.tenants = payload.tenants || resData.tenants || [];
+                        this.menus = payload.menus || resData.menus || [];
                     }
                 })
                 .catch(error => {
@@ -226,8 +228,10 @@
                 })
                 .then(response => {
                     this.isLoading = false;
-                    if (response.data.success) {
-                        this.checkedMenuIds = response.data.checkedMenuIds || [];
+                    const resData = response.data;
+                    if (resData && (resData.success || resData.data)) {
+                        const payload = resData.data || resData;
+                        this.checkedMenuIds = payload.checkedMenuIds || payload.active_menu_ids || resData.checkedMenuIds || [];
                     }
                 })
                 .catch(error => {

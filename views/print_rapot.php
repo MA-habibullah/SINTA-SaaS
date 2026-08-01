@@ -516,7 +516,7 @@
             </div>
             <div class="signature-right">
                 <div class="signature-container">
-                    <div style="margin-bottom: 2px;"><?= htmlspecialchars($tempat) ?>, <?= htmlspecialchars($tanggal) ?></div>
+                    <div style="margin-bottom: 2px;"><?= htmlspecialchars($tempat ?? 'Jombang') ?>, <?= htmlspecialchars($tanggal ?? date('d F Y')) ?></div>
                     <div style="margin-bottom: 0;">Kepala Sekolah</div>
                     <?php if (isset($showQrCode) && $showQrCode): ?>
                         <div style="height: 10px;"></div>

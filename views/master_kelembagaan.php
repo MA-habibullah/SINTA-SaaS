@@ -25,50 +25,54 @@
         </div>
     </div>
 
-    <!-- ═══ FILTER SEKOLAH — Hanya Super Admin ═══════════════════════════════ -->
-    <div v-if="userRole === 'super_admin'" class="card border-0 shadow-sm rounded-4 mb-3" style="background:linear-gradient(135deg,#eff6ff,#f0fdf4);border-left:4px solid #2563eb !important;">
-        <div class="card-body py-3 px-4">
-            <div class="row g-3 align-items-center">
-                <div class="col-auto">
-                    <div class="d-flex align-items-center gap-2">
-                        <label for="sa-filter-sekolah-kelembagaan" class="d-flex align-items-center gap-2 m-0 fw-bold text-dark fs-7 cursor-pointer">
-                            <i class="bi bi-building-fill text-primary fs-5"></i>
-                            Filter Sekolah
-                        </label>
-                        <span v-if="filterTenantId" class="badge rounded-pill ms-1" style="background:#dbeafe;color:#1d4ed8;font-size:.72rem;">
-                            <i class="bi bi-funnel-fill me-1"></i>Aktif
-                        </span>
-                    </div>
-                </div>
-                <div class="col-12 col-md-5">
-                    <select class="form-select form-select-sm rounded-3 shadow-none"
-                            v-model="filterTenantId"
-                            @change="onFilterTenantChange"
-                            id="sa-filter-sekolah-kelembagaan"
-                            name="filter_tenant_id"
-                            style="border:1.5px solid #bfdbfe;">
-                        <option value="">🏫 Semua Sekolah</option>
-                        <option v-for="t in listTenants" :key="t.id" :value="t.id">
-                            {{ t.nama_sekolah }}
-                        </option>
+    <!-- Filter Sekolah Banner (Di bawah tulisan Master Data Kelembagaan & Sebelum Navtab) -->
+    <div class="mb-4 p-3 px-md-4 rounded-4 shadow-sm border border-blue-100" 
+         style="background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%); border-left: 4px solid #2563eb !important;"
+         v-if="userRole === 'super_admin'">
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <i class="bi bi-building text-primary fs-5"></i>
+                <span class="fw-bold text-dark me-1" style="font-size: 0.95rem;">Filter Sekolah</span>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1.5 fs-8">
+                    <i class="bi bi-funnel-fill me-1"></i>Aktif
+                </span>
+
+                <!-- Dropdown Filter Sekolah (Khusus Super Admin) -->
+                <div class="ms-md-2 my-1 my-md-0">
+                    <select id="sa-filter-sekolah-kelembagaan" name="filter_tenant_id" 
+                            class="form-select form-select-sm bg-white border-blue-200 rounded-3 text-dark fw-medium shadow-sm" 
+                            style="min-width: 250px; max-width: 340px; height: 38px; font-size: 0.875rem;" 
+                            v-model="filterTenantId" 
+                            @change="onFilterTenantChange">
+                        <option value="">-- Semua Sekolah --</option>
+                        <option v-for="t in listTenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
                     </select>
                 </div>
-                <div class="col-12 col-md-4">
-                    <div v-if="filterTenantId" class="d-flex align-items-center gap-2">
-                        <span class="fs-8 text-muted">Menampilkan data milik:</span>
-                        <span class="fw-semibold text-primary fs-8">{{ selectedTenantName }}</span>
-                    </div>
-                    <div v-else class="fs-8 text-muted">
-                        <i class="bi bi-info-circle me-1"></i>Pilih sekolah untuk memfilter semua tabel
-                    </div>
-                </div>
-                <div class="col-auto ms-auto" v-if="filterTenantId">
-                    <button class="btn btn-outline-secondary btn-sm rounded-3" style="color:#334155; border-color:#94a3b8;"
-                            @click="clearFilterTenant"
-                            id="btn-reset-filter-sekolah">
-                        <i class="bi bi-x-circle me-1"></i>Reset Filter
-                    </button>
-                </div>
+
+                <!-- Tombol Terapkan Filter -->
+                <button type="button" 
+                        @click="onFilterTenantChange" 
+                        class="btn btn-primary btn-sm rounded-3 px-3 py-2 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-sm"
+                        style="height: 38px;">
+                    <i class="bi bi-funnel-fill"></i> Terapkan Filter
+                </button>
+
+                <!-- Reset Filter jika ada -->
+                <button v-if="filterTenantId" 
+                        type="button" 
+                        @click="clearFilterTenant" 
+                        class="btn btn-outline-secondary btn-sm rounded-3 px-3 py-2 fw-medium d-inline-flex align-items-center gap-1"
+                        style="height: 38px; color: #334155; border-color: #94a3b8;">
+                    <i class="bi bi-x-circle"></i> Reset Filter
+                </button>
+            </div>
+
+            <!-- Informational Text -->
+            <div class="text-muted fs-8 fs-md-7">
+                Menampilkan data milik: 
+                <strong class="text-primary fw-bold ms-1">
+                    {{ getSelectedTenantName() }}
+                </strong>
             </div>
         </div>
     </div>
@@ -146,6 +150,15 @@
                             <th>{{ activeTab === 'tahun_ajaran' ? 'Tahun Ajaran' : 'Tahun Angkatan' }}</th>
                             <th class="text-center" style="width: 100px;">Status</th>
                             <th class="text-center" style="width: 180px;">Aksi</th>
+                        </tr>
+                        <!-- Head Table Kurikulum -->
+                        <tr v-else-if="activeTab === 'kurikulum'">
+                            <th style="width: 60px;">No</th>
+                            <th>Sekolah</th>
+                            <th>Kode</th>
+                            <th>Nama Data</th>
+                            <th class="text-center" style="width: 130px;">Status</th>
+                            <th class="text-center" style="width: 140px;">Aksi</th>
                         </tr>
                         <!-- Head Table Generik Lainnya (Jenjang, Jurusan, Mapel, dll.) -->
                         <tr v-else>
@@ -230,37 +243,47 @@
                         <template v-else-if="activeTab === 'kurikulum'">
                             <tr v-for="(item, idx) in listData" :key="item.id" :class="{'table-light-danger text-muted': trashMode}">
                                 <td class="text-muted">{{ (currentPage - 1) * perPage + idx + 1 }}</td>
-                                <td v-if="userRole === 'super_admin'" class="fw-semibold text-secondary">{{ item.nama_sekolah || 'Sistem (Pemerintah)' }}</td>
+                                <td class="text-secondary fw-normal">
+                                    {{ isSystemItem(item) ? 'Sistem (Pemerintah)' : (item.nama_sekolah || 'Sistem (Pemerintah)') }}
+                                </td>
                                 <td class="fw-bold text-dark">
-                                    {{ item.nama_kurikulum }}
-                                    <span v-if="item.tenant_id === null" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill fs-9 ms-1.5"><i class="bi bi-shield-fill-check me-0.5"></i>Nasional</span>
-                                    <span v-else class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill fs-9 ms-1.5"><i class="bi bi-building me-0.5"></i>Kustom</span>
+                                    {{ getKurikulumTitle(item) }}
+                                    <span v-if="isSystemItem(item)" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill fs-9 ms-1.5 px-2 py-0.5">
+                                        <i class="bi bi-shield-fill-check me-0.5"></i>Nasional
+                                    </span>
+                                    <span v-else class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill fs-9 ms-1.5 px-2 py-0.5">
+                                        <i class="bi bi-building me-0.5"></i>Kustom
+                                    </span>
                                 </td>
                                 <td>
-                                    <span class="badge" :class="item.tipe_penilaian === 'kompleks' ? 'bg-danger-subtle text-danger border border-danger-subtle' : (item.tipe_penilaian === 'klasik' ? 'bg-info-subtle text-info border border-info-subtle' : 'bg-success-subtle text-success border border-success-subtle')">
-                                        {{ item.tipe_penilaian === 'kompleks' ? 'Kompleks (K-13)' : (item.tipe_penilaian === 'klasik' ? 'Klasik (KTSP)' : 'Sederhana (Merdeka)') }}
+                                    <span class="badge rounded-pill px-2.5 py-1 fs-8" :class="getKurikulumCategoryClass(item)">
+                                        {{ getKurikulumCategoryLabel(item) }}
                                     </span>
                                 </td>
                                 <td class="text-center">
-                                    <div class="form-check form-switch d-inline-block" v-if="!trashMode && item.tenant_id !== null">
-                                        <input :id="'status_switch_kur_' + item.id" :name="'status_switch_kur_' + item.id" :aria-label="'Ubah status aktif kurikulum ' + item.nama_kurikulum" class="form-check-input" type="checkbox" role="switch" 
+                                    <div class="form-check form-switch d-inline-block" v-if="!trashMode && !isSystemItem(item)">
+                                        <input :id="'status_switch_kur_' + item.id" :name="'status_switch_kur_' + item.id" :aria-label="'Ubah status aktif kurikulum ' + getKurikulumTitle(item)" class="form-check-input" type="checkbox" role="switch" 
                                                :checked="item.is_active == 1" @change="toggleStatus(item.id)">
                                     </div>
-                                    <span v-else-if="item.tenant_id === null" class="badge bg-success rounded-pill px-2 py-1 fs-9">Aktif Bawaan</span>
+                                    <span v-else-if="isSystemItem(item)" class="badge text-white rounded-pill px-2.5 py-1 fs-8 fw-semibold" style="background-color: #0f766e !important;">Aktif Bawaan</span>
                                     <span v-else class="badge bg-danger rounded-pill px-2 py-1 fs-9">Terhapus</span>
                                 </td>
                                 <td class="text-center">
-                                    <div class="d-inline-flex gap-2" v-if="!trashMode">
-                                        <button class="btn btn-sm btn-outline-secondary rounded-2 px-2 py-1" style="color:#334155; border-color:#94a3b8;" @click="openEditModal(item)" v-if="item.tenant_id !== null">
-                                            <i class="bi bi-pencil-square me-1"></i>Edit
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-danger rounded-2 px-2 py-1" @click="deleteItem(item.id)" v-if="item.tenant_id !== null">
-                                            <i class="bi bi-trash3 me-1"></i>Hapus
-                                        </button>
-                                        <span v-if="item.tenant_id === null" class="text-muted fs-8"><i class="bi bi-lock-fill"></i> Terkunci</span>
+                                    <div class="d-inline-flex gap-2 align-items-center" v-if="!trashMode">
+                                        <template v-if="isSystemItem(item)">
+                                            <span class="text-muted fs-8 fw-medium d-inline-flex align-items-center gap-1"><i class="bi bi-lock-fill"></i> Terkunci</span>
+                                        </template>
+                                        <template v-else>
+                                            <button class="btn btn-sm btn-outline-secondary rounded-2 px-2 py-1" style="color:#334155; border-color:#94a3b8;" @click="openEditModal(item)">
+                                                <i class="bi bi-pencil-square me-1"></i>Edit
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger rounded-2 px-2 py-1" @click="deleteItem(item.id)">
+                                                <i class="bi bi-trash3 me-1"></i>Hapus
+                                            </button>
+                                        </template>
                                     </div>
                                     <div class="d-inline-flex gap-2" v-else>
-                                        <button class="btn btn-sm btn-success text-white rounded-2 px-2 py-1" @click="restoreItem(item.id)" v-if="item.tenant_id !== null">
+                                        <button class="btn btn-sm btn-success text-white rounded-2 px-2 py-1" @click="restoreItem(item.id)" v-if="!isSystemItem(item)">
                                             <i class="bi bi-arrow-counterclockwise me-1"></i>Pulihkan
                                         </button>
                                         <span v-else class="text-muted fs-8">-</span>
@@ -317,8 +340,21 @@
             </div>
 
             <!-- Table Pagination Footer -->
-            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3">
-                <span class="fs-8 text-muted">Menampilkan {{ from }} s.d. {{ to }} dari {{ total }} baris</span>
+            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3" v-if="total > 0">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="fs-8 text-muted">Menampilkan {{ from }} s.d. {{ to }} dari {{ total }} baris</span>
+                    <div class="d-flex align-items-center gap-1 ms-2">
+                        <label for="mk-perpage" class="fs-8 text-muted mb-0">Tampilkan:</label>
+                        <select id="mk-perpage" name="mk_perpage" class="form-select form-select-sm py-0 px-2 rounded-2 fs-8" style="width: auto; height: 28px;" v-model="perPage" @change="fetchData(1)">
+                            <option :value="10">10</option>
+                            <option :value="25">25</option>
+                            <option :value="50">50</option>
+                            <option :value="80">80</option>
+                            <option :value="120">120</option>
+                        </select>
+                        <span class="fs-8 text-muted">per hal</span>
+                    </div>
+                </div>
                 <nav v-if="totalPages > 1">
                     <ul class="pagination pagination-sm m-0">
                         <li class="page-item" :class="{disabled: currentPage === 1}">
@@ -587,11 +623,51 @@
                 const tab = this.tabs.find(t => t.id === this.activeTab);
                 return tab ? tab.name : '';
             },
+            getSelectedTenantName() {
+                if (!this.filterTenantId) return 'Semua Sekolah';
+                const t = (this.listTenants || []).find(t => t.id === this.filterTenantId);
+                return t ? t.nama_sekolah : 'Semua Sekolah';
+            },
             // Nama sekolah yang sedang difilter (computed via find)
             get selectedTenantName() {
                 if (!this.filterTenantId) return '';
-                const t = this.listTenants.find(t => t.id === this.filterTenantId);
+                const t = (this.listTenants || []).find(t => t.id === this.filterTenantId);
                 return t ? t.nama_sekolah : '';
+            },
+            isSystemItem(item) {
+                if (!item) return false;
+                return !item.tenant_id || 
+                       item.tenant_id === '11111111-1111-1111-1111-111111111111' || 
+                       item.tenant_id === '00000000-0000-0000-0000-000000000000' || 
+                       item.is_system === true || 
+                       item.is_system === 1;
+            },
+            getKurikulumTitle(item) {
+                if (!item) return '';
+                return item.nama_ref_kurikulum || item.nama_kurikulum || item.nama || '';
+            },
+            getKurikulumCategoryLabel(item) {
+                if (!item) return 'Sederhana (Merdeka)';
+                const kat = (item.kategori || item.tipe_penilaian || '').toLowerCase();
+                const name = (item.nama_ref_kurikulum || item.nama_kurikulum || item.nama || '').toLowerCase();
+
+                if (kat === 'kompleks' || name.includes('2013') || name.includes('k-13') || name.includes('vokasi')) {
+                    return 'Kompleks (K-13)';
+                } else if (kat === 'klasik' || name.includes('ktsp') || name.includes('kbk')) {
+                    return 'Klasik (KTSP)';
+                } else {
+                    return 'Sederhana (Merdeka)';
+                }
+            },
+            getKurikulumCategoryClass(item) {
+                const label = this.getKurikulumCategoryLabel(item);
+                if (label.includes('Kompleks')) {
+                    return 'bg-danger-subtle text-danger border border-danger-subtle';
+                } else if (label.includes('Klasik')) {
+                    return 'bg-info-subtle text-info border border-info-subtle';
+                } else {
+                    return 'bg-success-subtle text-success border border-success-subtle';
+                }
             },
             onFilterTenantChange() {
                 this.fetchData(1);
@@ -754,6 +830,11 @@
                 
                 // Siapkan data payload
                 const payload = { ...this.form, module: this.activeTab };
+                if (this.userRole === 'super_admin') {
+                    payload.tenant_id = this.form.tenant_id || this.filterTenantId || '';
+                } else {
+                    payload.tenant_id = this.tenantId || '';
+                }
                 if (this.isEditMode) {
                     payload.id = this.editId;
                 }

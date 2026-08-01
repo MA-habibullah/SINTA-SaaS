@@ -354,8 +354,9 @@ $userRole = $_SESSION['role_name'] ?? '';
                 try {
                     const response = await axios.get('<?= $this->getBaseUrl() ?>/api/v1/activity-logs/filters');
                     if (response.data && response.data.success) {
-                        tenantOptions.value = response.data.tenants || [];
-                        roleOptions.value = response.data.roles || [];
+                        const d = response.data.data || response.data;
+                        tenantOptions.value = d.tenants || [];
+                        roleOptions.value = d.roles || [];
                     }
                 } catch (err) {
                     console.error('Failed to load filter options:', err);
@@ -377,11 +378,13 @@ $userRole = $_SESSION['role_name'] ?? '';
                     });
 
                     if (response.data && response.data.success) {
-                        logs.value = response.data.data;
-                        totalLogs.value = response.data.pagination.total;
-                        totalPages.value = response.data.pagination.pages;
+                        const payloadData = response.data.data || response.data;
+                        logs.value = payloadData.data || payloadData.logs || [];
+                        const pag = response.data.pagination || (response.data.data && response.data.data.pagination) || {};
+                        totalLogs.value = pag.total || 0;
+                        totalPages.value = pag.pages || 1;
                     } else {
-                        throw new Error(response.data.error || 'Gagal memuat log.');
+                        throw new Error((response.data && response.data.error) || 'Gagal memuat log.');
                     }
                 } catch (err) {
                     console.error(err);
@@ -423,17 +426,23 @@ $userRole = $_SESSION['role_name'] ?? '';
             // Pretty format date time
             const formatDateTime = (rawDateTime) => {
                 if (!rawDateTime) return '';
-                const d = new Date(rawDateTime.replace(/-/g, '/'));
-                if (isNaN(d.getTime())) return rawDateTime;
-                return d.toLocaleDateString('id-ID', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric'
-                }) + ' • ' + d.toLocaleTimeString('id-ID', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
+                if (typeof rawDateTime !== 'string') return String(rawDateTime);
+                try {
+                    const cleanStr = rawDateTime.replace(/-/g, '/');
+                    const d = new Date(cleanStr);
+                    if (isNaN(d.getTime())) return rawDateTime;
+                    return d.toLocaleDateString('id-ID', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric'
+                    }) + ' • ' + d.toLocaleTimeString('id-ID', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                } catch (e) {
+                    return rawDateTime;
+                }
             };
 
             // SweetAlert2 before vs after difference modal

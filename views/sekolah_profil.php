@@ -61,8 +61,8 @@
             <label for="sa-filter-sekolah" class="visually-hidden">Filter Sekolah</label>
             <select id="sa-filter-sekolah" name="tenant_id" @change="changeTenant($event)" class="w-full h-11 px-4 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
                 <?php foreach ($tenantsList as $t): ?>
-                    <option value="<?= htmlspecialchars($t['id']) ?>" <?= $t['id'] === $tenant['id'] ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($t['nama_sekolah']) ?> (NPSN: <?= htmlspecialchars($t['npsn']) ?>)
+                    <option value="<?= htmlspecialchars((string)($t['id'] ?? '')) ?>" <?= (string)($t['id'] ?? '') === (string)($tenantId ?? '') ? 'selected' : '' ?>>
+                        <?= htmlspecialchars((string)($t['nama_sekolah'] ?? '')) ?> (NPSN: <?= htmlspecialchars((string)($t['npsn'] ?? '-')) ?>)
                     </option>
                 <?php endforeach; ?>
             </select>

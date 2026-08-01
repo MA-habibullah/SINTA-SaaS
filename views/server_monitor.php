@@ -403,24 +403,24 @@
 
                         <!-- Total Pengguna -->
                         <td class="text-center">
-                            <div class="fw-bold text-dark">{{ t.total_users.toLocaleString('id-ID') }}</div>
-                            <div class="text-muted fs-9 mt-1">{{ t.total_siswa }} siswa, {{ t.total_staff }} staff</div>
+                            <div class="fw-bold text-dark">{{ ((t.total_users || 0)).toLocaleString('id-ID') }}</div>
+                            <div class="text-muted fs-9 mt-1">{{ t.total_siswa || 0 }} siswa, {{ t.total_staff || 0 }} staff</div>
                         </td>
 
                         <!-- Kuota Progress -->
                         <td style="min-width:160px;">
                             <div class="d-flex align-items-center justify-content-between mb-1" style="font-size:0.7rem;color:#64748b;">
-                                <span>{{ t.quota_percent }}%</span>
+                                <span>{{ t.quota_percent || 0 }}%</span>
                                 <span>{{ t.paket_aktif }}</span>
                             </div>
                             <div class="progress rounded-pill" style="height:6px;background:#f1f5f9;">
                                 <div class="progress-bar rounded-pill progress-bar-anim"
                                      role="progressbar"
                                      :aria-label="'Penggunaan Kuota Penyimpanan ' + t.nama_sekolah"
-                                     :aria-valuenow="t.quota_percent"
+                                     :aria-valuenow="t.quota_percent || 0"
                                      aria-valuemin="0"
                                      aria-valuemax="100"
-                                     :style="{ width: t.quota_percent + '%', background: usageColor(t.quota_percent) }">
+                                     :style="{ width: (t.quota_percent || 0) + '%', background: usageColor(t.quota_percent) }">
                                 </div>
                             </div>
                         </td>
@@ -439,7 +439,7 @@
                                        'bi-exclamation-triangle-fill': t.quota_status === 'Peringatan',
                                        'bi-check-circle-fill': t.quota_status === 'Normal',
                                    }"></i>
-                                {{ t.quota_status }}
+                                {{ t.quota_status || 'Normal' }}
                             </span>
                         </td>
                     </tr>
@@ -454,7 +454,7 @@
             <div class="d-flex gap-4 flex-wrap">
                 <span>Total Sesi Online: <strong class="text-success">{{ totalActiveSessions }}</strong></span>
                 <span>Total Penyimpanan Terpakai: <strong class="text-primary">{{ totalDiskFormatted }}</strong></span>
-                <span>Total Siswa Terdaftar: <strong class="text-dark">{{ totalSiswa.toLocaleString('id-ID') }}</strong></span>
+                <span>Total Siswa Terdaftar: <strong class="text-dark">{{ ((totalSiswa || 0)).toLocaleString('id-ID') }}</strong></span>
             </div>
             <div class="text-muted fs-9">Polling setiap 5 detik · Data aktif 15 menit terakhir</div>
         </div>
