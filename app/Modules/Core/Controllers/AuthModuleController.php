@@ -175,6 +175,15 @@ class AuthModuleController extends BaseController {
             $_SESSION['email'] = $user['email'];
             $_SESSION['last_activity'] = time();
 
+            \App\Helpers\ActivityLogger::log(
+                'LOGIN', 
+                'core.users', 
+                null, 
+                ['email' => $user['email'], 'nama_lengkap' => $user['nama_lengkap'], 'role' => $user['nama_role']],
+                $user['tenant_id'],
+                $user['id']
+            );
+
             $this->jsonResponse(true, [
                 'message' => 'Login berhasil. Mengalihkan ke dashboard...',
                 'redirect' => $this->getBaseUrl() . '/dashboard'
@@ -190,6 +199,18 @@ class AuthModuleController extends BaseController {
      */
     public function logout(): void {
         \App\Core\SessionManager::start();
+
+        if (!empty($_SESSION['logged_in'])) {
+            \App\Helpers\ActivityLogger::log(
+                'LOGOUT', 
+                'core.users', 
+                ['email' => $_SESSION['email'] ?? '', 'nama_lengkap' => $_SESSION['nama_lengkap'] ?? ''],
+                null,
+                $_SESSION['tenant_id'] ?? null,
+                $_SESSION['user_id'] ?? null
+            );
+        }
+
         session_unset();
         session_destroy();
         

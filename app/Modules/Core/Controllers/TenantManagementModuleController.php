@@ -25,7 +25,7 @@ class TenantManagementModuleController extends BaseController {
             'userRole' => $_SESSION['role_name'] ?? '',
             'baseUrl' => $this->getBaseUrl()
         ];
-        $this->render('super_admin_tenants', $data);
+        $this->render('tenants_index', $data);
     }
 
     /**
@@ -46,7 +46,16 @@ class TenantManagementModuleController extends BaseController {
     public function storeApi(): void {
         $input = $this->getJsonInput();
         try {
+            $isUpdate = !empty($input['id']);
             $saved = $this->model->saveTenant($input);
+            
+            \App\Helpers\ActivityLogger::log(
+                $isUpdate ? 'UPDATE' : 'INSERT',
+                'core.tenants',
+                $isUpdate ? ['id' => $input['id']] : null,
+                $saved ?: $input
+            );
+
             $this->jsonResponse(true, $saved, 'Data sekolah berhasil disimpan.');
         } catch (\Throwable $e) {
             $this->jsonResponse(false, null, $e->getMessage(), 400);
@@ -66,6 +75,14 @@ class TenantManagementModuleController extends BaseController {
 
         try {
             $this->model->deleteTenant($id);
+
+            \App\Helpers\ActivityLogger::log(
+                'DELETE',
+                'core.tenants',
+                ['id' => $id],
+                null
+            );
+
             $this->jsonResponse(true, null, 'Sekolah berhasil dinonaktifkan.');
         } catch (\Throwable $e) {
             $this->jsonResponse(false, null, $e->getMessage(), 400);
@@ -86,6 +103,14 @@ class TenantManagementModuleController extends BaseController {
 
         try {
             $this->model->updateStatus($id, $status);
+
+            \App\Helpers\ActivityLogger::log(
+                'UPDATE',
+                'core.tenants',
+                ['id' => $id],
+                ['status' => $status]
+            );
+
             $this->jsonResponse(true, null, 'Status sekolah berhasil diperbarui.');
         } catch (\Throwable $e) {
             $this->jsonResponse(false, null, $e->getMessage(), 400);

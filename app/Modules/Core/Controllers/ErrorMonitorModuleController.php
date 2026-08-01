@@ -21,32 +21,26 @@ use PDO;
  */
 class ErrorMonitorModuleController extends BaseController
 {
-    /** Hanya role ini yang diizinkan masuk */
     private const ALLOWED_ROLES = ['super_admin'];
 
     public function __construct()
     {
         parent::__construct();
 
-        // 1. Wajib Login
         SessionManager::requireLogin();
 
-        // 2. RBAC Guard — hanya super_admin, tolak semua role lain
         $role = $_SESSION['role_name'] ?? '';
         if (!in_array($role, self::ALLOWED_ROLES, true)) {
-            http_response_code(403);
-            echo "<div style='font-family:sans-serif;text-align:center;padding:60px'>";
-            echo "<h1 style='color:#dc3545;font-size:2rem;'>🔒 403 — Akses Ditolak</h1>";
-            echo "<p style='color:#6c757d;font-size:1rem;'>Halaman Error Monitor bersifat rahasia dan hanya dapat diakses oleh <strong>Super Admin Platform</strong>.</p>";
-            echo "<a href='" . $this->getBaseUrl() . "/dashboard' style='display:inline-block;margin-top:1rem;padding:0.5rem 1.5rem;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;'>Kembali ke Dashboard</a>";
-            echo "</div>";
+            if ($this->isJsonRequest()) {
+                $this->jsonResponse(false, null, 'Akses ditolak. Fitur ini khusus Super Admin Platform.', 403);
+            }
+            header('Location: ' . $this->getBaseUrl() . '/dashboard');
             exit;
         }
     }
 
     /**
      * GET /super-admin/error-monitor
-     * Render halaman monitor.
      */
     public function index(): void
     {
@@ -58,9 +52,6 @@ class ErrorMonitorModuleController extends BaseController
 
     /**
      * GET /api/v1/error-monitor
-     * Ambil daftar error terpaginasi & terfilter.
-     *
-     * Query params: page, per_page, search, level_filter
      */
     public function fetchApi(): void
     {
@@ -73,7 +64,6 @@ class ErrorMonitorModuleController extends BaseController
         try {
             $db = Database::getConnection();
 
-            // Bangun klausa WHERE secara dinamis
             $whereClauses = [];
             $params       = [];
 
@@ -92,7 +82,6 @@ class ErrorMonitorModuleController extends BaseController
 
             $whereSql = !empty($whereClauses) ? 'WHERE ' . implode(' AND ', $whereClauses) : '';
 
-            // Query utama
             $sql = "
                 SELECT
                     e.id,
@@ -140,10 +129,11 @@ class ErrorMonitorModuleController extends BaseController
             ");
             $stats = $statsStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $this->jsonResponse([
-                'success' => true,
-                'data'    => $errors,
-                'stats'   => $stats,
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success'    => true,
+                'data'       => $errors,
+                'stats'      => $stats,
                 'pagination' => [
                     'page'     => $page,
                     'per_page' => $perPage,
@@ -151,16 +141,16 @@ class ErrorMonitorModuleController extends BaseController
                     'pages'    => (int)ceil($total / $perPage),
                 ],
             ]);
+            exit;
 
         } catch (\Throwable $e) {
             error_log("ErrorMonitor fetchApi error: " . $e->getMessage());
-            $this->jsonResponse(['error' => 'Gagal memuat data error monitor.'], 500);
+            $this->jsonResponse(false, null, 'Gagal memuat data error monitor.', 500);
         }
     }
 
     /**
      * POST /api/v1/error-monitor/clear
-     * Hapus semua log error (TRUNCATE).
      */
     public function clearAll(): void
     {
@@ -168,20 +158,20 @@ class ErrorMonitorModuleController extends BaseController
             $db = Database::getConnection();
             $db->exec("DELETE FROM sistem.system_errors");
 
-            $this->jsonResponse([
+            header('Content-Type: application/json');
+            echo json_encode([
                 'success' => true,
                 'message' => 'Semua log error berhasil dihapus.',
             ]);
+            exit;
         } catch (\Throwable $e) {
             error_log("ErrorMonitor clearAll error: " . $e->getMessage());
-            $this->jsonResponse(['error' => 'Gagal menghapus log error.'], 500);
+            $this->jsonResponse(false, null, 'Gagal menghapus log error.', 500);
         }
     }
 
     /**
      * POST /api/v1/error-monitor/delete
-     * Hapus satu log error berdasarkan ID.
-     * Body JSON: { "id": "uuid" }
      */
     public function deleteOne(): void
     {
@@ -189,7 +179,8 @@ class ErrorMonitorModuleController extends BaseController
         $id   = trim($body['id'] ?? '');
 
         if (empty($id)) {
-            $this->jsonResponse(['error' => 'ID error tidak boleh kosong.'], 422);
+            $this->jsonResponse(false, null, 'ID error tidak boleh kosong.', 422);
+            return;
         }
 
         try {
@@ -197,33 +188,33 @@ class ErrorMonitorModuleController extends BaseController
             $stmt = $db->prepare("DELETE FROM sistem.system_errors WHERE id = :id");
             $stmt->execute(['id' => $id]);
 
-            $this->jsonResponse([
+            header('Content-Type: application/json');
+            echo json_encode([
                 'success' => true,
                 'message' => 'Log error berhasil dihapus.',
             ]);
+            exit;
         } catch (\Throwable $e) {
             error_log("ErrorMonitor deleteOne error: " . $e->getMessage());
-            $this->jsonResponse(['error' => 'Gagal menghapus log error.'], 500);
+            $this->jsonResponse(false, null, 'Gagal menghapus log error.', 500);
         }
     }
 
     /**
      * POST /api/v1/error-monitor/log-client
-     * Endpoint publik bagi frontend (Global Error Tracker) untuk merekam JS/Vue/Axios errors.
-     * Tidak diproteksi auth (agar jika auth gagal di klien, error tetap masuk), 
-     * tetapi dibatasi ukurannya.
      */
     public function logClientErrorApi(): void
     {
-        // 1. Terima raw JSON
         $raw = file_get_contents('php://input');
         if (strlen($raw) > 100000) {
-            $this->jsonResponse(['error' => 'Payload too large'], 413);
+            $this->jsonResponse(false, null, 'Payload too large', 413);
+            return;
         }
 
         $data = json_decode($raw, true);
         if (!$data || !isset($data['message'])) {
-            $this->jsonResponse(['error' => 'Invalid data'], 400);
+            $this->jsonResponse(false, null, 'Invalid data', 400);
+            return;
         }
 
         try {
@@ -245,7 +236,6 @@ class ErrorMonitorModuleController extends BaseController
                 $tenantId = null;
             }
 
-            // Sanitasi data
             $stmt->execute([
                 'tenant_id'      => $tenantId,
                 'error_level'    => substr($data['type'] ?? 'JS_ERROR', 0, 50),
@@ -260,11 +250,14 @@ class ErrorMonitorModuleController extends BaseController
                 'context'        => isset($data['context']) ? json_encode($data['context'], JSON_UNESCAPED_SLASHES) : null,
             ]);
 
-            $this->jsonResponse(['success' => true]);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true]);
+            exit;
         } catch (\Throwable $e) {
-            // Kembalikan 200 OK agar peramban (browser) tidak mencetak log merah 500 (Internal Server Error)
             error_log("[Client Error Logger Failed] " . $e->getMessage());
-            $this->jsonResponse(['error' => 'Failed to save'], 200);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true]);
+            exit;
         }
     }
 }
