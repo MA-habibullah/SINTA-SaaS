@@ -4,7 +4,9 @@ namespace App\Modules\Sistem\Controllers;
 
 use App\Core\BaseController;
 use App\Core\SessionManager;
+use App\Config\Database;
 use App\Modules\Sistem\Models\KelembagaanModel;
+use PDO;
 
 class KelembagaanModuleController extends BaseController {
 
@@ -13,7 +15,8 @@ class KelembagaanModuleController extends BaseController {
     public function __construct() {
         parent::__construct();
         SessionManager::requireLogin();
-        $this->model = new KelembagaanModel();
+        $tenantId = SessionManager::getTenantId();
+        $this->model = new KelembagaanModel($tenantId);
     }
 
     /**
@@ -21,11 +24,20 @@ class KelembagaanModuleController extends BaseController {
      */
     public function index(): void {
         $tenantId = SessionManager::getTenantId();
+        $userRole = $_SESSION['role_name'] ?? '';
+        $tenantList = [];
+        if ($userRole === 'super_admin') {
+            $tenantList = $this->model->getTenants();
+        }
         $data = [
-            'title' => 'Master Data Kelembagaan & Akademik',
-            'userRole' => $_SESSION['role_name'] ?? '',
-            'tenantId' => $tenantId,
-            'baseUrl' => $this->getBaseUrl()
+            'title'       => 'Master Data Kelembagaan & Akademik',
+            'userRole'    => $userRole,
+            'user_role'   => $userRole,
+            'tenantId'    => $tenantId,
+            'tenant_id'   => $tenantId,
+            'tenantList'  => $tenantList,
+            'tenant_list' => $tenantList,
+            'baseUrl'     => $this->getBaseUrl()
         ];
         $this->render('master_kelembagaan', $data);
     }
@@ -34,27 +46,147 @@ class KelembagaanModuleController extends BaseController {
      * GET /sekolah/identitas
      */
     public function identitasView(): void {
+        $userRole = $_SESSION['role_name'] ?? '';
         $tenantId = SessionManager::getTenantId();
+        
+        $tenantsList = [];
+        if ($userRole === 'super_admin') {
+            $tenantsList = $this->model->getTenants();
+        }
+
+        $selectedTenantId = $_GET['tenant_id'] ?? $tenantId;
+        if ($userRole !== 'super_admin' || empty($selectedTenantId)) {
+            $selectedTenantId = $tenantId;
+        }
+
+        // Handle AJAX request for profile detail
+        if (isset($_GET['ajax']) && $_GET['ajax'] == '1' && ($_GET['action'] ?? '') === 'get_profile_detail') {
+            try {
+                $db = Database::getConnection();
+                $stmt = $db->prepare("SELECT * FROM core.tenants WHERE id = :id LIMIT 1");
+                $stmt->execute(['id' => $selectedTenantId]);
+                $tenantData = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+                $this->jsonResponse(true, $tenantData);
+            } catch (\Throwable $e) {
+                $this->jsonResponse(false, null, $e->getMessage(), 500);
+            }
+            return;
+        }
+
         $data = [
-            'title' => 'Identitas Profil Sekolah',
-            'userRole' => $_SESSION['role_name'] ?? '',
-            'tenantId' => $tenantId,
-            'baseUrl' => $this->getBaseUrl()
+            'title'       => 'Identitas Profil Sekolah',
+            'user_role'   => $userRole,
+            'userRole'    => $userRole,
+            'tenantId'    => $selectedTenantId,
+            'tenantsList' => $tenantsList,
+            'baseUrl'     => $this->getBaseUrl()
         ];
-        $this->render('sekolah_identitas', $data);
+        $this->render('sekolah_profil', $data);
+    }
+
+    /**
+     * POST /api/v1/sekolah/update
+     */
+    public function updateProfile(): void {
+        $userRole = $_SESSION['role_name'] ?? '';
+        $sessionTenantId = SessionManager::getTenantId();
+        $targetTenantId = $_POST['tenant_id'] ?? $sessionTenantId;
+
+        if ($userRole !== 'super_admin' || empty($targetTenantId)) {
+            $targetTenantId = $sessionTenantId;
+        }
+
+        if (empty($targetTenantId)) {
+            $this->jsonResponse(false, null, 'ID Sekolah/Tenant tidak valid.', 400);
+            return;
+        }
+
+        try {
+            $db = Database::getConnection();
+
+            // Prepare update fields
+            $fields = [
+                'alamat'            => $_POST['alamat'] ?? '',
+                'rt_rw'             => $_POST['rt_rw'] ?? '',
+                'kode_pos'          => $_POST['kode_pos'] ?? '',
+                'kelurahan'         => $_POST['kelurahan'] ?? '',
+                'kecamatan'         => $_POST['kecamatan'] ?? '',
+                'kabupaten_kota'    => $_POST['kabupaten_kota'] ?? '',
+                'provinsi'          => $_POST['provinsi'] ?? '',
+                'telepon'           => $_POST['telepon'] ?? '',
+                'email'             => $_POST['email'] ?? '',
+                'website'           => $_POST['website'] ?? '',
+                'nama_kepsek'       => $_POST['nama_kepsek'] ?? '',
+                'pangkat_kepsek'    => $_POST['pangkat_kepsek'] ?? '',
+                'nip_kepsek'        => $_POST['nip_kepsek'] ?? '',
+                'nama_operator'     => $_POST['nama_operator'] ?? '',
+                'email_operator'    => $_POST['email_operator'] ?? '',
+                'akreditasi'        => $_POST['akreditasi'] ?? 'A (Unggul)',
+                'updated_at'        => date('Y-m-d H:i:s')
+            ];
+
+            // File Upload: Logo
+            if (!empty($_FILES['logo']['tmp_name']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
+                $uploadDir = __DIR__ . '/../../../../storage/app/public/logos/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0777, true);
+                }
+                $ext = pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION);
+                $filename = 'logo_' . $targetTenantId . '_' . time() . '.' . $ext;
+                $dest = $uploadDir . $filename;
+                if (move_uploaded_file($_FILES['logo']['tmp_name'], $dest)) {
+                    $fields['logo'] = 'logos/' . $filename;
+                }
+            }
+
+            // File Upload: Sertifikat Akreditasi
+            if (!empty($_FILES['sertifikat_akreditasi']['tmp_name']) && $_FILES['sertifikat_akreditasi']['error'] === UPLOAD_ERR_OK) {
+                $uploadDir = __DIR__ . '/../../../../storage/app/public/sertifikat/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0777, true);
+                }
+                $ext = pathinfo($_FILES['sertifikat_akreditasi']['name'], PATHINFO_EXTENSION);
+                $filename = 'cert_' . $targetTenantId . '_' . time() . '.' . $ext;
+                $dest = $uploadDir . $filename;
+                if (move_uploaded_file($_FILES['sertifikat_akreditasi']['tmp_name'], $dest)) {
+                    $fields['sertifikat_akreditasi'] = 'sertifikat/' . $filename;
+                }
+            }
+
+            $setClause = implode(', ', array_map(fn($col) => "$col = :$col", array_keys($fields)));
+            $fields['id'] = $targetTenantId;
+
+            $stmt = $db->prepare("UPDATE core.tenants SET $setClause WHERE id = :id");
+            $stmt->execute($fields);
+
+            $this->jsonResponse(true, null, 'Profil identitas sekolah berhasil disimpan.');
+        } catch (\Throwable $e) {
+            $this->jsonResponse(false, null, 'Gagal menyimpan profil: ' . $e->getMessage(), 500);
+        }
     }
 
     /**
      * GET /api/v1/kelembagaan
      */
     public function fetchApi(): void {
-        $tenantId = SessionManager::getTenantId();
-        $type = $_GET['type'] ?? 'kelas';
-        $page = (int)($_GET['page'] ?? 1);
-        $limit = (int)($_GET['limit'] ?? 20);
+        $module = $_GET['module'] ?? ($_GET['type'] ?? 'kelas');
+        $role = $_SESSION['role_name'] ?? '';
+
+        if ($role === 'super_admin') {
+            $filterTenantId = $_GET['filter_tenant_id'] ?? null;
+            if ($filterTenantId !== null) {
+                $this->model->setTenantId($filterTenantId !== '' ? $filterTenantId : null);
+            }
+        }
 
         try {
-            $result = $this->model->getDataList($tenantId, $type, $page, $limit);
+            $filters = [
+                'search'   => $_GET['search'] ?? '',
+                'page'     => (int)($_GET['page'] ?? 1),
+                'per_page' => (int)($_GET['per_page'] ?? ($_GET['limit'] ?? 10)),
+                'trash'    => $_GET['trash'] ?? 'false'
+            ];
+            $result = $this->model->getPaginated($module, $filters);
             $this->jsonResponse(true, $result);
         } catch (\Throwable $e) {
             $this->jsonResponse(false, null, $e->getMessage(), 500);
@@ -65,9 +197,15 @@ class KelembagaanModuleController extends BaseController {
      * GET /api/v1/kelembagaan/options
      */
     public function getOptionsApi(): void {
-        $tenantId = SessionManager::getTenantId();
+        $module = $_GET['module'] ?? 'jenjang';
+        $role = $_SESSION['role_name'] ?? '';
+
+        if ($role === 'super_admin' && !empty($_GET['tenant_id'])) {
+            $this->model->setTenantId($_GET['tenant_id']);
+        }
+
         try {
-            $options = $this->model->getOptions($tenantId);
+            $options = $this->model->getOptions($module);
             $this->jsonResponse(true, $options);
         } catch (\Throwable $e) {
             $this->jsonResponse(false, null, $e->getMessage(), 500);
@@ -78,12 +216,25 @@ class KelembagaanModuleController extends BaseController {
      * POST /api/v1/kelembagaan/simpan
      */
     public function storeApi(): void {
-        $tenantId = SessionManager::getTenantId();
         $input = $this->getJsonInput();
+        $module = $input['module'] ?? 'kelas';
+        $id = $input['id'] ?? null;
+        $role = $_SESSION['role_name'] ?? '';
+
+        if ($role === 'super_admin' && !empty($input['tenant_id'])) {
+            $this->model->setTenantId($input['tenant_id']);
+        } elseif ($role !== 'super_admin') {
+            $this->model->setTenantId(SessionManager::getTenantId());
+        }
 
         try {
-            $saved = $this->model->saveData($tenantId, $input);
-            $this->jsonResponse(true, $saved, 'Data kelembagaan berhasil disimpan.');
+            if ($id) {
+                $this->model->update($module, $id, $input);
+                $this->jsonResponse(true, ['id' => $id], 'Data kelembagaan berhasil diperbarui.');
+            } else {
+                $newId = $this->model->create($module, $input);
+                $this->jsonResponse(true, ['id' => $newId], 'Data kelembagaan berhasil ditambahkan.');
+            }
         } catch (\Throwable $e) {
             $this->jsonResponse(false, null, $e->getMessage(), 400);
         }
@@ -93,20 +244,95 @@ class KelembagaanModuleController extends BaseController {
      * POST /api/v1/kelembagaan/hapus
      */
     public function deleteApi(): void {
-        $tenantId = SessionManager::getTenantId();
         $input = $this->getJsonInput();
         $id = $input['id'] ?? null;
-        $type = $input['type'] ?? 'kelas';
+        $module = $input['module'] ?? ($input['type'] ?? 'kelas');
 
         if (!$id) {
             $this->jsonResponse(false, null, 'ID data wajib disertakan.', 400);
+            return;
         }
 
         try {
-            $this->model->deleteData($tenantId, $type, $id);
-            $this->jsonResponse(true, null, 'Data berhasil dihapus.');
+            $this->model->delete($module, $id);
+            $this->jsonResponse(true, null, 'Data berhasil dipindahkan ke tong sampah.');
         } catch (\Throwable $e) {
             $this->jsonResponse(false, null, $e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * POST /api/v1/kelembagaan/restore
+     */
+    public function restoreApi(): void {
+        $input = $this->getJsonInput();
+        $id = $input['id'] ?? null;
+        $module = $input['module'] ?? 'kelas';
+
+        if (!$id) {
+            $this->jsonResponse(false, null, 'ID data wajib disertakan.', 400);
+            return;
+        }
+
+        try {
+            $this->model->restore($module, $id);
+            $this->jsonResponse(true, null, 'Data berhasil dipulihkan.');
+        } catch (\Throwable $e) {
+            $this->jsonResponse(false, null, $e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * POST /api/v1/kelembagaan/toggle-status
+     */
+    public function toggleStatusApi(): void {
+        $input = $this->getJsonInput();
+        $id = $input['id'] ?? null;
+        $module = $input['module'] ?? 'kelas';
+
+        if (!$id) {
+            $this->jsonResponse(false, null, 'ID data wajib disertakan.', 400);
+            return;
+        }
+
+        try {
+            $this->model->toggleStatus($module, $id);
+            $this->jsonResponse(true, null, 'Status keaktifan berhasil diubah.');
+        } catch (\Throwable $e) {
+            $this->jsonResponse(false, null, $e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * GET /api/v1/kelembagaan/tenants
+     */
+    public function getTenantsApi(): void {
+        try {
+            $tenants = $this->model->getTenants();
+            $this->jsonResponse(true, $tenants);
+        } catch (\Throwable $e) {
+            $this->jsonResponse(false, null, $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * GET /api/v1/riwayat-kepsek
+     */
+    public function getRiwayatKepsekApi(): void {
+        $tenantId = $_GET['filter_tenant_id'] ?? SessionManager::getTenantId();
+        try {
+            $db = \App\Config\Database::getConnection();
+            $stmt = $db->prepare("SELECT * FROM core.tenants WHERE id = ? LIMIT 1");
+            $stmt->execute([$tenantId]);
+            $tenant = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+            $this->jsonResponse(true, [
+                'nama_kepsek' => $tenant['nama_kepsek'] ?? '-',
+                'nip_kepsek' => $tenant['nip_kepsek'] ?? '-',
+                'riwayat' => []
+            ]);
+        } catch (\Throwable $e) {
+            $this->jsonResponse(true, ['nama_kepsek' => '-', 'nip_kepsek' => '-', 'riwayat' => []]);
         }
     }
 }

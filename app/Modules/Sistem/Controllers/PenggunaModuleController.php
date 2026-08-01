@@ -206,13 +206,13 @@ class PenggunaModuleController extends BaseController {
 
         try {
             $db = \App\Config\Database::getConnection();
-            $q = "SELECT id, nama_kelas FROM akademik.kelas WHERE is_active = true";
+            $q = "SELECT DISTINCT ON (tenant_id, nama_kelas) id, nama_kelas FROM akademik.kelas WHERE is_active = true";
             $params = [];
             if (!empty($tenantId)) {
                 $q .= " AND tenant_id = :tenant_id";
                 $params['tenant_id'] = $tenantId;
             }
-            $q .= " ORDER BY nama_kelas ASC";
+            $q .= " ORDER BY tenant_id, nama_kelas ASC";
 
             $stmt = $db->prepare($q);
             $stmt->execute($params);

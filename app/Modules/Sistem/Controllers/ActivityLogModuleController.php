@@ -53,21 +53,20 @@ class ActivityLogModuleController extends BaseController {
             
             $tenants = [];
             if ($role === 'super_admin') {
-                $stmt = $db->query("SELECT id, nama_sekolah, npsn FROM core.tenants WHERE deleted_at IS NULL ORDER BY nama_sekolah ASC");
+                $stmt = $db->query("SELECT id, nama_sekolah, npsn FROM core.tenants ORDER BY nama_sekolah ASC");
                 $tenants = $stmt->fetchAll(PDO::FETCH_ASSOC);
             }
             
             $stmtRoles = $db->query("SELECT DISTINCT user_role FROM sistem.activity_logs ORDER BY user_role ASC");
             $roles = $stmtRoles->fetchAll(PDO::FETCH_COLUMN);
             
-            $this->jsonResponse([
-                'success' => true,
+            $this->jsonResponse(true, [
                 'tenants' => $tenants,
                 'roles'   => $roles
             ]);
         } catch (\Throwable $e) {
             error_log("Failed to fetch activity log filters: " . $e->getMessage());
-            $this->jsonResponse(['error' => 'Terjadi kesalahan sistem saat memuat filter.'], 500);
+            $this->jsonResponse(false, null, 'Terjadi kesalahan sistem saat memuat filter.', 500);
         }
     }
 
@@ -169,20 +168,22 @@ class ActivityLogModuleController extends BaseController {
             $countStmt->execute();
             $total = (int)$countStmt->fetchColumn();
 
-            $this->jsonResponse([
-                'success' => true,
-                'data'    => $logs,
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success'    => true,
+                'data'       => $logs,
                 'pagination' => [
                     'page'     => $page,
                     'per_page' => $perPage,
                     'total'    => $total,
-                    'pages'    => ceil($total / $perPage)
+                    'pages'    => (int)ceil($total / $perPage)
                 ]
             ]);
+            exit;
 
         } catch (\Throwable $e) {
             error_log("Audit log fetch error: " . $e->getMessage());
-            $this->jsonResponse(['error' => 'Terjadi kesalahan sistem saat memuat data log.'], 500);
+            $this->jsonResponse(false, null, 'Terjadi kesalahan sistem saat memuat data log.', 500);
         }
     }
 

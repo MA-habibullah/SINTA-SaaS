@@ -186,15 +186,17 @@ class ActiveSessionModuleController extends BaseController {
             $stmtAuditChart->execute($auditParams);
             $auditChartData = $stmtAuditChart->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-            $this->jsonResponse([
-                'success' => true,
-                'online_users' => $onlineUsers,
-                'chart_data' => $chartData,
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success'          => true,
+                'online_users'     => $onlineUsers,
+                'chart_data'       => $chartData,
                 'audit_chart_data' => $auditChartData
             ]);
+            exit;
         } catch (\Throwable $e) {
             error_log("Failed to fetch sessions data: " . $e->getMessage());
-            $this->jsonResponse(['error' => 'Terjadi kesalahan sistem saat memuat data analitik.'], 500);
+            $this->jsonResponse(false, null, 'Terjadi kesalahan sistem saat memuat data analitik.', 500);
         }
     }
 
@@ -211,11 +213,13 @@ class ActiveSessionModuleController extends BaseController {
         $dateLimit = isset($input['date_limit']) ? trim($input['date_limit']) : '';
 
         if (empty($dateLimit)) {
-            $this->jsonResponse(['error' => 'Tanggal batas retensi wajib dipilih.'], 400);
+            $this->jsonResponse(false, null, 'Tanggal batas retensi wajib dipilih.', 400);
+            return;
         }
 
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateLimit)) {
-            $this->jsonResponse(['error' => 'Format tanggal batas retensi tidak valid.'], 400);
+            $this->jsonResponse(false, null, 'Format tanggal batas retensi tidak valid.', 400);
+            return;
         }
 
         try {
@@ -234,10 +238,8 @@ class ActiveSessionModuleController extends BaseController {
             $affectedCount = (int)$stmtCount->fetchColumn();
 
             if ($affectedCount === 0) {
-                $this->jsonResponse([
-                    'success' => true,
-                    'message' => 'Tidak ada data log sesi yang memenuhi kriteria retensi.'
-                ]);
+                $this->jsonResponse(true, null, 'Tidak ada data log sesi yang memenuhi kriteria retensi.');
+                return;
             }
 
             $stmtDelete = $db->prepare("DELETE FROM sistem.active_sessions WHERE {$where}");
@@ -251,14 +253,11 @@ class ActiveSessionModuleController extends BaseController {
                 null
             );
 
-            $this->jsonResponse([
-                'success' => true,
-                'message' => "Berhasil menghapus {$affectedCount} log riwayat sesi sebelum tanggal {$dateLimit}."
-            ]);
+            $this->jsonResponse(true, null, "Berhasil menghapus {$affectedCount} log riwayat sesi sebelum tanggal {$dateLimit}.");
 
         } catch (\Throwable $e) {
             error_log("Retention clean error: " . $e->getMessage());
-            $this->jsonResponse(['error' => 'Terjadi kesalahan sistem saat membersihkan log retensi.'], 500);
+            $this->jsonResponse(false, null, 'Terjadi kesalahan sistem saat membersihkan log retensi.', 500);
         }
     }
 
@@ -314,13 +313,15 @@ class ActiveSessionModuleController extends BaseController {
             $stmt->execute($params);
             $logs = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-            $this->jsonResponse([
-                'success' => true,
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success'    => true,
                 'audit_logs' => $logs
             ]);
+            exit;
         } catch (\Throwable $e) {
             error_log("Failed to fetch audit logs: " . $e->getMessage());
-            $this->jsonResponse(['error' => 'Gagal memuat log keamanan.'], 500);
+            $this->jsonResponse(false, null, 'Gagal memuat log keamanan.', 500);
         }
     }
 
@@ -337,11 +338,13 @@ class ActiveSessionModuleController extends BaseController {
         $dateLimit = isset($input['date_limit']) ? trim($input['date_limit']) : '';
 
         if (empty($dateLimit)) {
-            $this->jsonResponse(['error' => 'Tanggal batas retensi wajib dipilih.'], 400);
+            $this->jsonResponse(false, null, 'Tanggal batas retensi wajib dipilih.', 400);
+            return;
         }
 
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateLimit)) {
-            $this->jsonResponse(['error' => 'Format tanggal batas retensi tidak valid.'], 400);
+            $this->jsonResponse(false, null, 'Format tanggal batas retensi tidak valid.', 400);
+            return;
         }
 
         try {
@@ -360,10 +363,7 @@ class ActiveSessionModuleController extends BaseController {
             $affectedCount = (int)$stmtCount->fetchColumn();
 
             if ($affectedCount === 0) {
-                $this->jsonResponse([
-                    'success' => true,
-                    'message' => 'Tidak ada data log audit yang memenuhi kriteria.'
-                ]);
+                $this->jsonResponse(true, null, 'Tidak ada data log audit yang memenuhi kriteria.');
                 return;
             }
 
@@ -378,14 +378,11 @@ class ActiveSessionModuleController extends BaseController {
                 null
             );
 
-            $this->jsonResponse([
-                'success' => true,
-                'message' => "Berhasil menghapus {$affectedCount} log audit sebelum/pada tanggal {$dateLimit}."
-            ]);
+            $this->jsonResponse(true, null, "Berhasil menghapus {$affectedCount} log audit sebelum/pada tanggal {$dateLimit}.");
 
         } catch (\Throwable $e) {
             error_log("Audit Retention clean error: " . $e->getMessage());
-            $this->jsonResponse(['error' => 'Terjadi kesalahan sistem saat membersihkan log audit.'], 500);
+            $this->jsonResponse(false, null, 'Terjadi kesalahan sistem saat membersihkan log audit.', 500);
         }
     }
 }

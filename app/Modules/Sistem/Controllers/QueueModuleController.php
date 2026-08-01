@@ -3,7 +3,6 @@
 namespace App\Modules\Sistem\Controllers;
 
 use App\Core\BaseController;
-
 use App\Config\Database;
 use App\Core\SessionManager;
 use App\Helpers\QueueManager;
@@ -15,17 +14,13 @@ class QueueModuleController extends BaseController {
     public function __construct() {
         parent::__construct();
         
-        // 1. Gate Keamanan: Wajib Login
         SessionManager::requireLogin();
         
-        // 2. Otorisasi: Hanya super_admin & operator_sekolah (mendukung override)
         if (!\App\Core\RouteGuard::checkCurrent(['super_admin', 'operator_sekolah'])) {
-            http_response_code(403);
-            echo "<div style='font-family: sans-serif; text-align: center; padding: 50px;'>";
-            echo "<h1 style='color: #dc3545;'>403 Akses Ditolak</h1>";
-            echo "<p style='color: #6c757d;'>Anda tidak memiliki wewenang untuk mengakses dashboard antrean sistem.</p>";
-            echo "<a href='/SINTA-SaaS/dashboard'>Kembali ke Dashboard</a>";
-            echo "</div>";
+            if ($this->isJsonRequest()) {
+                $this->jsonResponse(false, null, 'Akses ditolak. Fitur ini khusus Super Admin dan Operator Sekolah.', 403);
+            }
+            header('Location: ' . $this->getBaseUrl() . '/dashboard');
             exit;
         }
     }
@@ -36,15 +31,13 @@ class QueueModuleController extends BaseController {
      */
     public function index(): void {
         $role = $_SESSION['role_name'] ?? '';
-        $tenantId = $_SESSION['tenant_id'] ?? null;
         $tenantsList = [];
 
-        // Jika super_admin, ambil list tenant untuk dropdown filter
         if ($role === 'super_admin') {
             try {
                 $db = Database::getConnection();
-                $stmt = $db->query("SELECT id, nama_sekolah, npsn FROM tenants WHERE deleted_at IS NULL ORDER BY nama_sekolah ASC");
-                $tenantsList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $stmt = $db->query("SELECT id, nama_sekolah, npsn FROM core.tenants ORDER BY nama_sekolah ASC");
+                $tenantsList = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
             } catch (\Throwable $e) {
                 $tenantsList = [];
             }
@@ -68,7 +61,6 @@ class QueueModuleController extends BaseController {
         $role = $_SESSION['role_name'] ?? '';
         $sessionTenantId = $_SESSION['tenant_id'] ?? null;
         
-        // Parameter Filter & Paginasi
         $filterStatus = isset($_GET['status']) ? trim($_GET['status']) : '';
         $filterType = isset($_GET['job_type']) ? trim($_GET['job_type']) : '';
         $filterTenantId = isset($_GET['tenant_id']) ? trim($_GET['tenant_id']) : '';
@@ -77,28 +69,27 @@ class QueueModuleController extends BaseController {
         $limit = 15;
         $offset = ($page - 1) * $limit;
 
-        // Tentukan tenant_id berdasarkan RBAC
         $tenantId = ($role === 'super_admin') ? $filterTenantId : $sessionTenantId;
 
         try {
             $db = Database::getConnection();
 
-            // 1. Tarik Metrik KPIs
+            // 1. Tarik Metrik KPIs dari sistem.queue_jobs
             $metricsSql = "
                 SELECT 
-                    SUM(CASE WHEN `status` = 'pending' THEN 1 ELSE 0 END) as pending,
-                    SUM(CASE WHEN `status` = 'processing' THEN 1 ELSE 0 END) as processing,
-                    SUM(CASE WHEN `status` = 'completed' THEN 1 ELSE 0 END) as completed,
-                    SUM(CASE WHEN `status` = 'failed' THEN 1 ELSE 0 END) as failed,
+                    SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+                    SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END) as processing,
+                    SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+                    SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
                     COUNT(*) as total
-                FROM `system_jobs`
+                FROM sistem.queue_jobs
             ";
             
             $whereParts = [];
             $params = [];
             
             if (!empty($tenantId)) {
-                $whereParts[] = "`tenant_id` = :tenant_id";
+                $whereParts[] = "tenant_id = :tenant_id";
                 $params['tenant_id'] = $tenantId;
             }
             
@@ -108,35 +99,34 @@ class QueueModuleController extends BaseController {
             
             $stmtMetrics = $db->prepare($metricsSql);
             $stmtMetrics->execute($params);
-            $metrics = $stmtMetrics->fetch(PDO::FETCH_ASSOC);
+            $metrics = $stmtMetrics->fetch(PDO::FETCH_ASSOC) ?: [];
 
-            // Null-safeguard metrics
-            $metrics['pending'] = (int)($metrics['pending'] ?? 0);
+            $metrics['pending']    = (int)($metrics['pending'] ?? 0);
             $metrics['processing'] = (int)($metrics['processing'] ?? 0);
-            $metrics['completed'] = (int)($metrics['completed'] ?? 0);
-            $metrics['failed'] = (int)($metrics['failed'] ?? 0);
-            $metrics['total'] = (int)($metrics['total'] ?? 0);
+            $metrics['completed']  = (int)($metrics['completed'] ?? 0);
+            $metrics['failed']     = (int)($metrics['failed'] ?? 0);
+            $metrics['total']      = (int)($metrics['total'] ?? 0);
 
-            // 2. Tarik Data Jobs (Recent Jobs) dengan filter lengkap
+            // 2. Tarik Data Jobs (Recent Jobs)
             $dataSql = "
                 SELECT j.*, t.nama_sekolah
-                FROM `system_jobs` j
-                LEFT JOIN `tenants` t ON j.tenant_id = t.id
+                FROM sistem.queue_jobs j
+                LEFT JOIN core.tenants t ON j.tenant_id = t.id
             ";
             
             $dataWhere = [];
             $dataParams = [];
             
             if (!empty($tenantId)) {
-                $dataWhere[] = "j.`tenant_id` = :tenant_id";
+                $dataWhere[] = "j.tenant_id = :tenant_id";
                 $dataParams['tenant_id'] = $tenantId;
             }
             if (!empty($filterStatus)) {
-                $dataWhere[] = "j.`status` = :status";
+                $dataWhere[] = "j.status = :status";
                 $dataParams['status'] = $filterStatus;
             }
             if (!empty($filterType)) {
-                $dataWhere[] = "j.`job_type` = :job_type";
+                $dataWhere[] = "j.job_type = :job_type";
                 $dataParams['job_type'] = $filterType;
             }
 
@@ -144,39 +134,40 @@ class QueueModuleController extends BaseController {
                 $dataSql .= " WHERE " . implode(" AND ", $dataWhere);
             }
 
-            // Hitung Total Halaman
-            $countSql = "SELECT COUNT(*) FROM `system_jobs` j";
+            $countSql = "SELECT COUNT(*) FROM sistem.queue_jobs j";
             if (!empty($dataWhere)) {
                 $countSql .= " WHERE " . implode(" AND ", $dataWhere);
             }
             $stmtCount = $db->prepare($countSql);
             $stmtCount->execute($dataParams);
             $totalCount = (int)$stmtCount->fetchColumn();
-            $totalPages = ceil($totalCount / $limit);
+            $totalPages = (int)ceil($totalCount / $limit);
             if ($totalPages < 1) $totalPages = 1;
 
-            // Sorting & Limit Offset
-            $dataSql .= " ORDER BY j.`id` DESC LIMIT {$limit} OFFSET {$offset}";
+            $dataSql .= " ORDER BY j.created_at DESC LIMIT {$limit} OFFSET {$offset}";
             $stmtData = $db->prepare($dataSql);
             $stmtData->execute($dataParams);
-            $jobs = $stmtData->fetchAll(PDO::FETCH_ASSOC);
+            $jobs = $stmtData->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-            // Format json values
             foreach ($jobs as &$j) {
-                $j['payload'] = json_decode($j['payload'], true) ?? [];
+                if (isset($j['payload']) && is_string($j['payload'])) {
+                    $j['payload'] = json_decode($j['payload'], true) ?? [];
+                }
             }
 
-            $this->jsonResponse([
-                'success'     => true,
-                'metrics'     => $metrics,
-                'jobs'        => $jobs,
-                'current_page'=> $page,
-                'total_pages' => $totalPages
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success'      => true,
+                'metrics'      => $metrics,
+                'jobs'         => $jobs,
+                'current_page' => $page,
+                'total_pages'  => $totalPages
             ]);
+            exit;
 
         } catch (\Throwable $e) {
             error_log("fetchDataApi failed: " . $e->getMessage());
-            $this->jsonResponse(['error' => 'Terjadi kesalahan sistem saat memuat antrean.'], 500);
+            $this->jsonResponse(false, null, 'Terjadi kesalahan sistem saat memuat antrean.', 500);
         }
     }
 
@@ -193,24 +184,21 @@ class QueueModuleController extends BaseController {
         $payload = $input['payload'] ?? [];
         $tenantId = $sessionTenantId;
 
-        // Jika super_admin, perbolehkan custom tenant_id untuk job simulasi
         if ($role === 'super_admin' && !empty($input['tenant_id'])) {
             $tenantId = $input['tenant_id'];
         }
 
         if (!in_array($jobType, ['DEMO_SYNC', 'DEMO_EMAIL', 'CLEANUP_SESSIONS'], true)) {
-            $this->jsonResponse(['error' => 'Tipe pekerjaan tidak valid untuk simulasi.'], 400);
+            $this->jsonResponse(false, null, 'Tipe pekerjaan tidak valid untuk simulasi.', 400);
+            return;
         }
 
         $success = QueueManager::push($jobType, $payload, $tenantId);
 
         if ($success) {
-            $this->jsonResponse([
-                'success' => true,
-                'message' => "Pekerjaan '{$jobType}' berhasil ditambahkan ke antrean sistem."
-            ]);
+            $this->jsonResponse(true, null, "Pekerjaan '{$jobType}' berhasil ditambahkan ke antrean sistem.");
         } else {
-            $this->jsonResponse(['error' => 'Gagal memasukkan pekerjaan ke antrean database.'], 500);
+            $this->jsonResponse(false, null, 'Gagal memasukkan pekerjaan ke antrean database.', 500);
         }
     }
 
@@ -223,49 +211,44 @@ class QueueModuleController extends BaseController {
         $sessionTenantId = $_SESSION['tenant_id'] ?? null;
         
         $input = $this->getJsonInput();
-        $jobId = isset($input['id']) ? (int)$input['id'] : 0;
+        $jobId = $input['id'] ?? '';
 
-        if ($jobId <= 0) {
-            $this->jsonResponse(['error' => 'ID Pekerjaan tidak valid.'], 400);
+        if (empty($jobId)) {
+            $this->jsonResponse(false, null, 'ID Pekerjaan tidak valid.', 400);
+            return;
         }
 
         try {
             $db = Database::getConnection();
 
-            // Tarik data job untuk verifikasi
-            $stmt = $db->prepare("SELECT * FROM `system_jobs` WHERE `id` = :id LIMIT 1");
+            $stmt = $db->prepare("SELECT * FROM sistem.queue_jobs WHERE id = :id LIMIT 1");
             $stmt->execute(['id' => $jobId]);
             $job = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$job) {
-                $this->jsonResponse(['error' => 'Pekerjaan tidak ditemukan.'], 404);
+                $this->jsonResponse(false, null, 'Pekerjaan tidak ditemukan.', 404);
+                return;
             }
 
-            // Cegah operator sekolah meretry job sekolah lain (RBAC Security)
             if ($role !== 'super_admin' && $job['tenant_id'] !== $sessionTenantId) {
-                $this->jsonResponse(['error' => 'Akses ditolak. Anda tidak memiliki hak akses atas pekerjaan ini.'], 403);
+                $this->jsonResponse(false, null, 'Akses ditolak. Anda tidak memiliki hak akses atas pekerjaan ini.', 403);
+                return;
             }
 
-            // Kembalikan status ke pending
             $stmtRetry = $db->prepare("
-                UPDATE `system_jobs` SET
-                    `status` = 'pending',
-                    `attempts` = 0,
-                    `error_message` = NULL,
-                    `reserved_at` = NULL,
-                    `completed_at` = NULL
-                WHERE `id` = :id
+                UPDATE sistem.queue_jobs SET
+                    status = 'pending',
+                    attempts = 0,
+                    error_message = NULL
+                WHERE id = :id
             ");
             $stmtRetry->execute(['id' => $jobId]);
 
-            $this->jsonResponse([
-                'success' => true,
-                'message' => "Pekerjaan #{$jobId} sukses diatur kembali ke status pending."
-            ]);
+            $this->jsonResponse(true, null, "Pekerjaan sukses diatur kembali ke status pending.");
 
         } catch (\Throwable $e) {
             error_log("retryJobApi failed: " . $e->getMessage());
-            $this->jsonResponse(['error' => 'Gagal mengatur ulang pekerjaan.'], 500);
+            $this->jsonResponse(false, null, 'Gagal mengatur ulang pekerjaan.', 500);
         }
     }
 
@@ -278,41 +261,38 @@ class QueueModuleController extends BaseController {
         $sessionTenantId = $_SESSION['tenant_id'] ?? null;
         
         $input = $this->getJsonInput();
-        $jobId = isset($input['id']) ? (int)$input['id'] : 0;
+        $jobId = $input['id'] ?? '';
 
-        if ($jobId <= 0) {
-            $this->jsonResponse(['error' => 'ID Pekerjaan tidak valid.'], 400);
+        if (empty($jobId)) {
+            $this->jsonResponse(false, null, 'ID Pekerjaan tidak valid.', 400);
+            return;
         }
 
         try {
             $db = Database::getConnection();
 
-            // Tarik data job untuk verifikasi
-            $stmt = $db->prepare("SELECT * FROM `system_jobs` WHERE `id` = :id LIMIT 1");
+            $stmt = $db->prepare("SELECT * FROM sistem.queue_jobs WHERE id = :id LIMIT 1");
             $stmt->execute(['id' => $jobId]);
             $job = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$job) {
-                $this->jsonResponse(['error' => 'Pekerjaan tidak ditemukan.'], 404);
+                $this->jsonResponse(false, null, 'Pekerjaan tidak ditemukan.', 404);
+                return;
             }
 
-            // Proteksi RBAC
             if ($role !== 'super_admin' && $job['tenant_id'] !== $sessionTenantId) {
-                $this->jsonResponse(['error' => 'Akses ditolak.'], 403);
+                $this->jsonResponse(false, null, 'Akses ditolak.', 403);
+                return;
             }
 
-            // Hapus pekerjaan
-            $stmtDelete = $db->prepare("DELETE FROM `system_jobs` WHERE `id` = :id");
+            $stmtDelete = $db->prepare("DELETE FROM sistem.queue_jobs WHERE id = :id");
             $stmtDelete->execute(['id' => $jobId]);
 
-            $this->jsonResponse([
-                'success' => true,
-                'message' => "Pekerjaan #{$jobId} berhasil dihapus dari antrean."
-            ]);
+            $this->jsonResponse(true, null, "Pekerjaan berhasil dihapus dari antrean.");
 
         } catch (\Throwable $e) {
             error_log("deleteJobApi failed: " . $e->getMessage());
-            $this->jsonResponse(['error' => 'Gagal menghapus pekerjaan.'], 500);
+            $this->jsonResponse(false, null, 'Gagal menghapus pekerjaan.', 500);
         }
     }
 
@@ -321,14 +301,10 @@ class QueueModuleController extends BaseController {
      * POST /api/v1/queue/run-worker
      */
     public function runWorkerApi(): void {
-        // Ambil pekerjaan
         $job = QueueManager::pop();
 
         if (!$job) {
-            $this->jsonResponse([
-                'success' => false,
-                'message' => 'Antrean kosong. Tidak ada tugas pending.'
-            ]);
+            $this->jsonResponse(false, null, 'Antrean kosong. Tidak ada tugas pending.');
             return;
         }
 
@@ -336,24 +312,13 @@ class QueueModuleController extends BaseController {
         $type = $job['job_type'];
 
         try {
-            // Jalankan pekerjaan menggunakan dispatcher
             JobDispatcher::dispatch($job);
-            
-            // Tandai sukses
             QueueManager::markCompleted($id);
             
-            $this->jsonResponse([
-                'success' => true,
-                'message' => "Pekerjaan #{$id} ({$type}) sukses diselesaikan di latar belakang."
-            ]);
+            $this->jsonResponse(true, null, "Pekerjaan '{$type}' sukses diselesaikan di latar belakang.");
         } catch (\Throwable $e) {
-            // Tandai gagal
             QueueManager::markFailed($id, $e->getMessage());
-            
-            $this->jsonResponse([
-                'success' => false,
-                'error'   => "Pekerjaan #{$id} ({$type}) gagal diproses: " . $e->getMessage()
-            ]);
+            $this->jsonResponse(false, null, "Pekerjaan '{$type}' gagal diproses: " . $e->getMessage(), 500);
         }
     }
 }

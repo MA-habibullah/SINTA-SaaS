@@ -144,7 +144,17 @@ class KelembagaanModel extends Model {
                           FROM {$fullTable} k
                           LEFT JOIN core.tenants t ON k.tenant_id::text = t.id::text";
         }
-        $whereClause = $isSuperAdmin ? " WHERE 1=1" : " WHERE k.tenant_id = :tenant_id";
+        if ($isSuperAdmin && empty($this->tenantId)) {
+            $whereClause = " WHERE 1=1";
+        } else {
+            $effectiveTenant = !empty($this->tenantId) ? $this->tenantId : SessionManager::getTenantId();
+            if ($table === 'kurikulum') {
+                $whereClause = " WHERE (k.tenant_id::text = :tenant_id OR k.tenant_id::text = '11111111-1111-1111-1111-111111111111' OR k.tenant_id IS NULL)";
+            } else {
+                $whereClause = " WHERE k.tenant_id::text = :tenant_id";
+            }
+            $params['tenant_id'] = $effectiveTenant;
+        }
 
         $countSql = "SELECT COUNT(*) FROM {$fullTable} k LEFT JOIN core.tenants t ON k.tenant_id::text = t.id::text";
 
@@ -177,7 +187,15 @@ class KelembagaanModel extends Model {
         }
 
         $countStmt = $this->db->prepare($countSql . $whereClause);
-        $countStmt->execute($params);
+        if (isset($params['tenant_id'])) {
+            $countStmt->bindValue(':tenant_id', $params['tenant_id'], PDO::PARAM_STR);
+        }
+        foreach ($params as $key => $val) {
+            if ($key !== 'tenant_id') {
+                $countStmt->bindValue(':' . $key, $val, PDO::PARAM_STR);
+            }
+        }
+        $countStmt->execute();
         $total = (int)$countStmt->fetchColumn();
 
         if ($meta['has_created_at']) {
@@ -189,8 +207,8 @@ class KelembagaanModel extends Model {
         
         $dataStmt = $this->db->prepare($selectSql . $whereClause . $orderBy . $limitClause);
         
-        if (!$isSuperAdmin) {
-            $dataStmt->bindValue(':tenant_id', $this->tenantId, PDO::PARAM_STR);
+        if (isset($params['tenant_id'])) {
+            $dataStmt->bindValue(':tenant_id', $params['tenant_id'], PDO::PARAM_STR);
         }
         foreach ($params as $key => $val) {
             if ($key !== 'tenant_id') {
@@ -241,7 +259,7 @@ class KelembagaanModel extends Model {
         } else {
             $sql = "SELECT id, {$nameCol} AS nama {$extraCols} 
                     FROM {$fullTable} 
-                    WHERE (tenant_id::text = :tenant_id OR tenant_id IS NULL) AND is_active = true 
+                    WHERE (tenant_id::text = :tenant_id OR tenant_id::text = '11111111-1111-1111-1111-111111111111' OR tenant_id IS NULL) AND is_active = true 
                     {$orderSql}";
             $stmt = $this->db->prepare($sql);
             $stmt->execute(['tenant_id' => (string)$this->tenantId]);
@@ -314,12 +332,20 @@ class KelembagaanModel extends Model {
             mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
         );
 
+        $targetTenantId = !empty($this->tenantId) 
+            ? $this->tenantId 
+            : (!empty($data['tenant_id']) ? $data['tenant_id'] : SessionManager::getTenantId());
+
+        if (empty($targetTenantId) || $targetTenantId === '00000000-0000-0000-0000-000000000000') {
+            throw new \InvalidArgumentException("Pilih instansi sekolah terlebih dahulu.");
+        }
+
         if ($table === 'kelas') {
             $fields = ['id', 'tenant_id', 'nama_kelas', 'kode_kelas', 'id_jenjang', 'id_jurusan', 'is_active'];
             $placeholders = [':id', ':tenant_id', ':nama_kelas', ':kode_kelas', ':id_jenjang', ':id_jurusan', ':is_active'];
             $params = [
                 'id'         => $uuid,
-                'tenant_id'  => $this->tenantId,
+                'tenant_id'  => $targetTenantId,
                 'nama_kelas' => strip_tags(trim($data['nama_kelas'] ?? $data['nama'] ?? '')),
                 'kode_kelas' => strip_tags(trim($data['kode_kelas'] ?? $data['kode'] ?? '')),
                 'id_jenjang' => !empty($data['id_jenjang']) ? strip_tags(trim($data['id_jenjang'])) : null,
@@ -331,7 +357,7 @@ class KelembagaanModel extends Model {
             $placeholders = [':id', ':tenant_id', ':nama_ref_kurikulum', ':kategori', ':is_active'];
             $params = [
                 'id'                 => $uuid,
-                'tenant_id'          => $this->tenantId,
+                'tenant_id'          => $targetTenantId,
                 'nama_ref_kurikulum' => strip_tags(trim($data['nama_kurikulum'] ?? $data['nama'] ?? '')),
                 'kategori'           => strip_tags(trim($data['tipe_penilaian'] ?? 'sederhana')),
                 'is_active'          => true
@@ -342,7 +368,7 @@ class KelembagaanModel extends Model {
             $placeholders = [':id', ':tenant_id', ':nama', ':is_active'];
             $params  = [
                 'id'        => $uuid,
-                'tenant_id' => $this->tenantId,
+                'tenant_id' => $targetTenantId,
                 'nama'      => $namaVal,
                 'is_active' => true
             ];
