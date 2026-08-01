@@ -199,7 +199,7 @@
                                 <td class="text-muted">{{ (currentPage - 1) * perPage + idx + 1 }}</td>
                                 <td v-if="userRole === 'super_admin'" class="fw-semibold text-secondary">{{ item.nama_sekolah || '-' }}</td>
                                 <td class="fw-semibold text-dark font-monospace fs-7">
-                                    {{ activeTab === 'tahun_ajaran' ? item.tahun_ajaran : item.tahun_angkatan }}
+                                    {{ activeTab === 'tahun_ajaran' ? (item.tahun_ajaran || item.nama_tahun_ajaran || item.nama) : (item.tahun_angkatan || item.nama_angkatan || item.nama) }}
                                 </td>
                                 <td class="text-center">
                                     <div class="form-check form-switch d-inline-block" v-if="!trashMode">
@@ -626,11 +626,12 @@
 
                 axios.get('<?= $this->getBaseUrl() ?>/api/v1/kelembagaan', { params })
                     .then(res => {
-                        this.listData    = res.data.data;
-                        this.totalPages  = res.data.last_page;
-                        this.total       = res.data.total;
-                        this.from        = res.data.from;
-                        this.to          = res.data.to;
+                        const payload = (res.data && res.data.data) ? res.data.data : (res.data || {});
+                        this.listData    = Array.isArray(payload.data) ? payload.data : (Array.isArray(payload) ? payload : []);
+                        this.totalPages  = payload.last_page || 1;
+                        this.total       = payload.total || 0;
+                        this.from        = payload.from || 0;
+                        this.to          = payload.to || 0;
                         this.loading     = false;
                     }).catch(err => {
                         this.loading = false;
@@ -639,17 +640,20 @@
             },
             // Ambil opsi relasi untuk modal form Kelas
             fetchAuxiliaryData(tenantId = null) {
+                const activeTid = tenantId || this.filterTenantId || null;
                 const params = { module: 'jenjang' };
                 const params2 = { module: 'jurusan' };
-                if (tenantId) {
-                    params.tenant_id = tenantId;
-                    params2.tenant_id = tenantId;
+                if (activeTid) {
+                    params.tenant_id = activeTid;
+                    params2.tenant_id = activeTid;
                 }
                 
                 axios.get('<?= $this->getBaseUrl() ?>/api/v1/kelembagaan/options', { params })
-                     .then(res => this.listJenjang = res.data.data);
+                     .then(res => this.listJenjang = (res.data && res.data.data) ? res.data.data : (res.data || []))
+                     .catch(err => console.error("Gagal mengambil opsi jenjang:", err));
                 axios.get('<?= $this->getBaseUrl() ?>/api/v1/kelembagaan/options', { params: params2 })
-                     .then(res => this.listJurusan = res.data.data);
+                     .then(res => this.listJurusan = (res.data && res.data.data) ? res.data.data : (res.data || []))
+                     .catch(err => console.error("Gagal mengambil opsi jurusan:", err));
             },
             fetchTenants() {
                 axios.get('<?= $this->getBaseUrl() ?>/api/v1/kelembagaan/tenants')
@@ -687,12 +691,23 @@
                     this.form = { kode: '', nama: '' };
                 }
                 if (this.userRole === 'super_admin') {
-                    this.form.tenant_id = '';
+                    this.form.tenant_id = this.filterTenantId || '';
+                    if (this.activeTab === 'kelas') {
+                        this.fetchAuxiliaryData(this.form.tenant_id);
+                    }
                 }
             },
             openCreateModal() {
                 this.isEditMode = false;
                 this.resetForm();
+                if (this.userRole === 'super_admin') {
+                    if (!this.form.tenant_id && this.listTenants && this.listTenants.length > 0) {
+                        this.form.tenant_id = this.listTenants[0].id;
+                    }
+                    if (this.activeTab === 'kelas') {
+                        this.fetchAuxiliaryData(this.form.tenant_id);
+                    }
+                }
                 this.modalObj.show();
             },
             openEditModal(item) {
@@ -702,19 +717,19 @@
                 
                 if (this.activeTab === 'kelas') {
                     this.form = {
-                        id_jenjang: item.id_jenjang,
-                        id_jurusan: item.id_jurusan,
-                        kode_kelas: item.kode_kelas,
-                        nama_kelas: item.nama_kelas
+                        id_jenjang: item.id_jenjang || '',
+                        id_jurusan: item.id_jurusan || '',
+                        kode_kelas: item.kode_kelas || item.kode || '',
+                        nama_kelas: item.nama_kelas || item.nama || ''
                     };
                 } else if (this.activeTab === 'tahun_ajaran' || this.activeTab === 'angkatan') {
                     this.form = {
-                        kode: this.activeTab === 'tahun_ajaran' ? item.tahun_ajaran : item.tahun_angkatan
+                        kode: this.activeTab === 'tahun_ajaran' ? (item.tahun_ajaran || item.nama_tahun_ajaran || item.nama || '') : (item.tahun_angkatan || item.nama_angkatan || item.nama || '')
                     };
                 } else if (this.activeTab === 'kurikulum') {
                     this.form = {
-                        nama_kurikulum: item.nama_kurikulum,
-                        tipe_penilaian: item.tipe_penilaian,
+                        nama_kurikulum: item.nama_kurikulum || item.nama_ref_kurikulum || item.nama || '',
+                        tipe_penilaian: item.tipe_penilaian || item.kategori || 'sederhana',
                         is_active: item.is_active
                     };
                 } else {
@@ -755,7 +770,7 @@
                          this.toast.fire({ icon: 'success', title: res.data.message });
                          this.fetchData(this.isEditMode ? this.currentPage : 1);
                          if (this.activeTab === 'jenjang' || this.activeTab === 'jurusan') {
-                             this.fetchAuxiliaryData(this.userRole === 'super_admin' ? this.form.tenant_id : null); // Refresh dropdown options
+                             this.fetchAuxiliaryData(this.userRole === 'super_admin' ? (this.form.tenant_id || this.filterTenantId) : null);
                          }
                      })
                      .catch(err => {
@@ -830,12 +845,13 @@
                      });
             },
             getField(item, type) {
+                if (!item) return '-';
                 if (type === 'kode') {
-                    return item.kode_jenjang || item.kode_jurusan || item.kode_mapel || item.kode_pendidikan || item.kode_program;
+                    return item.kode || item.kode_kelas || item.kode_jenjang || item.kode_jurusan || item.kode_mapel || item.kode_mata_pelajaran || item.kode_pendidikan || item.kode_program || item.tahun_ajaran || item.nama_tahun_ajaran || item.tahun_angkatan || item.nama_angkatan || (item.id ? item.id.substring(0, 8) : '-');
                 } else if (type === 'nama') {
-                    return item.nama_jenjang || item.nama_jurusan || item.nama_mapel || item.nama_pendidikan || item.nama_program;
+                    return item.nama || item.nama_kelas || item.nama_jenjang || item.nama_jurusan || item.nama_mapel || item.nama_mata_pelajaran || item.nama_pendidikan || item.nama_program || item.nama_ref_kurikulum || item.nama_kurikulum || item.tahun_ajaran || item.nama_tahun_ajaran || item.tahun_angkatan || item.nama_angkatan || '-';
                 }
-                return '';
+                return '-';
             },
             getError(field) {
                 return this.errors[field] ? this.errors[field][0] : '';

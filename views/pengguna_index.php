@@ -256,8 +256,16 @@
                                 <td class="text-center">
                                     <div class="d-inline-flex gap-2" v-if="!trashMode">
                                         <template v-if="userRole === 'siswa'">
-                                            <button class="btn btn-sm btn-outline-primary rounded-2 px-2 py-1 fs-8" @click="openEditModal(item)">
+                                            <a :href="'<?= $this->getBaseUrl() ?>/siswa/edit?id=' + item.id" class="btn btn-sm btn-outline-primary rounded-2 px-2 py-1 fs-8">
                                                 <i class="bi bi-pencil-square me-1"></i>Lihat/Perbarui Data
+                                            </a>
+                                        </template>
+                                        <template v-else-if="activeTab === 'siswa'">
+                                            <a :href="'<?= $this->getBaseUrl() ?>/siswa/edit?id=' + item.id" class="btn btn-sm btn-outline-secondary rounded-2 px-2 py-1 fs-8">
+                                                <i class="bi bi-pencil-square me-1"></i>Edit
+                                            </a>
+                                            <button class="btn btn-sm btn-outline-danger rounded-2 px-2 py-1 fs-8" @click="deleteItem(item.id)">
+                                                <i class="bi bi-trash3 me-1"></i>Hapus
                                             </button>
                                         </template>
                                         <template v-else>
@@ -1578,6 +1586,10 @@
                 });
             },
             async openUserAccessModal(user) {
+                if (!user || !user.id) {
+                    Swal.fire('Error', 'ID User tidak valid atau belum termuat.', 'error');
+                    return;
+                }
                 this.selectedStaffId = user.id;
                 this.selectedStaffName = user.nama_lengkap;
                 try {
@@ -1791,6 +1803,10 @@
                 this.modalObj.show();
             },
             openEditModal(item) {
+                if (this.activeTab === 'siswa') {
+                    window.location.href = '<?= $this->getBaseUrl() ?>/siswa/edit?id=' + item.id;
+                    return;
+                }
                 this.isEditMode = true;
                 this.errors = {};
                 this.editId = item.id;
@@ -1853,6 +1869,10 @@
                       });
             },
             deleteItem(id) {
+                if (!id) {
+                    Swal.fire('Error', 'ID Pengguna tidak valid atau belum termuat.', 'error');
+                    return;
+                }
                 Swal.fire({
                     title: 'Pindahkan ke Tong Sampah?',
                     text: `Data ${this.getActiveTabName()} ini akan disembunyikan sementara dari sistem.`,

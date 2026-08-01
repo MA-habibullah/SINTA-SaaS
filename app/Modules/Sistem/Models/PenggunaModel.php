@@ -33,7 +33,9 @@ class PenggunaModel extends Model {
 
         if ($tab === 'mutasi') {
             // Query untuk Log Mutasi & Putus Sekolah (menggunakan tabel siswa.siswa langsung)
-            $selectSql = "SELECT s.*, t.nama_sekolah
+            $selectSql = "SELECT s.id, s.nama_lengkap, s.nisn, s.nis, s.kelas_saat_ini AS nama_kelas,
+                                 s.status_siswa AS keluar_karena, s.updated_at AS tanggal_keluar, 'Data status ' || s.status_siswa AS alasan_keluar,
+                                 t.nama_sekolah
                           FROM siswa.siswa s
                           LEFT JOIN core.tenants t ON s.tenant_id = t.id";
             $countSql = "SELECT COUNT(*) FROM siswa.siswa s 
@@ -51,35 +53,37 @@ class PenggunaModel extends Model {
                 $params['id_kelas'] = $filters['id_kelas'];
             }
 
-            if ($trashMode) {
-                $whereClause .= " AND s.is_active = false";
-            } else {
-                $whereClause .= " AND s.is_active = true";
-            }
+            // Mutasi: tidak filter berdasarkan is_active karena siswa mutasi/lulus sudah is_active=false
+            // Trash mode tidak berlaku untuk mutasi (data mutasi bukan trash)
 
             if ($search !== '') {
-                $whereClause .= " AND (LOWER(s.nama_lengkap) LIKE :search_nama OR LOWER(s.nisn) LIKE :search_nisn OR LOWER(s.nis) LIKE :search_nis OR LOWER(s.email) LIKE :search_email";
+                $whereClause .= " AND (s.nama_lengkap ILIKE :search_nama OR s.nisn ILIKE :search_nisn OR s.nis ILIKE :search_nis";
                 if ($isSuperAdmin) {
-                    $whereClause .= " OR LOWER(t.nama_sekolah) LIKE :search_sekolah";
+                    $whereClause .= " OR t.nama_sekolah ILIKE :search_sekolah";
                 }
                 $whereClause .= ")";
-                $params['search_nama'] = "%" . strtolower($search) . "%";
-                $params['search_nisn'] = "%" . strtolower($search) . "%";
-                $params['search_nis'] = "%" . strtolower($search) . "%";
-                $params['search_email'] = "%" . strtolower($search) . "%";
+                $params['search_nama'] = "%" . $search . "%";
+                $params['search_nisn'] = "%" . $search . "%";
+                $params['search_nis'] = "%" . $search . "%";
                 if ($isSuperAdmin) {
-                    $params['search_sekolah'] = "%" . strtolower($search) . "%";
+                    $params['search_sekolah'] = "%" . $search . "%";
                 }
             }
 
             $orderBy = " ORDER BY s.updated_at DESC, s.nama_lengkap ASC";
+
         } elseif ($tab === 'siswa') {
             // Query untuk Siswa (menggunakan tabel siswa.siswa langsung tanpa rincian_alamat/dll)
-            $selectSql = "SELECT s.*, t.nama_sekolah
+            $selectSql = "SELECT s.*, t.nama_sekolah,
+                                 COALESCE(k.nama_kelas, s.kelas_saat_ini, '-') AS nama_kelas,
+                                 COALESCE(j.nama_jenjang, (SELECT j2.nama_jenjang FROM core.jenjang j2 WHERE (j2.id::text = k.id_jenjang::text OR j2.tenant_id = s.tenant_id) LIMIT 1), '-') AS nama_jenjang
                           FROM siswa.siswa s
-                          LEFT JOIN core.tenants t ON s.tenant_id = t.id";
+                          LEFT JOIN core.tenants t ON s.tenant_id = t.id
+                          LEFT JOIN akademik.kelas k ON (s.tenant_id = k.tenant_id AND (s.kelas_saat_ini = k.id::text OR s.kelas_saat_ini = k.nama_kelas OR s.kelas_saat_ini = k.kode_kelas))
+                          LEFT JOIN core.jenjang j ON k.id_jenjang::text = j.id::text";
             $countSql = "SELECT COUNT(*) FROM siswa.siswa s 
-                          LEFT JOIN core.tenants t ON s.tenant_id = t.id";
+                          LEFT JOIN core.tenants t ON s.tenant_id = t.id
+                          LEFT JOIN akademik.kelas k ON (s.tenant_id = k.tenant_id AND (s.kelas_saat_ini = k.id::text OR s.kelas_saat_ini = k.nama_kelas OR s.kelas_saat_ini = k.kode_kelas))";
             $whereClause = $isSuperAdmin ? " WHERE 1=1" : " WHERE s.tenant_id = :tenant_id";
 
             if ($isSuperAdmin && !empty($filters['tenant_id'])) {
@@ -116,21 +120,21 @@ class PenggunaModel extends Model {
             }
 
             if ($search !== '') {
-                $whereClause .= " AND (LOWER(s.nama_lengkap) LIKE :search_nama OR LOWER(s.nisn) LIKE :search_nisn OR LOWER(s.nis) LIKE :search_nis OR LOWER(s.email) LIKE :search_email";
+                $whereClause .= " AND (s.nama_lengkap ILIKE :search_nama OR s.nisn ILIKE :search_nisn OR s.nis ILIKE :search_nis";
                 if ($isSuperAdmin) {
-                    $whereClause .= " OR LOWER(t.nama_sekolah) LIKE :search_sekolah";
+                    $whereClause .= " OR t.nama_sekolah ILIKE :search_sekolah";
                 }
                 $whereClause .= ")";
-                $params['search_nama'] = "%" . strtolower($search) . "%";
-                $params['search_nisn'] = "%" . strtolower($search) . "%";
-                $params['search_nis'] = "%" . strtolower($search) . "%";
-                $params['search_email'] = "%" . strtolower($search) . "%";
+                $params['search_nama'] = "%" . $search . "%";
+                $params['search_nisn'] = "%" . $search . "%";
+                $params['search_nis'] = "%" . $search . "%";
                 if ($isSuperAdmin) {
-                    $params['search_sekolah'] = "%" . strtolower($search) . "%";
+                    $params['search_sekolah'] = "%" . $search . "%";
                 }
             }
 
             $orderBy = " ORDER BY s.nama_lengkap ASC";
+
         } else {
             // Query untuk staff (Guru, Karyawan, Operator) dari tabel users
             $roleName = $this->roleMap[$tab] ?? '';
@@ -184,13 +188,9 @@ class PenggunaModel extends Model {
             }
 
             if ($search !== '') {
-                $whereClause .= " AND (LOWER(u.nama_lengkap) LIKE :search_nama OR LOWER(u.email) LIKE :search_email";
-                if ($isSuperAdmin) {
-                    // Perlu join tenants jika ingin mencari berdasarkan nama sekolah di superadmin
-                }
-                $whereClause .= ")";
-                $params['search_nama'] = "%" . strtolower($search) . "%";
-                $params['search_email'] = "%" . strtolower($search) . "%";
+                $whereClause .= " AND (u.nama_lengkap ILIKE :search_nama OR u.email ILIKE :search_email)";
+                $params['search_nama'] = "%" . $search . "%";
+                $params['search_email'] = "%" . $search . "%";
             }
 
             $orderBy = " ORDER BY u.nama_lengkap ASC";
@@ -266,9 +266,8 @@ class PenggunaModel extends Model {
         $isSuperAdmin = ($this->tenantId === null);
         
         if ($tab === 'siswa' || $tab === 'mutasi') {
-            $sql = "SELECT s.*, u.email, u.status AS user_status 
+            $sql = "SELECT s.* 
                     FROM siswa.siswa s
-                    LEFT JOIN core.users u ON s.user_id = u.id
                     WHERE s.id = :id";
             if (!$isSuperAdmin) {
                 $sql .= " AND s.tenant_id = :tenant_id";
@@ -683,8 +682,8 @@ class PenggunaModel extends Model {
             }
 
             if ($tab === 'siswa' || $tab === 'mutasi') {
-                // Hapus data siswa
-                $sql = "UPDATE siswa.siswa SET deleted_at = CURRENT_TIMESTAMP WHERE id = :id";
+                // Hapus data siswa (soft-delete via is_active)
+                $sql = "UPDATE siswa.siswa SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
                 if ($this->tenantId !== null) {
                     $sql .= " AND tenant_id = :tenant_id";
                 }
@@ -699,8 +698,8 @@ class PenggunaModel extends Model {
                     $userStmt->execute(['user_id' => $siswa['user_id']]);
                 }
             } else {
-                // Hapus data staff
-                $sql = "UPDATE core.users SET deleted_at = CURRENT_TIMESTAMP WHERE id = :id";
+                // Hapus data staff (soft-delete via is_active)
+                $sql = "UPDATE core.users SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
                 if ($this->tenantId !== null) {
                     $sql .= " AND tenant_id = :tenant_id";
                 }
@@ -728,8 +727,8 @@ class PenggunaModel extends Model {
             }
 
             if ($tab === 'siswa' || $tab === 'mutasi') {
-                // Pulihkan data siswa
-                $sql = "UPDATE siswa.siswa SET deleted_at = NULL WHERE id = :id";
+                // Pulihkan data siswa (restore via is_active)
+                $sql = "UPDATE siswa.siswa SET is_active = true, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
                 if ($this->tenantId !== null) {
                     $sql .= " AND tenant_id = :tenant_id";
                 }
@@ -744,8 +743,8 @@ class PenggunaModel extends Model {
                     $userStmt->execute(['user_id' => $siswa['user_id']]);
                 }
             } else {
-                // Pulihkan data staff
-                $sql = "UPDATE core.users SET deleted_at = NULL WHERE id = :id";
+                // Pulihkan data staff (restore via is_active)
+                $sql = "UPDATE core.users SET is_active = true, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
                 if ($this->tenantId !== null) {
                     $sql .= " AND tenant_id = :tenant_id";
                 }

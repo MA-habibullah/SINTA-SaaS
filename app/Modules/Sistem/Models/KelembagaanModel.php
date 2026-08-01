@@ -7,129 +7,158 @@ use PDO;
 
 class KelembagaanModel extends Model {
 
-    // Daftar tabel yang diizinkan untuk keamanan database
+    protected ?string $tenantId = null;
+
+    public function __construct(?string $tenantId = null) {
+        parent::__construct();
+        $this->tenantId = $tenantId;
+    }
+
+    public function setTenantId(?string $tenantId): void {
+        $this->tenantId = $tenantId;
+    }
+
+    // Schema Mapper: Pemetaan module ke schema.tabel PostgreSQL dan kolom presisi
     private array $allowedTables = [
-        'schema' => 'sistem',
-            'jenjang' => [
-            'code_field' => 'kode_jenjang',
-            'name_field' => 'nama_jenjang',
-            'search_cols' => ['kode_jenjang', 'nama_jenjang']
+        'jenjang' => [
+            'schema'         => 'core',
+            'table'          => 'jenjang',
+            'code_field'     => 'kode_jenjang',
+            'name_field'     => 'nama_jenjang',
+            'search_cols'    => ['kode_jenjang', 'nama_jenjang'],
+            'has_created_at' => false
         ],
         'jurusan' => [
-            'code_field' => 'kode_jurusan',
-            'name_field' => 'nama_jurusan',
-            'search_cols' => ['kode_jurusan', 'nama_jurusan']
+            'schema'         => 'akademik',
+            'table'          => 'jurusan',
+            'code_field'     => 'id',
+            'name_field'     => 'nama_jurusan',
+            'search_cols'    => ['nama_jurusan', 'kategori', 'deskripsi'],
+            'has_created_at' => true
         ],
-        'schema' => 'sistem',
-            'kelas' => [
-            'code_field' => 'kode_kelas',
-            'name_field' => 'nama_kelas',
-            'search_cols' => ['kode_kelas', 'nama_kelas']
+        'kelas' => [
+            'schema'         => 'akademik',
+            'table'          => 'kelas',
+            'code_field'     => 'id',
+            'name_field'     => 'nama_kelas',
+            'search_cols'    => ['nama_kelas', 'kategori', 'deskripsi'],
+            'has_created_at' => true
         ],
         'mata_pelajaran' => [
-            'code_field' => 'kode_mapel',
-            'name_field' => 'nama_mapel',
-            'search_cols' => ['kode_mapel', 'nama_mapel']
+            'schema'         => 'akademik',
+            'table'          => 'mata_pelajaran',
+            'code_field'     => 'id',
+            'name_field'     => 'nama_mata_pelajaran',
+            'search_cols'    => ['nama_mata_pelajaran', 'kategori', 'deskripsi'],
+            'has_created_at' => true
         ],
         'pendidikan' => [
-            'code_field' => 'kode_pendidikan',
-            'name_field' => 'nama_pendidikan',
-            'search_cols' => ['kode_pendidikan', 'nama_pendidikan']
+            'schema'         => 'akademik',
+            'table'          => 'pendidikan',
+            'code_field'     => 'id',
+            'name_field'     => 'nama_pendidikan',
+            'search_cols'    => ['nama_pendidikan', 'kategori', 'deskripsi'],
+            'has_created_at' => true
         ],
         'program_pengajaran' => [
-            'code_field' => 'kode_program',
-            'name_field' => 'nama_program',
-            'search_cols' => ['kode_program', 'nama_program']
+            'schema'         => 'akademik',
+            'table'          => 'program_pengajaran',
+            'code_field'     => 'kode_program',
+            'name_field'     => 'nama_program',
+            'search_cols'    => ['kode_program', 'nama_program'],
+            'has_created_at' => true
         ],
         'tahun_ajaran' => [
-            'code_field' => 'tahun_ajaran',
-            'name_field' => 'tahun_ajaran',
-            'search_cols' => ['tahun_ajaran']
+            'schema'         => 'akademik',
+            'table'          => 'tahun_ajaran',
+            'code_field'     => 'id',
+            'name_field'     => 'nama_tahun_ajaran',
+            'search_cols'    => ['nama_tahun_ajaran', 'kategori', 'deskripsi'],
+            'has_created_at' => true
         ],
         'angkatan' => [
-            'code_field' => 'tahun_angkatan',
-            'name_field' => 'tahun_angkatan',
-            'search_cols' => ['tahun_angkatan']
+            'schema'         => 'akademik',
+            'table'          => 'angkatan',
+            'code_field'     => 'id',
+            'name_field'     => 'nama_angkatan',
+            'search_cols'    => ['nama_angkatan', 'kategori', 'deskripsi'],
+            'has_created_at' => true
         ],
         'kurikulum' => [
-            'code_field' => 'id',
-            'name_field' => 'nama_kurikulum',
-            'search_cols' => ['nama_kurikulum', 'tipe_penilaian']
+            'schema'         => 'akademik',
+            'table'          => 'ref_kurikulum',
+            'code_field'     => 'id',
+            'name_field'     => 'nama_ref_kurikulum',
+            'search_cols'    => ['nama_ref_kurikulum', 'kategori', 'deskripsi'],
+            'has_created_at' => true
         ]
     ];
 
-    /**
-     * Memastikan nama tabel valid dan aman
-     */
     private function validateTableName(string $table): void {
         if (!array_key_exists($table, $this->allowedTables)) {
-            throw new \InvalidArgumentException("Tabel '{$table}' tidak valid atau dilarang.");
+            throw new \InvalidArgumentException("Modul kelembagaan '$table' tidak valid atau dilarang.");
         }
     }
 
-    /**
-     * Ambil data terpaginasi dengan filter pencarian, status aktif, dan mode tong sampah
-     */
+    public function getTableFullName(string $table): string {
+        $this->validateTableName($table);
+        $meta = $this->allowedTables[$table];
+        return $meta['schema'] . '.' . $meta['table'];
+    }
+
     public function getPaginated(string $table, array $filters = []): array {
         $this->validateTableName($table);
 
-        $search = $filters['search'] ?? '';
-        $perPage = (int)($filters['per_page'] ?? 10);
-        $page = (int)($filters['page'] ?? 1);
-        $offset = ($page - 1) * $perPage;
+        $search    = $filters['search'] ?? '';
+        $perPage   = (int)($filters['per_page'] ?? 10);
+        $page      = (int)($filters['page'] ?? 1);
+        $offset    = ($page - 1) * $perPage;
         $trashMode = ($filters['trash'] ?? 'false') === 'true';
 
         $params = [];
-        $isSuperAdmin = ($this->tenantId === null);
+        $isSuperAdmin = $this->isSuperAdminContext();
         if (!$isSuperAdmin) {
             $params['tenant_id'] = $this->tenantId;
         }
 
-        // Memilih query dasar
-        if ($table === 'kelas') {
-            // Relasi belongsTo Jenjang dan Jurusan
-            $selectSql = "SELECT k.*, j.nama_jenjang, ju.nama_jurusan, t.nama_sekolah 
-                          FROM sistem.kelas k
-                          LEFT JOIN sistem.jenjang j ON k.id_jenjang = j.id
-                          LEFT JOIN sistem.jurusan ju ON k.id_jurusan = ju.id
-                          LEFT JOIN core.tenants t ON k.tenant_id = t.id";
-            $whereClause = $isSuperAdmin ? " WHERE 1=1" : " WHERE k.tenant_id = :tenant_id";
-        } elseif ($table === 'kurikulum') {
-            $selectSql = "SELECT k.*, t.nama_sekolah 
-                          FROM sistem.ref_kurikulum k
-                          LEFT JOIN core.tenants t ON k.tenant_id = t.id";
-            $whereClause = $isSuperAdmin ? " WHERE 1=1" : " WHERE (k.tenant_id = :tenant_id OR k.tenant_id IS NULL)";
-        } else {
-            $selectSql = "SELECT k.*, t.nama_sekolah 
-                          FROM sistem.{$table} k
-                          LEFT JOIN core.tenants t ON k.tenant_id = t.id";
-            $whereClause = $isSuperAdmin ? " WHERE 1=1" : " WHERE k.tenant_id = :tenant_id";
-        }
-        $dbTable = ($table === 'kurikulum') ? 'ref_kurikulum' : $table;
-        $countSql = "SELECT COUNT(*) FROM sistem.{$dbTable} k LEFT JOIN core.tenants t ON k.tenant_id = t.id";
+        $fullTable = $this->getTableFullName($table);
+        $meta = $this->allowedTables[$table];
 
-        // Filter status soft delete
+        if ($table === 'kelas') {
+            $selectSql = "SELECT k.*, k.nama_kelas as nama, k.kode_kelas as kode,
+                                 j.nama_jenjang, jur.nama_jurusan, t.nama_sekolah 
+                          FROM akademik.kelas k
+                          LEFT JOIN core.jenjang j ON k.id_jenjang::text = j.id::text
+                          LEFT JOIN akademik.jurusan jur ON k.id_jurusan::text = jur.id::text
+                          LEFT JOIN core.tenants t ON k.tenant_id::text = t.id::text";
+        } elseif ($table === 'tahun_ajaran') {
+            $selectSql = "SELECT k.*, k.nama_tahun_ajaran as nama, k.nama_tahun_ajaran as tahun_ajaran, t.nama_sekolah 
+                          FROM akademik.tahun_ajaran k
+                          LEFT JOIN core.tenants t ON k.tenant_id::text = t.id::text";
+        } elseif ($table === 'angkatan') {
+            $selectSql = "SELECT k.*, k.nama_angkatan as nama, k.nama_angkatan as tahun_angkatan, t.nama_sekolah 
+                          FROM akademik.angkatan k
+                          LEFT JOIN core.tenants t ON k.tenant_id::text = t.id::text";
+        } else {
+            $selectSql = "SELECT k.*, k.{$meta['name_field']} as nama, t.nama_sekolah 
+                          FROM {$fullTable} k
+                          LEFT JOIN core.tenants t ON k.tenant_id::text = t.id::text";
+        }
+        $whereClause = $isSuperAdmin ? " WHERE 1=1" : " WHERE k.tenant_id = :tenant_id";
+
+        $countSql = "SELECT COUNT(*) FROM {$fullTable} k LEFT JOIN core.tenants t ON k.tenant_id::text = t.id::text";
+
         if ($trashMode) {
             $whereClause .= " AND k.is_active = false";
         } else {
             $whereClause .= " AND k.is_active = true";
         }
 
-        // Fitur Pencarian Global
         if ($search !== '') {
             $searchParts = [];
-            $meta = $this->allowedTables[$table];
-            
             $cols = [];
-            if ($table === 'kelas') {
-                $cols[] = "k.nama_kelas";
-                $cols[] = "k.kode_kelas";
-                $cols[] = "j.nama_jenjang";
-                $cols[] = "ju.nama_jurusan";
-            } else {
-                foreach ($meta['search_cols'] as $col) {
-                    $cols[] = "k.{$col}";
-                }
+            foreach ($meta['search_cols'] as $col) {
+                $cols[] = "k.{$col}";
             }
 
             if ($isSuperAdmin) {
@@ -147,24 +176,19 @@ class KelembagaanModel extends Model {
             }
         }
 
-        // Hitung total data
         $countStmt = $this->db->prepare($countSql . $whereClause);
         $countStmt->execute($params);
         $total = (int)$countStmt->fetchColumn();
 
-        // Ambil data halaman aktif dengan pagination
-        if ($table === 'tahun_ajaran') {
-            $orderBy = " ORDER BY k.tahun_ajaran DESC";
-        } elseif ($table === 'angkatan') {
-            $orderBy = " ORDER BY k.tahun_angkatan DESC";
+        if ($meta['has_created_at']) {
+            $orderBy = " ORDER BY k.created_at DESC";
         } else {
-            $orderBy = " ORDER BY k.id DESC"; // default sort
+            $orderBy = " ORDER BY k.id DESC";
         }
         $limitClause = " LIMIT :limit OFFSET :offset";
         
         $dataStmt = $this->db->prepare($selectSql . $whereClause . $orderBy . $limitClause);
         
-        // Bind parameters manually for offset and limit (must be INT for PDO)
         if (!$isSuperAdmin) {
             $dataStmt->bindValue(':tenant_id', $this->tenantId, PDO::PARAM_STR);
         }
@@ -184,110 +208,88 @@ class KelembagaanModel extends Model {
         $to = min($offset + $perPage, $total);
 
         return [
-            'data' => $list,
+            'data'         => $list,
             'current_page' => $page,
-            'last_page' => $totalPages,
-            'per_page' => $perPage,
-            'total' => $total,
-            'from' => $from,
-            'to' => $to
+            'last_page'    => $totalPages,
+            'per_page'     => $perPage,
+            'total'        => $total,
+            'from'         => $from,
+            'to'           => $to
         ];
     }
 
-    /**
-     * Ambil opsi helper (untuk dropdown select di form Kelas)
-     */
     public function getOptions(string $table): array {
         $this->validateTableName($table);
-        $isSuperAdmin = ($this->tenantId === null);
-        
-        $extraSelect = "";
+        $fullTable = $this->getTableFullName($table);
+        $meta = $this->allowedTables[$table];
+
+        $nameCol   = $meta['name_field'];
+        $extraCols = "";
         if ($table === 'kelas') {
-            $extraSelect = ", id_jenjang";
+            $extraCols = ", id_jenjang, kode_kelas, nama_kelas";
         }
 
         $orderSql = "ORDER BY nama ASC";
-        if ($table === 'tahun_ajaran') {
-            $orderSql = "ORDER BY " . $this->allowedTables[$table]['name_field'] . " DESC";
-        } elseif ($table === 'angkatan') {
-            $orderSql = "ORDER BY " . $this->allowedTables[$table]['name_field'] . " DESC";
-        }
         
-        if ($isSuperAdmin) {
-            $sql = "SELECT id, " . $this->allowedTables[$table]['name_field'] . " AS nama {$extraSelect}
-                    FROM sistem.{$table} 
-                    WHERE is_active = true AND is_active = 1 
+        if ($this->isSuperAdminContext()) {
+            $sql = "SELECT id, {$nameCol} AS nama {$extraCols} 
+                    FROM {$fullTable} 
+                    WHERE is_active = true 
                     {$orderSql}";
             $stmt = $this->db->prepare($sql);
             $stmt->execute();
         } else {
-            $sql = "SELECT id, " . $this->allowedTables[$table]['name_field'] . " AS nama {$extraSelect}
-                    FROM sistem.{$table} 
-                    WHERE tenant_id = :tenant_id AND is_active = true AND is_active = 1 
+            $sql = "SELECT id, {$nameCol} AS nama {$extraCols} 
+                    FROM {$fullTable} 
+                    WHERE (tenant_id::text = :tenant_id OR tenant_id IS NULL) AND is_active = true 
                     {$orderSql}";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute(['tenant_id' => $this->tenantId]);
+            $stmt->execute(['tenant_id' => (string)$this->tenantId]);
         }
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    /**
-     * Mengambil satu data detail berdasarkan ID
-     */
-    public function findById(string $table, int $id): ?array {
+    public function findById(string $table, string $id): ?array {
         $this->validateTableName($table);
-        $isSuperAdmin = ($this->tenantId === null);
-        $dbTable = ($table === 'kurikulum') ? 'ref_kurikulum' : $table;
+        $isSuperAdmin = $this->isSuperAdminContext();
+        $fullTable = $this->getTableFullName($table);
         
         if ($isSuperAdmin) {
-            $sql = "SELECT * FROM sistem.{$dbTable} WHERE id = :id LIMIT 1";
+            $sql = "SELECT * FROM {$fullTable} WHERE id::text = :id LIMIT 1";
             $stmt = $this->db->prepare($sql);
             $stmt->execute(['id' => $id]);
         } else {
-            if ($table === 'kurikulum') {
-                $sql = "SELECT * FROM sistem.ref_kurikulum WHERE id = :id AND (tenant_id = :tenant_id OR tenant_id IS NULL) LIMIT 1";
-            } else {
-                $sql = "SELECT * FROM sistem.{$dbTable} WHERE id = :id AND tenant_id = :tenant_id LIMIT 1";
-            }
+            $sql = "SELECT * FROM {$fullTable} WHERE id::text = :id AND tenant_id::text = :tenant_id LIMIT 1";
             $stmt = $this->db->prepare($sql);
             $stmt->execute([
-                'id' => $id,
+                'id'        => $id,
                 'tenant_id' => $this->tenantId
             ]);
         }
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
-    /**
-     * Memeriksa keunikan kode data per sekolah (tenant)
-     */
-    public function isCodeUnique(string $table, string $code, ?int $excludeId = null): bool {
+    public function isCodeUnique(string $table, string $code, ?string $excludeId = null): bool {
         $this->validateTableName($table);
-        $codeCol = $this->allowedTables[$table]['code_field'];
-        $isSuperAdmin = ($this->tenantId === null);
-        $dbTable = ($table === 'kurikulum') ? 'ref_kurikulum' : $table;
+        $meta = $this->allowedTables[$table];
+        $codeCol = $meta['code_field'];
+        $isSuperAdmin = $this->isSuperAdminContext();
+        $fullTable = $this->getTableFullName($table);
         
         if ($isSuperAdmin) {
-            $sql = "SELECT COUNT(*) FROM sistem.{$dbTable} 
+            $sql = "SELECT COUNT(*) FROM {$fullTable} 
                     WHERE {$codeCol} = :code AND is_active = true";
         } else {
-            if ($table === 'kurikulum') {
-                $sql = "SELECT COUNT(*) FROM sistem.ref_kurikulum 
-                        WHERE (tenant_id = :tenant_id OR tenant_id IS NULL) AND {$codeCol} = :code AND is_active = true";
-            } else {
-                $sql = "SELECT COUNT(*) FROM sistem.{$dbTable} 
-                        WHERE tenant_id = :tenant_id AND {$codeCol} = :code AND is_active = true";
-            }
+            $sql = "SELECT COUNT(*) FROM {$fullTable} 
+                    WHERE tenant_id = :tenant_id AND {$codeCol} = :code AND is_active = true";
         }
         
         if ($excludeId !== null) {
-            $sql .= " AND id != :exclude_id";
+            $sql .= " AND id::text != :exclude_id";
         }
 
         $stmt = $this->db->prepare($sql);
-        $params = [
-            'code' => $code
-        ];
+        $params = ['code' => $code];
         if (!$isSuperAdmin) {
             $params['tenant_id'] = $this->tenantId;
         }
@@ -299,136 +301,122 @@ class KelembagaanModel extends Model {
         return $stmt->fetchColumn() == 0;
     }
 
-    /**
-     * Simpan data baru
-     */
-    public function create(string $table, array $data): int {
+    public function create(string $table, array $data): string {
         $this->validateTableName($table);
+        $fullTable = $this->getTableFullName($table);
+        $meta      = $this->allowedTables[$table];
         
-        $fields = ['tenant_id'];
-        $placeholders = [':tenant_id'];
-        $params = ['tenant_id' => $this->tenantId];
+        $uuid = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0x0fff) | 0x4000,
+            mt_rand(0, 0x3fff) | 0x8000,
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+        );
 
         if ($table === 'kelas') {
-            $fields[] = 'id_jenjang';
-            $fields[] = 'id_jurusan';
-            $fields[] = 'kode_kelas';
-            $fields[] = 'nama_kelas';
-            
-            $placeholders[] = ':id_jenjang';
-            $placeholders[] = ':id_jurusan';
-            $placeholders[] = ':kode_kelas';
-            $placeholders[] = ':nama_kelas';
-
-            $params['id_jenjang'] = (int)$data['id_jenjang'];
-            $params['id_jurusan'] = (int)$data['id_jurusan'];
-            $params['kode_kelas'] = strip_tags(trim($data['kode_kelas']));
-            $params['nama_kelas'] = strip_tags(trim($data['nama_kelas']));
+            $fields = ['id', 'tenant_id', 'nama_kelas', 'kode_kelas', 'id_jenjang', 'id_jurusan', 'is_active'];
+            $placeholders = [':id', ':tenant_id', ':nama_kelas', ':kode_kelas', ':id_jenjang', ':id_jurusan', ':is_active'];
+            $params = [
+                'id'         => $uuid,
+                'tenant_id'  => $this->tenantId,
+                'nama_kelas' => strip_tags(trim($data['nama_kelas'] ?? $data['nama'] ?? '')),
+                'kode_kelas' => strip_tags(trim($data['kode_kelas'] ?? $data['kode'] ?? '')),
+                'id_jenjang' => !empty($data['id_jenjang']) ? strip_tags(trim($data['id_jenjang'])) : null,
+                'id_jurusan' => !empty($data['id_jurusan']) ? strip_tags(trim($data['id_jurusan'])) : null,
+                'is_active'  => true
+            ];
         } elseif ($table === 'kurikulum') {
-            $fields[] = 'nama_kurikulum';
-            $fields[] = 'tipe_penilaian';
-            $fields[] = 'is_active';
-
-            $placeholders[] = ':nama_kurikulum';
-            $placeholders[] = ':tipe_penilaian';
-            $placeholders[] = ':is_active';
-
-            $params['nama_kurikulum'] = strip_tags(trim($data['nama_kurikulum'] ?? $data['nama'] ?? ''));
-            $params['tipe_penilaian'] = strip_tags(trim($data['tipe_penilaian'] ?? 'sederhana'));
-            $params['is_active'] = isset($data['is_active']) ? (int)$data['is_active'] : 1;
-            $params['tenant_id'] = $this->tenantId ?: null;
+            $fields = ['id', 'tenant_id', 'nama_ref_kurikulum', 'kategori', 'is_active'];
+            $placeholders = [':id', ':tenant_id', ':nama_ref_kurikulum', ':kategori', ':is_active'];
+            $params = [
+                'id'                 => $uuid,
+                'tenant_id'          => $this->tenantId,
+                'nama_ref_kurikulum' => strip_tags(trim($data['nama_kurikulum'] ?? $data['nama'] ?? '')),
+                'kategori'           => strip_tags(trim($data['tipe_penilaian'] ?? 'sederhana')),
+                'is_active'          => true
+            ];
         } else {
-            $meta = $this->allowedTables[$table];
-            $codeCol = $meta['code_field'];
-            $nameCol = $meta['name_field'];
+            $namaVal = strip_tags(trim($data['nama'] ?? $data[$meta['name_field']] ?? $data['kode'] ?? ''));
+            $fields  = ['id', 'tenant_id', $meta['name_field'], 'is_active'];
+            $placeholders = [':id', ':tenant_id', ':nama', ':is_active'];
+            $params  = [
+                'id'        => $uuid,
+                'tenant_id' => $this->tenantId,
+                'nama'      => $namaVal,
+                'is_active' => true
+            ];
 
-            $fields[] = $codeCol;
-            $placeholders[] = ":{$codeCol}";
-            $params[$codeCol] = strip_tags(trim($data['kode']));
-
-            // Jika kolom kode dan nama sama (seperti tahun_ajaran dan angkatan)
-            if ($codeCol !== $nameCol) {
-                $fields[] = $nameCol;
-                $placeholders[] = ":{$nameCol}";
-                $params[$nameCol] = strip_tags(trim($data['nama']));
+            if ($meta['code_field'] !== 'id' && $meta['code_field'] !== $meta['name_field']) {
+                $fields[] = $meta['code_field'];
+                $placeholders[] = ':code_val';
+                $params['code_val'] = strip_tags(trim($data['kode'] ?? $data[$meta['code_field']] ?? ''));
             }
         }
 
-        $dbTable = ($table === 'kurikulum') ? 'ref_kurikulum' : $table;
         try {
             $this->db->beginTransaction();
-            $sql = "INSERT INTO {$dbTable} (" . implode(', ', $fields) . ") VALUES (" . implode(', ', $placeholders) . ")";
+            $sql = "INSERT INTO {$fullTable} (" . implode(', ', $fields) . ") VALUES (" . implode(', ', $placeholders) . ")";
             $stmt = $this->db->prepare($sql);
             $stmt->execute($params);
-            $lastId = (int)$this->db->query('SELECT gen_random_uuid()')->fetchColumn() /* FIXME UUID */;
             $this->db->commit();
-            return $lastId;
+            return $uuid;
         } catch (\Throwable $e) {
             $this->db->rollBack();
             throw $e;
         }
     }
 
-    /**
-     * Perbarui data yang ada
-     */
-    public function update(string $table, int $id, array $data): bool {
+    public function update(string $table, string $id, array $data): bool {
         $this->validateTableName($table);
-
-        // Security check for system curriculum
-        if ($table === 'kurikulum' && $this->tenantId !== null) {
-            $check = $this->findById($table, $id);
-            if (!$check || $check['tenant_id'] === null) {
-                throw new \InvalidArgumentException("Akses ditolak: Kurikulum sistem/nasional tidak boleh diubah.");
-            }
-        }
-
-        $sets = [];
-        $params = [
-            'id' => $id
-        ];
-        if ($this->tenantId !== null) {
-            $params['tenant_id'] = $this->tenantId;
-        }
+        $fullTable = $this->getTableFullName($table);
+        $meta      = $this->allowedTables[$table];
 
         if ($table === 'kelas') {
-            $sets[] = "id_jenjang = :id_jenjang";
-            $sets[] = "id_jurusan = :id_jurusan";
-            $sets[] = "kode_kelas = :kode_kelas";
-            $sets[] = "nama_kelas = :nama_kelas";
-
-            $params['id_jenjang'] = (int)$data['id_jenjang'];
-            $params['id_jurusan'] = (int)$data['id_jurusan'];
-            $params['kode_kelas'] = strip_tags(trim($data['kode_kelas']));
-            $params['nama_kelas'] = strip_tags(trim($data['nama_kelas']));
+            $sets = ["nama_kelas = :nama_kelas", "kode_kelas = :kode_kelas", "id_jenjang = :id_jenjang", "id_jurusan = :id_jurusan"];
+            $params = [
+                'id'         => $id,
+                'nama_kelas' => strip_tags(trim($data['nama_kelas'] ?? $data['nama'] ?? '')),
+                'kode_kelas' => strip_tags(trim($data['kode_kelas'] ?? $data['kode'] ?? '')),
+                'id_jenjang' => !empty($data['id_jenjang']) ? strip_tags(trim($data['id_jenjang'])) : null,
+                'id_jurusan' => !empty($data['id_jurusan']) ? strip_tags(trim($data['id_jurusan'])) : null
+            ];
+            if ($this->tenantId !== null) {
+                $params['tenant_id'] = $this->tenantId;
+            }
         } elseif ($table === 'kurikulum') {
-            $sets[] = "nama_kurikulum = :nama_kurikulum";
-            $sets[] = "tipe_penilaian = :tipe_penilaian";
-            $sets[] = "is_active = :is_active";
-
-            $params['nama_kurikulum'] = strip_tags(trim($data['nama_kurikulum'] ?? $data['nama'] ?? ''));
-            $params['tipe_penilaian'] = strip_tags(trim($data['tipe_penilaian'] ?? 'sederhana'));
-            $params['is_active'] = isset($data['is_active']) ? (int)$data['is_active'] : 1;
+            $sets = ["nama_ref_kurikulum = :nama_ref_kurikulum", "kategori = :kategori"];
+            $params = [
+                'id'                 => $id,
+                'nama_ref_kurikulum' => strip_tags(trim($data['nama_kurikulum'] ?? $data['nama'] ?? '')),
+                'kategori'           => strip_tags(trim($data['tipe_penilaian'] ?? 'sederhana'))
+            ];
+            if ($this->tenantId !== null) {
+                $params['tenant_id'] = $this->tenantId;
+            }
         } else {
-            $meta = $this->allowedTables[$table];
-            $codeCol = $meta['code_field'];
-            $nameCol = $meta['name_field'];
+            $namaVal = strip_tags(trim($data['nama'] ?? $data[$meta['name_field']] ?? $data['kode'] ?? ''));
+            $sets    = ["{$meta['name_field']} = :nama"];
+            $params  = [
+                'id'   => $id,
+                'nama' => $namaVal
+            ];
 
-            $sets[] = "{$codeCol} = :{$codeCol}";
-            $params[$codeCol] = strip_tags(trim($data['kode']));
+            if ($this->tenantId !== null) {
+                $params['tenant_id'] = $this->tenantId;
+            }
 
-            if ($codeCol !== $nameCol) {
-                $sets[] = "{$nameCol} = :{$nameCol}";
-                $params[$nameCol] = strip_tags(trim($data['nama']));
+            if ($meta['code_field'] !== 'id' && $meta['code_field'] !== $meta['name_field']) {
+                $sets[] = "{$meta['code_field']} = :code_val";
+                $params['code_val'] = strip_tags(trim($data['kode'] ?? $data[$meta['code_field']] ?? ''));
             }
         }
 
-        $dbTable = ($table === 'kurikulum') ? 'ref_kurikulum' : $table;
         try {
             $this->db->beginTransaction();
-            $sql = "UPDATE {$dbTable} SET " . implode(', ', $sets) . " WHERE id = :id AND is_active = true";
-            if ($this->tenantId !== null && $table !== 'kurikulum') {
-                $sql .= " AND tenant_id = :tenant_id";
+            $sql = "UPDATE {$fullTable} SET " . implode(', ', $sets) . " WHERE id::text = :id";
+            if ($this->tenantId !== null) {
+                $sql .= " AND tenant_id::text = :tenant_id";
             }
             $stmt = $this->db->prepare($sql);
             $success = $stmt->execute($params);
@@ -440,10 +428,7 @@ class KelembagaanModel extends Model {
         }
     }
 
-    /**
-     * Periksa apakah data master sedang digunakan oleh modul/tabel lain
-     */
-    public function checkDataInUse(string $table, int $id): array {
+    public function checkDataInUse(string $table, string $id): array {
         $this->validateTableName($table);
         $item = $this->findById($table, $id);
         if (!$item) {
@@ -453,116 +438,41 @@ class KelembagaanModel extends Model {
         $reasons = [];
 
         if ($table === 'mata_pelajaran') {
-            $stmt = $this->db->prepare("SELECT COUNT(*) FROM akademik.pemetaan_mapel WHERE mapel_id = ? AND is_active = true");
+            $stmt = $this->db->prepare("SELECT COUNT(*) FROM akademik.pemetaan_mapel WHERE mapel_id::text = ? AND is_active = true");
             $stmt->execute([$id]);
             if ($stmt->fetchColumn() > 0) {
                 $reasons[] = "Pemetaan Kelompok Mata Pelajaran";
             }
-
-            $stmt = $this->db->prepare("SELECT COUNT(*) FROM akademik.detail_nilai_rapor WHERE mapel_id = ? AND is_active = true");
-            $stmt->execute([$id]);
-            if ($stmt->fetchColumn() > 0) {
-                $reasons[] = "Input Nilai Rapor Siswa";
-            }
-
-            try {
-                $stmt = $this->db->prepare("SELECT COUNT(*) FROM pdss.pdss_config_mapel WHERE mapel_id = ?");
-                $stmt->execute([$id]);
-                if ($stmt->fetchColumn() > 0) {
-                    $reasons[] = "Konfigurasi Mapel PDSS";
-                }
-            } catch (\Throwable) {}
         } elseif ($table === 'kelas') {
-            $stmt = $this->db->prepare("SELECT COUNT(*) FROM siswa.siswa WHERE id_kelas = ? AND is_active = true");
-            $stmt->execute([$id]);
+            $stmt = $this->db->prepare("SELECT COUNT(*) FROM siswa.siswa WHERE (kelas_saat_ini::text = ? OR kelas_saat_ini = ?) AND is_active = true");
+            $stmt->execute([$id, $id]);
             if ($stmt->fetchColumn() > 0) {
                 $reasons[] = "Data Siswa Aktif";
-            }
-
-            $stmt = $this->db->prepare("SELECT COUNT(*) FROM akademik.pemetaan_mapel WHERE kelas_id = ? AND is_active = true");
-            $stmt->execute([$id]);
-            if ($stmt->fetchColumn() > 0) {
-                $reasons[] = "Pemetaan Mata Pelajaran Kelas";
-            }
-
-            $stmt = $this->db->prepare("SELECT COUNT(*) FROM akademik.detail_nilai_rapor WHERE kelas_id = ? AND is_active = true");
-            $stmt->execute([$id]);
-            if ($stmt->fetchColumn() > 0) {
-                $reasons[] = "Nilai Rapor Siswa";
-            }
-        } elseif ($table === 'jurusan') {
-            $stmt = $this->db->prepare("SELECT COUNT(*) FROM sistem.kelas WHERE id_jurusan = ? AND is_active = true");
-            $stmt->execute([$id]);
-            if ($stmt->fetchColumn() > 0) {
-                $reasons[] = "Data Kelas";
-            }
-        } elseif ($table === 'jenjang') {
-            $stmt = $this->db->prepare("SELECT COUNT(*) FROM sistem.kelas WHERE id_jenjang = ? AND is_active = true");
-            $stmt->execute([$id]);
-            if ($stmt->fetchColumn() > 0) {
-                $reasons[] = "Data Kelas";
-            }
-        } elseif ($table === 'tahun_ajaran') {
-            $taName = $item['tahun_ajaran'] ?? '';
-            $stmt = $this->db->prepare("SELECT COUNT(*) FROM akademik.pemetaan_mapel WHERE tahun_ajaran = ? AND is_active = true");
-            $stmt->execute([$taName]);
-            if ($stmt->fetchColumn() > 0) {
-                $reasons[] = "Pemetaan Mata Pelajaran";
-            }
-
-            $stmt = $this->db->prepare("SELECT COUNT(*) FROM akademik.detail_nilai_rapor WHERE tahun_ajaran = ? AND is_active = true");
-            $stmt->execute([$taName]);
-            if ($stmt->fetchColumn() > 0) {
-                $reasons[] = "Nilai Rapor Siswa";
-            }
-        } elseif ($table === 'angkatan') {
-            $stmt = $this->db->prepare("SELECT COUNT(*) FROM siswa.siswa WHERE id_angkatan = ? AND is_active = true");
-            $stmt->execute([$id]);
-            if ($stmt->fetchColumn() > 0) {
-                $reasons[] = "Data Siswa";
-            }
-        } elseif ($table === 'kurikulum') {
-            $stmt = $this->db->prepare("SELECT COUNT(*) FROM sistem.kelas_kurikulum WHERE kurikulum_id = ?");
-            $stmt->execute([$id]);
-            if ($stmt->fetchColumn() > 0) {
-                $reasons[] = "Setingan Kurikulum Kelas";
             }
         }
 
         return [
-            'in_use' => !empty($reasons),
+            'in_use'  => !empty($reasons),
             'reasons' => $reasons
         ];
     }
 
-    /**
-     * Soft Delete (Pindahkan ke Tong Sampah)
-     */
-    public function delete(string $table, int $id): bool {
+    public function delete(string $table, string $id): bool {
         $this->validateTableName($table);
+        $fullTable = $this->getTableFullName($table);
 
-        // Security check for system curriculum
-        if ($table === 'kurikulum' && $this->tenantId !== null) {
-            $check = $this->findById($table, $id);
-            if (!$check || $check['tenant_id'] === null) {
-                throw new \InvalidArgumentException("Akses ditolak: Kurikulum sistem/nasional tidak boleh dihapus.");
-            }
-        }
-
-        // Check if data is already in use by other modules
         $usage = $this->checkDataInUse($table, $id);
         if ($usage['in_use']) {
             $reasonStr = implode(', ', $usage['reasons']);
             throw new \InvalidArgumentException("Data ini tidak dapat dihapus karena sedang terhubung/digunakan pada: {$reasonStr}. Silakan nonaktifkan status keaktifannya melalui saklar status jika tidak lagi digunakan.");
         }
 
-        $dbTable = ($table === 'kurikulum') ? 'ref_kurikulum' : $table;
         try {
             $this->db->beginTransaction();
-            $sql = "UPDATE {$dbTable} SET deleted_at = CURRENT_TIMESTAMP WHERE id = :id";
+            $sql = "UPDATE {$fullTable} SET is_active = false WHERE id::text = :id";
             $params = ['id' => $id];
             if ($this->tenantId !== null) {
-                $sql .= " AND tenant_id = :tenant_id";
+                $sql .= " AND tenant_id::text = :tenant_id";
                 $params['tenant_id'] = $this->tenantId;
             }
             $stmt = $this->db->prepare($sql);
@@ -575,27 +485,16 @@ class KelembagaanModel extends Model {
         }
     }
 
-    /**
-     * Pulihkan dari Tong Sampah
-     */
-    public function restore(string $table, int $id): bool {
+    public function restore(string $table, string $id): bool {
         $this->validateTableName($table);
+        $fullTable = $this->getTableFullName($table);
 
-        // Security check for system curriculum
-        if ($table === 'kurikulum' && $this->tenantId !== null) {
-            $check = $this->findById($table, $id);
-            if (!$check || $check['tenant_id'] === null) {
-                throw new \InvalidArgumentException("Akses ditolak: Kurikulum sistem/nasional tidak boleh dipulihkan.");
-            }
-        }
-
-        $dbTable = ($table === 'kurikulum') ? 'ref_kurikulum' : $table;
         try {
             $this->db->beginTransaction();
-            $sql = "UPDATE {$dbTable} SET deleted_at = NULL WHERE id = :id";
+            $sql = "UPDATE {$fullTable} SET is_active = true WHERE id::text = :id";
             $params = ['id' => $id];
             if ($this->tenantId !== null) {
-                $sql .= " AND tenant_id = :tenant_id";
+                $sql .= " AND tenant_id::text = :tenant_id";
                 $params['tenant_id'] = $this->tenantId;
             }
             $stmt = $this->db->prepare($sql);
@@ -608,33 +507,17 @@ class KelembagaanModel extends Model {
         }
     }
 
-    /**
-     * Ubah status keaktifan switch toggle
-     */
-    public function toggleStatus(string $table, int $id): bool {
+    public function toggleStatus(string $table, string $id): bool {
         $this->validateTableName($table);
+        $fullTable = $this->getTableFullName($table);
 
-        // Security check for system curriculum
-        if ($table === 'kurikulum' && $this->tenantId !== null) {
-            $check = $this->findById($table, $id);
-            if (!$check || $check['tenant_id'] === null) {
-                throw new \InvalidArgumentException("Akses ditolak: Status kurikulum sistem/nasional tidak boleh diubah.");
-            }
-        }
-
-        $dbTable = ($table === 'kurikulum') ? 'ref_kurikulum' : $table;
         try {
             $this->db->beginTransaction();
             
-            // Ambil status saat ini
-            $sql = "SELECT is_active FROM sistem.{$dbTable} WHERE id = :id AND is_active = true LIMIT 1";
+            $sql = "SELECT is_active FROM {$fullTable} WHERE id::text = :id LIMIT 1";
             $params = ['id' => $id];
             if ($this->tenantId !== null) {
-                if ($table === 'kurikulum') {
-                    $sql = "SELECT is_active FROM sistem.ref_kurikulum WHERE id = :id AND (tenant_id = :tenant_id OR tenant_id IS NULL) AND is_active = true LIMIT 1";
-                } else {
-                    $sql = "SELECT is_active FROM sistem.{$dbTable} WHERE id = :id AND tenant_id = :tenant_id AND is_active = true LIMIT 1";
-                }
+                $sql = "SELECT is_active FROM {$fullTable} WHERE id::text = :id AND tenant_id::text = :tenant_id LIMIT 1";
                 $params['tenant_id'] = $this->tenantId;
             }
             $stmt = $this->db->prepare($sql);
@@ -646,12 +529,12 @@ class KelembagaanModel extends Model {
                 return false;
             }
 
-            $newStatus = $current['is_active'] ? 0 : 1;
+            $newStatus = $current['is_active'] ? 'false' : 'true';
 
-            $updateSql = "UPDATE {$dbTable} SET is_active = :status WHERE id = :id";
-            $updateParams = ['status' => $newStatus, 'id' => $id];
+            $updateSql = "UPDATE {$fullTable} SET is_active = {$newStatus} WHERE id::text = :id";
+            $updateParams = ['id' => $id];
             if ($this->tenantId !== null) {
-                $updateSql .= " AND tenant_id = :tenant_id";
+                $updateSql .= " AND tenant_id::text = :tenant_id";
                 $updateParams['tenant_id'] = $this->tenantId;
             }
             
@@ -666,11 +549,12 @@ class KelembagaanModel extends Model {
         }
     }
 
-    /**
-     * Ambil daftar semua tenant aktif
-     */
+    private function isSuperAdminContext(): bool {
+        return empty($this->tenantId) || $this->tenantId === '00000000-0000-0000-0000-000000000000';
+    }
+
     public function getTenants(): array {
-        $stmt = $this->db->query("SELECT id, nama_sekolah FROM core.tenants WHERE is_active = true ORDER BY nama_sekolah ASC");
+        $stmt = $this->db->query("SELECT id, nama_sekolah FROM core.tenants WHERE status = 'active' AND id != '00000000-0000-0000-0000-000000000000' ORDER BY nama_sekolah ASC");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }

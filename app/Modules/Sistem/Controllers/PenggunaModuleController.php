@@ -18,7 +18,9 @@ class PenggunaModuleController extends BaseController {
         SessionManager::requireLogin();
         
         // 2. Ambil tenant ID aktif dari user session
-        $tenantId = SessionManager::getTenantId();
+        // Super Admin menggunakan null agar PenggunaModel tahu bahwa ini super admin (isSuperAdmin = true)
+        $roleName = $_SESSION['role_name'] ?? '';
+        $tenantId = ($roleName === 'super_admin') ? null : SessionManager::getTenantId();
         $this->model = new PenggunaModel($tenantId);
     }
 
@@ -84,7 +86,9 @@ class PenggunaModuleController extends BaseController {
             }
 
             $result = $this->model->getPaginated($tab, $filters);
-            $this->jsonResponse($result);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode($result);
+            exit;
         } catch (\Throwable $e) {
             error_log("Failed to fetch pengguna data: " . $e->getMessage());
             $this->jsonResponse(['error' => 'Gagal mengambil data dari server: ' . $e->getMessage()], 500);
@@ -124,7 +128,7 @@ class PenggunaModuleController extends BaseController {
 
         try {
             $db = \App\Config\Database::getConnection();
-            $q = "SELECT id, nama_kelas FROM kelas WHERE is_active = 1";
+            $q = "SELECT id, nama_kelas FROM akademik.kelas WHERE is_active = true";
             $params = [];
             if (!empty($tenantId)) {
                 $q .= " AND tenant_id = :tenant_id";
