@@ -1531,16 +1531,20 @@
                 this.resetForm();
                 // Reset panel aksi saat pindah tab
                 if (tabId === 'naikkan_kelas') {
+                    this.aksiTenantId = this.filterTenantId;
                     this.aksiKelasAsalId = '';
                     this.aksiKelasTujuanId = '';
                     this.aksiListSiswa = [];
                     this.aksiSelectedIds = [];
                     this.aksiSelectAll = false;
-                    // Load kelas langsung untuk admin sekolah
-                    if (this.userRole !== 'super_admin') {
+                    // Load kelas langsung untuk tenant aktif
+                    if (this.userRole !== 'super_admin' || this.aksiTenantId) {
                         this.fetchAksiKelas();
-                    } else if (this.aksiTenantId) {
-                        this.fetchAksiKelas();
+                        this.fetchTahunAjaran();
+                    } else {
+                        this.aksiListKelas = [];
+                        this.tahunAjaranList = [];
+                        this.aksiTahunAjaran = '';
                     }
                 } else {
                     this.fetchData(1);
@@ -1707,12 +1711,13 @@
                     trash: this.trashMode ? 'true' : 'false'
                 };
 
+                if (this.userRole === 'super_admin' && this.filterTenantId) {
+                    params.tenant_id = this.filterTenantId;
+                }
+
                 if (this.activeTab === 'siswa' || this.activeTab === 'mutasi' || this.activeTab === 'profile_rapot') {
                     params.status = this.activeTab === 'profile_rapot' ? 'Aktif' : this.filterStatus;
                     params.id_kelas = this.filterKelas;
-                    if (this.userRole === 'super_admin') {
-                        params.tenant_id = this.filterTenantId;
-                    }
                 }
 
                 axios.get('<?= $this->getBaseUrl() ?>/api/v1/pengguna', {
@@ -1754,7 +1759,7 @@
             fetchTahunAjaran() {
                 let tenantId = '';
                 if (this.userRole === 'super_admin') {
-                    tenantId = this.aksiTenantId;
+                    tenantId = this.filterTenantId || this.aksiTenantId;
                 }
                 if (!tenantId && this.userRole === 'super_admin') {
                     this.tahunAjaranList = [];
@@ -1777,9 +1782,14 @@
             },
             onFilterTenantChange() {
                 this.filterKelas = '';
+                this.aksiTenantId = this.filterTenantId;
                 this.fetchKelas();
                 this.fetchTahunAjaran();
-                this.fetchData(1);
+                if (this.activeTab === 'naikkan_kelas') {
+                    this.onAksiTenantChange();
+                } else {
+                    this.fetchData(1);
+                }
             },
             getSelectedTenantName() {
                 if (this.userRole === 'super_admin') {
