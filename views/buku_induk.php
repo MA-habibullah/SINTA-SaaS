@@ -41,10 +41,11 @@
                 <div class="col-12 col-md-4">
                     <select class="form-select form-select-sm rounded-3 shadow-none"
                             v-model="tempFilterTenantId"
+                            @change="applyTenantFilter"
                             id="sa-filter-sekolah-bukuinduk"
                             name="filter_tenant_id"
                             style="border:1.5px solid #bfdbfe;">
-                        <option value="">🏫 -- Pilih Sekolah --</option>
+                        <option value="">🏫 -- Semua Sekolah --</option>
                         <option v-for="t in listTenants" :key="t.id" :value="t.id">
                             {{ t.nama_sekolah }}
                         </option>
@@ -138,17 +139,8 @@
                 </div>
             </div>
 
-            <!-- Warning State: Super Admin must select school -->
-            <div v-if="userRole === 'super_admin' && !filterTenantId" class="py-5 text-center bg-white rounded-4 border-0">
-                <i class="bi bi-building text-secondary display-4 d-block mb-3"></i>
-                <h5 class="fw-bold text-dark">Pilih Sekolah Terlebih Dahulu</h5>
-                <p class="text-muted fs-7 mx-auto" style="max-width: 480px;">
-                    Silakan pilih Sekolah terlebih dahulu pada filter "Filter Sekolah" di atas untuk memuat data Buku Induk siswa.
-                </p>
-            </div>
-
             <!-- Loader State -->
-            <div v-else-if="loading" class="text-center py-5">
+            <div v-if="loading" class="text-center py-5">
                 <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
@@ -2570,7 +2562,7 @@
                 capturedAlumniImages: [],
                 capturedAlumniImageUrls: [],
                 userRole: '<?php echo htmlspecialchars($user_role ?? ""); ?>',
-                listTenants: [],
+                listTenants: <?php echo json_encode($tenantList ?? [], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>,
                 tempFilterTenantId: '',
                 filterTenantId: '', 
                 jenjangOptions: [],
@@ -2688,19 +2680,22 @@
             // Load options via AJAX
             try {
                 const response = await axios.get('<?= $this->getBaseUrl() ?>/api/v1/buku-induk?action=get_options');
-                if (response.data && response.data.success) {
-                    this.listTenants = response.data.tenantList || [];
-                    this.jenjangOptions = response.data.jenjangList || [];
-                    this.kelasOptions = response.data.kelasList || [];
-                }
+                const payload = (response.data && response.data.data) ? response.data.data : (response.data || {});
+                this.listTenants = payload.tenantList || payload.tenant_list || [];
+                this.jenjangOptions = payload.jenjangList || payload.jenjang_list || [];
+                this.kelasOptions = payload.kelasList || payload.kelas_list || [];
             } catch (err) {
                 console.error("Gagal memuat opsi filter buku induk:", err);
             }
             
-            // Bersihkan data sampah dari tenant lain jika Super Admin belum memilih sekolah
+            // Auto-select first tenant for Super Admin if not set
             if (this.userRole === 'super_admin' && !this.filterTenantId) {
-                this.jenjangOptions = [];
-                this.kelasOptions = [];
+                if (this.listTenants && this.listTenants.length > 0) {
+                    this.filterTenantId = this.listTenants[0].id;
+                    this.tempFilterTenantId = this.listTenants[0].id;
+                    this.fetchKelasOptions(this.filterTenantId);
+                    this.fetchJenjangOptions(this.filterTenantId);
+                }
             }
             
             this.fetchData(1);
@@ -2818,10 +2813,6 @@
         methods: {
             // --- ALUMNI ARCHIVE METHODS ---
             fetchAlumni(page = 1) {
-                if (this.userRole === 'super_admin' && !this.filterTenantId) {
-                    this.alumniList = [];
-                    return;
-                }
                 this.alumniLoading = true;
                 this.alumniCurrentPage = page;
                 
@@ -2837,9 +2828,10 @@
 
                 axios.get('<?= $this->getBaseUrl() ?>/api/v1/buku-induk', { params })
                     .then(res => {
-                        this.alumniList = res.data.data;
-                        this.alumniTotalPages = res.data.last_page;
-                        this.alumniTotal = res.data.total;
+                        const payload = (res.data && res.data.data) ? res.data.data : (res.data || {});
+                        this.alumniList = Array.isArray(payload.data) ? payload.data : [];
+                        this.alumniTotalPages = payload.last_page || 1;
+                        this.alumniTotal = payload.total || 0;
                         this.alumniLoading = false;
                     }).catch(err => {
                         this.alumniLoading = false;
@@ -3291,12 +3283,6 @@
                 }
             },
             fetchNilaiRaporMaster() {
-                if (this.userRole === 'super_admin' && !this.filterTenantId) {
-                    this.masterNilaiRapor.tahun_ajaran = [];
-                    this.masterNilaiRapor.kelas = [];
-                    this.loadingNilaiRapor = false;
-                    return;
-                }
                 this.loadingNilaiRapor = true;
                 const params = {};
                 if (this.userRole === 'super_admin' && this.filterTenantId) {
@@ -3310,6 +3296,9 @@
                         
                         if (this.masterNilaiRapor.tahun_ajaran.length > 0 && !this.nilaiRapor.tahunAjaran) {
                             this.nilaiRapor.tahunAjaran = this.masterNilaiRapor.tahun_ajaran[0].tahun_ajaran;
+                        }
+                        if (this.masterNilaiRapor.kelas.length > 0 && !this.nilaiRapor.kelasId) {
+                            this.nilaiRapor.kelasId = this.masterNilaiRapor.kelas[0].id;
                         }
                         
                         this.loadingNilaiRapor = false;
@@ -3686,19 +3675,13 @@
                     this.fetchRiwayatKepsek();
                 } else if (this.mainActiveTab === 'cetak_buku_induk') {
                     this.loadMatrixData();
+                } else if (this.mainActiveTab === 'arsip_alumni') {
+                    this.fetchAlumni(1);
                 } else {
                     this.fetchData(1);
                 }
             },
             fetchKurikulumMaster() {
-                if (this.userRole === 'super_admin' && !this.filterTenantId) {
-                    this.masterKurikulum.tahun_ajaran = [];
-                    this.masterKurikulum.kelas = [];
-                    this.masterKurikulum.bank_mapel = [];
-                    this.kurikulumList = [];
-                    this.loadingKurikulum = false;
-                    return;
-                }
                 this.loadingKurikulum = true;
                 const params = {};
                 if (this.userRole === 'super_admin' && this.filterTenantId) {
@@ -3714,6 +3697,9 @@
                         
                         if (this.masterKurikulum.tahun_ajaran.length > 0 && !this.kurikulum.tahunAjaran) {
                             this.kurikulum.tahunAjaran = this.masterKurikulum.tahun_ajaran[0].tahun_ajaran;
+                        }
+                        if (this.masterKurikulum.kelas.length > 0 && !this.kurikulum.kelasId) {
+                            this.kurikulum.kelasId = this.masterKurikulum.kelas[0].id;
                         }
                         
                         this.loadingKurikulum = false;
@@ -4000,15 +3986,6 @@
                      });
             },
             fetchData(page = 1) {
-                if (this.userRole === 'super_admin' && !this.filterTenantId) {
-                    this.listData = [];
-                    this.totalPages = 1;
-                    this.total = 0;
-                    this.from = 0;
-                    this.to = 0;
-                    this.loading = false;
-                    return;
-                }
                 this.loading = true;
                 this.currentPage = page;
 
@@ -4026,11 +4003,12 @@
 
                 axios.get('<?= $this->getBaseUrl() ?>/api/v1/buku-induk', { params })
                     .then(res => {
-                        this.listData    = res.data.data;
-                        this.totalPages  = res.data.last_page;
-                        this.total       = res.data.total;
-                        this.from        = res.data.from;
-                        this.to          = res.data.to;
+                        const payload = (res.data && res.data.data) ? res.data.data : (res.data || {});
+                        this.listData    = Array.isArray(payload.data) ? payload.data : [];
+                        this.totalPages  = payload.last_page || 1;
+                        this.total       = payload.total || 0;
+                        this.from        = payload.from || 0;
+                        this.to          = payload.to || 0;
                         this.loading     = false;
                     }).catch(err => {
                         this.loading = false;

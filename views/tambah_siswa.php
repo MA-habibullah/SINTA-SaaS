@@ -8,7 +8,7 @@ use App\Config\Database;
 
 // Tentukan mode: Edit atau Tambah Baru
 $isEdit = isset($data['siswa']);
-$actionUrl = $isEdit ? '<?= $this->getBaseUrl() ?>/siswa/update' : '<?= $this->getBaseUrl() ?>/siswa/simpan';
+$actionUrl = $isEdit ? $this->getBaseUrl() . '/siswa/update' : $this->getBaseUrl() . '/siswa/simpan';
 $formTitle = $isEdit ? 'Edit Data Siswa' : 'Tambah Siswa Baru';
 $idSiswa = $isEdit ? ($data['siswa']['id'] ?? '') : '';
 $siswaFullData = $isEdit ? $data['siswa'] : [];
@@ -669,7 +669,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                     <label for="province_select" class="form-label">Provinsi <span class="text-danger">*</span></label>
                     <select class="form-select" id="province_select" v-model="form.id_provinsi" @change="onProvinceChange" :disabled="loadingProvinces" required>
                         <option value="" disabled>{{ loadingProvinces ? 'Memuat data...' : '-- Pilih Provinsi --' }}</option>
-                        <option v-for="p in provinces" :key="p.id_provinsi" :value="p.id_provinsi">{{ p.nama_provinsi }}</option>
+                        <option v-for="p in (Array.isArray(provinces) ? provinces.filter(x => x && x.id_provinsi) : [])" :key="p.id_provinsi" :value="p.id_provinsi">{{ p.nama_provinsi }}</option>
                     </select>
                 </div>
 
@@ -678,7 +678,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                     <label for="city_select" class="form-label">Kabupaten / Kota <span class="text-danger">*</span></label>
                     <select class="form-select" id="city_select" v-model="form.id_kota" @change="onCityChange" :disabled="loadingCities || !form.id_provinsi" required>
                         <option value="" disabled>{{ loadingCities ? 'Memuat data...' : '-- Pilih Kota --' }}</option>
-                        <option v-for="c in cityFiltered" :key="c.id_kota" :value="c.id_kota">{{ c.nama_kota }}</option>
+                        <option v-for="c in (Array.isArray(cityFiltered) ? cityFiltered.filter(x => x && x.id_kota) : [])" :key="c.id_kota" :value="c.id_kota">{{ c.nama_kota }}</option>
                     </select>
                 </div>
 
@@ -687,7 +687,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                     <label for="district_select" class="form-label">Kecamatan <span class="text-danger">*</span></label>
                     <select class="form-select" id="district_select" v-model="form.id_kecamatan" @change="onDistrictChange" :disabled="loadingDistricts || !form.id_kota" required>
                         <option value="" disabled>{{ loadingDistricts ? 'Memuat data...' : '-- Pilih Kecamatan --' }}</option>
-                        <option v-for="d in districts" :key="d.id_kecamatan" :value="d.id_kecamatan">{{ d.nama_kecamatan }}</option>
+                        <option v-for="d in (Array.isArray(districts) ? districts.filter(x => x && x.id_kecamatan) : [])" :key="d.id_kecamatan" :value="d.id_kecamatan">{{ d.nama_kecamatan }}</option>
                     </select>
                 </div>
 
@@ -696,7 +696,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                     <label for="id_kelurahan" class="form-label">Kelurahan <span class="text-danger">*</span></label>
                     <select class="form-select" id="id_kelurahan" name="id_kelurahan" v-model="form.id_kelurahan" :disabled="loadingSubdistricts || !form.id_kecamatan" required>
                         <option value="" disabled>{{ loadingSubdistricts ? 'Memuat data...' : '-- Pilih Kelurahan --' }}</option>
-                        <option v-for="k in subdistricts" :key="k.id_kelurahan" :value="k.id_kelurahan">{{ k.nama_kelurahan }}</option>
+                        <option v-for="k in (Array.isArray(subdistricts) ? subdistricts.filter(x => x && x.id_kelurahan) : [])" :key="k.id_kelurahan" :value="k.id_kelurahan">{{ k.nama_kelurahan }}</option>
                     </select>
                 </div>
 
@@ -2209,7 +2209,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 loadingProvinces.value = true;
                 try {
                     const res = await axios.get('?ajax=1&action=get_provinsi');
-                    provinces.value = res.data;
+                    provinces.value = (res.data && Array.isArray(res.data.data)) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
                 } catch (err) {
                     console.error("Gagal load provinsi", err);
                     showErrorToast("Gagal memuat data provinsi.");
@@ -2221,7 +2221,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
             const fetchAllCities = async () => {
                 try {
                     const res = await axios.get('?ajax=1&action=get_all_kota');
-                    cities.value = res.data;
+                    cities.value = (res.data && Array.isArray(res.data.data)) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
                 } catch (err) {
                     console.error("Gagal load kota lengkap", err);
                     showErrorToast("Gagal memuat data kota tempat lahir.");
@@ -2236,7 +2236,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                         url += `&tenant_id=${tenantId}`;
                     }
                     const res = await axios.get(url);
-                    acOptions.value = res.data;
+                    acOptions.value = (res.data && res.data.data) ? res.data.data : (res.data || {});
                 } catch (err) {
                     console.error("Gagal load opsi akademik", err);
                     showErrorToast("Gagal memuat opsi penempatan akademik.");
@@ -2248,7 +2248,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
             const fetchTenants = async () => {
                 try {
                     const res = await axios.get('<?= $this->getBaseUrl() ?>/api/v1/pengguna/tenants');
-                    listTenants.value = res.data.data;
+                    listTenants.value = (res.data && Array.isArray(res.data.data)) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
                 } catch (err) {
                     console.error("Gagal load list tenants", err);
                     showErrorToast("Gagal memuat daftar sekolah.");
@@ -2289,7 +2289,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 loadingCities.value = true;
                 try {
                     const res = await axios.get(`?ajax=1&action=get_kota&id_provinsi=${provId}`);
-                    cityFiltered.value = res.data;
+                    cityFiltered.value = (res.data && Array.isArray(res.data.data)) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
                 } catch (err) {
                     console.error(err);
                     showErrorToast("Gagal memuat kabupaten/kota.");
@@ -2308,7 +2308,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 loadingDistricts.value = true;
                 try {
                     const res = await axios.get(`?ajax=1&action=get_kecamatan&id_kota=${kotaId}`);
-                    districts.value = res.data;
+                    districts.value = (res.data && Array.isArray(res.data.data)) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
                 } catch (err) {
                     console.error(err);
                     showErrorToast("Gagal memuat kecamatan.");
@@ -2325,7 +2325,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 loadingSubdistricts.value = true;
                 try {
                     const res = await axios.get(`?ajax=1&action=get_kelurahan&id_kecamatan=${kecId}`);
-                    subdistricts.value = res.data;
+                    subdistricts.value = (res.data && Array.isArray(res.data.data)) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
                 } catch (err) {
                     console.error(err);
                     showErrorToast("Gagal memuat kelurahan.");

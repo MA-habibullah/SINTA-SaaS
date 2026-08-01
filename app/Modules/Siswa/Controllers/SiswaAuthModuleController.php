@@ -119,4 +119,96 @@ class SiswaAuthModuleController extends BaseController {
             $this->jsonResponse(false, null, 'Gagal autentikasi siswa: ' . $e->getMessage(), 400);
         }
     }
+
+    /**
+     * Tampilkan halaman wajib ubah password (First Login)
+     * GET /siswa/ubah-password
+     */
+    public function changePasswordView(): void {
+        SessionManager::start();
+
+        if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true || ($_SESSION['role_name'] ?? '') !== 'siswa') {
+            $this->redirect('/login');
+            return;
+        }
+
+        if (!($_SESSION['is_first_login'] ?? false)) {
+            $this->redirect('/dashboard');
+            return;
+        }
+
+        require_once __DIR__ . '/../../../../views/siswa_change_password_view.php';
+    }
+
+    /**
+     * API: Ubah Password Wajib Siswa (First Login)
+     * POST /api/v1/siswa/ubah-password
+     */
+    public function changePasswordApi(): void {
+        SessionManager::start();
+
+        if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true || ($_SESSION['role_name'] ?? '') !== 'siswa') {
+            $this->jsonResponse(false, null, 'Unauthorized access.', 401);
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->jsonResponse(false, null, 'Method not allowed.', 405);
+        }
+
+        $input = $this->getJsonInput();
+        $passwordBaru = isset($input['password_baru']) ? $input['password_baru'] : '';
+        $konfirmasiPassword = isset($input['konfirmasi_password']) ? $input['konfirmasi_password'] : '';
+
+        if (empty($passwordBaru) || empty($konfirmasiPassword)) {
+            $this->jsonResponse(false, null, 'Password Baru dan Konfirmasi Password wajib diisi.', 400);
+        }
+
+        if (strlen($passwordBaru) < 8) {
+            $this->jsonResponse(false, null, 'Password baru minimal harus sepanjang 8 karakter.', 422);
+        }
+
+        if ($passwordBaru !== $konfirmasiPassword) {
+            $this->jsonResponse(false, null, 'Konfirmasi password tidak cocok.', 422);
+        }
+
+        try {
+            $db = Database::getConnection();
+            $siswaId = $_SESSION['user_id'];
+
+            $hashedPassword = password_hash($passwordBaru, PASSWORD_BCRYPT);
+
+            $stmt = $db->prepare("UPDATE siswa.siswa SET password = :password, is_first_login = false, updated_at = NOW() WHERE id = :id");
+            $stmt->execute([
+                'password' => $hashedPassword,
+                'id' => $siswaId
+            ]);
+
+            $_SESSION['is_first_login'] = false;
+
+            $this->jsonResponse(true, [
+                'message' => 'Password berhasil diperbarui. Silakan masuk ke Dashboard.'
+            ]);
+
+        } catch (\Throwable $e) {
+            error_log("Failed to change student password: " . $e->getMessage());
+            $this->jsonResponse(false, null, 'Terjadi kesalahan sistem saat memperbarui password.', 500);
+        }
+    }
+
+    /**
+     * Logout Siswa
+     * GET /siswa/logout
+     */
+    public function logout(): void {
+        try {
+            $userId = $_SESSION['user_id'] ?? 'unknown';
+            if ($userId !== 'unknown') {
+                \App\Helpers\ActivityLogger::record('LOGOUT', 'siswa', $userId);
+            }
+        } catch (\Throwable $e) {}
+
+        SessionManager::logout();
+        $this->redirect('/login');
+    }
 }
+

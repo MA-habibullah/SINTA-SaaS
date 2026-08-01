@@ -35,9 +35,12 @@ class BukuIndukModuleController extends BaseController {
     public function index(): void {
         $db = \App\Config\Database::getConnection();
         $tenantId = SessionManager::getTenantId();
+        if ($tenantId === '00000000-0000-0000-0000-000000000000' || ($_SESSION['role_name'] ?? '') === 'super_admin') {
+            $tenantId = null;
+        }
         
         // Ambil opsi kelas untuk filter dropdown
-        $q = "SELECT id, nama_kelas, id_jenjang FROM sistem.kelas WHERE is_active = 1 AND is_active = true";
+        $q = "SELECT id, nama_kelas, id_jenjang FROM akademik.kelas WHERE is_active = true";
         if ($tenantId) {
             $q .= " AND tenant_id = :tenant_id";
         }
@@ -51,9 +54,9 @@ class BukuIndukModuleController extends BaseController {
         $kelasList = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Ambil opsi jenjang untuk filter dropdown
-        $qJenjang = "SELECT id, nama_jenjang FROM sistem.jenjang WHERE is_active = 1 AND is_active = true";
+        $qJenjang = "SELECT id, nama_jenjang FROM core.jenjang WHERE is_active = true";
         if ($tenantId) {
-            $qJenjang .= " AND tenant_id = :tenant_id";
+            $qJenjang .= " AND (tenant_id = :tenant_id OR tenant_id IS NULL)";
         }
         $qJenjang .= " ORDER BY nama_jenjang ASC";
         $stmtJenjang = $db->prepare($qJenjang);
@@ -67,7 +70,7 @@ class BukuIndukModuleController extends BaseController {
         // Ambil opsi sekolah/tenant untuk filter Super Admin
         $tenantList = [];
         if (!$tenantId) {
-            $stmtTenant = $db->query("SELECT id, nama_sekolah FROM tenants WHERE is_active = true ORDER BY nama_sekolah ASC");
+            $stmtTenant = $db->query("SELECT id, nama_sekolah FROM core.tenants WHERE status = 'active' AND id != '00000000-0000-0000-0000-000000000000' ORDER BY nama_sekolah ASC");
             $tenantList = $stmtTenant->fetchAll(PDO::FETCH_ASSOC);
         }
 
@@ -86,30 +89,34 @@ class BukuIndukModuleController extends BaseController {
     public function fetchApi(): void {
         $db = \App\Config\Database::getConnection();
         $tenantId = SessionManager::getTenantId();
+        if ($tenantId === '00000000-0000-0000-0000-000000000000' || ($_SESSION['role_name'] ?? '') === 'super_admin') {
+            $tenantId = null;
+        }
         $filterTenant = isset($_GET['filter_tenant_id']) ? trim($_GET['filter_tenant_id']) : '';
 
         if (isset($_GET['action']) && $_GET['action'] === 'get_options') {
-            $q = "SELECT id, nama_kelas, id_jenjang FROM sistem.kelas WHERE is_active = 1 AND is_active = true";
-            if ($tenantId) {
+            $effectiveTenant = $tenantId ?: $filterTenant;
+            $q = "SELECT id, nama_kelas, id_jenjang FROM akademik.kelas WHERE is_active = true";
+            if ($effectiveTenant) {
                 $q .= " AND tenant_id = :tenant_id";
             }
             $q .= " ORDER BY nama_kelas ASC";
             $stmt = $db->prepare($q);
-            if ($tenantId) {
-                $stmt->execute(['tenant_id' => $tenantId]);
+            if ($effectiveTenant) {
+                $stmt->execute(['tenant_id' => $effectiveTenant]);
             } else {
                 $stmt->execute();
             }
             $kelasList = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $qJenjang = "SELECT id, nama_jenjang FROM sistem.jenjang WHERE is_active = 1 AND is_active = true";
-            if ($tenantId) {
-                $qJenjang .= " AND tenant_id = :tenant_id";
+            $qJenjang = "SELECT id, nama_jenjang FROM core.jenjang WHERE is_active = true";
+            if ($effectiveTenant) {
+                $qJenjang .= " AND (tenant_id = :tenant_id OR tenant_id IS NULL)";
             }
             $qJenjang .= " ORDER BY nama_jenjang ASC";
             $stmtJenjang = $db->prepare($qJenjang);
-            if ($tenantId) {
-                $stmtJenjang->execute(['tenant_id' => $tenantId]);
+            if ($effectiveTenant) {
+                $stmtJenjang->execute(['tenant_id' => $effectiveTenant]);
             } else {
                 $stmtJenjang->execute();
             }
@@ -117,12 +124,11 @@ class BukuIndukModuleController extends BaseController {
 
             $tenantList = [];
             if (!$tenantId) {
-                $stmtTenant = $db->query("SELECT id, nama_sekolah FROM tenants WHERE is_active = true ORDER BY nama_sekolah ASC");
+                $stmtTenant = $db->query("SELECT id, nama_sekolah FROM core.tenants WHERE status = 'active' AND id != '00000000-0000-0000-0000-000000000000' ORDER BY nama_sekolah ASC");
                 $tenantList = $stmtTenant->fetchAll(PDO::FETCH_ASSOC);
             }
 
-            $this->jsonResponse([
-                'success' => true,
+            $this->jsonResponse(true, [
                 'kelasList' => $kelasList,
                 'jenjangList' => $jenjangList,
                 'tenantList' => $tenantList
@@ -153,14 +159,17 @@ class BukuIndukModuleController extends BaseController {
         $offset = ($page - 1) * $perPage;
 
         // Build query
-        $where = ["s.is_active = true"];
+        $where = [
+            "(s.is_active = true OR s.is_active IS NULL)",
+            "s.tenant_id != '00000000-0000-0000-0000-000000000000'"
+        ];
         $params = [];
 
         // Tenant filter
         if ($tenantId) {
             $where[] = "s.tenant_id = :tenant_id";
             $params['tenant_id'] = $tenantId;
-        } else {
+        } elseif (!empty($filterTenant)) {
             $where[] = "s.tenant_id = :filter_tenant_id";
             $params['filter_tenant_id'] = $filterTenant;
         }
@@ -175,31 +184,35 @@ class BukuIndukModuleController extends BaseController {
 
         // Kelas filter
         if ($filterKelas !== '') {
-            $where[] = "s.id_kelas = :kelas_id";
+            $where[] = "(s.kelas_saat_ini = :kelas_id OR k.id::text = :kelas_id OR k.nama_kelas = :kelas_id)";
             $params['kelas_id'] = $filterKelas;
         }
 
         // Status filter
         if ($filterStatus !== '') {
-            $where[] = "s.status = :status";
+            $where[] = "LOWER(s.status_siswa) = LOWER(:status)";
             $params['status'] = $filterStatus;
         }
 
         $whereClause = implode(" AND ", $where);
 
         // Count query
-        $countSql = "SELECT COUNT(*) FROM siswa s WHERE $whereClause";
+        $countSql = "SELECT COUNT(DISTINCT s.id) FROM siswa.siswa s 
+                    LEFT JOIN akademik.kelas k ON (s.tenant_id = k.tenant_id AND (s.kelas_saat_ini = k.id::text OR s.kelas_saat_ini = k.nama_kelas))
+                    WHERE $whereClause";
         $stmtCount = $db->prepare($countSql);
         $stmtCount->execute($params);
         $total = (int)$stmtCount->fetchColumn();
 
         // Select query
-        $sql = "SELECT s.id, s.nama_lengkap, s.nisn, s.nis, s.jenis_kelamin, s.status,
-                       k.nama_kelas, t.nama_sekolah, j.nama_jurusan
-                FROM siswa s
-                LEFT JOIN kelas k ON s.id_kelas = k.id
-                LEFT JOIN tenants t ON s.tenant_id = t.id
-                LEFT JOIN jurusan j ON s.id_jurusan = j.id
+        $sql = "SELECT s.id, s.nama_lengkap, s.nisn, s.nis, s.jenis_kelamin, s.status_siswa AS status,
+                       COALESCE(k.nama_kelas, s.kelas_saat_ini, '-') as nama_kelas,
+                       t.nama_sekolah,
+                       COALESCE(j.nama_jurusan, s.jurusan, '-') as nama_jurusan
+                FROM siswa.siswa s
+                LEFT JOIN akademik.kelas k ON (s.tenant_id = k.tenant_id AND (s.kelas_saat_ini = k.id::text OR s.kelas_saat_ini = k.nama_kelas))
+                LEFT JOIN core.tenants t ON s.tenant_id = t.id
+                LEFT JOIN akademik.jurusan j ON (s.tenant_id = j.tenant_id AND (s.jurusan = j.id::text OR s.jurusan = j.nama_jurusan))
                 WHERE $whereClause
                 ORDER BY s.nama_lengkap ASC
                 LIMIT :limit OFFSET :offset";
@@ -215,11 +228,11 @@ class BukuIndukModuleController extends BaseController {
         $stmt->execute();
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $lastPage = ceil($total / $perPage);
+        $lastPage = max(1, ceil($total / $perPage));
         $from = $total > 0 ? $offset + 1 : 0;
         $to = min($offset + $perPage, $total);
 
-        $this->jsonResponse([
+        $this->jsonResponse(true, [
             'data' => $data,
             'total' => $total,
             'per_page' => $perPage,
@@ -250,7 +263,7 @@ class BukuIndukModuleController extends BaseController {
         $siswa['nama_kelas'] = '-';
         if (!empty($siswa['id_kelas'])) {
             try {
-                $stmtKelas = $db->prepare("SELECT nama_kelas FROM sistem.kelas WHERE id = ?");
+                $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id = ?");
                 $stmtKelas->execute([$siswa['id_kelas']]);
                 $siswa['nama_kelas'] = $stmtKelas->fetchColumn() ?: '-';
             } catch (\Throwable $e) {
@@ -262,7 +275,7 @@ class BukuIndukModuleController extends BaseController {
         $siswa['nama_sekolah'] = '-';
         if (!empty($siswa['tenant_id'])) {
             try {
-                $stmtTenant = $db->prepare("SELECT nama_sekolah FROM tenants WHERE id = ?");
+                $stmtTenant = $db->prepare("SELECT nama_sekolah FROM core.tenants WHERE id = ?");
                 $stmtTenant->execute([$siswa['tenant_id']]);
                 $siswa['nama_sekolah'] = $stmtTenant->fetchColumn() ?: '-';
             } catch (\Throwable $e) {
@@ -275,10 +288,10 @@ class BukuIndukModuleController extends BaseController {
             try {
                 $stmt = $db->prepare("
                     SELECT kl.nama_kelurahan, kc.nama_kecamatan, kt.nama_kota, pr.nama_provinsi
-                    FROM kelurahan kl
-                    JOIN kecamatan kc ON kl.id_kecamatan = kc.id_kecamatan
-                    JOIN kota kt ON kc.id_kota = kt.id_kota
-                    JOIN provinsi pr ON kt.id_provinsi = pr.id_provinsi
+                    FROM core.kelurahan kl
+                    JOIN core.kecamatan kc ON kl.id_kecamatan = kc.id_kecamatan
+                    JOIN core.kota kt ON kc.id_kota = kt.id_kota
+                    JOIN core.provinsi pr ON kt.id_provinsi = pr.id_provinsi
                     WHERE kl.id_kelurahan = ?
                     LIMIT 1
                 ");
@@ -300,7 +313,7 @@ class BukuIndukModuleController extends BaseController {
         try {
             $stmtRK = $db->prepare("
                 SELECT * 
-                FROM riwayat_kenaikan_kelas 
+                FROM siswa.siswa.riwayat_kenaikan_kelas 
                 WHERE siswa_id = :siswa_id 
                   AND tenant_id = :tenant_id 
                 ORDER BY created_at ASC
@@ -318,7 +331,7 @@ class BukuIndukModuleController extends BaseController {
         $tahunMasuk = '-';
         if (!empty($siswa['id_tahun_ajaran'])) {
             try {
-                $stmtTa = $db->prepare("SELECT tahun_ajaran FROM tahun_ajaran WHERE id = ?");
+                $stmtTa = $db->prepare("SELECT tahun_ajaran FROM akademik.tahun_ajaran WHERE id = ?");
                 $stmtTa->execute([$siswa['id_tahun_ajaran']]);
                 $tahunMasuk = $stmtTa->fetchColumn() ?: '-';
             } catch (\Throwable $e) {
@@ -349,7 +362,7 @@ class BukuIndukModuleController extends BaseController {
         // Fetch kesehatan
         $kesehatan = [];
         try {
-            $stmtK = $db->prepare("SELECT * FROM kesehatan_siswa WHERE siswa_id = ? ORDER BY semester ASC");
+            $stmtK = $db->prepare("SELECT * FROM siswa.siswa.fisik_kesehatan_siswa WHERE siswa_id = ? ORDER BY semester ASC");
             $stmtK->execute([$id]);
             $krows = $stmtK->fetchAll(PDO::FETCH_ASSOC);
             foreach ($krows as $k) {
@@ -365,9 +378,9 @@ class BukuIndukModuleController extends BaseController {
         try {
             $stmtNR = $db->prepare("
                 SELECT dnr.*, mp.nama_mapel, mp.kode_mapel, k.nama_kelas
-                FROM detail_nilai_rapor dnr
-                JOIN mata_pelajaran mp ON dnr.mapel_id = mp.id
-                JOIN kelas k ON dnr.kelas_id = k.id
+                FROM akademik.detail_nilai_rapor dnr
+                JOIN akademik.mata_pelajaran mp ON dnr.mapel_id = mp.id
+                JOIN akademik.kelas k ON dnr.kelas_id = k.id
                 WHERE dnr.siswa_id = :siswa_id 
                   AND dnr.tenant_id = :tenant_id 
                   AND dnr.is_active = true
@@ -388,9 +401,9 @@ class BukuIndukModuleController extends BaseController {
         try {
             $stmtP = $db->prepare("
                 SELECT ps.*, ta.tahun_ajaran
-                FROM prestasi_siswa ps
+                FROM kesiswaan.prestasi_siswa ps
                 JOIN prestasi_siswa_anggota psa ON ps.id = psa.id_prestasi
-                LEFT JOIN tahun_ajaran ta ON ps.tahun_ajaran_id = ta.id
+                LEFT JOIN akademik.tahun_ajaran ta ON ps.tahun_ajaran_id = ta.id
                 WHERE psa.id_siswa = :siswa_id 
                   AND ps.tenant_id = :tenant_id 
                   AND ps.is_active = true
@@ -411,8 +424,8 @@ class BukuIndukModuleController extends BaseController {
         try {
             $stmtPL = $db->prepare("
                 SELECT cps.*, mp.nama_pelanggaran, mp.bobot_poin, mp.kategori
-                FROM catatan_pelanggaran_siswa cps
-                JOIN master_pelanggaran mp ON cps.pelanggaran_id = mp.id
+                FROM bk.pelanggaran_siswa cps
+                JOIN bk.master_pelanggaran mp ON cps.pelanggaran_id = mp.id
                 WHERE cps.siswa_id = :siswa_id 
                   AND cps.tenant_id = :tenant_id 
                   AND cps.is_active = true
@@ -434,7 +447,7 @@ class BukuIndukModuleController extends BaseController {
         try {
             $stmtTK = $db->prepare("
                 SELECT * 
-                FROM riwayat_kuliah 
+                FROM tracer.riwayat_kuliah 
                 WHERE id_siswa = :siswa_id 
                   AND tenant_id = :tenant_id
                 ORDER BY tahun_masuk DESC
@@ -447,7 +460,7 @@ class BukuIndukModuleController extends BaseController {
 
             $stmtTP = $db->prepare("
                 SELECT * 
-                FROM riwayat_pekerjaan 
+                FROM tracer.riwayat_pekerjaan 
                 WHERE id_siswa = :siswa_id 
                   AND tenant_id = :tenant_id
                 ORDER BY tahun_mulai DESC
@@ -468,7 +481,7 @@ class BukuIndukModuleController extends BaseController {
         try {
             $stmtPrestasi = $db->prepare("
                 SELECT ps.* 
-                FROM prestasi_siswa ps
+                FROM kesiswaan.prestasi_siswa ps
                 JOIN prestasi_siswa_anggota psa ON ps.id = psa.id_prestasi
                 WHERE psa.id_siswa = :siswa_id AND ps.tenant_id = :tenant_id AND ps.is_active = true
                 ORDER BY ps.tanggal_lomba DESC
@@ -488,7 +501,7 @@ class BukuIndukModuleController extends BaseController {
         try {
             $stmtBeasiswa = $db->prepare("
                 SELECT * 
-                FROM riwayat_beasiswa
+                FROM siswa.siswa.riwayat_beasiswa
                 WHERE siswa_id = :siswa_id AND tenant_id = :tenant_id
                 ORDER BY tahun_menerima DESC
             ");
@@ -531,10 +544,10 @@ class BukuIndukModuleController extends BaseController {
             try {
                 $stmt = $db->prepare("
                     SELECT kl.nama_kelurahan, kc.nama_kecamatan, kt.nama_kota, pr.nama_provinsi
-                    FROM kelurahan kl
-                    JOIN kecamatan kc ON kl.id_kecamatan = kc.id_kecamatan
-                    JOIN kota kt ON kc.id_kota = kt.id_kota
-                    JOIN provinsi pr ON kt.id_provinsi = pr.id_provinsi
+                    FROM core.kelurahan kl
+                    JOIN core.kecamatan kc ON kl.id_kecamatan = kc.id_kecamatan
+                    JOIN core.kota kt ON kc.id_kota = kt.id_kota
+                    JOIN core.provinsi pr ON kt.id_provinsi = pr.id_provinsi
                     WHERE kl.id_kelurahan = ?
                     LIMIT 1
                 ");
@@ -555,7 +568,7 @@ class BukuIndukModuleController extends BaseController {
         if (!empty($siswa['id_kelas'])) {
             try {
                 $db = \App\Config\Database::getConnection();
-                $stmtKelas = $db->prepare("SELECT nama_kelas FROM sistem.kelas WHERE id = ?");
+                $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id = ?");
                 $stmtKelas->execute([$siswa['id_kelas']]);
                 $siswa['nama_kelas'] = $stmtKelas->fetchColumn() ?: '-';
             } catch (\Throwable $e) {
@@ -568,7 +581,7 @@ class BukuIndukModuleController extends BaseController {
         // Dapatkan data headmaster & sekolah (npsn, wilayah) dari tenants
         try {
             $db = \App\Config\Database::getConnection();
-            $stmtTenant = $db->prepare("SELECT nama_sekolah, nama_kepsek, nip_kepsek, pangkat_kepsek, npsn, kecamatan, kabupaten_kota, provinsi FROM tenants WHERE id = ?");
+            $stmtTenant = $db->prepare("SELECT nama_sekolah, nama_kepsek, nip_kepsek, pangkat_kepsek, npsn, kecamatan, kabupaten_kota, provinsi FROM core.tenants WHERE id = ?");
             $stmtTenant->execute([$siswa['tenant_id']]);
             $tenantInfo = $stmtTenant->fetch(PDO::FETCH_ASSOC);
             $siswa['nama_sekolah'] = $tenantInfo['nama_sekolah'] ?? '-';
@@ -591,7 +604,7 @@ class BukuIndukModuleController extends BaseController {
             $db = \App\Config\Database::getConnection();
             $stmtPrestasi = $db->prepare("
                 SELECT ps.* 
-                FROM prestasi_siswa ps
+                FROM kesiswaan.prestasi_siswa ps
                 JOIN prestasi_siswa_anggota psa ON ps.id = psa.id_prestasi
                 WHERE psa.id_siswa = :siswa_id AND ps.tenant_id = :tenant_id AND ps.is_active = true
                 ORDER BY ps.tanggal_lomba DESC
@@ -611,7 +624,7 @@ class BukuIndukModuleController extends BaseController {
         try {
             $stmtBeasiswa = $db->prepare("
                 SELECT * 
-                FROM riwayat_beasiswa
+                FROM siswa.siswa.riwayat_beasiswa
                 WHERE siswa_id = :siswa_id AND tenant_id = :tenant_id
                 ORDER BY tahun_menerima DESC
             ");
@@ -675,10 +688,10 @@ class BukuIndukModuleController extends BaseController {
             try {
                 $stmt = $db->prepare("
                     SELECT kl.nama_kelurahan, kc.nama_kecamatan, kt.nama_kota, pr.nama_provinsi
-                    FROM kelurahan kl
-                    JOIN kecamatan kc ON kl.id_kecamatan = kc.id_kecamatan
-                    JOIN kota kt ON kc.id_kota = kt.id_kota
-                    JOIN provinsi pr ON kt.id_provinsi = pr.id_provinsi
+                    FROM core.kelurahan kl
+                    JOIN core.kecamatan kc ON kl.id_kecamatan = kc.id_kecamatan
+                    JOIN core.kota kt ON kc.id_kota = kt.id_kota
+                    JOIN core.provinsi pr ON kt.id_provinsi = pr.id_provinsi
                     WHERE kl.id_kelurahan = ?
                     LIMIT 1
                 ");
@@ -699,7 +712,7 @@ class BukuIndukModuleController extends BaseController {
         if (!empty($siswa['id_kelas'])) {
             try {
                 $db = \App\Config\Database::getConnection();
-                $stmtKelas = $db->prepare("SELECT nama_kelas FROM sistem.kelas WHERE id = ?");
+                $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id = ?");
                 $stmtKelas->execute([$siswa['id_kelas']]);
                 $siswa['nama_kelas'] = $stmtKelas->fetchColumn() ?: '-';
             } catch (\Throwable $e) {
@@ -712,7 +725,7 @@ class BukuIndukModuleController extends BaseController {
         // Dapatkan data headmaster & sekolah (npsn, wilayah) dari tenants
         try {
             $db = \App\Config\Database::getConnection();
-            $stmtTenant = $db->prepare("SELECT nama_sekolah, nama_kepsek, nip_kepsek, pangkat_kepsek, npsn, kecamatan, kabupaten_kota, provinsi FROM tenants WHERE id = ?");
+            $stmtTenant = $db->prepare("SELECT nama_sekolah, nama_kepsek, nip_kepsek, pangkat_kepsek, npsn, kecamatan, kabupaten_kota, provinsi FROM core.tenants WHERE id = ?");
             $stmtTenant->execute([$siswa['tenant_id']]);
             $tenantInfo = $stmtTenant->fetch(PDO::FETCH_ASSOC);
             $siswa['nama_sekolah'] = $tenantInfo['nama_sekolah'] ?? '-';
@@ -743,7 +756,7 @@ class BukuIndukModuleController extends BaseController {
             $db = \App\Config\Database::getConnection();
             $stmtPrestasi = $db->prepare("
                 SELECT ps.* 
-                FROM prestasi_siswa ps
+                FROM kesiswaan.prestasi_siswa ps
                 JOIN prestasi_siswa_anggota psa ON ps.id = psa.id_prestasi
                 WHERE psa.id_siswa = :siswa_id AND ps.tenant_id = :tenant_id AND ps.is_active = true
                 ORDER BY ps.tanggal_lomba DESC
@@ -763,7 +776,7 @@ class BukuIndukModuleController extends BaseController {
         try {
             $stmtBeasiswa = $db->prepare("
                 SELECT * 
-                FROM riwayat_beasiswa
+                FROM siswa.siswa.riwayat_beasiswa
                 WHERE siswa_id = :siswa_id AND tenant_id = :tenant_id
                 ORDER BY tahun_menerima DESC
             ");
@@ -791,7 +804,7 @@ class BukuIndukModuleController extends BaseController {
         if (!empty($siswa['id_tahun_ajaran'])) {
             try {
                 $db = \App\Config\Database::getConnection();
-                $stmtTa = $db->prepare("SELECT tahun_ajaran FROM tahun_ajaran WHERE id = ?");
+                $stmtTa = $db->prepare("SELECT tahun_ajaran FROM akademik.tahun_ajaran WHERE id = ?");
                 $stmtTa->execute([$siswa['id_tahun_ajaran']]);
                 $tahunAjaranMulai = $stmtTa->fetchColumn() ?: '';
             } catch (\Throwable $e) {
@@ -825,13 +838,20 @@ class BukuIndukModuleController extends BaseController {
         try {
             $db = \App\Config\Database::getConnection();
             $tenantId = SessionManager::getTenantId();
-            if (!$tenantId && isset($_GET['filter_tenant_id'])) {
-                $tenantId = $_GET['filter_tenant_id'];
+            if (!$tenantId && !empty($_GET['filter_tenant_id'])) {
+                $tenantId = trim($_GET['filter_tenant_id']);
             }
-            if (!$tenantId) throw new \Exception("Sekolah belum dipilih.");
+            if (!$tenantId && !empty($_GET['tenant_id'])) {
+                $tenantId = trim($_GET['tenant_id']);
+            }
             
-            $stmt = $db->prepare("SELECT * FROM riwayat_kepala_sekolah WHERE tenant_id = ? ORDER BY tanggal_mulai DESC");
-            $stmt->execute([$tenantId]);
+            if ($tenantId) {
+                $stmt = $db->prepare("SELECT r.*, t.nama_sekolah FROM kepegawaian.riwayat_kepala_sekolah r LEFT JOIN core.tenants t ON r.tenant_id = t.id WHERE r.tenant_id = ? ORDER BY r.tanggal_mulai DESC");
+                $stmt->execute([$tenantId]);
+            } else {
+                $stmt = $db->prepare("SELECT r.*, t.nama_sekolah FROM kepegawaian.riwayat_kepala_sekolah r LEFT JOIN core.tenants t ON r.tenant_id = t.id ORDER BY r.tanggal_mulai DESC");
+                $stmt->execute();
+            }
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             echo json_encode(['success' => true, 'data' => $data]);
@@ -864,7 +884,7 @@ class BukuIndukModuleController extends BaseController {
 
             if ($id) {
                 // Update
-                $stmt = $db->prepare("UPDATE riwayat_kepala_sekolah SET nama_kepsek = ?, nip_kepsek = ?, tanggal_mulai = ?, tanggal_selesai = ?, status_plt = ? WHERE id = ? AND tenant_id = ?");
+                $stmt = $db->prepare("UPDATE kepegawaian.riwayat_kepala_sekolah SET nama_kepsek = ?, nip_kepsek = ?, tanggal_mulai = ?, tanggal_selesai = ?, status_plt = ? WHERE id = ? AND tenant_id = ?");
                 $stmt->execute([$namaKepsek, $nipKepsek, $tanggalMulai, $tanggalSelesai, $statusPlt, $id, $tenantId]);
             } else {
                 // Insert
@@ -875,7 +895,7 @@ class BukuIndukModuleController extends BaseController {
                     mt_rand(0, 0x3fff) | 0x8000,
                     mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
                 );
-                $stmt = $db->prepare("INSERT INTO riwayat_kepala_sekolah (id, tenant_id, nama_kepsek, nip_kepsek, tanggal_mulai, tanggal_selesai, status_plt) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmt = $db->prepare("INSERT INTO kepegawaian.riwayat_kepala_sekolah (id, tenant_id, nama_kepsek, nip_kepsek, tanggal_mulai, tanggal_selesai, status_plt) VALUES (?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute([$id, $tenantId, $namaKepsek, $nipKepsek, $tanggalMulai, $tanggalSelesai, $statusPlt]);
             }
 
@@ -899,7 +919,7 @@ class BukuIndukModuleController extends BaseController {
             }
             if (!$tenantId) throw new \Exception("Sekolah belum dipilih.");
             
-            $stmt = $db->prepare("DELETE FROM riwayat_kepala_sekolah WHERE id = ? AND tenant_id = ?");
+            $stmt = $db->prepare("DELETE FROM kepegawaian.riwayat_kepala_sekolah WHERE id = ? AND tenant_id = ?");
             $stmt->execute([$id, $tenantId]);
             
             echo json_encode(['success' => true]);
@@ -913,7 +933,7 @@ class BukuIndukModuleController extends BaseController {
             $db = \App\Config\Database::getConnection();
             $stmt = $db->prepare("
                 SELECT nama_kepsek, nip_kepsek 
-                FROM riwayat_kepala_sekolah 
+                FROM kepegawaian.riwayat_kepala_sekolah 
                 WHERE tenant_id = ? 
                   AND tanggal_mulai <= ? 
                   AND (tanggal_selesai IS NULL OR tanggal_selesai >= ?)
@@ -952,7 +972,7 @@ class BukuIndukModuleController extends BaseController {
         $db = \App\Config\Database::getConnection();
 
         try {
-            $stmtTenant = $db->prepare("SELECT * FROM tenants WHERE id = ?");
+            $stmtTenant = $db->prepare("SELECT * FROM core.tenants WHERE id = ?");
             $stmtTenant->execute([$siswa['tenant_id']]);
             $tenantInfo = $stmtTenant->fetch(PDO::FETCH_ASSOC);
             $kurikulum = $tenantInfo['kurikulum'] ?? 'Merdeka';
@@ -994,10 +1014,10 @@ class BukuIndukModuleController extends BaseController {
             $queryParams = array_merge([$id, $ta], $semVariants);
             $stmtGrades = $db->prepare("
                 SELECT d.*, m.nama_mapel, k.nama_kelas, COALESCE(pm.kelompok_id, 'A. Kelompok Mata Pelajaran Umum') AS kelompok_id 
-                FROM detail_nilai_rapor d 
-                JOIN mata_pelajaran m ON d.mapel_id = m.id 
-                LEFT JOIN kelas k ON d.kelas_id = k.id
-                LEFT JOIN pemetaan_mapel pm ON (pm.tenant_id = d.tenant_id AND pm.kelas_id = d.kelas_id AND pm.tahun_ajaran = d.tahun_ajaran AND pm.semester = d.semester AND pm.mapel_id = d.mapel_id AND pm.is_active = true)
+                FROM akademik.detail_nilai_rapor d 
+                JOIN akademik.mata_pelajaran m ON d.mapel_id = m.id 
+                LEFT JOIN akademik.kelas k ON d.kelas_id = k.id
+                LEFT JOIN akademik.pemetaan_mapel pm ON (pm.tenant_id = d.tenant_id AND pm.kelas_id = d.kelas_id AND pm.tahun_ajaran = d.tahun_ajaran AND pm.semester = d.semester AND pm.mapel_id = d.mapel_id AND pm.is_active = true)
                 WHERE d.siswa_id = ? AND d.tahun_ajaran = ? AND d.semester IN ({$semPlaceholders})
                 AND d.is_active = true 
                 ORDER BY kelompok_id ASC, m.nama_mapel ASC
@@ -1029,8 +1049,8 @@ class BukuIndukModuleController extends BaseController {
 
             if ($kelasIdSiswa) {
                 $qKelasKur = "SELECT r.nama_kurikulum, r.tipe_penilaian 
-                              FROM sistem.kelas_kurikulum kk
-                              JOIN sistem.ref_kurikulum r ON kk.kurikulum_id = r.id
+                              FROM akademik.kelas_kurikulum kk
+                              JOIN akademik.ref_kurikulum r ON kk.kurikulum_id = r.id
                               WHERE kk.kelas_id = :kelas_id AND kk.tahun_ajaran = :tahun_ajaran AND kk.tenant_id = :tenant_id
                               LIMIT 1";
                 $stmtKelasKur = $db->prepare($qKelasKur);
@@ -1063,7 +1083,7 @@ class BukuIndukModuleController extends BaseController {
         if ($tipePenilaian === 'kompleks') {
             try {
                 $sikapParams = array_merge([$id, $ta], $semVariants);
-                $qSikap = "SELECT * FROM nilai_sikap_k13 WHERE siswa_id = ? AND tahun_ajaran = ? AND semester IN ({$semPlaceholders}) LIMIT 1";
+                $qSikap = "SELECT * FROM akademik.nilai_sikap_k13 WHERE siswa_id = ? AND tahun_ajaran = ? AND semester IN ({$semPlaceholders}) LIMIT 1";
                 $stmtSikap = $db->prepare($qSikap);
                 $stmtSikap->execute($sikapParams);
                 $sikapRow = $stmtSikap->fetch(PDO::FETCH_ASSOC);
@@ -1120,7 +1140,7 @@ class BukuIndukModuleController extends BaseController {
         $db = \App\Config\Database::getConnection();
 
         try {
-            $stmtTenant = $db->prepare("SELECT * FROM tenants WHERE id = ?");
+            $stmtTenant = $db->prepare("SELECT * FROM core.tenants WHERE id = ?");
             $stmtTenant->execute([$siswa['tenant_id']]);
             $tenantInfo = $stmtTenant->fetch(PDO::FETCH_ASSOC);
             $kurikulum = $tenantInfo['kurikulum'] ?? 'Merdeka';
@@ -1143,9 +1163,9 @@ class BukuIndukModuleController extends BaseController {
         try {
             $stmt = $db->prepare("
                 SELECT d.*, m.nama_mapel, COALESCE(pm.kelompok_id, 'A. Kelompok Mata Pelajaran Umum') AS kelompok 
-                FROM detail_nilai_rapor d 
-                JOIN mata_pelajaran m ON d.mapel_id = m.id 
-                LEFT JOIN pemetaan_mapel pm ON (pm.tenant_id = d.tenant_id AND pm.kelas_id = d.kelas_id AND pm.tahun_ajaran = d.tahun_ajaran AND pm.semester = d.semester AND pm.mapel_id = d.mapel_id AND pm.is_active = true)
+                FROM akademik.detail_nilai_rapor d 
+                JOIN akademik.mata_pelajaran m ON d.mapel_id = m.id 
+                LEFT JOIN akademik.pemetaan_mapel pm ON (pm.tenant_id = d.tenant_id AND pm.kelas_id = d.kelas_id AND pm.tahun_ajaran = d.tahun_ajaran AND pm.semester = d.semester AND pm.mapel_id = d.mapel_id AND pm.is_active = true)
                 WHERE d.siswa_id = ? AND d.is_active = true 
                 ORDER BY kelompok ASC, m.nama_mapel ASC, d.tahun_ajaran ASC, d.semester ASC
             ");
@@ -1194,7 +1214,7 @@ class BukuIndukModuleController extends BaseController {
         $db = \App\Config\Database::getConnection();
 
         // Ambil daftar siswa aktif di kelas ini
-        $query = "SELECT id FROM siswa WHERE id_kelas = :kelas_id AND is_active = true AND status = 'Aktif'";
+        $query = "SELECT id FROM siswa.siswa WHERE id_kelas = :kelas_id AND is_active = true AND status = 'Aktif'";
         $params = ['kelas_id' => $kelasId];
         
         if ($tenantId !== null) {
@@ -1223,10 +1243,10 @@ class BukuIndukModuleController extends BaseController {
                 try {
                     $stmtWilayah = $db->prepare("
                         SELECT kl.nama_kelurahan, kc.nama_kecamatan, kt.nama_kota, pr.nama_provinsi
-                        FROM kelurahan kl
-                        JOIN kecamatan kc ON kl.id_kecamatan = kc.id_kecamatan
-                        JOIN kota kt ON kc.id_kota = kt.id_kota
-                        JOIN provinsi pr ON kt.id_provinsi = pr.id_provinsi
+                        FROM core.kelurahan kl
+                        JOIN core.kecamatan kc ON kl.id_kecamatan = kc.id_kecamatan
+                        JOIN core.kota kt ON kc.id_kota = kt.id_kota
+                        JOIN core.provinsi pr ON kt.id_provinsi = pr.id_provinsi
                         WHERE kl.id_kelurahan = ?
                         LIMIT 1
                     ");
@@ -1246,7 +1266,7 @@ class BukuIndukModuleController extends BaseController {
             // Dapatkan nama kelas
             if (!empty($siswa['id_kelas'])) {
                 try {
-                    $stmtKelas = $db->prepare("SELECT nama_kelas FROM sistem.kelas WHERE id = ?");
+                    $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id = ?");
                     $stmtKelas->execute([$siswa['id_kelas']]);
                     $siswa['nama_kelas'] = $stmtKelas->fetchColumn() ?: '-';
                 } catch (\Throwable $e) {
@@ -1258,7 +1278,7 @@ class BukuIndukModuleController extends BaseController {
 
             // Dapatkan data headmaster (nama_kepsek & nip_kepsek) dari tenants
             try {
-                $stmtTenant = $db->prepare("SELECT nama_sekolah, nama_kepsek, nip_kepsek, pangkat_kepsek FROM tenants WHERE id = ?");
+                $stmtTenant = $db->prepare("SELECT nama_sekolah, nama_kepsek, nip_kepsek, pangkat_kepsek FROM core.tenants WHERE id = ?");
                 $stmtTenant->execute([$siswa['tenant_id']]);
                 $tenantInfo = $stmtTenant->fetch(PDO::FETCH_ASSOC);
                 $siswa['nama_sekolah'] = $tenantInfo['nama_sekolah'] ?? '-';
@@ -1289,51 +1309,56 @@ class BukuIndukModuleController extends BaseController {
         exit;
     }
     public function fetchCetakMatrixApi(): void {
-        $db = \App\Config\Database::getConnection();
+        $db       = \App\Config\Database::getConnection();
         $tenantId = SessionManager::getTenantId();
+        if ($tenantId === '00000000-0000-0000-0000-000000000000') $tenantId = null;
         
-        $filterTenant = $_GET['filter_tenant_id'] ?? '';
-        $filterKelas = $_GET['kelas_id'] ?? '';
-        $filterStatus = $_GET['status'] ?? '';
-        $filterTahunAjaran = $_GET['tahun_ajaran'] ?? '';
+        $filterTenant      = $_GET['filter_tenant_id'] ?? '';
+        $filterKelas       = $_GET['kelas_id']         ?? '';
+        $filterStatus      = $_GET['status']           ?? '';
+        $filterTahunAjaran = $_GET['tahun_ajaran']     ?? '';
         
-        $where = ["s.is_active = true"];
+        $activeTenantId = $tenantId ?: ($filterTenant !== '' ? $filterTenant : null);
+
+        // Resolve tenant if needed
+        if (!$tenantId && !empty($filterTenant)) {
+            $tenantId = $filterTenant;
+        }
+        
+        $where  = ["s.is_active = true"];
         $params = [];
 
-        if ($tenantId) {
-            $where[] = "s.tenant_id = :tenant_id";
-            $params['tenant_id'] = $tenantId;
-        } else if ($filterTenant !== '') {
-            $where[] = "s.tenant_id = :filter_tenant_id";
-            $params['filter_tenant_id'] = $filterTenant;
+        if ($activeTenantId) {
+            $where[]           = "s.tenant_id = :tenant_id";
+            $params['tenant_id'] = $activeTenantId;
         }
 
         // Dapatkan tahun ajaran aktif terlebih dahulu
-        $stmtTa = $db->prepare("SELECT tahun_ajaran FROM tahun_ajaran WHERE is_active = 1 " . ($tenantId ? "AND tenant_id = ?" : "") . " ORDER BY tahun_ajaran DESC LIMIT 1");
-        $stmtTa->execute($tenantId ? [$tenantId] : []);
+        $stmtTa = $db->prepare(
+            "SELECT nama_tahun_ajaran FROM akademik.tahun_ajaran WHERE is_active = true "
+            . ($activeTenantId ? "AND tenant_id = ?" : "")
+            . " ORDER BY nama_tahun_ajaran DESC LIMIT 1"
+        );
+        $stmtTa->execute($activeTenantId ? [$activeTenantId] : []);
         $activeTahunAjaran = $stmtTa->fetchColumn();
 
         if ($filterKelas !== '' && $filterTahunAjaran !== '') {
             $where[] = "(
-                s.id IN (SELECT siswa_id FROM detail_nilai_rapor WHERE kelas_id = :kelas_id1 AND tahun_ajaran = :tahun_ajaran1 AND is_active = true)
-                OR s.id IN (SELECT siswa_id FROM riwayat_kenaikan_kelas WHERE id_kelas_tujuan = :kelas_id2 AND tahun_ajaran = :tahun_ajaran2)
-                OR (s.id_kelas = :kelas_id3 AND " . ($filterTahunAjaran === $activeTahunAjaran ? "s.status = 'Aktif'" : "1=0") . ")
-                OR (s.id_kelas = :kelas_id4 AND s.id_tahun_ajaran IN (SELECT id FROM tahun_ajaran WHERE tahun_ajaran = :tahun_ajaran3))
+                s.id::text IN (SELECT siswa_id::text FROM akademik.detail_nilai_rapor WHERE (kelas_id = :kelas_id1 OR kelas_id::text = :kelas_id1) AND tahun_ajaran = :tahun_ajaran1 AND is_active = true)
+                OR s.id::text IN (SELECT siswa_id::text FROM siswa.riwayat_kenaikan_kelas WHERE (ke_kelas = :kelas_id2 OR ke_kelas::text = :kelas_id2) AND tahun_ajaran = :tahun_ajaran2)
+                OR (s.kelas_saat_ini = :kelas_id3 AND s.is_active = true)
             )";
-            $where[] = "(ta.tahun_ajaran IS NULL OR ta.tahun_ajaran <= :filter_ta_max1)";
-            $params['kelas_id1'] = $filterKelas;
-            $params['kelas_id2'] = $filterKelas;
-            $params['kelas_id3'] = $filterKelas;
-            $params['kelas_id4'] = $filterKelas;
-            $params['tahun_ajaran1'] = $filterTahunAjaran;
-            $params['tahun_ajaran2'] = $filterTahunAjaran;
-            $params['tahun_ajaran3'] = $filterTahunAjaran;
-            $params['filter_ta_max1'] = $filterTahunAjaran;
+            $params['kelas_id1']    = $filterKelas;
+            $params['kelas_id2']    = $filterKelas;
+            $params['kelas_id3']    = $filterKelas;
+            $params['tahun_ajaran1']= $filterTahunAjaran;
+            $params['tahun_ajaran2']= $filterTahunAjaran;
         } else if ($filterKelas !== '') {
             $where[] = "(
-                s.id_kelas = :kelas_id1
-                OR s.id IN (SELECT siswa_id FROM detail_nilai_rapor WHERE kelas_id = :kelas_id2 AND is_active = true)
-                OR s.id IN (SELECT siswa_id FROM riwayat_kenaikan_kelas WHERE id_kelas_tujuan = :kelas_id3 OR id_kelas_asal = :kelas_id4)
+                s.kelas_saat_ini = :kelas_id1
+                OR s.kelas_saat_ini::text = :kelas_id1
+                OR s.id::text IN (SELECT siswa_id::text FROM akademik.detail_nilai_rapor WHERE (kelas_id = :kelas_id2 OR kelas_id::text = :kelas_id2) AND is_active = true)
+                OR s.id::text IN (SELECT siswa_id::text FROM siswa.riwayat_kenaikan_kelas WHERE ke_kelas = :kelas_id3 OR dari_kelas = :kelas_id4)
             )";
             $params['kelas_id1'] = $filterKelas;
             $params['kelas_id2'] = $filterKelas;
@@ -1341,30 +1366,22 @@ class BukuIndukModuleController extends BaseController {
             $params['kelas_id4'] = $filterKelas;
         } else if ($filterTahunAjaran !== '') {
             $where[] = "(
-                s.id IN (SELECT siswa_id FROM detail_nilai_rapor WHERE tahun_ajaran = :tahun_ajaran1 AND is_active = true)
-                OR s.id IN (SELECT siswa_id FROM riwayat_kenaikan_kelas WHERE tahun_ajaran = :tahun_ajaran2)
-                OR s.id_tahun_ajaran IN (SELECT id FROM tahun_ajaran WHERE tahun_ajaran = :tahun_ajaran3)
-                " . ($filterTahunAjaran === $activeTahunAjaran ? " OR s.status = 'Aktif' " : "") . "
+                s.id::text IN (SELECT siswa_id::text FROM akademik.detail_nilai_rapor WHERE tahun_ajaran = :tahun_ajaran1 AND is_active = true)
+                OR s.id::text IN (SELECT siswa_id::text FROM siswa.riwayat_kenaikan_kelas WHERE tahun_ajaran = :tahun_ajaran2)
             )";
-            $where[] = "(ta.tahun_ajaran IS NULL OR ta.tahun_ajaran <= :filter_ta_max2)";
             $params['tahun_ajaran1'] = $filterTahunAjaran;
             $params['tahun_ajaran2'] = $filterTahunAjaran;
-            $params['tahun_ajaran3'] = $filterTahunAjaran;
-            $params['filter_ta_max2'] = $filterTahunAjaran;
-        }
-        if ($filterStatus !== '') {
-            $where[] = "s.status = :status";
-            $params['status'] = $filterStatus;
         }
 
         $whereClause = implode(" AND ", $where);
         
-        // Dapatkan data siswa dasar
-        $sql = "SELECT s.id, s.nisn, s.nis, s.nama_lengkap, ta.tahun_ajaran as tahun_masuk, k.nama_kelas as kelas_aktif, s.id_kelas, s.status 
-                FROM siswa s 
-                LEFT JOIN kelas k ON s.id_kelas = k.id 
-                LEFT JOIN tahun_ajaran ta ON s.id_tahun_ajaran = ta.id
-                WHERE $whereClause 
+        // Query siswa dasar — menggunakan kolom yang benar
+        $sql = "SELECT s.id, s.nisn, s.nis, s.nama_lengkap,
+                       s.tahun_masuk, s.tahun_lulus, s.angkatan, s.status_siswa AS status,
+                       k.nama_kelas AS kelas_aktif, s.kelas_saat_ini AS kelas_saat_ini_id
+                FROM   siswa.siswa s
+                LEFT JOIN akademik.kelas k ON (s.kelas_saat_ini = k.id::text OR s.kelas_saat_ini::text = k.id::text)
+                WHERE  $whereClause
                 ORDER BY s.nama_lengkap ASC";
         
         $stmt = $db->prepare($sql);
@@ -1386,8 +1403,8 @@ class BukuIndukModuleController extends BaseController {
             
             // Ambil histori dari rapor (sebagai proxy kelas apa mereka di masa lalu)
             $qHistory = "SELECT dnr.siswa_id, dnr.tahun_ajaran, dnr.semester, k.nama_kelas, k.id as kelas_id
-                         FROM detail_nilai_rapor dnr
-                         JOIN kelas k ON dnr.kelas_id = k.id
+                         FROM akademik.detail_nilai_rapor dnr
+                         JOIN akademik.kelas k ON dnr.kelas_id::text = k.id::text
                          WHERE dnr.siswa_id IN ($inQuery) AND dnr.is_active = true " . ($activeTenantId ? " AND dnr.tenant_id = ? " : "") . "
                          GROUP BY dnr.siswa_id, dnr.tahun_ajaran, dnr.semester, k.nama_kelas, k.id
                          ORDER BY dnr.tahun_ajaran ASC, dnr.semester ASC";
@@ -1406,19 +1423,17 @@ class BukuIndukModuleController extends BaseController {
         $maxYears = 3; // Default
         if ($tenantId || $filterTenant !== '') {
             $activeTenantId = $tenantId ?: $filterTenant;
-            $stmtT = $db->prepare("SELECT bentuk_pendidikan FROM tenants WHERE id = ?");
-            $stmtT->execute([$activeTenantId]);
-            $bentukPendidikan = $stmtT->fetchColumn();
-            if ($bentukPendidikan) {
-                $bp = strtoupper(trim($bentukPendidikan));
-                if (strpos($bp, 'SD') !== false || $bp === 'MI') {
-                    $maxYears = 6;
-                } elseif (strpos($bp, 'SMP') !== false || $bp === 'MTS') {
-                    $maxYears = 3;
-                } elseif (strpos($bp, 'SMK') !== false) {
-                    $maxYears = 3; // SMK can be 3 or 4, but let it scale dynamically if data exists
+            try {
+                $stmtT = $db->prepare("SELECT nama_sekolah FROM core.tenants WHERE id::text = ?");
+                $stmtT->execute([(string)$activeTenantId]);
+                $namaSekolah = $stmtT->fetchColumn();
+                if ($namaSekolah) {
+                    $bp = strtoupper(trim($namaSekolah));
+                    if (strpos($bp, 'SD') !== false || strpos($bp, 'MI') !== false) {
+                        $maxYears = 6;
+                    }
                 }
-            }
+            } catch (\Throwable $e) {}
         }
         $matrixData = [];
 
@@ -1469,7 +1484,7 @@ class BukuIndukModuleController extends BaseController {
             if ($activeTahunAjaran && $siswa['status'] === 'Aktif' && !isset($studentHistory[$activeTahunAjaran]) && !empty($siswa['id_kelas']) && (empty($yearsData) || $isJustPromoted)) {
                 $yearsData[] = [
                     'tahun_ajaran' => $activeTahunAjaran,
-                    'kelas_id' => $siswa['id_kelas'],
+                    'kelas_id' => $siswa['kelas_saat_ini_id'] ?? '',
                     'nama_kelas' => ($siswa['kelas_aktif'] ?: '-') . " (" . $activeTahunAjaran . ")",
                     'has_ganjil' => false,
                     'has_genap' => false
@@ -1480,7 +1495,7 @@ class BukuIndukModuleController extends BaseController {
             if (empty($yearsData)) {
                 $yearsData[] = [
                     'tahun_ajaran' => $activeTahunAjaran ?: '-', // Bisa diset ke tahun ajaran aktif kalau ada
-                    'kelas_id' => $siswa['id_kelas'] ?: '', // Ganti id_kelas kalau perlu
+                    'kelas_id' => $siswa['kelas_saat_ini_id'] ?? '',
                     'nama_kelas' => ($siswa['kelas_aktif'] ?: '-') . ($activeTahunAjaran ? " (" . $activeTahunAjaran . ")" : ""),
                     'has_ganjil' => false,
                     'has_genap' => false
@@ -1521,7 +1536,7 @@ class BukuIndukModuleController extends BaseController {
             $db = \App\Config\Database::getConnection();
             
             // Check existence
-            $stmtCheck = $db->prepare("SELECT id, nama_lengkap, tenant_id FROM siswa WHERE id = ? AND is_active = true");
+            $stmtCheck = $db->prepare("SELECT id, nama_lengkap, tenant_id FROM siswa.siswa WHERE id = ? AND is_active = true");
             $stmtCheck->execute([$id]);
             $siswa = $stmtCheck->fetch(PDO::FETCH_ASSOC);
 
@@ -1538,11 +1553,11 @@ class BukuIndukModuleController extends BaseController {
             $db->beginTransaction();
 
             // Soft delete the student
-            $stmtDel = $db->prepare("UPDATE siswa SET deleted_at = NOW() WHERE id = ?");
+            $stmtDel = $db->prepare("UPDATE siswa.siswa SET deleted_at = NOW() WHERE id = ?");
             $stmtDel->execute([$id]);
 
             // Soft delete detail nilai rapor
-            $stmtDelRapor = $db->prepare("UPDATE detail_nilai_rapor SET deleted_at = NOW() WHERE siswa_id = ?");
+            $stmtDelRapor = $db->prepare("UPDATE akademik.detail_nilai_rapor SET deleted_at = NOW() WHERE siswa_id = ?");
             $stmtDelRapor->execute([$id]);
             
             // Soft delete prestasi
@@ -1592,7 +1607,7 @@ class BukuIndukModuleController extends BaseController {
         $db = \App\Config\Database::getConnection();
 
         // Ambil daftar siswa aktif di kelas ini
-        $query = "SELECT id FROM siswa WHERE id_kelas = :kelas_id AND is_active = true AND status = 'Aktif'";
+        $query = "SELECT id FROM siswa.siswa WHERE id_kelas = :kelas_id AND is_active = true AND status = 'Aktif'";
         $params = ['kelas_id' => $kelasId];
         if ($tenantId !== null) {
             $query .= " AND tenant_id = :tenant_id";
@@ -1609,7 +1624,7 @@ class BukuIndukModuleController extends BaseController {
 
         // Ambil info tenant / sekolah
         try {
-            $stmtTenant = $db->prepare("SELECT * FROM tenants WHERE id = ?");
+            $stmtTenant = $db->prepare("SELECT * FROM core.tenants WHERE id = ?");
             $stmtTenant->execute([$tenantId]);
             $tenantInfo = $stmtTenant->fetch(PDO::FETCH_ASSOC);
         } catch (\Throwable $e) {
@@ -1626,7 +1641,7 @@ class BukuIndukModuleController extends BaseController {
 
         // Dapatkan nama kelas
         try {
-            $stmtKelas = $db->prepare("SELECT nama_kelas FROM sistem.kelas WHERE id = ?");
+            $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id = ?");
             $stmtKelas->execute([$kelasId]);
             $kelasName = $stmtKelas->fetchColumn() ?: '-';
         } catch (\Throwable $e) {
@@ -1638,8 +1653,8 @@ class BukuIndukModuleController extends BaseController {
         $namaKurikulum = 'Kurikulum Merdeka';
         try {
             $qKelasKur = "SELECT r.nama_kurikulum, r.tipe_penilaian 
-                          FROM sistem.kelas_kurikulum kk
-                          JOIN sistem.ref_kurikulum r ON kk.kurikulum_id = r.id
+                          FROM akademik.kelas_kurikulum kk
+                          JOIN akademik.ref_kurikulum r ON kk.kurikulum_id = r.id
                           WHERE kk.kelas_id = :kelas_id AND kk.tahun_ajaran = :tahun_ajaran AND kk.tenant_id = :tenant_id
                           LIMIT 1";
             $stmtKelasKur = $db->prepare($qKelasKur);
@@ -1669,9 +1684,9 @@ class BukuIndukModuleController extends BaseController {
             try {
                 $stmtGrades = $db->prepare("
                     SELECT d.*, m.nama_mapel, k.nama_kelas 
-                    FROM detail_nilai_rapor d 
-                    JOIN mata_pelajaran m ON d.mapel_id = m.id 
-                    LEFT JOIN kelas k ON d.kelas_id = k.id
+                    FROM akademik.detail_nilai_rapor d 
+                    JOIN akademik.mata_pelajaran m ON d.mapel_id = m.id 
+                    LEFT JOIN akademik.kelas k ON d.kelas_id = k.id
                     WHERE d.siswa_id = ? AND d.semester = ? AND d.tahun_ajaran = ? 
                     AND d.is_active = true 
                     ORDER BY m.nama_mapel ASC
@@ -1692,7 +1707,7 @@ class BukuIndukModuleController extends BaseController {
             $sikapK13 = [];
             foreach ($studentIds as $id) {
                 try {
-                    $stmtSikap = $db->prepare("SELECT * FROM nilai_sikap_k13 WHERE siswa_id = ? AND tahun_ajaran = ? AND semester = ? LIMIT 1");
+                    $stmtSikap = $db->prepare("SELECT * FROM akademik.nilai_sikap_k13 WHERE siswa_id = ? AND tahun_ajaran = ? AND semester = ? LIMIT 1");
                     $stmtSikap->execute([$id, $ta, $semester]);
                     $sikapRow = $stmtSikap->fetch(PDO::FETCH_ASSOC);
                     if ($sikapRow) {
@@ -1738,12 +1753,12 @@ class BukuIndukModuleController extends BaseController {
         $db = \App\Config\Database::getConnection();
 
         // 1. Get Kelas Name
-        $stmtKelas = $db->prepare("SELECT nama_kelas FROM sistem.kelas WHERE id = :id LIMIT 1");
+        $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id = :id LIMIT 1");
         $stmtKelas->execute(['id' => $kelasId]);
         $kelasName = $stmtKelas->fetchColumn() ?: 'Kelas';
 
         // 2. Get students in this class
-        $qSiswa = "SELECT id, nama_lengkap, nisn, nis FROM siswa 
+        $qSiswa = "SELECT id, nama_lengkap, nisn, nis FROM siswa.siswa 
                    WHERE id_kelas = :kelas_id AND tenant_id = :tenant_id AND status = 'Aktif' AND is_active = true 
                    ORDER BY nama_lengkap ASC";
         $stmtSiswa = $db->prepare($qSiswa);
@@ -1756,8 +1771,8 @@ class BukuIndukModuleController extends BaseController {
 
         // 3. Get all subjects mapped to this class across historical years
         $qMapel = "SELECT DISTINCT m.id, m.nama_mapel 
-                   FROM detail_nilai_rapor d
-                   JOIN mata_pelajaran m ON d.mapel_id = m.id
+                   FROM akademik.detail_nilai_rapor d
+                   JOIN akademik.mata_pelajaran m ON d.mapel_id = m.id
                    WHERE d.kelas_id = :kelas_id AND d.tenant_id = :tenant_id AND d.is_active = true
                    ORDER BY m.nama_mapel ASC";
         $stmtMapel = $db->prepare($qMapel);
@@ -1766,7 +1781,7 @@ class BukuIndukModuleController extends BaseController {
 
         // 4. Get all grades for these students for semesters 1-5 (Ganjil/Genap)
         $qGrades = "SELECT d.siswa_id, d.mapel_id, d.semester, d.tahun_ajaran, d.nilai_akhir 
-                    FROM detail_nilai_rapor d
+                    FROM akademik.detail_nilai_rapor d
                     WHERE d.kelas_id = :kelas_id AND d.tenant_id = :tenant_id AND d.is_active = true 
                       AND d.semester IN ('Ganjil', 'Genap')";
         $stmtGrades = $db->prepare($qGrades);
@@ -1852,7 +1867,7 @@ class BukuIndukModuleController extends BaseController {
             $db = \App\Config\Database::getConnection();
             
             $stmt = $db->prepare("
-                UPDATE kelas_kurikulum 
+                UPDATE akademik.kelas_kurikulum 
                 SET is_locked = :is_locked 
                 WHERE tenant_id = :tenant_id AND kelas_id = :kelas_id AND tahun_ajaran = :tahun_ajaran
             ");
@@ -1962,7 +1977,7 @@ class BukuIndukModuleController extends BaseController {
         // ── 4. Validasi keberadaan siswa (tanpa ambil data lengkap) ────────────
         try {
             $db = \App\Config\Database::getConnection();
-            $stmt = $db->prepare("SELECT id FROM siswa WHERE id = ? AND is_active = true LIMIT 1");
+            $stmt = $db->prepare("SELECT id FROM siswa.siswa WHERE id = ? AND is_active = true LIMIT 1");
             $stmt->execute([$id]);
             if (!$stmt->fetch()) {
                 http_response_code(404);
@@ -2077,7 +2092,7 @@ class BukuIndukModuleController extends BaseController {
 
             // Ambil info tenant
             $stmtTenant = $db->prepare(
-                "SELECT nama_sekolah, npsn, nama_kepsek FROM tenants WHERE id = ? LIMIT 1"
+                "SELECT nama_sekolah, npsn, nama_kepsek FROM core.tenants WHERE id = ? LIMIT 1"
             );
             $stmtTenant->execute([$siswa['tenant_id']]);
             $siswa['tenant_info'] = $stmtTenant->fetch(PDO::FETCH_ASSOC) ?: [];
@@ -2085,8 +2100,8 @@ class BukuIndukModuleController extends BaseController {
             // Ambil transkrip nilai (hanya kolom yang diperlukan)
             $stmt = $db->prepare("
                 SELECT d.nilai_akhir, d.semester, d.tahun_ajaran, m.nama_mapel
-                FROM detail_nilai_rapor d
-                JOIN mata_pelajaran m ON d.mapel_id = m.id
+                FROM akademik.detail_nilai_rapor d
+                JOIN akademik.mata_pelajaran m ON d.mapel_id = m.id
                 WHERE d.siswa_id = ? AND d.is_active = true
                 ORDER BY m.nama_mapel ASC, d.tahun_ajaran ASC, d.semester ASC
             ");
@@ -2156,7 +2171,7 @@ class BukuIndukModuleController extends BaseController {
             $tenantId = SessionManager::getTenantId();
             if (!$tenantId) {
                 $db = \App\Config\Database::getConnection();
-                $stmt = $db->prepare("SELECT tenant_id FROM siswa WHERE id = ?");
+                $stmt = $db->prepare("SELECT tenant_id FROM siswa.siswa WHERE id = ?");
                 $stmt->execute([$siswaId]);
                 $tenantId = $stmt->fetchColumn() ?: null;
             }
@@ -2202,7 +2217,7 @@ class BukuIndukModuleController extends BaseController {
             $db = \App\Config\Database::getConnection();
             
             // Get tenant_id of student
-            $stmtSiswa = $db->prepare("SELECT tenant_id FROM siswa WHERE id = ?");
+            $stmtSiswa = $db->prepare("SELECT tenant_id FROM siswa.siswa WHERE id = ?");
             $stmtSiswa->execute([$siswaId]);
             $tenantId = $stmtSiswa->fetchColumn();
             if (!$tenantId) {
@@ -2287,7 +2302,7 @@ class BukuIndukModuleController extends BaseController {
             // Save metadata to database
             $uuidDoc = $this->generateUuid();
             $userId = $_SESSION['user_id'] ?? 'SYSTEM';
-            $stmtInsert = $db->prepare("INSERT INTO arsip_dokumen_alumni (id, siswa_id, tenant_id, jenis_dokumen, file_path, file_size, keterangan, uploaded_by) 
+            $stmtInsert = $db->prepare("INSERT INTO tracer.arsip_dokumen_alumni (id, siswa_id, tenant_id, jenis_dokumen, file_path, file_size, keterangan, uploaded_by) 
                                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
             $stmtInsert->execute([$uuidDoc, $siswaId, $tenantId, $jenisDokumen, $pdfPath, $fileSize, $keterangan, $userId]);
 
@@ -2309,48 +2324,25 @@ class BukuIndukModuleController extends BaseController {
             
             // 1. Fetch archived documents from vault
             $stmt = $db->prepare("SELECT id, jenis_dokumen, file_size, keterangan, created_at 
-                                  FROM arsip_dokumen_alumni 
-                                  WHERE siswa_id = ? 
+                                  FROM tracer.arsip_dokumen_alumni 
+                                  WHERE siswa_id::text = ? 
                                   ORDER BY created_at DESC");
             $stmt->execute([$siswaId]);
             $docs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // 2. Fetch supporting documents from "dokumen" table (Step 5 uploads)
-            $stmtDok = $db->prepare("SELECT * FROM dokumen WHERE id_siswa = ? LIMIT 1");
+            // 2. Fetch supporting documents from "siswa.dokumen" table
+            $stmtDok = $db->prepare("SELECT * FROM siswa.siswa.dokumen WHERE siswa_id::text = ?");
             $stmtDok->execute([$siswaId]);
-            $dok = $stmtDok->fetch(PDO::FETCH_ASSOC);
+            $dokList = $stmtDok->fetchAll(PDO::FETCH_ASSOC);
 
-            if ($dok) {
-                $sizes = [];
-                if (!empty($dok['file_sizes'])) {
-                    $sizes = json_decode($dok['file_sizes'], true) ?: [];
-                }
-
-                $columns = [
-                    'berkas_kk' => 'Kartu Keluarga (KK)',
-                    'berkas_akta' => 'Akta Kelahiran',
-                    'berkas_ijazah_sd' => 'Ijazah SD',
-                    'berkas_ijazah_smp' => 'Ijazah SMP',
-                    'berkas_ijazah_sma' => 'Ijazah SMA',
-                    'berkas_mutasi_masuk' => 'Berkas Mutasi Masuk',
-                    'berkas_mutasi_keluar' => 'Berkas Mutasi Keluar',
-                    'berkas_kip' => 'Berkas KIP / KPS',
-                    'berkas_pernyataan_baru' => 'Surat Pernyataan Baru',
-                    'berkas_pernyataan_tka' => 'Surat Pernyataan TKA'
+            foreach ($dokList as $dok) {
+                $docs[] = [
+                    'id' => $dok['id'],
+                    'jenis_dokumen' => $dok['jenis_dokumen'] ?: 'Dokumen Siswa',
+                    'file_size' => 0,
+                    'keterangan' => $dok['keterangan'] ?: 'Dokumen dari Profil Siswa',
+                    'created_at' => $dok['created_at']
                 ];
-
-                foreach ($columns as $col => $label) {
-                    if (!empty($dok[$col])) {
-                        // Insert as virtual document
-                        $docs[] = [
-                            'id' => "virtual_{$col}_{$siswaId}",
-                            'jenis_dokumen' => $label,
-                            'file_size' => $sizes[$col] ?? 0,
-                            'keterangan' => 'Dokumen dari Pendaftaran/Profil Siswa',
-                            'created_at' => date('Y-m-d H:i:s')
-                        ];
-                    }
-                }
             }
 
             echo json_encode($docs);
@@ -2372,7 +2364,7 @@ class BukuIndukModuleController extends BaseController {
             }
             
             $db = \App\Config\Database::getConnection();
-            $stmt = $db->prepare("SELECT file_path, tenant_id FROM arsip_dokumen_alumni WHERE id = ?");
+            $stmt = $db->prepare("SELECT file_path, tenant_id FROM tracer.arsip_dokumen_alumni WHERE id = ?");
             $stmt->execute([$id]);
             $doc = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$doc) {
@@ -2380,7 +2372,7 @@ class BukuIndukModuleController extends BaseController {
             }
             
             // Delete record
-            $stmtDel = $db->prepare("DELETE FROM arsip_dokumen_alumni WHERE id = ?");
+            $stmtDel = $db->prepare("DELETE FROM tracer.arsip_dokumen_alumni WHERE id = ?");
             $stmtDel->execute([$id]);
             
             // Delete file
@@ -2423,8 +2415,8 @@ class BukuIndukModuleController extends BaseController {
                     if (in_array($colName, $allowedCols)) {
                         $stmtDok = $db->prepare("
                             SELECT d.{$colName} as file_path, s.tenant_id, s.nama_lengkap 
-                            FROM dokumen d 
-                            JOIN siswa s ON d.id_siswa = s.id 
+                            FROM siswa.siswa.dokumen d 
+                            JOIN siswa.siswa s ON d.id_siswa = s.id 
                             WHERE d.id_siswa = ? LIMIT 1
                         ");
                         $stmtDok->execute([$siswaId]);
@@ -2442,7 +2434,7 @@ class BukuIndukModuleController extends BaseController {
                 }
             } else {
                 // Fetch standard document from vault
-                $stmt = $db->prepare("SELECT * FROM arsip_dokumen_alumni WHERE id = ?");
+                $stmt = $db->prepare("SELECT * FROM tracer.arsip_dokumen_alumni WHERE id = ?");
                 $stmt->execute([$id]);
                 $doc = $stmt->fetch(PDO::FETCH_ASSOC);
             }
@@ -2608,14 +2600,14 @@ class BukuIndukModuleController extends BaseController {
             $db = \App\Config\Database::getConnection();
 
             if (empty($tenantId)) {
-                $stmtSiswa = $db->prepare("SELECT tenant_id FROM siswa WHERE id = ?");
+                $stmtSiswa = $db->prepare("SELECT tenant_id FROM siswa.siswa WHERE id = ?");
                 $stmtSiswa->execute([$siswaId]);
                 $tenantId = $stmtSiswa->fetchColumn();
             }
 
             $stmt = $db->prepare("
                 SELECT * 
-                FROM riwayat_beasiswa 
+                FROM siswa.siswa.riwayat_beasiswa 
                 WHERE siswa_id = :siswa_id AND tenant_id = :tenant_id 
                 ORDER BY tahun_menerima DESC
             ");
@@ -2662,7 +2654,7 @@ class BukuIndukModuleController extends BaseController {
             $db = \App\Config\Database::getConnection();
 
             if (empty($tenantId)) {
-                $stmtSiswa = $db->prepare("SELECT tenant_id FROM siswa WHERE id = ?");
+                $stmtSiswa = $db->prepare("SELECT tenant_id FROM siswa.siswa WHERE id = ?");
                 $stmtSiswa->execute([$siswaId]);
                 $tenantId = $stmtSiswa->fetchColumn();
             }
@@ -2673,7 +2665,7 @@ class BukuIndukModuleController extends BaseController {
             }
 
             $stmt = $db->prepare("
-                INSERT INTO riwayat_beasiswa (tenant_id, siswa_id, jenis_beasiswa, sumber, tahun_menerima, nominal) 
+                INSERT INTO siswa.riwayat_beasiswa (tenant_id, siswa_id, jenis_beasiswa, sumber, tahun_menerima, nominal) 
                 VALUES (:tenant_id, :siswa_id, :jenis_beasiswa, :sumber, :tahun_menerima, :nominal)
             ");
             $stmt->execute([
@@ -2719,7 +2711,7 @@ class BukuIndukModuleController extends BaseController {
             $db = \App\Config\Database::getConnection();
 
             // Get student ID and tenant ID before deleting
-            $stmtSiswa = $db->prepare("SELECT siswa_id, tenant_id FROM riwayat_beasiswa WHERE id = ?");
+            $stmtSiswa = $db->prepare("SELECT siswa_id, tenant_id FROM siswa.siswa.riwayat_beasiswa WHERE id = ?");
             $stmtSiswa->execute([$id]);
             $row = $stmtSiswa->fetch(\PDO::FETCH_ASSOC);
             $siswaId = $row['siswa_id'] ?? null;
@@ -2736,7 +2728,7 @@ class BukuIndukModuleController extends BaseController {
                 return;
             }
 
-            $stmt = $db->prepare("DELETE FROM riwayat_beasiswa WHERE id = ?");
+            $stmt = $db->prepare("DELETE FROM siswa.siswa.riwayat_beasiswa WHERE id = ?");
             $stmt->execute([$id]);
 
             \App\Helpers\CacheInvalidator::clearStudentCache($siswaId, $dbTenantId);
