@@ -8,7 +8,7 @@ $userNama   = $data['user_nama']   ?? ($_SESSION['nama_lengkap'] ?? '');
 $tenantId   = $data['tenant_id']   ?? '';
 $tenantList = $data['tenant_list'] ?? [];
 $tahunAjaranList = $data['tahun_ajaran_list'] ?? [];
-$baseUrl    = '/SINTA-SaaS';
+$baseUrl    = $data['baseUrl'] ?? (rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\'));
 ?>
 
 <style>

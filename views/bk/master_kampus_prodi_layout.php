@@ -1,5 +1,5 @@
 <?php
-$baseUrl  = '/SINTA-SaaS';
+$baseUrl  = $data['baseUrl'] ?? (rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\'));
 $tenantId = $_GET['tenant_id'] ?? ($_SESSION['tenant_id'] ?? '');
 $userRoles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
 $canWrite = false;
