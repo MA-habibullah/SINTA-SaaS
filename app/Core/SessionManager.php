@@ -127,7 +127,7 @@ class SessionManager {
             if (!empty($_SESSION['tenant_id'])) {
                 try {
                     $db = \App\Config\Database::getConnection();
-                    $stmt = $db->prepare("SELECT status FROM tenants WHERE id = ? AND deleted_at IS NULL");
+                    $stmt = $db->prepare("SELECT status FROM core.tenants WHERE id = ?");
                     $stmt->execute([$_SESSION['tenant_id']]);
                     $status = $stmt->fetchColumn();
                     if ($status !== 'active') {
@@ -200,19 +200,18 @@ class SessionManager {
 
             // Catat masing-masing ke activity_logs
             $insertStmt = $db->prepare("
-                INSERT INTO `activity_logs` (
-                    `id`, `tenant_id`, `user_role`, `table_name`, `record_id`, `action`, `user_id`, `ip_address`, `created_at`
+                INSERT INTO sistem.activity_logs (
+                    id, tenant_id, user_role, table_name, action, user_id, ip_address
                 ) VALUES (
-                    UUID(), :tenant_id, 'system', 'users', :record_id, 'SYSTEM_TIMEOUT', :user_id, '127.0.0.1', NOW()
+                    gen_random_uuid(), :tenant_id, 'system', 'users', 'SYSTEM_TIMEOUT', :user_id, '127.0.0.1'
                 )
             ");
 
             foreach ($staleSessions as $session) {
                 try {
                     $insertStmt->execute([
-                        'tenant_id'  => $session['tenant_id'],
-                        'record_id'  => $session['user_id'], // Target record is the user
-                        'user_id'    => $session['user_id']
+                        'tenant_id' => $session['tenant_id'],
+                        'user_id'   => $session['user_id']
                     ]);
                 } catch (\Throwable $e) {}
             }

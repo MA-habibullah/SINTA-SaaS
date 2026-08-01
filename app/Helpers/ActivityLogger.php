@@ -36,11 +36,20 @@ class ActivityLogger {
 
         try {
             $db = Database::getConnection();
+
+            if ($userId) {
+                $checkStmt = $db->prepare("SELECT COUNT(*) FROM core.users WHERE id::text = ?");
+                $checkStmt->execute([$userId]);
+                if ((int)$checkStmt->fetchColumn() === 0) {
+                    $userId = null;
+                }
+            }
+
             $stmt = $db->prepare("
-                INSERT INTO `activity_logs` (
-                    `id`, `tenant_id`, `user_id`, `user_role`, `action`, `table_name`, `record_id`, `old_data`, `new_data`, `ip_address`
+                INSERT INTO sistem.activity_logs (
+                    id, tenant_id, user_id, user_role, table_name, action, old_data, new_data, ip_address
                 ) VALUES (
-                    UUID(), :tenant_id, :user_id, :user_role, :action, :table_name, :record_id, :old_data, :new_data, :ip_address
+                    gen_random_uuid(), :tenant_id, :user_id, :user_role, :table_name, :action, :old_data, :new_data, :ip_address
                 )
             ");
 
@@ -48,9 +57,8 @@ class ActivityLogger {
                 'tenant_id'  => $tenantId,
                 'user_id'    => $userId,
                 'user_role'  => $userRole,
-                'action'     => strtoupper($action),
                 'table_name' => $tableName,
-                'record_id'  => $recordId,
+                'action'     => strtoupper($action),
                 'old_data'   => $oldData !== null ? json_encode($oldData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : null,
                 'new_data'   => $newData !== null ? json_encode($newData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : null,
                 'ip_address' => $ipAddress

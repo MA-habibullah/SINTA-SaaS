@@ -74,7 +74,7 @@ class AuthModuleController extends BaseController {
         // Blokir jika sudah melebihi batas
         if ($attempts >= $maxAttempts) {
             $remaining = $windowSeconds - (time() - $firstTime);
-            $this->jsonResponse(false, null, "Terlalu banyak percobaan login. Coba lagi dalam " . ceil($remaining / 60) . " menit.", 429);
+            $this->jsonResponse(false, null, "Terlalu banyak percobaan login. Coba lagi dalam " . ceil($remaining / 60) . " menit.", 200);
         }
 
         // Catat percobaan pertama
@@ -183,5 +183,17 @@ class AuthModuleController extends BaseController {
         } catch (\Throwable $e) {
             $this->jsonResponse(false, null, 'Gagal terhubung ke database: ' . $e->getMessage(), 400);
         }
+    }
+    /**
+     * Logout pengguna dari sesi saat ini
+     * POST /api/v1/auth/logout
+     */
+    public function logout(): void {
+        \App\Core\SessionManager::start();
+        session_unset();
+        session_destroy();
+        
+        // Turbo.js / standard form expecting a redirect
+        $this->redirect('/admin');
     }
 }

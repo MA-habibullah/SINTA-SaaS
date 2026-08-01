@@ -145,3 +145,12 @@ Ketika pengguna meminta verifikasi, agen wajib secara otomatis menjalankan 2 lan
    ```
    Pastikan hasilnya menunjukkan `Failed Checks: 0`.
 
+## Strict Prohibition on Folder Deletion in Scratch (PERMANENT RULE)
+DILARANG KERAS menghapus atau mengosongkan folder-folder berikut beserta seluruh isi berkas dan sub-foldernya dalam kondisi apa pun:
+1. `C:\laragon\www\sinta\scratch\docs`
+2. `C:\laragon\www\sinta\scratch\folder legacy`
+3. `C:\laragon\www\sinta\scratch\tests`
+
+Setiap kali pembersihan berkas dilakukan, ketiga direktori di atas WAJIB tetap aman, utuh, dan terlindungi dari segala bentuk perintah penghapusan.
+
+
