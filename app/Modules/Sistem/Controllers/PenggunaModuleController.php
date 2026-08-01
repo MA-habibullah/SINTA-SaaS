@@ -96,6 +96,78 @@ class PenggunaModuleController extends BaseController {
     }
 
     /**
+     * API: Export Data Pengguna ke CSV / Excel
+     * GET /api/v1/pengguna/export-excel?tab=...&tenant_id=...&id_kelas=...&status=...
+     */
+    public function exportExcelApi(): void {
+        $tab = $_GET['tab'] ?? 'siswa';
+        $roleName = $_SESSION['role_name'] ?? '';
+
+        $filters = [
+            'search' => trim($_GET['search'] ?? ''),
+            'page' => 1,
+            'per_page' => 5000,
+            'trash' => $_GET['trash'] ?? 'false',
+            'status' => trim($_GET['status'] ?? ''),
+            'id_kelas' => trim($_GET['id_kelas'] ?? ''),
+            'tenant_id' => trim($_GET['tenant_id'] ?? '')
+        ];
+
+        try {
+            $result = $this->model->getPaginated($tab, $filters);
+            $rows = $result['data'] ?? [];
+
+            $filename = "Data_" . ucfirst($tab) . "_SINTA_" . date('Y-m-d') . ".csv";
+            header('Content-Type: text/csv; charset=utf-8');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            header('Pragma: no-cache');
+            header('Expires: 0');
+
+            $output = fopen('php://output', 'w');
+            fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            if ($tab === 'siswa' || $tab === 'mutasi') {
+                fputcsv($output, ['No', 'Sekolah', 'Nama Lengkap', 'Jenjang', 'Kelas', 'NISN', 'NIS', 'L/P', 'Tempat Lahir', 'Tanggal Lahir', 'Alamat', 'Kelengkapan Data', 'Status Siswa']);
+                $no = 1;
+                foreach ($rows as $r) {
+                    fputcsv($output, [
+                        $no++,
+                        $r['nama_sekolah'] ?? '-',
+                        $r['nama_lengkap'] ?? '-',
+                        $r['nama_jenjang'] ?? '-',
+                        $r['nama_kelas'] ?? '-',
+                        $r['nisn'] ?? '-',
+                        $r['nis'] ?? '-',
+                        $r['jenis_kelamin'] ?? '-',
+                        $r['tempat_lahir'] ?? '-',
+                        $r['tanggal_lahir'] ?? '-',
+                        $r['alamat'] ?? '-',
+                        ($r['persentase_kelengkapan'] ?? 0) . '%',
+                        $r['status'] ?? $r['status_siswa'] ?? 'Aktif'
+                    ]);
+                }
+            } else {
+                fputcsv($output, ['No', 'Sekolah', 'Nama Lengkap', 'Email', 'Peran / Role', 'Status Akun']);
+                $no = 1;
+                foreach ($rows as $r) {
+                    fputcsv($output, [
+                        $no++,
+                        $r['nama_sekolah'] ?? '-',
+                        $r['nama_lengkap'] ?? '-',
+                        $r['email'] ?? '-',
+                        $r['nama_role'] ?? '-',
+                        ($r['is_active'] ?? false) ? 'Aktif' : 'Non-Aktif'
+                    ]);
+                }
+            }
+            fclose($output);
+            exit;
+        } catch (\Throwable $e) {
+            $this->jsonResponse(['error' => 'Gagal mengunduh Excel: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * API: Ambil daftar tenant/sekolah (untuk dropdown Super Admin)
      * GET /api/v1/pengguna/tenants
      */

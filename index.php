@@ -1803,6 +1803,12 @@ case '/api/v1/keuangan/dashboard-metrics':
             $controller->fetchApi();
             break;
 
+        case '/api/v1/pengguna/export-excel':
+            // API: Export CSV/Excel data pengguna
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
+            $controller->exportExcelApi();
+            break;
+
         case '/api/v1/pengguna/tenants':
             // API: Ambil daftar tenant/sekolah untuk Super Admin
             $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();

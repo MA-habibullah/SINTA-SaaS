@@ -27,11 +27,6 @@
                 <i class="bi" :class="trashMode ? 'bi-table' : 'bi-trash3'"></i>
                 {{ trashMode ? 'Kembali ke Data Aktif' : 'Lihat Tong Sampah' }}
             </button>
-            <label v-if="userRole === 'super_admin' && activeTab === 'siswa' && !trashMode" for="sa-export-filter-sekolah" class="visually-hidden">Pilih Sekolah untuk Ekspor</label>
-            <select id="sa-export-filter-sekolah" name="sa_export_filter_sekolah" class="form-select form-select-sm rounded-3 fs-8 fs-md-7 flex-grow-1 flex-md-grow-0" v-model="selectedExportTenantId" style="max-width: 200px;" v-if="userRole === 'super_admin' && activeTab === 'siswa' && !trashMode">
-                <option value="">-- Semua Sekolah --</option>
-                <option v-for="t in listTenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
-            </select>
             <button class="btn btn-outline-primary btn-sm rounded-3 px-3 py-2 fs-8 fs-md-7 flex-grow-1 flex-md-grow-0" @click="downloadExcel" v-if="activeTab === 'siswa' && !trashMode">
                 <i class="bi bi-download me-1"></i> Download Excel
             </button>
@@ -1747,6 +1742,25 @@
                 this.fetchKelas();
                 this.fetchTahunAjaran();
                 this.fetchData(1);
+            },
+            downloadExcel() {
+                let url = '<?= $this->getBaseUrl() ?>/api/v1/pengguna/export-excel?tab=' + this.activeTab;
+                if (this.userRole === 'super_admin' && this.filterTenantId) {
+                    url += '&tenant_id=' + encodeURIComponent(this.filterTenantId);
+                }
+                if (this.filterKelas) {
+                    url += '&id_kelas=' + encodeURIComponent(this.filterKelas);
+                }
+                if (this.filterStatus) {
+                    url += '&status=' + encodeURIComponent(this.filterStatus);
+                }
+                if (this.search) {
+                    url += '&search=' + encodeURIComponent(this.search);
+                }
+                if (this.trashMode) {
+                    url += '&trash=true';
+                }
+                window.open(url, '_blank');
             },
             resetFilters() {
                 this.filterStatus = 'Aktif';
