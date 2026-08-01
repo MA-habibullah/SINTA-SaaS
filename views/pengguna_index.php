@@ -42,6 +42,50 @@
         </div>
     </div>
 
+    <!-- Filter Sekolah Banner (Di bawah tulisan Manajemen Pengguna & Sebelum Navtab) -->
+    <div class="mb-4 p-3 px-md-4 rounded-4 shadow-sm border border-blue-100" 
+         style="background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%); border-left: 4px solid #2563eb !important;"
+         v-if="userRole !== 'siswa'">
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <i class="bi bi-building text-primary fs-5"></i>
+                <span class="fw-bold text-dark me-1" style="font-size: 0.95rem;">Filter Sekolah</span>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1.5 fs-8">
+                    <i class="bi bi-funnel-fill me-1"></i>Aktif
+                </span>
+
+                <!-- Dropdown Filter Sekolah (Khusus Super Admin) -->
+                <div v-if="userRole === 'super_admin'" class="ms-md-2 my-1 my-md-0">
+                    <select id="top_filter_tenant_id" name="top_filter_tenant_id" 
+                            class="form-select form-select-sm bg-white border-blue-200 rounded-3 text-dark fw-medium shadow-sm" 
+                            style="min-width: 250px; max-width: 340px; height: 38px; font-size: 0.875rem;" 
+                            v-model="filterTenantId" 
+                            @change="onFilterTenantChange">
+                        <option value="">-- Semua Sekolah --</option>
+                        <option v-for="t in listTenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
+                    </select>
+                </div>
+
+                <!-- Tombol Terapkan Filter -->
+                <button v-if="userRole === 'super_admin'" 
+                        type="button" 
+                        @click="onFilterTenantChange" 
+                        class="btn btn-primary btn-sm rounded-3 px-3 py-2 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-sm"
+                        style="height: 38px;">
+                    <i class="bi bi-funnel-fill"></i> Terapkan Filter
+                </button>
+            </div>
+
+            <!-- Informational Text -->
+            <div class="text-muted fs-8 fs-md-7">
+                Menampilkan data milik: 
+                <strong class="text-primary fw-bold ms-1">
+                    {{ getSelectedTenantName() }}
+                </strong>
+            </div>
+        </div>
+    </div>
+
     <!-- Navigation Tabs (Sleek Underline, 14px, Dark Grey) -->
     <div class="card border-0 shadow-sm rounded-4 mb-4">
         <div class="card-body p-2 bg-white rounded-4">
@@ -66,14 +110,7 @@
             <!-- Horizontal Filter Form (Tailwind CSS) -->
             <div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-100" v-if="activeTab === 'siswa' || activeTab === 'mutasi'">
                 <form @submit.prevent="fetchData(1)" class="flex flex-col md:flex-row md:items-end gap-3">
-                    <!-- Filter 1: Nama Sekolah (Super Admin Only) -->
-                    <div class="flex-1 min-w-[200px]" v-if="userRole === 'super_admin'">
-                        <label for="filter_tenant_id" class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Nama Sekolah / Tenant</label>
-                        <select id="filter_tenant_id" name="filter_tenant_id" class="w-full h-10 px-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" v-model="filterTenantId" @change="onFilterTenantChange">
-                            <option value="">-- Semua Sekolah --</option>
-                            <option v-for="t in listTenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
-                        </select>
-                    </div>
+                    <!-- Filter 1: Kelas / Rombel -->
 
                     <!-- Filter 2: Kelas / Rombel -->
                     <div class="flex-1 min-w-[150px]">
@@ -1412,6 +1449,7 @@
 
                 // ---- State untuk Registrasi Cepat Siswa ----
                 userNpsn: '<?php echo htmlspecialchars($user_npsn ?? ""); ?>',
+                userNamaSekolah: '<?php echo htmlspecialchars($user_nama_sekolah ?? ""); ?>',
                 quickAddForm: { npsn: '', nama_lengkap: '', nisn: '', tanggal_lahir: '', email: '' },
                 quickAddErrors: {},
                 quickAddLoading: false,
@@ -1742,6 +1780,16 @@
                 this.fetchKelas();
                 this.fetchTahunAjaran();
                 this.fetchData(1);
+            },
+            getSelectedTenantName() {
+                if (this.userRole === 'super_admin') {
+                    if (!this.filterTenantId) {
+                        return 'Semua Sekolah';
+                    }
+                    const found = this.listTenants.find(t => t.id == this.filterTenantId);
+                    return found ? found.nama_sekolah : 'Semua Sekolah';
+                }
+                return this.userNamaSekolah || 'Sekolah Anda';
             },
             downloadExcel() {
                 let url = '<?= $this->getBaseUrl() ?>/api/v1/pengguna/export-excel?tab=' + this.activeTab;

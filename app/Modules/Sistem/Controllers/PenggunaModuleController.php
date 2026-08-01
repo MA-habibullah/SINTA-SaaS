@@ -33,13 +33,18 @@ class PenggunaModuleController extends BaseController {
         $title = $roleName === 'siswa' ? 'Profil Data Diri' : 'Manajemen Pengguna';
         
         $npsn = '';
+        $namaSekolah = '';
         $tenantId = SessionManager::getTenantId();
         if ($tenantId !== null) {
             try {
                 $db = \App\Config\Database::getConnection();
-                $stmt = $db->prepare("SELECT npsn FROM tenants WHERE id = ? AND is_active = true LIMIT 1");
+                $stmt = $db->prepare("SELECT npsn, nama_sekolah FROM core.tenants WHERE id = ? AND is_active = true LIMIT 1");
                 $stmt->execute([$tenantId]);
-                $npsn = $stmt->fetchColumn() ?: '';
+                $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+                if ($row) {
+                    $npsn = $row['npsn'] ?? '';
+                    $namaSekolah = $row['nama_sekolah'] ?? '';
+                }
             } catch (\Throwable $e) {
                 // fallback
             }
@@ -49,7 +54,8 @@ class PenggunaModuleController extends BaseController {
             'title' => $title,
             'user_nama' => $_SESSION['nama_lengkap'] ?? 'User',
             'user_role' => $roleName,
-            'user_npsn' => $npsn
+            'user_npsn' => $npsn,
+            'user_nama_sekolah' => $namaSekolah
         ];
         
         $this->render('pengguna_index', $data);
