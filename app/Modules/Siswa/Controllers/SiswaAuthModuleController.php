@@ -107,6 +107,15 @@ class SiswaAuthModuleController extends BaseController {
             $_SESSION['nisn'] = $siswa['nisn'];
             $_SESSION['is_first_login'] = (bool)($siswa['is_first_login'] ?? false);
 
+            \App\Helpers\ActivityLogger::log(
+                'LOGIN', 
+                'akademik.siswa', 
+                null, 
+                ['nisn' => $siswa['nisn'], 'nama_lengkap' => $siswa['nama_lengkap'], 'role' => 'siswa'],
+                $siswa['tenant_id'],
+                $siswa['id']
+            );
+
             $redirectUrl = $this->getBaseUrl() . ($_SESSION['is_first_login'] ? '/siswa/ubah-password' : '/dashboard');
 
             $this->jsonResponse(true, [

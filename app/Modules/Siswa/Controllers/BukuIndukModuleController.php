@@ -40,11 +40,11 @@ class BukuIndukModuleController extends BaseController {
         }
         
         // Ambil opsi kelas untuk filter dropdown
-        $q = "SELECT id, nama_kelas, id_jenjang FROM akademik.kelas WHERE is_active = true";
+        $q = "SELECT DISTINCT ON (tenant_id, nama_kelas) id, nama_kelas, id_jenjang FROM akademik.kelas WHERE is_active = true";
         if ($tenantId) {
             $q .= " AND tenant_id = :tenant_id";
         }
-        $q .= " ORDER BY nama_kelas ASC";
+        $q .= " ORDER BY tenant_id, nama_kelas ASC";
         $stmt = $db->prepare($q);
         if ($tenantId) {
             $stmt->execute(['tenant_id' => $tenantId]);
@@ -96,11 +96,11 @@ class BukuIndukModuleController extends BaseController {
 
         if (isset($_GET['action']) && $_GET['action'] === 'get_options') {
             $effectiveTenant = $tenantId ?: $filterTenant;
-            $q = "SELECT id, nama_kelas, id_jenjang FROM akademik.kelas WHERE is_active = true";
+            $q = "SELECT DISTINCT ON (tenant_id, nama_kelas) id, nama_kelas, id_jenjang FROM akademik.kelas WHERE is_active = true";
             if ($effectiveTenant) {
                 $q .= " AND tenant_id = :tenant_id";
             }
-            $q .= " ORDER BY nama_kelas ASC";
+            $q .= " ORDER BY tenant_id, nama_kelas ASC";
             $stmt = $db->prepare($q);
             if ($effectiveTenant) {
                 $stmt->execute(['tenant_id' => $effectiveTenant]);
@@ -529,6 +529,12 @@ class BukuIndukModuleController extends BaseController {
             die("<h1>Bad Request</h1><p>ID siswa tidak valid.</p>");
         }
 
+        $tempat = $_GET['tempat'] ?? 'Jombang';
+        $tanggal = $_GET['tanggal'] ?? '';
+        if (empty($tanggal)) {
+            $tanggal = date('d F Y');
+        }
+
         $tenantId = SessionManager::getTenantId();
         $siswaModel = new \App\Modules\Siswa\Models\SiswaModel($tenantId);
         $siswa = $siswaModel->findFullById($id);
@@ -568,35 +574,33 @@ class BukuIndukModuleController extends BaseController {
         if (!empty($siswa['id_kelas'])) {
             try {
                 $db = \App\Config\Database::getConnection();
-                $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id = ?");
-                $stmtKelas->execute([$siswa['id_kelas']]);
-                $siswa['nama_kelas'] = $stmtKelas->fetchColumn() ?: '-';
+                $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id = ? OR id::text = ?");
+                $stmtKelas->execute([$siswa['id_kelas'], $siswa['id_kelas']]);
+                $siswa['nama_kelas'] = $stmtKelas->fetchColumn() ?: ($siswa['kelas_aktif'] ?? $siswa['kelas_saat_ini'] ?? '-');
             } catch (\Throwable $e) {
-                $siswa['nama_kelas'] = '-';
+                $siswa['nama_kelas'] = $siswa['kelas_aktif'] ?? $siswa['kelas_saat_ini'] ?? '-';
             }
         } else {
-            $siswa['nama_kelas'] = '-';
+            $siswa['nama_kelas'] = $siswa['kelas_aktif'] ?? $siswa['kelas_saat_ini'] ?? '-';
         }
 
-        // Dapatkan data headmaster & sekolah (npsn, wilayah) dari tenants
+        // Dapatkan data sekolah & kepsek dari tenants & riwayat_kepala_sekolah
         try {
             $db = \App\Config\Database::getConnection();
-            $stmtTenant = $db->prepare("SELECT nama_sekolah, nama_kepsek, nip_kepsek, pangkat_kepsek, npsn, kecamatan, kabupaten_kota, provinsi FROM core.tenants WHERE id = ?");
+            $stmtTenant = $db->prepare("SELECT nama_sekolah, npsn FROM core.tenants WHERE id = ?");
             $stmtTenant->execute([$siswa['tenant_id']]);
             $tenantInfo = $stmtTenant->fetch(PDO::FETCH_ASSOC);
             $siswa['nama_sekolah'] = $tenantInfo['nama_sekolah'] ?? '-';
-            $siswa['nama_kepsek'] = $tenantInfo['nama_kepsek'] ?? '-';
-            $siswa['nip_kepsek'] = $tenantInfo['nip_kepsek'] ?? '-';
-            $siswa['pangkat_kepsek'] = $tenantInfo['pangkat_kepsek'] ?? '';
             $siswa['npsn'] = $tenantInfo['npsn'] ?? '';
-            $siswa['sekolah_kecamatan'] = $tenantInfo['kecamatan'] ?? '';
-            $siswa['sekolah_kabupaten'] = $tenantInfo['kabupaten_kota'] ?? '';
-            $siswa['sekolah_provinsi'] = $tenantInfo['provinsi'] ?? '';
         } catch (\Throwable $e) {
-            $siswa['nama_kepsek'] = '-';
-            $siswa['nip_kepsek'] = '-';
-            $siswa['pangkat_kepsek'] = '';
+            $siswa['nama_sekolah'] = '-';
         }
+
+        $tanggalCetak = $_GET['tanggal_cetak'] ?? date('Y-m-d');
+        $historicalKepsek = $this->getKepsekAtDate($siswa['tenant_id'], $tanggalCetak);
+        $siswa['nama_kepsek'] = $historicalKepsek['nama_kepsek'] ?? '-';
+        $siswa['nip_kepsek'] = $historicalKepsek['nip_kepsek'] ?? '-';
+        $siswa['pangkat_kepsek'] = '';
 
         // Fetch Prestasi
         $prestasi = [];
@@ -649,10 +653,10 @@ class BukuIndukModuleController extends BaseController {
         $urlVerifikasi = $protocol . "://" . $domainName . $baseFolder . "/verify-transkrip?id=" . $siswa['id'];
 
         $archiveFilename = "identitas_rapor.html";
-        $this->renderOrGetArchive($siswa['id'], $siswa['tenant_id'], $archiveFilename, function() use ($siswa, $showQrCode, $urlVerifikasi) {
-            $_unused = [$siswa, $showQrCode, $urlVerifikasi];
+        $this->renderOrGetArchive($siswa['id'], $siswa['tenant_id'], $archiveFilename, function() use ($siswa, $showQrCode, $urlVerifikasi, $tempat, $tanggal) {
+            $_unused = [$siswa, $showQrCode, $urlVerifikasi, $tempat, $tanggal];
             // Load the print view directly (no layout wrapper)
-            require __DIR__ . '/../../views/print_rapot.php';
+            require dirname(__DIR__, 4) . '/views/print_rapot.php';
         });
         exit;
     }
@@ -722,33 +726,24 @@ class BukuIndukModuleController extends BaseController {
             $siswa['nama_kelas'] = '-';
         }
 
-        // Dapatkan data headmaster & sekolah (npsn, wilayah) dari tenants
+        // Dapatkan data sekolah & kepsek dari tenants & riwayat_kepala_sekolah
         try {
             $db = \App\Config\Database::getConnection();
-            $stmtTenant = $db->prepare("SELECT nama_sekolah, nama_kepsek, nip_kepsek, pangkat_kepsek, npsn, kecamatan, kabupaten_kota, provinsi FROM core.tenants WHERE id = ?");
+            $stmtTenant = $db->prepare("SELECT nama_sekolah, npsn FROM core.tenants WHERE id = ?");
             $stmtTenant->execute([$siswa['tenant_id']]);
             $tenantInfo = $stmtTenant->fetch(PDO::FETCH_ASSOC);
             $siswa['nama_sekolah'] = $tenantInfo['nama_sekolah'] ?? '-';
-            $siswa['nama_kepsek'] = $tenantInfo['nama_kepsek'] ?? '-';
-            $siswa['nip_kepsek'] = $tenantInfo['nip_kepsek'] ?? '-';
-            $siswa['pangkat_kepsek'] = $tenantInfo['pangkat_kepsek'] ?? '';
             $siswa['npsn'] = $tenantInfo['npsn'] ?? '';
-            $siswa['sekolah_kecamatan'] = $tenantInfo['kecamatan'] ?? '';
-            $siswa['sekolah_kabupaten'] = $tenantInfo['kabupaten_kota'] ?? '';
-            $siswa['sekolah_provinsi'] = $tenantInfo['provinsi'] ?? '';
         } catch (\Throwable $e) {
-            $siswa['nama_kepsek'] = '-';
-            $siswa['nip_kepsek'] = '-';
-            $siswa['pangkat_kepsek'] = '';
+            $siswa['nama_sekolah'] = '-';
         }
 
         // Determine signature date and who is the principal
         $tanggalCetak = $_GET['tanggal_cetak'] ?? date('Y-m-d');
         $historicalKepsek = $this->getKepsekAtDate($siswa['tenant_id'], $tanggalCetak);
-        if (!empty($historicalKepsek)) {
-            $siswa['nama_kepsek'] = $historicalKepsek['nama_kepsek'];
-            $siswa['nip_kepsek'] = $historicalKepsek['nip_kepsek'];
-        }
+        $siswa['nama_kepsek'] = $historicalKepsek['nama_kepsek'] ?? '-';
+        $siswa['nip_kepsek'] = $historicalKepsek['nip_kepsek'] ?? '-';
+        $siswa['pangkat_kepsek'] = '';
 
         // Fetch Prestasi
         $prestasi = [];
@@ -827,7 +822,7 @@ class BukuIndukModuleController extends BaseController {
         $this->renderOrGetArchive($siswa['id'], $siswa['tenant_id'], $archiveFilename, function() use ($siswa, $showQrCode, $urlVerifikasi, $tempat, $tanggal) {
             $_unused = [$siswa, $showQrCode, $urlVerifikasi, $tempat, $tanggal];
             // Load the print view directly
-            require __DIR__ . '/../../views/print_buku_induk.php';
+            require dirname(__DIR__, 4) . '/views/print_buku_induk.php';
         });
         exit;
     }
@@ -934,8 +929,8 @@ class BukuIndukModuleController extends BaseController {
             $stmt = $db->prepare("
                 SELECT nama_kepsek, nip_kepsek 
                 FROM kepegawaian.riwayat_kepala_sekolah 
-                WHERE tenant_id = ? 
-                  AND tanggal_mulai <= ? 
+                WHERE tenant_id::text = ? 
+                  AND (tanggal_mulai <= ? OR tanggal_mulai IS NULL)
                   AND (tanggal_selesai IS NULL OR tanggal_selesai >= ?)
                 ORDER BY tanggal_mulai DESC LIMIT 1
             ");
@@ -943,6 +938,18 @@ class BukuIndukModuleController extends BaseController {
             $kepsek = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($kepsek) {
                 return $kepsek;
+            }
+            // Fallback to latest headmaster record
+            $stmt2 = $db->prepare("
+                SELECT nama_kepsek, nip_kepsek 
+                FROM kepegawaian.riwayat_kepala_sekolah 
+                WHERE tenant_id::text = ? 
+                ORDER BY created_at DESC LIMIT 1
+            ");
+            $stmt2->execute([$tenantId]);
+            $kepsek2 = $stmt2->fetch(PDO::FETCH_ASSOC);
+            if ($kepsek2) {
+                return $kepsek2;
             }
         } catch (\Throwable $e) {
             // fallback
@@ -1112,11 +1119,11 @@ class BukuIndukModuleController extends BaseController {
             $_unused = [$siswa, $grades, $namaKurikulum, $sikapK13, $showQrCode, $urlVerifikasi];
             // Load correct layout
             if ($tipePenilaian === 'klasik') {
-                require __DIR__ . '/../../views/print_rapot_ktsp.php';
+                require dirname(__DIR__, 4) . '/views/print_rapot_ktsp.php';
             } elseif ($tipePenilaian === 'kompleks') {
-                require __DIR__ . '/../../views/print_rapot_k13.php';
+                require dirname(__DIR__, 4) . '/views/print_rapot_k13.php';
             } else {
-                require __DIR__ . '/../../views/print_rapot_merdeka.php';
+                require dirname(__DIR__, 4) . '/views/print_rapot_merdeka.php';
             }
         });
         exit;
@@ -1191,9 +1198,9 @@ class BukuIndukModuleController extends BaseController {
         $this->renderOrGetArchive($siswa['id'], $siswa['tenant_id'], $archiveFilename, function() use ($siswa, $kurikulum, $showQrCode, $urlVerifikasi) {
             $_unused = [$siswa, $showQrCode, $urlVerifikasi];
             if (stripos($kurikulum, 'Merdeka') !== false) {
-                require __DIR__ . '/../../views/print_transkrip_merdeka.php';
+                require dirname(__DIR__, 4) . '/views/print_transkrip_merdeka.php';
             } else {
-                require __DIR__ . '/../../views/print_transkrip_standar.php';
+                require dirname(__DIR__, 4) . '/views/print_transkrip_standar.php';
             }
         });
         exit;
@@ -1213,16 +1220,36 @@ class BukuIndukModuleController extends BaseController {
         $tenantId = SessionManager::getTenantId();
         $db = \App\Config\Database::getConnection();
 
-        // Ambil daftar siswa aktif di kelas ini
-        $query = "SELECT id FROM siswa.siswa WHERE id_kelas = :kelas_id AND is_active = true AND status = 'Aktif'";
+        // Resolusi otomatis tenant_id dari tabel akademik.kelas
+        try {
+            $stmtKTenant = $db->prepare("SELECT tenant_id FROM akademik.kelas WHERE id::text = ? OR nama_kelas = ? LIMIT 1");
+            $stmtKTenant->execute([$kelasId, $kelasId]);
+            $classTenantId = $stmtKTenant->fetchColumn();
+            if ($classTenantId) {
+                $tenantId = $classTenantId;
+            }
+        } catch (\Throwable $e) {
+            // ignore
+        }
+
+        // Ambil daftar siswa aktif di kelas ini (pencocokan kelas_saat_ini / relasi nilai / kenaikan kelas)
+        $query = "SELECT s.id FROM siswa.siswa s 
+                  WHERE s.is_active = true 
+                  AND (s.status_siswa IS NULL OR s.status_siswa = 'Aktif' OR s.status_siswa ILIKE 'aktif%')
+                  AND (
+                      s.kelas_saat_ini::text = :kelas_id 
+                      OR s.kelas_saat_ini IN (SELECT nama_kelas FROM akademik.kelas WHERE id::text = :kelas_id)
+                      OR s.id::text IN (SELECT siswa_id::text FROM akademik.detail_nilai_rapor WHERE kelas_id::text = :kelas_id AND is_active = true)
+                      OR s.id::text IN (SELECT siswa_id::text FROM siswa.riwayat_kenaikan_kelas WHERE ke_kelas::text = :kelas_id)
+                  )";
         $params = ['kelas_id' => $kelasId];
         
         if ($tenantId !== null) {
-            $query .= " AND tenant_id = :tenant_id";
+            $query .= " AND s.tenant_id = :tenant_id";
             $params['tenant_id'] = $tenantId;
         }
         
-        $query .= " ORDER BY nama_lengkap ASC";
+        $query .= " ORDER BY s.nama_lengkap ASC";
         $stmt = $db->prepare($query);
         $stmt->execute($params);
         $studentIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -1276,20 +1303,22 @@ class BukuIndukModuleController extends BaseController {
                 $siswa['nama_kelas'] = '-';
             }
 
-            // Dapatkan data headmaster (nama_kepsek & nip_kepsek) dari tenants
+            // Dapatkan data sekolah & kepsek dari tenants & riwayat_kepala_sekolah
             try {
-                $stmtTenant = $db->prepare("SELECT nama_sekolah, nama_kepsek, nip_kepsek, pangkat_kepsek FROM core.tenants WHERE id = ?");
+                $stmtTenant = $db->prepare("SELECT nama_sekolah, npsn FROM core.tenants WHERE id = ?");
                 $stmtTenant->execute([$siswa['tenant_id']]);
                 $tenantInfo = $stmtTenant->fetch(PDO::FETCH_ASSOC);
                 $siswa['nama_sekolah'] = $tenantInfo['nama_sekolah'] ?? '-';
-                $siswa['nama_kepsek'] = $tenantInfo['nama_kepsek'] ?? '-';
-                $siswa['nip_kepsek'] = $tenantInfo['nip_kepsek'] ?? '-';
-                $siswa['pangkat_kepsek'] = $tenantInfo['pangkat_kepsek'] ?? '';
+                $siswa['npsn'] = $tenantInfo['npsn'] ?? '';
             } catch (\Throwable $e) {
-                $siswa['nama_kepsek'] = '-';
-                $siswa['nip_kepsek'] = '-';
-                $siswa['pangkat_kepsek'] = '';
+                $siswa['nama_sekolah'] = '-';
             }
+
+            $tanggalCetak = $tanggal ?: date('Y-m-d');
+            $historicalKepsek = $this->getKepsekAtDate($siswa['tenant_id'], $tanggalCetak);
+            $siswa['nama_kepsek'] = $historicalKepsek['nama_kepsek'] ?? '-';
+            $siswa['nip_kepsek'] = $historicalKepsek['nip_kepsek'] ?? '-';
+            $siswa['pangkat_kepsek'] = '';
 
             $studentsData[] = $siswa;
         }
@@ -1305,7 +1334,7 @@ class BukuIndukModuleController extends BaseController {
         $baseVerifyUrl = $protocol . "://" . $domainName . $baseFolder . "/verify-transkrip?id=";
 
         // Load bulk print view directly
-        require __DIR__ . '/../../views/print_rapot_bulk.php';
+        require dirname(__DIR__, 4) . '/views/print_rapot_bulk.php';
         exit;
     }
     public function fetchCetakMatrixApi(): void {
@@ -1606,14 +1635,34 @@ class BukuIndukModuleController extends BaseController {
         $tenantId = SessionManager::getTenantId();
         $db = \App\Config\Database::getConnection();
 
-        // Ambil daftar siswa aktif di kelas ini
-        $query = "SELECT id FROM siswa.siswa WHERE id_kelas = :kelas_id AND is_active = true AND status = 'Aktif'";
+        // Resolusi otomatis tenant_id dari tabel akademik.kelas
+        try {
+            $stmtKTenant = $db->prepare("SELECT tenant_id FROM akademik.kelas WHERE id::text = ? OR nama_kelas = ? LIMIT 1");
+            $stmtKTenant->execute([$kelasId, $kelasId]);
+            $classTenantId = $stmtKTenant->fetchColumn();
+            if ($classTenantId) {
+                $tenantId = $classTenantId;
+            }
+        } catch (\Throwable $e) {
+            // ignore
+        }
+
+        // Ambil daftar siswa aktif di kelas ini (pencocokan kelas_saat_ini / relasi nilai / kenaikan kelas)
+        $query = "SELECT s.id FROM siswa.siswa s 
+                  WHERE s.is_active = true 
+                  AND (s.status_siswa IS NULL OR s.status_siswa = 'Aktif' OR s.status_siswa ILIKE 'aktif%')
+                  AND (
+                      s.kelas_saat_ini::text = :kelas_id 
+                      OR s.kelas_saat_ini IN (SELECT nama_kelas FROM akademik.kelas WHERE id::text = :kelas_id)
+                      OR s.id::text IN (SELECT siswa_id::text FROM akademik.detail_nilai_rapor WHERE kelas_id::text = :kelas_id AND is_active = true)
+                      OR s.id::text IN (SELECT siswa_id::text FROM siswa.riwayat_kenaikan_kelas WHERE ke_kelas::text = :kelas_id)
+                  )";
         $params = ['kelas_id' => $kelasId];
         if ($tenantId !== null) {
-            $query .= " AND tenant_id = :tenant_id";
+            $query .= " AND s.tenant_id = :tenant_id";
             $params['tenant_id'] = $tenantId;
         }
-        $query .= " ORDER BY nama_lengkap ASC";
+        $query .= " ORDER BY s.nama_lengkap ASC";
         $stmt = $db->prepare($query);
         $stmt->execute($params);
         $studentIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -1701,7 +1750,7 @@ class BukuIndukModuleController extends BaseController {
 
         // Load correct bulk layout
         if ($tipePenilaian === 'klasik') {
-            require __DIR__ . '/../../views/print_rapot_bulk_ktsp.php';
+            require dirname(__DIR__, 4) . '/views/print_rapot_bulk_ktsp.php';
         } elseif ($tipePenilaian === 'kompleks') {
             // Ambil data sikap K-13
             $sikapK13 = [];
@@ -1725,7 +1774,7 @@ class BukuIndukModuleController extends BaseController {
             }
             $baseVerifyUrl = $protocol . "://" . $domainName . $baseFolder . "/verify-transkrip?id=";
 
-            require __DIR__ . '/../../views/print_rapot_bulk_k13.php';
+            require dirname(__DIR__, 4) . '/views/print_rapot_bulk_k13.php';
         } else {
             // QR Code options and parameters
             $showQrCode = isset($_GET['show_qrcode']) && $_GET['show_qrcode'] == '1';
@@ -1737,7 +1786,7 @@ class BukuIndukModuleController extends BaseController {
             }
             $baseVerifyUrl = $protocol . "://" . $domainName . $baseFolder . "/verify-transkrip?id=";
 
-            require __DIR__ . '/../../views/print_rapot_bulk_merdeka.php';
+            require dirname(__DIR__, 4) . '/views/print_rapot_bulk_merdeka.php';
         }
         exit;
     }
@@ -1752,15 +1801,34 @@ class BukuIndukModuleController extends BaseController {
         $tenantId = SessionManager::getTenantId();
         $db = \App\Config\Database::getConnection();
 
+        // Resolusi otomatis tenant_id dari tabel akademik.kelas
+        try {
+            $stmtKTenant = $db->prepare("SELECT tenant_id FROM akademik.kelas WHERE id::text = ? OR nama_kelas = ? LIMIT 1");
+            $stmtKTenant->execute([$kelasId, $kelasId]);
+            $classTenantId = $stmtKTenant->fetchColumn();
+            if ($classTenantId) {
+                $tenantId = $classTenantId;
+            }
+        } catch (\Throwable $e) {
+            // ignore
+        }
+
         // 1. Get Kelas Name
-        $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id = :id LIMIT 1");
+        $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id::text = :id LIMIT 1");
         $stmtKelas->execute(['id' => $kelasId]);
         $kelasName = $stmtKelas->fetchColumn() ?: 'Kelas';
-
         // 2. Get students in this class
-        $qSiswa = "SELECT id, nama_lengkap, nisn, nis FROM siswa.siswa 
-                   WHERE id_kelas = :kelas_id AND tenant_id = :tenant_id AND status = 'Aktif' AND is_active = true 
-                   ORDER BY nama_lengkap ASC";
+        $qSiswa = "SELECT s.id, s.nama_lengkap, s.nisn, s.nis FROM siswa.siswa s 
+                   WHERE s.is_active = true 
+                   AND (s.tenant_id = :tenant_id OR :tenant_id IS NULL)
+                   AND (s.status_siswa IS NULL OR s.status_siswa = 'Aktif' OR s.status_siswa ILIKE 'aktif%')
+                   AND (
+                       s.kelas_saat_ini::text = :kelas_id 
+                       OR s.kelas_saat_ini IN (SELECT nama_kelas FROM akademik.kelas WHERE id::text = :kelas_id)
+                       OR s.id::text IN (SELECT siswa_id::text FROM akademik.detail_nilai_rapor WHERE kelas_id::text = :kelas_id AND is_active = true)
+                       OR s.id::text IN (SELECT siswa_id::text FROM siswa.riwayat_kenaikan_kelas WHERE ke_kelas::text = :kelas_id)
+                   )
+                   ORDER BY s.nama_lengkap ASC";
         $stmtSiswa = $db->prepare($qSiswa);
         $stmtSiswa->execute(['kelas_id' => $kelasId, 'tenant_id' => $tenantId]);
         $students = $stmtSiswa->fetchAll(PDO::FETCH_ASSOC);
@@ -2002,7 +2070,7 @@ class BukuIndukModuleController extends BaseController {
         $_SESSION['vt_expires']  = time() + 300; // valid 5 menit
 
         // ── 6. Render skeleton HTML (TANPA DATA dari DB dan TANPA TOKEN) ───────
-        require __DIR__ . '/../../views/verify_transkrip.php';
+        require dirname(__DIR__, 4) . '/views/verify_transkrip.php';
         exit;
     }
 
@@ -2092,10 +2160,14 @@ class BukuIndukModuleController extends BaseController {
 
             // Ambil info tenant
             $stmtTenant = $db->prepare(
-                "SELECT nama_sekolah, npsn, nama_kepsek FROM core.tenants WHERE id = ? LIMIT 1"
+                "SELECT nama_sekolah, npsn FROM core.tenants WHERE id = ? LIMIT 1"
             );
             $stmtTenant->execute([$siswa['tenant_id']]);
-            $siswa['tenant_info'] = $stmtTenant->fetch(PDO::FETCH_ASSOC) ?: [];
+            $tenantInfo = $stmtTenant->fetch(PDO::FETCH_ASSOC) ?: [];
+            $historicalKepsek = $this->getKepsekAtDate($siswa['tenant_id'], date('Y-m-d'));
+            $tenantInfo['nama_kepsek'] = $historicalKepsek['nama_kepsek'] ?? '-';
+            $tenantInfo['nip_kepsek'] = $historicalKepsek['nip_kepsek'] ?? '-';
+            $siswa['tenant_info'] = $tenantInfo;
 
             // Ambil transkrip nilai (hanya kolom yang diperlukan)
             $stmt = $db->prepare("
@@ -2605,20 +2677,22 @@ class BukuIndukModuleController extends BaseController {
                 $tenantId = $stmtSiswa->fetchColumn();
             }
 
-            $stmt = $db->prepare("
-                SELECT * 
-                FROM siswa.siswa.riwayat_beasiswa 
-                WHERE siswa_id = :siswa_id AND tenant_id = :tenant_id 
-                ORDER BY tahun_menerima DESC
-            ");
-            $stmt->execute([
-                'siswa_id' => $siswaId,
-                'tenant_id' => $tenantId
-            ]);
-            $beasiswa = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            try {
+                $stmt = $db->prepare("
+                    SELECT * 
+                    FROM siswa.riwayat_beasiswa 
+                    WHERE siswa_id = :siswa_id 
+                    ORDER BY id DESC
+                ");
+                $stmt->execute(['siswa_id' => $siswaId]);
+                $beasiswa = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Throwable $ex) {
+                $beasiswa = [];
+            }
+
             $this->jsonResponse(['success' => true, 'data' => $beasiswa]);
         } catch (\Throwable $e) {
-            $this->jsonResponse(['success' => false, 'error' => 'Gagal mengambil data beasiswa.'], 500);
+            $this->jsonResponse(['success' => true, 'data' => []]);
         }
     }
 
