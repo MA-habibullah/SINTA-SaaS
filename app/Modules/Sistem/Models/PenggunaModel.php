@@ -73,10 +73,29 @@ class PenggunaModel extends Model {
             $orderBy = " ORDER BY s.updated_at DESC, s.nama_lengkap ASC";
 
         } elseif ($tab === 'siswa') {
-            // Query untuk Siswa (menggunakan tabel siswa.siswa langsung tanpa rincian_alamat/dll)
+            // Query untuk Siswa (menggunakan tabel siswa.siswa langsung)
             $selectSql = "SELECT s.*, t.nama_sekolah,
-                                 COALESCE(k.nama_kelas, s.kelas_saat_ini, '-') AS nama_kelas,
-                                 COALESCE(j.nama_jenjang, (SELECT j2.nama_jenjang FROM core.jenjang j2 WHERE (j2.id::text = k.id_jenjang::text OR j2.tenant_id = s.tenant_id) LIMIT 1), '-') AS nama_jenjang
+                                 COALESCE(
+                                     j.nama_jenjang,
+                                     (SELECT j2.nama_jenjang FROM core.jenjang j2 WHERE (j2.id::text = k.id_jenjang::text OR j2.kode_jenjang ILIKE k.id_jenjang OR j2.nama_jenjang ILIKE k.id_jenjang) LIMIT 1),
+                                     CASE 
+                                         WHEN t.nama_sekolah ILIKE '%SMA%' THEN 'Sekolah Menengah Atas'
+                                         WHEN t.nama_sekolah ILIKE '%SMK%' THEN 'Sekolah Menengah Kejuruan'
+                                         WHEN t.nama_sekolah ILIKE '%SMP%' THEN 'Sekolah Menengah Pertama'
+                                         WHEN t.nama_sekolah ILIKE '%SD%' THEN 'Sekolah Dasar'
+                                         WHEN s.kelas_saat_ini ILIKE '%X%' OR s.kelas_saat_ini ILIKE '%XI%' OR s.kelas_saat_ini ILIKE '%XII%' THEN 'Sekolah Menengah Atas'
+                                         WHEN s.kelas_saat_ini ILIKE '%VII%' OR s.kelas_saat_ini ILIKE '%VIII%' OR s.kelas_saat_ini ILIKE '%IX%' THEN 'Sekolah Menengah Pertama'
+                                         ELSE 'Sekolah Menengah Atas'
+                                     END
+                                 ) AS nama_jenjang,
+                                 CASE 
+                                     WHEN s.status_siswa = 'aktif' THEN 'Aktif'
+                                     WHEN s.status_siswa = 'lulus' THEN 'Lulus'
+                                     WHEN s.status_siswa = 'pindah' THEN 'Pindah'
+                                     WHEN s.status_siswa = 'putus_sekolah' THEN 'Putus Sekolah'
+                                     ELSE INITCAP(COALESCE(s.status_siswa, 'Aktif'))
+                                 END AS status,
+                                 COALESCE(k.nama_kelas, s.kelas_saat_ini, '-') AS nama_kelas
                           FROM siswa.siswa s
                           LEFT JOIN core.tenants t ON s.tenant_id = t.id
                           LEFT JOIN akademik.kelas k ON (s.tenant_id = k.tenant_id AND (s.kelas_saat_ini = k.id::text OR s.kelas_saat_ini = k.nama_kelas OR s.kelas_saat_ini = k.kode_kelas))
@@ -219,15 +238,9 @@ class PenggunaModel extends Model {
         if ($tab === 'siswa') {
             foreach ($list as &$row) {
                 $fieldsToCheck = [
-                    'nisn', 'nama_lengkap', 'jenis_kelamin', 'tanggal_lahir', 'tempat_lahir', 
-                    'id_angkatan', 'id_tahun_ajaran', 'id_jenjang', 'id_jurusan', 'id_kelas', 'id_pendidikan',
-                    'alamat_kk', 'alamat_domisili', 'rt', 'rw', 'kode_pos', 'id_kelurahan', 'status_tinggal',
-                    'kontak_email', 'no_telepon_siswa',
-                    'tinggi_badan', 'berat_badan', 'lingkar_kepala', 'golongan_darah', 
-                    'anak_ke', 'jumlah_saudara', 'jarak_rumah', 'transportasi',
-                    'nik_ibu', 'nama_ibu', 'id_tempat_lahir_ibu', 'tanggal_lahir_ibu',
-                    'pendidikan_ibu', 'pekerjaan_ibu', 'penghasilan_ibu', 'agama_ibu',
-                    'jenis_pendaftaran', 'jalur_diterima', 'tanggal_masuk', 'hobi'
+                    'nisn', 'nis', 'nama_lengkap', 'jenis_kelamin', 'tempat_lahir', 'tanggal_lahir', 
+                    'agama', 'foto_url', 'email', 'no_hp', 'alamat', 'kelas_saat_ini', 'jurusan',
+                    'angkatan', 'tahun_masuk', 'status_siswa'
                 ];
                 $filled = 0;
                 $totalFields = count($fieldsToCheck);

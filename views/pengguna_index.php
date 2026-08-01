@@ -248,10 +248,11 @@
                                     </div>
                                 </td>
                                 <td class="text-center">
-                                    <span v-if="item.status === 'Aktif'" class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Aktif</span>
-                                    <span v-else-if="item.status === 'Lulus'" class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">Lulus</span>
-                                    <span v-else-if="item.status === 'Pindah'" class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1">Pindah</span>
-                                    <span v-else class="badge bg-secondary">-</span>
+                                    <span v-if="item.status === 'Aktif' || item.status_siswa === 'aktif' || item.status_siswa === 'Aktif'" class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Aktif</span>
+                                    <span v-else-if="item.status === 'Lulus' || item.status_siswa === 'lulus' || item.status_siswa === 'Lulus'" class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">Lulus</span>
+                                    <span v-else-if="item.status === 'Pindah' || item.status_siswa === 'pindah' || item.status_siswa === 'Pindah'" class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1">Pindah</span>
+                                    <span v-else-if="item.status === 'Putus Sekolah' || item.status_siswa === 'putus_sekolah'" class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">Putus Sekolah</span>
+                                    <span v-else class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">{{ item.status || 'Aktif' }}</span>
                                 </td>
                                 <td class="text-center">
                                     <div class="d-inline-flex gap-2" v-if="!trashMode">
