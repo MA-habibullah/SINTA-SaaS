@@ -33,7 +33,7 @@ Saat merancang fitur baru atau memodifikasi modul yang ada, terapkan arsitektur 
 
 # Custom Rules
 ## Testing and Checking Files
-Selalu simpan file percobaan, pengujian (*testing*), atau pengecekan (seperti file dengan awalan `test_`, `check_`, `grant_`, dsb.) HANYA ke dalam folder `C:\laragon\www\sinta\scratch`. Jangan pernah menyimpan file-file sementara ini di *root directory* atau direktori inti aplikasi lainnya.
+Selalu simpan file percobaan, pengujian (*testing*), atau pengecekan (seperti file dengan awalan `test_`, `check_`, `grant_`,`audit_`,`inspect_`, dsb.) HANYA ke dalam folder `C:\laragon\www\sinta\scratch\pengujian`. Jangan pernah menyimpan file-file sementara ini di *root directory* atau direktori inti aplikasi lainnya.
 
 ## Implementation Plans
 Setiap kali ada rencana implementasi (*implementation plan*) yang telah diselesaikan atau dijalankan, **SELURUH ISI plan** (bukan hanya ringkasan) wajib **ditambahkan (append)** ke dalam **satu file gabungan per hari** di folder `C:\laragon\www\sinta\scratch\docs` dengan format nama: `YYYY-MM-DD_Implementation_Plans_Harian.md` (contoh: `2026-07-17_Implementation_Plans_Harian.md`).
