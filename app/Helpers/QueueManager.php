@@ -14,11 +14,11 @@ class QueueManager {
         try {
             $db = Database::getConnection();
             $stmt = $db->prepare("
-                INSERT INTO `system_jobs` (tenant_id, job_type, payload, status, created_at, updated_at)
-                VALUES (:tenant_id, :job_type, :payload, 'pending', NOW(), NOW())
+                INSERT INTO sistem.queue_jobs (id, tenant_id, job_type, payload, status, created_at, available_at)
+                VALUES (gen_random_uuid(), :tenant_id, :job_type, :payload, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             ");
             return $stmt->execute([
-                'tenant_id' => $tenantId,
+                'tenant_id' => $tenantId ?: null,
                 'job_type'  => $jobType,
                 'payload'   => json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
             ]);
@@ -36,11 +36,10 @@ class QueueManager {
             $db = Database::getConnection();
             $db->beginTransaction();
 
-            // Kueri dengan FOR UPDATE untuk mengunci baris agar tidak diambil worker lain secara paralel
             $stmt = $db->prepare("
-                SELECT * FROM `system_jobs`
-                WHERE `status` = 'pending'
-                ORDER BY `id` ASC
+                SELECT * FROM sistem.queue_jobs
+                WHERE status = 'pending'
+                ORDER BY created_at ASC
                 LIMIT 1
                 FOR UPDATE
             ");
@@ -48,20 +47,19 @@ class QueueManager {
             $job = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($job) {
-                // Tandai pekerjaan sebagai sedang diproses
                 $stmtUpdate = $db->prepare("
-                    UPDATE `system_jobs` SET
-                        `status` = 'processing',
-                        `attempts` = `attempts` + 1,
-                        `reserved_at` = NOW()
-                    WHERE `id` = :id
+                    UPDATE sistem.queue_jobs SET
+                        status = 'processing',
+                        attempts = attempts + 1
+                    WHERE id = :id
                 ");
                 $stmtUpdate->execute(['id' => $job['id']]);
                 
                 $db->commit();
                 
-                // Parse payload string menjadi array kembali
-                $job['payload'] = json_decode($job['payload'], true) ?? [];
+                if (is_string($job['payload'])) {
+                    $job['payload'] = json_decode($job['payload'], true) ?? [];
+                }
                 return $job;
             }
 
@@ -79,14 +77,13 @@ class QueueManager {
     /**
      * Tandai pekerjaan selesai sukses
      */
-    public static function markCompleted(int $jobId): void {
+    public static function markCompleted(string $jobId): void {
         try {
             $db = Database::getConnection();
             $stmt = $db->prepare("
-                UPDATE `system_jobs` SET
-                    `status` = 'completed',
-                    `completed_at` = NOW()
-                WHERE `id` = :id
+                UPDATE sistem.queue_jobs SET
+                    status = 'completed'
+                WHERE id = :id
             ");
             $stmt->execute(['id' => $jobId]);
         } catch (\Throwable $e) {
@@ -97,15 +94,14 @@ class QueueManager {
     /**
      * Tandai pekerjaan gagal dengan menyimpan pesan error
      */
-    public static function markFailed(int $jobId, string $error): void {
+    public static function markFailed(string $jobId, string $error): void {
         try {
             $db = Database::getConnection();
             $stmt = $db->prepare("
-                UPDATE `system_jobs` SET
-                    `status` = 'failed',
-                    `error_message` = :error,
-                    `completed_at` = NOW()
-                WHERE `id` = :id
+                UPDATE sistem.queue_jobs SET
+                    status = 'failed',
+                    error_message = :error
+                WHERE id = :id
             ");
             $stmt->execute([
                 'id'    => $jobId,
