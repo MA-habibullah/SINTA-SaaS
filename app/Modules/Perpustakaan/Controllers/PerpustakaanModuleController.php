@@ -51,4 +51,128 @@ class PerpustakaanModuleController extends BaseController {
         $katalog = $this->model->getBibliografiList($tenantId, [], $limit, $offset);
         $this->jsonResponse(true, $katalog);
     }
+
+    /**
+     * GET /perpustakaan/katalog
+     */
+    public function katalog(): void {
+        $data = ['title' => 'Katalog Perpustakaan'];
+        $this->render('perpustakaan/katalog', $data);
+    }
+
+    /**
+     * GET /perpustakaan/sirkulasi
+     */
+    public function sirkulasi(): void {
+        $data = ['title' => 'Sirkulasi Peminjaman Buku'];
+        $this->render('perpustakaan/sirkulasi', $data);
+    }
+
+    /**
+     * GET /perpustakaan/buku-paket
+     */
+    public function bukuPaket(): void {
+        $data = ['title' => 'Manajemen Buku Paket'];
+        $this->render('perpustakaan/buku_paket', $data);
+    }
+
+    /**
+     * GET /perpustakaan/event
+     */
+    public function eventOSN(): void {
+        $data = ['title' => 'Event OSN & Literasi Perpustakaan'];
+        $this->render('perpustakaan/event', $data);
+    }
+
+    /**
+     * GET /perpustakaan/anggota
+     */
+    public function anggota(): void {
+        $data = ['title' => 'Manajemen Anggota Perpustakaan'];
+        $this->render('perpustakaan/anggota', $data);
+    }
+
+    /**
+     * GET /perpustakaan/denda
+     */
+    public function denda(): void {
+        $data = ['title' => 'Manajemen Denda Perpustakaan'];
+        $this->render('perpustakaan/denda', $data);
+    }
+
+    /**
+     * GET /perpustakaan/opname
+     */
+    public function opname(): void {
+        $data = ['title' => 'Stock Opname Perpustakaan'];
+        $this->render('perpustakaan/opname', $data);
+    }
+
+    /**
+     * GET /perpustakaan/laporan
+     */
+    public function laporan(): void {
+        $data = ['title' => 'Laporan Perpustakaan'];
+        $this->render('perpustakaan/laporan', $data);
+    }
+
+    /**
+     * GET /perpustakaan/pengaturan
+     */
+    public function pengaturan(): void {
+        $data = ['title' => 'Pengaturan Perpustakaan'];
+        $this->render('perpustakaan/pengaturan', $data);
+    }
+
+    /**
+     * GET /perpustakaan/opac
+     */
+    public function opacPublic(): void {
+        $data = ['title' => 'OPAC - Katalog Perpustakaan Publik'];
+        $this->render('perpustakaan/opac', $data);
+    }
+
+    /**
+     * GET /perpustakaan/buku-tamu
+     */
+    public function bukuTamuPublic(): void {
+        $data = ['title' => 'Buku Tamu Perpustakaan'];
+        $this->render('perpustakaan/buku_tamu', $data);
+    }
+
+    /**
+     * GET /perpustakaan/riwayat-saya
+     */
+    public function riwayatSiswa(): void {
+        $data = ['title' => 'Riwayat Peminjaman Saya'];
+        $this->render('perpustakaan/riwayat_siswa', $data);
+    }
+
+    /**
+     * POST /api/v1/perpustakaan/sirkulasi/pinjam
+     */
+    public function apiPinjamReguler(): void {
+        $this->jsonResponse(false, null, 'Fitur belum tersedia.', 501);
+    }
+
+    /**
+     * POST /api/v1/perpustakaan/sirkulasi/kembali
+     */
+    public function apiKembaliReguler(): void {
+        $this->jsonResponse(false, null, 'Fitur belum tersedia.', 501);
+    }
+
+    /**
+     * GET /api/v1/perpustakaan/bebas-pustaka/cek
+     */
+    public function apiCekBebasPustaka(): void {
+        $this->jsonResponse(true, ['bebas_pustaka' => true]);
+    }
+
+    /**
+     * POST /api/v1/perpustakaan/anggota/sync
+     */
+    public function apiSyncAnggota(): void {
+        $this->jsonResponse(false, null, 'Fitur belum tersedia.', 501);
+    }
 }
