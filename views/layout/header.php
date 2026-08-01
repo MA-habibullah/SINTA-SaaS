@@ -110,7 +110,7 @@ if ($tenantId) {
                 <a class="dropdown-item py-2 px-4 fw-medium text-secondary d-flex align-items-center gap-3 transition hover-bg-light" href="#" onclick="showSimulationAlert('Keamanan'); return false;"><i class="bi bi-shield-lock fs-5"></i> Keamanan</a>
             </li>
             <li class="border-top mt-1">
-                <form action="<?= ($_SESSION['role_name'] ?? '') === 'siswa' ? '<?= $this->getBaseUrl() ?>/siswa/logout' : '<?= $this->getBaseUrl() ?>/api/v1/auth/logout' ?>" method="<?= ($_SESSION['role_name'] ?? '') === 'siswa' ? 'GET' : 'POST' ?>" class="m-0" id="logoutForm">
+                <form action="<?= ($_SESSION['role_name'] ?? '') === 'siswa' ? $this->getBaseUrl() . '/siswa/logout' : $this->getBaseUrl() . '/api/v1/auth/logout' ?>" method="<?= ($_SESSION['role_name'] ?? '') === 'siswa' ? 'GET' : 'POST' ?>" class="m-0" id="logoutForm">
                     <button type="submit" class="dropdown-item py-3 px-4 text-danger fw-bold d-flex align-items-center gap-3 transition hover-bg-light bg-white w-100 text-start border-0">
                         <i class="bi bi-box-arrow-right fs-5"></i> Keluar Aplikasi
                     </button>

@@ -6,7 +6,7 @@
 /** @var \App\Core\Controller $this */
 use App\Config\Database;
 
-$requestUri = $_SERVER['REQUEST_URI'];
+$requestUri = $_SERVER['REQUEST_URI'] ?? '';
 $roles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
 $roles = array_filter(array_map('trim', $roles));
 if (empty($roles)) {
@@ -26,7 +26,7 @@ $isActive = function($paths) use ($requestUri) {
     }
 
     // Ambil hanya bagian path dari REQUEST_URI (tanpa query string dan trailing slash)
-    $currentPath = parse_url($requestUri, PHP_URL_PATH);
+    $currentPath = parse_url($requestUri ?? '', PHP_URL_PATH);
     $currentPath = rtrim((string)$currentPath, '/');
 
     $checkPath = function(string $path) use ($currentPath): bool {
