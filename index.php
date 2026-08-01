@@ -356,16 +356,11 @@ case '/perpustakaan':
             $controller = new App\Modules\Core\Controllers\PengumumanModuleController();
             $controller->update();
             break;
-            
-        case '/informasi/kategori-agenda/delete':
-            $controller = new App\Modules\Core\Controllers\PengumumanModuleController();
-            $controller->delete();
-            break;
 
         // MODUL PERPUSTAKAAN (INTEGRATED LIBRARY SYSTEM)
         case '/perpustakaan':
             $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
-            $controller->dashboard();
+            $controller->indexView();
             break;
 
         case '/perpustakaan/katalog':
@@ -1382,6 +1377,201 @@ case '/api/v1/keuangan/dashboard-metrics':
             $controller->apiExportBeasiswa();
             break;
 
+            $controller->apiGetStudentGrades();
+            break;
+
+        case '/api/v1/pdss/download-leger':
+            $controller = new App\Modules\Pdss\Controllers\PdssDetailModuleController();
+            $controller->apiDownloadLeger();
+            break;
+
+        case '/api/v1/pdss/students/search':
+            $controller = new App\Modules\Pdss\Controllers\PdssDetailModuleController();
+            $controller->apiSearchStudents();
+            break;
+
+        case '/api/v1/pdss/alumni-tracks':
+            $controller = new App\Modules\Pdss\Controllers\PdssDetailModuleController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveAlumniTrack();
+            } else {
+                $controller->apiGetAlumniTracks();
+            }
+            break;
+
+        case '/api/v1/pdss/alumni-tracks/delete':
+            $controller = new App\Modules\Pdss\Controllers\PdssDetailModuleController();
+            $controller->apiDeleteAlumniTrack();
+            break;
+
+        case '/api/v1/pdss/target-kampus':
+            $controller = new App\Modules\Pdss\Controllers\PdssDetailModuleController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveTargetKampus();
+            } else {
+                $controller->apiGetTargetKampus();
+            }
+            break;
+
+        case '/api/v1/pdss/target-kampus/delete':
+            $controller = new App\Modules\Pdss\Controllers\PdssDetailModuleController();
+            $controller->apiDeleteTargetKampus();
+            break;
+
+        // MASTER KAMPUS & PRODI ROUTES
+        case '/api/v1/kampus/template':
+            $controller = new App\Modules\Alumni\Controllers\KampusModuleController();
+            $controller->apiDownloadTemplate();
+            break;
+
+        case '/api/v1/kampus/import':
+            $controller = new App\Modules\Alumni\Controllers\KampusModuleController();
+            $controller->apiImportExcel();
+            break;
+
+        case '/api/v1/kampus':
+            $controller = new App\Modules\Alumni\Controllers\KampusModuleController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveKampus();
+            } else {
+                $controller->apiGetKampus();
+            }
+            break;
+
+        case '/api/v1/kampus/delete':
+            $controller = new App\Modules\Alumni\Controllers\KampusModuleController();
+            $controller->apiDeleteKampus();
+            break;
+
+        case '/api/v1/kampus/prodi':
+            $controller = new App\Modules\Alumni\Controllers\KampusModuleController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveProdi();
+            } else {
+                $controller->apiGetProdi();
+            }
+            break;
+
+        case '/api/v1/kampus/prodi/delete':
+            $controller = new App\Modules\Alumni\Controllers\KampusModuleController();
+            $controller->apiDeleteProdi();
+            break;
+
+        case '/api/v1/kampus/prodi/riwayat':
+            $controller = new App\Modules\Alumni\Controllers\KampusModuleController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveRiwayat();
+            } else {
+                $controller->apiGetRiwayat();
+            }
+            break;
+
+        case '/api/v1/kampus/prodi/riwayat/delete':
+            $controller = new App\Modules\Alumni\Controllers\KampusModuleController();
+            $controller->apiDeleteRiwayat();
+            break;
+
+        case '/api/v1/kampus/jalur':
+            $controller = new App\Modules\Alumni\Controllers\KampusModuleController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveJalurMasuk();
+            } else {
+                $controller->apiGetJalurMasuk();
+            }
+            break;
+
+        case '/api/v1/kampus/jalur/delete':
+            $controller = new App\Modules\Alumni\Controllers\KampusModuleController();
+            $controller->apiDeleteJalurMasuk();
+            break;
+
+        case '/api/v1/kampus/all-prodi':
+            $controller = new App\Modules\Alumni\Controllers\KampusModuleController();
+            $controller->apiGetAllKampusProdi();
+            break;
+
+        case '/api/v1/kampus/flat-list':
+            $controller = new App\Modules\Alumni\Controllers\KampusModuleController();
+            $controller->apiGetMasterKampusProdiFlat();
+            break;
+
+        case '/api/v1/kampus/export-daya-tampung':
+            $controller = new App\Modules\Alumni\Controllers\KampusModuleController();
+            $controller->apiExportDayaTampung();
+            break;
+
+        case '/api/v1/kampus/import-daya-tampung':
+            $controller = new App\Modules\Alumni\Controllers\KampusModuleController();
+            $controller->apiImportDayaTampung();
+            break;
+
+        case '/api/v1/kampus/bulk-delete-riwayat':
+            $controller = new App\Modules\Alumni\Controllers\KampusModuleController();
+            $controller->apiBulkDeleteRiwayat();
+            break;
+
+        case '/api/v1/kampus/export-kampus-prodi':
+            $controller = new App\Modules\Alumni\Controllers\KampusModuleController();
+            $controller->apiExportKampusProdi();
+            break;
+
+        case '/api/v1/kampus/import-kampus-prodi':
+            $controller = new App\Modules\Alumni\Controllers\KampusModuleController();
+            $controller->apiImportKampusProdi();
+            break;
+
+
+        case '/api/v1/pdss/target-kampus/seed':
+            $controller = new App\Modules\Pdss\Controllers\PdssDetailModuleController();
+            $controller->apiSeedTargetKampus();
+            break;
+
+        case '/api/v1/bk/pdss':
+            // API: Daftar siswa eligible SNBP / PDSS (Tab 4) - Deprecated / Scoped to PDSS Module
+            $controller = new App\Modules\Pdss\Controllers\PdssDetailModuleController();
+            $controller->apiGetKesiapan();
+            break;
+
+        case '/api/v1/bk/penjurusan':
+            // API: GET list pilihan penjurusan (Tab 2)
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiListPenjurusan();
+            break;
+
+        case '/api/v1/bk/penjurusan/verifikasi':
+            // API: POST verifikasi atau tolak pilihan penjurusan (Tab 2)
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiVerifikasiPenjurusan();
+            break;
+
+        case '/api/v1/bk/penjurusan/override':
+            // API: POST override jurusan siswa dengan ACID transaction (Tab 2)
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiOverridePenjurusan();
+            break;
+
+        case '/api/v1/bk/penjurusan/kunci':
+            // API: POST toggle kunci pilihan penjurusan (Tab 2)
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiToggleKunci();
+            break;
+
+        case '/api/v1/bk/siswa':
+            // API: GET search siswa dengan kelas, NIS, NISN (untuk Rekam Kasus Tab 5)
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiSiswaSearch();
+            break;
+
+        case '/api/v1/bk/beasiswa/list':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiBeasiswaList();
+            break;
+
+        case '/api/v1/bk/beasiswa/export':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiExportBeasiswa();
+            break;
+
         case '/api/v1/bk/kelas':
             // API: GET daftar kelas aktif untuk filter Rekam Kasus (Tab 5)
             $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
@@ -1389,17 +1579,116 @@ case '/api/v1/keuangan/dashboard-metrics':
             break;
 
         case '/konfigurasi/akses':
-            $controller = new App\Modules\Core\Controllers\UnderConstructionController();
-            $controller->index();
-            break;
-        case '/konfigurasi/akses_old':
-            // Panggil AksesController - Tampilkan Matriks Akses
             $controller = new App\Modules\Sistem\Controllers\AksesModuleController();
             $controller->index();
             break;
 
         case '/konfigurasi/akses/simpan':
-            // Panggil AksesController - Proses Simpan Matriks Akses
+            $controller = new App\Modules\Sistem\Controllers\AksesModuleController();
+            $controller->saveAccessMatrix();
+            break;
+
+        case '/api/v1/akses/fetch':
+            $controller = new App\Modules\Sistem\Controllers\AksesModuleController();
+            $controller->fetchAccessMap();
+            break;
+
+        case '/api/v1/akses/user-override':
+            $controller = new App\Modules\Sistem\Controllers\AksesModuleController();
+            $controller->fetchUserAccessOverrides();
+            break;
+
+        case '/api/v1/akses/user-override/simpan':
+            $controller = new App\Modules\Sistem\Controllers\AksesModuleController();
+            $controller->saveUserAccessOverrides();
+            break;
+
+        case '/utilitas/log-aktivitas':
+            $controller = new App\Modules\Sistem\Controllers\ActivityLogModuleController();
+            $controller->index();
+            break;
+
+        case '/api/v1/activity-logs/filters':
+            $controller = new App\Modules\Sistem\Controllers\ActivityLogModuleController();
+            $controller->fetchFiltersApi();
+            break;
+
+        case '/api/v1/activity-logs':
+            $controller = new App\Modules\Sistem\Controllers\ActivityLogModuleController();
+            $controller->fetchApi();
+            break;
+
+        case '/api/v1/activity-logs/delete':
+            $controller = new App\Modules\Sistem\Controllers\ActivityLogModuleController();
+            $controller->deleteLogsApi();
+            break;
+
+        case '/utilitas/sesi-aktif':
+            $controller = new App\Modules\Sistem\Controllers\ActiveSessionModuleController();
+            $controller->index();
+            break;
+
+        case '/api/v1/sessions/data':
+            $controller = new App\Modules\Sistem\Controllers\ActiveSessionModuleController();
+            $controller->fetchDataApi();
+            break;
+
+        case '/api/v1/sessions/audit':
+            $controller = new App\Modules\Sistem\Controllers\ActiveSessionModuleController();
+            $controller->fetchAuditApi();
+            break;
+
+        case '/api/v1/sessions/audit/retention':
+            $controller = new App\Modules\Sistem\Controllers\ActiveSessionModuleController();
+            $controller->deleteAuditRetentionApi();
+            break;
+
+        case '/api/v1/sessions/retention':
+            $controller = new App\Modules\Sistem\Controllers\ActiveSessionModuleController();
+            $controller->deleteRetentionApi();
+            break;
+
+        case '/master-data':
+            $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
+            $controller->index();
+            break;
+
+        case '/api/v1/kelembagaan':
+            // API: Ambil data terpaginasi
+            $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
+            $controller->fetchApi();
+            break;
+
+        case '/api/v1/kelembagaan/options':
+            // API: Ambil data opsi relasi
+            $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
+            $controller->getOptionsApi();
+            break;
+
+        case '/api/v1/kelembagaan/tenants':
+            // API: Ambil daftar tenant/sekolah untuk Super Admin
+            $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
+            $controller->getTenantsApi();
+            break;
+
+        case '/api/v1/kelembagaan/simpan':
+            // API: Simpan/Update data
+            $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
+            $controller->storeApi();
+            break;
+
+        case '/api/v1/kelembagaan/hapus':
+            // API: Soft Delete
+            $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
+            $controller->deleteApi();
+            break;
+
+        case '/api/v1/kelembagaan/restore':
+            // API: Restore
+            $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
+            $controller->restoreApi();
+            break;
+
             $controller = new App\Modules\Sistem\Controllers\AksesModuleController();
             $controller->store();
             break;
@@ -1511,14 +1800,9 @@ case '/api/v1/keuangan/dashboard-metrics':
             $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
             $controller->toggleStatusApi();
             break;
-
         case '/sekolah/identitas':
-            $controller = new App\Modules\Core\Controllers\UnderConstructionController();
-            $controller->index();
-            break;
-        case '/sekolah/identitas_old':
             $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
-            $controller->showProfile();
+            $controller->identitasView();
             break;
 
         case '/api/v1/sekolah/update':
@@ -1529,6 +1813,33 @@ case '/api/v1/keuangan/dashboard-metrics':
         case '/utilitas/antrean':
             $controller = new App\Modules\Sistem\Controllers\QueueModuleController();
             $controller->index();
+            break;
+
+        case '/utilitas/log-aktivitas':
+            $controller = new App\Modules\Sistem\Controllers\ActivityLogModuleController();
+            $controller->index();
+            break;
+
+        case '/utility/document-scanner':
+        case '/utilitas/document-scanner':
+        case '/utilitas/pemindai-dokumen':
+            $controller = new App\Modules\Sistem\Controllers\DocumentScannerModuleController();
+            $controller->index();
+            break;
+
+        case '/api/v1/activity-logs':
+            $controller = new App\Modules\Sistem\Controllers\ActivityLogModuleController();
+            $controller->fetchApi();
+            break;
+
+        case '/api/v1/activity-logs/filters':
+            $controller = new App\Modules\Sistem\Controllers\ActivityLogModuleController();
+            $controller->fetchFiltersApi();
+            break;
+
+        case '/api/v1/activity-logs/delete':
+            $controller = new App\Modules\Sistem\Controllers\ActivityLogModuleController();
+            $controller->deleteLogsApi();
             break;
 
         case '/api/v1/queue/data':
@@ -1581,21 +1892,12 @@ case '/api/v1/keuangan/dashboard-metrics':
             break;
 
         case '/super-admin/tenant-menus':
-            $controller = new App\Modules\Core\Controllers\UnderConstructionController();
-            $controller->index();
-            break;
-        case '/super-admin/tenant-menus_old':
             // Halaman: Kelola Akses Menu Per Sekolah (Tenant)
             $controller = new App\Modules\Sistem\Controllers\SuperAdminModuleController();
             $controller->index();
             break;
 
         case '/super-admin/tenants':
-            $controller = new App\Modules\Core\Controllers\UnderConstructionController();
-            $controller->index();
-            break;
-        case '/super-admin/tenants_old':
-            // Halaman: Kelola Sekolah (SaaS Tenant Management)
             $controller = new App\Modules\Core\Controllers\TenantManagementModuleController();
             $controller->index();
             break;
@@ -1959,6 +2261,140 @@ case '/api/v1/keuangan/dashboard-metrics':
                 case '/akademik/rapor':
             $controller = new App\Modules\Core\Controllers\UnderConstructionController();
             $controller->index();
+            break;
+
+        // MODUL MASTER DATA & KELEMBAGAAN
+        case '/master-data':
+            $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
+            $controller->index();
+            break;
+
+        case '/sekolah/identitas':
+            $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
+            $controller->identitasView();
+            break;
+
+        case '/api/v1/kelembagaan':
+            $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
+            $controller->fetchApi();
+            break;
+
+        case '/api/v1/kelembagaan/options':
+            $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
+            $controller->getOptionsApi();
+            break;
+
+        case '/api/v1/kelembagaan/simpan':
+            $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
+            $controller->storeApi();
+            break;
+
+        case '/api/v1/kelembagaan/hapus':
+            $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
+            $controller->deleteApi();
+            break;
+
+        case '/api/v1/kelembagaan/restore':
+            $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
+            $controller->restoreApi();
+            break;
+
+        case '/api/v1/kelembagaan/toggle-status':
+            $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
+            $controller->toggleStatusApi();
+            break;
+
+        case '/api/v1/kelembagaan/tenants':
+            $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
+            $controller->getTenantsApi();
+            break;
+
+        case '/api/v1/riwayat-kepsek':
+            $controller = new App\Modules\Sistem\Controllers\KelembagaanModuleController();
+            $controller->getRiwayatKepsekApi();
+            break;
+
+        // MODUL KURIKULUM
+        case '/api/v1/kurikulum':
+            $controller = new App\Modules\Akademik\Controllers\KurikulumModuleController();
+            $controller->index();
+            break;
+
+        // MODUL SUPER ADMIN
+        case '/super-admin/tenant-menus':
+            $controller = new App\Modules\Sistem\Controllers\SuperAdminModuleController();
+            $controller->tenantMenusView();
+            break;
+
+        case '/api/v1/super-admin/tenant-menus/fetch':
+            $controller = new App\Modules\Sistem\Controllers\SuperAdminModuleController();
+            $controller->fetchTenantMenus();
+            break;
+
+        case '/api/v1/super-admin/tenant-menus/save':
+            $controller = new App\Modules\Sistem\Controllers\SuperAdminModuleController();
+            $controller->saveTenantMenuAccess();
+            break;
+
+        case '/super-admin/server-monitor':
+            $controller = new App\Modules\Sistem\Controllers\SuperAdminModuleController();
+            $controller->serverMonitorView();
+            break;
+
+        case '/api/v1/super-admin/server-monitor/fetch':
+            $controller = new App\Modules\Sistem\Controllers\SuperAdminModuleController();
+            $controller->fetchServerMonitorApi();
+            break;
+
+        case '/api/v1/super-admin/server-monitor/save-network':
+            $controller = new App\Modules\Sistem\Controllers\SuperAdminModuleController();
+            $controller->saveNetworkConfigApi();
+            break;
+
+        case '/api/v1/super-admin/server-monitor/update-server':
+            $controller = new App\Modules\Sistem\Controllers\SuperAdminModuleController();
+            $controller->updateServerApi();
+            break;
+
+        // MODUL PENGGUNA
+        case '/pengguna':
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
+            $controller->index();
+            break;
+
+        case '/api/v1/pengguna':
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
+            $controller->fetchApi();
+            break;
+
+        case '/api/v1/pengguna/export-excel':
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
+            $controller->exportExcelApi();
+            break;
+
+        case '/api/v1/pengguna/tenants':
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
+            $controller->getTenantsApi();
+            break;
+
+        case '/api/v1/pengguna/kelas':
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
+            $controller->getKelasApi();
+            break;
+
+        case '/api/v1/pengguna/simpan':
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
+            $controller->storeApi();
+            break;
+
+        case '/api/v1/pengguna/quick-add-siswa':
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
+            $controller->quickStoreSiswaApi();
+            break;
+
+        case '/api/v1/pengguna/hapus':
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
+            $controller->deleteApi();
             break;
 
         default:
