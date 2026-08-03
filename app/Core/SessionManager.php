@@ -9,8 +9,8 @@ class SessionManager {
      */
     public static function start(): void {
         if (session_status() === PHP_SESSION_NONE) {
-            // Force PHP garbage collection to 30 minutes (1800 seconds) to match our application logic
-            ini_set('session.gc_maxlifetime', '1800');
+            // Force PHP garbage collection to 1 hour (3600 seconds)
+            ini_set('session.gc_maxlifetime', '3600');
             
             // Secure by Design cookie configuration
             $cookieParams = [
@@ -115,9 +115,9 @@ class SessionManager {
     public static function isLoggedIn(): bool {
         self::start();
         
-        // Cek juga session timeout (misal: 30 menit tidak aktif)
+        // Cek juga session timeout (1 Jam / 3600 detik tidak aktif)
         if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
-            $timeout = 1800; // 30 Menit
+            $timeout = 3600; // 1 Jam (3600 Detik)
             if (time() - ($_SESSION['last_activity'] ?? 0) > $timeout) {
                 self::logout();
                 return false;
@@ -187,7 +187,7 @@ class SessionManager {
     public static function cleanupStaleSessions(): void {
         try {
             $db = \App\Config\Database::getConnection();
-            $timeoutSeconds = 1800; // 30 Menit
+            $timeoutSeconds = 3600; // 1 Jam (3600 Detik)
 
             // Ambil semua sesi yang sudah kedaluwarsa (berbasis timezone Database)
             $stmt = $db->prepare("SELECT id, user_id, tenant_id FROM active_sessions WHERE last_activity < DATE_SUB(NOW(), INTERVAL ? SECOND)");

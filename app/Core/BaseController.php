@@ -46,6 +46,19 @@ class BaseController {
     protected function render(string $view, array $data = []): void {
         extract($data);
         $contentView = __DIR__ . '/../../views/' . $view . '.php';
+
+        // Smart Fallback View Resolver: jika view tidak ditemukan di root views/, cari di subfolder modul
+        if (!file_exists($contentView)) {
+            $possibleFolders = ['sistem', 'core', 'siswa', 'rapor', 'kesiswaan', 'bk', 'alumni', 'pdss', 'perpustakaan', 'keuangan', 'utility'];
+            foreach ($possibleFolders as $folder) {
+                $fallbackPath = __DIR__ . '/../../views/' . $folder . '/' . $view . '.php';
+                if (file_exists($fallbackPath)) {
+                    $contentView = $fallbackPath;
+                    break;
+                }
+            }
+        }
+
         if (!file_exists($contentView)) {
             error_log("View not found: " . $contentView);
         }

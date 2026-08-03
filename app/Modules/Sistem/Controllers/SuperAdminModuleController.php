@@ -39,7 +39,7 @@ class SuperAdminModuleController extends BaseController {
             'userRole' => $_SESSION['role_name'] ?? '',
             'baseUrl'  => $this->getBaseUrl()
         ];
-        $this->render('tenant_menus', $data);
+        $this->render('sistem/tenant_menus', $data);
     }
 
     /**
@@ -142,7 +142,7 @@ class SuperAdminModuleController extends BaseController {
             'userRole' => $_SESSION['role_name'] ?? '',
             'baseUrl'  => $this->getBaseUrl()
         ];
-        $this->render('server_monitor', $data);
+        $this->render('sistem/server_monitor', $data);
     }
 
     /**

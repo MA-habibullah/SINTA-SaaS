@@ -38,7 +38,7 @@ class ActivityLogModuleController extends BaseController {
             'user_role' => $_SESSION['role_name'] ?? '',
         ];
         
-        $this->render('activity_logs', $data);
+        $this->render('sistem/activity_logs', $data);
     }
 
     /**
@@ -97,14 +97,16 @@ class ActivityLogModuleController extends BaseController {
             if ($role === 'super_admin') {
                 if ($tenantFilter === 'system') {
                     $whereClauses[] = "l.tenant_id IS NULL";
-                } elseif (!empty($tenantFilter)) {
+                } elseif (!empty($tenantFilter) && $tenantFilter !== 'all') {
                     $whereClauses[] = "l.tenant_id = :tenant_filter";
                     $params['tenant_filter'] = $tenantFilter;
                 }
             } else {
-                $whereClauses[] = "l.tenant_id = :tenant_id";
+                if (!empty($tenantId)) {
+                    $whereClauses[] = "(l.tenant_id = :tenant_id OR l.tenant_id IS NULL)";
+                    $params['tenant_id'] = $tenantId;
+                }
                 $whereClauses[] = "l.user_role != 'super_admin'";
-                $params['tenant_id'] = $tenantId;
             }
 
             if (!empty($roleFilter)) {

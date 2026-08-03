@@ -50,7 +50,7 @@ class QueueModuleController extends BaseController {
             'tenantsList' => $tenantsList
         ];
 
-        $this->render('queue_monitoring', $data);
+        $this->render('sistem/queue_monitoring', $data);
     }
 
     /**

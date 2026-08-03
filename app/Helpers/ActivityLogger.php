@@ -46,10 +46,22 @@ class ActivityLogger {
         try {
             $db = Database::getConnection();
 
+            if ($effectiveTenantId) {
+                if ($effectiveTenantId === '00000000-0000-0000-0000-000000000000') {
+                    $effectiveTenantId = null;
+                } else {
+                    $checkTenantStmt = $db->prepare("SELECT COUNT(*) FROM core.tenants WHERE id::text = ?");
+                    $checkTenantStmt->execute([$effectiveTenantId]);
+                    if ((int)$checkTenantStmt->fetchColumn() === 0) {
+                        $effectiveTenantId = null;
+                    }
+                }
+            }
+
             if ($effectiveUserId) {
-                $checkStmt = $db->prepare("SELECT COUNT(*) FROM core.users WHERE id::text = ?");
-                $checkStmt->execute([$effectiveUserId]);
-                if ((int)$checkStmt->fetchColumn() === 0) {
+                $checkUserStmt = $db->prepare("SELECT COUNT(*) FROM core.users WHERE id::text = ?");
+                $checkUserStmt->execute([$effectiveUserId]);
+                if ((int)$checkUserStmt->fetchColumn() === 0) {
                     $effectiveUserId = null;
                 }
             }

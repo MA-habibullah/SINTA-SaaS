@@ -37,7 +37,7 @@ class ActiveSessionModuleController extends BaseController {
             'user_role' => $_SESSION['role_name'] ?? '',
         ];
         
-        $this->render('active_sessions', $data);
+        $this->render('sistem/active_sessions', $data);
     }
 
     /**

@@ -58,7 +58,7 @@ class PenggunaModuleController extends BaseController {
             'user_nama_sekolah' => $namaSekolah
         ];
         
-        $this->render('pengguna_index', $data);
+        $this->render('sistem/pengguna_index', $data);
     }
 
     /**

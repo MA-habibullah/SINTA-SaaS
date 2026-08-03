@@ -28,7 +28,7 @@ class ServerMonitorModuleController extends BaseController
     /** GET /super-admin/server-monitor */
     public function index(): void
     {
-        $this->render('server_monitor', [
+        $this->render('sistem/server_monitor', [
             'title'     => 'Server & Resource Monitor',
             'user_role' => $_SESSION['role_name'] ?? '',
         ]);

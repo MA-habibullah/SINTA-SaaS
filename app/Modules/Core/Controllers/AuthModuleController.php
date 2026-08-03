@@ -32,7 +32,7 @@ class AuthModuleController extends BaseController {
             $tenants = [];
         }
 
-        require_once __DIR__ . '/../../../../views/login_view.php';
+        require_once __DIR__ . '/../../../../views/core/login_view.php';
     }
 
     /**

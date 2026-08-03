@@ -39,7 +39,7 @@ class KelembagaanModuleController extends BaseController {
             'tenant_list' => $tenantList,
             'baseUrl'     => $this->getBaseUrl()
         ];
-        $this->render('master_kelembagaan', $data);
+        $this->render('sistem/master_kelembagaan', $data);
     }
 
     /**
@@ -66,6 +66,12 @@ class KelembagaanModuleController extends BaseController {
                 $stmt = $db->prepare("SELECT * FROM core.tenants WHERE id = :id LIMIT 1");
                 $stmt->execute(['id' => $selectedTenantId]);
                 $tenantData = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+                if (!empty($tenantData)) {
+                    $tenantData['kurikulum'] = $tenantData['kurikulum_terapan'] ?? ($tenantData['kurikulum'] ?? '');
+                    $tenantData['alamat_sekolah'] = $tenantData['alamat'] ?? '';
+                    $tenantData['no_telp'] = $tenantData['telepon'] ?? '';
+                    $tenantData['email_sekolah'] = $tenantData['email'] ?? '';
+                }
                 $this->jsonResponse(true, $tenantData);
             } catch (\Throwable $e) {
                 $this->jsonResponse(false, null, $e->getMessage(), 500);
@@ -81,7 +87,7 @@ class KelembagaanModuleController extends BaseController {
             'tenantsList' => $tenantsList,
             'baseUrl'     => $this->getBaseUrl()
         ];
-        $this->render('sekolah_profil', $data);
+        $this->render('sistem/sekolah_profil', $data);
     }
 
     /**
@@ -104,17 +110,22 @@ class KelembagaanModuleController extends BaseController {
         try {
             $db = Database::getConnection();
 
-            // Prepare update fields
+            // Fetch old state for audit log
+            $oldStmt = $db->prepare("SELECT * FROM core.tenants WHERE id = :id LIMIT 1");
+            $oldStmt->execute(['id' => $targetTenantId]);
+            $oldTenantData = $oldStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+            // Prepare update fields (support both column name variants)
             $fields = [
-                'alamat'            => $_POST['alamat'] ?? '',
+                'alamat'            => $_POST['alamat'] ?? ($_POST['alamat_sekolah'] ?? ''),
                 'rt_rw'             => $_POST['rt_rw'] ?? '',
                 'kode_pos'          => $_POST['kode_pos'] ?? '',
                 'kelurahan'         => $_POST['kelurahan'] ?? '',
                 'kecamatan'         => $_POST['kecamatan'] ?? '',
                 'kabupaten_kota'    => $_POST['kabupaten_kota'] ?? '',
                 'provinsi'          => $_POST['provinsi'] ?? '',
-                'telepon'           => $_POST['telepon'] ?? '',
-                'email'             => $_POST['email'] ?? '',
+                'telepon'           => $_POST['telepon'] ?? ($_POST['no_telp'] ?? ''),
+                'email'             => $_POST['email'] ?? ($_POST['email_sekolah'] ?? ''),
                 'website'           => $_POST['website'] ?? '',
                 'nama_kepsek'       => $_POST['nama_kepsek'] ?? '',
                 'pangkat_kepsek'    => $_POST['pangkat_kepsek'] ?? '',
@@ -124,6 +135,29 @@ class KelembagaanModuleController extends BaseController {
                 'akreditasi'        => $_POST['akreditasi'] ?? 'A (Unggul)',
                 'updated_at'        => date('Y-m-d H:i:s')
             ];
+
+            // Kurikulum can be edited by both Super Admin and Admin Sekolah
+            if (isset($_POST['kurikulum'])) {
+                $fields['kurikulum_terapan'] = $_POST['kurikulum'];
+            } elseif (isset($_POST['kurikulum_terapan'])) {
+                $fields['kurikulum_terapan'] = $_POST['kurikulum_terapan'];
+            }
+
+            // Data Identitas Pokok can ONLY be edited by Super Admin
+            if ($userRole === 'super_admin') {
+                if (isset($_POST['nama_sekolah']) && trim($_POST['nama_sekolah']) !== '') {
+                    $fields['nama_sekolah'] = trim($_POST['nama_sekolah']);
+                }
+                if (isset($_POST['npsn']) && trim($_POST['npsn']) !== '') {
+                    $fields['npsn'] = trim($_POST['npsn']);
+                }
+                if (isset($_POST['bentuk_pendidikan']) && trim($_POST['bentuk_pendidikan']) !== '') {
+                    $fields['bentuk_pendidikan'] = trim($_POST['bentuk_pendidikan']);
+                }
+                if (isset($_POST['status_sekolah']) && trim($_POST['status_sekolah']) !== '') {
+                    $fields['status_sekolah'] = trim($_POST['status_sekolah']);
+                }
+            }
 
             // File Upload: Logo
             if (!empty($_FILES['logo']['tmp_name']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
@@ -158,6 +192,9 @@ class KelembagaanModuleController extends BaseController {
 
             $stmt = $db->prepare("UPDATE core.tenants SET $setClause WHERE id = :id");
             $stmt->execute($fields);
+
+            // Audit Trail Activity Logger
+            \App\Helpers\ActivityLogger::log('UPDATE', 'core.tenants', $oldTenantData, $fields, $targetTenantId);
 
             $this->jsonResponse(true, null, 'Profil identitas sekolah berhasil disimpan.');
         } catch (\Throwable $e) {

@@ -234,14 +234,14 @@ class DashboardModuleController extends BaseController {
                 'user_role' => $_SESSION['role_name'],
                 'user_nama' => $_SESSION['nama_lengkap']
             ];
-            $this->render('dashboard_view', ['stats' => $data, 'data' => $data]);
+            $this->render('core/dashboard_view', ['stats' => $data, 'data' => $data]);
         } catch (\Throwable $e) {
             $data = [
                 'title' => 'Dashboard',
                 'user_role' => $_SESSION['role_name'],
                 'user_nama' => $_SESSION['nama_lengkap']
             ];
-            $this->render('dashboard_view', ['stats' => $data, 'data' => $data]);
+            $this->render('core/dashboard_view', ['stats' => $data, 'data' => $data]);
         }
     }
 
@@ -289,7 +289,7 @@ class DashboardModuleController extends BaseController {
             'tanggal' => $tanggal
         ];
         
-        $this->render('pengumuman_arsip_view', $data);
+        $this->render('core/pengumuman_arsip_view', $data);
     }
 }
 

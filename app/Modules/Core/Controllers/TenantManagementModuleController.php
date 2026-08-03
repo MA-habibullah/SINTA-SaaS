@@ -25,7 +25,7 @@ class TenantManagementModuleController extends BaseController {
             'userRole' => $_SESSION['role_name'] ?? '',
             'baseUrl' => $this->getBaseUrl()
         ];
-        $this->render('tenants_index', $data);
+        $this->render('core/tenants_index', $data);
     }
 
     /**

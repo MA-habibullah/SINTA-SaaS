@@ -36,9 +36,9 @@ class BantuanModuleController extends BaseController {
         ];
 
         if ($role === 'super_admin') {
-            $this->render('bantuan_admin', $data);
+            $this->render('core/bantuan_admin', $data);
         } else {
-            $this->render('bantuan_user', $data);
+            $this->render('core/bantuan_user', $data);
         }
     }
 

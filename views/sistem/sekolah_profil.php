@@ -9,7 +9,10 @@
 
 <!-- Custom Styles for Premium UI/UX -->
 <style>
-    /* Custom font style and transition smoothing */
+    /* Hide uncompiled Vue templates on page load/reload */
+    [v-cloak] {
+        display: none !important;
+    }
     .profile-card {
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
@@ -39,6 +42,52 @@
     .no-scrollbar {
         -ms-overflow-style: none;
         scrollbar-width: none;
+    }
+
+    /* Modal Certificate Preview Styles (Explicit CSS to override z-index & static tailwind constraints) */
+    .cert-modal-backdrop {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        z-index: 999999 !important;
+        background-color: rgba(15, 23, 42, 0.85) !important;
+        backdrop-filter: blur(8px) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 1rem !important;
+    }
+    .cert-modal-dialog {
+        background-color: #ffffff !important;
+        border-radius: 1.5rem !important;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35) !important;
+        width: 92vw !important;
+        max-width: 1100px !important;
+        max-height: 92vh !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        border: 1px solid #e2e8f0 !important;
+    }
+    .cert-modal-iframe {
+        width: 100% !important;
+        height: 72vh !important;
+        min-height: 500px !important;
+        border-radius: 1rem !important;
+        border: 1px solid #cbd5e1 !important;
+        background-color: #ffffff !important;
+    }
+    .cert-modal-img {
+        max-width: 100% !important;
+        max-height: 72vh !important;
+        object-fit: contain !important;
+        border-radius: 1rem !important;
+        margin: 0 auto !important;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2) !important;
     }
 </style>
 
@@ -173,16 +222,34 @@
 
                 <div class="flex flex-col gap-2">
                     <span class="text-xs font-semibold text-slate-500">Sertifikat Akreditasi:</span>
-                    <div v-if="tenant.sertifikat_akreditasi" class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200/60">
-                        <div class="flex items-center gap-2 truncate">
-                            <i class="bi" :class="isPdf(tenant.sertifikat_akreditasi) ? 'bi-file-pdf-fill text-red-500' : 'bi-file-image-fill text-blue-500'"></i>
-                            <span class="text-xs text-slate-600 truncate font-mono">{{ getFilename(tenant.sertifikat_akreditasi) }}</span>
+                    <div v-if="tenant.sertifikat_akreditasi" class="flex flex-col gap-2.5 p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 shadow-sm">
+                        <div class="flex items-center justify-between gap-2 truncate">
+                            <div class="flex items-center gap-2 truncate">
+                                <i class="bi" :class="isPdf(tenant.sertifikat_akreditasi) ? 'bi-file-pdf-fill text-red-500 text-xl' : 'bi-file-image-fill text-blue-500 text-xl'"></i>
+                                <span class="text-xs text-slate-700 truncate font-mono font-semibold">{{ getFilename(tenant.sertifikat_akreditasi) }}</span>
+                            </div>
+                            <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shadow-xs"
+                                  :class="isPdf(tenant.sertifikat_akreditasi) ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-blue-100 text-blue-700 border border-blue-200'">
+                                {{ isPdf(tenant.sertifikat_akreditasi) ? 'PDF' : 'Gambar' }}
+                            </span>
                         </div>
-                        <a :href="'<?= $this->getBaseUrl() ?>/storage/app/public/' + tenant.sertifikat_akreditasi" target="_blank" class="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1">
-                            Lihat <i class="bi bi-box-arrow-up-right"></i>
-                        </a>
+                        <div class="flex items-center gap-2 mt-2">
+                            <button type="button" @click="openCertModal('<?= $this->getBaseUrl() ?>/storage/app/public/' + tenant.sertifikat_akreditasi)" 
+                                    class="flex-1 py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm shadow-blue-500/20 transition flex items-center justify-center gap-1.5 cursor-pointer">
+                                <i class="bi bi-eye-fill text-sm"></i> Pratinjau Sertifikat
+                            </button>
+                            <a :href="'<?= $this->getBaseUrl() ?>/storage/app/public/' + tenant.sertifikat_akreditasi" target="_blank" 
+                               class="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 border border-slate-200" title="Buka di Tab Baru">
+                                <i class="bi bi-box-arrow-up-right text-sm"></i>
+                            </a>
+                            <a :href="'<?= $this->getBaseUrl() ?>/storage/app/public/' + tenant.sertifikat_akreditasi" download 
+                               class="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 border border-slate-200" title="Unduh Berkas">
+                                <i class="bi bi-download text-sm"></i>
+                            </a>
+                        </div>
                     </div>
-                    <div v-else class="text-xs text-slate-500 bg-slate-50 p-3 rounded-xl border border-dashed border-slate-200 text-center">
+                    <div v-else class="text-xs text-slate-500 bg-slate-50 p-4 rounded-2xl border border-dashed border-slate-300 text-center">
+                        <i class="bi bi-file-earmark-arrow-up text-slate-400 text-2xl mb-1 block"></i>
                         Berkas sertifikat belum diunggah
                     </div>
                 </div>
@@ -193,37 +260,67 @@
         <div class="lg:col-span-2">
             <form @submit.prevent="submitProfile" class="flex flex-col gap-6">
                 
-                <!-- GRUP 1: DATA IDENTITAS POKOK (READ-ONLY) -->
+                <!-- GRUP 1: DATA IDENTITAS POKOK -->
                 <div class="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200/80">
-                    <div class="flex items-center gap-3 mb-6">
-                        <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm">1</div>
-                        <h4 class="text-base font-bold text-slate-800 mb-0">Data Identitas Pokok <span class="text-xs font-normal text-slate-500 font-mono ml-2">(Read-Only)</span></h4>
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm">1</div>
+                            <h4 class="text-base font-bold text-slate-800 mb-0">Data Identitas Pokok</h4>
+                        </div>
+                        <span v-if="isSuperAdmin" class="bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1 rounded-full border border-blue-200 flex items-center gap-1">
+                            <i class="bi bi-shield-check text-blue-600"></i> Mode Super Admin (Akses Penuh Edit)
+                        </span>
+                        <span v-else class="bg-slate-100 text-slate-600 text-xs font-semibold px-3 py-1 rounded-full border border-slate-200 flex items-center gap-1">
+                            <i class="bi bi-lock-fill text-slate-500"></i> Identitas Pokok Dikunci (Admin Sekolah)
+                        </span>
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div>
                             <label for="form_nama_sekolah" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Nama Instansi</label>
-                            <input id="form_nama_sekolah" name="nama_sekolah" type="text" class="w-full h-11 px-4 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-sm font-medium font-sans cursor-not-allowed focus:outline-none" :value="tenant.nama_sekolah" disabled>
+                            <input id="form_nama_sekolah" name="nama_sekolah" v-model="form.nama_sekolah" type="text" 
+                                class="w-full h-11 px-4 rounded-xl border border-slate-200 text-sm font-medium transition-colors"
+                                :class="isSuperAdmin ? 'bg-white text-slate-800 input-premium border-blue-200' : 'bg-slate-50 text-slate-500 cursor-not-allowed'" 
+                                :disabled="!isSuperAdmin">
                         </div>
                         
                         <div>
                             <label for="form_npsn" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">NPSN Resmi</label>
-                            <input id="form_npsn" name="npsn" type="text" class="w-full h-11 px-4 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-sm font-mono cursor-not-allowed focus:outline-none" :value="tenant.npsn" disabled>
+                            <input id="form_npsn" name="npsn" v-model="form.npsn" type="text" 
+                                class="w-full h-11 px-4 rounded-xl border border-slate-200 text-sm font-mono transition-colors"
+                                :class="isSuperAdmin ? 'bg-white text-slate-800 input-premium border-blue-200' : 'bg-slate-50 text-slate-500 cursor-not-allowed'" 
+                                :disabled="!isSuperAdmin">
                         </div>
 
                         <div>
                             <label for="form_bentuk_pendidikan" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Bentuk Pendidikan</label>
-                            <input id="form_bentuk_pendidikan" name="bentuk_pendidikan" type="text" class="w-full h-11 px-4 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-sm font-medium cursor-not-allowed focus:outline-none" :value="tenant.bentuk_pendidikan" disabled>
+                            <input id="form_bentuk_pendidikan" name="bentuk_pendidikan" v-model="form.bentuk_pendidikan" type="text" 
+                                class="w-full h-11 px-4 rounded-xl border border-slate-200 text-sm font-medium transition-colors"
+                                :class="isSuperAdmin ? 'bg-white text-slate-800 input-premium border-blue-200' : 'bg-slate-50 text-slate-500 cursor-not-allowed'" 
+                                :disabled="!isSuperAdmin">
                         </div>
 
                         <div>
                             <label for="form_status_sekolah" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Status Sekolah</label>
-                            <input id="form_status_sekolah" name="status_sekolah" type="text" class="w-full h-11 px-4 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-sm font-medium cursor-not-allowed focus:outline-none" :value="tenant.status_sekolah" disabled>
+                            <select id="form_status_sekolah" name="status_sekolah" v-model="form.status_sekolah" 
+                                class="w-full h-11 px-4 rounded-xl border border-slate-200 text-sm font-medium transition-colors"
+                                :class="isSuperAdmin ? 'bg-white text-slate-800 input-premium border-blue-200' : 'bg-slate-50 text-slate-500 cursor-not-allowed'" 
+                                :disabled="!isSuperAdmin">
+                                <option value="Negeri">Negeri</option>
+                                <option value="Swasta">Swasta</option>
+                            </select>
                         </div>
 
                         <div>
-                            <label for="form_kurikulum" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Kurikulum Terapan</label>
-                            <input id="form_kurikulum" name="kurikulum" type="text" class="w-full h-11 px-4 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-sm font-medium cursor-not-allowed focus:outline-none" :value="tenant.kurikulum" disabled>
+                            <label for="form_kurikulum" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                                Kurikulum Terapan <span class="text-blue-600 font-semibold text-[11px] lowercase">(Dapat Diedit)</span>
+                            </label>
+                            <select id="form_kurikulum" name="kurikulum" v-model="form.kurikulum" 
+                                class="w-full h-11 px-4 rounded-xl border border-blue-300 bg-white text-slate-800 text-sm font-medium input-premium focus:ring-2 focus:ring-blue-500">
+                                <option value="Kurikulum Merdeka">Kurikulum Merdeka</option>
+                                <option value="Kurikulum 2013 (K13)">Kurikulum 2013 (K13)</option>
+                                <option value="KTSP 2006">KTSP 2006</option>
+                            </select>
                         </div>
 
                         <div>
@@ -469,6 +566,53 @@
             </form>
         </div>
     </div>
+
+    <!-- MODAL PRATINJAU SERTIFIKAT AKREDITASI -->
+    <teleport to="body">
+        <div v-if="showCertModal" class="cert-modal-backdrop animate-fade-in" @click.self="closeCertModal">
+            <div class="cert-modal-dialog">
+                <!-- Modal Header -->
+                <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="w-10 h-10 rounded-xl bg-blue-600/30 text-blue-400 flex items-center justify-center font-bold shrink-0">
+                            <i class="bi bi-award-fill text-xl"></i>
+                        </div>
+                        <div class="truncate">
+                            <h4 class="text-sm sm:text-base font-bold text-white mb-0 truncate">Pratinjau Sertifikat Akreditasi</h4>
+                            <p class="text-xs text-slate-400 mb-0 font-mono truncate">{{ getFilename(certModalUrl) }}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0 ms-3">
+                        <a :href="certModalUrl" target="_blank" class="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl transition flex items-center gap-1.5 text-xs font-semibold" title="Buka Tab Baru">
+                            <i class="bi bi-box-arrow-up-right text-base"></i> <span class="hidden sm:inline">Tab Baru</span>
+                        </a>
+                        <a :href="certModalUrl" target="_blank" download class="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl transition flex items-center gap-1.5 text-xs font-semibold" title="Unduh Berkas">
+                            <i class="bi bi-download text-base"></i> <span class="hidden sm:inline">Unduh</span>
+                        </a>
+                        <button type="button" @click="closeCertModal" class="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl transition cursor-pointer" title="Tutup (ESC)">
+                            <i class="bi bi-x-lg text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Modal Content Body -->
+                <div class="p-4 sm:p-6 overflow-y-auto flex-1 flex items-center justify-center bg-slate-950/5">
+                    <iframe v-if="isPdf(certModalUrl)" :src="certModalUrl" class="cert-modal-iframe"></iframe>
+                    <div v-else class="w-full h-full flex items-center justify-center overflow-auto p-2">
+                        <img :src="certModalUrl" alt="Pratinjau Sertifikat" class="cert-modal-img" />
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between flex-wrap gap-2 text-xs text-slate-500 shrink-0">
+                    <span class="flex items-center gap-1.5"><i class="bi bi-patch-check-fill text-blue-600 text-sm"></i> Dokumen legalitas resmi terverifikasi sistem SINTA-SaaS.</span>
+                    <button type="button" @click="closeCertModal" class="px-6 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition cursor-pointer shadow-sm">
+                        Tutup Pratinjau
+                    </button>
+                </div>
+            </div>
+        </div>
+    </teleport>
 </div>
 
 <!-- SweetAlert2 Library -->
@@ -484,8 +628,36 @@
             // Initial empty refs populated onMounted
             const tenant = ref({});
             const logoPreview = ref(null);
+            const isSuperAdmin = ref(<?= json_encode($user_role === 'super_admin') ?>);
+            
+            // Cert Modal State
+            const showCertModal = ref(false);
+            const certModalUrl = ref('');
+
+            const openCertModal = (url) => {
+                certModalUrl.value = url;
+                showCertModal.value = true;
+                window.addEventListener('keydown', handleCertKeydown);
+            };
+
+            const closeCertModal = () => {
+                showCertModal.value = false;
+                certModalUrl.value = '';
+                window.removeEventListener('keydown', handleCertKeydown);
+            };
+
+            const handleCertKeydown = (e) => {
+                if (e.key === 'Escape') {
+                    closeCertModal();
+                }
+            };
             
             const form = reactive({
+                nama_sekolah: '',
+                npsn: '',
+                bentuk_pendidikan: '',
+                status_sekolah: '',
+                kurikulum: 'Kurikulum Merdeka',
                 alamat_sekolah: '',
                 rt_rw: '',
                 kode_pos: '',
@@ -496,11 +668,11 @@
                 no_telp: '',
                 email_sekolah: '',
                 website: '',
-                nama_kepsek: 'Nana Petty Puspitasari',
+                nama_kepsek: '',
                 pangkat_kepsek: 'Pembina',
                 nip_kepsek: '',
-                nama_operator: 'Edi Sugiarto',
-                email_operator: 'aidasugiarto@gmail.com',
+                nama_operator: '',
+                email_operator: '',
                 akreditasi: 'A (Unggul)'
             });
 
@@ -518,6 +690,12 @@
                                 form[key] = tenant.value[key] !== null ? tenant.value[key] : '';
                             }
                         });
+
+                        // Fallback mapping for column alias compatibility
+                        form.alamat_sekolah = tenant.value.alamat || tenant.value.alamat_sekolah || form.alamat_sekolah || '';
+                        form.no_telp        = tenant.value.telepon || tenant.value.no_telp || form.no_telp || '';
+                        form.email_sekolah   = tenant.value.email || tenant.value.email_sekolah || form.email_sekolah || '';
+                        form.kurikulum       = tenant.value.kurikulum_terapan || tenant.value.kurikulum || form.kurikulum || 'Kurikulum Merdeka';
                     }
                 } catch (err) {
                     console.error("Gagal memuat profil sekolah:", err);
@@ -731,6 +909,11 @@
                 form,
                 errors,
                 saving,
+                isSuperAdmin,
+                showCertModal,
+                certModalUrl,
+                openCertModal,
+                closeCertModal,
                 dragStates,
                 logoFile,
                 sertifikatFile,

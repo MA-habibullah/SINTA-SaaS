@@ -92,7 +92,7 @@ class AksesModuleController extends BaseController {
             'access_map' => $accessMap,
             'baseUrl'    => $this->getBaseUrl()
         ];
-        $this->render('kelola_akses', $data);
+        $this->render('sistem/kelola_akses', $data);
     }
 
     /**

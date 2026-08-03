@@ -580,7 +580,7 @@ class KelembagaanModel extends Model {
     }
 
     public function getTenants(): array {
-        $stmt = $this->db->query("SELECT id, nama_sekolah FROM core.tenants WHERE status = 'active' AND id != '00000000-0000-0000-0000-000000000000' ORDER BY nama_sekolah ASC");
+        $stmt = $this->db->query("SELECT id, nama_sekolah, npsn FROM core.tenants WHERE status = 'active' AND id != '00000000-0000-0000-0000-000000000000' ORDER BY nama_sekolah ASC");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }

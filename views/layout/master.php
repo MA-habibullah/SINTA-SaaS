@@ -865,9 +865,60 @@
             checkViewportSuggestion();
             initViewportButton();
         }
-        document.addEventListener('turbo:load', function() {
-            initViewportButton();
-        });
+        // 1-Hour Session Idle Manager (55 min warning, 60 min auto-logout)
+        (function() {
+            const IDLE_TIMEOUT_MS = 60 * 60 * 1000; // 60 Menit (1 Jam)
+            const WARNING_TIMEOUT_MS = 55 * 60 * 1000; // 55 Menit
+            let warningTimer = null;
+            let logoutTimer = null;
+            let warningShown = false;
+
+            function resetIdleTimers() {
+                if (warningShown) return;
+                
+                clearTimeout(warningTimer);
+                clearTimeout(logoutTimer);
+
+                warningTimer = setTimeout(showIdleWarningModal, WARNING_TIMEOUT_MS);
+                logoutTimer = setTimeout(performAutoLogout, IDLE_TIMEOUT_MS);
+            }
+
+            function showIdleWarningModal() {
+                warningShown = true;
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Peringatan Sesi Berakhir',
+                        html: 'Sesi login Anda akan berakhir dalam <strong>5 menit</strong> karena tidak ada aktivitas.<br>Apakah Anda ingin melanjutkan sesi?',
+                        showCancelButton: true,
+                        confirmButtonText: 'Ya, Perpanjang Sesi',
+                        cancelButtonText: 'Keluar Sekarang',
+                        confirmButtonColor: '#2563eb',
+                        cancelButtonColor: '#dc3545',
+                        allowOutsideClick: false
+                    }).then((result) => {
+                        warningShown = false;
+                        if (result.isConfirmed) {
+                            fetch('<?= $this->getBaseUrl() ?>/sekolah/identitas?ajax=1&action=get_profile_detail').catch(() => {});
+                            resetIdleTimers();
+                        } else {
+                            performAutoLogout();
+                        }
+                    });
+                }
+            }
+
+            function performAutoLogout() {
+                window.location.href = '<?= $this->getBaseUrl() ?>/logout?reason=timeout';
+            }
+
+            const activityEvents = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+            activityEvents.forEach(evt => {
+                window.addEventListener(evt, resetIdleTimers, { passive: true });
+            });
+
+            resetIdleTimers();
+        })();
     </script>
 
 </body>
