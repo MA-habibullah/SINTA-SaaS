@@ -1572,6 +1572,119 @@ case '/api/v1/keuangan/dashboard-metrics':
             $controller->apiExportBeasiswa();
             break;
 
+        // ─── PDSS: KESIAPAN & ELIGIBILITAS ────────────────────
+        case '/api/v1/bk/kesiapan/list':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiKesiapanList();
+            break;
+
+        case '/api/v1/bk/kesiapan/toggle-eligible':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiToggleEligible();
+            break;
+
+        // ─── PDSS: SIMULASI PILIHAN KAMPUS ────────────────────
+        case '/api/v1/bk/simulasi/list':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiSimulasiList();
+            break;
+
+        case '/api/v1/bk/simulasi/setting':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiGetSimulasiSetting();
+            break;
+
+        case '/api/v1/bk/simulasi/toggle-setting':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiToggleSimulasiSetting();
+            break;
+
+        // ─── MASTER KAMPUS & PRODI ────────────────────────────
+        case '/api/v1/bk/kampus/list':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiKampusList();
+            break;
+
+        case '/api/v1/bk/kampus/create':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiKampusCreate();
+            break;
+
+        case '/api/v1/bk/kampus/update':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiKampusUpdate();
+            break;
+
+        case '/api/v1/bk/kampus/delete':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiKampusDelete();
+            break;
+
+        // ─── MASTER JALUR MASUK ───────────────────────────────
+        case '/api/v1/bk/jalur-masuk/list':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiJalurList();
+            break;
+
+        case '/api/v1/bk/jalur-masuk/create':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiJalurCreate();
+            break;
+
+        case '/api/v1/bk/jalur-masuk/update':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiJalurUpdate();
+            break;
+
+        case '/api/v1/bk/jalur-masuk/delete':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiJalurDelete();
+            break;
+
+        // ─── ALUMNI: TRACKING & TRACER STUDY ─────────────────
+        case '/api/v1/bk/alumni/tracking':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiAlumniTracking();
+            break;
+
+        case '/api/v1/bk/prestasi/delete':
+            // API: POST delete (soft-delete) prestasi
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiDeletePrestasi();
+            break;
+
+        case '/api/v1/bk/prestasi/export':
+            // API: GET export Excel prestasi siswa
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiExportPrestasi();
+            break;
+
+        case '/api/v1/bk/prestasi/export':
+            // API: GET export Excel prestasi siswa
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiExportPrestasi();
+            break;
+
+        case '/api/v1/bk/alumni/riwayat-kuliah':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiAlumniRiwayatKuliah();
+            break;
+
+        case '/api/v1/bk/alumni/riwayat-kuliah/delete':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiDeleteRiwayatKuliah();
+            break;
+
+        case '/api/v1/bk/alumni/riwayat-pekerjaan':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiAlumniRiwayatPekerjaan();
+            break;
+
+        case '/api/v1/bk/alumni/riwayat-pekerjaan/delete':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiDeleteRiwayatPekerjaan();
+            break;
+
         case '/api/v1/bk/kelas':
             // API: GET daftar kelas aktif untuk filter Rekam Kasus (Tab 5)
             $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();

@@ -1,14 +1,36 @@
 <?php
 /**
  * View: Bimbingan Konseling — Master BK
- * Module hub dengan 5 horizontal tab: Dashboard, Penjurusan, Tracer Study, PDSS, Jurnal BK
+ * Module hub dengan tab yang disesuaikan berdasarkan active_group:
+ *   layanan  → Dashboard, Jurnal, Prestasi, Kehadiran, Pelanggaran, Beasiswa
+ *   akademik → Penjurusan, Kesiapan (PDSS), Simulasi, Master Kampus, Master Jalur Masuk
+ *   alumni   → Tracking Alumni, Riwayat Kuliah, Riwayat Pekerjaan
  */
-$userRole   = $data['user_role']   ?? ($_SESSION['role_name']    ?? '');
-$userNama   = $data['user_nama']   ?? ($_SESSION['nama_lengkap'] ?? '');
-$tenantId   = $data['tenant_id']   ?? '';
-$tenantList = $data['tenant_list'] ?? [];
+$userRole        = $data['user_role']        ?? ($_SESSION['role_name']    ?? '');
+$userNama        = $data['user_nama']        ?? ($_SESSION['nama_lengkap'] ?? '');
+$tenantId        = $data['tenant_id']        ?? '';
+$tenantList      = $data['tenant_list']      ?? [];
 $tahunAjaranList = $data['tahun_ajaran_list'] ?? [];
-$baseUrl    = $data['baseUrl'] ?? (rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\'));
+$baseUrl         = $data['baseUrl'] ?? (rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\'));
+$activeGroup     = $data['active_group']     ?? 'layanan';
+
+// Mapping active_group → tab config
+if ($activeGroup === 'akademik') {
+    $pageTitle       = 'BK Akademik & Penjurusan';
+    $pageSubtitle    = 'Rekomendasi penjurusan, PDSS, dan simulasi pilihan kampus.';
+    $pageIcon        = 'bi-mortarboard-fill';
+    $allowed_bk_tabs = ['penjurusan', 'kesiapan', 'simulasi', 'master_kampus', 'master_jalur'];
+} elseif ($activeGroup === 'alumni') {
+    $pageTitle       = 'BK Alumni & Tracer Study';
+    $pageSubtitle    = 'Pelacakan alumni, penelusuran karir, dan studi lanjut PTN/PTS.';
+    $pageIcon        = 'bi-people-fill';
+    $allowed_bk_tabs = ['tracking', 'riwayat_kuliah', 'riwayat_pekerjaan'];
+} else { // default: layanan
+    $pageTitle       = 'Bimbingan Konseling';
+    $pageSubtitle    = 'Pusat monitoring, konseling, dan rekam kasus siswa.';
+    $pageIcon        = 'bi-heart-pulse-fill';
+    $allowed_bk_tabs = ['dashboard', 'jurnal', 'prestasi', 'kehadiran', 'pelanggaran', 'beasiswa'];
+}
 ?>
 
 <style>
@@ -327,11 +349,11 @@ $baseUrl    = $data['baseUrl'] ?? (rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\'
 <div class="d-flex justify-content-between flex-wrap align-items-center pt-2 pb-3 mb-4 border-bottom">
     <div>
         <h2 class="fw-bold text-dark mb-1">
-            <i class="bi bi-heart-pulse-fill me-2" style="color:var(--bk-primary);"></i>
-            Bimbingan Konseling
+            <i class="bi <?= htmlspecialchars($pageIcon) ?> me-2" style="color:var(--bk-primary);"></i>
+            <?= htmlspecialchars($pageTitle) ?>
         </h2>
         <p class="text-muted fs-7 mb-0">
-            Pusat monitoring, konseling, dan rekam kasus siswa.
+            <?= htmlspecialchars($pageSubtitle) ?>
             <span class="badge ms-1 rounded-pill" style="background:var(--bk-p-light);color:var(--bk-primary);">
                 <?= htmlspecialchars(strtoupper($userRole)) ?>
             </span>
@@ -348,20 +370,31 @@ $baseUrl    = $data['baseUrl'] ?? (rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\'
         <label for="sa-tenant-select" class="fw-semibold text-dark mb-0" style="white-space:nowrap;">
             Filter Sekolah (Super Admin):
         </label>
-        <select id="sa-tenant-select" name="sa-tenant-select" class="form-select form-select-sm rounded-3" style="max-width:320px;">
+        <select id="sa-tenant-select" name="sa-tenant-select" class="form-select form-select-sm rounded-3" style="max-width:320px;" onchange="applySuperAdminTenantFilter(this.value)">
             <option value="">— Semua Sekolah —</option>
             <?php foreach ($tenantList as $t): ?>
             <option value="<?= htmlspecialchars($t['id']) ?>"
                 <?= ($t['id'] === $tenantId ? 'selected' : '') ?>>
-                <?= htmlspecialchars($t['nama_sekolah']) ?>
+                <?= htmlspecialchars($t['nama_sekolah']) ?> (NPSN: <?= htmlspecialchars($t['npsn'] ?? '-') ?>)
             </option>
             <?php endforeach; ?>
         </select>
-        <button class="btn btn-sm btn-primary rounded-3" id="btn-apply-tenant">
+        <button class="btn btn-sm btn-primary rounded-3" id="btn-apply-tenant" onclick="applySuperAdminTenantFilter(document.getElementById('sa-tenant-select').value)">
             <i class="bi bi-funnel me-1"></i> Terapkan Filter
         </button>
     </div>
 </div>
+<script>
+function applySuperAdminTenantFilter(tenantId) {
+    const currentUrl = new URL(window.location.href);
+    if (tenantId) {
+        currentUrl.searchParams.set('tenant_id', tenantId);
+    } else {
+        currentUrl.searchParams.delete('tenant_id');
+    }
+    window.location.href = currentUrl.toString();
+}
+</script>
 <?php endif; ?>
 <?php endif; ?>
 
@@ -434,6 +467,64 @@ $baseUrl    = $data['baseUrl'] ?? (rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\'
                         <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'beasiswa'}"
                                 @click="switchTab('beasiswa')" id="tab-beasiswa">
                             <i class="bi bi-gift me-2 fs-6"></i> Beasiswa Siswa
+                        </button>
+                    </li>
+                    <?php endif; ?>
+                    <!-- ═══ AKADEMIK/PDSS TABS ═══ -->
+                    <?php if(!isset($allowed_bk_tabs) || in_array('kesiapan', $allowed_bk_tabs)): ?>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'kesiapan'}"
+                                @click="switchTab('kesiapan')" id="tab-kesiapan">
+                            <i class="bi bi-person-check me-2 fs-6"></i> Kesiapan & Eligibilitas
+                        </button>
+                    </li>
+                    <?php endif; ?>
+                    <?php if(!isset($allowed_bk_tabs) || in_array('simulasi', $allowed_bk_tabs)): ?>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'simulasi'}"
+                                @click="switchTab('simulasi')" id="tab-simulasi">
+                            <i class="bi bi-building-check me-2 fs-6"></i> Simulasi Pilihan Kampus
+                        </button>
+                    </li>
+                    <?php endif; ?>
+                    <?php if(!isset($allowed_bk_tabs) || in_array('master_kampus', $allowed_bk_tabs)): ?>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'master_kampus'}"
+                                @click="switchTab('master_kampus')" id="tab-master-kampus">
+                            <i class="bi bi-bank me-2 fs-6"></i> Master Kampus & Prodi
+                        </button>
+                    </li>
+                    <?php endif; ?>
+                    <?php if(!isset($allowed_bk_tabs) || in_array('master_jalur', $allowed_bk_tabs)): ?>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'master_jalur'}"
+                                @click="switchTab('master_jalur')" id="tab-master-jalur">
+                            <i class="bi bi-door-open me-2 fs-6"></i> Master Jalur Masuk
+                        </button>
+                    </li>
+                    <?php endif; ?>
+                    <!-- ═══ ALUMNI TABS ═══ -->
+                    <?php if(!isset($allowed_bk_tabs) || in_array('tracking', $allowed_bk_tabs)): ?>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'tracking'}"
+                                @click="switchTab('tracking')" id="tab-tracking">
+                            <i class="bi bi-people me-2 fs-6"></i> Tracking Data Alumni
+                        </button>
+                    </li>
+                    <?php endif; ?>
+                    <?php if(!isset($allowed_bk_tabs) || in_array('riwayat_kuliah', $allowed_bk_tabs)): ?>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'riwayat_kuliah'}"
+                                @click="switchTab('riwayat_kuliah')" id="tab-riwayat-kuliah">
+                            <i class="bi bi-book me-2 fs-6"></i> Riwayat Kuliah
+                        </button>
+                    </li>
+                    <?php endif; ?>
+                    <?php if(!isset($allowed_bk_tabs) || in_array('riwayat_pekerjaan', $allowed_bk_tabs)): ?>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'riwayat_pekerjaan'}"
+                                @click="switchTab('riwayat_pekerjaan')" id="tab-riwayat-pekerjaan">
+                            <i class="bi bi-briefcase me-2 fs-6"></i> Riwayat Pekerjaan
                         </button>
                     </li>
                     <?php endif; ?>
@@ -1420,7 +1511,7 @@ $baseUrl    = $data['baseUrl'] ?? (rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\'
                                 <input type="file" id="input-file-bukti" name="foto_bukti_prestasi" class="form-control form-control-sm prestasi-file-input" accept="image/*" @change="handleFileUpload($event, 'foto_bukti_prestasi')" />
                                 <div v-if="formPrestasi.existing_foto_bukti" class="fs-8 mt-1 text-success">
                                     <i class="bi bi-check-circle-fill"></i> Sudah ada file terunggah:
-                                    <a :href="baseUrl + '/storage/app/public/' + formPrestasi.existing_foto_bukti" target="_blank" class="fw-bold">Lihat Foto</a>
+                                    <a :href="getFileUrl(formPrestasi.existing_foto_bukti)" target="_blank" class="fw-bold">Lihat Foto</a>
                                 </div>
                             </div>
 
@@ -1429,7 +1520,7 @@ $baseUrl    = $data['baseUrl'] ?? (rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\'
                                 <input type="file" id="input-file-siswa" name="foto_siswa_prestasi" class="form-control form-control-sm prestasi-file-input" accept="image/*" @change="handleFileUpload($event, 'foto_siswa_prestasi')" />
                                 <div v-if="formPrestasi.existing_foto_siswa" class="fs-8 mt-1 text-success">
                                     <i class="bi bi-check-circle-fill"></i> Sudah ada file terunggah:
-                                    <a :href="baseUrl + '/storage/app/public/' + formPrestasi.existing_foto_siswa" target="_blank" class="fw-bold">Lihat Foto</a>
+                                    <a :href="getFileUrl(formPrestasi.existing_foto_siswa)" target="_blank" class="fw-bold">Lihat Foto</a>
                                 </div>
                             </div>
 
@@ -1438,7 +1529,7 @@ $baseUrl    = $data['baseUrl'] ?? (rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\'
                                 <input type="file" id="input-file-kegiatan" name="foto_kegiatan_lomba" class="form-control form-control-sm prestasi-file-input" accept="image/*" @change="handleFileUpload($event, 'foto_kegiatan_lomba')" />
                                 <div v-if="formPrestasi.existing_foto_kegiatan" class="fs-8 mt-1 text-success">
                                     <i class="bi bi-check-circle-fill"></i> Sudah ada file terunggah:
-                                    <a :href="baseUrl + '/storage/app/public/' + formPrestasi.existing_foto_kegiatan" target="_blank" class="fw-bold">Lihat Foto</a>
+                                    <a :href="getFileUrl(formPrestasi.existing_foto_kegiatan)" target="_blank" class="fw-bold">Lihat Foto</a>
                                 </div>
                             </div>
 
@@ -1447,7 +1538,7 @@ $baseUrl    = $data['baseUrl'] ?? (rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\'
                                 <input type="file" id="input-file-surat-tugas" name="surat_tugas_pdf" class="form-control form-control-sm prestasi-file-input" accept=".pdf,image/*" @change="handleFileUpload($event, 'surat_tugas_pdf')" />
                                 <div v-if="formPrestasi.existing_surat_tugas" class="fs-8 mt-1 text-success">
                                     <i class="bi bi-check-circle-fill"></i> Sudah ada file terunggah:
-                                    <a :href="baseUrl + '/storage/app/public/' + formPrestasi.existing_surat_tugas" target="_blank" class="fw-bold">Lihat Berkas</a>
+                                    <a :href="getFileUrl(formPrestasi.existing_surat_tugas)" target="_blank" class="fw-bold">Lihat Berkas</a>
                                 </div>
                             </div>
                         </div>
@@ -1484,7 +1575,7 @@ $baseUrl    = $data['baseUrl'] ?? (rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\'
                     </div>
 
                     <!-- Table List -->
-                    <div v-else-if="prestasiList.length > 0" class="table-responsive" style="max-height: 800px; overflow-y: auto;">
+                    <div v-else-if="filteredPrestasiList.length > 0" class="table-responsive" style="max-height: 800px; overflow-y: auto;">
                         <table class="table table-hover align-middle table-sm border-top" style="font-size:0.8rem;">
                             <thead class="table-light">
                                 <tr>
@@ -1496,7 +1587,7 @@ $baseUrl    = $data['baseUrl'] ?? (rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\'
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="p in prestasiList" :key="p.id" class="align-middle">
+                                <tr v-for="p in filteredPrestasiList" :key="p.id" class="align-middle">
                                     <td class="ps-3 py-3">
                                         <!-- Siswa Names -->
                                         <div class="mb-1">
@@ -1531,28 +1622,28 @@ $baseUrl    = $data['baseUrl'] ?? (rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\'
                                     <td class="text-center py-3">
                                         <div class="d-flex flex-wrap gap-1 justify-content-center">
                                             <a v-if="p.foto_bukti_prestasi" 
-                                               :href="baseUrl + '/storage/app/public/' + p.foto_bukti_prestasi" 
+                                               :href="getFileUrl(p.foto_bukti_prestasi)" 
                                                target="_blank" 
                                                class="btn btn-xs btn-outline-info p-1 rounded-2" 
                                                title="Foto Bukti Sertifikat">
                                                 <i class="bi bi-file-earmark-image"></i>
                                             </a>
                                             <a v-if="p.foto_siswa_prestasi" 
-                                               :href="baseUrl + '/storage/app/public/' + p.foto_siswa_prestasi" 
+                                               :href="getFileUrl(p.foto_siswa_prestasi)" 
                                                target="_blank" 
                                                class="btn btn-xs btn-outline-info p-1 rounded-2" 
                                                title="Foto Siswa / Penyerahan Juara">
                                                 <i class="bi bi-person-badge"></i>
                                             </a>
                                             <a v-if="p.foto_kegiatan_lomba" 
-                                               :href="baseUrl + '/storage/app/public/' + p.foto_kegiatan_lomba" 
+                                               :href="getFileUrl(p.foto_kegiatan_lomba)" 
                                                target="_blank" 
                                                class="btn btn-xs btn-outline-info p-1 rounded-2" 
                                                title="Foto Kegiatan">
                                                 <i class="bi bi-camera"></i>
                                             </a>
                                             <a v-if="p.surat_tugas_pdf" 
-                                               :href="baseUrl + '/storage/app/public/' + p.surat_tugas_pdf" 
+                                               :href="getFileUrl(p.surat_tugas_pdf)" 
                                                target="_blank" 
                                                class="btn btn-xs btn-outline-info p-1 rounded-2" 
                                                title="Surat Tugas">
@@ -2693,6 +2784,586 @@ $baseUrl    = $data['baseUrl'] ?? (rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\'
         </div>
     </div>
 
+    <!-- ═══════════════════════════════════════════════════════════
+         TAB: KESIAPAN & ELIGIBILITAS SISWA (PDSS)
+    ════════════════════════════════════════════════════════════ -->
+    <div v-show="activeTab === 'kesiapan'">
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-header bg-white border-0 rounded-top-4 p-4 pb-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div>
+                        <h5 class="fw-bold mb-1"><i class="bi bi-person-check-fill me-2 text-primary"></i>Kesiapan & Eligibilitas Siswa PDSS</h5>
+                        <p class="text-muted fs-8 mb-0">Daftar siswa Kelas 12 yang eligible mengikuti SNBP berdasarkan kuota dan nilai rata-rata 5 semester.</p>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap align-items-center">
+                        <select class="form-select form-select-sm rounded-3" v-model="kesiapanFilter.tahun_ajaran_id" @change="loadKesiapan()" style="min-width:180px;">
+                            <option value="">— Tahun Ajaran —</option>
+                            <option v-for="ta in tahunAjaranList" :key="ta.id" :value="ta.id">{{ ta.tahun_ajaran }}</option>
+                        </select>
+                        <button class="btn btn-sm btn-outline-success rounded-3" @click="exportKesiapanExcel()" :disabled="kesiapanList.length === 0">
+                            <i class="bi bi-file-earmark-excel me-1"></i> Export Excel
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div v-if="loadingKesiapan" class="text-center py-5">
+                    <div class="spinner-border text-primary"></div>
+                    <p class="text-muted mt-2 fs-7">Memuat data kesiapan siswa...</p>
+                </div>
+                <div v-else>
+                    <!-- KPI Strip -->
+                    <div class="row g-0 border-bottom">
+                        <div class="col-4 text-center py-3 border-end">
+                            <div class="fs-4 fw-bold text-primary">{{ kesiapanSummary.total_siswa }}</div>
+                            <div class="fs-8 text-muted">Total Siswa Kelas 12</div>
+                        </div>
+                        <div class="col-4 text-center py-3 border-end">
+                            <div class="fs-4 fw-bold text-success">{{ kesiapanSummary.total_eligible }}</div>
+                            <div class="fs-8 text-muted">Siswa Eligible SNBP</div>
+                        </div>
+                        <div class="col-4 text-center py-3">
+                            <div class="fs-4 fw-bold text-warning">{{ kesiapanSummary.persentase_eligible }}%</div>
+                            <div class="fs-8 text-muted">Kuota Terpenuhi</div>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 fs-8">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="px-4">#</th>
+                                    <th>Nama Siswa</th>
+                                    <th>NISN</th>
+                                    <th>Kelas</th>
+                                    <th class="text-center">Rata-rata 5 Sem</th>
+                                    <th class="text-center">Ranking</th>
+                                    <th class="text-center">Status Eligible</th>
+                                    <th class="text-center" v-if="userRole !== 'siswa'">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(s, idx) in kesiapanList" :key="s.siswa_id"
+                                    :class="{'table-success': s.is_eligible, 'table-light': !s.is_eligible}">
+                                    <td class="px-4 text-muted">{{ idx + 1 }}</td>
+                                    <td class="fw-semibold">{{ s.nama_lengkap }}</td>
+                                    <td class="font-monospace">{{ s.nisn || '-' }}</td>
+                                    <td><span class="badge bg-secondary rounded-pill">{{ s.nama_kelas }}</span></td>
+                                    <td class="text-center">
+                                        <span class="badge rounded-pill" :class="s.nilai_rata_rata >= 80 ? 'bg-success' : s.nilai_rata_rata >= 70 ? 'bg-warning text-dark' : 'bg-danger'">
+                                            {{ s.nilai_rata_rata ? Number(s.nilai_rata_rata).toFixed(2) : '-' }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center fw-bold">#{{ s.ranking_sekolah || '-' }}</td>
+                                    <td class="text-center">
+                                        <span v-if="s.is_eligible" class="badge bg-success rounded-pill px-3">
+                                            <i class="bi bi-check-circle me-1"></i> Eligible
+                                        </span>
+                                        <span v-else class="badge bg-secondary rounded-pill px-3">
+                                            Tidak Eligible
+                                        </span>
+                                    </td>
+                                    <td class="text-center" v-if="userRole !== 'siswa'">
+                                        <button class="btn btn-xs rounded-2 px-2 py-1"
+                                                :class="s.is_eligible ? 'btn-outline-danger' : 'btn-outline-success'"
+                                                @click="toggleEligible(s.siswa_id, s.is_eligible)"
+                                                title="Toggle Status Eligible">
+                                            <i :class="s.is_eligible ? 'bi bi-x-circle' : 'bi bi-check-circle'"></i>
+                                            {{ s.is_eligible ? 'Batalkan' : 'Set Eligible' }}
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr v-if="kesiapanList.length === 0">
+                                    <td colspan="8" class="text-center py-5 text-muted">
+                                        <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
+                                        Pilih Tahun Ajaran untuk melihat data kesiapan siswa.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         TAB: SIMULASI PILIHAN KAMPUS (PDSS)
+    ════════════════════════════════════════════════════════════ -->
+    <div v-show="activeTab === 'simulasi'">
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-header bg-white border-0 rounded-top-4 p-4 pb-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div>
+                        <h5 class="fw-bold mb-1"><i class="bi bi-building-check me-2 text-primary"></i>Simulasi Pilihan Kampus</h5>
+                        <p class="text-muted fs-8 mb-0">Kelola pilihan kampus & prodi siswa eligible per periode simulasi SNBP.</p>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <select class="form-select form-select-sm rounded-3" v-model="simulasiFilter.tahun_ajaran_id" @change="loadSimulasi()" style="min-width:180px;">
+                            <option value="">— Tahun Ajaran —</option>
+                            <option v-for="ta in tahunAjaranList" :key="ta.id" :value="ta.id">{{ ta.tahun_ajaran }}</option>
+                        </select>
+                        <button class="btn btn-sm btn-success rounded-3" @click="exportSimulasiXlsx()" :disabled="simulasiList.length === 0">
+                            <i class="bi bi-file-earmark-excel me-1"></i> Export XLSX SNBP
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Simulasi Setting Locks -->
+                <div class="row g-3 mb-4" v-if="userRole !== 'siswa'">
+                    <div class="col-12">
+                        <div class="p-3 rounded-3 border" style="background:#f8fafc;">
+                            <h6 class="fw-bold mb-3"><i class="bi bi-lock me-2 text-warning"></i>Pengaturan Periode Simulasi</h6>
+                            <div class="d-flex flex-wrap gap-3">
+                                <div v-for="n in [1,2]" :key="n" class="d-flex align-items-center gap-2 p-2 rounded-3 border bg-white">
+                                    <span class="badge rounded-pill px-3 py-2" :class="simulasiSettings[n] && simulasiSettings[n].is_open ? 'bg-success' : 'bg-secondary'">
+                                        Simulasi {{ n }}
+                                    </span>
+                                    <span class="fs-8 text-muted">{{ simulasiSettings[n] && simulasiSettings[n].is_open ? 'Dibuka' : 'Ditutup' }}</span>
+                                    <button class="btn btn-xs rounded-2 px-2 py-1"
+                                            :class="simulasiSettings[n] && simulasiSettings[n].is_open ? 'btn-outline-danger' : 'btn-outline-success'"
+                                            @click="toggleSimulasiSetting(n)">
+                                        {{ simulasiSettings[n] && simulasiSettings[n].is_open ? 'Tutup' : 'Buka' }}
+                                    </button>
+                                </div>
+                            </div>
+                            <p class="fs-9 text-muted mt-2 mb-0"><i class="bi bi-info-circle me-1"></i>Simulasi 2 hanya bisa dibuka setelah Simulasi 1 dikunci.</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Simulasi Data -->
+                <div v-if="loadingSimulasi" class="text-center py-5">
+                    <div class="spinner-border text-primary"></div>
+                    <p class="text-muted mt-2 fs-7">Memuat data simulasi...</p>
+                </div>
+                <div v-else class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 fs-8">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="px-3">#</th>
+                                <th>Nama Siswa</th>
+                                <th>NISN</th>
+                                <th class="text-center">Sim</th>
+                                <th class="text-center">Pilihan</th>
+                                <th>Nama Kampus</th>
+                                <th>Program Studi</th>
+                                <th class="text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(s, idx) in simulasiList" :key="s.id">
+                                <td class="px-3 text-muted">{{ idx + 1 }}</td>
+                                <td class="fw-semibold">{{ s.nama_lengkap }}</td>
+                                <td class="font-monospace">{{ s.nisn || '-' }}</td>
+                                <td class="text-center"><span class="badge bg-primary rounded-pill">Sim {{ s.no_simulasi }}</span></td>
+                                <td class="text-center"><span class="badge bg-info text-dark rounded-pill">Pilihan {{ s.no_pilihan }}</span></td>
+                                <td>{{ s.nama_kampus || '-' }}</td>
+                                <td>{{ s.nama_prodi || '-' }}</td>
+                                <td class="text-center">
+                                    <span class="badge rounded-pill" :class="s.status === 'final' ? 'bg-success' : 'bg-warning text-dark'">
+                                        {{ s.status === 'final' ? 'Final' : 'Draft' }}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr v-if="simulasiList.length === 0">
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
+                                    Belum ada data simulasi pilihan kampus.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         TAB: MASTER KAMPUS & PRODI
+    ════════════════════════════════════════════════════════════ -->
+    <div v-show="activeTab === 'master_kampus'">
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-header bg-white border-0 rounded-top-4 p-4 pb-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div>
+                        <h5 class="fw-bold mb-1"><i class="bi bi-bank me-2 text-primary"></i>Master Kampus & Program Studi</h5>
+                        <p class="text-muted fs-8 mb-0">Kelola database kampus PTN/PTS dan program studi untuk referensi simulasi pilihan siswa.</p>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <input type="text" class="form-control form-control-sm rounded-3" placeholder="Cari kampus..." v-model="kampusSearch" @input="loadKampus()" style="min-width:220px;">
+                        <button class="btn btn-sm btn-primary rounded-3" @click="openKampusModal(null)" v-if="userRole !== 'siswa'">
+                            <i class="bi bi-plus-circle me-1"></i> Tambah Kampus
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div v-if="loadingKampus" class="text-center py-5">
+                    <div class="spinner-border text-primary"></div>
+                </div>
+                <div v-else class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 fs-8">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="px-4">#</th>
+                                <th>Nama Kampus</th>
+                                <th>Jenis</th>
+                                <th>Kota</th>
+                                <th class="text-center">Akreditasi</th>
+                                <th class="text-center">Jumlah Prodi</th>
+                                <th class="text-center" v-if="userRole !== 'siswa'">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(k, idx) in kampusList" :key="k.id">
+                                <td class="px-4 text-muted">{{ idx + 1 }}</td>
+                                <td class="fw-semibold">{{ k.nama_kampus }}</td>
+                                <td><span class="badge rounded-pill" :class="k.jenis === 'PTN' ? 'bg-primary' : k.jenis === 'PTS' ? 'bg-info text-dark' : 'bg-secondary'">{{ k.jenis }}</span></td>
+                                <td>{{ k.kota || '-' }}</td>
+                                <td class="text-center"><span class="badge bg-success rounded-pill">{{ k.akreditasi || '-' }}</span></td>
+                                <td class="text-center fw-bold text-primary">{{ k.jumlah_prodi || 0 }}</td>
+                                <td class="text-center" v-if="userRole !== 'siswa'">
+                                    <button class="btn btn-xs btn-outline-primary rounded-2 me-1" @click="openKampusModal(k)" title="Edit"><i class="bi bi-pencil"></i></button>
+                                    <button class="btn btn-xs btn-outline-danger rounded-2" @click="deleteKampus(k.id)" title="Hapus"><i class="bi bi-trash"></i></button>
+                                </td>
+                            </tr>
+                            <tr v-if="kampusList.length === 0">
+                                <td colspan="7" class="text-center py-5 text-muted">
+                                    <i class="bi bi-building fs-1 d-block mb-2 opacity-25"></i>
+                                    Belum ada data kampus. Klik "Tambah Kampus" untuk memulai.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <!-- Modal Kampus -->
+        <div v-if="kampusModal.show" class="modal-overlay-bk" @click.self="kampusModal.show = false">
+            <div class="modal-card-bk p-4">
+                <h6 class="fw-bold mb-3">{{ kampusModal.isEdit ? 'Edit Kampus' : 'Tambah Kampus Baru' }}</h6>
+                <div class="row g-3">
+                    <div class="col-12"><label class="form-label fs-8 fw-semibold">Nama Kampus</label><input type="text" class="form-control form-control-sm" v-model="kampusModal.form.nama_kampus" placeholder="Universitas Indonesia"></div>
+                    <div class="col-6"><label class="form-label fs-8 fw-semibold">Jenis</label>
+                        <select class="form-select form-select-sm" v-model="kampusModal.form.jenis">
+                            <option>PTN</option><option>PTS</option><option>Kedinasan</option>
+                        </select>
+                    </div>
+                    <div class="col-6"><label class="form-label fs-8 fw-semibold">Akreditasi BAN-PT</label><input type="text" class="form-control form-control-sm" v-model="kampusModal.form.akreditasi" placeholder="Unggul / A / B"></div>
+                    <div class="col-6"><label class="form-label fs-8 fw-semibold">Kota</label><input type="text" class="form-control form-control-sm" v-model="kampusModal.form.kota" placeholder="Jakarta"></div>
+                    <div class="col-6"><label class="form-label fs-8 fw-semibold">Provinsi</label><input type="text" class="form-control form-control-sm" v-model="kampusModal.form.provinsi" placeholder="DKI Jakarta"></div>
+                </div>
+                <div class="d-flex gap-2 mt-4 justify-content-end">
+                    <button class="btn btn-sm btn-secondary rounded-3" @click="kampusModal.show = false">Batal</button>
+                    <button class="btn btn-sm btn-primary rounded-3" @click="submitKampus()" :disabled="kampusModal.saving">
+                        <span v-if="kampusModal.saving" class="spinner-border spinner-border-sm me-1"></span>
+                        Simpan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         TAB: MASTER JALUR MASUK
+    ════════════════════════════════════════════════════════════ -->
+    <div v-show="activeTab === 'master_jalur'">
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-header bg-white border-0 rounded-top-4 p-4 pb-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div>
+                        <h5 class="fw-bold mb-1"><i class="bi bi-door-open me-2 text-primary"></i>Master Jalur Masuk PTN</h5>
+                        <p class="text-muted fs-8 mb-0">Daftar jalur seleksi masuk PTN: SNBP, SNBT, Mandiri, SPAN-PTKIN, dan jalur khusus lainnya.</p>
+                    </div>
+                    <button class="btn btn-sm btn-primary rounded-3" @click="openJalurModal(null)" v-if="userRole !== 'siswa'">
+                        <i class="bi bi-plus-circle me-1"></i> Tambah Jalur
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div v-if="loadingJalur" class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+                <div v-else class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 fs-8">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="px-4">#</th>
+                                <th>Nama Jalur</th>
+                                <th>Deskripsi</th>
+                                <th>Persyaratan</th>
+                                <th class="text-center" v-if="userRole !== 'siswa'">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(j, idx) in jalurList" :key="j.id">
+                                <td class="px-4 text-muted">{{ idx + 1 }}</td>
+                                <td class="fw-semibold"><span class="badge bg-primary rounded-pill me-2">{{ j.nama_jalur }}</span></td>
+                                <td class="text-muted">{{ j.deskripsi || '-' }}</td>
+                                <td class="text-muted">{{ j.persyaratan || '-' }}</td>
+                                <td class="text-center" v-if="userRole !== 'siswa'">
+                                    <button class="btn btn-xs btn-outline-primary rounded-2 me-1" @click="openJalurModal(j)"><i class="bi bi-pencil"></i></button>
+                                    <button class="btn btn-xs btn-outline-danger rounded-2" @click="deleteJalur(j.id)"><i class="bi bi-trash"></i></button>
+                                </td>
+                            </tr>
+                            <tr v-if="jalurList.length === 0">
+                                <td colspan="5" class="text-center py-5 text-muted">
+                                    <i class="bi bi-door-open fs-1 d-block mb-2 opacity-25"></i>
+                                    Belum ada data jalur masuk. Klik "Tambah Jalur" untuk memulai.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <!-- Modal Jalur -->
+        <div v-if="jalurModal.show" class="modal-overlay-bk" @click.self="jalurModal.show = false">
+            <div class="modal-card-bk p-4">
+                <h6 class="fw-bold mb-3">{{ jalurModal.isEdit ? 'Edit Jalur' : 'Tambah Jalur Masuk Baru' }}</h6>
+                <div class="row g-3">
+                    <div class="col-12"><label class="form-label fs-8 fw-semibold">Nama Jalur</label><input type="text" class="form-control form-control-sm" v-model="jalurModal.form.nama_jalur" placeholder="SNBP / SNBT / Mandiri"></div>
+                    <div class="col-12"><label class="form-label fs-8 fw-semibold">Deskripsi Singkat</label><textarea class="form-control form-control-sm" v-model="jalurModal.form.deskripsi" rows="2" placeholder="Seleksi Nasional Berdasarkan Prestasi..."></textarea></div>
+                    <div class="col-12"><label class="form-label fs-8 fw-semibold">Persyaratan Umum</label><textarea class="form-control form-control-sm" v-model="jalurModal.form.persyaratan" rows="2" placeholder="Siswa kelas 12 dengan peringkat top 40%..."></textarea></div>
+                </div>
+                <div class="d-flex gap-2 mt-4 justify-content-end">
+                    <button class="btn btn-sm btn-secondary rounded-3" @click="jalurModal.show = false">Batal</button>
+                    <button class="btn btn-sm btn-primary rounded-3" @click="submitJalur()" :disabled="jalurModal.saving">
+                        <span v-if="jalurModal.saving" class="spinner-border spinner-border-sm me-1"></span>
+                        Simpan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         TAB: TRACKING DATA ALUMNI
+    ════════════════════════════════════════════════════════════ -->
+    <div v-show="activeTab === 'tracking'">
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-header bg-white border-0 rounded-top-4 p-4 pb-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div>
+                        <h5 class="fw-bold mb-1"><i class="bi bi-people-fill me-2 text-primary"></i>Tracking Data Alumni</h5>
+                        <p class="text-muted fs-8 mb-0">Monitor status dan penelusuran alumni pasca kelulusan.</p>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <select class="form-select form-select-sm rounded-3" v-model="alumniFilter.tahun_lulus" @change="loadAlumniTracking()" style="min-width:160px;">
+                            <option value="">— Semua Tahun Lulus —</option>
+                            <option v-for="y in alumniTahunLulusList" :key="y" :value="y">{{ y }}</option>
+                        </select>
+                        <select class="form-select form-select-sm rounded-3" v-model="alumniFilter.status" @change="loadAlumniTracking()" style="min-width:160px;">
+                            <option value="">— Semua Status —</option>
+                            <option value="kuliah">Kuliah</option>
+                            <option value="bekerja">Bekerja</option>
+                            <option value="wirausaha">Wirausaha</option>
+                            <option value="tidak_diketahui">Tidak Diketahui</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- KPI Alumni -->
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-md-3">
+                        <div class="kpi-card text-center">
+                            <div class="fs-3 fw-bold text-primary">{{ alumniKpi.total }}</div>
+                            <div class="fs-8 text-muted">Total Alumni</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="kpi-card text-center">
+                            <div class="fs-3 fw-bold text-success">{{ alumniKpi.kuliah }}</div>
+                            <div class="fs-8 text-muted">Kuliah</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="kpi-card text-center">
+                            <div class="fs-3 fw-bold text-info">{{ alumniKpi.bekerja }}</div>
+                            <div class="fs-8 text-muted">Bekerja</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="kpi-card text-center">
+                            <div class="fs-3 fw-bold text-warning">{{ alumniKpi.tidak_diketahui }}</div>
+                            <div class="fs-8 text-muted">Tidak Terdata</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Tabel Alumni -->
+                <div v-if="loadingAlumniTracking" class="text-center py-5">
+                    <div class="spinner-border text-primary"></div>
+                </div>
+                <div v-else class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 fs-8">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="px-4">#</th>
+                                <th>Nama Alumni</th>
+                                <th>NISN</th>
+                                <th class="text-center">Tahun Lulus</th>
+                                <th class="text-center">Status</th>
+                                <th>Keterangan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(a, idx) in alumniTrackingList" :key="a.id">
+                                <td class="px-4 text-muted">{{ idx + 1 }}</td>
+                                <td class="fw-semibold">{{ a.nama_lengkap || a.nama_alumni || '-' }}</td>
+                                <td class="font-monospace">{{ a.nisn || '-' }}</td>
+                                <td class="text-center">{{ a.tahun_lulus || '-' }}</td>
+                                <td class="text-center">
+                                    <span class="badge rounded-pill px-3"
+                                        :class="a.status_tracer === 'kuliah' ? 'bg-success' : a.status_tracer === 'bekerja' ? 'bg-info text-dark' : a.status_tracer === 'wirausaha' ? 'bg-warning text-dark' : 'bg-secondary'">
+                                        {{ a.status_tracer || 'Belum Diisi' }}
+                                    </span>
+                                </td>
+                                <td class="text-muted">{{ a.keterangan || '-' }}</td>
+                            </tr>
+                            <tr v-if="alumniTrackingList.length === 0">
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    <i class="bi bi-people fs-1 d-block mb-2 opacity-25"></i>
+                                    Belum ada data alumni yang terdata.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         TAB: RIWAYAT KULIAH
+    ════════════════════════════════════════════════════════════ -->
+    <div v-show="activeTab === 'riwayat_kuliah'">
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-header bg-white border-0 rounded-top-4 p-4 pb-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div>
+                        <h5 class="fw-bold mb-1"><i class="bi bi-book me-2 text-primary"></i>Riwayat Kuliah Alumni</h5>
+                        <p class="text-muted fs-8 mb-0">Data perkuliahan alumni di PTN/PTS lengkap dengan jalur masuk dan prodi yang dipilih.</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-primary rounded-3" @click="openKuliahModal(null)" v-if="userRole !== 'siswa'">
+                            <i class="bi bi-plus-circle me-1"></i> Tambah Riwayat Kuliah
+                        </button>
+                        <button class="btn btn-sm btn-outline-success rounded-3" @click="exportKuliahExcel()">
+                            <i class="bi bi-file-earmark-excel me-1"></i> Export
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div v-if="loadingKuliah" class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+                <div v-else class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 fs-8">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="px-4">#</th>
+                                <th>Nama Alumni</th>
+                                <th>NISN</th>
+                                <th>Kampus</th>
+                                <th>Prodi</th>
+                                <th class="text-center">Jalur Masuk</th>
+                                <th class="text-center">Tahun Masuk</th>
+                                <th class="text-center">Status</th>
+                                <th class="text-center" v-if="userRole !== 'siswa'">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(k, idx) in riwayatKuliahList" :key="k.id">
+                                <td class="px-4 text-muted">{{ idx + 1 }}</td>
+                                <td class="fw-semibold">{{ k.nama_lengkap || k.nama_alumni || '-' }}</td>
+                                <td class="font-monospace">{{ k.nisn || '-' }}</td>
+                                <td>{{ k.nama_kampus || '-' }}</td>
+                                <td>{{ k.nama_prodi || '-' }}</td>
+                                <td class="text-center"><span class="badge bg-primary rounded-pill">{{ k.jalur_masuk || '-' }}</span></td>
+                                <td class="text-center fw-bold">{{ k.tahun_masuk || '-' }}</td>
+                                <td class="text-center">
+                                    <span class="badge rounded-pill" :class="k.status_kuliah === 'aktif' ? 'bg-success' : k.status_kuliah === 'lulus' ? 'bg-info text-dark' : 'bg-secondary'">{{ k.status_kuliah || 'aktif' }}</span>
+                                </td>
+                                <td class="text-center" v-if="userRole !== 'siswa'">
+                                    <button class="btn btn-xs btn-outline-danger rounded-2" @click="deleteKuliah(k.id)" title="Hapus"><i class="bi bi-trash"></i></button>
+                                </td>
+                            </tr>
+                            <tr v-if="riwayatKuliahList.length === 0">
+                                <td colspan="9" class="text-center py-5 text-muted">
+                                    <i class="bi bi-book fs-1 d-block mb-2 opacity-25"></i>
+                                    Belum ada data riwayat kuliah alumni.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         TAB: RIWAYAT PEKERJAAN
+    ════════════════════════════════════════════════════════════ -->
+    <div v-show="activeTab === 'riwayat_pekerjaan'">
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-header bg-white border-0 rounded-top-4 p-4 pb-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div>
+                        <h5 class="fw-bold mb-1"><i class="bi bi-briefcase me-2 text-primary"></i>Riwayat Pekerjaan Alumni</h5>
+                        <p class="text-muted fs-8 mb-0">Data karir alumni: perusahaan, posisi jabatan, dan jenis instansi tempat bekerja.</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-primary rounded-3" @click="openPekerjaanModal(null)" v-if="userRole !== 'siswa'">
+                            <i class="bi bi-plus-circle me-1"></i> Tambah Riwayat Pekerjaan
+                        </button>
+                        <button class="btn btn-sm btn-outline-success rounded-3" @click="exportPekerjaanExcel()">
+                            <i class="bi bi-file-earmark-excel me-1"></i> Export
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div v-if="loadingPekerjaan" class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+                <div v-else class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 fs-8">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="px-4">#</th>
+                                <th>Nama Alumni</th>
+                                <th>NISN</th>
+                                <th>Perusahaan/Instansi</th>
+                                <th>Posisi</th>
+                                <th class="text-center">Jenis Instansi</th>
+                                <th class="text-center">Tahun Mulai</th>
+                                <th class="text-center" v-if="userRole !== 'siswa'">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(p, idx) in riwayatPekerjaanList" :key="p.id">
+                                <td class="px-4 text-muted">{{ idx + 1 }}</td>
+                                <td class="fw-semibold">{{ p.nama_lengkap || p.nama_alumni || '-' }}</td>
+                                <td class="font-monospace">{{ p.nisn || '-' }}</td>
+                                <td>{{ p.nama_perusahaan || '-' }}</td>
+                                <td>{{ p.posisi || '-' }}</td>
+                                <td class="text-center">
+                                    <span class="badge rounded-pill" :class="p.jenis_instansi === 'BUMN' ? 'bg-primary' : p.jenis_instansi === 'PNS' ? 'bg-success' : p.jenis_instansi === 'Swasta' ? 'bg-info text-dark' : 'bg-secondary'">{{ p.jenis_instansi || '-' }}</span>
+                                </td>
+                                <td class="text-center fw-bold">{{ p.tahun_mulai || '-' }}</td>
+                                <td class="text-center" v-if="userRole !== 'siswa'">
+                                    <button class="btn btn-xs btn-outline-danger rounded-2" @click="deletePekerjaan(p.id)" title="Hapus"><i class="bi bi-trash"></i></button>
+                                </td>
+                            </tr>
+                            <tr v-if="riwayatPekerjaanList.length === 0">
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <i class="bi bi-briefcase fs-1 d-block mb-2 opacity-25"></i>
+                                    Belum ada data riwayat pekerjaan alumni.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div><!-- End #bkApp -->
 
 <script>
@@ -2800,8 +3471,17 @@ window.VueAppRegistry.register('#bkApp', {
         // Dashboard
         const loadingDashboard = ref(false);
         const kpi = ref({
-            total_siswa_aktif: '—', kasus_bulan_ini: '—',
-            kasus_terbuka: '—', total_alumni: '—', distribusi_kasus: []
+            total_siswa_aktif: 0,
+            kasus_bulan_ini: 0,
+            kasus_terbuka: 0,
+            total_alumni: 0,
+            distribusi_kasus: [],
+            data: {
+                total_siswa_aktif: 0,
+                kasus_bulan_ini: 0,
+                kasus_terbuka: 0,
+                total_alumni: 0
+            }
         });
         const pieColors = ['#7c3aed','#2563eb','#10b981','#f59e0b','#ef4444','#64748b'];
 
@@ -2895,20 +3575,29 @@ window.VueAppRegistry.register('#bkApp', {
         });
 
         // ─── Tab Switch + Lazy Load ──────────────────────────
-        const tabsLoaded = ref({ dashboard: false, penjurusan: false, tracer: false, jurnal: false, prestasi: false, kehadiran: false, pelanggaran: false, beasiswa: false });
+        const tabsLoaded = ref({ dashboard: false, penjurusan: false, tracer: false, jurnal: false, prestasi: false, kehadiran: false, pelanggaran: false, beasiswa: false, kesiapan: false, simulasi: false, master_kampus: false, master_jalur: false, tracking: false, riwayat_kuliah: false, riwayat_pekerjaan: false });
 
         function switchTab(tab) {
             activeTab.value = tab;
             if (!tabsLoaded.value[tab]) {
                 tabsLoaded.value[tab] = true;
-                if (tab === 'dashboard')  loadDashboard();
-                if (tab === 'penjurusan') loadPenjurusan();
-                if (tab === 'tracer')     loadTracer();
-                if (tab === 'jurnal')     { loadKasus(); loadKelasList(); }
-                if (tab === 'prestasi')   { loadPrestasi(); }
-                if (tab === 'kehadiran')  { loadKelasKehadiran(); }
-                if (tab === 'pelanggaran') { switchSubTab(activeSubTab.value); }
-                if (tab === 'beasiswa')   { loadAllBeasiswa(); }
+                if (tab === 'dashboard')          loadDashboard();
+                if (tab === 'penjurusan')         loadPenjurusan();
+                if (tab === 'tracer')             loadTracer();
+                if (tab === 'jurnal')             { loadKasus(); loadKelasList(); }
+                if (tab === 'prestasi')           { loadPrestasi(); }
+                if (tab === 'kehadiran')          { loadKelasKehadiran(); }
+                if (tab === 'pelanggaran')        { switchSubTab(activeSubTab.value); }
+                if (tab === 'beasiswa')           { loadAllBeasiswa(); }
+                // PDSS & Akademik
+                if (tab === 'kesiapan')           { loadKesiapan(); }
+                if (tab === 'simulasi')           { loadSimulasiSettings(); loadSimulasi(); }
+                if (tab === 'master_kampus')      { loadKampus(); }
+                if (tab === 'master_jalur')       { loadJalur(); }
+                // Alumni
+                if (tab === 'tracking')           { loadAlumniTracking(); }
+                if (tab === 'riwayat_kuliah')     { loadRiwayatKuliah(); }
+                if (tab === 'riwayat_pekerjaan')  { loadRiwayatPekerjaan(); }
             } else {
                 if (tab === 'pelanggaran') { switchSubTab(activeSubTab.value); }
             }
@@ -2922,7 +3611,11 @@ window.VueAppRegistry.register('#bkApp', {
                 let url = `${_baseUrl}/api/v1/bk/dashboard`;
                 if (currentTenantId.value) url += `?tenant_id=${currentTenantId.value}`;
                 const res = await axios.get(url);
-                if (res.data.success) Object.assign(kpi.value, res.data);
+                if (res.data && res.data.success) {
+                    const payload = res.data.data || res.data;
+                    Object.assign(kpi.value, payload);
+                    if (!kpi.value.data) kpi.value.data = payload;
+                }
             } catch (e) { console.error('BK Dashboard load error', e); }
             finally { loadingDashboard.value = false; }
         }
@@ -3175,7 +3868,8 @@ window.VueAppRegistry.register('#bkApp', {
                     headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
                 });
                 if (res.data.success) {
-                    alertJurnal.value = { msg: '✅ ' + res.data.message, type: 'success' };
+                    const msgTxt = res.data.message || res.data.msg || 'Catatan BK berhasil disimpan.';
+                    alertJurnal.value = { msg: '✅ ' + msgTxt, type: 'success' };
                     formKasus.value = { id_siswa: '', tanggal_konseling: today, jenis_kasus: '', catatan: '', tindak_lanjut: '', status_kasus: 'Terbuka', is_rahasia: 1 };
                     selectedSiswaInfo.value = {};
                     kasusSearchSiswa.value  = '';
@@ -3184,7 +3878,7 @@ window.VueAppRegistry.register('#bkApp', {
                     Swal.fire({
                         icon: 'error',
                         title: 'Gagal',
-                        text: res.data.error || 'Gagal memuat log.',
+                        text: res.data.error || res.data.msg || 'Gagal menyimpan catatan.',
                         confirmButtonColor: 'var(--bk-primary)'
                     });
                 }
@@ -3192,9 +3886,11 @@ window.VueAppRegistry.register('#bkApp', {
                 Swal.fire({
                     icon: 'error',
                     title: 'Kesalahan',
-                    text: (err.response && err.response.data && err.response.data.error) || 'Koneksi ke server gagal.',
+                    text: (err.response && err.response.data && (err.response.data.error || err.response.data.msg)) || 'Koneksi ke server gagal.',
                     confirmButtonColor: 'var(--bk-primary)'
                 });
+            } finally {
+                loadingKasus.value = false;
             }
         }
 
@@ -3555,7 +4251,7 @@ window.VueAppRegistry.register('#bkApp', {
                     Swal.fire({
                         icon: 'success',
                         title: 'Sukses',
-                        text: res.data.message,
+                        text: res.data.message || res.data.msg || 'Data prestasi berhasil disimpan.',
                         confirmButtonColor: 'var(--bk-primary)'
                     });
                     clearFormPrestasi();
@@ -3564,7 +4260,7 @@ window.VueAppRegistry.register('#bkApp', {
                     Swal.fire({
                         icon: 'error',
                         title: 'Gagal',
-                        text: res.data.error || 'Terjadi kesalahan.',
+                        text: res.data.error || res.data.msg || 'Terjadi kesalahan.',
                         confirmButtonColor: 'var(--bk-primary)'
                     });
                 }
@@ -3572,7 +4268,7 @@ window.VueAppRegistry.register('#bkApp', {
                 Swal.fire({
                     icon: 'error',
                     title: 'Kesalahan',
-                    text: (err.response && err.response.data && err.response.data.error) || 'Koneksi ke server gagal.',
+                    text: (err.response && err.response.data && (err.response.data.error || err.response.data.msg)) || 'Koneksi ke server gagal.',
                     confirmButtonColor: 'var(--bk-primary)'
                 });
             } finally {
@@ -3952,22 +4648,24 @@ window.VueAppRegistry.register('#bkApp', {
         }
 
         async function loadPelanggaranDashboard() {
-            if (_userRole === 'super_admin' && !currentTenantId.value) return;
             loadingPelanggaranDashboard.value = true;
             try {
                 let url = `${_baseUrl}/api/v1/bk/pelanggaran/dashboard`;
                 if (currentTenantId.value) url += `?tenant_id=${currentTenantId.value}`;
                 const res = await axios.get(url);
-                if (res.data.success) {
-                    pelanggaranKpi.value = res.data.kpi;
+                if (res.data && res.data.success) {
+                    pelanggaranKpi.value = res.data.kpi || { wali_kelas: 0, sp1_bk: 0, sp2_skorsing: 0, sp3_do: 0, total_siswa_melanggar: 0 };
                     pelanggaranTopStudents.value = res.data.top_students || [];
                     
                     nextTick(() => {
                         renderPelanggaranChart(res.data.chart);
                     });
+                } else {
+                    pelanggaranKpi.value = { wali_kelas: 0, sp1_bk: 0, sp2_skorsing: 0, sp3_do: 0, total_siswa_melanggar: 0 };
                 }
             } catch (e) {
                 console.error('loadPelanggaranDashboard error', e);
+                pelanggaranKpi.value = { wali_kelas: 0, sp1_bk: 0, sp2_skorsing: 0, sp3_do: 0, total_siswa_melanggar: 0 };
             } finally {
                 loadingPelanggaranDashboard.value = false;
             }
@@ -4446,6 +5144,51 @@ window.VueAppRegistry.register('#bkApp', {
         });
         const loadingSimpanBeasiswa = ref(false);
 
+        // ─── KESIAPAN & ELIGIBILITAS (PDSS) STATE ────────────────
+        const loadingKesiapan = ref(false);
+        const kesiapanList = ref([]);
+        const kesiapanSummary = ref({ total_siswa: 0, total_eligible: 0, persentase_eligible: 0 });
+        const kesiapanFilter = ref({ tahun_ajaran_id: '' });
+
+        // ─── SIMULASI PILIHAN KAMPUS STATE ──────────────────────────
+        const loadingSimulasi = ref(false);
+        const simulasiList = ref([]);
+        const simulasiSettings = ref({ 1: { is_open: false }, 2: { is_open: false } });
+        const simulasiFilter = ref({ tahun_ajaran_id: '' });
+
+        // ─── MASTER KAMPUS STATE ────────────────────────────────────
+        const loadingKampus = ref(false);
+        const kampusList = ref([]);
+        const kampusSearch = ref('');
+        const kampusModal = ref({
+            show: false, isEdit: false, saving: false,
+            form: { id: '', nama_kampus: '', jenis: 'PTN', akreditasi: '', kota: '', provinsi: '' }
+        });
+
+        // ─── MASTER JALUR MASUK STATE ───────────────────────────────
+        const loadingJalur = ref(false);
+        const jalurList = ref([]);
+        const jalurModal = ref({
+            show: false, isEdit: false, saving: false,
+            form: { id: '', nama_jalur: '', deskripsi: '', persyaratan: '' }
+        });
+
+        // ─── ALUMNI TRACKING STATE ──────────────────────────────────
+        const loadingAlumniTracking = ref(false);
+        const alumniTrackingList = ref([]);
+        const alumniKpi = ref({ total: 0, kuliah: 0, bekerja: 0, tidak_diketahui: 0 });
+        const alumniFilter = ref({ tahun_lulus: '', status: '' });
+        const alumniTahunLulusList = ref([]);
+
+        // ─── RIWAYAT KULIAH STATE ───────────────────────────────────
+        const loadingKuliah = ref(false);
+        const riwayatKuliahList = ref([]);
+
+        // ─── RIWAYAT PEKERJAAN STATE ────────────────────────────────
+        const loadingPekerjaan = ref(false);
+        const riwayatPekerjaanList = ref([]);
+
+
         let searchBeasiswaTimeout = null;
         function searchSiswaBeasiswaDebounce() {
             clearTimeout(searchBeasiswaTimeout);
@@ -4603,10 +5346,300 @@ window.VueAppRegistry.register('#bkApp', {
             };
         }
 
+        // ─── PDSS & ALUMNI API METHODS ─────────────────────
+        function loadKesiapan() {
+            if (_userRole === 'super_admin' && !currentTenantId.value) return;
+            loadingKesiapan.value = true;
+            const params = new URLSearchParams();
+            if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
+            if (kesiapanFilter.value.tahun_ajaran_id) params.set('tahun_ajaran_id', kesiapanFilter.value.tahun_ajaran_id);
+
+            axios.get(`${_baseUrl}/api/v1/bk/kesiapan/list?${params.toString()}`)
+                .then(res => {
+                    kesiapanList.value = res.data.data || [];
+                    if (res.data.summary) kesiapanSummary.value = res.data.summary;
+                })
+                .catch(() => {
+                    kesiapanList.value = [];
+                    toast.fire({ icon: 'error', title: 'Gagal memuat data kesiapan PDSS.' });
+                })
+                .finally(() => { loadingKesiapan.value = false; });
+        }
+
+        function toggleEligible(siswaId, currentStatus) {
+            axios.post(`${_baseUrl}/api/v1/bk/kesiapan/toggle-eligible`, {
+                siswa_id: siswaId,
+                is_eligible: !currentStatus,
+                tenant_id: currentTenantId.value
+            })
+            .then(res => {
+                toast.fire({ icon: 'success', title: res.data.message || 'Status eligible diperbarui.' });
+                loadKesiapan();
+            })
+            .catch(err => {
+                Swal.fire('Gagal', err.response?.data?.error || 'Gagal mengubah status eligible.', 'error');
+            });
+        }
+
+        function exportKesiapanExcel() {
+            const params = new URLSearchParams();
+            if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
+            window.open(`${_baseUrl}/api/v1/bk/kesiapan/export?${params.toString()}`, '_blank');
+        }
+
+        function loadSimulasiSettings() {
+            const params = new URLSearchParams();
+            if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
+            axios.get(`${_baseUrl}/api/v1/bk/simulasi/setting?${params.toString()}`)
+                .then(res => {
+                    if (res.data.data) simulasiSettings.value = res.data.data;
+                });
+        }
+
+        function loadSimulasi() {
+            if (_userRole === 'super_admin' && !currentTenantId.value) return;
+            loadingSimulasi.value = true;
+            const params = new URLSearchParams();
+            if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
+            if (simulasiFilter.value.tahun_ajaran_id) params.set('tahun_ajaran_id', simulasiFilter.value.tahun_ajaran_id);
+
+            axios.get(`${_baseUrl}/api/v1/bk/simulasi/list?${params.toString()}`)
+                .then(res => {
+                    simulasiList.value = res.data.data || [];
+                })
+                .catch(() => { simulasiList.value = []; })
+                .finally(() => { loadingSimulasi.value = false; });
+        }
+
+        function toggleSimulasiSetting(noSimulasi) {
+            const currentObj = simulasiSettings.value[noSimulasi] || { is_open: false };
+            axios.post(`${_baseUrl}/api/v1/bk/simulasi/toggle-setting`, {
+                no_simulasi: noSimulasi,
+                is_open: !currentObj.is_open,
+                tenant_id: currentTenantId.value
+            })
+            .then(res => {
+                toast.fire({ icon: 'success', title: res.data.message || 'Pengaturan simulasi diperbarui.' });
+                loadSimulasiSettings();
+            });
+        }
+
+        function exportSimulasiXlsx() {
+            const params = new URLSearchParams();
+            if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
+            window.open(`${_baseUrl}/api/v1/bk/simulasi/export?${params.toString()}`, '_blank');
+        }
+
+        function loadKampus() {
+            loadingKampus.value = true;
+            axios.get(`${_baseUrl}/api/v1/bk/kampus/list`)
+                .then(res => { kampusList.value = res.data.data || []; })
+                .catch(() => { kampusList.value = []; })
+                .finally(() => { loadingKampus.value = false; });
+        }
+
+        function openKampusModal(item = null) {
+            if (item) {
+                kampusModal.value = { show: true, isEdit: true, saving: false, form: { ...item } };
+            } else {
+                kampusModal.value = { show: true, isEdit: false, saving: false, form: { id: '', nama_kampus: '', jenis: 'PTN', akreditasi: 'A', kota: '', provinsi: '' } };
+            }
+        }
+
+        function submitKampus() {
+            if (!kampusModal.value.form.nama_kampus) {
+                Swal.fire('Perhatian', 'Nama Kampus wajib diisi.', 'warning');
+                return;
+            }
+            kampusModal.value.saving = true;
+            const url = kampusModal.value.isEdit ? `${_baseUrl}/api/v1/bk/kampus/update` : `${_baseUrl}/api/v1/bk/kampus/create`;
+            axios.post(url, kampusModal.value.form)
+                .then(res => {
+                    toast.fire({ icon: 'success', title: res.data.message || 'Data kampus disimpan.' });
+                    kampusModal.value.show = false;
+                    loadKampus();
+                })
+                .catch(err => {
+                    Swal.fire('Gagal', err.response?.data?.error || 'Terjadi kesalahan.', 'error');
+                })
+                .finally(() => { kampusModal.value.saving = false; });
+        }
+
+        function deleteKampus(id) {
+            Swal.fire({
+                title: 'Hapus Master Kampus?',
+                text: 'Data yang dihapus tidak dapat dikembalikan!',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'Ya, Hapus'
+            }).then(r => {
+                if (r.isConfirmed) {
+                    axios.post(`${_baseUrl}/api/v1/bk/kampus/delete`, { id })
+                        .then(() => {
+                            toast.fire({ icon: 'success', title: 'Kampus berhasil dihapus.' });
+                            loadKampus();
+                        });
+                }
+            });
+        }
+
+        function loadJalur() {
+            loadingJalur.value = true;
+            axios.get(`${_baseUrl}/api/v1/bk/jalur-masuk/list`)
+                .then(res => { jalurList.value = res.data.data || []; })
+                .catch(() => { jalurList.value = []; })
+                .finally(() => { loadingJalur.value = false; });
+        }
+
+        function openJalurModal(item = null) {
+            if (item) {
+                jalurModal.value = { show: true, isEdit: true, saving: false, form: { ...item } };
+            } else {
+                jalurModal.value = { show: true, isEdit: false, saving: false, form: { id: '', nama_jalur: '', deskripsi: '', persyaratan: '' } };
+            }
+        }
+
+        function submitJalur() {
+            if (!jalurModal.value.form.nama_jalur) {
+                Swal.fire('Perhatian', 'Nama Jalur Masuk wajib diisi.', 'warning');
+                return;
+            }
+            jalurModal.value.saving = true;
+            const url = jalurModal.value.isEdit ? `${_baseUrl}/api/v1/bk/jalur-masuk/update` : `${_baseUrl}/api/v1/bk/jalur-masuk/create`;
+            axios.post(url, jalurModal.value.form)
+                .then(res => {
+                    toast.fire({ icon: 'success', title: res.data.message || 'Jalur masuk disimpan.' });
+                    jalurModal.value.show = false;
+                    loadJalur();
+                })
+                .catch(err => {
+                    Swal.fire('Gagal', err.response?.data?.error || 'Terjadi kesalahan.', 'error');
+                })
+                .finally(() => { jalurModal.value.saving = false; });
+        }
+
+        function deleteJalur(id) {
+            Swal.fire({
+                title: 'Hapus Jalur Masuk?',
+                text: 'Data yang dihapus tidak dapat dikembalikan!',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'Ya, Hapus'
+            }).then(r => {
+                if (r.isConfirmed) {
+                    axios.post(`${_baseUrl}/api/v1/bk/jalur-masuk/delete`, { id })
+                        .then(() => {
+                            toast.fire({ icon: 'success', title: 'Jalur masuk berhasil dihapus.' });
+                            loadJalur();
+                        });
+                }
+            });
+        }
+
+        function loadAlumniTracking() {
+            if (_userRole === 'super_admin' && !currentTenantId.value) return;
+            loadingAlumniTracking.value = true;
+            const params = new URLSearchParams();
+            if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
+            if (alumniFilter.value.tahun_lulus) params.set('tahun_lulus', alumniFilter.value.tahun_lulus);
+            if (alumniFilter.value.status) params.set('status', alumniFilter.value.status);
+
+            axios.get(`${_baseUrl}/api/v1/bk/alumni/tracking?${params.toString()}`)
+                .then(res => {
+                    alumniTrackingList.value = res.data.data || [];
+                    if (res.data.kpi) alumniKpi.value = res.data.kpi;
+                    if (res.data.tahun_lulus_options) alumniTahunLulusList.value = res.data.tahun_lulus_options;
+                })
+                .catch(() => { alumniTrackingList.value = []; })
+                .finally(() => { loadingAlumniTracking.value = false; });
+        }
+
+        function loadRiwayatKuliah() {
+            if (_userRole === 'super_admin' && !currentTenantId.value) return;
+            loadingKuliah.value = true;
+            const params = new URLSearchParams();
+            if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
+
+            axios.get(`${_baseUrl}/api/v1/bk/alumni/riwayat-kuliah?${params.toString()}`)
+                .then(res => { riwayatKuliahList.value = res.data.data || []; })
+                .catch(() => { riwayatKuliahList.value = []; })
+                .finally(() => { loadingKuliah.value = false; });
+        }
+
+        function deleteKuliah(id) {
+            Swal.fire({
+                title: 'Hapus Riwayat Kuliah?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'Ya, Hapus'
+            }).then(r => {
+                if (r.isConfirmed) {
+                    axios.post(`${_baseUrl}/api/v1/bk/alumni/riwayat-kuliah/delete`, { id })
+                        .then(() => {
+                            toast.fire({ icon: 'success', title: 'Data riwayat kuliah dihapus.' });
+                            loadRiwayatKuliah();
+                        });
+                }
+            });
+        }
+
+        function exportKuliahExcel() {
+            const params = new URLSearchParams();
+            if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
+            window.open(`${_baseUrl}/api/v1/bk/alumni/riwayat-kuliah/export?${params.toString()}`, '_blank');
+        }
+
+        function openKuliahModal() {
+            Swal.fire('Info', 'Form tambah riwayat kuliah dapat diisi melalui menu Tracer Study.', 'info');
+        }
+
+        function loadRiwayatPekerjaan() {
+            if (_userRole === 'super_admin' && !currentTenantId.value) return;
+            loadingPekerjaan.value = true;
+            const params = new URLSearchParams();
+            if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
+
+            axios.get(`${_baseUrl}/api/v1/bk/alumni/riwayat-pekerjaan?${params.toString()}`)
+                .then(res => { riwayatPekerjaanList.value = res.data.data || []; })
+                .catch(() => { riwayatPekerjaanList.value = []; })
+                .finally(() => { loadingPekerjaan.value = false; });
+        }
+
+        function deletePekerjaan(id) {
+            Swal.fire({
+                title: 'Hapus Riwayat Pekerjaan?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'Ya, Hapus'
+            }).then(r => {
+                if (r.isConfirmed) {
+                    axios.post(`${_baseUrl}/api/v1/bk/alumni/riwayat-pekerjaan/delete`, { id })
+                        .then(() => {
+                            toast.fire({ icon: 'success', title: 'Data riwayat pekerjaan dihapus.' });
+                            loadRiwayatPekerjaan();
+                        });
+                }
+            });
+        }
+
+        function exportPekerjaanExcel() {
+            const params = new URLSearchParams();
+            if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
+            window.open(`${_baseUrl}/api/v1/bk/alumni/riwayat-pekerjaan/export?${params.toString()}`, '_blank');
+        }
+
+        function openPekerjaanModal() {
+            Swal.fire('Info', 'Form tambah riwayat pekerjaan dapat diisi melalui menu Tracer Study.', 'info');
+        }
+
         // ─── Init ────────────────────────────────────────────
         onMounted(() => {
             loadDashboard();
-            tabsLoaded.value.dashboard = true;
+            switchTab(activeTab.value);
         });
 
         return {
@@ -4664,7 +5697,16 @@ window.VueAppRegistry.register('#bkApp', {
             searchSiswaBeasiswaDebounce, selectSiswaBeasiswa, clearSiswaBeasiswa, hideBeasiswaDropdownDelay,
             fetchBeasiswa, simpanBeasiswa, hapusBeasiswa, resetFormBeasiswa,
             // Daftar Semua Beasiswa
-            allBeasiswaList, filterBeasiswaTahunAjaran, loadingBeasiswaList, loadAllBeasiswa, exportBeasiswaExcel
+            allBeasiswaList, filterBeasiswaTahunAjaran, loadingBeasiswaList, loadAllBeasiswa, exportBeasiswaExcel,
+            // PDSS & Akademik
+            loadingKesiapan, kesiapanList, kesiapanSummary, kesiapanFilter, loadKesiapan, toggleEligible, exportKesiapanExcel,
+            loadingSimulasi, simulasiList, simulasiSettings, simulasiFilter, loadSimulasi, loadSimulasiSettings, toggleSimulasiSetting, exportSimulasiXlsx,
+            loadingKampus, kampusList, kampusSearch, kampusModal, loadKampus, openKampusModal, submitKampus, deleteKampus,
+            loadingJalur, jalurList, jalurModal, loadJalur, openJalurModal, submitJalur, deleteJalur,
+            // Alumni
+            loadingAlumniTracking, alumniTrackingList, alumniKpi, alumniFilter, alumniTahunLulusList, loadAlumniTracking,
+            loadingKuliah, riwayatKuliahList, loadRiwayatKuliah, deleteKuliah, exportKuliahExcel, openKuliahModal,
+            loadingPekerjaan, riwayatPekerjaanList, loadRiwayatPekerjaan, deletePekerjaan, exportPekerjaanExcel, openPekerjaanModal
         };
     }
 });

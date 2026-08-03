@@ -51,27 +51,32 @@ class BkDetailModuleController extends BaseController {
                 $tid  = $body['tenant_id'] ?? null;
             }
 
-            if (empty($tid) || $tid === '00000000-0000-0000-0000-000000000000') {
+            if (!empty($tid) && $tid !== '00000000-0000-0000-0000-000000000000') {
                 try {
                     $db   = \App\Config\Database::getConnection();
-                    $stmt = $db->query("SELECT id FROM core.tenants WHERE id != '00000000-0000-0000-0000-000000000000' AND status = 'active' AND deleted_at IS NULL ORDER BY nama_sekolah ASC LIMIT 1");
-                    $firstId = $stmt->fetchColumn();
-                    return $firstId ?: $tenantId;
+                    $stmt = $db->prepare("SELECT id FROM core.tenants WHERE id = ? LIMIT 1");
+                    $stmt->execute([$tid]);
+                    $valid = $stmt->fetchColumn();
+                    if ($valid) return $valid;
                 } catch (\Throwable) {
-                    return $tenantId;
                 }
             }
 
-            if (!empty($tid)) {
-                try {
-                    $db   = \App\Config\Database::getConnection();
-                    $stmt = $db->prepare("SELECT id FROM core.tenants WHERE id = ? AND deleted_at IS NULL LIMIT 1");
-                    $stmt->execute([$tid]);
-                    $valid = $stmt->fetchColumn();
-                    return $valid ?: $tenantId;
-                } catch (\Throwable) {
-                    return $tenantId;
-                }
+            try {
+                $db   = \App\Config\Database::getConnection();
+                $stmt = $db->query("SELECT id FROM core.tenants WHERE id != '00000000-0000-0000-0000-000000000000' AND status = 'active' ORDER BY created_at ASC LIMIT 1");
+                $firstId = $stmt->fetchColumn();
+                if ($firstId) return $firstId;
+            } catch (\Throwable) {
+            }
+        }
+
+        if (empty($tenantId) || $tenantId === '00000000-0000-0000-0000-000000000000') {
+            try {
+                $db   = \App\Config\Database::getConnection();
+                $stmt = $db->query("SELECT id FROM core.tenants WHERE id != '00000000-0000-0000-0000-000000000000' AND status = 'active' ORDER BY created_at ASC LIMIT 1");
+                $tenantId = $stmt->fetchColumn() ?: null;
+            } catch (\Throwable) {
             }
         }
 
@@ -107,22 +112,28 @@ class BkDetailModuleController extends BaseController {
         if ($role === 'super_admin') {
             try {
                 $db         = \App\Config\Database::getConnection();
-                $tenantList = $db->query("SELECT id, nama_sekolah FROM core.tenants WHERE id != '00000000-0000-0000-0000-000000000000' AND deleted_at IS NULL ORDER BY nama_sekolah ASC")
+                $tenantList = $db->query("SELECT id, nama_sekolah, npsn FROM core.tenants WHERE id != '00000000-0000-0000-0000-000000000000' AND status = 'active' ORDER BY nama_sekolah ASC")
                                  ->fetchAll(\PDO::FETCH_ASSOC);
             } catch (\Throwable $e) {}
         }
 
         $tahunAjaranList = [];
-        if ($tenantId) {
-            try {
-                $db = \App\Config\Database::getConnection();
-                $stmt = $db->prepare("SELECT id, tahun_ajaran FROM akademik.tahun_ajaran WHERE tenant_id = ? AND is_active = 1 AND deleted_at IS NULL ORDER BY tahun_ajaran DESC");
+        try {
+            $db = \App\Config\Database::getConnection();
+            if ($tenantId) {
+                $stmt = $db->prepare("SELECT id, COALESCE(nama_tahun_ajaran, '2025/2026') AS tahun_ajaran, is_active FROM akademik.tahun_ajaran WHERE tenant_id = ? AND is_active = TRUE ORDER BY created_at DESC");
                 $stmt->execute([$tenantId]);
                 $tahunAjaranList = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-            } catch (\Throwable $e) {}
+            }
+            if (empty($tahunAjaranList)) {
+                $stmt = $db->query("SELECT id, COALESCE(nama_tahun_ajaran, '2025/2026') AS tahun_ajaran, is_active FROM akademik.tahun_ajaran WHERE is_active = TRUE ORDER BY created_at DESC");
+                $tahunAjaranList = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            }
+        } catch (\Throwable $e) {
+            error_log('[BKController::_renderBkHub] Gagal memuat tahun ajaran: ' . $e->getMessage());
         }
 
-        $this->render('master_bk', [
+        $this->render('bk/master_bk', [
             'title'             => 'Bimbingan Konseling',
             'user_role'         => $role,
             'can_write'         => in_array($role, ['guru_bk', 'operator_sekolah', 'super_admin']),
@@ -139,10 +150,10 @@ class BkDetailModuleController extends BaseController {
         $db       = \App\Config\Database::getConnection();
 
         $q       = $this->sanitize($_GET['q'] ?? '');
-        $kelasId = (int)($_GET['kelas_id'] ?? 0);
+        $kelasId = $this->sanitize($_GET['kelas_id'] ?? '');
         $limit   = min((int)($_GET['limit'] ?? 10), 30);
 
-        if (strlen($q) < 1 && $kelasId === 0) {
+        if (strlen($q) < 1 && empty($kelasId)) {
             $this->jsonResponse(['success' => true, 'data' => []]);
             return;
         }
@@ -154,23 +165,19 @@ class BkDetailModuleController extends BaseController {
                         s.nama_lengkap,
                         s.nisn,
                         s.nis,
-                        s.status,
-                        s.id_kelas,
-                        k.nama_kelas,
-                        k.kode_kelas,
-                        j.nama_jurusan
+                        s.kelas_saat_ini AS nama_kelas,
+                        s.jurusan AS nama_jurusan,
+                        s.status_siswa AS status
                     FROM siswa.siswa s
-                    LEFT JOIN akademik.kelas   k ON s.id_kelas  = k.id
-                    LEFT JOIN akademik.jurusan j ON s.id_jurusan = j.id
-                    WHERE s.deleted_at IS NULL
-                      AND s.status = 'Aktif'";
+                    WHERE s.is_active = TRUE
+                      AND (LOWER(s.status_siswa) = 'aktif' OR s.status_siswa = 'Aktif')";
 
             if ($tenantId) {
                 $sql .= " AND s.tenant_id = ?";
                 $params[] = $tenantId;
             }
-            if ($kelasId > 0) {
-                $sql .= " AND s.id_kelas = ?";
+            if (!empty($kelasId)) {
+                $sql .= " AND s.kelas_saat_ini = ?";
                 $params[] = $kelasId;
             }
             if ($q !== '') {
@@ -181,7 +188,7 @@ class BkDetailModuleController extends BaseController {
                 $params[] = "%$lowerQ%";
             }
 
-            $sql .= " ORDER BY k.nama_kelas ASC, s.nama_lengkap ASC LIMIT ?";
+            $sql .= " ORDER BY s.kelas_saat_ini ASC, s.nama_lengkap ASC LIMIT ?";
             $stmt = $db->prepare($sql);
             foreach ($params as $i => $val) {
                 $stmt->bindValue($i + 1, $val, \PDO::PARAM_STR);
@@ -274,6 +281,171 @@ class BkDetailModuleController extends BaseController {
         }
     }
 
+    public function apiUpdateStatus(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->jsonResponse(['error' => 'Method not allowed.'], 405);
+            return;
+        }
+
+        $tenantId = $this->getSecureTenantId();
+        $roles    = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
+        $isGuruBkOnly = in_array('guru_bk', $roles) && !in_array('operator_sekolah', $roles) && !in_array('super_admin', $roles);
+        $userId   = $_SESSION['user_id'] ?? null;
+        $body     = $this->getJsonInput();
+
+        $idKasus = $this->sanitize($body['id_kasus'] ?? '');
+        $status  = $this->sanitize($body['status_kasus'] ?? '');
+
+        if (empty($idKasus)) {
+            $this->jsonResponse(['error' => 'ID Kasus tidak valid.'], 422);
+            return;
+        }
+
+        $validStatus = ['Terbuka', 'Proses', 'Selesai'];
+        if (!in_array($status, $validStatus, true)) {
+            $this->jsonResponse(['error' => 'Status kasus tidak valid.'], 422);
+            return;
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+
+            $qCheck = "SELECT id, tenant_id, id_guru_bk, is_rahasia, status_kasus FROM bk.catatan_bk WHERE id = ?::uuid LIMIT 1";
+            $stmtCheck = $db->prepare($qCheck);
+            $stmtCheck->execute([$idKasus]);
+            $kasus = $stmtCheck->fetch(\PDO::FETCH_ASSOC);
+
+            if (!$kasus) {
+                $this->jsonResponse(['error' => 'Catatan kasus tidak ditemukan.'], 404);
+                return;
+            }
+
+            if ($tenantId && $kasus['tenant_id'] !== $tenantId) {
+                $this->jsonResponse(['error' => 'Akses ditolak. Kasus berada di sekolah lain.'], 403);
+                return;
+            }
+
+            if ($isGuruBkOnly && (int)$kasus['is_rahasia'] === 1 && $kasus['id_guru_bk'] !== $userId) {
+                $this->jsonResponse(['error' => 'Akses ditolak. Anda tidak berhak mengubah kasus rahasia milik rekan guru lain.'], 403);
+                return;
+            }
+
+            $statusLama = $kasus['status_kasus'];
+            if ($statusLama === $status) {
+                $this->jsonResponse(['success' => true, 'message' => 'Status kasus tidak berubah.']);
+                return;
+            }
+
+            $db->beginTransaction();
+
+            $stmtUpdate = $db->prepare("UPDATE bk.catatan_bk SET status_kasus = ?, updated_at = NOW() WHERE id = ?::uuid");
+            $stmtUpdate->execute([$status, $idKasus]);
+
+            $currentUserRole = 'guru_bk';
+            foreach (['super_admin', 'operator_sekolah', 'guru_bk'] as $allowed) {
+                if (in_array($allowed, $roles)) {
+                    $currentUserRole = $allowed;
+                    break;
+                }
+            }
+            $currentUserName = $_SESSION['nama_lengkap'] ?? 'Guru BK / Admin';
+
+            $stmtLog = $db->prepare("
+                INSERT INTO bk.catatan_bk_log (
+                    id_catatan_bk,
+                    tenant_id,
+                    status_lama,
+                    status_baru,
+                    id_user,
+                    nama_user,
+                    peran_user
+                ) VALUES (
+                    :id_catatan_bk,
+                    :tenant_id,
+                    :status_lama,
+                    :status_baru,
+                    :id_user,
+                    :nama_user,
+                    :peran_user
+                )
+            ");
+            $stmtLog->execute([
+                'id_catatan_bk' => $idKasus,
+                'tenant_id'     => $kasus['tenant_id'],
+                'status_lama'   => $statusLama,
+                'status_baru'   => $status,
+                'id_user'       => $userId,
+                'nama_user'     => $currentUserName,
+                'peran_user'    => $currentUserRole
+            ]);
+
+            $db->commit();
+
+            $this->jsonResponse(['success' => true, 'message' => 'Status kasus berhasil diperbarui menjadi ' . $status]);
+        } catch (\Throwable $e) {
+            if (isset($db) && $db->inTransaction()) $db->rollBack();
+            error_log('[BKController::apiUpdateStatus] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal memperbarui status kasus: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function apiGetLogs(): void {
+        $tenantId = $this->getSecureTenantId();
+        $roles    = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
+        $isGuruBkOnly = in_array('guru_bk', $roles) && !in_array('operator_sekolah', $roles) && !in_array('super_admin', $roles);
+        $userId   = $_SESSION['user_id'] ?? null;
+
+        $idKasus = $this->sanitize($_GET['id_kasus'] ?? '');
+        if (empty($idKasus)) {
+            $this->jsonResponse(['error' => 'ID Kasus tidak valid.'], 422);
+            return;
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+
+            $qCheck = "SELECT id, tenant_id, id_guru_bk, is_rahasia FROM bk.catatan_bk WHERE id = ?::uuid LIMIT 1";
+            $stmtCheck = $db->prepare($qCheck);
+            $stmtCheck->execute([$idKasus]);
+            $kasus = $stmtCheck->fetch(\PDO::FETCH_ASSOC);
+
+            if (!$kasus) {
+                $this->jsonResponse(['error' => 'Catatan kasus tidak ditemukan.'], 404);
+                return;
+            }
+
+            if ($tenantId && $kasus['tenant_id'] !== $tenantId) {
+                $this->jsonResponse(['error' => 'Akses ditolak. Kasus berada di sekolah lain.'], 403);
+                return;
+            }
+
+            if ($isGuruBkOnly && (int)$kasus['is_rahasia'] === 1 && $kasus['id_guru_bk'] !== $userId) {
+                $this->jsonResponse(['error' => 'Akses ditolak. Anda tidak berhak melihat log kasus rahasia milik rekan guru lain.'], 403);
+                return;
+            }
+
+            $stmtLogs = $db->prepare("
+                SELECT 
+                    id, 
+                    status_lama, 
+                    status_baru, 
+                    nama_user, 
+                    peran_user, 
+                    created_at 
+                FROM bk.catatan_bk_log 
+                WHERE id_catatan_bk = ?::uuid 
+                ORDER BY created_at DESC
+            ");
+            $stmtLogs->execute([$idKasus]);
+            $logs = $stmtLogs->fetchAll(\PDO::FETCH_ASSOC);
+
+            $this->jsonResponse(['success' => true, 'data' => $logs]);
+        } catch (\Throwable $e) {
+            error_log('[BKController::apiGetLogs] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal memuat log riwayat kasus: ' . $e->getMessage()], 500);
+        }
+    }
+
     public function apiStoreKasus(): void {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->jsonResponse(['error' => 'Method not allowed.'], 405);
@@ -292,7 +464,6 @@ class BkDetailModuleController extends BaseController {
         $statusKasus  = $this->sanitize($body['status_kasus']      ?? 'Terbuka');
         $isRahasia    = (int)($body['is_rahasia'] ?? 1);
 
-        // ── Validasi Input ────────────────────────────────────────────────────
         $errors = [];
         if (empty($idSiswa))  $errors[] = 'ID Siswa wajib diisi.';
         if (empty($tenantId)) $errors[] = 'Tenant tidak terdeteksi.';
@@ -313,26 +484,19 @@ class BkDetailModuleController extends BaseController {
         try {
             $db = \App\Config\Database::getConnection();
 
-            // ── STEP 1: Ambil data snapshot siswa SAAT INI ──────────────────
-            // Query ini mengambil kelas, NIS, NISN pada moment rekam kasus.
-            // Nilai ini akan dikunci abadi di catatan_bk — TIDAK PERNAH berubah
-            // meskipun tahun depan siswa naik kelas (Historical Snapshot Pattern).
             $stmtSnap = $db->prepare("
                 SELECT
                     s.id,
                     s.nama_lengkap,
                     s.nisn,
                     s.nis,
-                    s.id_kelas,
-                    k.nama_kelas
+                    s.kelas_saat_ini AS nama_kelas
                 FROM siswa.siswa s
-                LEFT JOIN akademik.kelas k ON s.id_kelas = k.id
-                WHERE s.id        = ?
-                  AND s.tenant_id = ?
-                  AND s.deleted_at IS NULL
+                WHERE s.id = ?::uuid
+                  AND s.is_active = TRUE
                 LIMIT 1
             ");
-            $stmtSnap->execute([$idSiswa, $tenantId]);
+            $stmtSnap->execute([$idSiswa]);
             $siswaSnap = $stmtSnap->fetch(\PDO::FETCH_ASSOC);
 
             if (!$siswaSnap) {
@@ -340,23 +504,28 @@ class BkDetailModuleController extends BaseController {
                 return;
             }
 
-            // Nilai snapshot — diambil dari DB saat ini, bukan dari input user
             $snapNamaSiswa = $siswaSnap['nama_lengkap'] ?? null;
             $snapNisn      = $siswaSnap['nisn']          ?? null;
             $snapNis       = $siswaSnap['nis']           ?? null;
             $snapNamaKelas = $siswaSnap['nama_kelas']    ?? null;
-            $snapIdKelas   = $siswaSnap['id_kelas']      ?? null;
 
-            // ── STEP 2: INSERT dengan snapshot terkunci ─────────────────────
+            $newId = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x', 
+                mt_rand(0, 0xffff), mt_rand(0, 0xffff), 
+                mt_rand(0, 0xffff), 
+                mt_rand(0, 0x0fff) | 0x4000, 
+                mt_rand(0, 0x3fff) | 0x8000, 
+                mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+            );
+
             $db->beginTransaction();
             $stmt = $db->prepare("
                 INSERT INTO bk.catatan_bk (
+                    id,
                     id_siswa,
                     snapshot_nama_siswa,
                     snapshot_nisn,
                     snapshot_nis,
                     snapshot_nama_kelas,
-                    id_kelas_snapshot,
                     tenant_id,
                     id_guru_bk,
                     tanggal_konseling,
@@ -366,12 +535,12 @@ class BkDetailModuleController extends BaseController {
                     status_kasus,
                     is_rahasia
                 ) VALUES (
+                    :id,
                     :id_siswa,
                     :snap_nama_siswa,
                     :snap_nisn,
                     :snap_nis,
                     :snap_nama_kelas,
-                    :snap_id_kelas,
                     :tenant_id,
                     :id_guru_bk,
                     :tanggal,
@@ -383,12 +552,12 @@ class BkDetailModuleController extends BaseController {
                 )
             ");
             $stmt->execute([
+                'id'              => $newId,
                 'id_siswa'        => $idSiswa,
                 'snap_nama_siswa' => $snapNamaSiswa,
                 'snap_nisn'       => $snapNisn,
                 'snap_nis'        => $snapNis,
                 'snap_nama_kelas' => $snapNamaKelas,
-                'snap_id_kelas'   => $snapIdKelas,
                 'tenant_id'       => $tenantId,
                 'id_guru_bk'      => $idGuruBk,
                 'tanggal'         => $tanggal,
@@ -398,9 +567,7 @@ class BkDetailModuleController extends BaseController {
                 'status'          => $statusKasus,
                 'rahasia'         => $isRahasia,
             ]);
-            $newId = $db->lastInsertId();
 
-            // Ambil role penindak saat ini
             $rolesList = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
             $currentUserRole = 'guru_bk';
             foreach (['super_admin', 'operator_sekolah', 'guru_bk'] as $allowed) {
@@ -411,7 +578,6 @@ class BkDetailModuleController extends BaseController {
             }
             $currentUserName = $_SESSION['nama_lengkap'] ?? 'Guru BK / Admin';
 
-            // Insert log inisiasi pembuatan kasus ke catatan_bk_log
             $stmtLog = $db->prepare("
                 INSERT INTO bk.catatan_bk_log (
                     id_catatan_bk,
@@ -457,10 +623,9 @@ class BkDetailModuleController extends BaseController {
         } catch (\Throwable $e) {
             if (isset($db) && $db->inTransaction()) $db->rollBack();
             error_log('[BKController::apiStoreKasus] ' . $e->getMessage());
-            $this->jsonResponse(['error' => 'Gagal menyimpan catatan. Coba lagi.'], 500);
+            $this->jsonResponse(['error' => 'Gagal menyimpan catatan: ' . $e->getMessage()], 500);
         }
     }
-
 
     // =========================================================================
     // API: Tab 5 — Daftar Kasus (GET) — dengan Historical Snapshot
@@ -470,21 +635,29 @@ class BkDetailModuleController extends BaseController {
         $tenantId = $this->getSecureTenantId();
         $roles    = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
         $isGuruBkOnly = in_array('guru_bk', $roles) && !in_array('operator_sekolah', $roles) && !in_array('super_admin', $roles);
+        $userId   = $_SESSION['user_id'] ?? '';
         $db       = \App\Config\Database::getConnection();
 
         try {
-            // bk.catatan_bk adalah tabel master referensi catatan BK (nama_catatan_bk, kategori, deskripsi)
-            // Data transaksi kasus konseling disimpan di bk.sesi_mentoring / bk.catatan_bk
             $q = "
                 SELECT
                     cb.id,
-                    cb.nama_catatan_bk  AS jenis_kasus,
-                    cb.kategori,
-                    cb.deskripsi        AS catatan,
-                    cb.is_active,
+                    cb.id_siswa,
+                    COALESCE(cb.snapshot_nama_siswa, s.nama_lengkap, 'Siswa') AS nama_siswa,
+                    COALESCE(cb.snapshot_nisn, s.nisn) AS nisn,
+                    COALESCE(cb.snapshot_nis, s.nis) AS nis,
+                    COALESCE(cb.snapshot_nama_kelas, s.kelas_saat_ini, 'Kelas') AS nama_kelas,
+                    cb.id_guru_bk,
+                    COALESCE(cb.tanggal_konseling, cb.created_at::date) AS tanggal_konseling,
+                    COALESCE(cb.jenis_kasus, cb.nama_catatan_bk, 'Konseling BK') AS jenis_kasus,
+                    COALESCE(cb.catatan, cb.deskripsi, '') AS catatan,
+                    cb.tindak_lanjut,
+                    COALESCE(cb.status_kasus, 'Terbuka') AS status_kasus,
+                    COALESCE(cb.is_rahasia, 1) AS is_rahasia,
                     cb.created_at,
                     cb.updated_at
                 FROM bk.catatan_bk cb
+                LEFT JOIN siswa.siswa s ON cb.id_siswa = s.id
                 WHERE 1=1
             ";
             $params = [];
@@ -494,7 +667,12 @@ class BkDetailModuleController extends BaseController {
                 $params[] = $tenantId;
             }
 
-            $q .= " ORDER BY cb.created_at DESC LIMIT 150";
+            if ($isGuruBkOnly && $userId) {
+                $q .= " AND (cb.is_rahasia = 0 OR cb.id_guru_bk = ?)";
+                $params[] = $userId;
+            }
+
+            $q .= " ORDER BY cb.created_at DESC LIMIT 200";
             $stmt = $db->prepare($q);
             $stmt->execute($params);
             $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -502,191 +680,7 @@ class BkDetailModuleController extends BaseController {
             $this->jsonResponse(['success' => true, 'data' => $data]);
         } catch (\Throwable $e) {
             error_log('[BKController::apiListKasus] ' . $e->getMessage());
-            $this->jsonResponse(['error' => 'Gagal memuat data kasus.'], 500);
-        }
-    }
-
-    // =========================================================================
-    // API: Tab 5 — Update Status Riwayat Kasus BK + Log
-    // POST /api/v1/bk/kasus/update-status
-    // =========================================================================
-    public function apiUpdateStatus(): void {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->jsonResponse(['error' => 'Method not allowed.'], 405);
-            return;
-        }
-
-        $tenantId = $this->getSecureTenantId();
-        $roles    = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
-        $isGuruBkOnly = in_array('guru_bk', $roles) && !in_array('operator_sekolah', $roles) && !in_array('super_admin', $roles);
-        $userId   = $_SESSION['user_id'] ?? null;
-        $body     = $this->getJsonInput();
-
-        $idKasus = (int)($body['id_kasus'] ?? 0);
-        $status  = $this->sanitize($body['status_kasus'] ?? '');
-
-        if (!$idKasus) {
-            $this->jsonResponse(['error' => 'ID Kasus tidak valid.'], 422);
-            return;
-        }
-
-        $validStatus = ['Terbuka', 'Proses', 'Selesai'];
-        if (!in_array($status, $validStatus, true)) {
-            $this->jsonResponse(['error' => 'Status kasus tidak valid.'], 422);
-            return;
-        }
-
-        try {
-            $db = \App\Config\Database::getConnection();
-
-            // Pengecekan data kasus di DB
-            $qCheck = "SELECT id, tenant_id, id_guru_bk, is_rahasia, status_kasus FROM bk.catatan_bk WHERE id = ? AND deleted_at IS NULL LIMIT 1";
-            $stmtCheck = $db->prepare($qCheck);
-            $stmtCheck->execute([$idKasus]);
-            $kasus = $stmtCheck->fetch(\PDO::FETCH_ASSOC);
-
-            if (!$kasus) {
-                $this->jsonResponse(['error' => 'Catatan kasus tidak ditemukan.'], 404);
-                return;
-            }
-
-            // Validasi kepemilikan tenant
-            if ($tenantId && $kasus['tenant_id'] !== $tenantId) {
-                $this->jsonResponse(['error' => 'Akses ditolak. Kasus berada di sekolah lain.'], 403);
-                return;
-            }
-
-            // Otorisasi guru_bk untuk kasus rahasia
-            if ($isGuruBkOnly && (int)$kasus['is_rahasia'] === 1 && $kasus['id_guru_bk'] !== $userId) {
-                $this->jsonResponse(['error' => 'Akses ditolak. Anda tidak berhak mengubah kasus rahasia milik rekan guru lain.'], 403);
-                return;
-            }
-
-            $statusLama = $kasus['status_kasus'];
-            if ($statusLama === $status) {
-                $this->jsonResponse(['success' => true, 'message' => 'Status kasus tidak berubah.']);
-                return;
-            }
-
-            // Mulai transaksi untuk ACID lock/log
-            $db->beginTransaction();
-
-            // Update status kasus
-            $stmtUpdate = $db->prepare("UPDATE bk.catatan_bk SET status_kasus = ?, updated_at = NOW() WHERE id = ?");
-            $stmtUpdate->execute([$status, $idKasus]);
-
-            // Ambil role penindak saat ini
-            $currentUserRole = 'guru_bk';
-            foreach (['super_admin', 'operator_sekolah', 'guru_bk'] as $allowed) {
-                if (in_array($allowed, $roles)) {
-                    $currentUserRole = $allowed;
-                    break;
-                }
-            }
-            $currentUserName = $_SESSION['nama_lengkap'] ?? 'Guru BK / Admin';
-
-            // Log update status ke catatan_bk_log
-            $stmtLog = $db->prepare("
-                INSERT INTO bk.catatan_bk_log (
-                    id_catatan_bk,
-                    tenant_id,
-                    status_lama,
-                    status_baru,
-                    id_user,
-                    nama_user,
-                    peran_user
-                ) VALUES (
-                    :id_catatan_bk,
-                    :tenant_id,
-                    :status_lama,
-                    :status_baru,
-                    :id_user,
-                    :nama_user,
-                    :peran_user
-                )
-            ");
-            $stmtLog->execute([
-                'id_catatan_bk' => $idKasus,
-                'tenant_id'     => $kasus['tenant_id'],
-                'status_lama'   => $statusLama,
-                'status_baru'   => $status,
-                'id_user'       => $userId,
-                'nama_user'     => $currentUserName,
-                'peran_user'    => $currentUserRole
-            ]);
-
-            $db->commit();
-
-            $this->jsonResponse(['success' => true, 'message' => 'Status kasus berhasil diperbarui menjadi ' . $status]);
-        } catch (\Throwable $e) {
-            if (isset($db) && $db->inTransaction()) $db->rollBack();
-            error_log('[BKController::apiUpdateStatus] ' . $e->getMessage());
-            $this->jsonResponse(['error' => 'Gagal memperbarui status kasus. Coba lagi.'], 500);
-        }
-    }
-
-    // =========================================================================
-    // API: Tab 5 — Get Log Riwayat Aktivitas Kasus BK
-    // GET /api/v1/bk/kasus/logs?id_kasus=X
-    // =========================================================================
-    public function apiGetLogs(): void {
-        $tenantId = $this->getSecureTenantId();
-        $roles    = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
-        $isGuruBkOnly = in_array('guru_bk', $roles) && !in_array('operator_sekolah', $roles) && !in_array('super_admin', $roles);
-        $userId   = $_SESSION['user_id'] ?? null;
-
-        $idKasus = (int)($_GET['id_kasus'] ?? 0);
-        if (!$idKasus) {
-            $this->jsonResponse(['error' => 'ID Kasus tidak valid.'], 422);
-            return;
-        }
-
-        try {
-            $db = \App\Config\Database::getConnection();
-
-            // Pengecekan data kasus di DB
-            $qCheck = "SELECT id, tenant_id, id_guru_bk, is_rahasia FROM bk.catatan_bk WHERE id = ? AND deleted_at IS NULL LIMIT 1";
-            $stmtCheck = $db->prepare($qCheck);
-            $stmtCheck->execute([$idKasus]);
-            $kasus = $stmtCheck->fetch(\PDO::FETCH_ASSOC);
-
-            if (!$kasus) {
-                $this->jsonResponse(['error' => 'Catatan kasus tidak ditemukan.'], 404);
-                return;
-            }
-
-            // Validasi tenant
-            if ($tenantId && $kasus['tenant_id'] !== $tenantId) {
-                $this->jsonResponse(['error' => 'Akses ditolak. Kasus berada di sekolah lain.'], 403);
-                return;
-            }
-
-            // Otorisasi guru_bk untuk kasus rahasia
-            if ($isGuruBkOnly && (int)$kasus['is_rahasia'] === 1 && $kasus['id_guru_bk'] !== $userId) {
-                $this->jsonResponse(['error' => 'Akses ditolak. Anda tidak berhak melihat log kasus rahasia milik rekan guru lain.'], 403);
-                return;
-            }
-
-            // Ambil semua log
-            $stmtLogs = $db->prepare("
-                SELECT 
-                    id, 
-                    status_lama, 
-                    status_baru, 
-                    nama_user, 
-                    peran_user, 
-                    created_at 
-                FROM bk.catatan_bk_log 
-                WHERE id_catatan_bk = ? 
-                ORDER BY created_at DESC, id DESC
-            ");
-            $stmtLogs->execute([$idKasus]);
-            $logs = $stmtLogs->fetchAll(\PDO::FETCH_ASSOC);
-
-            $this->jsonResponse(['success' => true, 'data' => $logs]);
-        } catch (\Throwable $e) {
-            error_log('[BKController::apiGetLogs] ' . $e->getMessage());
-            $this->jsonResponse(['error' => 'Gagal memuat log riwayat kasus.'], 500);
+            $this->jsonResponse(['error' => 'Gagal memuat data kasus: ' . $e->getMessage()], 500);
         }
     }
 
@@ -1089,28 +1083,194 @@ class BkDetailModuleController extends BaseController {
 
         try {
             $db = \App\Config\Database::getConnection();
-            // kesiswaan.prestasi_siswa adalah tabel master referensi jenis prestasi
             $stmt = $db->prepare("
                 SELECT
                     ps.id,
-                    ps.nama_prestasi_siswa  AS nama_prestasi,
+                    ps.tahun_ajaran_id,
+                    ps.semester,
+                    COALESCE(ps.nama_lomba, ps.nama_prestasi_siswa) AS nama_lomba,
+                    COALESCE(ps.nama_lomba, ps.nama_prestasi_siswa) AS nama_prestasi,
+                    COALESCE(ps.bidang_lomba, ps.kategori) AS bidang_lomba,
+                    ps.nomor_sertifikat,
+                    ps.juara,
                     ps.kategori,
-                    ps.deskripsi,
-                    ps.is_active,
+                    ps.tingkat_kejuaraan,
+                    ps.jenis_lomba,
+                    ps.tempat_lomba,
+                    ps.tanggal_lomba,
+                    ps.penyelenggara,
+                    ps.guru_pendamping,
+                    ps.poin_prestasi,
+                    ps.foto_bukti_prestasi,
+                    ps.foto_siswa_prestasi,
+                    ps.foto_kegiatan_lomba,
+                    ps.surat_tugas_pdf,
                     ps.created_at,
-                    ps.updated_at
+                    COALESCE(
+                        (
+                            SELECT json_agg(json_build_object(
+                                'id', s.id,
+                                'nama_lengkap', s.nama_lengkap,
+                                'nisn', s.nisn,
+                                'nis', s.nis,
+                                'nama_kelas', s.kelas_saat_ini
+                            ))
+                            FROM kesiswaan.prestasi_siswa_anggota psa
+                            JOIN siswa.siswa s ON psa.id_siswa = s.id
+                            WHERE psa.id_prestasi = ps.id
+                        )::text, '[]'
+                    ) AS siswa_list_json
                 FROM kesiswaan.prestasi_siswa ps
                 WHERE ps.tenant_id = ?
-                  AND ps.is_active = TRUE
-                ORDER BY ps.nama_prestasi_siswa ASC
+                ORDER BY ps.created_at DESC
             ");
             $stmt->execute([$tenantId]);
             $prestasiList = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
+            foreach ($prestasiList as &$item) {
+                $item['siswa_list'] = json_decode($item['siswa_list_json'] ?? '[]', true) ?: [];
+                if (!empty($item['siswa_list'])) {
+                    $item['nama_siswa'] = implode(', ', array_column($item['siswa_list'], 'nama_lengkap'));
+                    $item['nisn']       = $item['siswa_list'][0]['nisn'] ?? '';
+                    $item['nama_kelas'] = $item['siswa_list'][0]['nama_kelas'] ?? '';
+                } else {
+                    $item['nama_siswa'] = '—';
+                    $item['nisn']       = '—';
+                    $item['nama_kelas'] = '—';
+                }
+            }
+
             $this->jsonResponse(['success' => true, 'data' => $prestasiList]);
         } catch (\Throwable $e) {
             error_log('[BKController::apiListPrestasi] ' . $e->getMessage());
-            $this->jsonResponse(['error' => 'Gagal memuat daftar prestasi.'], 500);
+            $this->jsonResponse(['error' => 'Gagal memuat daftar prestasi: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // =========================================================================
+    // API: Ekspor Excel Data Prestasi Siswa (.xlsx)
+    // GET /api/v1/bk/prestasi/export?tahun_ajaran_id=X&semester=Y
+    // =========================================================================
+    public function apiExportPrestasi(): void {
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            die("Pilih sekolah terlebih dahulu.");
+        }
+
+        $tahunAjaranId = $this->sanitize($_GET['tahun_ajaran_id'] ?? '');
+        $semester      = $this->sanitize($_GET['semester'] ?? '');
+
+        try {
+            $db = \App\Config\Database::getConnection();
+
+            $stmtTenant = $db->prepare("SELECT nama_sekolah FROM core.tenants WHERE id = ? LIMIT 1");
+            $stmtTenant->execute([$tenantId]);
+            $namaSekolah = $stmtTenant->fetchColumn() ?: "Sekolah";
+
+            $sql = "
+                SELECT
+                    ps.id,
+                    ps.tahun_ajaran_id,
+                    ps.semester,
+                    COALESCE(ps.bidang_lomba, ps.kategori) AS bidang_lomba,
+                    COALESCE(ps.nama_lomba, ps.nama_prestasi_siswa) AS nama_lomba,
+                    ps.nomor_sertifikat,
+                    ps.juara,
+                    ps.kategori,
+                    ps.tingkat_kejuaraan,
+                    ps.jenis_lomba,
+                    ps.tempat_lomba,
+                    ps.tanggal_lomba,
+                    ps.penyelenggara,
+                    ps.guru_pendamping,
+                    COALESCE(ps.poin_prestasi, 0) AS poin_prestasi,
+                    COALESCE(s.nama_lengkap, 'Siswa') AS nama_siswa,
+                    s.nisn,
+                    s.nis,
+                    s.kelas_saat_ini AS nama_kelas
+                FROM kesiswaan.prestasi_siswa ps
+                LEFT JOIN kesiswaan.prestasi_siswa_anggota psa ON psa.id_prestasi = ps.id
+                LEFT JOIN siswa.siswa s ON psa.id_siswa = s.id
+                WHERE ps.tenant_id = :tenant_id
+            ";
+
+            $params = ['tenant_id' => $tenantId];
+
+            if (!empty($tahunAjaranId)) {
+                $sql .= " AND (ps.tahun_ajaran_id = :tahun_ajaran_id OR ps.tahun_ajaran_id IN (SELECT id::text FROM akademik.tahun_ajaran WHERE is_active = TRUE))";
+                $params['tahun_ajaran_id'] = $tahunAjaranId;
+            }
+            if (!empty($semester)) {
+                $sql .= " AND ps.semester = :semester";
+                $params['semester'] = $semester;
+            }
+
+            $sql .= " ORDER BY ps.created_at DESC";
+
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            $filename = "Prestasi_Siswa_" . date('Ymd_His') . ".xlsx";
+
+            $excelData = [];
+            $excelData[] = ['REKAPITULASI DATA PRESTASI SISWA'];
+            $excelData[] = ['Sekolah:', $namaSekolah];
+            $excelData[] = ['Filter Tahun Ajaran:', $tahunAjaranId ?: 'Semua'];
+            $excelData[] = ['Filter Semester:', $semester ?: 'Semua'];
+            $excelData[] = [];
+
+            $excelData[] = [
+                'No',
+                'Nama Siswa',
+                'NISN',
+                'NIS',
+                'Kelas',
+                'Tahun Ajaran',
+                'Semester',
+                'Bidang Lomba',
+                'Nama Lomba',
+                'Nomor Sertifikat',
+                'Juara / Peringkat',
+                'Kategori',
+                'Tingkat Kejuaraan',
+                'Jenis Lomba',
+                'Tempat Lomba',
+                'Tanggal Lomba',
+                'Penyelenggara',
+                'Guru Pendamping',
+                'Skor Poin'
+            ];
+
+            $no = 1;
+            foreach ($rows as $row) {
+                $excelData[] = [
+                    $no++,
+                    (string)($row['nama_siswa'] ?? ''),
+                    (string)($row['nisn'] ?? ''),
+                    (string)($row['nis'] ?? ''),
+                    (string)($row['nama_kelas'] ?? ''),
+                    (string)($row['tahun_ajaran_id'] ?? ''),
+                    (string)($row['semester'] ?? ''),
+                    (string)($row['bidang_lomba'] ?? ''),
+                    (string)($row['nama_lomba'] ?? ''),
+                    (string)($row['nomor_sertifikat'] ?? ''),
+                    (string)($row['juara'] ?? ''),
+                    (string)($row['kategori'] ?? ''),
+                    (string)($row['tingkat_kejuaraan'] ?? ''),
+                    (string)($row['jenis_lomba'] ?? ''),
+                    (string)($row['tempat_lomba'] ?? ''),
+                    (string)($row['tanggal_lomba'] ?? ''),
+                    (string)($row['penyelenggara'] ?? ''),
+                    (string)($row['guru_pendamping'] ?? ''),
+                    (int)($row['poin_prestasi'] ?? 0)
+                ];
+            }
+
+            \Shuchkin\SimpleXLSXGen::fromArray($excelData)->downloadAs($filename);
+            exit;
+        } catch (\Throwable $e) {
+            die("Gagal mengekspor data prestasi: " . $e->getMessage());
         }
     }
 
@@ -1130,8 +1290,7 @@ class BkDetailModuleController extends BaseController {
             return;
         }
 
-        // Ambil data POST (biasanya multipart/form-data)
-        $tahunAjaranId    = (int)($_POST['tahun_ajaran_id']    ?? 0);
+        $tahunAjaranId    = $this->sanitize($_POST['tahun_ajaran_id'] ?? ($_POST['tahun_ajaran'] ?? ''));
         $semester         = $this->sanitize($_POST['semester']         ?? '');
         $bidangLomba      = $this->sanitize($_POST['bidang_lomba']      ?? '');
         $namaLomba        = $this->sanitize($_POST['nama_lomba']        ?? '');
@@ -1146,7 +1305,6 @@ class BkDetailModuleController extends BaseController {
         $penyelenggara    = $this->sanitize($_POST['penyelenggara']    ?? '');
         $guruPendamping   = $this->sanitize($_POST['guru_pendamping']   ?? '');
 
-        // Siswa IDs (array JSON atau string koma)
         $siswaIdsJson = $_POST['siswa_ids'] ?? '[]';
         $siswaIds     = json_decode($siswaIdsJson, true);
         if (!is_array($siswaIds) || empty($siswaIds)) {
@@ -1158,20 +1316,17 @@ class BkDetailModuleController extends BaseController {
             $guruPendamping = null;
         }
 
-        // Tentukan nilai juara jika manual
         if ($juara === 'Lainnya' && !empty($juaraLainnya)) {
             $juaraText = $juaraLainnya;
         } else {
             $juaraText = $juara;
         }
 
-        // Validasi input wajib
-        if (!$tahunAjaranId || empty($semester) || empty($bidangLomba) || empty($namaLomba) || empty($juaraText) || empty($tingkatKejuaraan) || empty($tempatLomba) || empty($tanggalLomba) || empty($penyelenggara)) {
+        if (empty($tahunAjaranId) || empty($semester) || empty($bidangLomba) || empty($namaLomba) || empty($juaraText) || empty($tingkatKejuaraan) || empty($tempatLomba) || empty($tanggalLomba) || empty($penyelenggara)) {
             $this->jsonResponse(['error' => 'Semua kolom bertanda bintang (*) wajib diisi.'], 422);
             return;
         }
 
-        // Otomatis hitung poin
         $poin = $this->calculatePoints($tingkatKejuaraan, $juaraText);
 
         // Upload files
@@ -1304,7 +1459,7 @@ class BkDetailModuleController extends BaseController {
             }
 
             // Ambil data POST
-            $tahunAjaranId    = (int)($_POST['tahun_ajaran_id']    ?? 0);
+            $tahunAjaranId    = $this->sanitize($_POST['tahun_ajaran_id'] ?? ($_POST['tahun_ajaran'] ?? ''));
             $semester         = $this->sanitize($_POST['semester']         ?? '');
             $bidangLomba      = $this->sanitize($_POST['bidang_lomba']      ?? '');
             $namaLomba        = $this->sanitize($_POST['nama_lomba']        ?? '');
@@ -1336,7 +1491,7 @@ class BkDetailModuleController extends BaseController {
                 $juaraText = $juara;
             }
 
-            if (!$tahunAjaranId || empty($semester) || empty($bidangLomba) || empty($namaLomba) || empty($juaraText) || empty($tingkatKejuaraan) || empty($tempatLomba) || empty($tanggalLomba) || empty($penyelenggara)) {
+            if (empty($tahunAjaranId) || empty($semester) || empty($bidangLomba) || empty($namaLomba) || empty($juaraText) || empty($tingkatKejuaraan) || empty($tempatLomba) || empty($tanggalLomba) || empty($penyelenggara)) {
                 $this->jsonResponse(['error' => 'Semua kolom bertanda bintang (*) wajib diisi.'], 422);
                 return;
             }
@@ -3026,19 +3181,23 @@ class BkDetailModuleController extends BaseController {
             $params = ['tenant_id' => $tenantId];
 
             if (!empty($tahunAjaranId)) {
-                $whereClause .= " AND s.id_tahun_ajaran = :tahun_ajaran_id";
+                $whereClause .= " AND (rb.tahun_menerima::text = :tahun_ajaran OR ta.id::text = :tahun_ajaran_id)";
+                $params['tahun_ajaran'] = $tahunAjaranId;
                 $params['tahun_ajaran_id'] = $tahunAjaranId;
             }
 
             $sql = "
-                SELECT rb.id, rb.jenis_beasiswa, rb.sumber, rb.tahun_menerima, rb.nominal,
-                       s.nama_lengkap, s.nisn, k.nama_kelas, ta.tahun_ajaran
-                FROM riwayat_beasiswa rb
+                SELECT rb.id, 
+                       COALESCE(rb.jenis_beasiswa, rb.nama_beasiswa) AS jenis_beasiswa, 
+                       COALESCE(rb.sumber, rb.penyelenggara) AS sumber, 
+                       COALESCE(rb.tahun_menerima, rb.tahun_mulai) AS tahun_menerima, 
+                       rb.nominal,
+                       s.nama_lengkap, s.nisn, s.kelas_saat_ini AS nama_kelas
+                FROM siswa.riwayat_beasiswa rb
                 JOIN siswa.siswa s ON rb.siswa_id = s.id
-                LEFT JOIN akademik.kelas k ON s.id_kelas = k.id
-                LEFT JOIN tahun_ajaran ta ON s.id_tahun_ajaran = ta.id
+                LEFT JOIN akademik.tahun_ajaran ta ON ta.is_active = TRUE
                 $whereClause
-                ORDER BY rb.tahun_menerima DESC, s.nama_lengkap ASC
+                ORDER BY rb.created_at DESC, s.nama_lengkap ASC
             ";
             $stmt = $db->prepare($sql);
             $stmt->execute($params);
@@ -3046,7 +3205,7 @@ class BkDetailModuleController extends BaseController {
             $this->jsonResponse(['success' => true, 'data' => $data]);
         } catch (\Throwable $e) {
             error_log('[BKController::apiBeasiswaList] ' . $e->getMessage());
-            $this->jsonResponse(['success' => false, 'error' => 'Gagal mengambil data beasiswa.'], 500);
+            $this->jsonResponse(['success' => false, 'error' => 'Gagal mengambil data beasiswa: ' . $e->getMessage()], 500);
         }
     }
 
@@ -3066,13 +3225,13 @@ class BkDetailModuleController extends BaseController {
             $db = \App\Config\Database::getConnection();
             
             // Ambil nama sekolah
-            $stmtTenant = $db->prepare("SELECT nama_sekolah FROM tenants WHERE id = ?");
+            $stmtTenant = $db->prepare("SELECT nama_sekolah FROM core.tenants WHERE id = ?");
             $stmtTenant->execute([$tenantId]);
             $namaSekolah = $stmtTenant->fetchColumn() ?: 'Sekolah';
 
             $tahunAjaranStr = 'Semua Tahun Ajaran';
             if (!empty($tahunAjaranId)) {
-                $stmtTA = $db->prepare("SELECT tahun_ajaran FROM akademik.tahun_ajaran WHERE id = ?");
+                $stmtTA = $db->prepare("SELECT nama_tahun_ajaran FROM akademik.tahun_ajaran WHERE id = ?");
                 $stmtTA->execute([$tahunAjaranId]);
                 $tahunAjaranStr = $stmtTA->fetchColumn() ?: 'Semua Tahun Ajaran';
             }
@@ -3081,19 +3240,20 @@ class BkDetailModuleController extends BaseController {
             $params = ['tenant_id' => $tenantId];
 
             if (!empty($tahunAjaranId)) {
-                $whereClause .= " AND s.id_tahun_ajaran = :tahun_ajaran_id";
-                $params['tahun_ajaran_id'] = $tahunAjaranId;
+                $whereClause .= " AND rb.tahun_menerima::text = :tahun_ajaran";
+                $params['tahun_ajaran'] = $tahunAjaranId;
             }
 
             $sql = "
-                SELECT rb.jenis_beasiswa, rb.sumber, rb.tahun_menerima, rb.nominal,
-                       s.nama_lengkap, s.nisn, k.nama_kelas, ta.tahun_ajaran
-                FROM riwayat_beasiswa rb
+                SELECT COALESCE(rb.jenis_beasiswa, rb.nama_beasiswa) AS jenis_beasiswa, 
+                       COALESCE(rb.sumber, rb.penyelenggara) AS sumber, 
+                       COALESCE(rb.tahun_menerima, rb.tahun_mulai) AS tahun_menerima, 
+                       rb.nominal,
+                       s.nama_lengkap, s.nisn, s.kelas_saat_ini AS nama_kelas
+                FROM siswa.riwayat_beasiswa rb
                 JOIN siswa.siswa s ON rb.siswa_id = s.id
-                LEFT JOIN akademik.kelas k ON s.id_kelas = k.id
-                LEFT JOIN tahun_ajaran ta ON s.id_tahun_ajaran = ta.id
                 $whereClause
-                ORDER BY rb.tahun_menerima DESC, s.nama_lengkap ASC
+                ORDER BY rb.created_at DESC, s.nama_lengkap ASC
             ";
             $stmt = $db->prepare($sql);
             $stmt->execute($params);
@@ -3139,5 +3299,531 @@ class BkDetailModuleController extends BaseController {
             error_log('[BKController::apiExportBeasiswa] ' . $e->getMessage());
             exit('Gagal mengekspor data.');
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  PDSS: KESIAPAN & ELIGIBILITAS SISWA
+    // ═══════════════════════════════════════════════════════════
+
+    public function apiKesiapanList(): void {
+        $tenantId      = $this->getSecureTenantId();
+        $db            = \App\Config\Database::getConnection();
+        $tahunAjaranId = $this->sanitize($_GET['tahun_ajaran_id'] ?? '');
+
+        try {
+            // Query siswa kelas 12 dengan rata-rata nilai 5 semester terakhir
+            $sql = "
+                SELECT
+                    s.id                AS siswa_id,
+                    s.nama_lengkap,
+                    s.nisn,
+                    k.nama_kelas,
+                    COALESCE(ks.is_eligible, FALSE)            AS is_eligible,
+                    COALESCE(ks.nilai_rata_rata, 0)::NUMERIC   AS nilai_rata_rata,
+                    COALESCE(ks.ranking_sekolah, 0)::INT       AS ranking_sekolah
+                FROM siswa.siswa s
+                LEFT JOIN akademik.kelas k ON s.id_kelas = k.id
+                LEFT JOIN pdss.kesiapan_siswa ks ON ks.siswa_id = s.id AND ks.tenant_id = s.tenant_id
+                    " . ($tahunAjaranId ? "AND ks.tahun_ajaran_id = ?" : "") . "
+                WHERE s.deleted_at IS NULL
+                  AND s.status = 'Aktif'
+                  AND (k.tingkat = '12' OR k.nama_kelas ILIKE '12%' OR k.nama_kelas ILIKE 'XII%')
+                  AND s.tenant_id = ?
+                ORDER BY COALESCE(ks.ranking_sekolah, 9999) ASC, s.nama_lengkap ASC
+            ";
+
+            $params = [];
+            if ($tahunAjaranId) $params[] = $tahunAjaranId;
+            $params[] = $tenantId;
+
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            // Cast booleans
+            foreach ($rows as &$r) {
+                $r['is_eligible']    = (bool)$r['is_eligible'];
+                $r['nilai_rata_rata'] = (float)$r['nilai_rata_rata'];
+                $r['ranking_sekolah'] = (int)$r['ranking_sekolah'];
+            }
+            unset($r);
+
+            $total    = count($rows);
+            $eligible = count(array_filter($rows, fn($r) => $r['is_eligible']));
+            $persen   = $total > 0 ? round(($eligible / $total) * 100, 1) : 0;
+
+            $this->jsonResponse([
+                'success' => true,
+                'data'    => $rows,
+                'summary' => [
+                    'total_siswa'         => $total,
+                    'total_eligible'      => $eligible,
+                    'persentase_eligible' => $persen,
+                ]
+            ]);
+        } catch (\Throwable $e) {
+            error_log('[BK::apiKesiapanList] ' . $e->getMessage());
+            http_response_code(500);
+            $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'Gagal mengambil data kesiapan siswa.']);
+        }
+    }
+
+    public function apiToggleEligible(): void {
+        $this->requireWrite();
+        $tenantId    = $this->getSecureTenantId();
+        $db          = \App\Config\Database::getConnection();
+        $body        = json_decode(file_get_contents('php://input'), true) ?? [];
+        $siswaId     = $this->sanitize($body['siswa_id'] ?? '');
+        $isEligible  = filter_var($body['is_eligible'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $tahunAjaranId = $this->sanitize($body['tahun_ajaran_id'] ?? '');
+
+        if (!$siswaId) {
+            http_response_code(422);
+            $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'siswa_id wajib diisi.']);
+            return;
+        }
+
+        try {
+            // Upsert kesiapan_siswa
+            $stmt = $db->prepare("
+                INSERT INTO pdss.kesiapan_siswa (id, tenant_id, siswa_id, tahun_ajaran_id, is_eligible, updated_at)
+                VALUES (gen_random_uuid(), ?, ?, ?, ?, NOW())
+                ON CONFLICT (tenant_id, siswa_id, tahun_ajaran_id)
+                DO UPDATE SET is_eligible = EXCLUDED.is_eligible, updated_at = NOW()
+            ");
+            $stmt->execute([$tenantId, $siswaId, $tahunAjaranId ?: null, $isEligible]);
+
+            $this->jsonResponse(['success' => true, 'data' => null, 'message' => 'Status eligible berhasil diperbarui.']);
+        } catch (\Throwable $e) {
+            error_log('[BK::apiToggleEligible] ' . $e->getMessage());
+            http_response_code(500);
+            $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'Gagal mengubah status eligible.']);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  PDSS: SIMULASI PILIHAN KAMPUS
+    // ═══════════════════════════════════════════════════════════
+
+    public function apiSimulasiList(): void {
+        $tenantId      = $this->getSecureTenantId();
+        $db            = \App\Config\Database::getConnection();
+        $tahunAjaranId = $this->sanitize($_GET['tahun_ajaran_id'] ?? '');
+
+        try {
+            $sql = "
+                SELECT
+                    pk.id,
+                    s.nama_lengkap,
+                    s.nisn,
+                    pk.no_simulasi,
+                    pk.no_pilihan,
+                    mk.nama_kampus,
+                    mp.nama_prodi,
+                    pk.status
+                FROM pdss.pilihan_kampus pk
+                LEFT JOIN siswa.siswa s ON pk.siswa_id = s.id
+                LEFT JOIN pdss.master_kampus mk ON pk.kampus_id = mk.id
+                LEFT JOIN pdss.master_prodi mp ON pk.prodi_id = mp.id
+                WHERE pk.tenant_id = ?
+                " . ($tahunAjaranId ? "AND pk.tahun_ajaran_id = ?" : "") . "
+                ORDER BY s.nama_lengkap ASC, pk.no_simulasi ASC, pk.no_pilihan ASC
+            ";
+            $params = [$tenantId];
+            if ($tahunAjaranId) $params[] = $tahunAjaranId;
+
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            $this->jsonResponse(['success' => true, 'data' => $stmt->fetchAll(\PDO::FETCH_ASSOC)]);
+        } catch (\Throwable $e) {
+            error_log('[BK::apiSimulasiList] ' . $e->getMessage());
+            http_response_code(500);
+            $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'Gagal mengambil data simulasi.']);
+        }
+    }
+
+    public function apiGetSimulasiSetting(): void {
+        $tenantId      = $this->getSecureTenantId();
+        $db            = \App\Config\Database::getConnection();
+        $tahunAjaranId = $this->sanitize($_GET['tahun_ajaran_id'] ?? '');
+
+        try {
+            $sql = "SELECT no_simulasi, is_open FROM pdss.simulasi_setting WHERE tenant_id = ?" .
+                   ($tahunAjaranId ? " AND tahun_ajaran_id = ?" : "");
+            $params = [$tenantId];
+            if ($tahunAjaranId) $params[] = $tahunAjaranId;
+
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            foreach ($rows as &$r) $r['is_open'] = (bool)$r['is_open'];
+            $this->jsonResponse(['success' => true, 'data' => $rows]);
+        } catch (\Throwable $e) {
+            $this->jsonResponse(['success' => true, 'data' => []]);
+        }
+    }
+
+    public function apiToggleSimulasiSetting(): void {
+        $this->requireWrite();
+        $tenantId    = $this->getSecureTenantId();
+        $db          = \App\Config\Database::getConnection();
+        $body        = json_decode(file_get_contents('php://input'), true) ?? [];
+        $noSimulasi  = (int)($body['no_simulasi'] ?? 1);
+        $tahunAjaranId = $this->sanitize($body['tahun_ajaran_id'] ?? '');
+
+        try {
+            $stmt = $db->prepare("
+                INSERT INTO pdss.simulasi_setting (id, tenant_id, tahun_ajaran_id, no_simulasi, is_open, updated_at)
+                VALUES (gen_random_uuid(), ?, ?, ?, TRUE, NOW())
+                ON CONFLICT (tenant_id, tahun_ajaran_id, no_simulasi)
+                DO UPDATE SET is_open = NOT pdss.simulasi_setting.is_open, updated_at = NOW()
+            ");
+            $stmt->execute([$tenantId, $tahunAjaranId ?: null, $noSimulasi]);
+            $this->jsonResponse(['success' => true, 'data' => null, 'message' => "Setting Simulasi {$noSimulasi} berhasil diperbarui."]);
+        } catch (\Throwable $e) {
+            error_log('[BK::apiToggleSimulasiSetting] ' . $e->getMessage());
+            http_response_code(500);
+            $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'Gagal mengubah setting simulasi.']);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  MASTER KAMPUS & PRODI
+    // ═══════════════════════════════════════════════════════════
+
+    public function apiKampusList(): void {
+        $db = \App\Config\Database::getConnection();
+        $q  = $this->sanitize($_GET['q'] ?? '');
+
+        try {
+            $sql = "
+                SELECT k.id, k.nama_kampus, k.jenis, k.kota, k.provinsi, k.akreditasi,
+                       COUNT(p.id)::INT AS jumlah_prodi
+                FROM pdss.master_kampus k
+                LEFT JOIN pdss.master_prodi p ON p.kampus_id = k.id
+                WHERE 1=1
+            ";
+            $params = [];
+            if ($q) { $sql .= " AND k.nama_kampus ILIKE ?"; $params[] = "%{$q}%"; }
+            $sql .= " GROUP BY k.id, k.nama_kampus, k.jenis, k.kota, k.provinsi, k.akreditasi ORDER BY k.nama_kampus ASC LIMIT 100";
+
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            $this->jsonResponse(['success' => true, 'data' => $stmt->fetchAll(\PDO::FETCH_ASSOC)]);
+        } catch (\Throwable $e) {
+            error_log('[BK::apiKampusList] ' . $e->getMessage());
+            http_response_code(500);
+            $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'Gagal mengambil data kampus.']);
+        }
+    }
+
+    public function apiKampusCreate(): void {
+        $this->requireWrite();
+        $db   = \App\Config\Database::getConnection();
+        $body = json_decode(file_get_contents('php://input'), true) ?? [];
+
+        $namaKampus = $this->sanitize($body['nama_kampus'] ?? '');
+        $jenis      = $this->sanitize($body['jenis'] ?? 'PTN');
+        $akreditasi = $this->sanitize($body['akreditasi'] ?? '');
+        $kota       = $this->sanitize($body['kota'] ?? '');
+        $provinsi   = $this->sanitize($body['provinsi'] ?? '');
+
+        if (!$namaKampus) {
+            http_response_code(422);
+            $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'Nama kampus wajib diisi.']);
+            return;
+        }
+
+        try {
+            $stmt = $db->prepare("INSERT INTO pdss.master_kampus (id, nama_kampus, jenis, akreditasi, kota, provinsi, created_at, updated_at) VALUES (gen_random_uuid(), ?, ?, ?, ?, ?, NOW(), NOW())");
+            $stmt->execute([$namaKampus, $jenis, $akreditasi, $kota, $provinsi]);
+            $this->jsonResponse(['success' => true, 'data' => null, 'message' => "Kampus '{$namaKampus}' berhasil ditambahkan."]);
+        } catch (\Throwable $e) {
+            error_log('[BK::apiKampusCreate] ' . $e->getMessage());
+            http_response_code(500);
+            $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'Gagal menambahkan kampus.']);
+        }
+    }
+
+    public function apiKampusUpdate(): void {
+        $this->requireWrite();
+        $db   = \App\Config\Database::getConnection();
+        $body = json_decode(file_get_contents('php://input'), true) ?? [];
+
+        $id         = $this->sanitize($body['id'] ?? '');
+        $namaKampus = $this->sanitize($body['nama_kampus'] ?? '');
+
+        if (!$id || !$namaKampus) {
+            http_response_code(422);
+            $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'id dan nama_kampus wajib diisi.']);
+            return;
+        }
+
+        try {
+            $stmt = $db->prepare("UPDATE pdss.master_kampus SET nama_kampus = ?, jenis = ?, akreditasi = ?, kota = ?, provinsi = ?, updated_at = NOW() WHERE id = ?");
+            $stmt->execute([$namaKampus, $this->sanitize($body['jenis'] ?? 'PTN'), $this->sanitize($body['akreditasi'] ?? ''), $this->sanitize($body['kota'] ?? ''), $this->sanitize($body['provinsi'] ?? ''), $id]);
+            $this->jsonResponse(['success' => true, 'data' => null, 'message' => 'Data kampus berhasil diperbarui.']);
+        } catch (\Throwable $e) {
+            error_log('[BK::apiKampusUpdate] ' . $e->getMessage());
+            http_response_code(500);
+            $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'Gagal memperbarui kampus.']);
+        }
+    }
+
+    public function apiKampusDelete(): void {
+        $this->requireWrite();
+        $db   = \App\Config\Database::getConnection();
+        $body = json_decode(file_get_contents('php://input'), true) ?? [];
+        $id   = $this->sanitize($body['id'] ?? '');
+
+        if (!$id) { http_response_code(422); $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'id wajib diisi.']); return; }
+
+        try {
+            $db->prepare("DELETE FROM pdss.master_kampus WHERE id = ?")->execute([$id]);
+            $this->jsonResponse(['success' => true, 'data' => null, 'message' => 'Kampus berhasil dihapus.']);
+        } catch (\Throwable $e) {
+            error_log('[BK::apiKampusDelete] ' . $e->getMessage());
+            http_response_code(500);
+            $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'Gagal menghapus kampus.']);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  MASTER JALUR MASUK
+    // ═══════════════════════════════════════════════════════════
+
+    public function apiJalurList(): void {
+        $db = \App\Config\Database::getConnection();
+        try {
+            $stmt = $db->query("SELECT id, nama_jalur, deskripsi, persyaratan FROM pdss.master_jalur_masuk ORDER BY nama_jalur ASC");
+            $this->jsonResponse(['success' => true, 'data' => $stmt->fetchAll(\PDO::FETCH_ASSOC)]);
+        } catch (\Throwable $e) {
+            error_log('[BK::apiJalurList] ' . $e->getMessage());
+            http_response_code(500);
+            $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'Gagal mengambil data jalur masuk.']);
+        }
+    }
+
+    public function apiJalurCreate(): void {
+        $this->requireWrite();
+        $db        = \App\Config\Database::getConnection();
+        $body      = json_decode(file_get_contents('php://input'), true) ?? [];
+        $namaJalur = $this->sanitize($body['nama_jalur'] ?? '');
+
+        if (!$namaJalur) { http_response_code(422); $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'Nama jalur wajib diisi.']); return; }
+
+        try {
+            $stmt = $db->prepare("INSERT INTO pdss.master_jalur_masuk (id, nama_jalur, deskripsi, persyaratan) VALUES (gen_random_uuid(), ?, ?, ?)");
+            $stmt->execute([$namaJalur, $this->sanitize($body['deskripsi'] ?? ''), $this->sanitize($body['persyaratan'] ?? '')]);
+            $this->jsonResponse(['success' => true, 'data' => null, 'message' => "Jalur '{$namaJalur}' berhasil ditambahkan."]);
+        } catch (\Throwable $e) {
+            error_log('[BK::apiJalurCreate] ' . $e->getMessage());
+            http_response_code(500);
+            $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'Gagal menambahkan jalur.']);
+        }
+    }
+
+    public function apiJalurUpdate(): void {
+        $this->requireWrite();
+        $db        = \App\Config\Database::getConnection();
+        $body      = json_decode(file_get_contents('php://input'), true) ?? [];
+        $id        = $this->sanitize($body['id'] ?? '');
+        $namaJalur = $this->sanitize($body['nama_jalur'] ?? '');
+
+        if (!$id || !$namaJalur) { http_response_code(422); $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'id dan nama_jalur wajib diisi.']); return; }
+
+        try {
+            $stmt = $db->prepare("UPDATE pdss.master_jalur_masuk SET nama_jalur = ?, deskripsi = ?, persyaratan = ? WHERE id = ?");
+            $stmt->execute([$namaJalur, $this->sanitize($body['deskripsi'] ?? ''), $this->sanitize($body['persyaratan'] ?? ''), $id]);
+            $this->jsonResponse(['success' => true, 'data' => null, 'message' => 'Jalur masuk berhasil diperbarui.']);
+        } catch (\Throwable $e) {
+            error_log('[BK::apiJalurUpdate] ' . $e->getMessage());
+            http_response_code(500);
+            $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'Gagal memperbarui jalur.']);
+        }
+    }
+
+    public function apiJalurDelete(): void {
+        $this->requireWrite();
+        $db   = \App\Config\Database::getConnection();
+        $body = json_decode(file_get_contents('php://input'), true) ?? [];
+        $id   = $this->sanitize($body['id'] ?? '');
+
+        if (!$id) { http_response_code(422); $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'id wajib diisi.']); return; }
+
+        try {
+            $db->prepare("DELETE FROM pdss.master_jalur_masuk WHERE id = ?")->execute([$id]);
+            $this->jsonResponse(['success' => true, 'data' => null, 'message' => 'Jalur masuk berhasil dihapus.']);
+        } catch (\Throwable $e) {
+            error_log('[BK::apiJalurDelete] ' . $e->getMessage());
+            http_response_code(500);
+            $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'Gagal menghapus jalur.']);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  ALUMNI: TRACKING, RIWAYAT KULIAH, RIWAYAT PEKERJAAN
+    // ═══════════════════════════════════════════════════════════
+
+    public function apiAlumniTracking(): void {
+        $tenantId   = $this->getSecureTenantId();
+        $db         = \App\Config\Database::getConnection();
+        $tahunLulus = $this->sanitize($_GET['tahun_lulus'] ?? '');
+        $status     = $this->sanitize($_GET['status'] ?? '');
+
+        try {
+            $sql = "
+                SELECT
+                    a.id,
+                    COALESCE(s.nama_lengkap, a.nama_alumni) AS nama_lengkap,
+                    COALESCE(s.nisn, a.nisn)               AS nisn,
+                    a.tahun_lulus,
+                    a.status_tracer,
+                    a.keterangan
+                FROM tracer.alumni a
+                LEFT JOIN siswa.siswa s ON a.siswa_id = s.id
+                WHERE a.tenant_id = ?
+            ";
+            $params = [$tenantId];
+            if ($tahunLulus) { $sql .= " AND a.tahun_lulus = ?"; $params[] = (int)$tahunLulus; }
+            if ($status)     { $sql .= " AND a.status_tracer = ?"; $params[] = $status; }
+            $sql .= " ORDER BY a.tahun_lulus DESC, nama_lengkap ASC LIMIT 500";
+
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            // KPI
+            $kpi = ['total' => count($rows), 'kuliah' => 0, 'bekerja' => 0, 'tidak_diketahui' => 0];
+            foreach ($rows as $r) {
+                if ($r['status_tracer'] === 'kuliah') $kpi['kuliah']++;
+                elseif (in_array($r['status_tracer'], ['bekerja', 'wirausaha'])) $kpi['bekerja']++;
+                else $kpi['tidak_diketahui']++;
+            }
+
+            // Unique tahun lulus list
+            $tahunList = array_unique(array_column($rows, 'tahun_lulus'));
+            rsort($tahunList);
+
+            $this->jsonResponse(['success' => true, 'data' => $rows, 'kpi' => $kpi, 'tahun_lulus_list' => $tahunList]);
+        } catch (\Throwable $e) {
+            error_log('[BK::apiAlumniTracking] ' . $e->getMessage());
+            http_response_code(500);
+            $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'Gagal mengambil data alumni.']);
+        }
+    }
+
+    public function apiAlumniRiwayatKuliah(): void {
+        $tenantId = $this->getSecureTenantId();
+        $db       = \App\Config\Database::getConnection();
+
+        try {
+            $sql = "
+                SELECT
+                    rk.id,
+                    COALESCE(s.nama_lengkap, a.nama_alumni) AS nama_lengkap,
+                    COALESCE(s.nisn, a.nisn)               AS nisn,
+                    rk.nama_kampus,
+                    rk.nama_prodi,
+                    rk.jalur_masuk,
+                    rk.tahun_masuk,
+                    rk.status_kuliah
+                FROM tracer.riwayat_kuliah rk
+                LEFT JOIN tracer.alumni a ON rk.alumni_id = a.id
+                LEFT JOIN siswa.siswa s ON a.siswa_id = s.id
+                WHERE rk.tenant_id = ?
+                ORDER BY rk.tahun_masuk DESC, nama_lengkap ASC
+                LIMIT 500
+            ";
+            $stmt = $db->prepare($sql);
+            $stmt->execute([$tenantId]);
+            $this->jsonResponse(['success' => true, 'data' => $stmt->fetchAll(\PDO::FETCH_ASSOC)]);
+        } catch (\Throwable $e) {
+            error_log('[BK::apiAlumniRiwayatKuliah] ' . $e->getMessage());
+            http_response_code(500);
+            $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'Gagal mengambil riwayat kuliah.']);
+        }
+    }
+
+    public function apiDeleteRiwayatKuliah(): void {
+        $this->requireWrite();
+        $db   = \App\Config\Database::getConnection();
+        $body = json_decode(file_get_contents('php://input'), true) ?? [];
+        $id   = $this->sanitize($body['id'] ?? '');
+
+        if (!$id) { http_response_code(422); $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'id wajib diisi.']); return; }
+
+        try {
+            $db->prepare("DELETE FROM tracer.riwayat_kuliah WHERE id = ? AND tenant_id = ?")->execute([$id, $this->getSecureTenantId()]);
+            $this->jsonResponse(['success' => true, 'data' => null, 'message' => 'Riwayat kuliah berhasil dihapus.']);
+        } catch (\Throwable $e) {
+            error_log('[BK::apiDeleteRiwayatKuliah] ' . $e->getMessage());
+            http_response_code(500);
+            $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'Gagal menghapus riwayat kuliah.']);
+        }
+    }
+
+    public function apiAlumniRiwayatPekerjaan(): void {
+        $tenantId = $this->getSecureTenantId();
+        $db       = \App\Config\Database::getConnection();
+
+        try {
+            $sql = "
+                SELECT
+                    rp.id,
+                    COALESCE(s.nama_lengkap, a.nama_alumni) AS nama_lengkap,
+                    COALESCE(s.nisn, a.nisn)               AS nisn,
+                    rp.nama_perusahaan,
+                    rp.posisi,
+                    rp.jenis_instansi,
+                    rp.tahun_mulai,
+                    rp.tahun_selesai
+                FROM tracer.riwayat_pekerjaan rp
+                LEFT JOIN tracer.alumni a ON rp.alumni_id = a.id
+                LEFT JOIN siswa.siswa s ON a.siswa_id = s.id
+                WHERE rp.tenant_id = ?
+                ORDER BY rp.tahun_mulai DESC, nama_lengkap ASC
+                LIMIT 500
+            ";
+            $stmt = $db->prepare($sql);
+            $stmt->execute([$tenantId]);
+            $this->jsonResponse(['success' => true, 'data' => $stmt->fetchAll(\PDO::FETCH_ASSOC)]);
+        } catch (\Throwable $e) {
+            error_log('[BK::apiAlumniRiwayatPekerjaan] ' . $e->getMessage());
+            http_response_code(500);
+            $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'Gagal mengambil riwayat pekerjaan.']);
+        }
+    }
+
+    public function apiDeleteRiwayatPekerjaan(): void {
+        $this->requireWrite();
+        $db   = \App\Config\Database::getConnection();
+        $body = json_decode(file_get_contents('php://input'), true) ?? [];
+        $id   = $this->sanitize($body['id'] ?? '');
+
+        if (!$id) { http_response_code(422); $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'id wajib diisi.']); return; }
+
+        try {
+            $db->prepare("DELETE FROM tracer.riwayat_pekerjaan WHERE id = ? AND tenant_id = ?")->execute([$id, $this->getSecureTenantId()]);
+            $this->jsonResponse(['success' => true, 'data' => null, 'message' => 'Riwayat pekerjaan berhasil dihapus.']);
+        } catch (\Throwable $e) {
+            error_log('[BK::apiDeleteRiwayatPekerjaan] ' . $e->getMessage());
+            http_response_code(500);
+            $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'Gagal menghapus riwayat pekerjaan.']);
+        }
+    }
+
+    /**
+     * Helper: Pastikan hanya role yang memiliki akses tulis (non-siswa) bisa menjalankan method ini.
+     */
+    private function requireWrite(): void {
+        $roles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
+        $allowed = ['super_admin', 'operator_sekolah', 'guru_bk'];
+        foreach ($allowed as $r) {
+            if (in_array($r, $roles)) return;
+        }
+        http_response_code(403);
+        $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'Akses ditolak.']);
+        exit;
     }
 }
