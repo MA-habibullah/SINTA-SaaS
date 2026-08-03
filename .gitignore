@@ -16,6 +16,9 @@
 /storage/app/public/tenants/**/*
 /storage/app/perpustakaan/**/*
 /storage/perpustakaan/**/*
+/app/Modules/storage/
+/storage/app/public/logos/
+/storage/app/public/sertifikat/
 
 # Kecualikan .gitkeep agar struktur folder penting tetap ter-track
 !storage/app/public/uploads/**/.gitkeep
