@@ -31,7 +31,7 @@ class SiswaAuthModuleController extends BaseController {
             $tenants = [];
         }
 
-        require_once __DIR__ . '/../../../../views/siswa_login_view.php';
+        require_once __DIR__ . '/../../../../views/siswa/siswa_login_view.php';
     }
 
     /**
@@ -146,7 +146,7 @@ class SiswaAuthModuleController extends BaseController {
             return;
         }
 
-        require_once __DIR__ . '/../../../../views/siswa_change_password_view.php';
+        require_once __DIR__ . '/../../../../views/siswa/siswa_change_password_view.php';
     }
 
     /**

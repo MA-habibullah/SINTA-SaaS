@@ -359,7 +359,7 @@ class SiswaModuleController extends BaseController {
             'draft'          => $draft
         ];
         
-        $this->render('tambah_siswa', $data);
+        $this->render('siswa/tambah_siswa', $data);
     }
 
     /**
@@ -416,7 +416,7 @@ class SiswaModuleController extends BaseController {
                 'cities_list' => $cities,
                 'academic_options' => $academicOptions
             ];
-            $this->render('tambah_siswa', $data);
+            $this->render('siswa/tambah_siswa', $data);
             exit;
         }
 
@@ -552,7 +552,7 @@ class SiswaModuleController extends BaseController {
             'academic_options' => $academicOptions
         ];
 
-        $this->render('tambah_siswa', $data);
+        $this->render('siswa/tambah_siswa', $data);
     }
 
     /**
@@ -696,7 +696,7 @@ class SiswaModuleController extends BaseController {
                 'cities_list' => $cities,
                 'academic_options' => $academicOptions
             ];
-            $this->render('tambah_siswa', $data);
+            $this->render('siswa/tambah_siswa', $data);
             exit;
         }
 

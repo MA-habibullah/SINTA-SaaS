@@ -90,15 +90,19 @@ return [
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 siswa_id UUID NOT NULL REFERENCES siswa.siswa(id) ON DELETE CASCADE,
                 tenant_id UUID NOT NULL REFERENCES core.tenants(id) ON DELETE CASCADE,
-                tahun_ajaran VARCHAR(20) NOT NULL,
-                semester SMALLINT NOT NULL,
+                tahun_ajaran VARCHAR(50) NULL,
+                tahun_ajaran_id UUID NULL,
+                semester VARCHAR(50) NULL,
                 hadir SMALLINT NOT NULL DEFAULT 0,
                 sakit SMALLINT NOT NULL DEFAULT 0,
                 izin SMALLINT NOT NULL DEFAULT 0,
                 alpha SMALLINT NOT NULL DEFAULT 0,
+                alfa SMALLINT NOT NULL DEFAULT 0,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
+            ALTER TABLE siswa.absensi_semester ADD COLUMN IF NOT EXISTS tahun_ajaran_id UUID NULL;
+            ALTER TABLE siswa.absensi_semester ADD COLUMN IF NOT EXISTS alfa SMALLINT DEFAULT 0;
 
             CREATE TABLE IF NOT EXISTS siswa.riwayat_kenaikan_kelas (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -29,16 +29,26 @@ class KampusModuleController extends BaseController
         // 2. Dari parameter GET ?tenant_id=... (untuk super_admin yang memfilter dari UI)
         // 3. Dari parameter POST / JSON body
         $tenantId = $_SESSION['tenant_id'] ?? '';
-        if (empty($tenantId) && !empty($_GET['tenant_id'])) {
-            $tenantId = trim($_GET['tenant_id']);
+        if (empty($tenantId) || $tenantId === '00000000-0000-0000-0000-000000000000') {
+            if (!empty($_GET['tenant_id']) && $_GET['tenant_id'] !== '00000000-0000-0000-0000-000000000000') {
+                $tenantId = trim($_GET['tenant_id']);
+            } elseif (!empty($_POST['tenant_id']) && $_POST['tenant_id'] !== '00000000-0000-0000-0000-000000000000') {
+                $tenantId = trim($_POST['tenant_id']);
+            } else {
+                $body = $this->getJsonInput();
+                if (!empty($body['tenant_id']) && $body['tenant_id'] !== '00000000-0000-0000-0000-000000000000') {
+                    $tenantId = trim($body['tenant_id']);
+                }
+            }
         }
-        if (empty($tenantId) && !empty($_POST['tenant_id'])) {
-            $tenantId = trim($_POST['tenant_id']);
-        }
-        if (empty($tenantId)) {
-            $body = $this->getJsonInput();
-            if (!empty($body['tenant_id'])) {
-                $tenantId = trim($body['tenant_id']);
+
+        if (empty($tenantId) || $tenantId === '00000000-0000-0000-0000-000000000000') {
+            try {
+                $db = Database::getConnection();
+                $stmtDefault = $db->query("SELECT id FROM core.tenants WHERE status = 'active' ORDER BY created_at ASC LIMIT 1");
+                $tenantId = $stmtDefault->fetchColumn() ?: null;
+            } catch (\Throwable $e) {
+                $tenantId = null;
             }
         }
 
@@ -64,8 +74,8 @@ class KampusModuleController extends BaseController
         // Ambil semua kampus dan prodinya
         $stmt = $db->prepare("
             SELECT k.*, 
-                   (SELECT COUNT(*) FROM master_kampus_prodi p WHERE p.kampus_id = k.id) as total_prodi
-            FROM master_kampus k
+                   (SELECT COUNT(*) FROM pdss.master_kampus_prodi p WHERE p.kampus_id = k.id) as total_prodi
+            FROM pdss.master_kampus k
             WHERE k.tenant_id = ?
             ORDER BY k.nama_kampus ASC
         ");
@@ -98,14 +108,14 @@ class KampusModuleController extends BaseController
             if (empty($id)) {
                 $id = $this->generateUuidV4();
                 $stmt = $db->prepare("
-                    INSERT INTO master_kampus (id, tenant_id, nama_kampus, kota_kampus, alamat_kampus, jenis_kampus)
+                    INSERT INTO pdss.master_kampus (id, tenant_id, nama_kampus, kota_kampus, alamat_kampus, jenis_kampus)
                     VALUES (?, ?, ?, ?, ?, ?)
                 ");
                 $stmt->execute([$id, $tenantId, $nama_kampus, $kota_kampus, $alamat_kampus, $jenis_kampus]);
                 $msg = "Kampus berhasil ditambahkan.";
             } else {
                 $stmt = $db->prepare("
-                    UPDATE master_kampus 
+                    UPDATE pdss.master_kampus 
                     SET nama_kampus=?, kota_kampus=?, alamat_kampus=?, jenis_kampus=? 
                     WHERE id=? AND tenant_id=?
                 ");
@@ -129,7 +139,7 @@ class KampusModuleController extends BaseController
         }
 
         $db = Database::getConnection();
-        $stmt = $db->prepare("DELETE FROM master_kampus WHERE id = ? AND tenant_id = ?");
+        $stmt = $db->prepare("DELETE FROM pdss.master_kampus WHERE id = ? AND tenant_id = ?");
         $stmt->execute([$id, $tenantId]);
 
         $this->jsonResponse(['success' => true, 'message' => 'Kampus berhasil dihapus.']);
@@ -146,8 +156,8 @@ class KampusModuleController extends BaseController
         $db = Database::getConnection();
         $stmt = $db->prepare("
             SELECT p.* 
-            FROM master_kampus_prodi p
-            JOIN master_kampus k ON p.kampus_id = k.id
+            FROM pdss.master_kampus_prodi p
+            JOIN pdss.master_kampus k ON p.kampus_id = k.id
             WHERE k.tenant_id = ? AND p.kampus_id = ?
             ORDER BY p.program_studi ASC
         ");
@@ -175,30 +185,17 @@ class KampusModuleController extends BaseController
         }
 
         $db = Database::getConnection();
-        
-        $stmtCheckCol = $db->prepare("SHOW COLUMNS FROM `master_kampus_prodi` LIKE 'kode_prodi'");
-        $stmtCheckCol->execute();
-        $hasKodeCol = $stmtCheckCol->fetch() !== false;
+        $hasKodeCol = true;
         
         try {
             if (empty($id)) {
                 $id = $this->generateUuidV4();
-                if ($hasKodeCol) {
-                    $stmt = $db->prepare("INSERT INTO master_kampus_prodi (id, kampus_id, kode_prodi, fakultas, program_studi, jenjang, jenis_portofolio) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                    $stmt->execute([$id, $kampus_id, $kode_prodi, $fakultas, $program_studi, $jenjang, $portofolio]);
-                } else {
-                    $stmt = $db->prepare("INSERT INTO master_kampus_prodi (id, kampus_id, fakultas, program_studi, jenjang) VALUES (?, ?, ?, ?, ?)");
-                    $stmt->execute([$id, $kampus_id, $fakultas, $program_studi, $jenjang]);
-                }
+                $stmt = $db->prepare("INSERT INTO pdss.master_kampus_prodi (id, kampus_id, kode_prodi, fakultas, program_studi, jenjang, jenis_portofolio) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$id, $kampus_id, $kode_prodi, $fakultas, $program_studi, $jenjang, $portofolio]);
                 $msg = "Program Studi berhasil ditambahkan.";
             } else {
-                if ($hasKodeCol) {
-                    $stmt = $db->prepare("UPDATE master_kampus_prodi SET kode_prodi=?, fakultas=?, program_studi=?, jenjang=?, jenis_portofolio=? WHERE id=?");
-                    $stmt->execute([$kode_prodi, $fakultas, $program_studi, $jenjang, $portofolio, $id]);
-                } else {
-                    $stmt = $db->prepare("UPDATE master_kampus_prodi SET fakultas=?, program_studi=?, jenjang=? WHERE id=?");
-                    $stmt->execute([$fakultas, $program_studi, $jenjang, $id]);
-                }
+                $stmt = $db->prepare("UPDATE pdss.master_kampus_prodi SET kode_prodi=?, fakultas=?, program_studi=?, jenjang=?, jenis_portofolio=? WHERE id=?");
+                $stmt->execute([$kode_prodi, $fakultas, $program_studi, $jenjang, $portofolio, $id]);
                 $msg = "Program Studi berhasil diperbarui.";
             }
             $this->jsonResponse(['success' => true, 'message' => $msg, 'id' => $id]);
@@ -218,7 +215,7 @@ class KampusModuleController extends BaseController
         }
 
         $db = Database::getConnection();
-        $stmt = $db->prepare("DELETE FROM master_kampus_prodi WHERE id = ?");
+        $stmt = $db->prepare("DELETE FROM pdss.master_kampus_prodi WHERE id = ?");
         $stmt->execute([$id]);
 
         $this->jsonResponse(['success' => true, 'message' => 'Prodi berhasil dihapus.']);
@@ -283,7 +280,7 @@ class KampusModuleController extends BaseController
         }
 
         $db = Database::getConnection();
-        $stmt = $db->prepare("DELETE FROM kampus_prodi_riwayat WHERE id = ?");
+        $stmt = $db->prepare("DELETE FROM pdss.kampus_prodi_riwayat WHERE id = ?");
         $stmt->execute([$id]);
 
         $this->jsonResponse(['success' => true, 'message' => 'Riwayat berhasil dihapus.']);
@@ -298,7 +295,7 @@ class KampusModuleController extends BaseController
         $db = Database::getConnection();
         
         $stmt = $db->prepare("
-            SELECT * FROM master_jalur_masuk
+            SELECT * FROM bk.master_jalur_masuk
             WHERE tenant_id = ?
             ORDER BY nama_jalur ASC
         ");
@@ -312,7 +309,7 @@ class KampusModuleController extends BaseController
         $tenantId = $this->checkAccess();
         $body = $this->getJsonInput();
 
-        $id         = (int)($body['id'] ?? 0);
+        $id         = $this->sanitizeStr($body['id'] ?? '');
         $nama_jalur = $this->sanitizeStr($body['nama_jalur'] ?? '');
         $kategori   = $this->sanitizeStr($body['kategori'] ?? 'Lainnya');
 
@@ -323,10 +320,11 @@ class KampusModuleController extends BaseController
         $db = Database::getConnection();
         try {
             if (empty($id)) {
-                $stmt = $db->prepare("INSERT INTO master_jalur_masuk (tenant_id, nama_jalur, kategori) VALUES (?, ?, ?)");
-                $stmt->execute([$tenantId, $nama_jalur, $kategori]);
+                $id = $this->generateUuidV4();
+                $stmt = $db->prepare("INSERT INTO bk.master_jalur_masuk (id, tenant_id, nama_jalur, kategori) VALUES (?, ?, ?, ?)");
+                $stmt->execute([$id, $tenantId, $nama_jalur, $kategori]);
             } else {
-                $stmt = $db->prepare("UPDATE master_jalur_masuk SET nama_jalur=?, kategori=? WHERE id=? AND tenant_id=?");
+                $stmt = $db->prepare("UPDATE bk.master_jalur_masuk SET nama_jalur=?, kategori=? WHERE id=? AND tenant_id=?");
                 $stmt->execute([$nama_jalur, $kategori, $id, $tenantId]);
             }
             $this->jsonResponse(['success' => true, 'message' => 'Jalur masuk berhasil disimpan.']);
@@ -339,14 +337,14 @@ class KampusModuleController extends BaseController
     {
         $tenantId = $this->checkAccess();
         $body = $this->getJsonInput();
-        $id   = (int)($body['id'] ?? 0);
+        $id   = $this->sanitizeStr($body['id'] ?? '');
 
         if (empty($id)) {
             $this->jsonResponse(['error' => 'ID wajib diisi.'], 422);
         }
 
         $db = Database::getConnection();
-        $stmt = $db->prepare("DELETE FROM master_jalur_masuk WHERE id = ? AND tenant_id = ?");
+        $stmt = $db->prepare("DELETE FROM bk.master_jalur_masuk WHERE id = ? AND tenant_id = ?");
         $stmt->execute([$id, $tenantId]);
 
         $this->jsonResponse(['success' => true, 'message' => 'Jalur masuk berhasil dihapus.']);
@@ -536,19 +534,14 @@ class KampusModuleController extends BaseController
         $tenantId = $this->checkAccess();
         $db = Database::getConnection();
 
-        $stmtCheckCol = $db->prepare("SHOW COLUMNS FROM `master_kampus_prodi` LIKE 'kode_prodi'");
-        $stmtCheckCol->execute();
-        $hasKodeCol = $stmtCheckCol->fetch() !== false;
+        $hasKodeCol = true;
 
-        $selectCols = "p.id as prodi_id, k.id as kampus_id, k.nama_kampus, p.program_studi, p.fakultas, p.jenjang";
-        if ($hasKodeCol) {
-            $selectCols .= ", p.kode_prodi, p.jenis_portofolio";
-        }
+        $selectCols = "p.id as prodi_id, k.id as kampus_id, k.nama_kampus, p.program_studi, p.fakultas, p.jenjang, p.kode_prodi, p.jenis_portofolio";
 
         $stmt = $db->prepare("
             SELECT $selectCols
-            FROM master_kampus_prodi p
-            JOIN master_kampus k ON p.kampus_id = k.id
+            FROM pdss.master_kampus_prodi p
+            JOIN pdss.master_kampus k ON p.kampus_id = k.id
             WHERE k.tenant_id = ?
             ORDER BY k.nama_kampus ASC, p.program_studi ASC
         ");
@@ -610,8 +603,8 @@ class KampusModuleController extends BaseController
             SELECT 
                 k.id as kampus_id, k.nama_kampus, k.kota_kampus, k.jenis_kampus,
                 p.id as prodi_id, p.kode_prodi, p.fakultas, p.program_studi, p.jenjang, p.jenis_portofolio
-            FROM master_kampus k
-            LEFT JOIN master_kampus_prodi p ON p.kampus_id = k.id
+            FROM pdss.master_kampus k
+            LEFT JOIN pdss.master_kampus_prodi p ON p.kampus_id = k.id
             WHERE k.tenant_id = ?
             ORDER BY k.nama_kampus ASC, p.program_studi ASC
         ");
@@ -623,7 +616,7 @@ class KampusModuleController extends BaseController
 
         if (!empty($prodiIds)) {
             $inClause = implode(',', array_fill(0, count($prodiIds), '?'));
-            $stmtRiwayat = $db->prepare("SELECT prodi_id, tahun, daya_tampung, jumlah_pendaftar FROM kampus_prodi_riwayat WHERE prodi_id IN ($inClause) ORDER BY tahun DESC");
+            $stmtRiwayat = $db->prepare("SELECT prodi_id, tahun, daya_tampung, jumlah_pendaftar FROM pdss.kampus_prodi_riwayat WHERE prodi_id IN ($inClause) ORDER BY tahun DESC");
             $stmtRiwayat->execute($prodiIds);
             $riwayatRows = $stmtRiwayat->fetchAll(PDO::FETCH_ASSOC);
 
@@ -657,13 +650,13 @@ class KampusModuleController extends BaseController
         $db = Database::getConnection();
         
         if ($kampusId && !$tahun) {
-            $stmt = $db->prepare("DELETE r FROM kampus_prodi_riwayat r JOIN master_kampus_prodi p ON p.id = r.prodi_id JOIN master_kampus k ON k.id = p.kampus_id WHERE k.id = ? AND k.tenant_id = ?");
+            $stmt = $db->prepare("DELETE FROM pdss.kampus_prodi_riwayat r USING pdss.master_kampus_prodi p, pdss.master_kampus k WHERE p.id = r.prodi_id AND k.id = p.kampus_id AND k.id = ? AND k.tenant_id = ?");
             $stmt->execute([$kampusId, $tenantId]);
         } elseif ($tahun && !$kampusId) {
-            $stmt = $db->prepare("DELETE r FROM kampus_prodi_riwayat r JOIN master_kampus_prodi p ON p.id = r.prodi_id JOIN master_kampus k ON k.id = p.kampus_id WHERE r.tahun = ? AND k.tenant_id = ?");
+            $stmt = $db->prepare("DELETE FROM pdss.kampus_prodi_riwayat r USING pdss.master_kampus_prodi p, pdss.master_kampus k WHERE p.id = r.prodi_id AND k.id = p.kampus_id AND r.tahun = ? AND k.tenant_id = ?");
             $stmt->execute([$tahun, $tenantId]);
         } else {
-            $stmt = $db->prepare("DELETE r FROM kampus_prodi_riwayat r JOIN master_kampus_prodi p ON p.id = r.prodi_id JOIN master_kampus k ON k.id = p.kampus_id WHERE r.tahun = ? AND k.id = ? AND k.tenant_id = ?");
+            $stmt = $db->prepare("DELETE FROM pdss.kampus_prodi_riwayat r USING pdss.master_kampus_prodi p, pdss.master_kampus k WHERE p.id = r.prodi_id AND k.id = p.kampus_id AND r.tahun = ? AND k.id = ? AND k.tenant_id = ?");
             $stmt->execute([$tahun, $kampusId, $tenantId]);
         }
 
@@ -680,8 +673,8 @@ class KampusModuleController extends BaseController
                 k.nama_kampus,
                 p.kode_prodi,
                 p.program_studi
-            FROM master_kampus k
-            JOIN master_kampus_prodi p ON p.kampus_id = k.id
+            FROM pdss.master_kampus k
+            JOIN pdss.master_kampus_prodi p ON p.kampus_id = k.id
             WHERE k.tenant_id = ?
             ORDER BY k.nama_kampus ASC, p.program_studi ASC
         ");
@@ -821,8 +814,8 @@ class KampusModuleController extends BaseController
                 p.fakultas,
                 p.jenjang,
                 p.jenis_portofolio
-            FROM master_kampus k
-            LEFT JOIN master_kampus_prodi p ON p.kampus_id = k.id
+            FROM pdss.master_kampus k
+            LEFT JOIN pdss.master_kampus_prodi p ON p.kampus_id = k.id
             WHERE k.tenant_id = ?
             ORDER BY k.nama_kampus ASC, p.program_studi ASC
         ");
@@ -931,7 +924,7 @@ class KampusModuleController extends BaseController
 
                 // Upsert Kampus
                 if (!isset($kampusCache[$namaKampus])) {
-                    $stmtFind = $db->prepare("SELECT id FROM master_kampus WHERE tenant_id = ? AND nama_kampus = ? LIMIT 1");
+                    $stmtFind = $db->prepare("SELECT id FROM pdss.master_kampus WHERE tenant_id = ? AND nama_kampus = ? LIMIT 1");
                     $stmtFind->execute([$tenantId, $namaKampus]);
                     $kampusId = $stmtFind->fetchColumn();
 
@@ -940,12 +933,12 @@ class KampusModuleController extends BaseController
                             mt_rand(0, 0xffffffff), mt_rand(0, 0xffff),
                             mt_rand(0, 0x0fff), mt_rand(0, 0x3fff) | 0x8000,
                             mt_rand(0, 0xffffffffffff));
-                        $stmtIns = $db->prepare("INSERT INTO master_kampus (id, tenant_id, nama_kampus, kota_kampus, jenis_kampus) VALUES (?, ?, ?, ?, ?)");
+                        $stmtIns = $db->prepare("INSERT INTO pdss.master_kampus (id, tenant_id, nama_kampus, kota_kampus, jenis_kampus) VALUES (?, ?, ?, ?, ?)");
                         $stmtIns->execute([$newId, $tenantId, $namaKampus, $kotaKampus, $jenisKampus]);
                         $kampusId = $newId;
                     } elseif ($kotaKampus) {
                         // UPDATE hanya boleh jika kampus memang milik tenant ini
-                        $stmtUpd = $db->prepare("UPDATE master_kampus SET kota_kampus = ?, jenis_kampus = ? WHERE id = ? AND tenant_id = ?");
+                        $stmtUpd = $db->prepare("UPDATE pdss.master_kampus SET kota_kampus = ?, jenis_kampus = ? WHERE id = ? AND tenant_id = ?");
                         $stmtUpd->execute([$kotaKampus, $jenisKampus, $kampusId, $tenantId]);
                     }
                     $kampusCache[$namaKampus] = $kampusId;
@@ -954,8 +947,8 @@ class KampusModuleController extends BaseController
 
                 // Upsert Prodi — pastikan kampus_id yang dipilih memang milik tenant ini
                 $stmtFindProdi = $db->prepare("
-                    SELECT p.id FROM master_kampus_prodi p
-                    JOIN master_kampus k ON k.id = p.kampus_id
+                    SELECT p.id FROM pdss.master_kampus_prodi p
+                    JOIN pdss.master_kampus k ON k.id = p.kampus_id
                     WHERE k.tenant_id = ? AND p.kode_prodi = ? AND p.kampus_id = ?
                     LIMIT 1
                 ");
@@ -967,18 +960,17 @@ class KampusModuleController extends BaseController
                         mt_rand(0, 0xffffffff), mt_rand(0, 0xffff),
                         mt_rand(0, 0x0fff), mt_rand(0, 0x3fff) | 0x8000,
                         mt_rand(0, 0xffffffffffff));
-                    $stmtInsProdi = $db->prepare("INSERT INTO master_kampus_prodi (id, kampus_id, kode_prodi, program_studi, fakultas, jenjang, jenis_portofolio) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                    $stmtInsProdi = $db->prepare("INSERT INTO pdss.master_kampus_prodi (id, kampus_id, kode_prodi, program_studi, fakultas, jenjang, jenis_portofolio) VALUES (?, ?, ?, ?, ?, ?, ?)");
                     $stmtInsProdi->execute([$newProdiId, $kampusId, $kodeProdi, $namaProdi, $fakultas, $jenjang, $portofolio]);
                     $inserted++;
                 } else {
                     // UPDATE prodi — validasi ownership kembali melalui kampus
                     $stmtUpdProdi = $db->prepare("
-                        UPDATE master_kampus_prodi p
-                        JOIN master_kampus k ON k.id = p.kampus_id
-                        SET p.kode_prodi = ?, p.program_studi = ?, p.fakultas = ?, p.jenjang = ?, p.jenis_portofolio = ?
-                        WHERE p.id = ? AND k.tenant_id = ?
+                        UPDATE pdss.master_kampus_prodi
+                        SET kode_prodi = ?, program_studi = ?, fakultas = ?, jenjang = ?, jenis_portofolio = ?
+                        WHERE id = ?
                     ");
-                    $stmtUpdProdi->execute([$kodeProdi, $namaProdi, $fakultas, $jenjang, $portofolio, $prodiId, $tenantId]);
+                    $stmtUpdProdi->execute([$kodeProdi, $namaProdi, $fakultas, $jenjang, $portofolio, $prodiId]);
                     $updated++;
                 }
             }

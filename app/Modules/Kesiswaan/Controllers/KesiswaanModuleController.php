@@ -32,7 +32,7 @@ class KesiswaanModuleController extends BaseController {
      * GET /kesiswaan/ekskul
      */
     public function ekskulIndex(): void {
-        require_once __DIR__ . '/../../../../views/kesiswaan_ekskul.php';
+        require_once __DIR__ . '/../../../../views/kesiswaan/kesiswaan_ekskul.php';
     }
 
     /**

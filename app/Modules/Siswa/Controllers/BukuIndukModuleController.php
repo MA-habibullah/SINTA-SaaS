@@ -83,7 +83,7 @@ class BukuIndukModuleController extends BaseController {
             'tenantList' => $tenantList
         ];
 
-        $this->render('buku_induk', $data);
+        $this->render('siswa/buku_induk', $data);
     }
 
     public function fetchApi(): void {
@@ -656,7 +656,7 @@ class BukuIndukModuleController extends BaseController {
         $this->renderOrGetArchive($siswa['id'], $siswa['tenant_id'], $archiveFilename, function() use ($siswa, $showQrCode, $urlVerifikasi, $tempat, $tanggal) {
             $_unused = [$siswa, $showQrCode, $urlVerifikasi, $tempat, $tanggal];
             // Load the print view directly (no layout wrapper)
-            require dirname(__DIR__, 4) . '/views/print_rapot.php';
+            require dirname(__DIR__, 4) . '/views/rapor/print_rapot.php';
         });
         exit;
     }
@@ -822,7 +822,7 @@ class BukuIndukModuleController extends BaseController {
         $this->renderOrGetArchive($siswa['id'], $siswa['tenant_id'], $archiveFilename, function() use ($siswa, $showQrCode, $urlVerifikasi, $tempat, $tanggal) {
             $_unused = [$siswa, $showQrCode, $urlVerifikasi, $tempat, $tanggal];
             // Load the print view directly
-            require dirname(__DIR__, 4) . '/views/print_buku_induk.php';
+            require dirname(__DIR__, 4) . '/views/siswa/print_buku_induk.php';
         });
         exit;
     }
@@ -1119,11 +1119,11 @@ class BukuIndukModuleController extends BaseController {
             $_unused = [$siswa, $grades, $namaKurikulum, $sikapK13, $showQrCode, $urlVerifikasi];
             // Load correct layout
             if ($tipePenilaian === 'klasik') {
-                require dirname(__DIR__, 4) . '/views/print_rapot_ktsp.php';
+                require dirname(__DIR__, 4) . '/views/rapor/print_rapot_ktsp.php';
             } elseif ($tipePenilaian === 'kompleks') {
-                require dirname(__DIR__, 4) . '/views/print_rapot_k13.php';
+                require dirname(__DIR__, 4) . '/views/rapor/print_rapot_k13.php';
             } else {
-                require dirname(__DIR__, 4) . '/views/print_rapot_merdeka.php';
+                require dirname(__DIR__, 4) . '/views/rapor/print_rapot_merdeka.php';
             }
         });
         exit;
@@ -1198,9 +1198,9 @@ class BukuIndukModuleController extends BaseController {
         $this->renderOrGetArchive($siswa['id'], $siswa['tenant_id'], $archiveFilename, function() use ($siswa, $kurikulum, $showQrCode, $urlVerifikasi) {
             $_unused = [$siswa, $showQrCode, $urlVerifikasi];
             if (stripos($kurikulum, 'Merdeka') !== false) {
-                require dirname(__DIR__, 4) . '/views/print_transkrip_merdeka.php';
+                require dirname(__DIR__, 4) . '/views/rapor/print_transkrip_merdeka.php';
             } else {
-                require dirname(__DIR__, 4) . '/views/print_transkrip_standar.php';
+                require dirname(__DIR__, 4) . '/views/rapor/print_transkrip_standar.php';
             }
         });
         exit;
@@ -1334,7 +1334,7 @@ class BukuIndukModuleController extends BaseController {
         $baseVerifyUrl = $protocol . "://" . $domainName . $baseFolder . "/verify-transkrip?id=";
 
         // Load bulk print view directly
-        require dirname(__DIR__, 4) . '/views/print_rapot_bulk.php';
+        require dirname(__DIR__, 4) . '/views/rapor/print_rapot_bulk.php';
         exit;
     }
     public function fetchCetakMatrixApi(): void {
@@ -1750,7 +1750,7 @@ class BukuIndukModuleController extends BaseController {
 
         // Load correct bulk layout
         if ($tipePenilaian === 'klasik') {
-            require dirname(__DIR__, 4) . '/views/print_rapot_bulk_ktsp.php';
+            require dirname(__DIR__, 4) . '/views/rapor/print_rapot_bulk_ktsp.php';
         } elseif ($tipePenilaian === 'kompleks') {
             // Ambil data sikap K-13
             $sikapK13 = [];
@@ -1774,7 +1774,7 @@ class BukuIndukModuleController extends BaseController {
             }
             $baseVerifyUrl = $protocol . "://" . $domainName . $baseFolder . "/verify-transkrip?id=";
 
-            require dirname(__DIR__, 4) . '/views/print_rapot_bulk_k13.php';
+            require dirname(__DIR__, 4) . '/views/rapor/print_rapot_bulk_k13.php';
         } else {
             // QR Code options and parameters
             $showQrCode = isset($_GET['show_qrcode']) && $_GET['show_qrcode'] == '1';
@@ -1786,7 +1786,7 @@ class BukuIndukModuleController extends BaseController {
             }
             $baseVerifyUrl = $protocol . "://" . $domainName . $baseFolder . "/verify-transkrip?id=";
 
-            require dirname(__DIR__, 4) . '/views/print_rapot_bulk_merdeka.php';
+            require dirname(__DIR__, 4) . '/views/rapor/print_rapot_bulk_merdeka.php';
         }
         exit;
     }
@@ -2070,7 +2070,7 @@ class BukuIndukModuleController extends BaseController {
         $_SESSION['vt_expires']  = time() + 300; // valid 5 menit
 
         // ── 6. Render skeleton HTML (TANPA DATA dari DB dan TANPA TOKEN) ───────
-        require dirname(__DIR__, 4) . '/views/verify_transkrip.php';
+        require dirname(__DIR__, 4) . '/views/siswa/verify_transkrip.php';
         exit;
     }
 

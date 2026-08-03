@@ -128,7 +128,7 @@ class PdssDetailModuleController extends BaseController {
             } catch (\Throwable $e) {}
         }
         
-        $this->render('pdss_index', [
+        $this->render('pdss/pdss_index', [
             'title' => 'PDSS & Tracking Alumni',
             'can_write' => $this->canWrite(),
             'user_role' => $userRole,
@@ -145,23 +145,39 @@ class PdssDetailModuleController extends BaseController {
         $roles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
         $tenantId = SessionManager::getTenantId();
 
-        if (in_array('super_admin', $roles, true)) {
+        if (in_array('super_admin', $roles, true) || in_array('superadmin', $roles, true)) {
             $tid = $_GET['tenant_id'] ?? $_POST['tenant_id'] ?? null;
             if (empty($tid)) {
                 $body = $this->getJsonInput();
                 $tid = $body['tenant_id'] ?? null;
             }
 
-            if (!empty($tid)) {
+            if (!empty($tid) && $tid !== '00000000-0000-0000-0000-000000000000') {
                 try {
                     $db = \App\Config\Database::getConnection();
-                    $stmt = $db->prepare("SELECT id FROM tenants WHERE id = ? AND deleted_at IS NULL LIMIT 1");
+                    $stmt = $db->prepare("SELECT id FROM core.tenants WHERE id = ? AND deleted_at IS NULL LIMIT 1");
                     $stmt->execute([$tid]);
                     $valid = $stmt->fetchColumn();
-                    return $valid ?: null;
+                    if ($valid) return $valid;
                 } catch (\Throwable $e) {
-                    return null;
                 }
+            }
+
+            try {
+                $db = \App\Config\Database::getConnection();
+                $stmtDefault = $db->query("SELECT id FROM core.tenants WHERE id != '00000000-0000-0000-0000-000000000000' AND status = 'active' AND deleted_at IS NULL ORDER BY created_at ASC LIMIT 1");
+                $firstId = $stmtDefault->fetchColumn();
+                if ($firstId) return $firstId;
+            } catch (\Throwable $e) {
+            }
+        }
+
+        if (empty($tenantId) || $tenantId === '00000000-0000-0000-0000-000000000000') {
+            try {
+                $db = \App\Config\Database::getConnection();
+                $stmtDefault = $db->query("SELECT id FROM core.tenants WHERE id != '00000000-0000-0000-0000-000000000000' AND status = 'active' AND deleted_at IS NULL ORDER BY created_at ASC LIMIT 1");
+                $tenantId = $stmtDefault->fetchColumn() ?: null;
+            } catch (\Throwable $e) {
             }
         }
 
@@ -2087,11 +2103,11 @@ class PdssDetailModuleController extends BaseController {
             $stmtSim = $db->prepare("
                 SELECT ps.*, mk1.nama_kampus AS kampus_nama_1, mp1.program_studi AS prodi_nama_1,
                        mk2.nama_kampus AS kampus_nama_2, mp2.program_studi AS prodi_nama_2
-                FROM pdss_simulasi ps
-                LEFT JOIN master_kampus mk1 ON ps.kampus_id_1 = mk1.id
-                LEFT JOIN master_kampus_prodi mp1 ON ps.prodi_id_1 = mp1.id
-                LEFT JOIN master_kampus mk2 ON ps.kampus_id_2 = mk2.id
-                LEFT JOIN master_kampus_prodi mp2 ON ps.prodi_id_2 = mp2.id
+                FROM pdss.pdss_simulasi ps
+                LEFT JOIN pdss.master_kampus mk1 ON ps.kampus_id_1 = mk1.id
+                LEFT JOIN pdss.master_kampus_prodi mp1 ON ps.prodi_id_1 = mp1.id
+                LEFT JOIN pdss.master_kampus mk2 ON ps.kampus_id_2 = mk2.id
+                LEFT JOIN pdss.master_kampus_prodi mp2 ON ps.prodi_id_2 = mp2.id
                 WHERE ps.tenant_id = ? AND ps.tahun_ajaran_id = ? AND ps.no_simulasi = ?
                   AND ps.deleted_at IS NULL
             ");

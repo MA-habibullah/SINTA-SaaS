@@ -80,7 +80,7 @@ class TracerModuleController extends BaseController {
             $pekerjaan = $db->query("SELECT rp.*, s.nama_lengkap, t.nama_sekolah FROM riwayat_pekerjaan rp JOIN siswa s ON rp.id_siswa = s.id JOIN tenants t ON rp.tenant_id = t.id ORDER BY rp.created_at DESC LIMIT 200");
         }
 
-        $this->render('tracer_study', [
+        $this->render('alumni/tracer_study', [
             'title'             => 'Tracer Study / Portofolio Alumni',
             'user_role'         => $roleName,
             'user_nama'         => $_SESSION['nama_lengkap'] ?? '',
