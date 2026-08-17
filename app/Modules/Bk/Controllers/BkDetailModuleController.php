@@ -5,6 +5,7 @@ namespace App\Modules\Bk\Controllers;
 use App\Core\BaseController;
 use App\Core\SessionManager;
 use App\Core\FileCompressor;
+use App\Core\FileStorage;
 
 /**
  * BimbinganKonselingController (BKController)
@@ -87,6 +88,10 @@ class BkDetailModuleController extends BaseController {
         $this->_renderBkHub('layanan');
     }
 
+    public function kedisiplinan(): void {
+        $this->_renderBkHub('kedisiplinan');
+    }
+
     public function akademik(): void {
         $this->_renderBkHub('akademik');
     }
@@ -133,8 +138,17 @@ class BkDetailModuleController extends BaseController {
             error_log('[BKController::_renderBkHub] Gagal memuat tahun ajaran: ' . $e->getMessage());
         }
 
+        $pageTitle = 'Layanan BK';
+        if ($activeGroup === 'kedisiplinan') {
+            $pageTitle = 'Kedisiplinan Siswa';
+        } elseif ($activeGroup === 'akademik') {
+            $pageTitle = 'Kesiapan Akademik & PDSS';
+        } elseif ($activeGroup === 'alumni') {
+            $pageTitle = 'Alumni & Tracer Study';
+        }
+
         $this->render('bk/master_bk', [
-            'title'             => 'Bimbingan Konseling',
+            'title'             => $pageTitle,
             'user_role'         => $role,
             'can_write'         => in_array($role, ['guru_bk', 'operator_sekolah', 'super_admin']),
             'user_nama'         => $userNama,
@@ -320,7 +334,7 @@ class BkDetailModuleController extends BaseController {
                 return;
             }
 
-            if ($tenantId && $kasus['tenant_id'] !== $tenantId) {
+            if ($tenantId && $kasus['tenant_id'] !== $tenantId && !in_array('super_admin', $roles)) {
                 $this->jsonResponse(['error' => 'Akses ditolak. Kasus berada di sekolah lain.'], 403);
                 return;
             }
@@ -414,7 +428,7 @@ class BkDetailModuleController extends BaseController {
                 return;
             }
 
-            if ($tenantId && $kasus['tenant_id'] !== $tenantId) {
+            if ($tenantId && $kasus['tenant_id'] !== $tenantId && !in_array('super_admin', $roles)) {
                 $this->jsonResponse(['error' => 'Akses ditolak. Kasus berada di sekolah lain.'], 403);
                 return;
             }
@@ -509,64 +523,100 @@ class BkDetailModuleController extends BaseController {
             $snapNis       = $siswaSnap['nis']           ?? null;
             $snapNamaKelas = $siswaSnap['nama_kelas']    ?? null;
 
-            $newId = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x', 
-                mt_rand(0, 0xffff), mt_rand(0, 0xffff), 
-                mt_rand(0, 0xffff), 
-                mt_rand(0, 0x0fff) | 0x4000, 
-                mt_rand(0, 0x3fff) | 0x8000, 
-                mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
-            );
+            $kasusId = $this->sanitize($body['id'] ?? '');
 
             $db->beginTransaction();
-            $stmt = $db->prepare("
-                INSERT INTO bk.catatan_bk (
-                    id,
-                    id_siswa,
-                    snapshot_nama_siswa,
-                    snapshot_nisn,
-                    snapshot_nis,
-                    snapshot_nama_kelas,
-                    tenant_id,
-                    id_guru_bk,
-                    tanggal_konseling,
-                    jenis_kasus,
-                    catatan,
-                    tindak_lanjut,
-                    status_kasus,
-                    is_rahasia
-                ) VALUES (
-                    :id,
-                    :id_siswa,
-                    :snap_nama_siswa,
-                    :snap_nisn,
-                    :snap_nis,
-                    :snap_nama_kelas,
-                    :tenant_id,
-                    :id_guru_bk,
-                    :tanggal,
-                    :jenis,
-                    :catatan,
-                    :tindak,
-                    :status,
-                    :rahasia
-                )
-            ");
-            $stmt->execute([
-                'id'              => $newId,
-                'id_siswa'        => $idSiswa,
-                'snap_nama_siswa' => $snapNamaSiswa,
-                'snap_nisn'       => $snapNisn,
-                'snap_nis'        => $snapNis,
-                'snap_nama_kelas' => $snapNamaKelas,
-                'tenant_id'       => $tenantId,
-                'id_guru_bk'      => $idGuruBk,
-                'tanggal'         => $tanggal,
-                'jenis'           => $jenisKasus,
-                'catatan'         => $catatan,
-                'tindak'          => $tindakLanjut ?: null,
-                'status'          => $statusKasus,
-                'rahasia'         => $isRahasia,
-            ]);
+            if (!empty($kasusId)) {
+                $stmt = $db->prepare("
+                    UPDATE bk.catatan_bk SET
+                        id_siswa = :id_siswa,
+                        snapshot_nama_siswa = :snap_nama_siswa,
+                        snapshot_nisn = :snap_nisn,
+                        snapshot_nis = :snap_nis,
+                        snapshot_nama_kelas = :snap_nama_kelas,
+                        tanggal_konseling = :tanggal,
+                        jenis_kasus = :jenis,
+                        catatan = :catatan,
+                        tindak_lanjut = :tindak,
+                        status_kasus = :status,
+                        is_rahasia = :rahasia,
+                        updated_at = NOW()
+                    WHERE id = :id::uuid
+                ");
+                $stmt->execute([
+                    'id'              => $kasusId,
+                    'id_siswa'        => $idSiswa,
+                    'snap_nama_siswa' => $snapNamaSiswa,
+                    'snap_nisn'       => $snapNisn,
+                    'snap_nis'        => $snapNis,
+                    'snap_nama_kelas' => $snapNamaKelas,
+                    'tanggal'         => $tanggal,
+                    'jenis'           => $jenisKasus,
+                    'catatan'         => $catatan,
+                    'tindak'          => $tindakLanjut ?: null,
+                    'status'          => $statusKasus,
+                    'rahasia'         => $isRahasia,
+                ]);
+            } else {
+                $newId = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x', 
+                    mt_rand(0, 0xffff), mt_rand(0, 0xffff), 
+                    mt_rand(0, 0xffff), 
+                    mt_rand(0, 0x0fff) | 0x4000, 
+                    mt_rand(0, 0x3fff) | 0x8000, 
+                    mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+                );
+
+                $stmt = $db->prepare("
+                    INSERT INTO bk.catatan_bk (
+                        id,
+                        id_siswa,
+                        snapshot_nama_siswa,
+                        snapshot_nisn,
+                        snapshot_nis,
+                        snapshot_nama_kelas,
+                        tenant_id,
+                        id_guru_bk,
+                        tanggal_konseling,
+                        jenis_kasus,
+                        catatan,
+                        tindak_lanjut,
+                        status_kasus,
+                        is_rahasia
+                    ) VALUES (
+                        :id,
+                        :id_siswa,
+                        :snap_nama_siswa,
+                        :snap_nisn,
+                        :snap_nis,
+                        :snap_nama_kelas,
+                        :tenant_id,
+                        :id_guru_bk,
+                        :tanggal,
+                        :jenis,
+                        :catatan,
+                        :tindak,
+                        :status,
+                        :rahasia
+                    )
+                ");
+                $stmt->execute([
+                    'id'              => $newId,
+                    'id_siswa'        => $idSiswa,
+                    'snap_nama_siswa' => $snapNamaSiswa,
+                    'snap_nisn'       => $snapNisn,
+                    'snap_nis'        => $snapNis,
+                    'snap_nama_kelas' => $snapNamaKelas,
+                    'tenant_id'       => $tenantId,
+                    'id_guru_bk'      => $idGuruBk,
+                    'tanggal'         => $tanggal,
+                    'jenis'           => $jenisKasus,
+                    'catatan'         => $catatan,
+                    'tindak'          => $tindakLanjut ?: null,
+                    'status'          => $statusKasus,
+                    'rahasia'         => $isRahasia,
+                ]);
+            }
+            $targetId = !empty($kasusId) ? $kasusId : $newId;
 
             $rolesList = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
             $currentUserRole = 'guru_bk';
@@ -598,7 +648,7 @@ class BkDetailModuleController extends BaseController {
                 )
             ");
             $stmtLog->execute([
-                'id_catatan_bk' => $newId,
+                'id_catatan_bk' => $targetId,
                 'tenant_id'     => $tenantId,
                 'status_baru'   => $statusKasus,
                 'id_user'       => $idGuruBk,
@@ -610,7 +660,7 @@ class BkDetailModuleController extends BaseController {
 
             $this->jsonResponse([
                 'success' => true,
-                'id'      => $newId,
+                'id'      => $targetId,
                 'message' => 'Catatan BK berhasil disimpan.',
                 'snapshot' => [
                     'nama_siswa' => $snapNamaSiswa,
@@ -1197,7 +1247,7 @@ class BkDetailModuleController extends BaseController {
             $params = ['tenant_id' => $tenantId];
 
             if (!empty($tahunAjaranId)) {
-                $sql .= " AND (ps.tahun_ajaran_id = :tahun_ajaran_id OR ps.tahun_ajaran_id IN (SELECT id::text FROM akademik.tahun_ajaran WHERE is_active = TRUE))";
+                $sql .= " AND (ps.tahun_ajaran_id = :tahun_ajaran_id OR ps.tahun_ajaran_id = (SELECT nama_tahun_ajaran FROM akademik.tahun_ajaran WHERE id::text = :tahun_ajaran_id LIMIT 1))";
                 $params['tahun_ajaran_id'] = $tahunAjaranId;
             }
             if (!empty($semester)) {
@@ -1327,7 +1377,11 @@ class BkDetailModuleController extends BaseController {
             return;
         }
 
-        $poin = $this->calculatePoints($tingkatKejuaraan, $juaraText);
+        if (isset($_POST['poin_prestasi']) && $_POST['poin_prestasi'] !== '' && is_numeric($_POST['poin_prestasi'])) {
+            $poin = (int)$_POST['poin_prestasi'];
+        } else {
+            $poin = $this->calculatePoints($tingkatKejuaraan, $juaraText);
+        }
 
         // Upload files
         $fotoBukti    = null;
@@ -1496,8 +1550,11 @@ class BkDetailModuleController extends BaseController {
                 return;
             }
 
-            // Hitung poin
-            $poin = $this->calculatePoints($tingkatKejuaraan, $juaraText);
+            if (isset($_POST['poin_prestasi']) && $_POST['poin_prestasi'] !== '' && is_numeric($_POST['poin_prestasi'])) {
+                $poin = (int)$_POST['poin_prestasi'];
+            } else {
+                $poin = $this->calculatePoints($tingkatKejuaraan, $juaraText);
+            }
 
             // Upload files
             $fotoBukti    = $current['foto_bukti_prestasi'];
@@ -1819,6 +1876,10 @@ class BkDetailModuleController extends BaseController {
     // API: Ambil Absensi Semester Kehadiran (Tab Kehadiran)
     // GET /api/v1/bk/absensi-semester?tahun_ajaran_id=X&semester=Y&kelas_id=Z
     // =========================================================================
+    // =========================================================================
+    // API: Ambil Absensi Semester Kehadiran (Tab Kehadiran)
+    // GET /api/v1/bk/absensi-semester?tahun_ajaran_id=X&semester=Y&kelas_id=Z
+    // =========================================================================
     public function apiGetAbsensiSemester(): void {
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
@@ -1826,17 +1887,51 @@ class BkDetailModuleController extends BaseController {
             return;
         }
 
-        $tahunAjaranId = (int)($_GET['tahun_ajaran_id'] ?? 0);
+        $tahunAjaranId = $this->sanitize($_GET['tahun_ajaran_id'] ?? '');
         $semester = $this->sanitize($_GET['semester'] ?? '');
-        $kelasId = (int)($_GET['kelas_id'] ?? 0);
+        $kelasId = $this->sanitize($_GET['kelas_id'] ?? '');
 
-        if (!$tahunAjaranId || !$semester || !$kelasId) {
+        if (empty($tahunAjaranId) || empty($semester) || empty($kelasId)) {
             $this->jsonResponse(['error' => 'Tahun Ajaran, Semester, dan Kelas wajib dipilih.'], 422);
             return;
         }
 
         try {
             $db = \App\Config\Database::getConnection();
+
+            // Resolve nama_kelas from $kelasId
+            $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE (id::text = ? OR nama_kelas = ?) AND tenant_id::text = ? LIMIT 1");
+            $stmtKelas->execute([$kelasId, $kelasId, $tenantId]);
+            $namaKelas = $stmtKelas->fetchColumn() ?: $kelasId;
+
+            // Resolve tahun_ajaran_str from $tahunAjaranId
+            $stmtTa = $db->prepare("SELECT COALESCE(nama_tahun_ajaran, '') FROM akademik.tahun_ajaran WHERE (id::text = ? OR nama_tahun_ajaran = ?) AND tenant_id::text = ? LIMIT 1");
+            $stmtTa->execute([$tahunAjaranId, $tahunAjaranId, $tenantId]);
+            $tahunAjaranStr = $stmtTa->fetchColumn() ?: $tahunAjaranId;
+
+            $semesterInt = (strtolower(trim($semester)) === 'ganjil' || trim($semester) === '1') ? 1 : 2;
+            $semesterStr = ($semesterInt === 1) ? 'Ganjil' : 'Genap';
+
+            $whereConditions = [
+                "(s.status_siswa = 'Aktif' OR s.status_siswa IS NULL OR s.is_active = TRUE)",
+                "s.tenant_id = :tenant_id_siswa"
+            ];
+            $params = [
+                'tahun_ajaran_id' => $tahunAjaranId,
+                'tahun_ajaran_str' => $tahunAjaranStr,
+                'semester_int' => $semesterInt,
+                'semester_str' => $semesterStr,
+                'semester_val' => (string)$semesterInt,
+                'tenant_id_absensi' => $tenantId,
+                'tenant_id_siswa' => $tenantId
+            ];
+
+            if (!empty($namaKelas)) {
+                $whereConditions[] = "(s.kelas_saat_ini = :nama_kelas OR s.kelas_saat_ini = :kelas_id)";
+                $params['nama_kelas'] = $namaKelas;
+                $params['kelas_id'] = $kelasId;
+            }
+
             $sql = "SELECT 
                         s.id AS siswa_id,
                         s.nama_lengkap,
@@ -1845,30 +1940,42 @@ class BkDetailModuleController extends BaseController {
                         s.jenis_kelamin,
                         COALESCE(a.sakit, 0) AS sakit,
                         COALESCE(a.izin, 0) AS izin,
-                        COALESCE(a.alfa, 0) AS alfa,
+                        COALESCE(a.alfa, a.alpha, 0) AS alfa,
                         a.id AS absensi_id
                     FROM siswa.siswa s
-                    LEFT JOIN absensi_semester a ON s.id = a.siswa_id 
-                        AND a.tahun_ajaran_id = :tahun_ajaran_id 
-                        AND a.semester = :semester
+                    LEFT JOIN siswa.absensi_semester a ON s.id = a.siswa_id 
+                        AND (a.tahun_ajaran_id = :tahun_ajaran_id OR a.tahun_ajaran = :tahun_ajaran_str OR a.tahun_ajaran_id = :tahun_ajaran_str OR a.tahun_ajaran = :tahun_ajaran_id)
+                        AND (a.semester = :semester_int OR a.semester::text = :semester_str OR a.semester::text = :semester_val)
                         AND a.tenant_id = :tenant_id_absensi
-                    WHERE s.id_kelas = :kelas_id 
-                      AND s.status = 'Aktif'
-                      AND s.deleted_at IS NULL
-                      AND s.tenant_id = :tenant_id_siswa
+                    WHERE " . implode(' AND ', $whereConditions) . "
                     ORDER BY s.nama_lengkap ASC";
             
             $stmt = $db->prepare($sql);
-            $stmt->execute([
-                'tahun_ajaran_id' => $tahunAjaranId,
-                'semester' => $semester,
-                'kelas_id' => $kelasId,
-                'tenant_id_absensi' => $tenantId,
-                'tenant_id_siswa' => $tenantId
-            ]);
+            $stmt->execute($params);
 
             $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-            $this->jsonResponse(['success' => true, 'data' => $data]);
+
+            // Check if any record for this class, year, and semester is locked
+            $stmtLock = $db->prepare("
+                SELECT (COALESCE(is_locked, FALSE) OR COALESCE(dikunci, FALSE)) AS is_locked
+                FROM siswa.absensi_semester 
+                WHERE tenant_id::text = :tenant_id
+                  AND (tahun_ajaran_id = :tahun_ajaran_id OR tahun_ajaran = :tahun_ajaran_str)
+                  AND (semester = :semester_int OR semester::text = :semester_str OR semester::text = :semester_val)
+                  AND (is_locked = TRUE OR dikunci = TRUE)
+                LIMIT 1
+            ");
+            $stmtLock->execute([
+                'tenant_id' => $tenantId,
+                'tahun_ajaran_id' => $tahunAjaranId,
+                'tahun_ajaran_str' => $tahunAjaranStr,
+                'semester_int' => $semesterInt,
+                'semester_str' => $semesterStr,
+                'semester_val' => (string)$semesterInt
+            ]);
+            $isLocked = (bool)$stmtLock->fetchColumn();
+
+            $this->jsonResponse(['success' => true, 'data' => $data, 'is_locked' => $isLocked]);
         } catch (\Throwable $e) {
             error_log('[BKController::apiGetAbsensiSemester] ' . $e->getMessage());
             $this->jsonResponse(['error' => 'Gagal mengambil data kehadiran: ' . $e->getMessage()], 500);
@@ -1892,12 +1999,12 @@ class BkDetailModuleController extends BaseController {
         }
 
         $body = $this->getJsonInput();
-        $tahunAjaranId = (int)($body['tahun_ajaran_id'] ?? 0);
+        $tahunAjaranId = $this->sanitize($body['tahun_ajaran_id'] ?? '');
         $semester = $this->sanitize($body['semester'] ?? '');
-        $kelasId = (int)($body['kelas_id'] ?? 0);
+        $kelasId = $this->sanitize($body['kelas_id'] ?? '');
         $attendance = $body['attendance'] ?? [];
 
-        if (!$tahunAjaranId || !$semester || !$kelasId) {
+        if (empty($tahunAjaranId) || empty($semester) || empty($kelasId)) {
             $this->jsonResponse(['error' => 'Parameter tidak lengkap.'], 422);
             return;
         }
@@ -1909,22 +2016,57 @@ class BkDetailModuleController extends BaseController {
 
         try {
             $db = \App\Config\Database::getConnection();
+
+            $semesterInt = (strtolower(trim($semester)) === 'ganjil' || trim($semester) === '1') ? 1 : 2;
+            $semesterStr = ($semesterInt === 1) ? 'Ganjil' : 'Genap';
+
+            // Resolve actual year string e.g. "2025/2026"
+            $stmtTa = $db->prepare("SELECT COALESCE(nama_tahun_ajaran, '') FROM akademik.tahun_ajaran WHERE (id::text = ? OR nama_tahun_ajaran = ?) AND tenant_id::text = ? LIMIT 1");
+            $stmtTa->execute([$tahunAjaranId, $tahunAjaranId, $tenantId]);
+            $tahunAjaranStr = $stmtTa->fetchColumn() ?: $tahunAjaranId;
+
+            // Check if class attendance is locked
+            $stmtLockCheck = $db->prepare("
+                SELECT (COALESCE(is_locked, FALSE) OR COALESCE(dikunci, FALSE)) 
+                FROM siswa.absensi_semester 
+                WHERE tenant_id::text = :tenant_id 
+                  AND (tahun_ajaran_id = :tahun_ajaran_id OR tahun_ajaran = :tahun_ajaran_str)
+                  AND (semester = :semester_int OR semester::text = :semester_str OR semester::text = :semester_val)
+                  AND (is_locked = TRUE OR dikunci = TRUE)
+                LIMIT 1
+            ");
+            $stmtLockCheck->execute([
+                'tenant_id' => $tenantId,
+                'tahun_ajaran_id' => $tahunAjaranId,
+                'tahun_ajaran_str' => $tahunAjaranStr,
+                'semester_int' => $semesterInt,
+                'semester_str' => $semesterStr,
+                'semester_val' => (string)$semesterInt
+            ]);
+            $alreadyLocked = (bool)$stmtLockCheck->fetchColumn();
+
+            $userRole = strtolower($_SESSION['role'] ?? '');
+            if ($alreadyLocked && !in_array($userRole, ['admin', 'super_admin', 'kurikulum'], true)) {
+                $this->jsonResponse(['error' => 'Data kehadiran kelas ini telah dikunci oleh Kurikulum/Admin dan tidak dapat diubah.'], 403);
+                return;
+            }
+
             $db->beginTransaction();
 
             $checkStmt = $db->prepare("
                 SELECT id FROM siswa.absensi_semester 
                 WHERE tenant_id = :tenant_id 
                   AND siswa_id = :siswa_id 
-                  AND tahun_ajaran_id = :tahun_ajaran_id 
-                  AND semester = :semester 
+                  AND (tahun_ajaran_id = :tahun_ajaran_id OR tahun_ajaran = :tahun_ajaran_str OR tahun_ajaran_id = :tahun_ajaran_str OR tahun_ajaran = :tahun_ajaran_id)
+                  AND (semester = :semester_int OR semester::text = :semester_str OR semester::text = :semester_val)
                 LIMIT 1
             ");
 
             $insertStmt = $db->prepare("
                 INSERT INTO siswa.absensi_semester (
-                    tenant_id, siswa_id, tahun_ajaran_id, semester, sakit, izin, alfa
+                    tenant_id, siswa_id, tahun_ajaran_id, tahun_ajaran, semester, sakit, izin, alfa
                 ) VALUES (
-                    :tenant_id, :siswa_id, :tahun_ajaran_id, :semester, :sakit, :izin, :alfa
+                    :tenant_id, :siswa_id, :tahun_ajaran_id, :tahun_ajaran, :semester, :sakit, :izin, :alfa
                 )
             ");
 
@@ -1932,13 +2074,9 @@ class BkDetailModuleController extends BaseController {
                 UPDATE siswa.absensi_semester SET 
                     sakit = :sakit,
                     izin = :izin,
-                    alfa = :alfa
+                    alfa = :alfa,
+                    updated_at = NOW()
                 WHERE id = :id
-            ");
-
-            $verifySiswaStmt = $db->prepare("
-                SELECT id FROM siswa.siswa 
-                WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL LIMIT 1
             ");
 
             foreach ($attendance as $record) {
@@ -1951,16 +2089,14 @@ class BkDetailModuleController extends BaseController {
                     continue;
                 }
 
-                $verifySiswaStmt->execute([$siswaId, $tenantId]);
-                if (!$verifySiswaStmt->fetchColumn()) {
-                    throw new \Exception("Siswa dengan ID {$siswaId} tidak terdaftar di sekolah ini.");
-                }
-
                 $checkStmt->execute([
                     'tenant_id' => $tenantId,
                     'siswa_id' => $siswaId,
                     'tahun_ajaran_id' => $tahunAjaranId,
-                    'semester' => $semester
+                    'tahun_ajaran_str' => $tahunAjaranStr,
+                    'semester_int' => $semesterInt,
+                    'semester_str' => $semesterStr,
+                    'semester_val' => (string)$semesterInt
                 ]);
                 $existingId = $checkStmt->fetchColumn();
 
@@ -1976,7 +2112,8 @@ class BkDetailModuleController extends BaseController {
                         'tenant_id' => $tenantId,
                         'siswa_id' => $siswaId,
                         'tahun_ajaran_id' => $tahunAjaranId,
-                        'semester' => $semester,
+                        'tahun_ajaran' => $tahunAjaranStr,
+                        'semester' => $semesterInt,
                         'sakit' => $sakit,
                         'izin' => $izin,
                         'alfa' => $alfa
@@ -2005,33 +2142,56 @@ class BkDetailModuleController extends BaseController {
             die("Pilih sekolah terlebih dahulu.");
         }
 
-        $tahunAjaranId = (int)($_GET['tahun_ajaran_id'] ?? 0);
+        $tahunAjaranId = $this->sanitize($_GET['tahun_ajaran_id'] ?? '');
         $semester = $this->sanitize($_GET['semester'] ?? '');
-        $kelasId = (int)($_GET['kelas_id'] ?? 0);
+        $kelasId = $this->sanitize($_GET['kelas_id'] ?? '');
 
-        if (!$tahunAjaranId || !$semester || !$kelasId) {
+        if (empty($tahunAjaranId) || empty($semester) || empty($kelasId)) {
             die("Tahun Ajaran, Semester, dan Kelas wajib dipilih.");
         }
 
         try {
             $db = \App\Config\Database::getConnection();
 
+            $semesterInt = (strtolower(trim($semester)) === 'ganjil' || trim($semester) === '1') ? 1 : 2;
+            $semesterStr = ($semesterInt === 1) ? 'Ganjil' : 'Genap';
+
             // Ambil info nama sekolah, kelas, tahun ajaran untuk header & filename
-            $stmtTenant = $db->prepare("SELECT nama_sekolah FROM tenants WHERE id = ? LIMIT 1");
+            $stmtTenant = $db->prepare("SELECT nama_sekolah FROM core.tenants WHERE id::text = ? LIMIT 1");
             $stmtTenant->execute([$tenantId]);
             $namaSekolah = $stmtTenant->fetchColumn() ?: "Sekolah";
 
-            $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id = ? AND tenant_id = ? LIMIT 1");
-            $stmtKelas->execute([$kelasId, $tenantId]);
-            $namaKelas = $stmtKelas->fetchColumn() ?: "Kelas";
+            $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE (id::text = ? OR nama_kelas = ?) AND tenant_id::text = ? LIMIT 1");
+            $stmtKelas->execute([$kelasId, $kelasId, $tenantId]);
+            $namaKelas = $stmtKelas->fetchColumn() ?: $kelasId;
 
-            $stmtTa = $db->prepare("SELECT tahun_ajaran FROM akademik.tahun_ajaran WHERE id = ? AND tenant_id = ? LIMIT 1");
-            $stmtTa->execute([$tahunAjaranId, $tenantId]);
-            $tahunAjaranStr = $stmtTa->fetchColumn() ?: "TahunAjaran";
+            $stmtTa = $db->prepare("SELECT COALESCE(nama_tahun_ajaran, '') FROM akademik.tahun_ajaran WHERE (id::text = ? OR nama_tahun_ajaran = ?) AND tenant_id::text = ? LIMIT 1");
+            $stmtTa->execute([$tahunAjaranId, $tahunAjaranId, $tenantId]);
+            $tahunAjaranStr = $stmtTa->fetchColumn() ?: $tahunAjaranId;
 
-            $filename = "Absensi_" . str_replace(' ', '_', $namaKelas) . "_" . str_replace('/', '-', $tahunAjaranStr) . "_" . $semester . "_" . date('Ymd_His') . ".xlsx";
+            $filename = "Absensi_" . str_replace(' ', '_', $namaKelas) . "_" . str_replace('/', '-', $tahunAjaranStr) . "_" . $semesterStr . "_" . date('Ymd_His') . ".xlsx";
 
             // Query data siswa + absensi
+            $whereConditions = [
+                "(s.status_siswa = 'Aktif' OR s.status_siswa IS NULL OR s.is_active = TRUE)",
+                "s.tenant_id = :tenant_id_siswa"
+            ];
+            $params = [
+                'tahun_ajaran_id' => $tahunAjaranId,
+                'tahun_ajaran_str' => $tahunAjaranStr,
+                'semester_int' => $semesterInt,
+                'semester_str' => $semesterStr,
+                'semester_val' => (string)$semesterInt,
+                'tenant_id_absensi' => $tenantId,
+                'tenant_id_siswa' => $tenantId
+            ];
+
+            if (!empty($namaKelas)) {
+                $whereConditions[] = "(s.kelas_saat_ini = :nama_kelas OR s.kelas_saat_ini = :kelas_id)";
+                $params['nama_kelas'] = $namaKelas;
+                $params['kelas_id'] = $kelasId;
+            }
+
             $sql = "SELECT 
                         s.nama_lengkap,
                         s.nisn,
@@ -2041,26 +2201,17 @@ class BkDetailModuleController extends BaseController {
                         s.tenant_id,
                         COALESCE(a.sakit, 0) AS sakit,
                         COALESCE(a.izin, 0) AS izin,
-                        COALESCE(a.alfa, 0) AS alfa
+                        COALESCE(a.alfa, a.alpha, 0) AS alfa
                     FROM siswa.siswa s
-                    LEFT JOIN absensi_semester a ON s.id = a.siswa_id 
-                        AND a.tahun_ajaran_id = :tahun_ajaran_id 
-                        AND a.semester = :semester
+                    LEFT JOIN siswa.absensi_semester a ON s.id = a.siswa_id 
+                        AND (a.tahun_ajaran_id = :tahun_ajaran_id OR a.tahun_ajaran = :tahun_ajaran_str OR a.tahun_ajaran_id = :tahun_ajaran_str OR a.tahun_ajaran = :tahun_ajaran_id)
+                        AND (a.semester = :semester_int OR a.semester::text = :semester_str OR a.semester::text = :semester_val)
                         AND a.tenant_id = :tenant_id_absensi
-                    WHERE s.id_kelas = :kelas_id 
-                      AND s.status = 'Aktif'
-                      AND s.deleted_at IS NULL
-                      AND s.tenant_id = :tenant_id_siswa
+                    WHERE " . implode(' AND ', $whereConditions) . "
                     ORDER BY s.nama_lengkap ASC";
             
             $stmt = $db->prepare($sql);
-            $stmt->execute([
-                'tahun_ajaran_id' => $tahunAjaranId,
-                'semester' => $semester,
-                'kelas_id' => $kelasId,
-                'tenant_id_absensi' => $tenantId,
-                'tenant_id_siswa' => $tenantId
-            ]);
+            $stmt->execute($params);
             $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
             // Prepare data array for SimpleXLSXGen
@@ -2069,7 +2220,7 @@ class BkDetailModuleController extends BaseController {
             $excelData[] = ['Sekolah:', $namaSekolah];
             $excelData[] = ['Kelas:', $namaKelas];
             $excelData[] = ['Tahun Ajaran:', $tahunAjaranStr];
-            $excelData[] = ['Semester:', $semester];
+            $excelData[] = ['Semester:', $semesterStr];
             $excelData[] = []; // Empty separator line
             
             $excelData[] = [
@@ -2108,6 +2259,133 @@ class BkDetailModuleController extends BaseController {
     }
 
     // =========================================================================
+    // API: Toggle Kunci Data Absensi Semester Kehadiran
+    // POST /api/v1/bk/absensi-semester/toggle-lock
+    // =========================================================================
+    public function apiToggleLockAbsensiSemester(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->jsonResponse(['error' => 'Method not allowed.'], 405);
+            return;
+        }
+
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Pilih sekolah terlebih dahulu.'], 400);
+            return;
+        }
+
+        $userRole = strtolower($_SESSION['role'] ?? '');
+        if (!in_array($userRole, ['admin', 'super_admin', 'kurikulum', 'petugas_bk', 'guru'], true)) {
+            $this->jsonResponse(['error' => 'Anda tidak memiliki hak akses untuk mengunci/membuka kunci data kehadiran.'], 403);
+            return;
+        }
+
+        $body = $this->getJsonInput();
+        $tahunAjaranId = $this->sanitize($body['tahun_ajaran_id'] ?? '');
+        $semester = $this->sanitize($body['semester'] ?? '');
+        $kelasId = $this->sanitize($body['kelas_id'] ?? '');
+        $lockStatus = !empty($body['is_locked']);
+
+        if (empty($tahunAjaranId) || empty($semester) || empty($kelasId)) {
+            $this->jsonResponse(['error' => 'Parameter tidak lengkap.'], 422);
+            return;
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+
+            $semesterInt = (strtolower(trim($semester)) === 'ganjil' || trim($semester) === '1') ? 1 : 2;
+            $semesterStr = ($semesterInt === 1) ? 'Ganjil' : 'Genap';
+
+            $stmtTa = $db->prepare("SELECT COALESCE(nama_tahun_ajaran, '') FROM akademik.tahun_ajaran WHERE (id::text = ? OR nama_tahun_ajaran = ?) AND tenant_id::text = ? LIMIT 1");
+            $stmtTa->execute([$tahunAjaranId, $tahunAjaranId, $tenantId]);
+            $tahunAjaranStr = $stmtTa->fetchColumn() ?: $tahunAjaranId;
+
+            // Resolve nama_kelas and get all siswa_id for this class
+            $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE (id::text = ? OR nama_kelas = ?) AND tenant_id::text = ? LIMIT 1");
+            $stmtKelas->execute([$kelasId, $kelasId, $tenantId]);
+            $namaKelas = $stmtKelas->fetchColumn() ?: $kelasId;
+
+            $stmtSiswa = $db->prepare("SELECT id FROM siswa.siswa WHERE tenant_id::text = ? AND (kelas_saat_ini = ? OR kelas_saat_ini = ?)");
+            $stmtSiswa->execute([$tenantId, $namaKelas, $kelasId]);
+            $siswaList = $stmtSiswa->fetchAll(\PDO::FETCH_COLUMN);
+
+            if (empty($siswaList)) {
+                $this->jsonResponse(['error' => 'Tidak ada siswa pada kelas ini.'], 400);
+                return;
+            }
+
+            $db->beginTransaction();
+
+            $checkStmt = $db->prepare("
+                SELECT id FROM siswa.absensi_semester 
+                WHERE tenant_id = :tenant_id 
+                  AND siswa_id = :siswa_id 
+                  AND (tahun_ajaran_id = :tahun_ajaran_id OR tahun_ajaran = :tahun_ajaran_str OR tahun_ajaran_id = :tahun_ajaran_str OR tahun_ajaran = :tahun_ajaran_id)
+                  AND (semester = :semester_int OR semester::text = :semester_str OR semester::text = :semester_val)
+                LIMIT 1
+            ");
+
+            $insertStmt = $db->prepare("
+                INSERT INTO siswa.absensi_semester (
+                    tenant_id, siswa_id, tahun_ajaran_id, tahun_ajaran, semester, sakit, izin, alfa, is_locked, dikunci
+                ) VALUES (
+                    :tenant_id, :siswa_id, :tahun_ajaran_id, :tahun_ajaran, :semester, 0, 0, 0, :is_locked, :dikunci
+                )
+            ");
+
+            $updateStmt = $db->prepare("
+                UPDATE siswa.absensi_semester SET 
+                    is_locked = :is_locked,
+                    dikunci = :dikunci,
+                    updated_at = NOW()
+                WHERE id = :id
+            ");
+
+            foreach ($siswaList as $siswaId) {
+                $checkStmt->execute([
+                    'tenant_id' => $tenantId,
+                    'siswa_id' => $siswaId,
+                    'tahun_ajaran_id' => $tahunAjaranId,
+                    'tahun_ajaran_str' => $tahunAjaranStr,
+                    'semester_int' => $semesterInt,
+                    'semester_str' => $semesterStr,
+                    'semester_val' => (string)$semesterInt
+                ]);
+                $existingId = $checkStmt->fetchColumn();
+
+                if ($existingId) {
+                    $updateStmt->execute([
+                        'is_locked' => $lockStatus ? 'true' : 'false',
+                        'dikunci' => $lockStatus ? 'true' : 'false',
+                        'id' => $existingId
+                    ]);
+                } else {
+                    $insertStmt->execute([
+                        'tenant_id' => $tenantId,
+                        'siswa_id' => $siswaId,
+                        'tahun_ajaran_id' => $tahunAjaranId,
+                        'tahun_ajaran' => $tahunAjaranStr,
+                        'semester' => $semesterInt,
+                        'is_locked' => $lockStatus ? 'true' : 'false',
+                        'dikunci' => $lockStatus ? 'true' : 'false'
+                    ]);
+                }
+            }
+
+            $db->commit();
+            $msg = $lockStatus ? 'Data kehadiran kelas berhasil DIKUNCI.' : 'Kunci data kehadiran berhasil DIBUKA.';
+            $this->jsonResponse(['success' => true, 'message' => $msg, 'is_locked' => $lockStatus]);
+        } catch (\Throwable $e) {
+            if (isset($db) && $db->inTransaction()) {
+                $db->rollBack();
+            }
+            error_log('[BKController::apiToggleLockAbsensiSemester] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal mengubah status kunci kehadiran: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // =========================================================================
     // API: Impor CSV Absensi Semester Kehadiran (Excel Save As CSV)
     // POST /api/v1/bk/absensi-semester/import
     // =========================================================================
@@ -2123,11 +2401,11 @@ class BkDetailModuleController extends BaseController {
             return;
         }
 
-        $tahunAjaranId = (int)($_POST['tahun_ajaran_id'] ?? 0);
+        $tahunAjaranId = $this->sanitize($_POST['tahun_ajaran_id'] ?? '');
         $semester = $this->sanitize($_POST['semester'] ?? '');
-        $kelasId = (int)($_POST['kelas_id'] ?? 0);
+        $kelasId = $this->sanitize($_POST['kelas_id'] ?? '');
 
-        if (!$tahunAjaranId || !$semester || !$kelasId) {
+        if (empty($tahunAjaranId) || empty($semester) || empty($kelasId)) {
             $this->jsonResponse(['error' => 'Parameter filter (Tahun Ajaran, Semester, Kelas) tidak lengkap.'], 422);
             return;
         }
@@ -2232,6 +2510,14 @@ class BkDetailModuleController extends BaseController {
             $db = \App\Config\Database::getConnection();
             $db->beginTransaction();
 
+            $semesterInt = (strtolower(trim($semester)) === 'ganjil' || trim($semester) === '1') ? 1 : 2;
+            $semesterStr = ($semesterInt === 1) ? 'Ganjil' : 'Genap';
+
+            // Resolve actual year string e.g. "2025/2026"
+            $stmtTa = $db->prepare("SELECT COALESCE(nama_tahun_ajaran, '') FROM akademik.tahun_ajaran WHERE (id::text = ? OR nama_tahun_ajaran = ?) AND tenant_id::text = ? LIMIT 1");
+            $stmtTa->execute([$tahunAjaranId, $tahunAjaranId, $tenantId]);
+            $tahunAjaranStr = $stmtTa->fetchColumn() ?: $tahunAjaranId;
+
             $rowCount = $headerRowNumber;
             $successCount = 0;
             $errors = [];
@@ -2240,7 +2526,7 @@ class BkDetailModuleController extends BaseController {
             $stmtSiswaCheck = $db->prepare("
                 SELECT id, tenant_id FROM siswa.siswa 
                 WHERE nisn = :nisn 
-                  AND deleted_at IS NULL 
+                  AND tenant_id = :tenant_id
                 LIMIT 1
             ");
 
@@ -2248,16 +2534,16 @@ class BkDetailModuleController extends BaseController {
                 SELECT id FROM siswa.absensi_semester 
                 WHERE tenant_id = :tenant_id 
                   AND siswa_id = :siswa_id 
-                  AND tahun_ajaran_id = :tahun_ajaran_id 
-                  AND semester = :semester 
+                  AND (tahun_ajaran_id = :tahun_ajaran_id OR tahun_ajaran = :tahun_ajaran_str OR tahun_ajaran_id = :tahun_ajaran_str OR tahun_ajaran = :tahun_ajaran_id)
+                  AND (semester = :semester_int OR semester::text = :semester_str OR semester::text = :semester_val)
                 LIMIT 1
             ");
 
             $insertStmt = $db->prepare("
                 INSERT INTO siswa.absensi_semester (
-                    tenant_id, siswa_id, tahun_ajaran_id, semester, sakit, izin, alfa
+                    tenant_id, siswa_id, tahun_ajaran_id, tahun_ajaran, semester, sakit, izin, alfa
                 ) VALUES (
-                    :tenant_id, :siswa_id, :tahun_ajaran_id, :semester, :sakit, :izin, :alfa
+                    :tenant_id, :siswa_id, :tahun_ajaran_id, :tahun_ajaran, :semester, :sakit, :izin, :alfa
                 )
             ");
 
@@ -2265,7 +2551,8 @@ class BkDetailModuleController extends BaseController {
                 UPDATE siswa.absensi_semester SET 
                     sakit = :sakit,
                     izin = :izin,
-                    alfa = :alfa
+                    alfa = :alfa,
+                    updated_at = NOW()
                 WHERE id = :id
             ");
 
@@ -2302,7 +2589,8 @@ class BkDetailModuleController extends BaseController {
 
                 // Check student exist by nisn
                 $stmtSiswaCheck->execute([
-                    'nisn' => $rawNisn
+                    'nisn' => $rawNisn,
+                    'tenant_id' => $tenantId
                 ]);
                 $siswa = $stmtSiswaCheck->fetch(\PDO::FETCH_ASSOC);
 
@@ -2323,7 +2611,10 @@ class BkDetailModuleController extends BaseController {
                     'tenant_id' => $tenantId,
                     'siswa_id' => $siswaId,
                     'tahun_ajaran_id' => $tahunAjaranId,
-                    'semester' => $semester
+                    'tahun_ajaran_str' => $tahunAjaranStr,
+                    'semester_int' => $semesterInt,
+                    'semester_str' => $semesterStr,
+                    'semester_val' => (string)$semesterInt
                 ]);
                 $existingId = $checkAbsensiStmt->fetchColumn();
 
@@ -2341,7 +2632,8 @@ class BkDetailModuleController extends BaseController {
                         'tenant_id' => $tenantId,
                         'siswa_id' => $siswaId,
                         'tahun_ajaran_id' => $tahunAjaranId,
-                        'semester' => $semester,
+                        'tahun_ajaran' => $tahunAjaranStr,
+                        'semester' => $semesterInt,
                         'sakit' => max(0, $sakit),
                         'izin' => max(0, $izin),
                         'alfa' => max(0, $alfa)
@@ -2434,9 +2726,12 @@ class BkDetailModuleController extends BaseController {
             // Top pelanggaran berdasarkan kategori
             $topStmt = $db->prepare("
                 SELECT
+                    ps.id AS siswa_id,
+                    ps.nama_pelanggaran_siswa AS nama_lengkap,
                     ps.nama_pelanggaran_siswa AS nama,
                     ps.kategori,
-                    ps.deskripsi
+                    ps.deskripsi,
+                    10 AS total_poin
                 FROM bk.pelanggaran_siswa ps
                 WHERE ps.tenant_id = ?
                   AND ps.is_active = TRUE
@@ -2481,8 +2776,7 @@ class BkDetailModuleController extends BaseController {
                 $countsList = [0];
             }
 
-            $this->jsonResponse([
-                'success'     => true,
+            $this->jsonResponse(true, [
                 'kpi'         => $kpi,
                 'top_students'=> $topStudents,
                 'chart'       => [
@@ -2514,10 +2808,14 @@ class BkDetailModuleController extends BaseController {
 
         try {
             $stmt = $db->prepare("
-                SELECT id, kategori, nama_pelanggaran, bobot_poin 
+                SELECT 
+                    id, 
+                    kategori, 
+                    COALESCE(nama_pelanggaran, nama_master_pelanggaran, 'Pelanggaran') AS nama_pelanggaran, 
+                    COALESCE(bobot_poin, 10) AS bobot_poin 
                 FROM bk.master_pelanggaran 
-                WHERE tenant_id = ? AND deleted_at IS NULL 
-                ORDER BY kategori ASC, nama_pelanggaran ASC
+                WHERE tenant_id = ? AND is_active = TRUE
+                ORDER BY kategori ASC, created_at DESC
             ");
             $stmt->execute([$tenantId]);
             $rules = $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -2538,45 +2836,24 @@ class BkDetailModuleController extends BaseController {
         $db = \App\Config\Database::getConnection();
         $input = $this->getJsonInput();
 
-        $kategori = $this->sanitize($input['kategori'] ?? '');
-        $namaPelanggaran = $this->sanitize($input['nama_pelanggaran'] ?? '');
-        $bobotPoin = (int)($input['bobot_poin'] ?? 0);
+        $kategori = $this->sanitize($input['kategori'] ?? ($_POST['kategori'] ?? 'Ringan'));
+        $namaPelanggaran = $this->sanitize($input['nama_pelanggaran'] ?? ($_POST['nama_pelanggaran'] ?? ''));
+        $bobotPoin = (int)($input['bobot_poin'] ?? ($_POST['bobot_poin'] ?? 10));
 
-        if (!in_array($kategori, ['Ringan', 'Sedang', 'Berat', 'Khusus'], true)) {
-            $this->jsonResponse(['error' => 'Kategori tidak valid.'], 400);
-        }
         if (empty($namaPelanggaran)) {
             $this->jsonResponse(['error' => 'Nama pelanggaran wajib diisi.'], 400);
         }
-        if ($bobotPoin <= 0) {
-            $this->jsonResponse(['error' => 'Bobot poin harus lebih besar dari 0.'], 400);
-        }
-
-        // Generate UUID
-        $uuid = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-            mt_rand(0, 0xffff), mt_rand(0, 0xffff),
-            mt_rand(0, 0xffff),
-            mt_rand(0, 0x0fff) | 0x4000,
-            mt_rand(0, 0x3fff) | 0x8000,
-            mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
-        );
 
         try {
             $stmt = $db->prepare("
-                INSERT INTO bk.master_pelanggaran (id, tenant_id, kategori, nama_pelanggaran, bobot_poin)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO bk.master_pelanggaran (tenant_id, kategori, nama_master_pelanggaran, nama_pelanggaran, bobot_poin, is_active)
+                VALUES (?, ?, ?, ?, ?, TRUE)
             ");
-            $stmt->execute([$uuid, $tenantId, $kategori, $namaPelanggaran, $bobotPoin]);
+            $stmt->execute([$tenantId, $kategori, $namaPelanggaran, $namaPelanggaran, $bobotPoin]);
 
             $this->jsonResponse([
                 'success' => true,
-                'message' => 'Aturan pelanggaran berhasil disimpan.',
-                'data' => [
-                    'id' => $uuid,
-                    'kategori' => $kategori,
-                    'nama_pelanggaran' => $namaPelanggaran,
-                    'bobot_poin' => $bobotPoin
-                ]
+                'message' => 'Aturan pelanggaran berhasil disimpan.'
             ]);
         } catch (\Throwable $e) {
             error_log('[BKController::apiStoreMasterPelanggaran] ' . $e->getMessage());
@@ -2593,38 +2870,22 @@ class BkDetailModuleController extends BaseController {
         $db = \App\Config\Database::getConnection();
         $input = $this->getJsonInput();
 
-        $id = $this->sanitize($input['id'] ?? '');
-        $kategori = $this->sanitize($input['kategori'] ?? '');
-        $namaPelanggaran = $this->sanitize($input['nama_pelanggaran'] ?? '');
-        $bobotPoin = (int)($input['bobot_poin'] ?? 0);
+        $id = $this->sanitize($input['id'] ?? ($_POST['id'] ?? ''));
+        $kategori = $this->sanitize($input['kategori'] ?? ($_POST['kategori'] ?? 'Ringan'));
+        $namaPelanggaran = $this->sanitize($input['nama_pelanggaran'] ?? ($_POST['nama_pelanggaran'] ?? ''));
+        $bobotPoin = (int)($input['bobot_poin'] ?? ($_POST['bobot_poin'] ?? 10));
 
-        if (empty($id)) {
-            $this->jsonResponse(['error' => 'ID aturan tidak valid.'], 400);
-        }
-        if (!in_array($kategori, ['Ringan', 'Sedang', 'Berat', 'Khusus'], true)) {
-            $this->jsonResponse(['error' => 'Kategori tidak valid.'], 400);
-        }
-        if (empty($namaPelanggaran)) {
-            $this->jsonResponse(['error' => 'Nama pelanggaran wajib diisi.'], 400);
-        }
-        if ($bobotPoin <= 0) {
-            $this->jsonResponse(['error' => 'Bobot poin harus lebih besar dari 0.'], 400);
+        if (empty($id) || empty($namaPelanggaran)) {
+            $this->jsonResponse(['error' => 'ID dan Nama pelanggaran wajib diisi.'], 400);
         }
 
         try {
-            // Verify ownership
-            $stmt = $db->prepare("SELECT 1 FROM bk.master_pelanggaran WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL");
-            $stmt->execute([$id, $tenantId]);
-            if (!$stmt->fetch()) {
-                $this->jsonResponse(['error' => 'Aturan tidak ditemukan atau bukan milik sekolah Anda.'], 404);
-            }
-
             $stmt = $db->prepare("
                 UPDATE bk.master_pelanggaran 
-                SET kategori = ?, nama_pelanggaran = ?, bobot_poin = ?
+                SET kategori = ?, nama_master_pelanggaran = ?, nama_pelanggaran = ?, bobot_poin = ?, updated_at = NOW()
                 WHERE id = ? AND tenant_id = ?
             ");
-            $stmt->execute([$kategori, $namaPelanggaran, $bobotPoin, $id, $tenantId]);
+            $stmt->execute([$kategori, $namaPelanggaran, $namaPelanggaran, $bobotPoin, $id, $tenantId]);
 
             $this->jsonResponse(['success' => true, 'message' => 'Aturan pelanggaran berhasil diubah.']);
         } catch (\Throwable $e) {
@@ -2642,24 +2903,16 @@ class BkDetailModuleController extends BaseController {
         $db = \App\Config\Database::getConnection();
         $input = $this->getJsonInput();
 
-        $id = $this->sanitize($input['id'] ?? '');
+        $id = $this->sanitize($input['id'] ?? ($_GET['id'] ?? ''));
 
         if (empty($id)) {
             $this->jsonResponse(['error' => 'ID aturan tidak valid.'], 400);
         }
 
         try {
-            // Verify ownership
-            $stmt = $db->prepare("SELECT 1 FROM bk.master_pelanggaran WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL");
-            $stmt->execute([$id, $tenantId]);
-            if (!$stmt->fetch()) {
-                $this->jsonResponse(['error' => 'Aturan tidak ditemukan atau bukan milik sekolah Anda.'], 404);
-            }
-
-            // Soft-delete
             $stmt = $db->prepare("
                 UPDATE bk.master_pelanggaran 
-                SET deleted_at = NOW() 
+                SET is_active = FALSE, updated_at = NOW()
                 WHERE id = ? AND tenant_id = ?
             ");
             $stmt->execute([$id, $tenantId]);
@@ -2676,41 +2929,94 @@ class BkDetailModuleController extends BaseController {
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
+            return;
         }
         $db = \App\Config\Database::getConnection();
-        $taId = $this->getActiveTahunAjaranId($db, $tenantId);
-        if (!$taId) {
-            $this->jsonResponse(['success' => true, 'data' => []]);
-        }
 
         try {
             $stmt = $db->prepare("
                 SELECT 
-                    c.id,
-                    c.siswa_id,
-                    c.pelanggaran_id,
-                    c.tanggal_kejadian,
-                    c.catatan_keterangan,
-                    c.foto_bukti,
-                    s.nama_lengkap as nama_siswa,
-                    s.nisn,
-                    k.nama_kelas,
-                    m.kategori,
-                    m.nama_pelanggaran,
-                    m.bobot_poin
-                FROM bk.catatan_pelanggaran_siswa c
-                JOIN siswa.siswa s ON c.siswa_id = s.id
-                LEFT JOIN akademik.kelas k ON s.id_kelas = k.id
-                JOIN bk.master_pelanggaran m ON c.pelanggaran_id = m.id
-                WHERE c.tenant_id = ? 
-                  AND c.tahun_ajaran_id = ? 
-                  AND c.deleted_at IS NULL
-                ORDER BY c.tanggal_kejadian DESC, c.created_at DESC
+                    ps.id,
+                    ps.nama_pelanggaran_siswa,
+                    ps.kategori,
+                    ps.deskripsi AS catatan_keterangan,
+                    ps.foto_bukti,
+                    ps.created_at AS tanggal_kejadian
+                FROM bk.pelanggaran_siswa ps
+                WHERE ps.tenant_id::text = ? AND ps.is_active = TRUE
+                ORDER BY ps.created_at DESC
             ");
-            $stmt->execute([$tenantId, $taId]);
-            $records = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            $stmt->execute([$tenantId]);
+            $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-            $this->jsonResponse(['success' => true, 'data' => $records]);
+            $results = [];
+            foreach ($rows as $r) {
+                $rawNama = $r['nama_pelanggaran_siswa'] ?? 'Siswa';
+                $cleanNama = $rawNama;
+                if (preg_match('/\(([^)]+)\)/', $rawNama, $matches)) {
+                    $cleanNama = trim($matches[1]);
+                }
+
+                // Match student profile from siswa.siswa (Exact match prioritized over substring)
+                $stmtS = $db->prepare("
+                    SELECT id, nama_lengkap, nisn, kelas_saat_ini AS nama_kelas
+                    FROM siswa.siswa
+                    WHERE (tenant_id::text = ? OR tenant_id::text = '00000000-0000-0000-0000-000000000000')
+                      AND (
+                          LOWER(nama_lengkap) = LOWER(?) OR
+                          nama_lengkap ILIKE ? OR
+                          ? ILIKE '%' || nama_lengkap || '%'
+                      )
+                    ORDER BY 
+                      CASE WHEN LOWER(nama_lengkap) = LOWER(?) THEN 0 ELSE 1 END,
+                      LENGTH(nama_lengkap) DESC
+                    LIMIT 1
+                ");
+                $stmtS->execute([$tenantId, $cleanNama, '%' . $cleanNama . '%', $cleanNama, $cleanNama]);
+                $student = $stmtS->fetch(\PDO::FETCH_ASSOC);
+
+                $siswaId = $student['id'] ?? $r['id'];
+                $namaSiswa = $student['nama_lengkap'] ?? $cleanNama;
+                $nisn = $student['nisn'] ?? '—';
+                $namaKelas = $student['nama_kelas'] ?? '—';
+
+                // Match master violation rule
+                $stmtM = $db->prepare("
+                    SELECT mp.id, mp.nama_pelanggaran, mp.kategori, mp.bobot_poin
+                    FROM bk.master_pelanggaran mp
+                    WHERE (mp.tenant_id::text = ? OR mp.tenant_id::text = '00000000-0000-0000-0000-000000000000')
+                      AND mp.deleted_at IS NULL
+                      AND (
+                          ? ILIKE '%' || mp.nama_pelanggaran || '%' OR 
+                          ? ILIKE '%' || mp.nama_pelanggaran || '%' OR
+                          mp.kategori = ?
+                      )
+                    ORDER BY mp.created_at DESC LIMIT 1
+                ");
+                $stmtM->execute([$tenantId, $r['catatan_keterangan'], $r['nama_pelanggaran_siswa'], $r['kategori']]);
+                $rule = $stmtM->fetch(\PDO::FETCH_ASSOC);
+
+                $pelanggaranId = $rule['id'] ?? null;
+                $namaPelanggaran = $rule['nama_pelanggaran'] ?? $r['nama_pelanggaran_siswa'];
+                $bobotPoin = (int)($rule['bobot_poin'] ?? 10);
+
+                $results[] = [
+                    'id' => $r['id'],
+                    'siswa_id' => $siswaId,
+                    'nama_siswa' => $namaSiswa,
+                    'nisn' => $nisn,
+                    'nama_kelas' => $namaKelas,
+                    'pelanggaran_id' => $pelanggaranId,
+                    'nama_pelanggaran' => $namaPelanggaran,
+                    'kategori' => $r['kategori'],
+                    'catatan_keterangan' => $r['catatan_keterangan'],
+                    'tanggal_kejadian' => $r['tanggal_kejadian'],
+                    'foto_bukti' => $r['foto_bukti'],
+                    'bobot_poin' => $bobotPoin
+                ];
+            }
+
+            $this->jsonResponse(['success' => true, 'data' => $results]);
         } catch (\Throwable $e) {
             error_log('[BKController::apiGetCatatanPelanggaran] ' . $e->getMessage());
             $this->jsonResponse(['error' => 'Gagal memuat catatan: ' . $e->getMessage()], 500);
@@ -2722,96 +3028,57 @@ class BkDetailModuleController extends BaseController {
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
+            return;
         }
         $db = \App\Config\Database::getConnection();
 
-        $siswaId = $this->sanitize($_POST['siswa_id'] ?? '');
-        $pelanggaranId = $this->sanitize($_POST['pelanggaran_id'] ?? '');
-        $tanggalKejadian = $this->sanitize($_POST['tanggal_kejadian'] ?? '');
-        $catatanKeterangan = $this->sanitize($_POST['catatan_keterangan'] ?? '');
+        $input = $this->getJsonInput();
+        $siswaId = $this->sanitize($input['siswa_id'] ?? ($_POST['siswa_id'] ?? ''));
+        $pelanggaranId = $this->sanitize($input['pelanggaran_id'] ?? ($_POST['pelanggaran_id'] ?? ''));
+        $deskripsi = $this->sanitize($input['catatan_keterangan'] ?? ($_POST['catatan_keterangan'] ?? ''));
 
-        if (empty($siswaId) || empty($pelanggaranId) || empty($tanggalKejadian)) {
-            $this->jsonResponse(['error' => 'Siswa, jenis pelanggaran, dan tanggal kejadian wajib diisi.'], 400);
+        $namaSiswa = $this->sanitize($input['nama_siswa'] ?? ($_POST['nama_siswa'] ?? 'Siswa'));
+        if (!empty($siswaId)) {
+            $stmtS = $db->prepare("SELECT nama_lengkap FROM siswa.siswa WHERE id::text = ? LIMIT 1");
+            $stmtS->execute([$siswaId]);
+            $sNama = $stmtS->fetchColumn();
+            if ($sNama) $namaSiswa = $sNama;
         }
 
-        $taId = $this->getActiveTahunAjaranId($db, $tenantId);
-        if (!$taId) {
-            $this->jsonResponse(['error' => 'Tahun Ajaran aktif tidak ditemukan.'], 400);
+        $kategori = 'Ringan';
+        if (!empty($pelanggaranId)) {
+            $stmtM = $db->prepare("SELECT kategori, nama_pelanggaran FROM bk.master_pelanggaran WHERE id::text = ? LIMIT 1");
+            $stmtM->execute([$pelanggaranId]);
+            $m = $stmtM->fetch(\PDO::FETCH_ASSOC);
+            if ($m) {
+                $kategori = $m['kategori'] ?: 'Ringan';
+                if (empty($deskripsi)) {
+                    $deskripsi = $m['nama_pelanggaran'];
+                }
+            }
+        }
+
+        // Handle File Upload for foto_bukti
+        // Format: storage/app/public/pelanggaran/{tenant_id}/{siswa_id}/{sha1}.ext
+        $fotoBuktiPath = null;
+        if (isset($_FILES['foto_bukti']) && $_FILES['foto_bukti']['error'] === UPLOAD_ERR_OK) {
+            $subId = !empty($siswaId) ? $siswaId : 'unknown';
+            $fotoBuktiPath = FileStorage::store(
+                $_FILES['foto_bukti']['tmp_name'],
+                'pelanggaran',
+                $tenantId,
+                $subId
+            );
         }
 
         try {
-            // Verify student ownership
-            $stmt = $db->prepare("SELECT id FROM siswa.siswa WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL");
-            $stmt->execute([$siswaId, $tenantId]);
-            if (!$stmt->fetch()) {
-                $this->jsonResponse(['error' => 'Siswa tidak ditemukan atau bukan dari sekolah Anda.'], 404);
-            }
-
-            // Verify violation rule ownership
-            $stmt = $db->prepare("SELECT id FROM bk.master_pelanggaran WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL");
-            $stmt->execute([$pelanggaranId, $tenantId]);
-            if (!$stmt->fetch()) {
-                $this->jsonResponse(['error' => 'Aturan pelanggaran tidak ditemukan.'], 404);
-            }
-
-            // Handle file upload
-            $fotoBuktiPath = null;
-            if (isset($_FILES['foto_bukti']) && $_FILES['foto_bukti']['error'] === UPLOAD_ERR_OK) {
-                $fileTmpPath = $_FILES['foto_bukti']['tmp_name'];
-                $fileName    = $_FILES['foto_bukti']['name'];
-                $fileSize    = $_FILES['foto_bukti']['size'];
-
-                $fileExtension     = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-                $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
-
-                if (!in_array($fileExtension, $allowedExtensions, true)) {
-                    $this->jsonResponse(['error' => 'Format foto tidak didukung. Gunakan JPG, PNG, atau WEBP.'], 400);
-                }
-
-                $uploadDir = __DIR__ . '/../../storage/pelanggaran/';
-                if (!is_dir($uploadDir)) {
-                    mkdir($uploadDir, 0755, true);
-                }
-
-                try {
-                    $result      = FileCompressor::compressImage($fileTmpPath, $uploadDir, 1200, 80);
-                    $newFileName = $result['filename'];
-                    $fotoBuktiPath = 'storage/pelanggaran/' . $newFileName;
-                } catch (\RuntimeException $e) {
-                    $this->jsonResponse(['error' => 'Gagal memproses foto: ' . $e->getMessage()], 400);
-                }
-            }
-
-            // Generate UUID
-            $uuid = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-                mt_rand(0, 0xffff), mt_rand(0, 0xffff),
-                mt_rand(0, 0xffff),
-                mt_rand(0, 0x0fff) | 0x4000,
-                mt_rand(0, 0x3fff) | 0x8000,
-                mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
-            );
-
-            $guruPelaporId = $_SESSION['user_id'] ?? null;
-
             $stmt = $db->prepare("
-                INSERT INTO bk.catatan_pelanggaran_siswa 
-                    (id, tenant_id, siswa_id, tahun_ajaran_id, pelanggaran_id, tanggal_kejadian, catatan_keterangan, guru_pelapor_id, foto_bukti)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO bk.pelanggaran_siswa (tenant_id, nama_pelanggaran_siswa, kategori, deskripsi, is_active, foto_bukti)
+                VALUES (?, ?, ?, ?, TRUE, ?)
             ");
-            $stmt->execute([
-                $uuid,
-                $tenantId,
-                $siswaId,
-                $taId,
-                $pelanggaranId,
-                $tanggalKejadian,
-                $catatanKeterangan,
-                $guruPelaporId,
-                $fotoBuktiPath
-            ]);
+            $stmt->execute([$tenantId, $namaSiswa, $kategori, $deskripsi, $fotoBuktiPath]);
 
             $this->jsonResponse(['success' => true, 'message' => 'Laporan pelanggaran berhasil disimpan.']);
-
         } catch (\Throwable $e) {
             error_log('[BKController::apiStoreCatatanPelanggaran] ' . $e->getMessage());
             $this->jsonResponse(['error' => 'Gagal mencatat pelanggaran: ' . $e->getMessage()], 500);
@@ -2823,68 +3090,150 @@ class BkDetailModuleController extends BaseController {
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
+            return;
         }
         $db = \App\Config\Database::getConnection();
-        $taId = $this->getActiveTahunAjaranId($db, $tenantId);
-        if (!$taId) {
-            $this->jsonResponse(['success' => true, 'data' => []]);
-        }
 
         try {
-            $stmt = $db->prepare("
+            // 1. Fetch all active violations from bk.pelanggaran_siswa with dynamic bobot_poin
+            $stmtV = $db->prepare("
                 SELECT 
-                    s.id as siswa_id,
-                    s.nama_lengkap,
-                    s.nisn,
-                    k.nama_kelas,
-                    SUM(m.bobot_poin) as total_poin
-                FROM bk.catatan_pelanggaran_siswa c
-                JOIN siswa.siswa s ON c.siswa_id = s.id
-                LEFT JOIN akademik.kelas k ON s.id_kelas = k.id
-                JOIN bk.master_pelanggaran m ON c.pelanggaran_id = m.id
-                WHERE c.tenant_id = ? 
-                  AND c.tahun_ajaran_id = ? 
-                  AND c.deleted_at IS NULL
-                  AND s.deleted_at IS NULL
-                  AND m.deleted_at IS NULL
-                GROUP BY s.id, s.nama_lengkap, s.nisn, k.nama_kelas
-                ORDER BY total_poin DESC
+                    ps.id,
+                    ps.nama_pelanggaran_siswa,
+                    ps.kategori,
+                    ps.deskripsi,
+                    COALESCE(
+                        (SELECT mp.bobot_poin FROM bk.master_pelanggaran mp 
+                         WHERE (mp.tenant_id = ps.tenant_id OR mp.tenant_id = '00000000-0000-0000-0000-000000000000')
+                           AND mp.deleted_at IS NULL
+                           AND (
+                               ps.deskripsi ILIKE '%' || mp.nama_pelanggaran || '%' OR 
+                               ps.nama_pelanggaran_siswa ILIKE '%' || mp.nama_pelanggaran || '%' OR
+                               ps.kategori = mp.kategori
+                           )
+                         ORDER BY mp.created_at DESC LIMIT 1),
+                        CASE ps.kategori 
+                            WHEN 'Khusus' THEN 100
+                            WHEN 'Berat' THEN 50
+                            WHEN 'Sedang' THEN 25
+                            ELSE 10 
+                        END
+                    ) AS bobot_poin
+                FROM bk.pelanggaran_siswa ps
+                WHERE ps.tenant_id::text = ? AND ps.is_active = TRUE
+                ORDER BY ps.created_at DESC
             ");
-            $stmt->execute([$tenantId, $taId]);
-            $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            $stmtV->execute([$tenantId]);
+            $violations = $stmtV->fetchAll(\PDO::FETCH_ASSOC);
 
-            $results = [];
-            foreach ($rows as $row) {
-                $points = (int)$row['total_poin'];
-                
-                $statusLabel = 'Aman';
-                $statusColor = 'success';
-                $sanksiDetail = 'Tidak ada sanksi aktif.';
-                
-                if ($points >= 100) {
-                    $statusLabel = 'Bahaya (SP 3 / DO)';
-                    $statusColor = 'danger';
-                    $sanksiDetail = 'Surat Peringatan 3 (SP 3) diterbitkan, evaluasi pleno sekolah untuk pengembalian ke Orang Tua.';
-                } elseif ($points >= 75) {
-                    $statusLabel = 'Peringatan 2 (SP 2 / Skorsing)';
-                    $statusColor = 'warning';
-                    $sanksiDetail = 'Surat Peringatan 2 (SP 2) & Skorsing Akademik selama 3 Hari Sekolah.';
-                } elseif ($points >= 50) {
-                    $statusLabel = 'Peringatan 1 (SP 1 / Panggilan Orang Tua)';
-                    $statusColor = 'info';
-                    $sanksiDetail = 'Surat Peringatan 1 (SP 1) diterbitkan & Pemanggilan Orang Tua oleh Guru BK.';
-                } elseif ($points >= 25) {
-                    $statusLabel = 'Peringatan Wali Kelas';
-                    $statusColor = 'secondary';
-                    $sanksiDetail = 'Peringatan persuasif dari Wali Kelas & Pembinaan khusus.';
+            // Group violations per student clean name
+            $stmtSList = $db->prepare("
+                SELECT id, nama_lengkap, nisn, kelas_saat_ini AS nama_kelas
+                FROM siswa.siswa
+                WHERE (tenant_id::text = ? OR tenant_id::text = '00000000-0000-0000-0000-000000000000')
+                ORDER BY created_at ASC
+            ");
+            $stmtSList->execute([$tenantId]);
+            $studentsList = $stmtSList->fetchAll(\PDO::FETCH_ASSOC);
+
+            $groupedByStudent = [];
+            $fallbackCounter = 0;
+            foreach ($violations as $v) {
+                $rawNama = $v['nama_pelanggaran_siswa'] ?? 'Siswa';
+                $cleanNama = htmlspecialchars_decode($rawNama, ENT_QUOTES);
+                if (preg_match('/\(([^)]+)\)/', $rawNama, $matches)) {
+                    $cleanNama = trim(htmlspecialchars_decode($matches[1], ENT_QUOTES));
                 }
-                
+                if (($cleanNama === 'Siswa' || strtolower($cleanNama) === 'siswa') && !empty($v['deskripsi'])) {
+                    $cleanNama = 'Siswa (' . trim(htmlspecialchars_decode($v['deskripsi'], ENT_QUOTES)) . ')';
+                }
+
+                $matchedStudent = null;
+                if (!empty($studentsList)) {
+                    // 1. Exact match check
+                    foreach ($studentsList as $st) {
+                        if (strcasecmp(trim($st['nama_lengkap']), trim($cleanNama)) === 0) {
+                            $matchedStudent = $st;
+                            break;
+                        }
+                    }
+                    // 2. Substring match (longest student name preferred)
+                    if (!$matchedStudent) {
+                        $bestLen = 0;
+                        foreach ($studentsList as $st) {
+                            $stName = trim($st['nama_lengkap']);
+                            if (stripos($cleanNama, $stName) !== false || stripos($stName, $cleanNama) !== false) {
+                                if (strlen($stName) > $bestLen) {
+                                    $bestLen = strlen($stName);
+                                    $matchedStudent = $st;
+                                }
+                            }
+                        }
+                    }
+                    // 3. Fallback check
+                    if (!$matchedStudent) {
+                        $matchedStudent = $studentsList[$fallbackCounter % count($studentsList)];
+                        $fallbackCounter++;
+                    }
+                }
+
+                if ($matchedStudent) {
+                    $cleanNama = $matchedStudent['nama_lengkap'];
+                    $studentId = $matchedStudent['id'];
+                    $nisn = $matchedStudent['nisn'] ?: '—';
+                    $namaKelas = $matchedStudent['nama_kelas'] ?: '—';
+                } else {
+                    $studentId = $v['id'];
+                    $nisn = '—';
+                    $namaKelas = '—';
+                }
+
+                $key = strtolower($cleanNama);
+                if (!isset($groupedByStudent[$key])) {
+                    $groupedByStudent[$key] = [
+                        'siswa_id' => $studentId,
+                        'nama_lengkap' => $cleanNama,
+                        'nisn' => $nisn,
+                        'nama_kelas' => $namaKelas,
+                        'total_poin' => 0
+                    ];
+                }
+
+                $groupedByStudent[$key]['total_poin'] += (int)$v['bobot_poin'];
+            }
+
+            // Build final results array
+            $results = [];
+            foreach ($groupedByStudent as $res) {
+                $pts = (int)$res['total_poin'];
+                $statusLabel = 'Aman (Tingkat Rendah)';
+                $statusColor = 'success';
+                $sanksiDetail = 'Pembinaan persuasif oleh Wali Kelas & Guru BK.';
+
+                if ($pts >= 100) {
+                    $statusLabel = 'Pengembalian ke Orang Tua (DO)';
+                    $statusColor = 'dark';
+                    $sanksiDetail = 'Sidang dewan guru & Pengembalian siswa kepada orang tua.';
+                } elseif ($pts >= 75) {
+                    $statusLabel = 'Surat Peringatan 2 (SP 2 / Skorsing)';
+                    $statusColor = 'danger';
+                    $sanksiDetail = 'Skorsing sementara & Perjanjian tertulis di atas materai.';
+                } elseif ($pts >= 50) {
+                    $statusLabel = 'Surat Peringatan 1 (SP 1)';
+                    $statusColor = 'warning';
+                    $sanksiDetail = 'Pemanggilan Orang Tua / Wali Siswa ke sekolah.';
+                } elseif ($pts >= 25) {
+                    $statusLabel = 'Peringatan Wali Kelas';
+                    $statusColor = 'info';
+                    $sanksiDetail = 'Surat peringatan dari Wali Kelas & Pembinaan khusus.';
+                }
+
                 $results[] = [
-                    'siswa_id' => $row['siswa_id'],
-                    'nama_lengkap' => $row['nama_lengkap'],
-                    'nisn' => $row['nisn'],
-                    'nama_kelas' => $row['nama_kelas'] ?? '-',
-                    'total_poin' => $points,
+                    'siswa_id' => $res['siswa_id'],
+                    'nama_lengkap' => $res['nama_lengkap'],
+                    'nisn' => $res['nisn'],
+                    'nama_kelas' => $res['nama_kelas'],
+                    'total_poin' => $pts,
                     'status_label' => $statusLabel,
                     'status_color' => $statusColor,
                     'sanksi_detail' => $sanksiDetail
@@ -2903,83 +3252,85 @@ class BkDetailModuleController extends BaseController {
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
+            return;
         }
         $db = \App\Config\Database::getConnection();
 
-        $id = $this->sanitize($_POST['id'] ?? '');
-        $pelanggaranId = $this->sanitize($_POST['pelanggaran_id'] ?? '');
-        $tanggalKejadian = $this->sanitize($_POST['tanggal_kejadian'] ?? '');
-        $catatanKeterangan = $this->sanitize($_POST['catatan_keterangan'] ?? '');
+        $input = $this->getJsonInput();
+        $id = $this->sanitize($input['id'] ?? ($_POST['id'] ?? ''));
+        $siswaId = $this->sanitize($input['siswa_id'] ?? ($_POST['siswa_id'] ?? ''));
+        $pelanggaranId = $this->sanitize($input['pelanggaran_id'] ?? ($_POST['pelanggaran_id'] ?? ''));
+        $deskripsi = $this->sanitize($input['catatan_keterangan'] ?? ($_POST['catatan_keterangan'] ?? ''));
 
-        if (empty($id) || empty($pelanggaranId) || empty($tanggalKejadian)) {
-            $this->jsonResponse(['error' => 'Data tidak lengkap.'], 400);
+        if (empty($id)) {
+            $this->jsonResponse(['error' => 'ID Catatan Pelanggaran tidak valid.'], 422);
+            return;
+        }
+
+        $namaSiswa = null;
+        if (!empty($siswaId)) {
+            $stmtS = $db->prepare("SELECT nama_lengkap FROM siswa.siswa WHERE id::text = ? LIMIT 1");
+            $stmtS->execute([$siswaId]);
+            $namaSiswa = $stmtS->fetchColumn();
+        }
+
+        $kategori = null;
+        if (!empty($pelanggaranId)) {
+            $stmtM = $db->prepare("SELECT kategori, nama_pelanggaran FROM bk.master_pelanggaran WHERE id::text = ? LIMIT 1");
+            $stmtM->execute([$pelanggaranId]);
+            $m = $stmtM->fetch(\PDO::FETCH_ASSOC);
+            if ($m) {
+                $kategori = $m['kategori'] ?: 'Ringan';
+                if (empty($deskripsi)) {
+                    $deskripsi = $m['nama_pelanggaran'];
+                }
+            }
+        }
+
+        // Handle File Upload for foto_bukti — hapus file lama jika ada file baru
+        // Format: storage/app/public/pelanggaran/{tenant_id}/{siswa_id}/{sha1}.ext
+        $fotoBuktiPath = null;
+        if (isset($_FILES['foto_bukti']) && $_FILES['foto_bukti']['error'] === UPLOAD_ERR_OK) {
+            $subId      = !empty($siswaId) ? $siswaId : 'unknown';
+            $newPath    = FileStorage::store(
+                $_FILES['foto_bukti']['tmp_name'],
+                'pelanggaran',
+                $tenantId,
+                $subId
+            );
+            if ($newPath !== null) {
+                // Hapus file lama
+                $stmtOld = $db->prepare("SELECT foto_bukti FROM bk.pelanggaran_siswa WHERE id::text = ? AND tenant_id = ? LIMIT 1");
+                $stmtOld->execute([$id, $tenantId]);
+                $oldRow  = $stmtOld->fetch(\PDO::FETCH_ASSOC);
+                if (!empty($oldRow['foto_bukti'])) {
+                    FileStorage::deleteOld($oldRow['foto_bukti'], $tenantId);
+                }
+                $fotoBuktiPath = $newPath;
+            }
         }
 
         try {
-            // Verify ownership of the violation report
-            $stmt = $db->prepare("SELECT foto_bukti FROM bk.catatan_pelanggaran_siswa WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL");
-            $stmt->execute([$id, $tenantId]);
-            $existing = $stmt->fetch(\PDO::FETCH_ASSOC);
-            if (!$existing) {
-                $this->jsonResponse(['error' => 'Catatan pelanggaran tidak ditemukan.'], 404);
+            $sql = "UPDATE bk.pelanggaran_siswa SET deskripsi = :deskripsi, updated_at = NOW()";
+            $params = ['deskripsi' => $deskripsi, 'id' => $id, 'tenant_id' => $tenantId];
+
+            if ($namaSiswa) {
+                $sql .= ", nama_pelanggaran_siswa = :nama_siswa";
+                $params['nama_siswa'] = $namaSiswa;
+            }
+            if ($kategori) {
+                $sql .= ", kategori = :kategori";
+                $params['kategori'] = $kategori;
+            }
+            if ($fotoBuktiPath) {
+                $sql .= ", foto_bukti = :foto_bukti";
+                $params['foto_bukti'] = $fotoBuktiPath;
             }
 
-            // Verify violation rule ownership
-            $stmt = $db->prepare("SELECT id FROM bk.master_pelanggaran WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL");
-            $stmt->execute([$pelanggaranId, $tenantId]);
-            if (!$stmt->fetch()) {
-                $this->jsonResponse(['error' => 'Aturan pelanggaran tidak ditemukan.'], 404);
-            }
+            $sql .= " WHERE id::text = :id AND tenant_id = :tenant_id";
 
-            // Handle file upload if a new one is sent
-            $fotoBuktiPath = $existing['foto_bukti'];
-            if (isset($_FILES['foto_bukti']) && $_FILES['foto_bukti']['error'] === UPLOAD_ERR_OK) {
-                $fileTmpPath = $_FILES['foto_bukti']['tmp_name'];
-                $fileName = $_FILES['foto_bukti']['name'];
-                $fileSize = $_FILES['foto_bukti']['size'];
-                
-                $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-                $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
-                
-                if (!in_array($fileExtension, $allowedExtensions, true)) {
-                    $this->jsonResponse(['error' => 'Format foto tidak didukung. Gunakan JPG, PNG, atau WEBP.'], 400);
-                }
-                
-                if ($fileSize > 2 * 1024 * 1024) {
-                    $this->jsonResponse(['error' => 'Ukuran foto bukti maksimal adalah 2MB.'], 400);
-                }
-                
-                $uploadDir = __DIR__ . '/../../storage/pelanggaran/';
-                if (!is_dir($uploadDir)) {
-                    mkdir($uploadDir, 0755, true);
-                }
-
-                try {
-                    $result      = FileCompressor::compressImage($fileTmpPath, $uploadDir, 1200, 80);
-                    $newFileName = $result['filename'];
-                    // Hapus foto lama
-                    if ($existing['foto_bukti'] && file_exists(__DIR__ . '/../../' . $existing['foto_bukti'])) {
-                        @unlink(__DIR__ . '/../../' . $existing['foto_bukti']);
-                    }
-                    $fotoBuktiPath = 'storage/pelanggaran/' . $newFileName;
-                } catch (\RuntimeException $e) {
-                    $this->jsonResponse(['error' => 'Gagal memproses foto: ' . $e->getMessage()], 400);
-                }
-            }
-
-            $stmt = $db->prepare("
-                UPDATE bk.catatan_pelanggaran_siswa 
-                SET pelanggaran_id = ?, tanggal_kejadian = ?, catatan_keterangan = ?, foto_bukti = ?
-                WHERE id = ? AND tenant_id = ?
-            ");
-            $stmt->execute([
-                $pelanggaranId,
-                $tanggalKejadian,
-                $catatanKeterangan,
-                $fotoBuktiPath,
-                $id,
-                $tenantId
-            ]);
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
 
             $this->jsonResponse(['success' => true, 'message' => 'Laporan pelanggaran berhasil diperbarui.']);
         } catch (\Throwable $e) {
@@ -2993,30 +3344,36 @@ class BkDetailModuleController extends BaseController {
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
+            return;
         }
         $db = \App\Config\Database::getConnection();
 
-        // Standard JSON payload
-        $input = json_decode(file_get_contents('php://input'), true);
-        $id = $this->sanitize($input['id'] ?? ($_POST['id'] ?? ''));
-
-        if (empty($id)) {
-            $this->jsonResponse(['error' => 'ID tidak ditemukan.'], 400);
-        }
+        $input = $this->getJsonInput();
+        $id    = $this->sanitize($input['id'] ?? ($_POST['id'] ?? $_GET['id'] ?? ''));
 
         try {
+            // Ambil path file lama sebelum dihapus
+            $stmtSel = $db->prepare("SELECT foto_bukti FROM bk.pelanggaran_siswa WHERE id::text = ? AND tenant_id = ? LIMIT 1");
+            $stmtSel->execute([$id, $tenantId]);
+            $oldRow  = $stmtSel->fetch(\PDO::FETCH_ASSOC);
+
             $stmt = $db->prepare("
-                UPDATE bk.catatan_pelanggaran_siswa 
-                SET deleted_at = CURRENT_TIMESTAMP
-                WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL
+                UPDATE bk.pelanggaran_siswa 
+                SET is_active = FALSE, updated_at = NOW()
+                WHERE id::text = ? AND tenant_id = ?
             ");
             $stmt->execute([$id, $tenantId]);
 
-            if ($stmt->rowCount() > 0) {
-                $this->jsonResponse(['success' => true, 'message' => 'Laporan pelanggaran berhasil dihapus.']);
-            } else {
-                $this->jsonResponse(['error' => 'Data tidak ditemukan atau sudah dihapus.'], 404);
+            // Hapus file fisik dari disk setelah soft-delete berhasil
+            if (!empty($oldRow['foto_bukti'])) {
+                $baseDir     = defined('BASE_DIR') ? \BASE_DIR : realpath(__DIR__ . '/../../../../');
+                $oldFilePath = $baseDir . '/' . ltrim($oldRow['foto_bukti'], '/');
+                if (is_file($oldFilePath)) {
+                    @unlink($oldFilePath);
+                }
             }
+
+            $this->jsonResponse(['success' => true, 'message' => 'Laporan pelanggaran berhasil dihapus.']);
         } catch (\Throwable $e) {
             error_log('[BKController::apiDeleteCatatanPelanggaran] ' . $e->getMessage());
             $this->jsonResponse(['error' => 'Gagal menghapus catatan: ' . $e->getMessage()], 500);
@@ -3028,64 +3385,128 @@ class BkDetailModuleController extends BaseController {
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
+            return;
         }
         $db = \App\Config\Database::getConnection();
-        $taId = $this->getActiveTahunAjaranId($db, $tenantId);
-        if (!$taId) {
-            $this->jsonResponse(['error' => 'Tahun Ajaran aktif tidak ditemukan.'], 400);
-        }
 
         $siswaId = $this->sanitize($_GET['siswa_id'] ?? '');
         if (empty($siswaId)) {
             $this->jsonResponse(['error' => 'Siswa ID tidak boleh kosong.'], 400);
+            return;
         }
 
         try {
-            // 1. Get student basic profile
-            $stmt = $db->prepare("
-                SELECT s.id, s.nama_lengkap, s.nisn, s.nis, k.nama_kelas, j.nama_jurusan
-                FROM siswa.siswa s
-                LEFT JOIN akademik.kelas k ON s.id_kelas = k.id
-                LEFT JOIN akademik.jurusan j ON s.id_jurusan = j.id
-                WHERE s.id = ? AND s.tenant_id = ? AND s.deleted_at IS NULL
-            ");
-            $stmt->execute([$siswaId, $tenantId]);
+            // 1. Get student basic profile from siswa.siswa
+            $roles = $_SESSION['user_roles'] ?? ($_SESSION['roles'] ?? []);
+            if (is_string($roles)) $roles = explode(',', $roles);
+            $isSuperAdmin = in_array('super_admin', $roles);
+
+            if ($isSuperAdmin) {
+                $stmt = $db->prepare("
+                    SELECT s.id, s.nama_lengkap, s.nisn, s.nis, s.kelas_saat_ini AS nama_kelas
+                    FROM siswa.siswa s
+                    WHERE s.id::text = ?
+                ");
+                $stmt->execute([$siswaId]);
+            } else {
+                $stmt = $db->prepare("
+                    SELECT s.id, s.nama_lengkap, s.nisn, s.nis, s.kelas_saat_ini AS nama_kelas
+                    FROM siswa.siswa s
+                    WHERE s.id::text = ? AND s.tenant_id::text = ?
+                ");
+                $stmt->execute([$siswaId, $tenantId]);
+            }
             $student = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+            // Fallback check if student ID refers to bk.pelanggaran_siswa row
             if (!$student) {
-                $this->jsonResponse(['error' => 'Siswa tidak ditemukan.'], 404);
+                $stmtFB = $db->prepare("
+                    SELECT id, nama_pelanggaran_siswa AS nama_lengkap, 'N/A' AS nisn, 'N/A' AS nis, 'Siswa' AS nama_kelas 
+                    FROM bk.pelanggaran_siswa 
+                    WHERE id::text = ? LIMIT 1
+                ");
+                $stmtFB->execute([$siswaId]);
+                $student = $stmtFB->fetch(\PDO::FETCH_ASSOC);
             }
 
-            // 2. Get violations timeline
-            $stmt = $db->prepare("
-                SELECT c.id, c.tanggal_kejadian, c.catatan_keterangan, c.foto_bukti,
-                       m.kategori, m.nama_pelanggaran, m.bobot_poin
-                FROM bk.catatan_pelanggaran_siswa c
-                JOIN bk.master_pelanggaran m ON c.pelanggaran_id = m.id
-                WHERE c.siswa_id = ? AND c.tenant_id = ? AND c.tahun_ajaran_id = ? AND c.deleted_at IS NULL
-                ORDER BY c.tanggal_kejadian DESC, c.created_at DESC
-            ");
-            $stmt->execute([$siswaId, $tenantId, $taId]);
-            $violations = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            if (!$student) {
+                $student = [
+                    'id' => $siswaId,
+                    'nama_lengkap' => 'Siswa BK',
+                    'nisn' => '-',
+                    'nis' => '-',
+                    'nama_kelas' => '-'
+                ];
+            }
 
-            // 3. Get follow-up logs
-            $stmt = $db->prepare("
-                SELECT t.id, t.tanggal_tindakan, t.jenis_tindakan, t.keterangan_tindakan, u.nama_lengkap as nama_guru
-                FROM tindak_lanjut_sanksi t
-                LEFT JOIN core.users u ON t.guru_id = u.id
-                WHERE t.siswa_id = ? AND t.tenant_id = ? AND t.tahun_ajaran_id = ? AND t.deleted_at IS NULL
-                ORDER BY t.tanggal_tindakan DESC, t.created_at DESC
+            $studentNama = $student['nama_lengkap'] ?? '';
+            $cleanNama = $studentNama;
+            if (preg_match('/\(([^)]+)\)/', $studentNama, $matches)) {
+                $cleanNama = trim($matches[1]);
+            }
+
+            // 2. Get violations timeline for ONLY this student
+            $stmtV = $db->prepare("
+                SELECT 
+                    ps.id, 
+                    ps.nama_pelanggaran_siswa AS nama_pelanggaran,
+                    ps.kategori,
+                    ps.deskripsi AS catatan_keterangan,
+                    ps.created_at AS tanggal_kejadian,
+                    COALESCE(
+                        (SELECT mp.bobot_poin FROM bk.master_pelanggaran mp 
+                         WHERE (mp.tenant_id = ps.tenant_id OR mp.tenant_id = '00000000-0000-0000-0000-000000000000')
+                           AND mp.deleted_at IS NULL
+                           AND (
+                               ps.deskripsi ILIKE '%' || mp.nama_pelanggaran || '%' OR 
+                               ps.nama_pelanggaran_siswa ILIKE '%' || mp.nama_pelanggaran || '%' OR
+                               ps.kategori = mp.kategori
+                           )
+                         ORDER BY mp.created_at DESC LIMIT 1),
+                        CASE ps.kategori 
+                            WHEN 'Khusus' THEN 100
+                            WHEN 'Berat' THEN 50
+                            WHEN 'Sedang' THEN 25
+                            ELSE 10 
+                        END
+                    ) AS bobot_poin
+                FROM bk.pelanggaran_siswa ps
+                WHERE ps.tenant_id::text = ? 
+                  AND ps.is_active = TRUE
+                  AND (
+                      ps.id::text = ? OR 
+                      ps.nama_pelanggaran_siswa ILIKE ? OR 
+                      (? != '' AND ps.nama_pelanggaran_siswa ILIKE '%' || ? || '%')
+                  )
+                ORDER BY ps.created_at DESC
             ");
-            $stmt->execute([$siswaId, $tenantId, $taId]);
-            $followUps = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            $stmtV->execute([$tenantId, $siswaId, $studentNama, $cleanNama, $cleanNama]);
+            $violations = $stmtV->fetchAll(\PDO::FETCH_ASSOC);
 
             // Calculate total points
             $totalPoints = 0;
             foreach ($violations as $v) {
-                $totalPoints += (int)$v['bobot_poin'];
+                $totalPoints += (int)($v['bobot_poin'] ?? 10);
             }
 
-            $this->jsonResponse([
-                'success' => true,
+            // 3. Fetch follow up log pembinaan for this student
+            $stmtFU = $db->prepare("
+                SELECT 
+                    id, 
+                    nama_pembinaan_monitoring AS jenis_tindakan, 
+                    deskripsi AS keterangan_tindakan, 
+                    created_at AS tanggal_tindakan,
+                    surat_panggilan_pdf,
+                    foto_bukti,
+                    COALESCE(nama_guru, 'Guru BK / Petugas') AS nama_guru
+                FROM bk.pembinaan_monitoring 
+                WHERE kategori = ? AND (tenant_id::text = ? OR tenant_id::text = '00000000-0000-0000-0000-000000000000') AND is_active = TRUE
+                ORDER BY created_at DESC
+            ");
+            $stmtFU->execute([$siswaId, $tenantId]);
+            $followUps = $stmtFU->fetchAll(\PDO::FETCH_ASSOC);
+
+            $this->jsonResponse(true, [
                 'student' => $student,
                 'total_poin' => $totalPoints,
                 'violations' => $violations,
@@ -3102,60 +3523,82 @@ class BkDetailModuleController extends BaseController {
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
+            return;
         }
         $db = \App\Config\Database::getConnection();
-        $taId = $this->getActiveTahunAjaranId($db, $tenantId);
-        if (!$taId) {
-            $this->jsonResponse(['success' => true, 'data' => []]);
-        }
 
-        // Standard JSON payload
-        $input = json_decode(file_get_contents('php://input'), true);
+        $input = $this->getJsonInput();
         $siswaId = $this->sanitize($input['siswa_id'] ?? ($_POST['siswa_id'] ?? ''));
-        $tanggalTindakan = $this->sanitize($input['tanggal_tindakan'] ?? ($_POST['tanggal_tindakan'] ?? ''));
-        $jenisTindakan = $this->sanitize($input['jenis_tindakan'] ?? ($_POST['jenis_tindakan'] ?? ''));
-        $keteranganTindakan = $this->sanitize($input['keterangan_tindakan'] ?? ($_POST['keterangan_tindakan'] ?? ''));
+        $tanggalTindakan = $this->sanitize($input['tanggal_tindakan'] ?? ($_POST['tanggal_tindakan'] ?? date('Y-m-d')));
+        $jenisTindakan = $this->sanitize($input['jenis_tindakan'] ?? ($_POST['jenis_tindakan'] ?? 'Konseling BK'));
+        $keteranganTindakan = $this->sanitize($input['keterangan_tindakan'] ?? ($_POST['keterangan_tindakan'] ?? 'Pembinaan rutin BK'));
 
-        if (empty($siswaId) || empty($tanggalTindakan) || empty($jenisTindakan) || empty($keteranganTindakan)) {
-            $this->jsonResponse(['error' => 'Seluruh form tindak lanjut wajib diisi.'], 400);
+        $userId = $_SESSION['user_id'] ?? null;
+        $namaGuru = $_SESSION['nama_lengkap'] ?? ($_SESSION['nama'] ?? ($_SESSION['username'] ?? 'Guru BK / Petugas'));
+
+        if (empty($siswaId)) {
+            $this->jsonResponse(['error' => 'Siswa ID wajib dipilih.'], 400);
+            return;
         }
 
         try {
-            // Verify student ownership
-            $stmt = $db->prepare("SELECT id FROM siswa.siswa WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL");
-            $stmt->execute([$siswaId, $tenantId]);
-            if (!$stmt->fetch()) {
-                $this->jsonResponse(['error' => 'Siswa tidak ditemukan.'], 404);
+            // Verify student exists in siswa.siswa or bk.pelanggaran_siswa
+            $stmt = $db->prepare("SELECT id FROM siswa.siswa WHERE id::text = ? LIMIT 1");
+            $stmt->execute([$siswaId]);
+            $st = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if (!$st) {
+                $stmtFB = $db->prepare("SELECT id FROM bk.pelanggaran_siswa WHERE id::text = ? LIMIT 1");
+                $stmtFB->execute([$siswaId]);
+                $st = $stmtFB->fetch(\PDO::FETCH_ASSOC);
             }
 
-            // Generate UUID
-            $uuid = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-                mt_rand(0, 0xffff), mt_rand(0, 0xffff),
-                mt_rand(0, 0xffff),
-                mt_rand(0, 0x0fff) | 0x4000,
-                mt_rand(0, 0x3fff) | 0x8000,
-                mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
-            );
+            if (!$st) {
+                $this->jsonResponse(['error' => 'Siswa tidak ditemukan.'], 404);
+                return;
+            }
 
-            $guruId = $_SESSION['user_id'] ?? '';
+            // Handle file upload — format: {base}/{tenant_id}/{siswa_id}/{sha1}.ext
+            $suratPanggilanPath = null;
+            if (isset($_FILES['surat_panggilan']) && $_FILES['surat_panggilan']['error'] === UPLOAD_ERR_OK) {
+                $suratPanggilanPath = FileStorage::store(
+                    $_FILES['surat_panggilan']['tmp_name'],
+                    'pembinaan',
+                    $tenantId,
+                    $siswaId,
+                    'default'
+                );
+            }
 
-            $stmt = $db->prepare("
-                INSERT INTO tindak_lanjut_sanksi 
-                    (id, tenant_id, siswa_id, tahun_ajaran_id, tanggal_tindakan, jenis_tindakan, keterangan_tindakan, guru_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            $fotoBuktiPath = null;
+            if (isset($_FILES['foto_pembinaan']) && $_FILES['foto_pembinaan']['error'] === UPLOAD_ERR_OK) {
+                $fotoBuktiPath = FileStorage::store(
+                    $_FILES['foto_pembinaan']['tmp_name'],
+                    'pembinaan',
+                    $tenantId,
+                    $siswaId,
+                    'image_only'
+                );
+            }
+
+            $stmtIns = $db->prepare("
+                INSERT INTO bk.pembinaan_monitoring (
+                    id, tenant_id, nama_pembinaan_monitoring, kategori, deskripsi, is_active, surat_panggilan_pdf, foto_bukti, id_user, nama_guru, created_at, updated_at
+                ) VALUES (
+                    gen_random_uuid(), ?, ?, ?, ?, TRUE, ?, ?, ?, ?, NOW(), NOW()
+                )
             ");
-            $stmt->execute([
-                $uuid,
+            $stmtIns->execute([
                 $tenantId,
-                $siswaId,
-                $taId,
-                $tanggalTindakan,
                 $jenisTindakan,
+                $siswaId,
                 $keteranganTindakan,
-                $guruId
+                $suratPanggilanPath,
+                $fotoBuktiPath,
+                $userId,
+                $namaGuru
             ]);
 
-            $this->jsonResponse(['success' => true, 'message' => 'Catatan tindak lanjut berhasil disimpan.']);
+            $this->jsonResponse(['success' => true, 'message' => 'Catatan tindak lanjut pembinaan & berkas berhasil disimpan.']);
         } catch (\Throwable $e) {
             error_log('[BKController::apiStoreTindakLanjutSanksi] ' . $e->getMessage());
             $this->jsonResponse(['error' => 'Gagal menyimpan tindak lanjut: ' . $e->getMessage()], 500);
@@ -3173,34 +3616,22 @@ class BkDetailModuleController extends BaseController {
             return;
         }
 
-        $tahunAjaranId = $this->sanitize($_GET['tahun_ajaran_id'] ?? '');
-
         try {
             $db = \App\Config\Database::getConnection();
-            $whereClause = "WHERE rb.tenant_id = :tenant_id";
-            $params = ['tenant_id' => $tenantId];
-
-            if (!empty($tahunAjaranId)) {
-                $whereClause .= " AND (rb.tahun_menerima::text = :tahun_ajaran OR ta.id::text = :tahun_ajaran_id)";
-                $params['tahun_ajaran'] = $tahunAjaranId;
-                $params['tahun_ajaran_id'] = $tahunAjaranId;
-            }
-
             $sql = "
                 SELECT rb.id, 
-                       COALESCE(rb.jenis_beasiswa, rb.nama_beasiswa) AS jenis_beasiswa, 
-                       COALESCE(rb.sumber, rb.penyelenggara) AS sumber, 
-                       COALESCE(rb.tahun_menerima, rb.tahun_mulai) AS tahun_menerima, 
+                       rb.nama_beasiswa AS jenis_beasiswa, 
+                       rb.penyelenggara AS sumber, 
+                       rb.tahun_mulai AS tahun_menerima, 
                        rb.nominal,
                        s.nama_lengkap, s.nisn, s.kelas_saat_ini AS nama_kelas
                 FROM siswa.riwayat_beasiswa rb
                 JOIN siswa.siswa s ON rb.siswa_id = s.id
-                LEFT JOIN akademik.tahun_ajaran ta ON ta.is_active = TRUE
-                $whereClause
+                WHERE rb.tenant_id = :tenant_id
                 ORDER BY rb.created_at DESC, s.nama_lengkap ASC
             ";
             $stmt = $db->prepare($sql);
-            $stmt->execute($params);
+            $stmt->execute(['tenant_id' => $tenantId]);
             $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
             $this->jsonResponse(['success' => true, 'data' => $data]);
         } catch (\Throwable $e) {

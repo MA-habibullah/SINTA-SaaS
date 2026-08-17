@@ -25,11 +25,24 @@ if ($activeGroup === 'akademik') {
     $pageSubtitle    = 'Pelacakan alumni, penelusuran karir, dan studi lanjut PTN/PTS.';
     $pageIcon        = 'bi-people-fill';
     $allowed_bk_tabs = ['tracking', 'riwayat_kuliah', 'riwayat_pekerjaan'];
+} elseif ($activeGroup === 'kedisiplinan') {
+    $pageTitle       = 'Kedisiplinan Siswa';
+    $pageSubtitle    = 'Poin pelanggaran, tata tertib, rekam kasus konseling, dan buku sanksi.';
+    $pageIcon        = 'bi-shield-exclamation';
+    $allowed_bk_tabs = ['p_dashboard', 'jurnal', 'p_input', 'p_sanksi', 'p_master'];
 } else { // default: layanan
-    $pageTitle       = 'Bimbingan Konseling';
-    $pageSubtitle    = 'Pusat monitoring, konseling, dan rekam kasus siswa.';
-    $pageIcon        = 'bi-heart-pulse-fill';
-    $allowed_bk_tabs = ['dashboard', 'jurnal', 'prestasi', 'kehadiran', 'pelanggaran', 'beasiswa'];
+    $pageTitle       = 'Layanan BK';
+    $pageSubtitle    = 'Pusat monitoring, konseling, dan prestasi siswa.';
+    $pageIcon        = 'bi-person-badge';
+    $allowed_bk_tabs = ['dashboard', 'prestasi', 'kehadiran', 'beasiswa'];
+}
+
+$defaultMainTab = $allowed_bk_tabs[0] ?? 'dashboard';
+if (str_starts_with($defaultMainTab, 'p_')) {
+    $defaultSubTab = $defaultMainTab;
+    $defaultMainTab = 'pelanggaran';
+} else {
+    $defaultSubTab = 'p_dashboard';
 }
 ?>
 
@@ -43,7 +56,12 @@ if ($activeGroup === 'akademik') {
         --bk-red:       #ef4444;
         --bk-blue:      #2563eb;
         --bk-border:    #e2e8f0;
-        --bk-bg:        #f8fafc;
+    /* ─── Modal & Backdrop Stacking Fix ───────────── */
+    .modal {
+        z-index: 1060 !important;
+    }
+    .modal-backdrop {
+        z-index: 1050 !important;
     }
 
     /* ─── Tab Nav ────────────────────────────────────── */
@@ -430,14 +448,6 @@ function applySuperAdminTenantFilter(tenantId) {
                         </button>
                     </li>
                     <?php endif; ?>
-                    <?php if(!isset($allowed_bk_tabs) || in_array('jurnal', $allowed_bk_tabs)): ?>
-                    <li class="nav-item">
-                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'jurnal'}"
-                                @click="switchTab('jurnal')" id="tab-jurnal">
-                            <i class="bi bi-journal-text me-2 fs-6"></i> Rekam Kasus & Jurnal
-                        </button>
-                    </li>
-                    <?php endif; ?>
                     <?php if(!isset($allowed_bk_tabs) || in_array('prestasi', $allowed_bk_tabs)): ?>
                     <li class="nav-item">
                         <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'prestasi'}"
@@ -454,11 +464,43 @@ function applySuperAdminTenantFilter(tenantId) {
                         </button>
                     </li>
                     <?php endif; ?>
-                    <?php if(!isset($allowed_bk_tabs) || in_array('pelanggaran', $allowed_bk_tabs)): ?>
+                    <?php if(!isset($allowed_bk_tabs) || in_array('p_dashboard', $allowed_bk_tabs)): ?>
                     <li class="nav-item">
-                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'pelanggaran'}"
-                                @click="switchTab('pelanggaran')" id="tab-pelanggaran">
-                            <i class="bi bi-shield-exclamation me-2 fs-6"></i> Tata Tertib & Poin
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'pelanggaran' && activeSubTab === 'p_dashboard'}"
+                                @click="switchSubTab('p_dashboard')" id="tab-p-dashboard">
+                            <i class="bi bi-speedometer2 me-2 fs-6"></i> Dashboard &amp; Tren
+                        </button>
+                    </li>
+                    <?php endif; ?>
+                    <?php if(!isset($allowed_bk_tabs) || in_array('jurnal', $allowed_bk_tabs)): ?>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'jurnal'}"
+                                @click="switchTab('jurnal')" id="tab-jurnal">
+                            <i class="bi bi-journal-text me-2 fs-6"></i> Rekam Kasus &amp; Jurnal
+                        </button>
+                    </li>
+                    <?php endif; ?>
+                    <?php if(!isset($allowed_bk_tabs) || in_array('p_input', $allowed_bk_tabs)): ?>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'pelanggaran' && activeSubTab === 'p_input'}"
+                                @click="switchSubTab('p_input')" id="tab-p-input">
+                            <i class="bi bi-plus-circle me-2 fs-6"></i> Catat Pelanggaran
+                        </button>
+                    </li>
+                    <?php endif; ?>
+                    <?php if(!isset($allowed_bk_tabs) || in_array('p_sanksi', $allowed_bk_tabs)): ?>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'pelanggaran' && activeSubTab === 'p_sanksi'}"
+                                @click="switchSubTab('p_sanksi')" id="tab-p-sanksi">
+                            <i class="bi bi-journal-bookmark me-2 fs-6"></i> Buku Catatan Sanksi
+                        </button>
+                    </li>
+                    <?php endif; ?>
+                    <?php if(!isset($allowed_bk_tabs) || in_array('p_master', $allowed_bk_tabs)): ?>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'pelanggaran' && activeSubTab === 'p_master'}"
+                                @click="switchSubTab('p_master')" id="tab-p-master">
+                            <i class="bi bi-gear-fill me-2 fs-6"></i> Master Kategori &amp; Poin
                         </button>
                     </li>
                     <?php endif; ?>
@@ -551,7 +593,7 @@ function applySuperAdminTenantFilter(tenantId) {
                         <div class="d-flex justify-content-between align-items-start">
                             <div>
                                 <p class="text-muted fs-8 fw-semibold text-uppercase mb-1">Siswa Aktif</p>
-                                <div class="kpi-value text-dark">{{ kpi.total_siswa_aktif }}</div>
+                                <div class="kpi-value text-dark">{{ kpi?.total_siswa_aktif ?? 0 }}</div>
                             </div>
                             <div class="kpi-icon" style="background:#eff6ff;color:#2563eb;">
                                 <i class="bi bi-people-fill"></i>
@@ -564,7 +606,7 @@ function applySuperAdminTenantFilter(tenantId) {
                         <div class="d-flex justify-content-between align-items-start">
                             <div>
                                 <p class="text-muted fs-8 fw-semibold text-uppercase mb-1">Kasus Bulan Ini</p>
-                                <div class="kpi-value" style="color:var(--bk-amber);">{{ kpi.kasus_bulan_ini }}</div>
+                                <div class="kpi-value" style="color:var(--bk-amber);">{{ kpi?.kasus_bulan_ini ?? 0 }}</div>
                             </div>
                             <div class="kpi-icon" style="background:#fff7ed;color:#f59e0b;">
                                 <i class="bi bi-exclamation-triangle-fill"></i>
@@ -577,7 +619,7 @@ function applySuperAdminTenantFilter(tenantId) {
                         <div class="d-flex justify-content-between align-items-start">
                             <div>
                                 <p class="text-muted fs-8 fw-semibold text-uppercase mb-1">Kasus Terbuka</p>
-                                <div class="kpi-value" style="color:var(--bk-red);">{{ kpi.kasus_terbuka }}</div>
+                                <div class="kpi-value" style="color:var(--bk-red);">{{ kpi?.kasus_terbuka ?? 0 }}</div>
                             </div>
                             <div class="kpi-icon" style="background:#fef2f2;color:#ef4444;">
                                 <i class="bi bi-folder2-open"></i>
@@ -590,7 +632,7 @@ function applySuperAdminTenantFilter(tenantId) {
                         <div class="d-flex justify-content-between align-items-start">
                             <div>
                                 <p class="text-muted fs-8 fw-semibold text-uppercase mb-1">Total Alumni</p>
-                                <div class="kpi-value" style="color:var(--bk-green);">{{ kpi.total_alumni }}</div>
+                                <div class="kpi-value" style="color:var(--bk-green);">{{ kpi?.total_alumni ?? 0 }}</div>
                             </div>
                             <div class="kpi-icon" style="background:#ecfdf5;color:#10b981;">
                                 <i class="bi bi-mortarboard-fill"></i>
@@ -603,11 +645,11 @@ function applySuperAdminTenantFilter(tenantId) {
             <!-- Distribusi Kasus -->
             <div class="bk-card p-4">
                 <h6 class="fw-bold mb-3"><i class="bi bi-pie-chart-fill me-2" style="color:var(--bk-primary);"></i>Distribusi Kasus per Jenis</h6>
-                <div v-if="kpi.distribusi_kasus && kpi.distribusi_kasus.length > 0">
+                <div v-if="Array.isArray(kpi.distribusi_kasus) && kpi.distribusi_kasus.length > 0">
                     <div class="row g-2">
                         <div v-for="(item, idx) in kpi.distribusi_kasus" :key="idx" class="col-md-4">
                             <div class="d-flex align-items-center gap-2 p-2 rounded-3" style="background:var(--bk-bg);">
-                                <span class="pie-legend-dot" :style="'background:' + pieColors[idx % pieColors.length]"></span>
+                                <span class="pie-legend-dot" :style="'background:' + (pieColors && pieColors.length ? pieColors[idx % pieColors.length] : '#7c3aed')"></span>
                                 <span class="fw-semibold fs-7">{{ item.jenis_kasus }}</span>
                                 <span class="ms-auto badge bg-secondary rounded-pill">{{ item.total }}</span>
                             </div>
@@ -641,7 +683,7 @@ function applySuperAdminTenantFilter(tenantId) {
 
         <div v-else>
             <!-- Summary Cards Per Jurusan -->
-            <div v-if="penjurusanSummary.length > 0" class="row g-3 mb-4">
+            <div v-if="penjurusanSummary?.length > 0" class="row g-3 mb-4">
                 <div v-for="s in penjurusanSummary" :key="s.kode_jurusan" class="col-md-4 col-lg-3">
                     <div class="kpi-card h-100">
                         <div class="d-flex justify-content-between align-items-start mb-2">
@@ -715,7 +757,7 @@ function applySuperAdminTenantFilter(tenantId) {
 
             <!-- Data Table -->
             <div class="bk-card p-0 overflow-hidden">
-                <div v-if="penjurusanData.length > 0">
+                <div v-if="penjurusanData?.length > 0">
                     <div class="table-responsive">
                         <table class="table table-hover mb-0 align-middle" id="tbl-penjurusan">
                             <thead style="background:var(--bk-bg);border-bottom:2px solid var(--bk-border);">
@@ -958,227 +1000,58 @@ function applySuperAdminTenantFilter(tenantId) {
         </div>
 
         <div class="row g-4">
-            <!-- Form Tambah Kasus (Kiri / Atas) -->
-            <div class="col-lg-5">
-                <div class="bk-form-card p-4 h-100">
-                    <h6 class="fw-bold mb-3" style="color:var(--bk-primary);">
-                        <i class="bi bi-plus-circle-fill me-2"></i>Rekam Kasus Baru
-                    </h6>
-
-                    <!-- A. TAMPILAN JIKA SISWA BELUM DIPILIH (Pencarian Nama) -->
-                    <div v-if="!formKasus.id_siswa" class="animate-fade-in">
-                        <h6 class="fw-bold mb-3" style="color:var(--bk-primary);">
-                            <i class="bi bi-search me-2"></i>Pencarian Siswa
-                        </h6>
-                        <p class="text-muted fs-8 mb-4">
-                            Cari nama siswa terlebih dahulu untuk mulai merekam kasus konseling.
-                        </p>
-                        
-                        <div class="mb-3">
-                            <label for="input-siswa-kasus" class="form-label fw-semibold fs-7">Cari Nama Siswa <span class="text-danger">*</span></label>
-                            <div style="position:relative;">
-                                <div class="input-group input-group-sm">
-                                    <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
-                                    <input type="text" class="form-control rounded-end-3 fs-7"
-                                           v-model="kasusSearchSiswa"
-                                           @input="searchSiswaDebounce"
-                                           @blur="hideDropdownDelay"
-                                           @focus="onSearchFocus"
-                                           placeholder="Ketik nama siswa..."
-                                           id="input-siswa-kasus"
-                                           name="siswa_kasus"
-                                           autocomplete="off">
-                                </div>
-
-                                <!-- Dropdown autocomplete -->
-                                <div v-show="showSiswaDropdown && siswaOptions.length > 0"
-                                     class="border rounded-3 bg-white shadow mt-1"
-                                     style="position:absolute;z-index:200;max-height:220px;overflow-y:auto;width:100%;">
-                                    <div v-for="s in siswaOptions" :key="s.id"
-                                         class="px-3 py-2 border-bottom hover-bg"
-                                         @mousedown.prevent="selectSiswa(s)"
-                                         style="cursor:pointer;font-size:0.82rem;"
-                                         :style="{background: siswaHover===s.id?'#eff6ff':'#fff'}"
-                                         @mouseenter="siswaHover=s.id" @mouseleave="siswaHover=null">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div class="fw-semibold text-dark">{{ s.nama_lengkap }}</div>
-                                            <span class="badge rounded-pill" style="background:#eff6ff;color:#1e40af;font-size:.68rem;border:1px solid #bfdbfe;">
-                                                {{ s.nama_kelas || 'Tanpa Kelas' }}
-                                            </span>
-                                        </div>
-                                        <div class="d-flex gap-2 mt-1 flex-wrap" style="font-size: 0.72rem;">
-                                            <span v-if="s.nisn" class="text-muted">NISN: {{ s.nisn }}</span>
-                                            <span v-if="s.nis" class="text-muted">| NIS: {{ s.nis }}</span>
-                                        </div>
-                                    </div>
-                                    <div v-if="loadingSearchSiswa" class="text-center py-2 text-muted fs-8">
-                                        <span class="spinner-border spinner-border-sm me-1"></span>Mencari...
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- B. TAMPILAN JIKA SISWA SUDAH DIPILIH (Form Rekam Kasus Dinamis) -->
-                    <div v-else class="animate-fade-in">
-                        <h6 class="fw-bold mb-3" style="color:var(--bk-primary);">
-                            <i class="bi bi-journal-plus me-2"></i>Detail Rekam Kasus
-                        </h6>
-
-                        <!-- Beautiful Selected Student Card -->
-                        <div class="p-3 mb-3 rounded-4 shadow-sm border" style="background:#fff;border-color:var(--bk-border) !important;">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <div class="text-truncate" style="max-width: 75%;">
-                                    <h6 class="fw-bold text-dark mb-0 text-truncate" title="Nama Lengkap">{{ selectedSiswaInfo.nama_lengkap }}</h6>
-                                    <p class="text-muted fs-8 mb-0 text-truncate">{{ selectedSiswaInfo.nama_jurusan || 'Tanpa Jurusan' }}</p>
-                                </div>
-                                <button class="btn btn-xs btn-outline-secondary rounded-pill px-2 py-1 fs-8 fw-semibold d-flex align-items-center gap-1"
-                                        style="color:#334155; border-color:#94a3b8;"
-                                        type="button" @click="clearSiswa" id="btn-ganti-siswa" title="Pilih siswa lain">
-                                    <i class="bi bi-arrow-left-right"></i> Ganti
-                                </button>
-                            </div>
-                            
-                            <div class="row g-2 mt-2 pt-2 border-top">
-                                <div class="col-6">
-                                    <small class="text-muted d-block fs-9 mb-1">KELAS (SNAPSHOT)</small>
-                                    <span class="badge w-100 rounded-3 text-start py-2 px-2 text-truncate" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe; font-size:0.75rem;">
-                                        <i class="bi bi-camera me-1"></i>{{ selectedSiswaInfo.nama_kelas || '—' }}
-                                    </span>
-                                </div>
-                                <div class="col-6">
-                                    <small class="text-muted d-block fs-9 mb-1">NISN</small>
-                                    <span class="badge w-100 rounded-3 text-start py-2 px-2 text-truncate" style="background:#fffbeb;color:#92400e;border:1px solid #fde68a; font-size:0.75rem;">
-                                        <i class="bi bi-card-text me-1"></i>{{ selectedSiswaInfo.nisn || '—' }}
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            <div class="row g-2 mt-2 pt-1" v-if="selectedSiswaInfo.nis">
-                                <div class="col-12">
-                                    <small class="text-muted d-block fs-9 mb-1">NIS</small>
-                                    <span class="badge w-100 rounded-3 text-start py-2 px-2 text-truncate" style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0; font-size:0.75rem;">
-                                        <i class="bi bi-person-badge me-1"></i>{{ selectedSiswaInfo.nis }}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <!-- Snapshot Info Hint -->
-                            <div class="autofill-hint mt-2">
-                                <i class="bi bi-shield-lock-fill flex-shrink-0" style="color:#7c3aed;margin-top:1px;"></i>
-                                <span style="font-size:0.65rem;color:#64748b;">
-                                    Kelas saat ini akan **dikunci sebagai snapshot historis** saat data disimpan.
-                                </span>
-                            </div>
-                        </div>
-
-                        <!-- Form Input Details -->
-                        <div class="mb-3">
-                            <label for="input-tgl-konseling" class="form-label fw-semibold fs-7">Tanggal Pembuatan / Catat Kasus <span class="text-danger">*</span></label>
-                            <input type="date" class="form-control rounded-3"
-                                   v-model="formKasus.tanggal_konseling"
-                                   :max="today" id="input-tgl-konseling" name="tanggal_konseling">
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="select-jenis-kasus" class="form-label fw-semibold fs-7">Jenis Kasus <span class="text-danger">*</span></label>
-                            <select class="form-select rounded-3" v-model="formKasus.jenis_kasus" id="select-jenis-kasus" name="jenis_kasus">
-                                <option value="">-- Pilih --</option>
-                                <option value="Akademik">Akademik</option>
-                                <option value="Perilaku">Perilaku</option>
-                                <option value="Keluarga">Keluarga</option>
-                                <option value="Karir">Karir</option>
-                                <option value="Kesehatan Mental">Kesehatan Mental</option>
-                                <option value="Lainnya">Lainnya</option>
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="input-catatan-kasus" class="form-label fw-semibold fs-7">Catatan Konseling <span class="text-danger">*</span></label>
-                            <textarea class="form-control rounded-3" rows="4"
-                                      v-model="formKasus.catatan"
-                                      placeholder="Tuliskan catatan observasi, keluhan, dan temuan konseling secara lengkap..."
-                                      id="input-catatan-kasus" name="catatan_kasus"></textarea>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="input-tindak-lanjut" class="form-label fw-semibold fs-7">Tindak Lanjut</label>
-                            <textarea class="form-control rounded-3" rows="2"
-                                      v-model="formKasus.tindak_lanjut"
-                                      placeholder="Rencana tindak lanjut dan rekomendasi..."
-                                      id="input-tindak-lanjut" name="tindak_lanjut"></textarea>
-                        </div>
-
-                        <div class="row g-2 mb-4">
-                            <div class="col-md-6">
-                                <label for="select-status-kasus" class="form-label fw-semibold fs-7">Status Kasus</label>
-                                <select class="form-select rounded-3" v-model="formKasus.status_kasus" id="select-status-kasus" name="status_kasus">
-                                    <option value="Terbuka">Terbuka</option>
-                                    <option value="Proses">Dalam Proses</option>
-                                    <option value="Selesai">Selesai</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6 d-flex align-items-end">
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" id="cb-rahasia" name="is_rahasia"
-                                           v-model="formKasus.is_rahasia" :true-value="1" :false-value="0">
-                                    <label class="form-check-label fw-semibold fs-7" for="cb-rahasia">
-                                        <i class="bi bi-lock-fill me-1 text-warning"></i>Rahasia
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Buttons Row -->
-                        <div class="d-flex gap-2">
-                            <button class="btn btn-outline-secondary rounded-3 w-50" style="color:#334155; border-color:#94a3b8;" type="button" @click="clearSiswa" id="btn-batal-kasus">
-                                Batal
-                            </button>
-                            <button class="btn rounded-3 fw-semibold w-50 text-white" :disabled="loadingKasus"
-                                    @click="submitKasus" id="btn-simpan-kasus"
-                                    style="background:var(--bk-primary);">
-                                <span v-if="loadingKasus" class="spinner-border spinner-border-sm me-2"></span>
-                                <i v-else class="bi bi-floppy me-2"></i>
-                                {{ loadingKasus ? 'Menyimpan...' : 'Rekam Kasus' }}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Daftar Kasus (Kanan / Bawah) -->
-            <div class="col-lg-7">
+            <!-- Full Width: Tabel Riwayat Kasus -->
+            <div class="col-12">
                 <div class="bk-card p-4">
                     <!-- Header -->
-                    <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom flex-wrap gap-2">
                         <div>
                             <h6 class="fw-bold mb-0" style="color:var(--bk-primary);">
-                                <i class="bi bi-journal-text me-2"></i>Riwayat Kasus
+                                <i class="bi bi-journal-text me-2"></i>Riwayat Kasus & Jurnal Konseling
                             </h6>
-                            <small class="text-muted fs-8" v-if="kasusList.length > 0">
-                                {{ kasusList.length }} catatan ditemukan
+                            <small class="text-muted fs-8" v-if="kasusList?.length > 0">
+                                {{ kasusList?.length || 0 }} catatan ditemukan
                             </small>
                         </div>
-                        <button class="btn btn-sm btn-outline-secondary rounded-3" style="color:#334155; border-color:#94a3b8;"
-                                @click="loadKasus" :disabled="loadingKasusList">
-                            <span v-if="loadingKasusList" class="spinner-border spinner-border-sm me-1"></span>
-                            <i v-else class="bi bi-arrow-clockwise me-1"></i>Refresh
-                        </button>
+                        <div class="d-flex align-items-center gap-2">
+                            <button class="btn btn-sm btn-outline-secondary rounded-3" style="color:#334155; border-color:#94a3b8;"
+                                    @click="loadKasus" :disabled="loadingKasusList">
+                                <span v-if="loadingKasusList" class="spinner-border spinner-border-sm me-1"></span>
+                                <i v-else class="bi bi-arrow-clockwise me-1"></i>Refresh
+                            </button>
+                            <button type="button" @click="openTambahKasusModal" class="btn btn-sm btn-primary rounded-3 px-3 fw-semibold d-inline-flex align-items-center gap-1">
+                                <i class="bi bi-plus-lg fs-6"></i> Catat Jurnal Kasus
+                            </button>
+                        </div>
                     </div>
 
-                    <!-- Search filter lokal -->
-                    <div v-if="kasusList.length > 0" class="mb-3">
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
-                            <label for="input-search-kasus-list" class="visually-hidden">Cari riwayat kasus</label>
-                            <input type="text" class="form-control rounded-end-3 shadow-none"
-                                   v-model="kasusListSearch"
-                                   placeholder="Filter nama siswa, kelas, jenis kasus..."
-                                   id="input-search-kasus-list" name="search_kasus_list">
-                            <button v-if="kasusListSearch" class="btn btn-outline-secondary btn-sm" style="color:#334155; border-color:#94a3b8;"
-                                    @click="kasusListSearch=''" type="button">
-                                <i class="bi bi-x"></i>
-                            </button>
+                    <!-- Search & Status Filter Bar -->
+                    <div v-if="kasusList?.length > 0" class="row g-2 mb-3 align-items-center">
+                        <div class="col-md-7">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                                <label for="input-search-kasus-list" class="visually-hidden">Cari riwayat kasus</label>
+                                <input type="text" class="form-control rounded-end-3 shadow-none"
+                                       v-model="kasusListSearch"
+                                       placeholder="Filter nama siswa, kelas, jenis kasus..."
+                                       id="input-search-kasus-list" name="search_kasus_list">
+                                <button v-if="kasusListSearch" class="btn btn-outline-secondary btn-sm" style="color:#334155; border-color:#94a3b8;"
+                                        @click="kasusListSearch=''" type="button">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-5">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-light text-muted fw-semibold" style="font-size:0.75rem;"><i class="bi bi-funnel me-1"></i>Status:</span>
+                                <select class="form-select form-select-sm rounded-end-3 fs-8 fw-semibold" v-model="kasusStatusFilter" id="select-filter-status-kasus">
+                                    <option value="aktif">🟢 Kasus Aktif (Terbuka & Proses)</option>
+                                    <option value="Terbuka">🔵 Terbuka</option>
+                                    <option value="Proses">🟡 Dalam Proses</option>
+                                    <option value="Selesai">⚪ Selesai (Tertutup)</option>
+                                    <option value="semua">📋 Semua Status Kasus</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
@@ -1186,7 +1059,7 @@ function applySuperAdminTenantFilter(tenantId) {
                         <div class="spinner-border" style="color:var(--bk-primary);"></div>
                     </div>
 
-                    <div v-else-if="filteredKasusList.length > 0" class="table-responsive" style="max-height:480px;overflow-y:auto;">
+                    <div v-else-if="filteredKasusList?.length > 0" class="table-responsive" style="max-height:600px;overflow-y:auto;">
                         <table class="table table-hover align-middle fs-8" id="tbl-kasus" style="font-size:0.82rem;">
                             <thead class="table-light sticky-top">
                                 <tr>
@@ -1200,7 +1073,7 @@ function applySuperAdminTenantFilter(tenantId) {
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="k in filteredKasusList" :key="k.id">
+                                <tr v-for="k in paginatedKasusList" :key="k.id">
                                     <!-- Tanggal -->
                                     <td class="text-muted text-nowrap" style="width:90px;">
                                         {{ k.tanggal_konseling }}
@@ -1257,6 +1130,14 @@ function applySuperAdminTenantFilter(tenantId) {
                                     <td class="text-end pe-3">
                                         <div class="d-flex gap-1 justify-content-end">
                                             <button v-if="canEditKasus(k)"
+                                                    class="btn btn-xs btn-outline-warning rounded-2 py-0 px-2 fw-semibold"
+                                                    style="font-size:0.7rem; line-height:1.5;"
+                                                    @click="openEditKasus(k)"
+                                                    :id="'btn-edit-kasus-' + k.id"
+                                                    title="Edit Catatan Kasus">
+                                                <i class="bi bi-pencil"></i> Edit
+                                            </button>
+                                            <button v-if="canEditKasus(k)"
                                                     class="btn btn-xs btn-outline-primary rounded-2 py-0 px-2 fw-semibold"
                                                     style="font-size:0.7rem; line-height:1.5;"
                                                     @click="openChangeStatus(k)"
@@ -1278,21 +1159,55 @@ function applySuperAdminTenantFilter(tenantId) {
                         </table>
                     </div>
 
+                    <!-- Pagination Controls: Rekam Kasus -->
+                    <div v-if="filteredKasusList?.length > 0" class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top flex-wrap gap-2">
+                        <div class="text-muted fs-8">
+                            Menampilkan <strong>{{ (currentPageKasus - 1) * perPageKasus + 1 }}</strong> - <strong>{{ Math.min(currentPageKasus * perPageKasus, filteredKasusList.length) }}</strong> dari <strong>{{ filteredKasusList.length }}</strong> catatan
+                        </div>
+                        <div class="d-flex align-items-center gap-1">
+                            <button class="btn btn-xs btn-outline-secondary rounded-2 px-2" :disabled="currentPageKasus === 1" @click="currentPageKasus--">
+                                <i class="bi bi-chevron-left me-1"></i>Sebelumnya
+                            </button>
+                            <template v-for="p in totalKasusPages" :key="'kasus_p_' + p">
+                                <button v-if="p === 1 || p === totalKasusPages || (p >= currentPageKasus - 1 && p <= currentPageKasus + 1)"
+                                        class="btn btn-xs rounded-2 px-2.5 fw-semibold"
+                                        :class="p === currentPageKasus ? 'btn-primary text-white shadow-sm' : 'btn-outline-secondary text-dark'"
+                                        @click="currentPageKasus = p">
+                                    {{ p }}
+                                </button>
+                                <span v-else-if="(p === 2 && currentPageKasus > 3) || (p === totalKasusPages - 1 && currentPageKasus < totalKasusPages - 2)" class="px-1 text-muted fs-8">...</span>
+                            </template>
+                            <button class="btn btn-xs btn-outline-secondary rounded-2 px-2" :disabled="currentPageKasus === totalKasusPages" @click="currentPageKasus++">
+                                Selanjutnya<i class="bi bi-chevron-right ms-1"></i>
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Empty state setelah filter -->
-                    <div v-else-if="kasusList.length > 0 && filteredKasusList.length === 0"
+                    <div v-else-if="(kasusList?.length > 0) && (filteredKasusList?.length === 0)"
                          class="text-center py-4 text-muted">
-                        <i class="bi bi-search fs-2 d-block mb-2"></i>
-                        Tidak ada kasus yang cocok dengan filter "<strong>{{ kasusListSearch }}</strong>".
+                        <i class="bi bi-funnel fs-2 d-block mb-2 text-warning"></i>
+                        Tidak ada kasus konseling yang cocok dengan kata kunci atau filter status terpilih.
+                        <div class="mt-2">
+                            <button type="button" @click="kasusListSearch=''; kasusStatusFilter='semua';" class="btn btn-xs btn-outline-secondary rounded-pill px-3">
+                                Reset Filter (Tampilkan Semua Status)
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Benar-benar kosong -->
                     <div v-else class="text-center py-5 text-muted">
                         <i class="bi bi-journal fs-1 d-block mb-2"></i>
-                        Belum ada catatan kasus. Rekam kasus baru di panel sebelah kiri.
+                        Belum ada catatan kasus konseling. Klik tombol <strong>+ Catat Jurnal Kasus</strong> untuk menambahkan catatan baru.
+                        <div class="mt-3">
+                            <button type="button" @click="openTambahKasusModal" class="btn btn-sm btn-primary rounded-3 px-3">
+                                <i class="bi bi-plus-lg me-1"></i> Catat Jurnal Kasus
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Info badge snapshot -->
-                    <div v-if="kasusList.length > 0" class="mt-3 rounded-3 px-3 py-2 d-flex align-items-start gap-2"
+                    <div v-if="kasusList?.length > 0" class="mt-3 rounded-3 px-3 py-2 d-flex align-items-start gap-2"
                          style="background:#eff6ff;border:1px solid #bfdbfe;font-size:.75rem;">
                         <i class="bi bi-camera text-primary mt-1 flex-shrink-0"></i>
                         <span class="text-muted">
@@ -1300,6 +1215,196 @@ function applySuperAdminTenantFilter(tenantId) {
                             menyimpan data historis yang terkunci saat kasus direkam.
                             Jika siswa naik kelas, histori ini tetap menunjukkan kelas lamanya.
                         </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Popup Form Rekam Kasus & Jurnal Konseling (Harmonized UI/UX & Tall Spacious Dropdown) -->
+        <div class="modal fade" id="modalFormKasus" tabindex="-1" aria-labelledby="modalFormKasusLabel" aria-hidden="true" data-bs-backdrop="static">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content rounded-4 border-0 shadow" style="min-height: 560px;">
+                    <div class="modal-header border-bottom py-3 bg-light px-4">
+                        <h6 class="modal-title fw-bold text-dark d-flex align-items-center" id="modalFormKasusLabel">
+                            <i class="bi bi-journal-plus me-2" style="color:var(--bk-primary);"></i>
+                            {{ formKasus.id ? 'Edit Rekam Kasus & Jurnal Konseling' : 'Tambah Rekam Kasus & Jurnal Konseling' }}
+                        </h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" @click="closeKasusModal"></button>
+                    </div>
+                    
+                    <div class="modal-body p-4" style="min-height: 480px; overflow: visible !important;">
+                        <!-- Alert Info / Warning Form -->
+                        <div v-if="alertJurnal.msg" :class="'alert alert-' + alertJurnal.type + ' border-0 rounded-3 py-2 px-3 mb-3 fs-7 animate-fade-in'">
+                            {{ alertJurnal.msg }}
+                        </div>
+
+                        <!-- A. TAMPILAN JIKA SISWA BELUM DIPILIH (Pencarian Nama) -->
+                        <div v-if="!formKasus.id_siswa" class="animate-fade-in py-2" style="min-height: 420px;">
+                            <div class="p-3 mb-4 rounded-4 border bg-light text-center">
+                                <div class="rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center bg-white shadow-sm" style="width:48px; height:48px;">
+                                    <i class="bi bi-person-search fs-4 text-primary"></i>
+                                </div>
+                                <h6 class="fw-bold text-dark mb-1">Cari & Pilih Siswa</h6>
+                                <p class="text-muted fs-8 mb-0 mx-auto" style="max-width:400px;">
+                                    Ketik nama lengkap, NIS, atau NISN siswa untuk mulai merekam catatan kasus konseling.
+                                </p>
+                            </div>
+
+                            <div class="mb-5 pb-4">
+                                <label for="input-siswa-kasus-modal" class="form-label fw-bold fs-7 mb-1 text-dark">
+                                    Pilih Siswa <span class="text-danger">*</span>
+                                </label>
+                                <div class="position-relative">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                                        <input type="text" 
+                                               class="form-control form-control-sm border-start-0 ps-1 rounded-end-3"
+                                               v-model="kasusSearchSiswa"
+                                               @input="searchSiswaDebounce"
+                                               @blur="hideDropdownDelay"
+                                               @focus="onSearchFocus"
+                                               placeholder="Ketik Nama, NISN, atau NIK Siswa..."
+                                               id="input-siswa-kasus-modal"
+                                               name="siswa_kasus"
+                                               autocomplete="off">
+                                    </div>
+
+                                    <!-- Dropdown Autocomplete Pencarian Siswa -->
+                                    <div v-if="showSiswaDropdown && siswaOptions?.length > 0"
+                                         class="position-absolute w-100 bg-white border rounded-3 shadow-lg p-1 mt-1"
+                                         style="max-height: 240px; overflow-y: auto; z-index: 1070;">
+                                        <div v-for="s in siswaOptions" :key="s.id"
+                                             @mousedown.prevent="selectSiswa(s)"
+                                             class="p-2 rounded-2 hover-bg-slate cursor-pointer fs-7 d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <div class="fw-bold text-dark">{{ s.nama_lengkap }}</div>
+                                                <div class="text-muted fs-8">NISN: {{ s.nisn || '-' }} | Kelas: {{ s.nama_kelas || '-' }}</div>
+                                            </div>
+                                            <i class="bi bi-plus-circle-fill text-primary fs-6"></i>
+                                        </div>
+                                    </div>
+                                    <div v-else-if="showSiswaDropdown && loadingSearchSiswa" 
+                                         class="position-absolute w-100 bg-white border rounded-3 shadow-lg p-3 text-center mt-1"
+                                         style="z-index: 1070;">
+                                        <div class="spinner-border spinner-border-sm text-primary"></div>
+                                        <span class="fs-7 text-muted ms-2">Mencari data siswa...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- B. TAMPILAN JIKA SISWA SUDAH DIPILIH (Form Rekam Kasus Dinamis) -->
+                        <div v-else class="animate-fade-in">
+                            <!-- Selected Student Card (Styled like Form Prestasi) -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold fs-7 mb-1 text-dark">
+                                    Siswa Terpilih <span class="text-danger">*</span>
+                                </label>
+
+                                <!-- Jika Mode Edit: Tampilkan Badge Siswa Terkunci -->
+                                <div v-if="formKasus.id" class="p-2 px-3 border rounded-3 bg-light d-flex align-items-center justify-content-between mb-2">
+                                    <span class="fs-8 text-muted fw-semibold d-flex align-items-center gap-1">
+                                        <i class="bi bi-lock-fill text-warning"></i>
+                                        Siswa Otomatis Terkunci (Mode Edit Data)
+                                    </span>
+                                    <span class="badge bg-secondary rounded-pill px-2 py-1 fs-9">Terkunci</span>
+                                </div>
+
+                                <div class="badge d-flex align-items-center justify-content-between p-2 rounded-3 text-dark w-100 text-start" 
+                                     style="background: var(--bk-p-light); color: var(--bk-primary); border: 1px solid #ddd;">
+                                    <div>
+                                        <span class="fw-bold text-dark fs-7 me-2">{{ selectedSiswaInfo.nama_lengkap }}</span>
+                                        <span class="badge bg-primary rounded-pill px-2 py-1 fs-9 me-2">Kelas: {{ selectedSiswaInfo.nama_kelas || '-' }}</span>
+                                        <span class="text-muted fs-8">NISN: {{ selectedSiswaInfo.nisn || '-' }}</span>
+                                    </div>
+                                    <button v-if="!formKasus.id" type="button" class="btn btn-xs btn-outline-secondary rounded-2 py-0 px-2 fw-semibold"
+                                            @click="clearSiswa" id="btn-ganti-siswa-modal" title="Ganti Siswa">
+                                        <i class="bi bi-arrow-left-right me-1"></i> Ganti
+                                    </button>
+                                    <i v-else class="bi bi-lock-fill text-muted ms-1" style="font-size:0.85rem;" title="Siswa terkunci saat edit data"></i>
+                                </div>
+                            </div>
+
+                            <!-- Form Input Details -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-6">
+                                    <label for="input-tgl-konseling-modal" class="form-label fw-bold fs-7 mb-1 text-dark">
+                                        Tanggal Catat Kasus <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="date" class="form-control form-control-sm rounded-3"
+                                           v-model="formKasus.tanggal_konseling"
+                                           :max="today" id="input-tgl-konseling-modal" name="tanggal_konseling">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="select-jenis-kasus-modal" class="form-label fw-bold fs-7 mb-1 text-dark">
+                                        Jenis Kasus <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select form-select-sm rounded-3" v-model="formKasus.jenis_kasus" id="select-jenis-kasus-modal" name="jenis_kasus">
+                                        <option value="">— Pilih Jenis Kasus —</option>
+                                        <option value="Akademik">Akademik</option>
+                                        <option value="Perilaku">Perilaku</option>
+                                        <option value="Keluarga">Keluarga</option>
+                                        <option value="Karir">Karir & Masa Depan</option>
+                                        <option value="Kesehatan Mental">Kesehatan Mental</option>
+                                        <option value="Lainnya">Lainnya</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="input-catatan-kasus-modal" class="form-label fw-bold fs-7 mb-1 text-dark">
+                                    Catatan Konseling <span class="text-danger">*</span>
+                                </label>
+                                <textarea class="form-control form-control-sm rounded-3" rows="3"
+                                          v-model="formKasus.catatan"
+                                          placeholder="Tuliskan catatan observasi, keluhan, dan temuan konseling secara lengkap..."
+                                          id="input-catatan-kasus-modal" name="catatan_kasus"></textarea>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="input-tindak-lanjut-modal" class="form-label fw-bold fs-7 mb-1 text-dark">
+                                    Rencana Tindak Lanjut
+                                </label>
+                                <textarea class="form-control form-control-sm rounded-3" rows="2"
+                                          v-model="formKasus.tindak_lanjut"
+                                          placeholder="Rencana tindak lanjut, konseling lanjutan, rekomendasi..."
+                                          id="input-tindak-lanjut-modal" name="tindak_lanjut"></textarea>
+                            </div>
+
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-6">
+                                    <label for="select-status-kasus-modal" class="form-label fw-bold fs-7 mb-1 text-dark">
+                                        Status Kasus
+                                    </label>
+                                    <select class="form-select form-select-sm rounded-3" v-model="formKasus.status_kasus" id="select-status-kasus-modal" name="status_kasus">
+                                        <option value="Terbuka">Terbuka (Baru Dibuat)</option>
+                                        <option value="Proses">Dalam Proses Penanganan</option>
+                                        <option value="Selesai">Selesai (Tertutup)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 d-flex align-items-end">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="cb-rahasia-modal" name="is_rahasia"
+                                               v-model="formKasus.is_rahasia" :true-value="1" :false-value="0">
+                                        <label class="form-check-label fw-bold fs-7 text-dark" for="cb-rahasia-modal">
+                                            <i class="bi bi-lock-fill me-1 text-warning"></i>Rahasia (Hanya Konselor BK)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-footer border-top bg-light py-2 px-4 d-flex justify-content-end gap-2">
+                        <button type="button" @click="closeKasusModal" class="btn btn-sm btn-outline-secondary rounded-3 px-4" data-bs-dismiss="modal">
+                            Batal
+                        </button>
+                        <button v-if="formKasus.id_siswa" class="btn btn-sm btn-primary rounded-3 px-4 fw-bold" :disabled="loadingKasus"
+                                @click="submitKasus" id="btn-simpan-kasus-modal">
+                            <span v-if="loadingKasus" class="spinner-border spinner-border-sm me-1"></span>
+                            <i v-else class="bi bi-floppy me-1"></i>
+                            {{ loadingKasus ? 'Menyimpan...' : 'Simpan Rekam Kasus' }}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1322,105 +1427,55 @@ function applySuperAdminTenantFilter(tenantId) {
         </div>
 
         <div v-else class="row g-4">
-            <!-- Panel Kiri: Form Input/Edit Prestasi -->
-            <div class="col-lg-5">
+            <!-- Full Width: Tabel List Prestasi -->
+            <div class="col-12">
                 <div class="bk-card p-4">
-                    <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom flex-wrap gap-2">
                         <h6 class="fw-bold mb-0">
-                            <i class="bi bi-trophy-fill me-2" style="color:var(--bk-primary);"></i>
-                            {{ formPrestasi.id ? 'Edit Data Prestasi' : 'Tambah Data Prestasi' }}
+                            <i class="bi bi-list-stars me-2" style="color:var(--bk-primary);"></i>
+                            Daftar Prestasi Siswa
                         </h6>
-                        <button v-if="formPrestasi.id" @click="clearFormPrestasi" class="btn btn-xs btn-outline-secondary rounded-3 py-1 px-2 fw-semibold" style="font-size: 0.72rem;">
-                            <i class="bi bi-plus-circle me-1"></i> Mode Tambah
-                        </button>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="badge bg-primary rounded-pill px-3 py-2 fs-7">{{ filteredPrestasiList?.length || prestasiList?.length || 0 }} Data</span>
+                            <button type="button" @click="exportPrestasiExcel" class="btn btn-sm btn-outline-success rounded-3 px-3 fw-semibold d-inline-flex align-items-center gap-1" title="Unduh Berkas Excel (.xlsx) dengan Filter Tahun Ajaran">
+                                <i class="bi bi-file-earmark-excel fs-6"></i> Download Excel (.xlsx)
+                            </button>
+                            <button type="button" @click="openTambahPrestasiModal" class="btn btn-sm btn-primary rounded-3 px-3 fw-semibold d-inline-flex align-items-center gap-1">
+                                <i class="bi bi-plus-lg fs-6"></i> Tambah Data Prestasi
+                            </button>
+                        </div>
                     </div>
 
-                    <!-- Alert Info / Warning Form -->
-                    <div v-if="alertPrestasi.msg" :class="'alert alert-' + alertPrestasi.type + ' border-0 rounded-3 py-2 px-3 mb-3 fs-7 animate-fade-in'">
-                        {{ alertPrestasi.msg }}
-                    </div>                    <form @submit.prevent="submitPrestasi" enctype="multipart/form-data">
-                        <!-- Siswa Selection -->
-                        <div class="mb-3">
-                            <label for="input-prestasi-cari-siswa" class="form-label fw-bold fs-7 mb-1 text-dark">Pilih Siswa <span class="text-danger">*</span></label>
-                            <div class="position-relative">
-                                <div class="input-group input-group-sm">
-                                    <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
-                                    <input type="text" 
-                                           id="input-prestasi-cari-siswa"
-                                           name="prestasi_cari_siswa"
-                                           class="form-control form-control-sm border-start-0 ps-1 rounded-end-3" 
-                                           placeholder="Ketik Nama, NISN, atau NIK Siswa..."
-                                           v-model="prestasiSearchSiswa"
-                                           @input="searchSiswaPrestasiDebounce"
-                                           @focus="showPrestasiSiswaDropdown = true"
-                                           @blur="hidePrestasiDropdownDelay" />
-                                </div>
-                                
-                                <!-- Dropdown Pencarian Siswa -->
-                                <div v-if="showPrestasiSiswaDropdown && prestasiSiswaOptions.length > 0" 
-                                     class="position-absolute w-100 bg-white border rounded-3 shadow-lg p-1 mt-1 z-3"
-                                     style="max-height: 250px; overflow-y: auto;">
-                                    <div v-for="s in prestasiSiswaOptions" 
-                                         :key="s.id" 
-                                         @mousedown.prevent="selectSiswaPrestasi(s)"
-                                         class="p-2 rounded-2 hover-bg-slate cursor-pointer fs-7 d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <div class="fw-bold text-dark">{{ s.nama_lengkap }}</div>
-                                            <div class="text-muted fs-8">NISN: {{ s.nisn }} | Kelas: {{ s.nama_kelas || '-' }}</div>
-                                        </div>
-                                        <i class="bi bi-plus-circle-fill text-primary fs-6"></i>
-                                    </div>
-                                </div>
-                                <div v-else-if="showPrestasiSiswaDropdown && loadingSearchPrestasiSiswa" 
-                                     class="position-absolute w-100 bg-white border rounded-3 shadow-lg p-3 text-center mt-1 z-3">
-                                    <div class="spinner-border spinner-border-sm text-primary"></div>
-                                    <span class="fs-7 text-muted ms-2">Mencari...</span>
-                                </div>
-                            </div>
-
-                            <!-- List Siswa Terpilih -->
-                            <div v-if="selectedPrestasiSiswa.length > 0" class="mt-2 d-flex flex-wrap gap-2">
-                                <div v-for="s in selectedPrestasiSiswa" :key="s.id" 
-                                     class="badge d-inline-flex align-items-center gap-2 p-2 rounded-3 text-dark" 
-                                     style="background: var(--bk-p-light); color: var(--bk-primary); border: 1px solid #ddd;">
-                                    <span class="fw-semibold">{{ s.nama_lengkap }} ({{ s.nama_kelas || '-' }})</span>
-                                    <button type="button" class="btn-close" style="font-size: 0.6rem; margin-left: 5px;" @click="removeSiswaPrestasi(s.id)"></button>
-                                </div>
+                    <!-- Filter Bar Prestasi Siswa -->
+                    <div v-if="prestasiList?.length > 0" class="row g-2 mb-3 align-items-center">
+                        <div class="col-md-5">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                                <input type="text" class="form-control rounded-end-3 shadow-none"
+                                       v-model="filterPrestasiSearch"
+                                       placeholder="Cari nama siswa, lomba, bidang, sertifikat..."
+                                       id="input-search-prestasi-list">
+                                <button v-if="filterPrestasiSearch" class="btn btn-outline-secondary btn-sm" @click="filterPrestasiSearch=''" type="button">
+                                    <i class="bi bi-x"></i>
+                                </button>
                             </div>
                         </div>
-
-                        <!-- Kategori & Tahun Ajaran & Semester -->
-                        <div class="row g-2 mb-3">
-                            <div class="col-md-6">
-                                <label for="select-prestasi-kategori" class="form-label fw-bold fs-7 mb-1 text-dark">Kategori Kepesertaan <span class="text-danger">*</span></label>
-                                <select id="select-prestasi-kategori" name="kategori" v-model="formPrestasi.kategori" class="form-select form-select-sm rounded-3">
-                                    <option value="Personal">Personal (Individu)</option>
-                                    <option value="Regu">Regu (Kelompok)</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="select-prestasi-tahun-ajaran" class="form-label fw-bold fs-7 mb-1 text-dark">Tahun Ajaran <span class="text-danger">*</span></label>
-                                <select id="select-prestasi-tahun-ajaran" name="tahun_ajaran_id" v-model="formPrestasi.tahun_ajaran_id" class="form-select form-select-sm rounded-3">
-                                    <option value="">— Pilih Tahun —</option>
+                        <div class="col-md-3">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-light text-muted fw-semibold" style="font-size:0.75rem;"><i class="bi bi-calendar3 me-1"></i>Tahun:</span>
+                                <select class="form-select form-select-sm rounded-end-3 fs-8 fw-semibold" v-model="filterPrestasiTahunAjaran" id="select-filter-prestasi-ta">
+                                    <option value="">Semua Tahun Ajaran</option>
                                     <option v-for="y in activeYearsList" :key="y.id" :value="y.id">
                                         {{ y.tahun_ajaran }}
                                     </option>
                                 </select>
                             </div>
                         </div>
-
-                        <div class="row g-2 mb-3">
-                            <div class="col-md-6">
-                                <label for="select-prestasi-semester" class="form-label fw-bold fs-7 mb-1 text-dark">Semester <span class="text-danger">*</span></label>
-                                <select id="select-prestasi-semester" name="semester" v-model="formPrestasi.semester" class="form-select form-select-sm rounded-3">
-                                    <option value="Ganjil">Ganjil</option>
-                                    <option value="Genap">Genap</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="select-prestasi-tingkat" class="form-label fw-bold fs-7 mb-1 text-dark">Tingkat Kejuaraan <span class="text-danger">*</span></label>
-                                <select id="select-prestasi-tingkat" name="tingkat_kejuaraan" v-model="formPrestasi.tingkat_kejuaraan" class="form-select form-select-sm rounded-3">
-                                    <option value="">— Pilih Tingkat —</option>
+                        <div class="col-md-4">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-light text-muted fw-semibold" style="font-size:0.75rem;"><i class="bi bi-trophy me-1"></i>Tingkat:</span>
+                                <select class="form-select form-select-sm rounded-end-3 fs-8 fw-semibold" v-model="filterPrestasiTingkat" id="select-filter-prestasi-tingkat">
+                                    <option value="">Semua Tingkat Kejuaraan</option>
                                     <option value="Kabupaten/Kota">Kabupaten/Kota</option>
                                     <option value="Provinsi">Provinsi</option>
                                     <option value="Nasional">Nasional</option>
@@ -1428,144 +1483,6 @@ function applySuperAdminTenantFilter(tenantId) {
                                 </select>
                             </div>
                         </div>
-
-                        <!-- Bidang Lomba & Nama Lomba -->
-                        <div class="mb-3">
-                            <label for="input-prestasi-bidang" class="form-label fw-bold fs-7 mb-1 text-dark">Bidang Lomba / Prestasi <span class="text-danger">*</span></label>
-                            <input type="text" id="input-prestasi-bidang" name="bidang_lomba" v-model="formPrestasi.bidang_lomba" class="form-control form-control-sm rounded-3" placeholder="Contoh: Sains/OSN, Olahraga/O2SN, Seni, dll." />
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="input-prestasi-nama-lomba" class="form-label fw-bold fs-7 mb-1 text-dark">Nama Perlombaan / Kegiatan <span class="text-danger">*</span></label>
-                            <input type="text" id="input-prestasi-nama-lomba" name="nama_lomba" v-model="formPrestasi.nama_lomba" class="form-control form-control-sm rounded-3" placeholder="Contoh: Olimpiade Matematika Nasional 2026" />
-                        </div>
-
-                        <!-- Kategori Juara & Nomor Sertifikat -->
-                        <div class="row g-2 mb-3">
-                            <div class="col-md-6">
-                                <label for="select-prestasi-juara" class="form-label fw-bold fs-7 mb-1 text-dark">Peringkat Juara <span class="text-danger">*</span></label>
-                                <select id="select-prestasi-juara" name="juara" v-model="formPrestasi.juara" class="form-select form-select-sm rounded-3">
-                                    <option value="">— Pilih Juara —</option>
-                                    <option value="Juara 1">Juara 1</option>
-                                    <option value="Juara 2">Juara 2</option>
-                                    <option value="Juara 3">Juara 3</option>
-                                    <option value="Harapan 1">Juara Harapan 1</option>
-                                    <option value="Harapan 2">Juara Harapan 2</option>
-                                    <option value="Harapan 3">Juara Harapan 3</option>
-                                    <option value="Lainnya">Lainnya (Tulis Keterangan)</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6" v-if="formPrestasi.juara === 'Lainnya'">
-                                <label for="input-prestasi-juara-lainnya" class="form-label fw-bold fs-7 mb-1 text-dark">Keterangan Juara <span class="text-danger">*</span></label>
-                                <input type="text" id="input-prestasi-juara-lainnya" name="juara_lainnya" v-model="formPrestasi.juara_lainnya" class="form-control form-control-sm rounded-3" placeholder="Contoh: Gold Medal / Juara Favorit" />
-                            </div>
-                            <div class="col-md-6" v-else>
-                                <label for="input-prestasi-sertifikat" class="form-label fw-bold fs-7 mb-1 text-dark">Nomor Sertifikat / Piagam</label>
-                                <input type="text" id="input-prestasi-sertifikat" name="nomor_sertifikat" v-model="formPrestasi.nomor_sertifikat" class="form-control form-control-sm rounded-3" placeholder="No. Sertifikat jika ada" />
-                            </div>
-                        </div>
-
-                        <div class="mb-3" v-if="formPrestasi.juara === 'Lainnya'">
-                            <label for="input-prestasi-sertifikat-lainnya" class="form-label fw-bold fs-7 mb-1 text-dark">Nomor Sertifikat / Piagam</label>
-                            <input type="text" id="input-prestasi-sertifikat-lainnya" name="nomor_sertifikat" v-model="formPrestasi.nomor_sertifikat" class="form-control form-control-sm rounded-3" placeholder="No. Sertifikat jika ada" />
-                        </div>
-
-                        <!-- Detail Pelaksanaan -->
-                        <div class="row g-2 mb-3">
-                            <div class="col-md-6">
-                                <label for="select-prestasi-jenis" class="form-label fw-bold fs-7 mb-1 text-dark">Jenis Pelaksanaan <span class="text-danger">*</span></label>
-                                <select id="select-prestasi-jenis" name="jenis_lomba" v-model="formPrestasi.jenis_lomba" class="form-select form-select-sm rounded-3">
-                                    <option value="Offline">Offline (Luring)</option>
-                                    <option value="Online">Online (Daring)</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="input-prestasi-tanggal" class="form-label fw-bold fs-7 mb-1 text-dark">Tanggal Kegiatan <span class="text-danger">*</span></label>
-                                <input type="date" id="input-prestasi-tanggal" name="tanggal_lomba" v-model="formPrestasi.tanggal_lomba" class="form-control form-control-sm rounded-3" />
-                            </div>
-                        </div>
-
-                        <div class="row g-2 mb-3">
-                            <div class="col-md-6">
-                                <label for="input-prestasi-tempat" class="form-label fw-bold fs-7 mb-1 text-dark">Tempat / Kota <span class="text-danger">*</span></label>
-                                <input type="text" id="input-prestasi-tempat" name="tempat_lomba" v-model="formPrestasi.tempat_lomba" class="form-control form-control-sm rounded-3" placeholder="Contoh: Jakarta" />
-                            </div>
-                            <div class="col-md-6">
-                                <label for="input-prestasi-penyelenggara" class="form-label fw-bold fs-7 mb-1 text-dark">Penyelenggara <span class="text-danger">*</span></label>
-                                <input type="text" id="input-prestasi-penyelenggara" name="penyelenggara" v-model="formPrestasi.penyelenggara" class="form-control form-control-sm rounded-3" placeholder="Contoh: Puspresnas / Kemendikbud" />
-                            </div>
-                        </div>
-
-                        <!-- Guru Pendamping -->
-                        <div class="mb-3">
-                            <label for="input-prestasi-guru" class="form-label fw-bold fs-7 mb-1 text-dark">Guru Pendamping</label>
-                            <input type="text" id="input-prestasi-guru" name="guru_pendamping" v-model="formPrestasi.guru_pendamping" class="form-control form-control-sm rounded-3" placeholder="Tulis nama Guru Pendamping jika ada (Opsional)" />
-                        </div>
-
-                        <!-- Files Upload -->
-                        <div class="border rounded-3 p-3 bg-light mb-4">
-                            <div class="fw-bold fs-7 text-dark mb-2"><i class="bi bi-file-earmark-arrow-up me-1"></i>Berkas Pendukung (Masing-masing maks. 1 MB)</div>
-                            
-                            <div class="mb-2">
-                                <label for="input-file-bukti" class="form-label fs-8 fw-semibold mb-1 text-muted">Foto Bukti Sertifikat (.jpg, .jpeg, .png)</label>
-                                <input type="file" id="input-file-bukti" name="foto_bukti_prestasi" class="form-control form-control-sm prestasi-file-input" accept="image/*" @change="handleFileUpload($event, 'foto_bukti_prestasi')" />
-                                <div v-if="formPrestasi.existing_foto_bukti" class="fs-8 mt-1 text-success">
-                                    <i class="bi bi-check-circle-fill"></i> Sudah ada file terunggah:
-                                    <a :href="getFileUrl(formPrestasi.existing_foto_bukti)" target="_blank" class="fw-bold">Lihat Foto</a>
-                                </div>
-                            </div>
-
-                            <div class="mb-2">
-                                <label for="input-file-siswa" class="form-label fs-8 fw-semibold mb-1 text-muted">Foto Penerimaan Penghargaan / Siswa (.jpg, .jpeg, .png)</label>
-                                <input type="file" id="input-file-siswa" name="foto_siswa_prestasi" class="form-control form-control-sm prestasi-file-input" accept="image/*" @change="handleFileUpload($event, 'foto_siswa_prestasi')" />
-                                <div v-if="formPrestasi.existing_foto_siswa" class="fs-8 mt-1 text-success">
-                                    <i class="bi bi-check-circle-fill"></i> Sudah ada file terunggah:
-                                    <a :href="getFileUrl(formPrestasi.existing_foto_siswa)" target="_blank" class="fw-bold">Lihat Foto</a>
-                                </div>
-                            </div>
-
-                            <div class="mb-2">
-                                <label for="input-file-kegiatan" class="form-label fs-8 fw-semibold mb-1 text-muted">Foto Dokumentasi Kegiatan (.jpg, .jpeg, .png)</label>
-                                <input type="file" id="input-file-kegiatan" name="foto_kegiatan_lomba" class="form-control form-control-sm prestasi-file-input" accept="image/*" @change="handleFileUpload($event, 'foto_kegiatan_lomba')" />
-                                <div v-if="formPrestasi.existing_foto_kegiatan" class="fs-8 mt-1 text-success">
-                                    <i class="bi bi-check-circle-fill"></i> Sudah ada file terunggah:
-                                    <a :href="getFileUrl(formPrestasi.existing_foto_kegiatan)" target="_blank" class="fw-bold">Lihat Foto</a>
-                                </div>
-                            </div>
-
-                            <div class="mb-0">
-                                <label for="input-file-surat-tugas" class="form-label fs-8 fw-semibold mb-1 text-muted">Surat Tugas PDF/Gambar (.pdf, .jpg, .jpeg, .png)</label>
-                                <input type="file" id="input-file-surat-tugas" name="surat_tugas_pdf" class="form-control form-control-sm prestasi-file-input" accept=".pdf,image/*" @change="handleFileUpload($event, 'surat_tugas_pdf')" />
-                                <div v-if="formPrestasi.existing_surat_tugas" class="fs-8 mt-1 text-success">
-                                    <i class="bi bi-check-circle-fill"></i> Sudah ada file terunggah:
-                                    <a :href="getFileUrl(formPrestasi.existing_surat_tugas)" target="_blank" class="fw-bold">Lihat Berkas</a>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Form Buttons -->
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-sm btn-primary rounded-3 px-4 w-100" :disabled="loadingPrestasi">
-                                <span v-if="loadingPrestasi" class="spinner-border spinner-border-sm me-1"></span>
-                                <i v-else class="bi bi-save me-1"></i> Simpan Prestasi
-                            </button>
-                            <button type="button" @click="clearFormPrestasi" class="btn btn-sm btn-outline-secondary rounded-3 px-3">
-                                Batal
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Panel Kanan: Tabel List Prestasi -->
-            <div class="col-lg-7">
-                <div class="bk-card p-4 h-100">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="fw-bold mb-0">
-                            <i class="bi bi-list-stars me-2" style="color:var(--bk-primary);"></i>
-                            Daftar Prestasi Siswa
-                        </h6>
-                        <span class="badge bg-primary rounded-pill">{{ prestasiList.length }} Data</span>
                     </div>
 
                     <!-- Loading State -->
@@ -1575,26 +1492,26 @@ function applySuperAdminTenantFilter(tenantId) {
                     </div>
 
                     <!-- Table List -->
-                    <div v-else-if="filteredPrestasiList.length > 0" class="table-responsive" style="max-height: 800px; overflow-y: auto;">
+                    <div v-else-if="filteredPrestasiList?.length > 0" class="table-responsive" style="max-height: 800px; overflow-y: auto;">
                         <table class="table table-hover align-middle table-sm border-top" style="font-size:0.8rem;">
                             <thead class="table-light">
                                 <tr>
-                                    <th class="ps-3 py-2" style="width:35%;">Siswa & Prestasi</th>
+                                    <th class="ps-3 py-2" style="width:30%;">Siswa & Prestasi</th>
                                     <th class="py-2" style="width:30%;">Detail Event</th>
                                     <th class="py-2 text-center" style="width:10%;">Poin</th>
-                                    <th class="py-2 text-center" style="width:10%;">Berkas</th>
+                                    <th class="py-2 text-center" style="width:15%;">Berkas</th>
                                     <th class="pe-3 py-2 text-end" style="width:15%;">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="p in filteredPrestasiList" :key="p.id" class="align-middle">
+                                <tr v-for="p in paginatedPrestasiList" :key="p.id" class="align-middle">
                                     <td class="ps-3 py-3">
                                         <!-- Siswa Names -->
                                         <div class="mb-1">
-                                            <span v-for="(s, idx) in p.siswa_list" :key="s.id">
+                                            <span v-for="(s, idx) in (p.siswa_list || [])" :key="s.id || idx">
                                                 <span class="fw-bold text-dark">{{ s.nama_lengkap }}</span>
                                                 <span class="text-muted fs-8"> ({{ s.nama_kelas || '-' }})</span>
-                                                <span v-if="idx < p.siswa_list.length - 1">, </span>
+                                                <span v-if="p.siswa_list && idx < p.siswa_list.length - 1">, </span>
                                             </span>
                                         </div>
                                         <!-- Kategori & Bidang -->
@@ -1654,16 +1571,16 @@ function applySuperAdminTenantFilter(tenantId) {
                                     </td>
                                     <td class="text-end pe-3 py-3">
                                         <div class="d-flex gap-1 justify-content-end">
-                                            <button @click="editPrestasi(p)" 
+                                            <button @click="openEditPrestasiModal(p)" 
                                                     class="btn btn-xs btn-outline-primary rounded-2 py-0 px-2 fw-semibold" 
                                                     style="font-size:0.7rem; line-height:1.5;" 
                                                     title="Edit Data Prestasi">
-                                                <i class="bi bi-pencil-square"></i>
+                                                <i class="bi bi-pencil me-1"></i> Edit
                                             </button>
                                             <button @click="deletePrestasi(p.id)" 
                                                     class="btn btn-xs btn-outline-danger rounded-2 py-0 px-2 fw-semibold" 
                                                     style="font-size:0.7rem; line-height:1.5;" 
-                                                    title="Hapus Data Prestasi">
+                                                    title="Hapus Data">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </div>
@@ -1673,10 +1590,270 @@ function applySuperAdminTenantFilter(tenantId) {
                         </table>
                     </div>
 
-                    <!-- Empty state -->
-                    <div v-else class="text-center py-5 text-muted">
-                        <i class="bi bi-trophy fs-1 d-block mb-2"></i>
-                        Belum ada catatan prestasi siswa yang terdaftar.
+                    <!-- Empty State -->
+                    <div v-else class="text-center py-5">
+                        <i class="bi bi-trophy text-muted display-4 mb-3 d-block opacity-50"></i>
+                        <h6 class="fw-bold text-dark mb-1">Belum Ada Data Prestasi</h6>
+                        <p class="text-muted fs-7 mb-3">Klik tombol <strong>+ Tambah Data Prestasi</strong> untuk menambahkan catatan prestasi siswa.</p>
+                        <button type="button" @click="openTambahPrestasiModal" class="btn btn-sm btn-primary rounded-3 px-3">
+                            <i class="bi bi-plus-lg me-1"></i> Tambah Prestasi Baru
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Popup Form Input/Edit Prestasi Siswa -->
+        <div class="modal fade" id="modalFormPrestasi" tabindex="-1" aria-labelledby="modalFormPrestasiLabel" aria-hidden="true" data-bs-backdrop="static">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content rounded-4 border-0 shadow">
+                    <div class="modal-header border-bottom py-3 bg-light">
+                        <h6 class="modal-title fw-bold text-dark d-flex align-items-center" id="modalFormPrestasiLabel">
+                            <i class="bi bi-trophy-fill me-2" style="color:var(--bk-primary);"></i>
+                            {{ formPrestasi.id ? 'Edit Data Prestasi Siswa' : 'Tambah Data Prestasi Siswa' }}
+                        </h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" @click="closePrestasiModal"></button>
+                    </div>
+                    <div class="modal-body p-4" style="min-height: 380px;">
+                        <!-- Alert Info / Warning Form -->
+                        <div v-if="alertPrestasi.msg" :class="'alert alert-' + alertPrestasi.type + ' border-0 rounded-3 py-2 px-3 mb-3 fs-7 animate-fade-in'">
+                            {{ alertPrestasi.msg }}
+                        </div>
+
+                        <form @submit.prevent="submitPrestasi" id="form-prestasi-modal" enctype="multipart/form-data">
+                            <!-- Siswa Selection -->
+                            <div class="mb-3">
+                                <label for="input-prestasi-cari-siswa" class="form-label fw-bold fs-7 mb-1 text-dark">
+                                    Pilih Siswa <span class="text-danger">*</span>
+                                </label>
+                                
+                                <!-- Jika Mode Edit: Tampilkan Badge Siswa Terkunci -->
+                                <div v-if="formPrestasi.id" class="p-2 px-3 border rounded-3 bg-light d-flex align-items-center justify-content-between">
+                                    <span class="fs-8 text-muted fw-semibold d-flex align-items-center gap-1">
+                                        <i class="bi bi-lock-fill text-warning"></i>
+                                        Siswa Otomatis Terkunci (Mode Edit Data)
+                                    </span>
+                                    <span class="badge bg-secondary rounded-pill px-2 py-1 fs-9">Terkunci</span>
+                                </div>
+                                
+                                <!-- Jika Mode Tambah: Tampilkan Input Search Autocomplete -->
+                                <div v-else class="position-relative">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                                        <input type="text" 
+                                               id="input-prestasi-cari-siswa"
+                                               name="prestasi_cari_siswa"
+                                               class="form-control form-control-sm border-start-0 ps-1 rounded-end-3" 
+                                               placeholder="Ketik Nama, NISN, atau NIK Siswa..."
+                                               v-model="prestasiSearchSiswa"
+                                               @input="searchSiswaPrestasiDebounce"
+                                               @focus="showPrestasiSiswaDropdown = true"
+                                               @blur="hidePrestasiDropdownDelay" />
+                                    </div>
+                                    
+                                    <!-- Dropdown Pencarian Siswa -->
+                                    <div v-if="showPrestasiSiswaDropdown && prestasiSiswaOptions?.length > 0" 
+                                         class="position-absolute w-100 bg-white border rounded-3 shadow-lg p-1 mt-1 z-3"
+                                         style="max-height: 250px; overflow-y: auto;">
+                                        <div v-for="s in prestasiSiswaOptions" 
+                                             :key="s.id" 
+                                             @mousedown.prevent="selectSiswaPrestasi(s)"
+                                             class="p-2 rounded-2 hover-bg-slate cursor-pointer fs-7 d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <div class="fw-bold text-dark">{{ s.nama_lengkap }}</div>
+                                                <div class="text-muted fs-8">NISN: {{ s.nisn }} | Kelas: {{ s.nama_kelas || '-' }}</div>
+                                            </div>
+                                            <i class="bi bi-plus-circle-fill text-primary fs-6"></i>
+                                        </div>
+                                    </div>
+                                    <div v-else-if="showPrestasiSiswaDropdown && loadingSearchPrestasiSiswa" 
+                                         class="position-absolute w-100 bg-white border rounded-3 shadow-lg p-3 text-center mt-1 z-3">
+                                        <div class="spinner-border spinner-border-sm text-primary"></div>
+                                        <span class="fs-7 text-muted ms-2">Mencari...</span>
+                                    </div>
+                                </div>
+
+                                <!-- List Siswa Terpilih -->
+                                <div v-if="selectedPrestasiSiswa?.length > 0" class="mt-2 d-flex flex-wrap gap-2">
+                                    <div v-for="s in selectedPrestasiSiswa" :key="s.id" 
+                                         class="badge d-inline-flex align-items-center gap-2 p-2 rounded-3 text-dark" 
+                                         style="background: var(--bk-p-light); color: var(--bk-primary); border: 1px solid #ddd;">
+                                        <span class="fw-semibold">{{ s.nama_lengkap }} ({{ s.nama_kelas || '-' }})</span>
+                                        <button v-if="!formPrestasi.id" type="button" class="btn-close" style="font-size: 0.6rem; margin-left: 5px;" @click="removeSiswaPrestasi(s.id)" title="Hapus dari daftar"></button>
+                                        <i v-else class="bi bi-lock-fill text-muted ms-1" style="font-size:0.75rem;" title="Siswa terkunci saat edit data"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Kategori & Tahun Ajaran & Semester -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-6">
+                                    <label for="select-prestasi-kategori" class="form-label fw-bold fs-7 mb-1 text-dark">Kategori Kepesertaan <span class="text-danger">*</span></label>
+                                    <select id="select-prestasi-kategori" name="kategori" v-model="formPrestasi.kategori" class="form-select form-select-sm rounded-3">
+                                        <option value="Personal">Personal (Individu)</option>
+                                        <option value="Regu">Regu (Kelompok)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="select-prestasi-tahun-ajaran" class="form-label fw-bold fs-7 mb-1 text-dark">Tahun Ajaran <span class="text-danger">*</span></label>
+                                    <select id="select-prestasi-tahun-ajaran" name="tahun_ajaran_id" v-model="formPrestasi.tahun_ajaran_id" class="form-select form-select-sm rounded-3">
+                                        <option value="">— Pilih Tahun —</option>
+                                        <option v-for="y in activeYearsList" :key="y.id" :value="y.id">
+                                            {{ y.tahun_ajaran }}
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-6">
+                                    <label for="select-prestasi-semester" class="form-label fw-bold fs-7 mb-1 text-dark">Semester <span class="text-danger">*</span></label>
+                                    <select id="select-prestasi-semester" name="semester" v-model="formPrestasi.semester" class="form-select form-select-sm rounded-3">
+                                        <option value="Ganjil">Ganjil</option>
+                                        <option value="Genap">Genap</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="select-prestasi-tingkat" class="form-label fw-bold fs-7 mb-1 text-dark">Tingkat Kejuaraan <span class="text-danger">*</span></label>
+                                    <select id="select-prestasi-tingkat" name="tingkat_kejuaraan" v-model="formPrestasi.tingkat_kejuaraan" @change="autoCalculatePrestasiPoint" class="form-select form-select-sm rounded-3">
+                                        <option value="">— Pilih Tingkat —</option>
+                                        <option value="Kabupaten/Kota">Kabupaten/Kota</option>
+                                        <option value="Provinsi">Provinsi</option>
+                                        <option value="Nasional">Nasional</option>
+                                        <option value="Internasional">Internasional</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Bidang Lomba & Nama Lomba -->
+                            <div class="mb-3">
+                                <label for="input-prestasi-bidang" class="form-label fw-bold fs-7 mb-1 text-dark">Bidang Lomba / Prestasi <span class="text-danger">*</span></label>
+                                <input type="text" id="input-prestasi-bidang" name="bidang_lomba" v-model="formPrestasi.bidang_lomba" class="form-control form-control-sm rounded-3" placeholder="Contoh: Sains/OSN, Olahraga/O2SN, Seni, dll." />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="input-prestasi-nama-lomba" class="form-label fw-bold fs-7 mb-1 text-dark">Nama Perlombaan / Kegiatan <span class="text-danger">*</span></label>
+                                <input type="text" id="input-prestasi-nama-lomba" name="nama_lomba" v-model="formPrestasi.nama_lomba" class="form-control form-control-sm rounded-3" placeholder="Contoh: Olimpiade Matematika Nasional 2026" />
+                            </div>
+
+                            <!-- Kategori Juara & Nomor Sertifikat -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-6">
+                                    <label for="select-prestasi-juara" class="form-label fw-bold fs-7 mb-1 text-dark">Peringkat Juara <span class="text-danger">*</span></label>
+                                    <select id="select-prestasi-juara" name="juara" v-model="formPrestasi.juara" @change="autoCalculatePrestasiPoint" class="form-select form-select-sm rounded-3">
+                                        <option value="">— Pilih Juara —</option>
+                                        <option value="Juara 1">Juara 1</option>
+                                        <option value="Juara 2">Juara 2</option>
+                                        <option value="Juara 3">Juara 3</option>
+                                        <option value="Harapan 1">Juara Harapan 1</option>
+                                        <option value="Harapan 2">Juara Harapan 2</option>
+                                        <option value="Harapan 3">Juara Harapan 3</option>
+                                        <option value="Lainnya">Lainnya (Tulis Keterangan)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6" v-if="formPrestasi.juara === 'Lainnya'">
+                                    <label for="input-prestasi-juara-lainnya" class="form-label fw-bold fs-7 mb-1 text-dark">Keterangan Juara <span class="text-danger">*</span></label>
+                                    <input type="text" id="input-prestasi-juara-lainnya" name="juara_lainnya" v-model="formPrestasi.juara_lainnya" class="form-control form-control-sm rounded-3" placeholder="Contoh: Gold Medal / Juara Favorit" />
+                                </div>
+                                <div class="col-md-6" v-else>
+                                    <label for="input-prestasi-sertifikat" class="form-label fw-bold fs-7 mb-1 text-dark">Nomor Sertifikat / Piagam</label>
+                                    <input type="text" id="input-prestasi-sertifikat" name="nomor_sertifikat" v-model="formPrestasi.nomor_sertifikat" class="form-control form-control-sm rounded-3" placeholder="No. Sertifikat jika ada" />
+                                </div>
+                            </div>
+
+                            <div class="mb-3" v-if="formPrestasi.juara === 'Lainnya'">
+                                <label for="input-prestasi-sertifikat-lainnya" class="form-label fw-bold fs-7 mb-1 text-dark">Nomor Sertifikat / Piagam</label>
+                                <input type="text" id="input-prestasi-sertifikat-lainnya" name="nomor_sertifikat" v-model="formPrestasi.nomor_sertifikat" class="form-control form-control-sm rounded-3" placeholder="No. Sertifikat jika ada" />
+                            </div>
+
+                            <!-- Detail Pelaksanaan -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-6">
+                                    <label for="select-prestasi-jenis" class="form-label fw-bold fs-7 mb-1 text-dark">Jenis Pelaksanaan <span class="text-danger">*</span></label>
+                                    <select id="select-prestasi-jenis" name="jenis_lomba" v-model="formPrestasi.jenis_lomba" class="form-select form-select-sm rounded-3">
+                                        <option value="Offline">Offline (Luring)</option>
+                                        <option value="Online">Online (Daring)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="input-prestasi-tanggal" class="form-label fw-bold fs-7 mb-1 text-dark">Tanggal Kegiatan <span class="text-danger">*</span></label>
+                                    <input type="date" id="input-prestasi-tanggal" name="tanggal_lomba" v-model="formPrestasi.tanggal_lomba" class="form-control form-control-sm rounded-3" />
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-6">
+                                    <label for="input-prestasi-tempat" class="form-label fw-bold fs-7 mb-1 text-dark">Tempat / Kota <span class="text-danger">*</span></label>
+                                    <input type="text" id="input-prestasi-tempat" name="tempat_lomba" v-model="formPrestasi.tempat_lomba" class="form-control form-control-sm rounded-3" placeholder="Contoh: Jakarta" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="input-prestasi-penyelenggara" class="form-label fw-bold fs-7 mb-1 text-dark">Penyelenggara <span class="text-danger">*</span></label>
+                                    <input type="text" id="input-prestasi-penyelenggara" name="penyelenggara" v-model="formPrestasi.penyelenggara" class="form-control form-control-sm rounded-3" placeholder="Contoh: Puspresnas / Kemendikbud" />
+                                </div>
+                            </div>
+
+                            <!-- Guru Pendamping & Poin Prestasi -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-8">
+                                    <label for="input-prestasi-guru" class="form-label fw-bold fs-7 mb-1 text-dark">Guru Pendamping</label>
+                                    <input type="text" id="input-prestasi-guru" name="guru_pendamping" v-model="formPrestasi.guru_pendamping" class="form-control form-control-sm rounded-3" placeholder="Tulis nama Guru Pendamping jika ada (Opsional)" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="input-prestasi-poin" class="form-label fw-bold fs-7 mb-1 text-dark">Poin Prestasi <span class="text-danger">*</span></label>
+                                    <input type="number" id="input-prestasi-poin" name="poin_prestasi" v-model.number="formPrestasi.poin_prestasi" class="form-control form-control-sm rounded-3 fw-bold text-success" min="0" max="1000" placeholder="Poin" />
+                                </div>
+                            </div>
+
+                            <!-- Files Upload -->
+                            <div class="border rounded-3 p-3 bg-light mb-2">
+                                <div class="fw-bold fs-7 text-dark mb-2"><i class="bi bi-file-earmark-arrow-up me-1"></i>Berkas Pendukung (Masing-masing maks. 1 MB)</div>
+                                
+                                <div class="mb-2">
+                                    <label for="input-file-bukti" class="form-label fs-8 fw-semibold mb-1 text-muted">Foto Bukti Sertifikat (.jpg, .jpeg, .png)</label>
+                                    <input type="file" id="input-file-bukti" name="foto_bukti_prestasi" class="form-control form-control-sm prestasi-file-input" accept="image/*" @change="handleFileUpload($event, 'foto_bukti_prestasi')" />
+                                    <div v-if="formPrestasi.existing_foto_bukti" class="fs-8 mt-1 text-success">
+                                        <i class="bi bi-check-circle-fill"></i> Sudah ada file terunggah:
+                                        <a :href="getFileUrl(formPrestasi.existing_foto_bukti)" target="_blank" class="fw-bold">Lihat Foto</a>
+                                    </div>
+                                </div>
+
+                                <div class="mb-2">
+                                    <label for="input-file-siswa" class="form-label fs-8 fw-semibold mb-1 text-muted">Foto Penerimaan Penghargaan / Siswa (.jpg, .jpeg, .png)</label>
+                                    <input type="file" id="input-file-siswa" name="foto_siswa_prestasi" class="form-control form-control-sm prestasi-file-input" accept="image/*" @change="handleFileUpload($event, 'foto_siswa_prestasi')" />
+                                    <div v-if="formPrestasi.existing_foto_siswa" class="fs-8 mt-1 text-success">
+                                        <i class="bi bi-check-circle-fill"></i> Sudah ada file terunggah:
+                                        <a :href="getFileUrl(formPrestasi.existing_foto_siswa)" target="_blank" class="fw-bold">Lihat Foto</a>
+                                    </div>
+                                </div>
+
+                                <div class="mb-2">
+                                    <label for="input-file-kegiatan" class="form-label fs-8 fw-semibold mb-1 text-muted">Foto Dokumentasi Kegiatan (.jpg, .jpeg, .png)</label>
+                                    <input type="file" id="input-file-kegiatan" name="foto_kegiatan_lomba" class="form-control form-control-sm prestasi-file-input" accept="image/*" @change="handleFileUpload($event, 'foto_kegiatan_lomba')" />
+                                    <div v-if="formPrestasi.existing_foto_kegiatan" class="fs-8 mt-1 text-success">
+                                        <i class="bi bi-check-circle-fill"></i> Sudah ada file terunggah:
+                                        <a :href="getFileUrl(formPrestasi.existing_foto_kegiatan)" target="_blank" class="fw-bold">Lihat Foto</a>
+                                    </div>
+                                </div>
+
+                                <div class="mb-0">
+                                    <label for="input-file-surat-tugas" class="form-label fs-8 fw-semibold mb-1 text-muted">Surat Tugas PDF/Gambar (.pdf, .jpg, .jpeg, .png)</label>
+                                    <input type="file" id="input-file-surat-tugas" name="surat_tugas_pdf" class="form-control form-control-sm prestasi-file-input" accept=".pdf,image/*" @change="handleFileUpload($event, 'surat_tugas_pdf')" />
+                                    <div v-if="formPrestasi.existing_surat_tugas" class="fs-8 mt-1 text-success">
+                                        <i class="bi bi-check-circle-fill"></i> Sudah ada file terunggah:
+                                        <a :href="getFileUrl(formPrestasi.existing_surat_tugas)" target="_blank" class="fw-bold">Lihat Berkas</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer border-top bg-light py-2 px-4 d-flex justify-content-end gap-2">
+                        <button type="button" @click="closePrestasiModal" class="btn btn-sm btn-outline-secondary rounded-3 px-4" data-bs-dismiss="modal">
+                            Batal
+                        </button>
+                        <button type="submit" form="form-prestasi-modal" class="btn btn-sm btn-primary rounded-3 px-4 fw-bold" :disabled="loadingPrestasi">
+                            <span v-if="loadingPrestasi" class="spinner-border spinner-border-sm me-1"></span>
+                            <i v-else class="bi bi-save me-1"></i> Simpan Prestasi
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1692,7 +1869,7 @@ function applySuperAdminTenantFilter(tenantId) {
             <div class="row g-3 align-items-end">
                 <div class="col-md-3">
                     <label for="select-ta-kehadiran" class="form-label fw-semibold fs-8 mb-1">Tahun Ajaran</label>
-                    <select id="select-ta-kehadiran" name="ta_kehadiran" class="form-select form-select-sm rounded-3" v-model="filterKehadiran.tahun_ajaran_id">
+                    <select id="select-ta-kehadiran" name="ta_kehadiran" class="form-select form-select-sm rounded-3" v-model="filterKehadiran.tahun_ajaran_id" @change="loadKehadiran">
                         <option value="">-- Pilih Tahun Ajaran --</option>
                         <option v-for="ta in tahunAjaranList" :key="ta.id" :value="ta.id">
                             {{ ta.tahun_ajaran }} ({{ ta.status === 'Aktif' ? 'Aktif' : 'Non-Aktif' }})
@@ -1701,14 +1878,14 @@ function applySuperAdminTenantFilter(tenantId) {
                 </div>
                 <div class="col-md-3">
                     <label for="select-sm-kehadiran" class="form-label fw-semibold fs-8 mb-1">Semester</label>
-                    <select id="select-sm-kehadiran" name="sm_kehadiran" class="form-select form-select-sm rounded-3" v-model="filterKehadiran.semester">
+                    <select id="select-sm-kehadiran" name="sm_kehadiran" class="form-select form-select-sm rounded-3" v-model="filterKehadiran.semester" @change="loadKehadiran">
                         <option value="Ganjil">Ganjil</option>
                         <option value="Genap">Genap</option>
                     </select>
                 </div>
                 <div class="col-md-3">
                     <label for="select-kls-kehadiran" class="form-label fw-semibold fs-8 mb-1">Kelas</label>
-                    <select id="select-kls-kehadiran" name="kls_kehadiran" class="form-select form-select-sm rounded-3" v-model="filterKehadiran.kelas_id">
+                    <select id="select-kls-kehadiran" name="kls_kehadiran" class="form-select form-select-sm rounded-3" v-model="filterKehadiran.kelas_id" @change="loadKehadiran">
                         <option value="">-- Pilih Kelas --</option>
                         <option v-for="k in listKelasKehadiran" :key="k.id" :value="k.id">
                             {{ k.nama_kelas }}
@@ -1725,19 +1902,33 @@ function applySuperAdminTenantFilter(tenantId) {
         </div>
 
         <!-- Main Workspace -->
-        <div class="row g-4" v-if="kehadiranData.length > 0">
+        <div class="row g-4" v-if="kehadiranData?.length > 0">
             <!-- Grid Table (Left) -->
             <div class="col-lg-8">
                 <div class="bk-card p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                         <div>
-                            <h6 class="fw-bold mb-0 text-dark">
-                                <i class="bi bi-grid-3x3-gap-fill me-2 text-primary"></i>Input Absensi Kehadiran Siswa
+                            <h6 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                                <i class="bi bi-grid-3x3-gap-fill text-primary"></i>Input Absensi Kehadiran Siswa
+                                <span v-if="isKehadiranLocked" class="badge bg-danger rounded-pill fs-8">
+                                    <i class="bi bi-lock-fill me-1"></i>Terkunci (Read Only)
+                                </span>
+                                <span v-else class="badge bg-success rounded-pill fs-8">
+                                    <i class="bi bi-unlock-fill me-1"></i>Bisa Diedit
+                                </span>
                             </h6>
                             <small class="text-muted fs-8">Gunakan tombol arah keyboard &larr; &rarr; &uarr; &darr; atau Enter untuk berpindah sel.</small>
                         </div>
-                        <div class="d-flex gap-2">
-                            <button class="btn btn-sm btn-outline-secondary rounded-3 text-dark fw-semibold" @click="setAllEmptyToZero" id="btn-set-nol">
+                        <div class="d-flex gap-2 align-items-center">
+                            <!-- Toggle Kunci Button -->
+                            <button v-if="isKehadiranLocked" class="btn btn-sm btn-outline-danger rounded-3 fw-semibold" @click="toggleLockKehadiran" id="btn-toggle-kunci">
+                                <i class="bi bi-unlock-fill me-1"></i> Buka Kunci Data
+                            </button>
+                            <button v-else class="btn btn-sm btn-warning rounded-3 text-dark fw-semibold" @click="toggleLockKehadiran" id="btn-toggle-kunci">
+                                <i class="bi bi-lock-fill me-1"></i> Kunci Data Kehadiran
+                            </button>
+                            <!-- Set Kosong Button -->
+                            <button class="btn btn-sm btn-outline-secondary rounded-3 text-dark fw-semibold" @click="setAllEmptyToZero" :disabled="isKehadiranLocked" id="btn-set-nol">
                                 Set Kosong &rarr; 0
                             </button>
                         </div>
@@ -1775,32 +1966,32 @@ function applySuperAdminTenantFilter(tenantId) {
                                     <!-- Sakit input -->
                                     <td class="text-center" :class="{'dirty-cell': isCellDirty(s.siswa_id, 'sakit')}">
                                         <div class="d-flex align-items-center justify-content-center gap-1">
-                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:20px;height:20px;line-height:0.5;" @click="decrementAbsen(s.siswa_id, 'sakit')">-</button>
+                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:20px;height:20px;line-height:0.5;" :disabled="isKehadiranLocked" @click="decrementAbsen(s.siswa_id, 'sakit')">-</button>
                                             <label :for="'sakit-' + s.siswa_id" class="visually-hidden">Sakit {{ s.nama_lengkap }}</label>
                                             <input type="number" :id="'sakit-' + s.siswa_id" :name="'sakit_' + s.siswa_id" class="form-control form-control-sm grid-input-number rounded-2 p-1" 
-                                                   v-model.number="s.sakit" min="0" @keydown="handleGridKeydown($event, idx, 'sakit')">
-                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:20px;height:20px;line-height:0.5;" @click="incrementAbsen(s.siswa_id, 'sakit')">+</button>
+                                                   v-model.number="s.sakit" min="0" :disabled="isKehadiranLocked" @keydown="handleGridKeydown($event, idx, 'sakit')">
+                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:20px;height:20px;line-height:0.5;" :disabled="isKehadiranLocked" @click="incrementAbsen(s.siswa_id, 'sakit')">+</button>
                                         </div>
                                     </td>
                                     <!-- Izin input -->
                                     <td class="text-center" :class="{'dirty-cell': isCellDirty(s.siswa_id, 'izin')}">
                                         <div class="d-flex align-items-center justify-content-center gap-1">
-                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:20px;height:20px;line-height:0.5;" @click="decrementAbsen(s.siswa_id, 'izin')">-</button>
+                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:20px;height:20px;line-height:0.5;" :disabled="isKehadiranLocked" @click="decrementAbsen(s.siswa_id, 'izin')">-</button>
                                             <label :for="'izin-' + s.siswa_id" class="visually-hidden">Izin {{ s.nama_lengkap }}</label>
                                             <input type="number" :id="'izin-' + s.siswa_id" :name="'izin_' + s.siswa_id" class="form-control form-control-sm grid-input-number rounded-2 p-1" 
-                                                   v-model.number="s.izin" min="0" @keydown="handleGridKeydown($event, idx, 'izin')">
-                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:20px;height:20px;line-height:0.5;" @click="incrementAbsen(s.siswa_id, 'izin')">+</button>
+                                                   v-model.number="s.izin" min="0" :disabled="isKehadiranLocked" @keydown="handleGridKeydown($event, idx, 'izin')">
+                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:20px;height:20px;line-height:0.5;" :disabled="isKehadiranLocked" @click="incrementAbsen(s.siswa_id, 'izin')">+</button>
                                         </div>
                                     </td>
                                     <!-- Alfa input -->
                                     <td class="text-center" :class="{'dirty-cell': isCellDirty(s.siswa_id, 'alfa')}" 
                                         :class="s.alfa > 5 ? 'cell-warning' : ((s.sakit + s.izin + s.alfa) > 7 ? 'cell-caution' : '')">
                                         <div class="d-flex align-items-center justify-content-center gap-1">
-                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:20px;height:20px;line-height:0.5;" @click="decrementAbsen(s.siswa_id, 'alfa')">-</button>
+                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:20px;height:20px;line-height:0.5;" :disabled="isKehadiranLocked" @click="decrementAbsen(s.siswa_id, 'alfa')">-</button>
                                             <label :for="'alfa-' + s.siswa_id" class="visually-hidden">Alfa {{ s.nama_lengkap }}</label>
                                             <input type="number" :id="'alfa-' + s.siswa_id" :name="'alfa_' + s.siswa_id" class="form-control form-control-sm grid-input-number rounded-2 p-1" 
-                                                   v-model.number="s.alfa" min="0" @keydown="handleGridKeydown($event, idx, 'alfa')">
-                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:20px;height:20px;line-height:0.5;" @click="incrementAbsen(s.siswa_id, 'alfa')">+</button>
+                                                   v-model.number="s.alfa" min="0" :disabled="isKehadiranLocked" @keydown="handleGridKeydown($event, idx, 'alfa')">
+                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:20px;height:20px;line-height:0.5;" :disabled="isKehadiranLocked" @click="incrementAbsen(s.siswa_id, 'alfa')">+</button>
                                         </div>
                                     </td>
                                     <!-- Status -->
@@ -1815,7 +2006,7 @@ function applySuperAdminTenantFilter(tenantId) {
                     </div>
 
                     <div class="d-flex justify-content-end gap-2 mt-4">
-                        <button class="btn btn-primary rounded-3 px-4 fw-bold" @click="saveKehadiran" :disabled="savingKehadiran" id="btn-simpan-kehadiran">
+                        <button class="btn btn-primary rounded-3 px-4 fw-bold" @click="saveKehadiran" :disabled="savingKehadiran || isKehadiranLocked" id="btn-simpan-kehadiran">
                             <span v-if="savingKehadiran" class="spinner-border spinner-border-sm me-1"></span>
                             <i v-else class="bi bi-floppy-fill me-1"></i> Simpan Absensi Kelas
                         </button>
@@ -1841,8 +2032,8 @@ function applySuperAdminTenantFilter(tenantId) {
                             <p class="fs-8 text-muted mb-2">Unggah berkas template Excel (.xlsx) yang sudah diedit. Pastikan kolom **UUID Sekolah, NISN, Sakit, Izin, Tanpa Keterangan (Alfa)** tetap ada.</p>
                             <div class="d-flex gap-2 align-items-center">
                                 <label for="file-import-kehadiran" class="visually-hidden">Unggah template kehadiran</label>
-                                <input type="file" id="file-import-kehadiran" name="file_import_kehadiran" @change="handleFileImportChange" class="form-control form-control-sm" accept=".xlsx">
-                                <button class="btn btn-sm btn-success rounded-3 fw-semibold" @click="importKehadiran" :disabled="importingKehadiran" id="btn-proses-impor-kehadiran">
+                                <input type="file" id="file-import-kehadiran" name="file_import_kehadiran" @change="handleFileImportChange" class="form-control form-control-sm" accept=".xlsx" :disabled="isKehadiranLocked">
+                                <button class="btn btn-sm btn-success rounded-3 fw-semibold" @click="importKehadiran" :disabled="importingKehadiran || isKehadiranLocked" id="btn-proses-impor-kehadiran">
                                     <span v-if="importingKehadiran" class="spinner-border spinner-border-sm me-1"></span>
                                     <i v-else class="bi bi-upload"></i> Impor
                                 </button>
@@ -1865,6 +2056,7 @@ function applySuperAdminTenantFilter(tenantId) {
          TAB 7: TATA TERTIB & POIN PELANGGARAN
     ════════════════════════════════════════════════════════════ -->
     <div v-show="activeTab === 'pelanggaran'" class="animate-fade-in">
+        <?php if ($activeGroup !== 'kedisiplinan'): ?>
         <!-- Sub navigation segment control -->
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2 border-bottom pb-2">
             <div class="sub-tabs-segment">
@@ -1893,6 +2085,7 @@ function applySuperAdminTenantFilter(tenantId) {
                 <i class="bi bi-info-circle me-1"></i> Akumulasi poin dihitung berdasarkan tahun ajaran berjalan.
             </div>
         </div>
+        <?php endif; ?>
 
         <!-- SUB-TAB 1: DASHBOARD & TREN -->
         <div v-show="activeSubTab === 'p_dashboard'" class="animate-fade-in">
@@ -1947,7 +2140,7 @@ function applySuperAdminTenantFilter(tenantId) {
                             <h6 class="fw-bold mb-3 text-dark">
                                 <i class="bi bi-trophy-fill me-2 text-danger"></i>Akumulasi Poin Tertinggi Minggu Ini
                             </h6>
-                            <div v-if="pelanggaranTopStudents.length > 0" class="table-responsive">
+                            <div v-if="pelanggaranTopStudents?.length > 0" class="table-responsive">
                                 <table class="table table-hover align-middle fs-8">
                                     <thead class="table-light">
                                         <tr>
@@ -2005,149 +2198,33 @@ function applySuperAdminTenantFilter(tenantId) {
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- SUB-TAB 2: CATAT PELANGGARAN (TRANSAKSI) -->
-        <div v-show="activeSubTab === 'p_input'" class="animate-fade-in">
-            <div class="row g-4">
-                <!-- Form Input/Edit Laporan (Kiri) -->
-                <div class="col-lg-4">
-                    <div class="bk-form-card p-4 rounded-4 shadow-sm border bg-white">
-                        <h6 class="fw-bold mb-3" style="color:var(--bk-primary);">
-                            <i class="bi" :class="formInputPelanggaran.id ? 'bi-pencil-square' : 'bi-plus-circle-fill'"></i>
-                            {{ formInputPelanggaran.id ? 'Edit Laporan Pelanggaran' : 'Catat Pelanggaran Siswa' }}
-                        </h6>
-
-                        <!-- Autocomplete search input -->
-                        <div v-if="!selectedPelanggaranSiswa.id" class="mb-3">
-                            <label for="pelanggaran-siswa-search" class="form-label fw-semibold fs-7">Cari Nama Siswa <span class="text-danger">*</span></label>
-                            <div style="position:relative;">
-                                <div class="input-group input-group-sm">
-                                    <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
-                                    <input type="text" id="pelanggaran-siswa-search" name="pelanggaran_siswa_search" class="form-control rounded-end-3 fs-7"
-                                           v-model="pelanggaranSearchSiswa"
-                                           @input="searchSiswaPelanggaranDebounce"
-                                           @blur="hidePelanggaranDropdownDelay"
-                                           placeholder="Ketik nama siswa..."
-                                           autocomplete="off">
-                                </div>
-                                <!-- Dropdown Autocomplete -->
-                                <div v-show="showPelanggaranSiswaDropdown && pelanggaranSiswaOptions.length > 0"
-                                     class="border rounded-3 bg-white shadow mt-1"
-                                     style="position:absolute;z-index:200;max-height:200px;overflow-y:auto;width:100%;">
-                                    <div v-for="s in pelanggaranSiswaOptions" :key="s.id"
-                                         class="px-3 py-2 border-bottom"
-                                         @mousedown.prevent="selectSiswaPelanggaran(s)"
-                                         style="cursor:pointer;font-size:0.8rem;"
-                                         :style="{background: siswaHoverPelanggaran === s.id ? '#eff6ff' : '#fff'}"
-                                         @mouseenter="siswaHoverPelanggaran = s.id" @mouseleave="siswaHoverPelanggaran = null">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div class="fw-semibold text-dark">{{ s.nama_lengkap }}</div>
-                                            <span class="badge rounded-pill bg-light text-primary border" style="font-size:0.65rem;">
-                                                {{ s.nama_kelas || 'Tanpa Kelas' }}
-                                            </span>
-                                        </div>
-                                        <div class="text-muted" style="font-size:0.7rem;">NISN: {{ s.nisn || '-' }}</div>
-                                    </div>
-                                    <div v-if="loadingSearchPelanggaranSiswa" class="text-center py-2 text-muted fs-8">
-                                        <span class="spinner-border spinner-border-sm me-1"></span>Mencari...
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Card info siswa terpilih -->
-                        <div v-else class="p-3 mb-3 rounded-4 shadow-sm border bg-light">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <div class="text-truncate" style="max-width:75%;">
-                                    <h6 class="fw-bold text-dark mb-0 text-truncate">{{ selectedPelanggaranSiswa.nama_lengkap }}</h6>
-                                    <p class="text-muted fs-9 mb-0">NISN: {{ selectedPelanggaranSiswa.nisn || '-' }}</p>
-                                </div>
-                                <button v-if="!formInputPelanggaran.id" class="btn btn-xs btn-outline-secondary rounded-pill px-2 py-0.5 fs-9"
-                                        type="button" @click="clearSiswaPelanggaran" id="btn-clear-siswa-pelanggaran">
-                                    <i class="bi bi-arrow-left-right"></i> Ganti
-                                </button>
-                            </div>
-                            <div class="border-top pt-2 mt-2">
-                                <span class="badge bg-primary rounded-3 py-1.5 px-2.5 fs-9">
-                                    {{ selectedPelanggaranSiswa.nama_kelas || '-' }}
-                                </span>
-                            </div>
-                        </div>
-
-                        <!-- Form fields -->
-                        <div class="mb-3">
-                            <label for="input-pelanggaran-id" class="form-label fw-semibold fs-7">Aturan Pelanggaran & Poin <span class="text-danger">*</span></label>
-                            <select id="input-pelanggaran-id" name="pelanggaran_id" class="form-select form-select-sm rounded-3" v-model="formInputPelanggaran.pelanggaran_id">
-                                <option value="">-- Pilih Pelanggaran --</option>
-                                <option v-for="rule in pelanggaranMasterList" :key="rule.id" :value="rule.id">
-                                    [{{ rule.kategori }}] {{ rule.nama_pelanggaran }} ({{ rule.bobot_poin }} Poin)
-                                </option>
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="input-tanggal-kejadian" class="form-label fw-semibold fs-7">Tanggal Kejadian <span class="text-danger">*</span></label>
-                            <input type="date" id="input-tanggal-kejadian" name="tanggal_kejadian" class="form-control form-control-sm rounded-3" v-model="formInputPelanggaran.tanggal_kejadian">
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="input-catatan-keterangan" class="form-label fw-semibold fs-7">Kronologi / Catatan Kejadian</label>
-                            <textarea id="input-catatan-keterangan" name="catatan_keterangan" class="form-control form-control-sm rounded-3 text-area-vertical" rows="3" 
-                                      v-model="formInputPelanggaran.catatan_keterangan"
-                                      placeholder="Tulis detail kronologi pelanggaran..."></textarea>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="input-foto-bukti-file" class="form-label fw-semibold fs-7">Foto Bukti (Maks 2MB)</label>
-                            <input type="file" id="input-foto-bukti-file" name="foto_bukti" class="form-control form-control-sm rounded-3 mb-2" 
-                                   accept="image/*" @change="handleFotoUpload">
-                            <div v-if="formInputPelanggaran.existing_foto" class="mt-2">
-                                <small class="text-muted d-block">Foto Sebelumnya:</small>
-                                <a :href="baseUrl + '/' + formInputPelanggaran.existing_foto" target="_blank" class="fs-8 text-primary fw-bold text-decoration-underline">
-                                    <i class="bi bi-image me-1"></i>Lihat Foto Bukti
-                                </a>
-                            </div>
-                        </div>
-
-                        <div class="d-flex gap-2 mt-4">
-                            <button class="btn btn-sm btn-outline-secondary rounded-3 w-50" type="button" @click="clearSiswaPelanggaran" id="btn-reset-pelanggaran-form">
-                                Batal / Reset
-                            </button>
-                            <button class="btn btn-sm btn-primary rounded-3 w-50 text-white fw-bold" @click="submitPelanggaran" :disabled="submittingPelanggaran" id="btn-submit-pelanggaran">
-                                <i class="bi bi-floppy me-1"></i>
-                                {{ formInputPelanggaran.id ? 'Perbarui' : 'Simpan' }}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Riwayat Laporan (Kanan) -->
-                <div class="col-lg-8">
+                <!-- Row 3: Riwayat Laporan Hari Ini & Terkini (Dashboard View) -->
+                <div class="mt-4">
                     <div class="bk-card p-4 rounded-4 shadow-sm border bg-white">
                         <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                             <div>
                                 <h6 class="fw-bold mb-0 text-dark">
-                                    <i class="bi bi-clock-history me-2 text-danger"></i>Riwayat Laporan Hari Ini & Terkini
+                                    <i class="bi bi-clock-history me-2 text-danger"></i>Riwayat Laporan Hari Ini &amp; Terkini
                                 </h6>
-                                <small class="text-muted fs-8">{{ filteredCatatanPelanggaran.length }} kejadian terdaftar</small>
+                                <small class="text-muted fs-8">{{ filteredCatatanPelanggaran?.length || 0 }} kejadian terdaftar</small>
                             </div>
                             <div class="d-flex gap-2">
-                                <label for="catatan-list-search" class="visually-hidden">Cari riwayat laporan</label>
-                                <input type="text" id="catatan-list-search" name="catatan_list_search" class="form-control form-control-sm rounded-3" style="width: 200px;" 
+                                <label for="catatan-dashboard-search" class="visually-hidden">Cari riwayat laporan</label>
+                                <input type="text" id="catatan-dashboard-search" name="catatan_dashboard_search" class="form-control form-control-sm rounded-3" style="width: 220px;" 
                                        v-model="catatanListSearch" placeholder="Cari nama, kelas...">
-                                <button class="btn btn-sm btn-outline-secondary rounded-3" @click="loadPelanggaranCatatan" :disabled="loadingPelanggaranCatatan" id="btn-refresh-catatan">
+                                <button class="btn btn-sm btn-outline-secondary rounded-3" @click="loadPelanggaranCatatan" :disabled="loadingPelanggaranCatatan" id="btn-refresh-catatan-dash">
                                     <i class="bi bi-arrow-clockwise"></i>
                                 </button>
                             </div>
                         </div>
 
-                        <div v-if="loadingPelanggaranCatatan" class="text-center py-5">
-                            <div class="spinner-border text-primary"></div>
+                        <div v-if="loadingPelanggaranCatatan" class="text-center py-4">
+                            <div class="spinner-border spinner-border-sm text-primary"></div>
+                            <span class="ms-2 text-muted fs-8">Memuat riwayat laporan...</span>
                         </div>
-                        <div v-else-if="filteredCatatanPelanggaran.length > 0" class="table-responsive" style="max-height:480px; overflow-y:auto;">
-                            <table class="table table-hover align-middle fs-8" id="tbl-riwayat-laporan">
+                        <div v-else-if="filteredCatatanPelanggaran?.length > 0" class="table-responsive" style="max-height:380px; overflow-y:auto;">
+                            <table class="table table-hover align-middle fs-8" id="tbl-riwayat-laporan-dash">
                                 <thead class="table-light sticky-top">
                                     <tr>
                                         <th>Tanggal</th>
@@ -2160,7 +2237,7 @@ function applySuperAdminTenantFilter(tenantId) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="c in filteredCatatanPelanggaran" :key="c.id">
+                                    <tr v-for="c in filteredCatatanPelanggaran" :key="'dash_' + c.id">
                                         <td class="text-muted text-nowrap">{{ formatTanggalIndo(c.tanggal_kejadian) }}</td>
                                         <td class="fw-bold text-dark">{{ c.nama_siswa }}</td>
                                         <td class="text-muted">{{ c.nisn || '-' }}</td>
@@ -2183,14 +2260,14 @@ function applySuperAdminTenantFilter(tenantId) {
                                             </div>
                                         </td>
                                         <td class="text-center">
-                                            <a v-if="c.foto_bukti" @click.prevent="showFotoModal(baseUrl + '/' + c.foto_bukti)" href="#" 
+                                            <a v-if="c.foto_bukti" @click.prevent="showFotoModal(secureFileUrl(c.foto_bukti))" href="#" 
                                                class="btn btn-xs btn-outline-info p-1 rounded-2" title="Foto Bukti">
                                                 <i class="bi bi-image"></i>
                                             </a>
                                             <span v-else class="text-muted">—</span>
                                         </td>
                                         <td class="text-end">
-                                            <button class="btn btn-xs btn-outline-primary me-1 rounded-2 py-0 px-2 fw-semibold" style="font-size:0.7rem; line-height:1.5;" @click="editPelanggaran(c)" title="Edit Laporan">
+                                            <button class="btn btn-xs btn-outline-primary me-1 rounded-2 py-0 px-2 fw-semibold" style="font-size:0.7rem; line-height:1.5;" @click="switchSubTab('p_input'); editPelanggaran(c)" title="Edit Laporan">
                                                 <i class="bi bi-pencil-square"></i>
                                             </button>
                                             <button class="btn btn-xs btn-outline-danger rounded-2 py-0 px-2 fw-semibold" style="font-size:0.7rem; line-height:1.5;" @click="deletePelanggaran(c.id)" title="Hapus Laporan">
@@ -2201,10 +2278,257 @@ function applySuperAdminTenantFilter(tenantId) {
                                 </tbody>
                             </table>
                         </div>
-                        <div v-else class="text-center py-5 text-muted">
-                            <i class="bi bi-journal-x fs-2 mb-2 d-block"></i>
-                            Tidak ada data pelanggaran.
+                        <div v-else class="text-center py-4 text-muted">
+                            <i class="bi bi-journal-x fs-3 mb-2 d-block"></i>
+                            Belum ada riwayat laporan hari ini / terkini.
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SUB-TAB 2: CATAT PELANGGARAN (TRANSAKSI) -->
+        <div v-show="activeSubTab === 'p_input'" class="animate-fade-in">
+            <div class="bk-card p-4 rounded-4 shadow-sm border bg-white">
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <div>
+                        <h6 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-shield-exclamation me-2 text-danger"></i>Catatan Pelanggaran Siswa
+                        </h6>
+                        <small class="text-muted fs-8">{{ filteredCatatanPelanggaran?.length || 0 }} kejadian terdaftar</small>
+                    </div>
+                    <div class="d-flex gap-2 align-items-center">
+                        <label for="catatan-list-search" class="visually-hidden">Cari riwayat laporan</label>
+                        <input type="text" id="catatan-list-search" name="catatan_list_search" class="form-control form-control-sm rounded-3" style="width: 220px;" 
+                               v-model="catatanListSearch" placeholder="Cari nama, kelas...">
+                        <button class="btn btn-sm btn-outline-secondary rounded-3" @click="loadPelanggaranCatatan" :disabled="loadingPelanggaranCatatan" id="btn-refresh-catatan" title="Refresh Data">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                        <button class="btn btn-sm btn-primary rounded-3 text-white fw-bold shadow-sm d-flex align-items-center gap-1 ms-1" @click="openPelanggaranModal" id="btn-open-modal-pelanggaran">
+                            <i class="bi bi-plus-circle-fill"></i> Catat Pelanggaran Baru
+                        </button>
+                    </div>
+                </div>
+
+                <div v-if="loadingPelanggaranCatatan" class="text-center py-5">
+                    <div class="spinner-border text-primary"></div>
+                </div>
+                <div v-else-if="filteredCatatanPelanggaran?.length > 0" class="table-responsive" style="max-height:540px; overflow-y:auto;">
+                    <table class="table table-hover align-middle fs-8" id="tbl-riwayat-laporan">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Nama Siswa</th>
+                                <th>NISN</th>
+                                <th>Kelas</th>
+                                <th>Kejadian Pelanggaran</th>
+                                <th class="text-center">Bukti</th>
+                                <th class="text-end" style="width: 100px;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="c in paginatedCatatanPelanggaran" :key="c.id">
+                                <td class="text-muted text-nowrap">{{ formatTanggalIndo(c.tanggal_kejadian) }}</td>
+                                <td class="fw-bold text-dark">{{ c.nama_siswa }}</td>
+                                <td class="text-muted">{{ c.nisn || '-' }}</td>
+                                <td>
+                                    <span class="badge bg-light text-primary border rounded-3">{{ c.nama_kelas || '-' }}</span>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold text-dark">
+                                        <span class="badge me-1" 
+                                              :class="getKategoriBadge(c.kategori)">{{ c.kategori }}</span>
+                                        {{ c.nama_pelanggaran }}
+                                    </div>
+                                    <div class="text-muted fs-9 mt-1" v-if="c.catatan_keterangan">
+                                        {{ c.catatan_keterangan }}
+                                    </div>
+                                    <div class="mt-1">
+                                        <span class="badge rounded-pill bg-light text-danger border" style="font-size: 0.65rem;">
+                                            +{{ c.bobot_poin }} Poin
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <a v-if="c.foto_bukti" @click.prevent="showFotoModal(secureFileUrl(c.foto_bukti))" href="#" 
+                                       class="btn btn-xs btn-outline-info p-1 rounded-2" title="Foto Bukti">
+                                        <i class="bi bi-image"></i>
+                                    </a>
+                                    <span v-else class="text-muted">—</span>
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-xs btn-outline-primary me-1 rounded-2 py-0 px-2 fw-semibold" style="font-size:0.7rem; line-height:1.5;" @click="editPelanggaran(c)" title="Edit Laporan">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                    <button class="btn btn-xs btn-outline-danger rounded-2 py-0 px-2 fw-semibold" style="font-size:0.7rem; line-height:1.5;" @click="deletePelanggaran(c.id)" title="Hapus Laporan">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination Controls: Catatan Pelanggaran -->
+                <div v-if="filteredCatatanPelanggaran?.length > 0" class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top flex-wrap gap-2">
+                    <div class="text-muted fs-8">
+                        Menampilkan <strong>{{ (currentPagePelanggaran - 1) * perPagePelanggaran + 1 }}</strong> - <strong>{{ Math.min(currentPagePelanggaran * perPagePelanggaran, filteredCatatanPelanggaran.length) }}</strong> dari <strong>{{ filteredCatatanPelanggaran.length }}</strong> kejadian
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        <button class="btn btn-xs btn-outline-secondary rounded-2 px-2" :disabled="currentPagePelanggaran === 1" @click="currentPagePelanggaran--">
+                            <i class="bi bi-chevron-left me-1"></i>Sebelumnya
+                        </button>
+                        <template v-for="p in totalPelanggaranPages" :key="'pelanggaran_p_' + p">
+                            <button v-if="p === 1 || p === totalPelanggaranPages || (p >= currentPagePelanggaran - 1 && p <= currentPagePelanggaran + 1)"
+                                    class="btn btn-xs rounded-2 px-2.5 fw-semibold"
+                                    :class="p === currentPagePelanggaran ? 'btn-primary text-white shadow-sm' : 'btn-outline-secondary text-dark'"
+                                    @click="currentPagePelanggaran = p">
+                                {{ p }}
+                            </button>
+                            <span v-else-if="(p === 2 && currentPagePelanggaran > 3) || (p === totalPelanggaranPages - 1 && currentPagePelanggaran < totalPelanggaranPages - 2)" class="px-1 text-muted fs-8">...</span>
+                        </template>
+                        <button class="btn btn-xs btn-outline-secondary rounded-2 px-2" :disabled="currentPagePelanggaran === totalPelanggaranPages" @click="currentPagePelanggaran++">
+                            Selanjutnya<i class="bi bi-chevron-right ms-1"></i>
+                        </button>
+                    </div>
+                </div>
+                <div v-else class="text-center py-5 text-muted">
+                    <i class="bi bi-journal-x fs-2 mb-2 d-block"></i>
+                    Belum ada data pelanggaran siswa. Klik tombol <strong>+ Catat Pelanggaran Baru</strong> di atas untuk membuat catatan.
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Popup Form Input/Edit Catatan Pelanggaran Siswa -->
+        <div class="modal fade" id="modalFormCatatPelanggaran" tabindex="-1" aria-labelledby="modalFormCatatPelanggaranLabel" aria-hidden="true" data-bs-backdrop="static">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content rounded-4 border-0 shadow">
+                    <div class="modal-header border-bottom py-3 bg-light">
+                        <h6 class="modal-title fw-bold text-dark d-flex align-items-center" id="modalFormCatatPelanggaranLabel">
+                            <i class="bi bi-shield-exclamation me-2 text-danger fs-5"></i>
+                            {{ formInputPelanggaran.id ? 'Edit Catatan Pelanggaran' : 'Catat Pelanggaran Siswa Baru' }}
+                        </h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" @click="closePelanggaranModal"></button>
+                    </div>
+                    <div class="modal-body p-4" style="min-height: 360px;">
+                        <form @submit.prevent="submitPelanggaran" id="form-pelanggaran-modal" enctype="multipart/form-data">
+                            <!-- Siswa Selection -->
+                            <div class="mb-3">
+                                <label for="pelanggaran-siswa-search" class="form-label fw-bold fs-7 mb-1 text-dark">
+                                    Pilih Siswa <span class="text-danger">*</span>
+                                </label>
+                                
+                                <!-- Jika Mode Edit: Tampilkan Info Siswa Terkunci -->
+                                <div v-if="formInputPelanggaran.id" class="p-2 px-3 border rounded-3 bg-light d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <span class="fw-bold text-dark me-2 fs-7">{{ selectedPelanggaranSiswa.nama_lengkap || 'Siswa' }}</span>
+                                        <span class="badge bg-primary rounded-3 me-1 fs-9">{{ selectedPelanggaranSiswa.nama_kelas || '-' }}</span>
+                                        <small class="text-muted fs-9">NISN: {{ selectedPelanggaranSiswa.nisn || '-' }}</small>
+                                    </div>
+                                    <span class="badge bg-secondary rounded-pill px-2 py-1 fs-9 d-flex align-items-center gap-1">
+                                        <i class="bi bi-lock-fill"></i> Terkunci
+                                    </span>
+                                </div>
+
+                                <!-- Jika Mode Tambah: Input Search Autocomplete -->
+                                <div v-else class="position-relative">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                                        <input type="text" 
+                                               id="pelanggaran-siswa-search"
+                                               name="pelanggaran_siswa_search"
+                                               class="form-control form-control-sm border-start-0 ps-1 rounded-end-3" 
+                                               placeholder="Ketik Nama, NISN, atau NIK Siswa..."
+                                               v-model="pelanggaranSearchSiswa"
+                                               @input="searchSiswaPelanggaranDebounce"
+                                               @focus="showPelanggaranSiswaDropdown = true"
+                                               @blur="hidePelanggaranDropdownDelay"
+                                               autocomplete="off" />
+                                    </div>
+                                    
+                                    <!-- Dropdown Autocomplete Pencarian Siswa -->
+                                    <div v-if="showPelanggaranSiswaDropdown && pelanggaranSiswaOptions?.length > 0" 
+                                         class="position-absolute w-100 bg-white border rounded-3 shadow-lg p-1 mt-1 z-3"
+                                         style="max-height: 220px; overflow-y: auto;">
+                                        <div v-for="s in pelanggaranSiswaOptions" 
+                                             :key="s.id" 
+                                             @mousedown.prevent="selectSiswaPelanggaran(s)"
+                                             class="p-2 rounded-2 hover-bg-slate cursor-pointer fs-7 d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <div class="fw-bold text-dark">{{ s.nama_lengkap }}</div>
+                                                <div class="text-muted fs-8">NISN: {{ s.nisn || '-' }} | Kelas: {{ s.nama_kelas || '-' }}</div>
+                                            </div>
+                                            <i class="bi bi-plus-circle-fill text-primary fs-6"></i>
+                                        </div>
+                                    </div>
+                                    <div v-else-if="showPelanggaranSiswaDropdown && loadingSearchPelanggaranSiswa" 
+                                         class="position-absolute w-100 bg-white border rounded-3 shadow-lg p-3 text-center mt-1 z-3">
+                                        <div class="spinner-border spinner-border-sm text-primary"></div>
+                                        <span class="fs-7 text-muted ms-2">Mencari...</span>
+                                    </div>
+                                </div>
+
+                                <!-- Siswa Terpilih Badge -->
+                                <div v-if="selectedPelanggaranSiswa?.id" class="mt-2 d-flex flex-wrap gap-2">
+                                    <div class="badge d-inline-flex align-items-center gap-2 p-2 rounded-3 text-dark" 
+                                         style="background: #fef2f2; color: #991b1b; border: 1px solid #fecaca;">
+                                        <span class="fw-semibold">{{ selectedPelanggaranSiswa.nama_lengkap }} ({{ selectedPelanggaranSiswa.nama_kelas || '-' }})</span>
+                                        <button v-if="!formInputPelanggaran.id" type="button" class="btn-close" style="font-size: 0.6rem; margin-left: 5px;" @click="clearSiswaPelanggaran" title="Hapus / Ganti Siswa"></button>
+                                        <i v-else class="bi bi-lock-fill text-muted ms-1" style="font-size:0.75rem;" title="Siswa terkunci saat edit data"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Form fields row: Rule & Date -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-7">
+                                    <label for="input-pelanggaran-id" class="form-label fw-bold fs-7 mb-1 text-dark">Aturan Pelanggaran & Poin <span class="text-danger">*</span></label>
+                                    <select id="input-pelanggaran-id" name="pelanggaran_id" class="form-select form-select-sm rounded-3" v-model="formInputPelanggaran.pelanggaran_id">
+                                        <option value="">-- Pilih Aturan Pelanggaran --</option>
+                                        <option v-for="rule in pelanggaranMasterList" :key="rule.id" :value="rule.id">
+                                            [{{ rule.kategori }}] {{ rule.nama_pelanggaran }} (+{{ rule.bobot_poin }} Poin)
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="col-md-5">
+                                    <label for="input-tanggal-kejadian" class="form-label fw-bold fs-7 mb-1 text-dark">Tanggal Kejadian <span class="text-danger">*</span></label>
+                                    <input type="date" id="input-tanggal-kejadian" name="tanggal_kejadian" class="form-control form-control-sm rounded-3" v-model="formInputPelanggaran.tanggal_kejadian">
+                                </div>
+                            </div>
+
+                            <!-- Kronologi -->
+                            <div class="mb-3">
+                                <label for="input-catatan-keterangan" class="form-label fw-bold fs-7 mb-1 text-dark">Kronologi / Catatan Kejadian</label>
+                                <textarea id="input-catatan-keterangan" name="catatan_keterangan" class="form-control form-control-sm rounded-3 text-area-vertical" rows="3" 
+                                          v-model="formInputPelanggaran.catatan_keterangan"
+                                          placeholder="Tuliskan detail kronologi atau catatan penting kejadian..."></textarea>
+                            </div>
+
+                            <!-- Upload Foto Bukti -->
+                            <div class="mb-2">
+                                <label for="input-foto-bukti-file" class="form-label fw-bold fs-7 mb-1 text-dark">
+                                    <i class="bi bi-camera-fill text-primary me-1"></i>Foto Bukti
+                                    <span class="badge bg-info text-dark fw-normal ms-1 fs-9">Kamera HP / File &bull; Otomatis dikompres &lt;1MB</span>
+                                </label>
+                                <input type="file" id="input-foto-bukti-file" name="foto_bukti" class="form-control form-control-sm rounded-3" 
+                                       accept="image/*" capture="environment" @change="handleFotoUpload">
+                                <div v-if="formInputPelanggaran.existing_foto" class="mt-2">
+                                    <small class="text-muted d-block">Foto Sebelumnya:</small>
+                                    <a @click.prevent="showFotoModal(secureFileUrl(formInputPelanggaran.existing_foto))" href="#" class="fs-8 text-primary fw-bold text-decoration-underline cursor-pointer">
+                                        <i class="bi bi-image me-1"></i>Lihat Foto Bukti Saat Ini
+                                    </a>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer border-top bg-light py-2 px-4">
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-3 px-3" data-bs-dismiss="modal" @click="closePelanggaranModal">
+                            Batal
+                        </button>
+                        <button type="button" class="btn btn-sm btn-primary text-white fw-bold rounded-3 px-4" @click="submitPelanggaran" :disabled="submittingPelanggaran">
+                            <i class="bi bi-floppy me-1"></i>
+                            {{ formInputPelanggaran.id ? 'Perbarui Laporan' : 'Simpan Pelanggaran' }}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -2244,7 +2568,7 @@ function applySuperAdminTenantFilter(tenantId) {
                 <div v-if="loadingPelanggaranSanksi" class="text-center py-5">
                     <div class="spinner-border text-primary"></div>
                 </div>
-                <div v-else-if="filteredSanksiBuku.length > 0" class="table-responsive">
+                <div v-else-if="filteredSanksiBuku?.length > 0" class="table-responsive">
                     <table class="table table-hover align-middle fs-8" id="tbl-buku-sanksi">
                         <thead class="table-light">
                             <tr>
@@ -2258,7 +2582,7 @@ function applySuperAdminTenantFilter(tenantId) {
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="item in filteredSanksiBuku" :key="item.siswa_id">
+                            <tr v-for="item in paginatedSanksiBuku" :key="item.siswa_id">
                                 <td><div class="fw-bold text-dark text-nowrap">{{ item.nama_lengkap }}</div></td>
                                 <td class="text-muted text-nowrap">{{ item.nisn || '-' }}</td>
                                 <td>
@@ -2303,6 +2627,30 @@ function applySuperAdminTenantFilter(tenantId) {
                             </tr>
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Pagination Controls: Buku Catatan Sanksi -->
+                <div v-if="filteredSanksiBuku?.length > 0" class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top flex-wrap gap-2">
+                    <div class="text-muted fs-8">
+                        Menampilkan <strong>{{ (currentPageSanksi - 1) * perPageSanksi + 1 }}</strong> - <strong>{{ Math.min(currentPageSanksi * perPageSanksi, filteredSanksiBuku.length) }}</strong> dari <strong>{{ filteredSanksiBuku.length }}</strong> siswa
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        <button class="btn btn-xs btn-outline-secondary rounded-2 px-2" :disabled="currentPageSanksi === 1" @click="currentPageSanksi--">
+                            <i class="bi bi-chevron-left me-1"></i>Sebelumnya
+                        </button>
+                        <template v-for="p in totalSanksiPages" :key="'sanksi_p_' + p">
+                            <button v-if="p === 1 || p === totalSanksiPages || (p >= currentPageSanksi - 1 && p <= currentPageSanksi + 1)"
+                                    class="btn btn-xs rounded-2 px-2.5 fw-semibold"
+                                    :class="p === currentPageSanksi ? 'btn-primary text-white shadow-sm' : 'btn-outline-secondary text-dark'"
+                                    @click="currentPageSanksi = p">
+                                {{ p }}
+                            </button>
+                            <span v-else-if="(p === 2 && currentPageSanksi > 3) || (p === totalSanksiPages - 1 && currentPageSanksi < totalSanksiPages - 2)" class="px-1 text-muted fs-8">...</span>
+                        </template>
+                        <button class="btn btn-xs btn-outline-secondary rounded-2 px-2" :disabled="currentPageSanksi === totalSanksiPages" @click="currentPageSanksi++">
+                            Selanjutnya<i class="bi bi-chevron-right ms-1"></i>
+                        </button>
+                    </div>
                 </div>
                 <div v-else class="text-center py-5 text-muted">
                     <i class="bi bi-people-fill fs-2 mb-2 d-block"></i>
@@ -2376,7 +2724,7 @@ function applySuperAdminTenantFilter(tenantId) {
                         <div v-if="loadingPelanggaranMaster" class="text-center py-5">
                             <div class="spinner-border text-primary"></div>
                         </div>
-                        <div v-else-if="pelanggaranMasterList.length > 0" class="table-responsive">
+                        <div v-else-if="pelanggaranMasterList?.length > 0" class="table-responsive">
                             <table class="table table-hover align-middle fs-8" id="tbl-master-aturan">
                                 <thead class="table-light">
                                     <tr>
@@ -2387,7 +2735,7 @@ function applySuperAdminTenantFilter(tenantId) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="rule in pelanggaranMasterList" :key="rule.id">
+                                    <tr v-for="rule in paginatedPelanggaranMasterList" :key="rule.id">
                                         <td>
                                             <span class="badge" :class="getKategoriBadge(rule.kategori)">{{ rule.kategori }}</span>
                                         </td>
@@ -2404,6 +2752,30 @@ function applySuperAdminTenantFilter(tenantId) {
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+
+                        <!-- Pagination Controls: Master Aturan -->
+                        <div v-if="pelanggaranMasterList?.length > 0" class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top flex-wrap gap-2">
+                            <div class="text-muted fs-8">
+                                Menampilkan <strong>{{ (currentPageMaster - 1) * perPageMaster + 1 }}</strong> - <strong>{{ Math.min(currentPageMaster * perPageMaster, pelanggaranMasterList.length) }}</strong> dari <strong>{{ pelanggaranMasterList.length }}</strong> aturan
+                            </div>
+                            <div class="d-flex align-items-center gap-1">
+                                <button class="btn btn-xs btn-outline-secondary rounded-2 px-2" :disabled="currentPageMaster === 1" @click="currentPageMaster--">
+                                    <i class="bi bi-chevron-left me-1"></i>Sebelumnya
+                                </button>
+                                <template v-for="p in totalMasterPages" :key="'master_p_' + p">
+                                    <button v-if="p === 1 || p === totalMasterPages || (p >= currentPageMaster - 1 && p <= currentPageMaster + 1)"
+                                            class="btn btn-xs rounded-2 px-2.5 fw-semibold"
+                                            :class="p === currentPageMaster ? 'btn-primary text-white shadow-sm' : 'btn-outline-secondary text-dark'"
+                                            @click="currentPageMaster = p">
+                                        {{ p }}
+                                    </button>
+                                    <span v-else-if="(p === 2 && currentPageMaster > 3) || (p === totalMasterPages - 1 && currentPageMaster < totalMasterPages - 2)" class="px-1 text-muted fs-8">...</span>
+                                </template>
+                                <button class="btn btn-xs btn-outline-secondary rounded-2 px-2" :disabled="currentPageMaster === totalMasterPages" @click="currentPageMaster++">
+                                    Selanjutnya<i class="bi bi-chevron-right ms-1"></i>
+                                </button>
+                            </div>
                         </div>
                         <div v-else class="text-center py-5 text-muted">
                             <i class="bi bi-info-circle fs-2 mb-2 d-block"></i>
@@ -2439,11 +2811,11 @@ function applySuperAdminTenantFilter(tenantId) {
                         <div class="row g-3">
                             <div class="col-md-6 border-end">
                                 <span class="badge bg-light text-primary border mb-1">PROFIL SISWA</span>
-                                <h5 class="fw-bold text-dark mb-1">{{ sanksiDetailModal.student.nama_lengkap }}</h5>
+                                <h5 class="fw-bold text-dark mb-1">{{ sanksiDetailModal.student?.nama_lengkap || 'Memuat Data Siswa...' }}</h5>
                                 <div class="text-muted fs-8 d-flex flex-wrap gap-3">
-                                    <span><strong>NISN:</strong> {{ sanksiDetailModal.student.nisn || '-' }}</span>
-                                    <span><strong>NIS:</strong> {{ sanksiDetailModal.student.nis || '-' }}</span>
-                                    <span><strong>Kelas:</strong> {{ sanksiDetailModal.student.nama_kelas || '-' }}</span>
+                                    <span><strong>NISN:</strong> {{ sanksiDetailModal.student?.nisn || '-' }}</span>
+                                    <span><strong>NIS:</strong> {{ sanksiDetailModal.student?.nis || '-' }}</span>
+                                    <span><strong>Kelas:</strong> {{ sanksiDetailModal.student?.nama_kelas || '-' }}</span>
                                 </div>
                             </div>
                             <!-- Point Gauge and Status Indicators -->
@@ -2498,7 +2870,7 @@ function applySuperAdminTenantFilter(tenantId) {
                             <div class="p-3 border rounded-4 bg-light" style="max-height: 400px; overflow-y: auto;">
                                 <h6 class="fw-bold text-dark mb-3"><i class="bi bi-clock-history me-2 text-danger"></i>Timeline Riwayat Pelanggaran</h6>
                                 
-                                <div v-if="sanksiDetailModal.violations.length > 0" class="timeline-container px-2">
+                                <div v-if="sanksiDetailModal.violations && sanksiDetailModal.violations.length > 0" class="timeline-container px-2">
                                     <div v-for="v in sanksiDetailModal.violations" :key="v.id" class="border-start border-2 border-danger pb-3 ps-3 position-relative">
                                         <!-- Timeline node dot -->
                                         <div class="rounded-circle bg-danger position-absolute" style="width: 10px; height: 10px; left: -6px; top: 4px;"></div>
@@ -2514,7 +2886,7 @@ function applySuperAdminTenantFilter(tenantId) {
                                         
                                         <!-- Image Proof Thumbnail -->
                                         <div v-if="v.foto_bukti" class="mt-2">
-                                            <a @click.prevent="showFotoModal(baseUrl + '/' + v.foto_bukti)" href="#" class="d-inline-flex align-items-center gap-1 btn btn-xs btn-outline-secondary p-1 rounded-2">
+                                            <a @click.prevent="showFotoModal(secureFileUrl(v.foto_bukti))" href="#" class="d-inline-flex align-items-center gap-1 btn btn-xs btn-outline-secondary p-1 rounded-2">
                                                 <i class="bi bi-file-earmark-image text-info"></i>
                                                 <span class="fs-9">Lihat Bukti Foto</span>
                                             </a>
@@ -2533,7 +2905,7 @@ function applySuperAdminTenantFilter(tenantId) {
                             <div class="p-3 border rounded-4 bg-light mb-3" style="max-height: 250px; overflow-y: auto;">
                                 <h6 class="fw-bold text-dark mb-3"><i class="bi bi-journal-check me-2 text-violet"></i>Log Intervensi & Pembinaan BK</h6>
                                 
-                                <div v-if="sanksiDetailModal.followUps.length > 0" class="timeline-container px-2">
+                                <div v-if="sanksiDetailModal.followUps && sanksiDetailModal.followUps.length > 0" class="timeline-container px-2">
                                     <div v-for="f in sanksiDetailModal.followUps" :key="f.id" class="border-start border-2 border-primary pb-3 ps-3 position-relative">
                                         <!-- Timeline node dot -->
                                         <div class="rounded-circle bg-primary position-absolute" style="width: 10px; height: 10px; left: -6px; top: 4px;"></div>
@@ -2545,7 +2917,15 @@ function applySuperAdminTenantFilter(tenantId) {
                                         <p class="text-dark mb-1 fs-8 mt-1 fw-semibold">
                                             {{ f.keterangan_tindakan }}
                                         </p>
-                                        <div class="text-muted fs-9 text-end">
+                                        <div v-if="f.surat_panggilan_pdf || f.foto_bukti" class="mt-2 d-flex gap-2 flex-wrap">
+                                            <a v-if="f.surat_panggilan_pdf" :href="secureFileUrl(f.surat_panggilan_pdf)" target="_blank" class="badge bg-danger text-white text-decoration-none rounded-2 py-1 px-2">
+                                                <i class="bi bi-file-earmark-pdf-fill me-1"></i> Surat Panggilan
+                                            </a>
+                                            <button v-if="f.foto_bukti" type="button" @click="showFotoModal(secureFileUrl(f.foto_bukti))" class="badge bg-info text-dark border-0 rounded-2 py-1 px-2 cursor-pointer">
+                                                <i class="bi bi-image-fill me-1"></i> Foto Dokumentasi
+                                            </button>
+                                        </div>
+                                        <div class="text-muted fs-9 text-end mt-1">
                                             Diinput oleh: <strong>{{ f.nama_guru }}</strong>
                                         </div>
                                     </div>
@@ -2580,6 +2960,22 @@ function applySuperAdminTenantFilter(tenantId) {
                                         <textarea id="input-tindak-keterangan" name="keterangan_tindakan" class="form-control form-control-sm rounded-3 fs-8 text-area-vertical" rows="2" 
                                                   v-model="formTindakLanjut.keterangan_tindakan" placeholder="Deskripsikan hasil konseling, komitmen siswa, atau sanksi administratif..."></textarea>
                                     </div>
+
+                                    <!-- Upload Files Fields -->
+                                    <div class="col-md-6 mt-2">
+                                        <label for="input-tindak-surat" class="form-label fw-semibold fs-8 mb-1 text-dark">
+                                            <i class="bi bi-file-earmark-pdf text-danger me-1"></i>Surat Panggilan (PDF / Foto)
+                                        </label>
+                                        <input type="file" id="input-tindak-surat" class="form-control form-control-sm rounded-3 fs-8" accept=".pdf,.jpg,.jpeg,.png,.webp" @change="handleSuratPanggilanUpload">
+                                    </div>
+                                    <div class="col-md-6 mt-2">
+                                        <label for="input-tindak-foto" class="form-label fw-semibold fs-8 mb-1 text-dark">
+                                            <i class="bi bi-camera-fill text-primary me-1"></i>Foto Bukti / Dokumentasi
+                                            <span class="badge bg-info text-dark fw-normal ms-1 fs-9">Kamera HP &bull; Otomatis &lt;1MB</span>
+                                        </label>
+                                        <input type="file" id="input-tindak-foto" class="form-control form-control-sm rounded-3 fs-8" accept="image/*" capture="environment" @change="handleFotoPembinaanUpload">
+                                    </div>
+
                                     <div class="col-md-12 mt-3 text-end">
                                         <button class="btn btn-sm btn-primary rounded-3 px-3 py-1.5 fw-bold" @click="submitTindakLanjut(sanksiDetailModal.student.id)" :disabled="submittingTindakLanjut" id="btn-save-tindakan">
                                             <span v-if="submittingTindakLanjut" class="spinner-border spinner-border-sm me-1"></span>
@@ -2598,10 +2994,10 @@ function applySuperAdminTenantFilter(tenantId) {
     </div>
 
     <!-- PROOF IMAGE LIGHTBOX MODAL -->
-    <div v-if="fotoModal.show" class="modal-backdrop-custom d-flex align-items-center justify-content-center" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.8); z-index:1060;" @click="fotoModal.show = false">
-        <div class="position-relative p-2" style="max-width:90%; max-height:90%;">
-            <img :src="fotoModal.src" class="img-fluid rounded-3 shadow-lg" style="max-height:80vh;" alt="Foto bukti fisik pelanggaran">
-            <button class="btn btn-dark rounded-circle position-absolute" style="top:-15px; right:-15px; width:36px; height:36px; display:flex; align-items:center; justify-content:center;" @click="fotoModal.show = false" id="btn-close-foto-modal">
+    <div v-if="fotoModal.show" class="modal-backdrop-custom d-flex align-items-center justify-content-center" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.85); z-index:99999;" @click="fotoModal.show = false">
+        <div class="position-relative p-2" style="max-width:90%; max-height:90%; z-index:100000;" @click.stop>
+            <img :src="fotoModal.src" class="img-fluid rounded-3 shadow-lg bg-white" style="max-height:80vh;" alt="Foto bukti fisik pelanggaran">
+            <button class="btn btn-dark rounded-circle position-absolute" style="top:-15px; right:-15px; width:36px; height:36px; display:flex; align-items:center; justify-content:center; z-index:100001;" @click="fotoModal.show = false" id="btn-close-foto-modal">
                 <i class="bi bi-x fs-4"></i>
             </button>
         </div>
@@ -2654,7 +3050,7 @@ function applySuperAdminTenantFilter(tenantId) {
                             </div>
                             
                             <!-- Dropdown Pencarian Siswa -->
-                            <div v-if="showBeasiswaSiswaDropdown && beasiswaSiswaOptions.length > 0" 
+                            <div v-if="showBeasiswaSiswaDropdown && beasiswaSiswaOptions?.length > 0" 
                                  class="position-absolute w-100 bg-white border rounded-3 shadow-lg p-1 mt-1 z-3"
                                  style="max-height: 250px; overflow-y: auto;">
                                 <div v-for="s in beasiswaSiswaOptions" 
@@ -2771,7 +3167,7 @@ function applySuperAdminTenantFilter(tenantId) {
                                         </button>
                                     </td>
                                 </tr>
-                                <tr v-if="allBeasiswaList.length === 0">
+                                <tr v-if="!allBeasiswaList || allBeasiswaList?.length === 0">
                                     <td colspan="8" class="text-center py-4 text-muted">
                                         Tidak ada data beasiswa yang tercatat.
                                     </td>
@@ -2800,7 +3196,7 @@ function applySuperAdminTenantFilter(tenantId) {
                             <option value="">— Tahun Ajaran —</option>
                             <option v-for="ta in tahunAjaranList" :key="ta.id" :value="ta.id">{{ ta.tahun_ajaran }}</option>
                         </select>
-                        <button class="btn btn-sm btn-outline-success rounded-3" @click="exportKesiapanExcel()" :disabled="kesiapanList.length === 0">
+                        <button class="btn btn-sm btn-outline-success rounded-3" @click="exportKesiapanExcel()" :disabled="!kesiapanList || kesiapanList?.length === 0">
                             <i class="bi bi-file-earmark-excel me-1"></i> Export Excel
                         </button>
                     </div>
@@ -2872,7 +3268,7 @@ function applySuperAdminTenantFilter(tenantId) {
                                         </button>
                                     </td>
                                 </tr>
-                                <tr v-if="kesiapanList.length === 0">
+                                <tr v-if="!kesiapanList || kesiapanList?.length === 0">
                                     <td colspan="8" class="text-center py-5 text-muted">
                                         <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
                                         Pilih Tahun Ajaran untuk melihat data kesiapan siswa.
@@ -2902,7 +3298,7 @@ function applySuperAdminTenantFilter(tenantId) {
                             <option value="">— Tahun Ajaran —</option>
                             <option v-for="ta in tahunAjaranList" :key="ta.id" :value="ta.id">{{ ta.tahun_ajaran }}</option>
                         </select>
-                        <button class="btn btn-sm btn-success rounded-3" @click="exportSimulasiXlsx()" :disabled="simulasiList.length === 0">
+                        <button class="btn btn-sm btn-success rounded-3" @click="exportSimulasiXlsx()" :disabled="!simulasiList || simulasiList?.length === 0">
                             <i class="bi bi-file-earmark-excel me-1"></i> Export XLSX SNBP
                         </button>
                     </div>
@@ -3027,7 +3423,7 @@ function applySuperAdminTenantFilter(tenantId) {
                                     <button class="btn btn-xs btn-outline-danger rounded-2" @click="deleteKampus(k.id)" title="Hapus"><i class="bi bi-trash"></i></button>
                                 </td>
                             </tr>
-                            <tr v-if="kampusList.length === 0">
+                            <tr v-if="!kampusList || kampusList?.length === 0">
                                 <td colspan="7" class="text-center py-5 text-muted">
                                     <i class="bi bi-building fs-1 d-block mb-2 opacity-25"></i>
                                     Belum ada data kampus. Klik "Tambah Kampus" untuk memulai.
@@ -3104,7 +3500,7 @@ function applySuperAdminTenantFilter(tenantId) {
                                     <button class="btn btn-xs btn-outline-danger rounded-2" @click="deleteJalur(j.id)"><i class="bi bi-trash"></i></button>
                                 </td>
                             </tr>
-                            <tr v-if="jalurList.length === 0">
+                            <tr v-if="!jalurList || jalurList?.length === 0">
                                 <td colspan="5" class="text-center py-5 text-muted">
                                     <i class="bi bi-door-open fs-1 d-block mb-2 opacity-25"></i>
                                     Belum ada data jalur masuk. Klik "Tambah Jalur" untuk memulai.
@@ -3219,7 +3615,7 @@ function applySuperAdminTenantFilter(tenantId) {
                                 </td>
                                 <td class="text-muted">{{ a.keterangan || '-' }}</td>
                             </tr>
-                            <tr v-if="alumniTrackingList.length === 0">
+                            <tr v-if="!alumniTrackingList || alumniTrackingList?.length === 0">
                                 <td colspan="6" class="text-center py-5 text-muted">
                                     <i class="bi bi-people fs-1 d-block mb-2 opacity-25"></i>
                                     Belum ada data alumni yang terdata.
@@ -3286,7 +3682,7 @@ function applySuperAdminTenantFilter(tenantId) {
                                     <button class="btn btn-xs btn-outline-danger rounded-2" @click="deleteKuliah(k.id)" title="Hapus"><i class="bi bi-trash"></i></button>
                                 </td>
                             </tr>
-                            <tr v-if="riwayatKuliahList.length === 0">
+                            <tr v-if="!riwayatKuliahList || riwayatKuliahList?.length === 0">
                                 <td colspan="9" class="text-center py-5 text-muted">
                                     <i class="bi bi-book fs-1 d-block mb-2 opacity-25"></i>
                                     Belum ada data riwayat kuliah alumni.
@@ -3351,7 +3747,7 @@ function applySuperAdminTenantFilter(tenantId) {
                                     <button class="btn btn-xs btn-outline-danger rounded-2" @click="deletePekerjaan(p.id)" title="Hapus"><i class="bi bi-trash"></i></button>
                                 </td>
                             </tr>
-                            <tr v-if="riwayatPekerjaanList.length === 0">
+                            <tr v-if="!riwayatPekerjaanList || riwayatPekerjaanList?.length === 0">
                                 <td colspan="8" class="text-center py-5 text-muted">
                                     <i class="bi bi-briefcase fs-1 d-block mb-2 opacity-25"></i>
                                     Belum ada data riwayat pekerjaan alumni.
@@ -3379,6 +3775,7 @@ const _tahunAjaranList = <?= json_encode($tahunAjaranList, JSON_HEX_TAG | JSON_H
 
 window.VueAppRegistry.register('#bkApp', {
     setup() {
+        const { ref, computed, watch, onMounted } = Vue;
         const userRole       = _userRole;
         const baseUrl        = _baseUrl;
 
@@ -3395,7 +3792,8 @@ window.VueAppRegistry.register('#bkApp', {
         });
 
         // ─── State ──────────────────────────────────────────
-        const activeTab      = ref('<?= $allowed_bk_tabs[0] ?? "dashboard" ?>');
+        const activeTab      = ref('<?= $defaultMainTab ?>');
+        const activeSubTab   = ref('<?= $defaultSubTab ?>');
         const currentTenantId= ref(_tenantId);
 
         // ─── Kehadiran State ────────────────────────────────
@@ -3408,9 +3806,9 @@ window.VueAppRegistry.register('#bkApp', {
         const listKelasKehadiran = ref([]);
         const fileImportKehadiran = ref(null);
         const tahunAjaranList = ref(_tahunAjaranList || []);
+        const isKehadiranLocked = ref(false);
 
         // ─── Pelanggaran & Poin State ────────────────────────
-        const activeSubTab = ref('p_dashboard');
         const loadingPelanggaranDashboard = ref(false);
         const pelanggaranKpi = ref({ wali_kelas: 0, sp1_bk: 0, sp2_skorsing: 0, sp3_do: 0, total_siswa_melanggar: 0 });
         const pelanggaranTopStudents = ref([]);
@@ -3485,6 +3883,13 @@ window.VueAppRegistry.register('#bkApp', {
         });
         const pieColors = ['#7c3aed','#2563eb','#10b981','#f59e0b','#ef4444','#64748b'];
 
+        // Prestasi Filter State (placed early for computed dependencies)
+        const activeYearsList = ref(_tahunAjaranList || []);
+        const prestasiList = ref([]);
+        const filterPrestasiTahunAjaran = ref('');
+        const filterPrestasiTingkat     = ref('');
+        const filterPrestasiSearch      = ref('');
+
         // Tracer
         const loadingTracer = ref(false);
         const tracerData    = ref({ kuliah: 0, pekerjaan: 0, total: 0 });
@@ -3496,6 +3901,7 @@ window.VueAppRegistry.register('#bkApp', {
         const loadingKasusList  = ref(false);
         const kasusList         = ref([]);
         const kasusListSearch   = ref(''); // Filter lokal untuk tabel riwayat
+        const kasusStatusFilter = ref('aktif'); // Default: 'aktif' (Otomatis tampilkan Terbuka & Dalam Proses)
         const alertJurnal       = ref({ msg: '', type: 'success' });
         const kasusSearchSiswa  = ref('');
         const siswaOptions      = ref([]);
@@ -3508,11 +3914,24 @@ window.VueAppRegistry.register('#bkApp', {
         const today = new Date().toISOString().split('T')[0];
         let debounceTimer = null;
 
-        // Computed: filter tabel riwayat kasus secara lokal
+        // Computed: filter tabel riwayat kasus secara lokal (Default otomatis: Terbuka & Proses)
         const filteredKasusList = computed(() => {
-            if (!kasusListSearch.value.trim()) return kasusList.value;
+            let list = kasusList.value || [];
+
+            // Filter berdasarkan status kasus (Default: 'aktif' = Terbuka & Dalam Proses)
+            if (kasusStatusFilter.value === 'aktif') {
+                list = list.filter(k => k.status_kasus === 'Terbuka' || k.status_kasus === 'Proses');
+            } else if (kasusStatusFilter.value === 'Terbuka') {
+                list = list.filter(k => k.status_kasus === 'Terbuka');
+            } else if (kasusStatusFilter.value === 'Proses') {
+                list = list.filter(k => k.status_kasus === 'Proses');
+            } else if (kasusStatusFilter.value === 'Selesai') {
+                list = list.filter(k => k.status_kasus === 'Selesai');
+            }
+
+            if (!kasusListSearch.value.trim()) return list;
             const q = kasusListSearch.value.toLowerCase();
-            return kasusList.value.filter(k =>
+            return list.filter(k =>
                 (k.nama_siswa         || '').toLowerCase().includes(q) ||
                 (k.nisn               || '').includes(q) ||
                 (k.nis                || '').includes(q) ||
@@ -3563,6 +3982,98 @@ window.VueAppRegistry.register('#bkApp', {
             }
             return list;
         });
+
+        const filteredPrestasiList = computed(() => {
+            let list = [...(prestasiList.value || [])];
+
+            // 1. Filter Tahun Ajaran
+            if (filterPrestasiTahunAjaran.value) {
+                list = list.filter(p => 
+                    String(p.tahun_ajaran_id) === String(filterPrestasiTahunAjaran.value) ||
+                    String(p.tahun_ajaran || '') === String(filterPrestasiTahunAjaran.value)
+                );
+            }
+
+            // 2. Filter Tingkat Kejuaraan
+            if (filterPrestasiTingkat.value) {
+                list = list.filter(p => p.tingkat_kejuaraan === filterPrestasiTingkat.value);
+            }
+
+            // 3. Filter Pencarian Teks
+            if (filterPrestasiSearch.value.trim()) {
+                const q = filterPrestasiSearch.value.toLowerCase();
+                list = list.filter(p =>
+                    (p.nama_lomba         || '').toLowerCase().includes(q) ||
+                    (p.bidang_lomba       || '').toLowerCase().includes(q) ||
+                    (p.juara              || '').toLowerCase().includes(q) ||
+                    (p.tingkat_kejuaraan  || '').toLowerCase().includes(q) ||
+                    (p.nomor_sertifikat   || '').toLowerCase().includes(q) ||
+                    (p.penyelenggara      || '').toLowerCase().includes(q) ||
+                    (p.siswa_list || []).some(s => 
+                        (s.nama_lengkap   || '').toLowerCase().includes(q) ||
+                        (s.nisn           || '').includes(q) ||
+                        (s.nama_kelas     || '').toLowerCase().includes(q)
+                    )
+                );
+            }
+
+            // 4. Tampilkan yang Terbaru (Sort Descending)
+            list.sort((a, b) => {
+                const dateA = a.tanggal_lomba || a.created_at || a.id || '';
+                const dateB = b.tanggal_lomba || b.created_at || b.id || '';
+                if (dateA < dateB) return 1;
+                if (dateA > dateB) return -1;
+                return 0;
+            });
+
+            return list;
+        });
+
+        // ─── Pagination States & Computed ───────────────────
+        const currentPageKasus = ref(1);
+        const perPageKasus = ref(10);
+        const totalKasusPages = computed(() => Math.ceil((filteredKasusList.value?.length || 0) / perPageKasus.value) || 1);
+        const paginatedKasusList = computed(() => {
+            const start = (currentPageKasus.value - 1) * perPageKasus.value;
+            return (filteredKasusList.value || []).slice(start, start + perPageKasus.value);
+        });
+        watch([kasusListSearch, kasusStatusFilter, filteredKasusList], () => { currentPageKasus.value = 1; });
+
+        const currentPagePelanggaran = ref(1);
+        const perPagePelanggaran = ref(10);
+        const totalPelanggaranPages = computed(() => Math.ceil((filteredCatatanPelanggaran.value?.length || 0) / perPagePelanggaran.value) || 1);
+        const paginatedCatatanPelanggaran = computed(() => {
+            const start = (currentPagePelanggaran.value - 1) * perPagePelanggaran.value;
+            return (filteredCatatanPelanggaran.value || []).slice(start, start + perPagePelanggaran.value);
+        });
+        watch([catatanListSearch, filteredCatatanPelanggaran], () => { currentPagePelanggaran.value = 1; });
+
+        const currentPageSanksi = ref(1);
+        const perPageSanksi = ref(10);
+        const totalSanksiPages = computed(() => Math.ceil((filteredSanksiBuku.value?.length || 0) / perPageSanksi.value) || 1);
+        const paginatedSanksiBuku = computed(() => {
+            const start = (currentPageSanksi.value - 1) * perPageSanksi.value;
+            return (filteredSanksiBuku.value || []).slice(start, start + perPageSanksi.value);
+        });
+        watch([sanksiStatus, filteredSanksiBuku], () => { currentPageSanksi.value = 1; });
+
+        const currentPageMaster = ref(1);
+        const perPageMaster = ref(10);
+        const totalMasterPages = computed(() => Math.ceil((pelanggaranMasterList.value?.length || 0) / perPageMaster.value) || 1);
+        const paginatedPelanggaranMasterList = computed(() => {
+            const start = (currentPageMaster.value - 1) * perPageMaster.value;
+            return (pelanggaranMasterList.value || []).slice(start, start + perPageMaster.value);
+        });
+        watch([pelanggaranMasterList], () => { currentPageMaster.value = 1; });
+
+        const currentPagePrestasi = ref(1);
+        const perPagePrestasi = ref(10);
+        const totalPrestasiPages = computed(() => Math.ceil((filteredPrestasiList.value?.length || 0) / perPagePrestasi.value) || 1);
+        const paginatedPrestasiList = computed(() => {
+            const start = (currentPagePrestasi.value - 1) * perPagePrestasi.value;
+            return (filteredPrestasiList.value || []).slice(start, start + perPagePrestasi.value);
+        });
+        watch([filterPrestasiTahunAjaran, filterPrestasiTingkat, filterPrestasiSearch, filteredPrestasiList], () => { currentPagePrestasi.value = 1; });
 
         const formKasus = ref({
             id_siswa: '',
@@ -3852,11 +4363,68 @@ window.VueAppRegistry.register('#bkApp', {
             showSiswaDropdown.value  = false;
         }
 
+        function openTambahKasusModal() {
+            clearSiswa();
+            formKasus.value = {
+                id_siswa: '',
+                tanggal_konseling: today,
+                jenis_kasus: '',
+                catatan: '',
+                tindak_lanjut: '',
+                status_kasus: 'Terbuka',
+                is_rahasia: 1
+            };
+            const modalEl = document.getElementById('modalFormKasus');
+            if (modalEl && window.bootstrap) {
+                if (modalEl.parentNode !== document.body) {
+                    document.body.appendChild(modalEl);
+                }
+                const modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+            }
+        }
+
+        function openEditKasus(k) {
+            const sId = k.id_siswa || k.siswa_id || k.id;
+            selectedSiswaInfo.value = {
+                id: sId,
+                nama_lengkap: k.nama_siswa || k.nama_lengkap || 'Siswa',
+                nisn: k.nisn || '-',
+                nama_kelas: k.kelas_saat_kejadian || k.nama_kelas || '-'
+            };
+            formKasus.value = {
+                id: k.id,
+                id_siswa: sId,
+                tanggal_konseling: k.tanggal_konseling ? String(k.tanggal_konseling).substring(0, 10) : today,
+                jenis_kasus: k.jenis_kasus || '',
+                catatan: k.catatan || k.catatan_keterangan || '',
+                tindak_lanjut: k.tindak_lanjut || '',
+                status_kasus: k.status_kasus || 'Terbuka',
+                is_rahasia: (k.is_rahasia == 1 || k.is_rahasia === true) ? 1 : 0
+            };
+            const modalEl = document.getElementById('modalFormKasus');
+            if (modalEl && window.bootstrap) {
+                if (modalEl.parentNode !== document.body) {
+                    document.body.appendChild(modalEl);
+                }
+                const modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+            }
+        }
+
+        function closeKasusModal() {
+            const modalEl = document.getElementById('modalFormKasus');
+            if (modalEl && window.bootstrap) {
+                const modal = window.bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            }
+        }
+
         // ─── Submit Kasus ────────────────────────────────────
         async function submitKasus() {
-            if (!formKasus.value.id_siswa)      { alertJurnal.value = { msg: 'Pilih siswa terlebih dahulu.', type: 'danger' }; return; }
-            if (!formKasus.value.jenis_kasus)   { alertJurnal.value = { msg: 'Jenis kasus wajib dipilih.', type: 'danger' }; return; }
-            if (!formKasus.value.catatan.trim()){ alertJurnal.value = { msg: 'Catatan konseling wajib diisi.', type: 'danger' }; return; }
+            if (!formKasus.value.id_siswa)      { Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Pilih siswa terlebih dahulu.', confirmButtonColor: 'var(--bk-primary)' }); return; }
+            if (!formKasus.value.jenis_kasus)   { Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Jenis kasus wajib dipilih.', confirmButtonColor: 'var(--bk-primary)' }); return; }
+            if (!formKasus.value.catatan.trim()){ Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Catatan konseling wajib diisi.', confirmButtonColor: 'var(--bk-primary)' }); return; }
 
             loadingKasus.value  = true;
             alertJurnal.value   = { msg: '', type: 'success' };
@@ -3869,10 +4437,17 @@ window.VueAppRegistry.register('#bkApp', {
                 });
                 if (res.data.success) {
                     const msgTxt = res.data.message || res.data.msg || 'Catatan BK berhasil disimpan.';
-                    alertJurnal.value = { msg: '✅ ' + msgTxt, type: 'success' };
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil',
+                        text: msgTxt,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
                     formKasus.value = { id_siswa: '', tanggal_konseling: today, jenis_kasus: '', catatan: '', tindak_lanjut: '', status_kasus: 'Terbuka', is_rahasia: 1 };
                     selectedSiswaInfo.value = {};
                     kasusSearchSiswa.value  = '';
+                    closeKasusModal();
                     loadKasus();
                 } else {
                     Swal.fire({
@@ -3979,7 +4554,9 @@ window.VueAppRegistry.register('#bkApp', {
             });
 
             try {
-                const res = await axios.get(`${_baseUrl}/api/v1/bk/kasus/logs?id_kasus=${k.id}`);
+                let url = `${_baseUrl}/api/v1/bk/kasus/logs?id_kasus=${k.id}`;
+                if (currentTenantId.value) url += `&tenant_id=${currentTenantId.value}`;
+                const res = await axios.get(url);
                 if (res.data.success) {
                     const logs = res.data.data || [];
                     if (logs.length === 0) {
@@ -4068,8 +4645,6 @@ window.VueAppRegistry.register('#bkApp', {
         }
 
         // ─── Prestasi Siswa ──────────────────────────────────
-        const activeYearsList = ref(_tahunAjaranList);
-        const prestasiList = ref([]);
         const guruList = ref([]);
         const loadingPrestasi = ref(false);
         const loadingPrestasiList = ref(false);
@@ -4096,6 +4671,7 @@ window.VueAppRegistry.register('#bkApp', {
             tanggal_lomba: '',
             penyelenggara: '',
             guru_pendamping: '',
+            poin_prestasi: 0,
             foto_bukti_prestasi: null,
             foto_siswa_prestasi: null,
             foto_kegiatan_lomba: null,
@@ -4105,6 +4681,66 @@ window.VueAppRegistry.register('#bkApp', {
             existing_foto_kegiatan: null,
             existing_surat_tugas: null
         });
+
+        function removeSiswaPrestasi(id) {
+            if (formPrestasi.value.id) return; // Mode Edit: Siswa otomatis terkunci
+            selectedPrestasiSiswa.value = selectedPrestasiSiswa.value.filter(s => s.id !== id);
+        }
+
+        function exportPrestasiExcel() {
+            if (_userRole === 'super_admin' && !currentTenantId.value) {
+                Swal.fire('Perhatian', 'Pilih sekolah terlebih dahulu.', 'warning');
+                return;
+            }
+            const params = new URLSearchParams();
+            if (filterPrestasiTahunAjaran.value) {
+                params.set('tahun_ajaran_id', filterPrestasiTahunAjaran.value);
+            }
+            if (currentTenantId.value) {
+                params.set('tenant_id', currentTenantId.value);
+            }
+            window.open(`${_baseUrl}/api/v1/bk/prestasi/export?${params.toString()}`, '_blank');
+        }
+
+        function autoCalculatePrestasiPoint() {
+            const tingkat = (formPrestasi.value.tingkat_kejuaraan || '').toLowerCase();
+            const juaraText = (formPrestasi.value.juara === 'Lainnya' ? formPrestasi.value.juara_lainnya : formPrestasi.value.juara || '').toLowerCase();
+            if (!tingkat || !juaraText) return;
+
+            if (tingkat.includes('internasional')) {
+                if (juaraText.includes('1')) formPrestasi.value.poin_prestasi = 100;
+                else if (juaraText.includes('2')) formPrestasi.value.poin_prestasi = 95;
+                else if (juaraText.includes('3')) formPrestasi.value.poin_prestasi = 90;
+                else if (juaraText.includes('harapan 1')) formPrestasi.value.poin_prestasi = 85;
+                else if (juaraText.includes('harapan 2')) formPrestasi.value.poin_prestasi = 80;
+                else if (juaraText.includes('harapan 3')) formPrestasi.value.poin_prestasi = 75;
+                else formPrestasi.value.poin_prestasi = 70;
+            } else if (tingkat.includes('nasional')) {
+                if (juaraText.includes('1')) formPrestasi.value.poin_prestasi = 90;
+                else if (juaraText.includes('2')) formPrestasi.value.poin_prestasi = 85;
+                else if (juaraText.includes('3')) formPrestasi.value.poin_prestasi = 80;
+                else if (juaraText.includes('harapan 1')) formPrestasi.value.poin_prestasi = 75;
+                else if (juaraText.includes('harapan 2')) formPrestasi.value.poin_prestasi = 70;
+                else if (juaraText.includes('harapan 3')) formPrestasi.value.poin_prestasi = 65;
+                else formPrestasi.value.poin_prestasi = 60;
+            } else if (tingkat.includes('provinsi')) {
+                if (juaraText.includes('1')) formPrestasi.value.poin_prestasi = 80;
+                else if (juaraText.includes('2')) formPrestasi.value.poin_prestasi = 75;
+                else if (juaraText.includes('3')) formPrestasi.value.poin_prestasi = 70;
+                else if (juaraText.includes('harapan 1')) formPrestasi.value.poin_prestasi = 65;
+                else if (juaraText.includes('harapan 2')) formPrestasi.value.poin_prestasi = 60;
+                else if (juaraText.includes('harapan 3')) formPrestasi.value.poin_prestasi = 55;
+                else formPrestasi.value.poin_prestasi = 50;
+            } else {
+                if (juaraText.includes('1')) formPrestasi.value.poin_prestasi = 70;
+                else if (juaraText.includes('2')) formPrestasi.value.poin_prestasi = 65;
+                else if (juaraText.includes('3')) formPrestasi.value.poin_prestasi = 60;
+                else if (juaraText.includes('harapan 1')) formPrestasi.value.poin_prestasi = 55;
+                else if (juaraText.includes('harapan 2')) formPrestasi.value.poin_prestasi = 50;
+                else if (juaraText.includes('harapan 3')) formPrestasi.value.poin_prestasi = 45;
+                else formPrestasi.value.poin_prestasi = 40;
+            }
+        }
 
         let debouncePrestasiTimer = null;
         function searchSiswaPrestasiDebounce() {
@@ -4164,6 +4800,35 @@ window.VueAppRegistry.register('#bkApp', {
                 }
                 formPrestasi.value[fieldName] = file;
             }
+        }
+
+        /**
+         * Buat URL aman untuk mengakses file upload.
+         * File storage dialihkan melalui /api/v1/file/serve?path=...
+         * agar tidak bisa diakses langsung tanpa login.
+         */
+        function getFileUrl(path) {
+            if (!path) return '#';
+            if (path.startsWith('http://') || path.startsWith('https://')) return path;
+            const cleanPath = String(path).replace(/^\/+/, '');
+            // Jika ini file storage sensitif → wajib melalui endpoint aman
+            if (cleanPath.startsWith('storage/')) {
+                return _baseUrl + '/api/v1/file/serve?path=' + encodeURIComponent(cleanPath);
+            }
+            return _baseUrl + '/' + cleanPath;
+        }
+
+        /**
+         * Buat secure URL untuk foto-foto yang ditampilkan langsung di modal/tabel.
+         */
+        function secureFileUrl(relativePath) {
+            if (!relativePath) return '';
+            if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) return relativePath;
+            const cleanPath = String(relativePath).replace(/^\/+/, '');
+            if (cleanPath.startsWith('storage/')) {
+                return _baseUrl + '/api/v1/file/serve?path=' + encodeURIComponent(cleanPath);
+            }
+            return _baseUrl + '/' + cleanPath;
         }
 
         async function loadPrestasi() {
@@ -4231,6 +4896,7 @@ window.VueAppRegistry.register('#bkApp', {
                 formData.append('tanggal_lomba', formPrestasi.value.tanggal_lomba);
                 formData.append('penyelenggara', formPrestasi.value.penyelenggara);
                 formData.append('guru_pendamping', formPrestasi.value.guru_pendamping);
+                formData.append('poin_prestasi', formPrestasi.value.poin_prestasi || 0);
 
                 const siswaIds = selectedPrestasiSiswa.value.map(s => s.id);
                 formData.append('siswa_ids', JSON.stringify(siswaIds));
@@ -4254,6 +4920,7 @@ window.VueAppRegistry.register('#bkApp', {
                         text: res.data.message || res.data.msg || 'Data prestasi berhasil disimpan.',
                         confirmButtonColor: 'var(--bk-primary)'
                     });
+                    closePrestasiModal();
                     clearFormPrestasi();
                     loadPrestasi();
                 } else {
@@ -4273,6 +4940,32 @@ window.VueAppRegistry.register('#bkApp', {
                 });
             } finally {
                 loadingPrestasi.value = false;
+            }
+        }
+
+        function openTambahPrestasiModal() {
+            clearFormPrestasi();
+            const modalEl = document.getElementById('modalFormPrestasi');
+            if (modalEl) {
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+            }
+        }
+
+        function openEditPrestasiModal(p) {
+            editPrestasi(p);
+            const modalEl = document.getElementById('modalFormPrestasi');
+            if (modalEl) {
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+            }
+        }
+
+        function closePrestasiModal() {
+            const modalEl = document.getElementById('modalFormPrestasi');
+            if (modalEl) {
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
             }
         }
 
@@ -4298,6 +4991,7 @@ window.VueAppRegistry.register('#bkApp', {
             formPrestasi.value.tanggal_lomba = p.tanggal_lomba;
             formPrestasi.value.penyelenggara = p.penyelenggara;
             formPrestasi.value.guru_pendamping = p.guru_pendamping || '';
+            formPrestasi.value.poin_prestasi = p.poin_prestasi || 0;
             
             formPrestasi.value.existing_foto_bukti = p.foto_bukti_prestasi;
             formPrestasi.value.existing_foto_siswa = p.foto_siswa_prestasi;
@@ -4375,6 +5069,7 @@ window.VueAppRegistry.register('#bkApp', {
                 tanggal_lomba: '',
                 penyelenggara: '',
                 guru_pendamping: '',
+                poin_prestasi: 0,
                 foto_bukti_prestasi: null,
                 foto_siswa_prestasi: null,
                 foto_kegiatan_lomba: null,
@@ -4401,7 +5096,22 @@ window.VueAppRegistry.register('#bkApp', {
                 let url = `${_baseUrl}/api/v1/bk/kelas`;
                 if (currentTenantId.value) url += `?tenant_id=${currentTenantId.value}`;
                 const res = await axios.get(url);
-                if (res.data.success) listKelasKehadiran.value = res.data.data || [];
+                if (res.data.success) {
+                    listKelasKehadiran.value = res.data.data || [];
+                    if (listKelasKehadiran.value.length > 0) {
+                        const exists = listKelasKehadiran.value.some(k => k.id === filterKehadiran.value.kelas_id);
+                        if (!filterKehadiran.value.kelas_id || !exists) {
+                            filterKehadiran.value.kelas_id = listKelasKehadiran.value[0].id;
+                        }
+                    }
+                }
+                if (!filterKehadiran.value.tahun_ajaran_id && (tahunAjaranList.value || []).length > 0) {
+                    const activeTa = tahunAjaranList.value.find(ta => ta.status === 'Aktif') || tahunAjaranList.value[0];
+                    if (activeTa) filterKehadiran.value.tahun_ajaran_id = activeTa.id;
+                }
+                if (filterKehadiran.value.tahun_ajaran_id && filterKehadiran.value.semester && filterKehadiran.value.kelas_id) {
+                    loadKehadiran();
+                }
             } catch (e) { console.error('loadKelasKehadiran error', e); }
         }
 
@@ -4409,6 +5119,7 @@ window.VueAppRegistry.register('#bkApp', {
             if (!filterKehadiran.value.tahun_ajaran_id || !filterKehadiran.value.semester || !filterKehadiran.value.kelas_id) {
                 kehadiranData.value = [];
                 originalKehadiranData.value = [];
+                isKehadiranLocked.value = false;
                 return;
             }
             loadingKehadiran.value = true;
@@ -4422,10 +5133,11 @@ window.VueAppRegistry.register('#bkApp', {
                 if (res.data.success) {
                     kehadiranData.value = res.data.data.map(item => ({
                         ...item,
-                        sakit: parseInt(item.sakit) || 0,
-                        izin: parseInt(item.izin) || 0,
-                        alfa: parseInt(item.alfa) || 0
+                        sakit: (item.sakit === null || item.sakit === '' || item.sakit === undefined) ? 0 : (parseInt(item.sakit) || 0),
+                        izin: (item.izin === null || item.izin === '' || item.izin === undefined) ? 0 : (parseInt(item.izin) || 0),
+                        alfa: (item.alfa === null || item.alfa === '' || item.alfa === undefined) ? 0 : (parseInt(item.alfa) || 0)
                     }));
+                    isKehadiranLocked.value = !!res.data.is_locked;
                     originalKehadiranData.value = JSON.parse(JSON.stringify(kehadiranData.value));
                 }
             } catch (e) {
@@ -4451,14 +5163,21 @@ window.VueAppRegistry.register('#bkApp', {
         }
 
         function setAllEmptyToZero() {
+            if (isKehadiranLocked.value) {
+                Swal.fire('Terperinci', 'Data kehadiran kelas ini sedang dikunci oleh Admin/Kurikulum.', 'warning');
+                return;
+            }
+            let updatedCount = 0;
             kehadiranData.value.forEach(item => {
-                if (item.sakit === null || item.sakit === '') item.sakit = 0;
-                if (item.izin === null || item.izin === '') item.izin = 0;
-                if (item.alfa === null || item.alfa === '') item.alfa = 0;
+                if (item.sakit === null || item.sakit === '' || item.sakit === undefined || isNaN(item.sakit)) { item.sakit = 0; updatedCount++; }
+                if (item.izin === null || item.izin === '' || item.izin === undefined || isNaN(item.izin)) { item.izin = 0; updatedCount++; }
+                if (item.alfa === null || item.alfa === '' || item.alfa === undefined || isNaN(item.alfa)) { item.alfa = 0; updatedCount++; }
             });
+            toast.fire({ icon: 'info', title: 'Seluruh sel kosong telah diisi angka 0. Silakan klik Simpan.' });
         }
 
         function incrementAbsen(siswaId, field) {
+            if (isKehadiranLocked.value) return;
             const item = kehadiranData.value.find(s => s.siswa_id === siswaId);
             if (!item) return;
             let val = parseInt(item[field]);
@@ -4467,19 +5186,62 @@ window.VueAppRegistry.register('#bkApp', {
         }
 
         function decrementAbsen(siswaId, field) {
+            if (isKehadiranLocked.value) return;
             const item = kehadiranData.value.find(s => s.siswa_id === siswaId);
             if (!item) return;
             let val = parseInt(item[field]);
-            if (isNaN(val)) val = 0;
-            if (val > 0) {
-                item[field] = val - 1;
-            } else {
+            if (isNaN(val) || val <= 0) {
                 item[field] = 0;
+            } else {
+                item[field] = val - 1;
+            }
+        }
+
+        async function toggleLockKehadiran() {
+            const nextState = !isKehadiranLocked.value;
+            const actionText = nextState ? 'KUNCI' : 'BUKA KUNCI';
+            const confirmMsg = nextState 
+                ? 'Apakah Anda yakin ingin MENGUNCI data kehadiran kelas ini? Data yang dikunci tidak dapat diubah tanpa persetujuan Admin/Kurikulum.' 
+                : 'Apakah Anda yakin ingin MEMBUKA KUNCI data kehadiran kelas ini?';
+
+            const res = await Swal.fire({
+                title: `Konfirmasi ${actionText} Data Kehadiran`,
+                text: confirmMsg,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: nextState ? '#ef4444' : '#10b981',
+                confirmButtonText: `Ya, ${actionText}`
+            });
+
+            if (!res.isConfirmed) return;
+
+            try {
+                const payload = {
+                    tahun_ajaran_id: filterKehadiran.value.tahun_ajaran_id,
+                    semester: filterKehadiran.value.semester,
+                    kelas_id: filterKehadiran.value.kelas_id,
+                    is_locked: nextState
+                };
+                if (currentTenantId.value) payload.tenant_id = currentTenantId.value;
+
+                const resp = await axios.post(`${_baseUrl}/api/v1/bk/absensi-semester/toggle-lock`, payload);
+                if (resp.data && resp.data.success) {
+                    isKehadiranLocked.value = nextState;
+                    toast.fire({ icon: 'success', title: resp.data.message || 'Status kunci diperbarui.' });
+                    loadKehadiran();
+                }
+            } catch (e) {
+                console.error('toggleLockKehadiran error', e);
+                Swal.fire({ icon: 'error', title: 'Gagal', text: e.response?.data?.error || 'Gagal mengubah status kunci.' });
             }
         }
 
         async function saveKehadiran() {
             if (kehadiranData.value.length === 0) return;
+            if (isKehadiranLocked.value) {
+                Swal.fire('Terperinci', 'Data kehadiran kelas ini sedang dikunci oleh Admin/Kurikulum.', 'warning');
+                return;
+            }
             savingKehadiran.value = true;
             try {
                 const payload = {
@@ -4634,6 +5396,7 @@ window.VueAppRegistry.register('#bkApp', {
 
         // ─── Pelanggaran & Poin Methods ──────────────────────
         function switchSubTab(subTab) {
+            activeTab.value = 'pelanggaran';
             activeSubTab.value = subTab;
             if (subTab === 'p_dashboard') {
                 loadPelanggaranDashboard();
@@ -4654,11 +5417,12 @@ window.VueAppRegistry.register('#bkApp', {
                 if (currentTenantId.value) url += `?tenant_id=${currentTenantId.value}`;
                 const res = await axios.get(url);
                 if (res.data && res.data.success) {
-                    pelanggaranKpi.value = res.data.kpi || { wali_kelas: 0, sp1_bk: 0, sp2_skorsing: 0, sp3_do: 0, total_siswa_melanggar: 0 };
-                    pelanggaranTopStudents.value = res.data.top_students || [];
+                    const resData = (res.data.data && typeof res.data.data === 'object') ? res.data.data : res.data;
+                    pelanggaranKpi.value = resData.kpi || { wali_kelas: 0, sp1_bk: 0, sp2_skorsing: 0, sp3_do: 0, total_siswa_melanggar: 0 };
+                    pelanggaranTopStudents.value = resData.top_students || [];
                     
                     nextTick(() => {
-                        renderPelanggaranChart(res.data.chart);
+                        renderPelanggaranChart(resData.chart);
                     });
                 } else {
                     pelanggaranKpi.value = { wali_kelas: 0, sp1_bk: 0, sp2_skorsing: 0, sp3_do: 0, total_siswa_melanggar: 0 };
@@ -4668,6 +5432,7 @@ window.VueAppRegistry.register('#bkApp', {
                 pelanggaranKpi.value = { wali_kelas: 0, sp1_bk: 0, sp2_skorsing: 0, sp3_do: 0, total_siswa_melanggar: 0 };
             } finally {
                 loadingPelanggaranDashboard.value = false;
+                loadPelanggaranCatatan();
             }
         }
 
@@ -4881,20 +5646,71 @@ window.VueAppRegistry.register('#bkApp', {
             if (fileInput) fileInput.value = '';
         }
 
-        function handleFotoUpload(event) {
+        /**
+         * Kompres gambar ke bawah maxSizeBytes menggunakan Canvas API.
+         * Mengembalikan Promise<File> yang sudah dikompres.
+         */
+        function compressImageBelow1MB(file, maxSizeBytes = 1 * 1024 * 1024, quality = 0.85) {
+            return new Promise((resolve) => {
+                if (file.size <= maxSizeBytes) { resolve(file); return; }
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let { width, height } = img;
+                        // Turunkan resolusi jika file masih terlalu besar
+                        const scaleFactor = Math.sqrt(maxSizeBytes / file.size) * 0.9;
+                        canvas.width  = Math.round(width  * scaleFactor);
+                        canvas.height = Math.round(height * scaleFactor);
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                        // Coba kompres iteratif sampai di bawah batas
+                        let q = quality;
+                        const tryCompress = () => {
+                            canvas.toBlob((blob) => {
+                                if (blob.size <= maxSizeBytes || q <= 0.3) {
+                                    const compressed = new File([blob], file.name, { type: blob.type || 'image/jpeg', lastModified: Date.now() });
+                                    resolve(compressed);
+                                } else {
+                                    q -= 0.1;
+                                    tryCompress();
+                                }
+                            }, 'image/jpeg', q);
+                        };
+                        tryCompress();
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function handleFotoUpload(event) {
             const file = event.target.files[0];
-            if (file) {
-                if (file.size > 2 * 1024 * 1024) {
-                    Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Ukuran foto maksimal 2MB.' });
-                    event.target.value = '';
-                    return;
-                }
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'File harus berupa gambar (JPG, PNG, WEBP, dll).' });
+                event.target.value = '';
+                return;
+            }
+            // Auto-kompres jika di atas 1MB
+            if (file.size > 1 * 1024 * 1024) {
+                const toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
+                toast.fire({ icon: 'info', title: 'Mengompres foto... 🗜️' });
+                const compressed = await compressImageBelow1MB(file, 1 * 1024 * 1024);
+                formInputPelanggaran.value.foto_bukti = compressed;
+                const kb = Math.round(compressed.size / 1024);
+                toast.fire({ icon: 'success', title: `Foto dikompres: ${kb} KB ✅` });
+            } else {
                 formInputPelanggaran.value.foto_bukti = file;
             }
         }
 
         async function submitPelanggaran() {
-            if (!formInputPelanggaran.value.siswa_id) {
+            const targetSId = formInputPelanggaran.value.siswa_id || selectedPelanggaranSiswa.value.id || formInputPelanggaran.value.id;
+            if (!targetSId) {
                 Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Pilih siswa terlebih dahulu.' });
                 return;
             }
@@ -4910,7 +5726,7 @@ window.VueAppRegistry.register('#bkApp', {
             try {
                 const formData = new FormData();
                 if (formInputPelanggaran.value.id) formData.append('id', formInputPelanggaran.value.id);
-                formData.append('siswa_id', formInputPelanggaran.value.siswa_id);
+                formData.append('siswa_id', targetSId);
                 formData.append('pelanggaran_id', formInputPelanggaran.value.pelanggaran_id);
                 formData.append('tanggal_kejadian', formInputPelanggaran.value.tanggal_kejadian);
                 formData.append('catatan_keterangan', formInputPelanggaran.value.catatan_keterangan || '');
@@ -4930,7 +5746,9 @@ window.VueAppRegistry.register('#bkApp', {
 
                 if (res.data.success) {
                     Swal.fire({ icon: 'success', title: 'Sukses', text: res.data.message, timer: 1500, showConfirmButton: false });
+                    closePelanggaranModal();
                     clearSiswaPelanggaran();
+                    catatanListSearch.value = '';
                     loadPelanggaranCatatan();
                 } else {
                     Swal.fire({ icon: 'error', title: 'Gagal', text: res.data.error || 'Gagal menyimpan catatan.' });
@@ -4943,24 +5761,65 @@ window.VueAppRegistry.register('#bkApp', {
             }
         }
 
+        function openPelanggaranModal() {
+            clearSiswaPelanggaran();
+            const modalEl = document.getElementById('modalFormCatatPelanggaran');
+            if (modalEl) {
+                if (modalEl.parentNode !== document.body) {
+                    document.body.appendChild(modalEl);
+                }
+                const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                bsModal.show();
+            }
+        }
+
+        function closePelanggaranModal() {
+            const modalEl = document.getElementById('modalFormCatatPelanggaran');
+            if (modalEl) {
+                const bsModal = bootstrap.Modal.getInstance(modalEl);
+                if (bsModal) bsModal.hide();
+            }
+        }
+
         function editPelanggaran(c) {
+            const targetSiswaId = c.siswa_id || c.id;
             selectedPelanggaranSiswa.value = {
-                id: c.siswa_id,
-                nama_lengkap: c.nama_siswa,
-                nisn: c.nisn,
-                nama_kelas: c.nama_kelas
+                id: targetSiswaId,
+                nama_lengkap: c.nama_siswa || c.nama_lengkap || 'Siswa',
+                nisn: c.nisn || '-',
+                nama_kelas: c.nama_kelas || '-'
             };
+
+            let pId = c.pelanggaran_id || '';
+            if (!pId && pelanggaranMasterList.value && pelanggaranMasterList.value.length > 0) {
+                const matched = pelanggaranMasterList.value.find(r => 
+                    r.kategori === c.kategori || 
+                    (c.catatan_keterangan && c.catatan_keterangan.toLowerCase().includes(r.nama_pelanggaran.toLowerCase())) ||
+                    (c.nama_pelanggaran && c.nama_pelanggaran.toLowerCase().includes(r.nama_pelanggaran.toLowerCase()))
+                );
+                if (matched) pId = matched.id;
+            }
+
             formInputPelanggaran.value = {
                 id: c.id,
-                siswa_id: c.siswa_id,
-                pelanggaran_id: c.pelanggaran_id,
-                tanggal_kejadian: c.tanggal_kejadian,
+                siswa_id: targetSiswaId,
+                pelanggaran_id: pId,
+                tanggal_kejadian: c.tanggal_kejadian ? String(c.tanggal_kejadian).substring(0, 10) : today,
                 catatan_keterangan: c.catatan_keterangan || '',
                 foto_bukti: null,
                 existing_foto: c.foto_bukti || null
             };
             const fileInput = document.getElementById('input-foto-bukti-file');
             if (fileInput) fileInput.value = '';
+
+            const modalEl = document.getElementById('modalFormCatatPelanggaran');
+            if (modalEl) {
+                if (modalEl.parentNode !== document.body) {
+                    document.body.appendChild(modalEl);
+                }
+                const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                bsModal.show();
+            }
         }
 
         async function deletePelanggaran(id) {
@@ -5039,22 +5898,62 @@ window.VueAppRegistry.register('#bkApp', {
             formTindakLanjut.value = {
                 tanggal_tindakan: new Date().toISOString().split('T')[0],
                 jenis_tindakan: 'Konseling BK',
-                keterangan_tindakan: ''
+                keterangan_tindakan: '',
+                surat_panggilan: null,
+                foto_pembinaan: null
             };
+            const sInput = document.getElementById('input-tindak-surat');
+            if (sInput) sInput.value = '';
+            const fInput = document.getElementById('input-tindak-foto');
+            if (fInput) fInput.value = '';
 
             try {
                 let url = `${_baseUrl}/api/v1/bk/pelanggaran/sanksi/detail?siswa_id=${siswaId}`;
                 if (currentTenantId.value) url += `&tenant_id=${currentTenantId.value}`;
                 const res = await axios.get(url);
-                if (res.data.success) {
-                    sanksiDetailModal.value.student = res.data.student || {};
-                    sanksiDetailModal.value.total_poin = parseInt(res.data.total_poin) || 0;
-                    sanksiDetailModal.value.violations = res.data.violations || [];
-                    sanksiDetailModal.value.followUps = res.data.follow_ups || [];
+                if (res.data && res.data.success) {
+                    const payloadData = (res.data.data && typeof res.data.data === 'object') ? res.data.data : res.data;
+                    sanksiDetailModal.value.student = payloadData.student || {};
+                    sanksiDetailModal.value.total_poin = parseInt(payloadData.total_poin) || 0;
+                    sanksiDetailModal.value.violations = payloadData.violations || [];
+                    sanksiDetailModal.value.followUps = payloadData.follow_ups || [];
                 }
             } catch (e) {
                 console.error('openSanksiDetail error', e);
                 Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal mengambil detail sanksi siswa.' });
+            }
+        }
+
+        function handleSuratPanggilanUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                if (file.size > 2 * 1024 * 1024) {
+                    Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Ukuran berkas surat panggilan maksimal 2MB.' });
+                    event.target.value = '';
+                    return;
+                }
+                formTindakLanjut.value.surat_panggilan = file;
+            }
+        }
+
+        async function handleFotoPembinaanUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'File harus berupa gambar (JPG, PNG, WEBP, dll).' });
+                event.target.value = '';
+                return;
+            }
+            // Auto-kompres jika di atas 1MB
+            if (file.size > 1 * 1024 * 1024) {
+                const toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
+                toast.fire({ icon: 'info', title: 'Mengompres foto... 🗜️' });
+                const compressed = await compressImageBelow1MB(file, 1 * 1024 * 1024);
+                formTindakLanjut.value.foto_pembinaan = compressed;
+                const kb = Math.round(compressed.size / 1024);
+                toast.fire({ icon: 'success', title: `Foto dikompres: ${kb} KB ✅` });
+            } else {
+                formTindakLanjut.value.foto_pembinaan = file;
             }
         }
 
@@ -5074,16 +5973,21 @@ window.VueAppRegistry.register('#bkApp', {
 
             submittingTindakLanjut.value = true;
             try {
-                const payload = {
-                    siswa_id: siswaId,
-                    tanggal_tindakan: formTindakLanjut.value.tanggal_tindakan,
-                    jenis_tindakan: formTindakLanjut.value.jenis_tindakan,
-                    keterangan_tindakan: formTindakLanjut.value.keterangan_tindakan
-                };
-                if (currentTenantId.value) payload.tenant_id = currentTenantId.value;
+                const formData = new FormData();
+                formData.append('siswa_id', siswaId);
+                formData.append('tanggal_tindakan', formTindakLanjut.value.tanggal_tindakan);
+                formData.append('jenis_tindakan', formTindakLanjut.value.jenis_tindakan);
+                formData.append('keterangan_tindakan', formTindakLanjut.value.keterangan_tindakan);
+                if (formTindakLanjut.value.surat_panggilan) {
+                    formData.append('surat_panggilan', formTindakLanjut.value.surat_panggilan);
+                }
+                if (formTindakLanjut.value.foto_pembinaan) {
+                    formData.append('foto_pembinaan', formTindakLanjut.value.foto_pembinaan);
+                }
+                if (currentTenantId.value) formData.append('tenant_id', currentTenantId.value);
 
-                const res = await axios.post(`${_baseUrl}/api/v1/bk/pelanggaran/sanksi/tindak-lanjut`, payload, {
-                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                const res = await axios.post(`${_baseUrl}/api/v1/bk/pelanggaran/sanksi/tindak-lanjut`, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data', 'X-Requested-With': 'XMLHttpRequest' }
                 });
 
                 if (res.data.success) {
@@ -5103,15 +6007,21 @@ window.VueAppRegistry.register('#bkApp', {
 
         function showFotoModal(src) {
             fotoModal.value.show = true;
-            fotoModal.value.src = src;
+            // Pastikan URL gambar selalu melalui endpoint aman jika berasal dari storage
+            if (src && !src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith(_baseUrl + '/api/v1/file/serve')) {
+                const cleanPath = String(src).replace(/^\/+/, '').replace(_baseUrl.replace(/^\/+/, ''), '').replace(/^\/+/, '');
+                fotoModal.value.src = _baseUrl + '/api/v1/file/serve?path=' + encodeURIComponent(cleanPath);
+            } else {
+                fotoModal.value.src = src;
+            }
         }
 
         function getKategoriBadge(kategori) {
-            if (kategori === 'Ringan') return 'badge-secondary';
-            if (kategori === 'Sedang') return 'badge-info';
-            if (kategori === 'Berat') return 'badge-warning';
-            if (kategori === 'Khusus') return 'badge-danger';
-            return 'badge-secondary';
+            if (kategori === 'Ringan') return 'bg-info text-dark fw-bold border border-info px-2 py-1 rounded-2';
+            if (kategori === 'Sedang') return 'bg-warning text-dark fw-bold border border-warning px-2 py-1 rounded-2';
+            if (kategori === 'Berat') return 'bg-danger text-white fw-bold border border-danger px-2 py-1 rounded-2';
+            if (kategori === 'Khusus') return 'bg-dark text-white fw-bold border border-secondary px-2 py-1 rounded-2';
+            return 'bg-secondary text-white fw-bold px-2 py-1 rounded-2';
         }
 
         function getPoinBadgeClass(poin) {
@@ -5655,7 +6565,7 @@ window.VueAppRegistry.register('#bkApp', {
             loadingTracer, tracerData,
             // Jurnal — Rekam Kasus
             loadingKasus, loadingKasusList, kasusList,
-            kasusListSearch, filteredKasusList,
+            kasusListSearch, kasusStatusFilter, filteredKasusList,
             alertJurnal, kasusSearchSiswa, siswaOptions,
             selectedSiswaInfo, formKasus, today,
             showSiswaDropdown, siswaHover, loadingSearchSiswa,
@@ -5663,19 +6573,19 @@ window.VueAppRegistry.register('#bkApp', {
             submitKasus, loadKasus, loadKelasList,
             searchSiswaDebounce, selectSiswa, clearSiswa,
             onFilterKelasChange, onSearchFocus, hideDropdownDelay,
-            canEditKasus, openChangeStatus, openLogs,
+            canEditKasus, openChangeStatus, openLogs, openTambahKasusModal, openEditKasus, closeKasusModal,
             // Prestasi Siswa
-            activeYearsList, prestasiList, guruList, loadingPrestasi, loadingPrestasiList,
+            activeYearsList, prestasiList, filterPrestasiTahunAjaran, filterPrestasiTingkat, filterPrestasiSearch, exportPrestasiExcel, filteredPrestasiList, guruList, loadingPrestasi, loadingPrestasiList,
             prestasiSearchSiswa, prestasiSiswaOptions, selectedPrestasiSiswa,
             showPrestasiSiswaDropdown, loadingSearchPrestasiSiswa, alertPrestasi, formPrestasi,
             searchSiswaPrestasiDebounce, hidePrestasiDropdownDelay, selectSiswaPrestasi,
-            removeSiswaPrestasi, handleFileUpload, submitPrestasi, loadPrestasi, loadGuruList,
-            editPrestasi, deletePrestasi, clearFormPrestasi, userRole, baseUrl, currentTenantId,
+            removeSiswaPrestasi, handleFileUpload, getFileUrl, submitPrestasi, loadPrestasi, loadGuruList, autoCalculatePrestasiPoint,
+            editPrestasi, deletePrestasi, clearFormPrestasi, openTambahPrestasiModal, openEditPrestasiModal, closePrestasiModal, userRole, baseUrl, currentTenantId,
             // Kehadiran
             loadingKehadiran, savingKehadiran, importingKehadiran, filterKehadiran, tahunAjaranList,
-            kehadiranData, listKelasKehadiran, fileImportKehadiran,
+            kehadiranData, listKelasKehadiran, fileImportKehadiran, isKehadiranLocked,
             loadKehadiran, loadKelasKehadiran, isCellDirty, isRowDirty, setAllEmptyToZero,
-            incrementAbsen, decrementAbsen, saveKehadiran, exportKehadiran,
+            incrementAbsen, decrementAbsen, saveKehadiran, exportKehadiran, toggleLockKehadiran,
             handleFileImportChange, importKehadiran, handleGridKeydown,
             // Pelanggaran & Poin
             activeSubTab, switchSubTab,
@@ -5688,9 +6598,17 @@ window.VueAppRegistry.register('#bkApp', {
             loadPelanggaranDashboard, loadPelanggaranMaster, masterRulesFiltered, filteredCatatanPelanggaran, filteredSanksiBuku, openMasterModal,
             submitMasterRule, deleteMasterRule, searchSiswaPelanggaranDebounce, hidePelanggaranDropdownDelay,
             selectSiswaPelanggaran, clearSiswaPelanggaran, handleFotoUpload, submitPelanggaran, editPelanggaran, deletePelanggaran,
-            loadPelanggaranCatatan, loadPelanggaranSanksi, showFotoModal, getKategoriBadge,
+            openPelanggaranModal, closePelanggaranModal,
+            // Pagination Properties
+            currentPageKasus, perPageKasus, totalKasusPages, paginatedKasusList,
+            currentPagePelanggaran, perPagePelanggaran, totalPelanggaranPages, paginatedCatatanPelanggaran,
+            currentPageSanksi, perPageSanksi, totalSanksiPages, paginatedSanksiBuku,
+            currentPageMaster, perPageMaster, totalMasterPages, paginatedPelanggaranMasterList,
+            currentPagePrestasi, perPagePrestasi, totalPrestasiPages, paginatedPrestasiList,
+            loadPelanggaranCatatan, loadPelanggaranSanksi, showFotoModal, getKategoriBadge, secureFileUrl,
             getPoinBadgeClass, formatTanggalIndo, sanksiSearch, sanksiStatus, sanksiDetailModal,
             formTindakLanjut, submittingTindakLanjut, openSanksiDetail, submitTindakLanjut,
+            handleSuratPanggilanUpload, handleFotoPembinaanUpload,
             // Beasiswa
             toast, activeBeasiswaSiswa, beasiswaSearchSiswa, beasiswaSiswaOptions, showBeasiswaSiswaDropdown,
             loadingSearchBeasiswaSiswa, riwayatBeasiswaList, formBeasiswa, loadingSimpanBeasiswa,
@@ -5710,6 +6628,9 @@ window.VueAppRegistry.register('#bkApp', {
         };
     }
 });
+if (window.VueAppRegistry && typeof window.VueAppRegistry.mountAll === 'function') {
+    window.VueAppRegistry.mountAll();
+}
 }
 
 // Super Admin tenant filter
