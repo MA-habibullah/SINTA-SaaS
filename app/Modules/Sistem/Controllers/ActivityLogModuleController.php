@@ -170,10 +170,8 @@ class ActivityLogModuleController extends BaseController {
             $countStmt->execute();
             $total = (int)$countStmt->fetchColumn();
 
-            header('Content-Type: application/json');
-            echo json_encode([
-                'success'    => true,
-                'data'       => $logs,
+            $this->jsonResponse(true, [
+                'logs'       => $logs,
                 'pagination' => [
                     'page'     => $page,
                     'per_page' => $perPage,
@@ -181,7 +179,6 @@ class ActivityLogModuleController extends BaseController {
                     'pages'    => (int)ceil($total / $perPage)
                 ]
             ]);
-            exit;
 
         } catch (\Throwable $e) {
             error_log("Audit log fetch error: " . $e->getMessage());

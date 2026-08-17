@@ -234,15 +234,15 @@
                             </span>
                         </div>
                         <div class="flex items-center gap-2 mt-2">
-                            <button type="button" @click="openCertModal('<?= $this->getBaseUrl() ?>/storage/app/public/' + tenant.sertifikat_akreditasi)" 
+                            <button type="button" @click="openCertModal(getFileUrl(tenant.sertifikat_akreditasi))" 
                                     class="flex-1 py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm shadow-blue-500/20 transition flex items-center justify-center gap-1.5 cursor-pointer">
                                 <i class="bi bi-eye-fill text-sm"></i> Pratinjau Sertifikat
                             </button>
-                            <a :href="'<?= $this->getBaseUrl() ?>/storage/app/public/' + tenant.sertifikat_akreditasi" target="_blank" 
+                            <a :href="getFileUrl(tenant.sertifikat_akreditasi)" target="_blank" 
                                class="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 border border-slate-200" title="Buka di Tab Baru">
                                 <i class="bi bi-box-arrow-up-right text-sm"></i>
                             </a>
-                            <a :href="'<?= $this->getBaseUrl() ?>/storage/app/public/' + tenant.sertifikat_akreditasi" download 
+                            <a :href="getFileUrl(tenant.sertifikat_akreditasi, true)" download 
                                class="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 border border-slate-200" title="Unduh Berkas">
                                 <i class="bi bi-download text-sm"></i>
                             </a>
@@ -505,7 +505,7 @@
                                         <i class="bi bi-cloud-arrow-up-fill text-xl"></i>
                                     </div>
                                     <span class="text-xs font-bold text-slate-700">Pilih berkas logo atau drag ke sini</span>
-                                    <span class="text-[10px] text-slate-500 uppercase tracking-wider">Format JPG, JPEG, PNG (Maks. 500 KB)</span>
+                                    <span class="text-[10px] text-blue-600 font-bold uppercase tracking-wider"><i class="bi bi-magic me-1"></i>Otomatis Di-resize & Kompresi oleh Sistem</span>
                                 </div>
  
                                 <div v-if="logoFile" class="absolute inset-0 bg-white/95 backdrop-blur-sm p-4 flex flex-col items-center justify-center gap-2">
@@ -537,7 +537,7 @@
                                         <i class="bi bi-file-earmark-arrow-up-fill text-xl"></i>
                                     </div>
                                     <span class="text-xs font-bold text-slate-700">Pilih berkas sertifikat atau drag ke sini</span>
-                                    <span class="text-[10px] text-slate-500 uppercase tracking-wider">Format PDF, JPG, JPEG, PNG (Maks. 500 KB)</span>
+                                    <span class="text-[10px] text-blue-600 font-bold uppercase tracking-wider"><i class="bi bi-magic me-1"></i>Gambar Otomatis Di-resize (PDF Maks 5MB)</span>
                                 </div>
  
                                 <div v-if="sertifikatFile" class="absolute inset-0 bg-white/95 backdrop-blur-sm p-4 flex flex-col items-center justify-center gap-2">
@@ -628,7 +628,7 @@
             // Initial empty refs populated onMounted
             const tenant = ref({});
             const logoPreview = ref(null);
-            const isSuperAdmin = ref(<?= json_encode($user_role === 'super_admin') ?>);
+            const isSuperAdmin = ref(<?= json_encode($user_role === 'super_admin', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
             
             // Cert Modal State
             const showCertModal = ref(false);
@@ -683,7 +683,7 @@
                     const response = await axios.get(`<?= $this->getBaseUrl() ?>/sekolah/identitas?ajax=1&action=get_profile_detail&tenant_id=${tId}`);
                     if (response.data && response.data.success) {
                         tenant.value = response.data.data;
-                        logoPreview.value = tenant.value.logo ? `<?= $this->getBaseUrl() ?>/storage/app/public/${tenant.value.logo}` : null;
+                        logoPreview.value = tenant.value.logo ? getFileUrl(tenant.value.logo) : null;
                         
                         Object.keys(form).forEach(key => {
                             if (key in tenant.value) {
@@ -756,43 +756,103 @@
                 }
             };
 
-            // Process & Validate File Size & Type
-            const processFile = (type, file) => {
-                const maxSize = 500 * 1024; // 500 KB
-                
-                // Clear old errors for this file
+            // Helper kompresi & auto-resize gambar berbasis HTML5 Canvas (Preserves PNG Transparency)
+            const compressImageFile = (file, maxWidth = 1000, quality = 0.85) => {
+                return new Promise((resolve) => {
+                    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                        resolve(file);
+                        return;
+                    }
+
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.src = e.target.result;
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            let width = img.width;
+                            let height = img.height;
+
+                            if (width > maxWidth) {
+                                height = Math.round((height * maxWidth) / width);
+                                width = maxWidth;
+                            }
+
+                            canvas.width = width;
+                            canvas.height = height;
+
+                            const ctx = canvas.getContext('2d');
+                            const ext = file.name.split('.').pop().toLowerCase();
+                            let outputMime = 'image/jpeg';
+                            let outputExt = '.jpg';
+
+                            if (file.type === 'image/png' || ext === 'png') {
+                                outputMime = 'image/png';
+                                outputExt = '.png';
+                                ctx.clearRect(0, 0, width, height);
+                            } else if (file.type === 'image/webp' || ext === 'webp') {
+                                outputMime = 'image/webp';
+                                outputExt = '.webp';
+                                ctx.clearRect(0, 0, width, height);
+                            }
+
+                            ctx.drawImage(img, 0, 0, width, height);
+
+                            canvas.toBlob((blob) => {
+                                if (!blob) {
+                                    resolve(file);
+                                    return;
+                                }
+                                const cleanName = file.name.replace(/\.[^/.]+$/, "") + outputExt;
+                                const compressedFile = new File([blob], cleanName, {
+                                    type: outputMime,
+                                    lastModified: Date.now()
+                                });
+                                resolve(compressedFile);
+                            }, outputMime, quality);
+                        };
+                        img.onerror = () => resolve(file);
+                    };
+                    reader.onerror = () => resolve(file);
+                });
+            };
+
+            // Process & Validate File Size & Type dengan Auto-Resize
+            const processFile = async (type, rawFile) => {
+                if (!rawFile) return;
+
                 if (type === 'logo') {
                     delete errors.value.logo;
-                    
-                    if (file.size > maxSize) {
-                        errors.value.logo = ['Ukuran logo tidak boleh melebihi 500 KB.'];
+                    const ext = rawFile.name.split('.').pop().toLowerCase();
+                    if (!['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
+                        errors.value.logo = ['Logo harus berupa gambar (.jpg, .jpeg, .png, .webp).'];
                         return;
                     }
-                    
-                    const ext = file.name.split('.').pop().toLowerCase();
-                    if (!['jpg', 'jpeg', 'png'].includes(ext)) {
-                        errors.value.logo = ['Logo harus berupa gambar (.jpg, .jpeg, .png).'];
-                        return;
-                    }
-                    
-                    logoFile.value = file;
-                    // Create object url for preview
-                    logoPreview.value = URL.createObjectURL(file);
+
+                    // Auto-resize logo max 800px & kompresi
+                    const compressed = await compressImageFile(rawFile, 800, 0.85);
+                    logoFile.value = compressed;
+                    logoPreview.value = URL.createObjectURL(compressed);
                 } else {
                     delete errors.value.sertifikat_akreditasi;
-                    
-                    if (file.size > maxSize) {
-                        errors.value.sertifikat_akreditasi = ['Ukuran sertifikat tidak boleh melebihi 500 KB.'];
-                        return;
-                    }
-                    
-                    const ext = file.name.split('.').pop().toLowerCase();
-                    if (!['jpg', 'jpeg', 'png', 'pdf'].includes(ext)) {
+                    const ext = rawFile.name.split('.').pop().toLowerCase();
+                    if (!['jpg', 'jpeg', 'png', 'webp', 'pdf'].includes(ext)) {
                         errors.value.sertifikat_akreditasi = ['Sertifikat harus berupa gambar atau PDF (.jpg, .jpeg, .png, .pdf).'];
                         return;
                     }
-                    
-                    sertifikatFile.value = file;
+
+                    if (ext === 'pdf') {
+                        if (rawFile.size > 5 * 1024 * 1024) {
+                            errors.value.sertifikat_akreditasi = ['Ukuran berkas PDF sertifikat maksimal 5 MB.'];
+                            return;
+                        }
+                        sertifikatFile.value = rawFile;
+                    } else {
+                        // Auto-resize gambar sertifikat max 1400px & kompresi
+                        const compressed = await compressImageFile(rawFile, 1400, 0.85);
+                        sertifikatFile.value = compressed;
+                    }
                 }
             };
 
@@ -800,7 +860,7 @@
             const clearFile = (type) => {
                 if (type === 'logo') {
                     logoFile.value = null;
-                    logoPreview.value = tenant.value.logo ? `<?= $this->getBaseUrl() ?>/storage/app/public/${tenant.value.logo}` : null;
+                    logoPreview.value = tenant.value.logo ? getFileUrl(tenant.value.logo) : null;
                     const el = document.getElementById('logo_file_input') || logoInput.value;
                     if (el) el.value = '';
                 } else {
@@ -898,6 +958,16 @@
                 return path.split('/').pop();
             };
 
+            // Helper to get secure file serve URL
+            const getFileUrl = (path, isDownload = false) => {
+                if (!path) return '';
+                if (path.startsWith('http://') || path.startsWith('https://')) return path;
+                const cleanPath = path.startsWith('storage/app/public/') ? path : 'storage/app/public/' + path.replace(/^\/+/, '');
+                let url = `<?= $this->getBaseUrl() ?>/api/v1/file/serve?path=` + encodeURIComponent(cleanPath);
+                if (isDownload) url += '&download=1';
+                return url;
+            };
+
             // Helper to check if file is PDF
             const isPdf = (filename) => {
                 if (!filename) return false;
@@ -930,6 +1000,7 @@
                 formatBytes,
                 getFilename,
                 isPdf,
+                getFileUrl,
                 changeTenant
             };
         }

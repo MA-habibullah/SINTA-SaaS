@@ -3,6 +3,7 @@
 namespace App\Modules\Sistem\Controllers;
 
 use App\Core\BaseController;
+use App\Core\FileStorage;
 use App\Core\SessionManager;
 use App\Config\Database;
 use App\Modules\Sistem\Models\KelembagaanModel;
@@ -159,31 +160,39 @@ class KelembagaanModuleController extends BaseController {
                 }
             }
 
-            // File Upload: Logo
+            // File Upload: Logo — format: logos/{tenant_id}/{sha1}.ext
             if (!empty($_FILES['logo']['tmp_name']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
-                $uploadDir = __DIR__ . '/../../../../storage/app/public/logos/';
-                if (!is_dir($uploadDir)) {
-                    mkdir($uploadDir, 0777, true);
-                }
-                $ext = pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION);
-                $filename = 'logo_' . $targetTenantId . '_' . time() . '.' . $ext;
-                $dest = $uploadDir . $filename;
-                if (move_uploaded_file($_FILES['logo']['tmp_name'], $dest)) {
-                    $fields['logo'] = 'logos/' . $filename;
+                $newLogoPath = FileStorage::store(
+                    $_FILES['logo']['tmp_name'],
+                    'logos',
+                    $targetTenantId,
+                    null,
+                    'image_only'
+                );
+                if ($newLogoPath !== null) {
+                    // Hapus logo lama
+                    if (!empty($oldTenantData['logo'])) {
+                        FileStorage::deleteOld('storage/app/public/' . $oldTenantData['logo'], $targetTenantId);
+                    }
+                    $fields['logo'] = str_replace('storage/app/public/', '', $newLogoPath);
                 }
             }
 
-            // File Upload: Sertifikat Akreditasi
+            // File Upload: Sertifikat Akreditasi — format: sertifikat/{tenant_id}/{sha1}.pdf
             if (!empty($_FILES['sertifikat_akreditasi']['tmp_name']) && $_FILES['sertifikat_akreditasi']['error'] === UPLOAD_ERR_OK) {
-                $uploadDir = __DIR__ . '/../../../../storage/app/public/sertifikat/';
-                if (!is_dir($uploadDir)) {
-                    mkdir($uploadDir, 0777, true);
-                }
-                $ext = pathinfo($_FILES['sertifikat_akreditasi']['name'], PATHINFO_EXTENSION);
-                $filename = 'cert_' . $targetTenantId . '_' . time() . '.' . $ext;
-                $dest = $uploadDir . $filename;
-                if (move_uploaded_file($_FILES['sertifikat_akreditasi']['tmp_name'], $dest)) {
-                    $fields['sertifikat_akreditasi'] = 'sertifikat/' . $filename;
+                $newCertPath = FileStorage::store(
+                    $_FILES['sertifikat_akreditasi']['tmp_name'],
+                    'sertifikat',
+                    $targetTenantId,
+                    null,
+                    'default'
+                );
+                if ($newCertPath !== null) {
+                    // Hapus sertifikat lama
+                    if (!empty($oldTenantData['sertifikat_akreditasi'])) {
+                        FileStorage::deleteOld('storage/app/public/' . $oldTenantData['sertifikat_akreditasi'], $targetTenantId);
+                    }
+                    $fields['sertifikat_akreditasi'] = str_replace('storage/app/public/', '', $newCertPath);
                 }
             }
 

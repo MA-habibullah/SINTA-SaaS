@@ -378,10 +378,14 @@ $userRole = $_SESSION['role_name'] ?? '';
                     });
 
                     if (response.data && response.data.success) {
-                        const payloadData = response.data.data || response.data;
-                        logs.value = payloadData.data || payloadData.logs || [];
-                        const pag = response.data.pagination || (response.data.data && response.data.data.pagination) || {};
-                        totalLogs.value = pag.total || 0;
+                        const resData = response.data.data || {};
+                        if (Array.isArray(resData)) {
+                            logs.value = resData;
+                        } else {
+                            logs.value = resData.logs || resData.data || [];
+                        }
+                        const pag = resData.pagination || response.data.pagination || {};
+                        totalLogs.value = pag.total !== undefined ? pag.total : logs.value.length;
                         totalPages.value = pag.pages || 1;
                     } else {
                         throw new Error((response.data && response.data.error) || 'Gagal memuat log.');

@@ -2049,6 +2049,17 @@
             getError(field) {
                 return this.errors[field] ? this.errors[field][0] : '';
             },
+            downloadExcel() {
+                const params = new URLSearchParams({
+                    tab: this.activeTab,
+                    search: this.searchQuery || '',
+                    trash: this.trashMode ? 'true' : 'false',
+                    id_kelas: this.filterKelas || '',
+                    status: this.filterStatus || '',
+                    tenant_id: this.filterTenantId || ''
+                });
+                window.open('<?= $this->getBaseUrl() ?>/api/v1/pengguna/export-excel?' + params.toString(), '_blank');
+            },
 
             // ================================================================
             // METHODS: PANEL NAIKKAN KELAS & LULUSKAN SISWA
