@@ -423,12 +423,12 @@ class BukuIndukModuleController extends BaseController {
         $pelanggaran = [];
         try {
             $stmtPL = $db->prepare("
-                SELECT cps.*, mp.nama_pelanggaran, mp.bobot_poin, mp.kategori
-                FROM bk.pelanggaran_siswa cps
+                SELECT cps.*, COALESCE(mp.nama_pelanggaran, mp.nama_master_pelanggaran) AS nama_pelanggaran, mp.bobot_poin, mp.kategori
+                FROM bk.catatan_pelanggaran_siswa cps
                 JOIN bk.master_pelanggaran mp ON cps.pelanggaran_id = mp.id
                 WHERE cps.siswa_id = :siswa_id 
                   AND cps.tenant_id = :tenant_id 
-                  AND cps.is_active = true
+                  AND cps.deleted_at IS NULL
                 ORDER BY cps.tanggal_kejadian DESC
             ");
             $stmtPL->execute([
@@ -2202,7 +2202,7 @@ class BukuIndukModuleController extends BaseController {
     }
 
     private function renderOrGetArchive(string $siswaId, string $tenantId, string $filename, callable $renderCallback): void {
-        $archiveDir = __DIR__ . "/../../storage/archive/{$tenantId}/{$siswaId}";
+        $archiveDir = __DIR__ . "/../../storage/app/public/archive/{$tenantId}/{$siswaId}";
         if (!is_dir($archiveDir)) {
             mkdir($archiveDir, 0777, true);
         }
@@ -2253,7 +2253,7 @@ class BukuIndukModuleController extends BaseController {
             }
 
             $cleanTa = str_replace(['/', '\\'], '-', $ta);
-            $archiveDir = __DIR__ . "/../../storage/archive/{$tenantId}/{$siswaId}";
+            $archiveDir = __DIR__ . "/../../storage/app/public/archive/{$tenantId}/{$siswaId}";
             
             if ($type === 'rapor') {
                 $filename = "rapor_{$semester}_{$cleanTa}.html";
@@ -2297,7 +2297,7 @@ class BukuIndukModuleController extends BaseController {
             }
 
             // Ensure archive directory exists
-            $archiveDir = realpath(__DIR__ . '/../../storage') . "/archive/{$tenantId}/{$siswaId}";
+            $archiveDir = realpath(__DIR__ . '/../../storage/app/public') . "/archive/{$tenantId}/{$siswaId}";
             if (!is_dir($archiveDir)) {
                 mkdir($archiveDir, 0755, true);
             }
@@ -2321,7 +2321,7 @@ class BukuIndukModuleController extends BaseController {
                     throw new \Exception("Gagal menyimpan file PDF.");
                 }
                 
-                $pdfPath = "storage/archive/{$tenantId}/{$siswaId}/{$pdfFilename}";
+                $pdfPath = "storage/app/public/archive/{$tenantId}/{$siswaId}/{$pdfFilename}";
                 $fileSize = filesize($targetFile);
             } 
             // Handle images upload and compile to PDF
@@ -2365,7 +2365,7 @@ class BukuIndukModuleController extends BaseController {
                 
                 $pdf->Output('F', $targetFile);
                 
-                $pdfPath = "storage/archive/{$tenantId}/{$siswaId}/{$pdfFilename}";
+                $pdfPath = "storage/app/public/archive/{$tenantId}/{$siswaId}/{$pdfFilename}";
                 $fileSize = filesize($targetFile);
             } else {
                 throw new \Exception("Unggah file PDF atau foto HP terlebih dahulu.");
@@ -2679,7 +2679,14 @@ class BukuIndukModuleController extends BaseController {
 
             try {
                 $stmt = $db->prepare("
-                    SELECT * 
+                    SELECT 
+                        id,
+                        siswa_id,
+                        tenant_id,
+                        nama_beasiswa AS jenis_beasiswa,
+                        penyelenggara AS sumber,
+                        tahun_mulai AS tahun_menerima,
+                        nominal
                     FROM siswa.riwayat_beasiswa 
                     WHERE siswa_id = :siswa_id 
                     ORDER BY id DESC
@@ -2739,7 +2746,7 @@ class BukuIndukModuleController extends BaseController {
             }
 
             $stmt = $db->prepare("
-                INSERT INTO siswa.riwayat_beasiswa (tenant_id, siswa_id, jenis_beasiswa, sumber, tahun_menerima, nominal) 
+                INSERT INTO siswa.riwayat_beasiswa (tenant_id, siswa_id, nama_beasiswa, penyelenggara, tahun_mulai, nominal) 
                 VALUES (:tenant_id, :siswa_id, :jenis_beasiswa, :sumber, :tahun_menerima, :nominal)
             ");
             $stmt->execute([
@@ -2785,7 +2792,7 @@ class BukuIndukModuleController extends BaseController {
             $db = \App\Config\Database::getConnection();
 
             // Get student ID and tenant ID before deleting
-            $stmtSiswa = $db->prepare("SELECT siswa_id, tenant_id FROM siswa.siswa.riwayat_beasiswa WHERE id = ?");
+            $stmtSiswa = $db->prepare("SELECT siswa_id, tenant_id FROM siswa.riwayat_beasiswa WHERE id = ?");
             $stmtSiswa->execute([$id]);
             $row = $stmtSiswa->fetch(\PDO::FETCH_ASSOC);
             $siswaId = $row['siswa_id'] ?? null;

@@ -4,6 +4,7 @@ namespace App\Modules\Siswa\Controllers;
 
 use App\Core\BaseController;
 use App\Config\Database;
+use App\Core\FileStorage;
 use App\Core\SessionManager;
 use PDO;
 
@@ -157,7 +158,7 @@ class BulkPhotoModuleController extends BaseController {
                 mkdir($baseDir, 0755, true);
             }
 
-            $newFileName = bin2hex(random_bytes(20)) . '.' . $ext;
+            $newFileName = sha1_file($filePath) . '.' . $ext;
             $destPath = $baseDir . $newFileName;
 
             if (!rename($filePath, $destPath)) {

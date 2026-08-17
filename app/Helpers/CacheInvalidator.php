@@ -19,7 +19,7 @@ class CacheInvalidator {
         }
         if (empty($tenantId)) return;
 
-        $archiveDir = dirname(__DIR__, 2) . "/storage/archive/{$tenantId}/{$siswaId}";
+        $archiveDir = dirname(__DIR__, 2) . "/storage/app/public/archive/{$tenantId}/{$siswaId}";
         $files = ['buku_induk.html', 'identitas_rapor.html', 'transkrip.html'];
         
         if (is_dir($archiveDir)) {

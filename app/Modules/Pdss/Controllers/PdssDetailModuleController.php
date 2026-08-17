@@ -3,7 +3,7 @@
 namespace App\Modules\Pdss\Controllers;
 
 use App\Core\BaseController;
-
+use App\Core\FileStorage;
 use App\Core\SessionManager;
 use PDO;
 
@@ -33,11 +33,9 @@ class PdssDetailModuleController extends BaseController {
             
             // Drop old pdss_config_mapel if it exists and doesn't have sem_1 column
             try {
-                $check = $db->query("SHOW COLUMNS FROM `pdss_config_mapel` LIKE 'sem_1'");
+                $check = $db->query("SELECT column_name FROM information_schema.columns WHERE table_name = 'pdss_config_mapel' AND column_name = 'sem_1'");
                 if ($check && $check->rowCount() === 0) {
-                    $db->exec("SET FOREIGN_KEY_CHECKS = 0;");
-                    $db->exec("DROP TABLE IF EXISTS `pdss_config_mapel`;");
-                    $db->exec("SET FOREIGN_KEY_CHECKS = 1;");
+                    $db->exec("DROP TABLE IF EXISTS pdss.pdss_config_mapel CASCADE;");
                 }
             } catch (\Throwable $e) {
                 // Table doesn't exist yet, ignore
@@ -75,9 +73,9 @@ class PdssDetailModuleController extends BaseController {
 
             // Create pdss_lock table
             try {
-                $checkLock = $db->query("SHOW COLUMNS FROM `pdss_lock` LIKE 'step'");
+                $checkLock = $db->query("SELECT column_name FROM information_schema.columns WHERE table_name = 'pdss_lock' AND column_name = 'step'");
                 if ($checkLock && $checkLock->rowCount() === 0) {
-                    $db->exec("DROP TABLE IF EXISTS `pdss_lock`;");
+                    $db->exec("DROP TABLE IF EXISTS pdss.pdss_lock CASCADE;");
                 }
             } catch (\Throwable $e) {
                 // Table doesn't exist yet, ignore
@@ -1254,9 +1252,9 @@ class PdssDetailModuleController extends BaseController {
 
             $db->beginTransaction();
             $stmt = $db->prepare("
-                INSERT INTO target_kampus (id, tenant_id, nama_kampus, jenis_kampus, kuota_target) 
+                INSERT INTO pdss.target_kampus (id, tenant_id, nama_kampus, jenis_kampus, kuota_target) 
                 VALUES (?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE kuota_target = VALUES(kuota_target)
+                ON CONFLICT (id) DO UPDATE SET kuota_target = EXCLUDED.kuota_target
             ");
 
             foreach ($defaultList as $item) {
@@ -1337,9 +1335,9 @@ class PdssDetailModuleController extends BaseController {
             
             // Simpan atau update
             $stmt = $db->prepare("
-                INSERT INTO pdss_manual_eligible (tenant_id, siswa_id, status_eligible)
+                INSERT INTO pdss.pdss_manual_eligible (tenant_id, siswa_id, status_eligible)
                 VALUES (?, ?, ?)
-                ON DUPLICATE KEY UPDATE status_eligible = VALUES(status_eligible)
+                ON CONFLICT (tenant_id, siswa_id) DO UPDATE SET status_eligible = EXCLUDED.status_eligible
             ");
             $stmt->execute([$tenantId, $siswaId, $status]);
 
@@ -1384,9 +1382,9 @@ class PdssDetailModuleController extends BaseController {
             }
             
             $stmt = $db->prepare("
-                INSERT INTO pdss_lock (tenant_id, step, tahun_ajaran_id, is_locked, locked_by, locked_at)
+                INSERT INTO pdss.pdss_lock (tenant_id, step, tahun_ajaran_id, is_locked, locked_by, locked_at)
                 VALUES (?, ?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE is_locked = VALUES(is_locked), locked_by = VALUES(locked_by), locked_at = VALUES(locked_at)
+                ON CONFLICT (tenant_id, step, tahun_ajaran_id) DO UPDATE SET is_locked = EXCLUDED.is_locked, locked_by = EXCLUDED.locked_by, locked_at = EXCLUDED.locked_at
             ");
             $stmt->execute([$tenantId, $step, $tahunAjaranId, $isLocked, $isLocked ? $userName : null, $isLocked ? $now : null]);
 
@@ -1956,16 +1954,16 @@ class PdssDetailModuleController extends BaseController {
             $now = date('Y-m-d H:i:s');
 
             if ($action === 'open') {
-                $db->prepare("INSERT INTO pdss_simulasi_setting (tenant_id, tahun_ajaran_id, no_simulasi, is_open, is_locked, dibuka_oleh, dibuka_at) VALUES (?,?,?,1,0,?,?) ON DUPLICATE KEY UPDATE is_open=1, is_locked=0, dibuka_oleh=?, dibuka_at=?")
-                   ->execute([$tenantId, $tahunAjaranId, $noSimulasi, $userName, $now, $userName, $now]);
+                $db->prepare("INSERT INTO pdss.pdss_simulasi_setting (tenant_id, tahun_ajaran_id, no_simulasi, is_open, is_locked, dibuka_oleh, dibuka_at) VALUES (?,?,?,1,0,?,?) ON CONFLICT (tenant_id, tahun_ajaran_id, no_simulasi) DO UPDATE SET is_open=1, is_locked=0, dibuka_oleh=EXCLUDED.dibuka_oleh, dibuka_at=EXCLUDED.dibuka_at")
+                   ->execute([$tenantId, $tahunAjaranId, $noSimulasi, $userName, $now]);
                 $this->jsonResponse(['success' => true, 'message' => "Simulasi $noSimulasi berhasil dibuka."]);
             } elseif ($action === 'close') {
-                $db->prepare("INSERT INTO pdss_simulasi_setting (tenant_id, tahun_ajaran_id, no_simulasi, is_open, is_locked, ditutup_oleh, ditutup_at) VALUES (?,?,?,0,0,?,?) ON DUPLICATE KEY UPDATE is_open=0, ditutup_oleh=?, ditutup_at=?")
-                   ->execute([$tenantId, $tahunAjaranId, $noSimulasi, $userName, $now, $userName, $now]);
+                $db->prepare("INSERT INTO pdss.pdss_simulasi_setting (tenant_id, tahun_ajaran_id, no_simulasi, is_open, is_locked, ditutup_oleh, ditutup_at) VALUES (?,?,?,0,0,?,?) ON CONFLICT (tenant_id, tahun_ajaran_id, no_simulasi) DO UPDATE SET is_open=0, ditutup_oleh=EXCLUDED.ditutup_oleh, ditutup_at=EXCLUDED.ditutup_at")
+                   ->execute([$tenantId, $tahunAjaranId, $noSimulasi, $userName, $now]);
                 $this->jsonResponse(['success' => true, 'message' => "Simulasi $noSimulasi berhasil ditutup."]);
             } elseif ($action === 'lock') {
-                $db->prepare("INSERT INTO pdss_simulasi_setting (tenant_id, tahun_ajaran_id, no_simulasi, is_open, is_locked, dikunci_oleh, dikunci_at) VALUES (?,?,?,0,1,?,?) ON DUPLICATE KEY UPDATE is_open=0, is_locked=1, dikunci_oleh=?, dikunci_at=?")
-                   ->execute([$tenantId, $tahunAjaranId, $noSimulasi, $userName, $now, $userName, $now]);
+                $db->prepare("INSERT INTO pdss.pdss_simulasi_setting (tenant_id, tahun_ajaran_id, no_simulasi, is_open, is_locked, dikunci_oleh, dikunci_at) VALUES (?,?,?,0,1,?,?) ON CONFLICT (tenant_id, tahun_ajaran_id, no_simulasi) DO UPDATE SET is_open=0, is_locked=1, dikunci_oleh=EXCLUDED.dikunci_oleh, dikunci_at=EXCLUDED.dikunci_at")
+                   ->execute([$tenantId, $tahunAjaranId, $noSimulasi, $userName, $now]);
                 $this->jsonResponse(['success' => true, 'message' => "Simulasi $noSimulasi berhasil dikunci permanen."]);
             }
         } catch (\Throwable $e) {
@@ -2442,16 +2440,16 @@ class PdssDetailModuleController extends BaseController {
 
             // UPSERT
             $db->prepare("
-                INSERT INTO pdss_simulasi
+                INSERT INTO pdss.pdss_simulasi
                 (tenant_id, siswa_id, tahun_ajaran_id, no_simulasi, kampus_id_1, prodi_id_1, nama_kampus_1, nama_prodi_1, kampus_id_2, prodi_id_2, nama_kampus_2, nama_prodi_2, catatan_siswa, diisi_oleh, status)
                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'submitted')
-                ON DUPLICATE KEY UPDATE
-                    kampus_id_1=VALUES(kampus_id_1), prodi_id_1=VALUES(prodi_id_1),
-                    nama_kampus_1=VALUES(nama_kampus_1), nama_prodi_1=VALUES(nama_prodi_1),
-                    kampus_id_2=VALUES(kampus_id_2), prodi_id_2=VALUES(prodi_id_2),
-                    nama_kampus_2=VALUES(nama_kampus_2), nama_prodi_2=VALUES(nama_prodi_2),
-                    catatan_siswa=VALUES(catatan_siswa), diisi_oleh=VALUES(diisi_oleh),
-                    status='submitted', updated_at=NOW()
+                ON CONFLICT (tenant_id, siswa_id, no_simulasi) DO UPDATE SET
+                    kampus_id_1=EXCLUDED.kampus_id_1, prodi_id_1=EXCLUDED.prodi_id_1,
+                    nama_kampus_1=EXCLUDED.nama_kampus_1, nama_prodi_1=EXCLUDED.nama_prodi_1,
+                    kampus_id_2=EXCLUDED.kampus_id_2, prodi_id_2=EXCLUDED.prodi_id_2,
+                    nama_kampus_2=EXCLUDED.nama_kampus_2, nama_prodi_2=EXCLUDED.nama_prodi_2,
+                    catatan_siswa=EXCLUDED.catatan_siswa, diisi_oleh=EXCLUDED.diisi_oleh,
+                    status='submitted', updated_at=CURRENT_TIMESTAMP
             ")->execute([
                 $tenantId, $siswaId, $tahunAjaranId, $noSimulasi,
                 $kampusId1, $prodiId1, $namKampus1, $namProdi1,
@@ -2539,14 +2537,24 @@ class PdssDetailModuleController extends BaseController {
                 $tahunAjaranId = $stmtTA->fetchColumn();
             }
 
-            $uploadDir = __DIR__ . "/../../storage/uploads/pdss/simulasi/{$tenantId}/{$tahunAjaranId}/";
-            if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+            // Hapus file lama jika ada
+            $stmtOld = $db->prepare("SELECT bukti_file FROM pdss_simulasi WHERE tenant_id = ? AND siswa_id = ? AND tahun_ajaran_id = ? AND no_simulasi = 3 AND deleted_at IS NULL LIMIT 1");
+            $stmtOld->execute([$tenantId, $siswaId, $tahunAjaranId]);
+            $oldPath = $stmtOld->fetchColumn();
+            if (!empty($oldPath)) {
+                FileStorage::deleteOld($oldPath, $tenantId);
+            }
 
-            $newFilename = "sim3_{$siswaId}_" . time() . ".$ext";
-            $destPath    = $uploadDir . $newFilename;
-            $relativePath = "storage/uploads/pdss/simulasi/{$tenantId}/{$tahunAjaranId}/{$newFilename}";
+            // Simpan file baru: storage/app/public/pdss/simulasi/{tenant_id}/{siswa_id}/{sha1}.ext
+            $relativePath = FileStorage::store(
+                $file['tmp_name'],
+                'pdss/simulasi',
+                $tenantId,
+                $siswaId,
+                'default'
+            );
 
-            if (!move_uploaded_file($file['tmp_name'], $destPath)) {
+            if ($relativePath === null) {
                 $this->jsonResponse(['error' => 'Gagal memindahkan file.'], 500); return;
             }
 
