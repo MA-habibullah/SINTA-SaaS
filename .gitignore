@@ -1,5 +1,7 @@
 # Mengabaikan file konfigurasi database lokal & env
 .env
+.env.local
+.deploy_pass
 
 # Mengabaikan konfigurasi database (berisi credential sensitif)
 /app/Config/Database.php
@@ -7,28 +9,27 @@
 # Mengabaikan log sampah internal
 *.log
 
-# Mengabaikan folder upload dokumen siswa (SPO, KK, Ijazah) & tenant demi privasi data
-# Tetap lacak file .htaccess untuk keamanan direktori web server
-/storage/app/public/uploads/**/*
-/storage/uploads/**/*
-/storage/archive/**/*
-/storage/app/rate_limit/
-/storage/app/public/tenants/**/*
-/storage/app/perpustakaan/**/*
-/storage/perpustakaan/**/*
-/app/Modules/storage/
-/storage/app/public/logos/
-/storage/app/public/sertifikat/
+# =========================================================================
+#  STORAGE: Abaikan seluruh isi file upload pengguna & rate limit temporer
+# =========================================================================
+/storage/app/public/*
+/storage/app/rate_limit/*
 
-# Kecualikan .gitkeep agar struktur folder penting tetap ter-track
-!storage/app/public/uploads/**/.gitkeep
-!storage/uploads/**/.gitkeep
-!storage/archive/**/.gitkeep
-!storage/perpustakaan/**/.gitkeep
+# PENGECUALIAN: Tetap lacak berkas .htaccess untuk keamanan direktori web server
+!/storage/app/public/.htaccess
+!/storage/app/public/**/.htaccess
 
-# Mengabaikan folder scratch untuk file debugging lokal
+# PENGECUALIAN: Tetap lacak berkas .gitkeep agar struktur folder storage tetap ada di repository
+!/storage/app/public/**/.gitkeep
+
+
+# Mengabaikan folder scratch & file debugging lokal
 /scratch/
-/contoh desain tampilan cetak buku induk/
+test_*.php
+rename_script.php
+database_export.sql
+SOP_INSTALLATION.*
+
 # Mengabaikan file sistem operasi
 .DS_Store
 Thumbs.db
@@ -40,14 +41,5 @@ Thumbs.db
 *.ntvs*
 *.njsproj
 
-# package-lock.json tetap di-track untuk mengunci versi dependency
-# vendor/ dan composer.lock HARUS di-push untuk shared hosting (tidak ada akses composer)
-# node_modules/ di-push sesuai kebutuhan deployment
-test_*.php
-rename_script.php
-database_export.sql
-SOP_INSTALLATION.*
-
-# Mengabaikan password deploy lokal
-.deploy_pass
+# Node modules / Dependencies
 node_modules/

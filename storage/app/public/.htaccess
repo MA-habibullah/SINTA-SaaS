@@ -1,0 +1,21 @@
+﻿# ╔════════════════════════════════════════════════════════════════╗
+# ║  SINTA SaaS - Security: Blokir akses langsung ke storage/app/public ║
+# ║  Semua file wajib diakses terotorisasi melalui /api/v1/file/serve ║
+# ╚════════════════════════════════════════════════════════════════╝
+
+# Tolak SEMUA akses langsung dari browser (HTTP 403 Forbidden)
+Order Deny,Allow
+Deny from all
+
+# Nonaktifkan eksekusi PHP & script server-side
+RemoveHandler .php .php3 .php4 .php5 .phtml .cgi .pl .py .sh
+php_flag engine off
+
+# Cegah directory listing
+Options -Indexes
+
+# Header keamanan tambahan
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "DENY"
+</IfModule>
