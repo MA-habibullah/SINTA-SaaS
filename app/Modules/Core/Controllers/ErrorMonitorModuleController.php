@@ -29,6 +29,11 @@ class ErrorMonitorModuleController extends BaseController
 
         SessionManager::requireLogin();
 
+        $uri = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+        if (str_contains($uri, '/log-client')) {
+            return; // Allow logging client JS errors for any logged-in user
+        }
+
         $role = $_SESSION['role_name'] ?? '';
         if (!in_array($role, self::ALLOWED_ROLES, true)) {
             if ($this->isJsonRequest()) {
@@ -68,7 +73,7 @@ class ErrorMonitorModuleController extends BaseController
             $params       = [];
 
             if (!empty($search)) {
-                $whereClauses[] = "(e.message LIKE :s1 OR e.file LIKE :s2 OR e.request_url LIKE :s3)";
+                $whereClauses[] = "(e.message ILIKE :s1 OR e.file ILIKE :s2 OR e.request_url ILIKE :s3)";
                 $like = '%' . $search . '%';
                 $params['s1'] = $like;
                 $params['s2'] = $like;

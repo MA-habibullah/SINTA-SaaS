@@ -3,7 +3,7 @@ Saat merombak, membuat file Model, atau membuat Controller baru, agen WAJIB mema
 
 **1. Struktur Direktori dan Namespace:**
 - Modul berlokasi di `C:\laragon\www\sinta\app\Modules\`.
-- Setiap modul (misal: `Sistem`, `Core`, `Akademik`) harus menempati sub-folder `Controllers/` dan `Models/`.
+- Setiap modul (misal: `Sistem`, `Core`, `Akademik`, `Kesiswaan`, `Siswa`, `Bk`, `Keuangan`, `Perpustakaan`, `Persuratan`, `Sarpras`, `Kepegawaian`, `Alumni`, `Pdss`, `Tracer`, `Cms`, `Smk`) harus menempati sub-folder `Controllers/` dan `Models/`.
 - File Model wajib menggunakan namespace `App\Modules\[NamaModul]\Models`.
 - File Controller wajib menggunakan namespace `App\Modules\[NamaModul]\Controllers`.
 
@@ -14,7 +14,7 @@ Saat merombak, membuat file Model, atau membuat Controller baru, agen WAJIB mema
 
 **3. Pendefinisian Controller:**
 - Controller digunakan untuk menangani operasi CRUD atau logika bisnis terpusat yang memanggil instansiasi Model.
-- Pastikan Controller menjaga batasan arsitektur (tidak mencampuradukkan logika manipulasi database kotor secara langsung tanpa melalui Model/PDO parameterized statement).
+- Pastikan Controller menjaga batasan arsitektur (menggunakan `BaseController` & `jsonResponse()` tanpa mencampuradukkan logika manipulasi database kotor secara langsung tanpa melalui PDO parameterized statement).
 
 
 ## Security Guidelines (Anti-XSS & Data Protection)
@@ -25,65 +25,126 @@ Saat menulis, memodifikasi, atau membenahi program, agen wajib selalu menerapkan
 - **Pencegahan SQL Injection (SQLi)**: Selalu gunakan Prepared Statements dengan Parameter Binding (menggunakan PDO/bindValue/execute) untuk setiap kueri database yang memproses input dari pengguna. Jangan pernah menggabungkan variabel langsung ke dalam string SQL (seperti `"WHERE id = " . $id`).
 - **Validasi & Sanitasi Input Sisi Server**: Setiap input dari request client (GET, POST, COOKIE) wajib divalidasi tipe datanya dan disanitasi menggunakan fungsi seperti `strip_tags()`, `htmlspecialchars()`, `filter_var()`, atau regex sebelum digunakan dalam proses logika bisnis aplikasi.
 
+
 ## Modern Architecture & Zero Data Leakage Development
 Saat merancang fitur baru atau memodifikasi modul yang ada, terapkan arsitektur modern dan aman:
 - **Migrasi ke AJAX Fetch Dinamis**: Hindari mencetak data mentah dari database langsung menggunakan PHP `json_encode` di dalam blok skrip HTML (`<script>`). Seluruh pemuatan data sensitif (seperti data siswa, guru, profil sekolah, agenda, dsb.) wajib dialihkan menggunakan arsitektur dynamic fetch asinkronus (misal menggunakan Axios/fetch) pada saat komponen ter-mount di sisi klien (`onMounted`/`mounted` di Vue). Hal ini penting untuk memastikan tidak ada data rahasia yang bocor lewat perintah "View Page Source" (Ctrl+U).
 - **Pengembangan dengan Ide Baru & Aman**: Setiap pembuatan fitur atau modul baru wajib dirancang menggunakan pola arsitektur modern (API-driven / dynamic rendering) dengan tetap mengutamakan keindahan estetika antarmuka (premium UI/UX) dan keamanan data yang ketat sejak fase awal perencanaan kode.
 - **Standardisasi Respon API JSON**: Saat membuat API endpoint baru yang menghasilkan respon JSON, selalu gunakan format terstandardisasi: `['success' => true/false, 'data' => ..., 'error' => ...]` lengkap dengan HTTP status code yang tepat (contoh: 200 OK, 400 Bad Request, 403 Forbidden, 422 Unprocessable Entity untuk error validasi).
 
+
+## Fast-Track Migration Cheat Sheet (MySQL -> PostgreSQL Multi-Schema)
+Untuk mempercepat migrasi dari MySQL ke PostgreSQL tanpa error runtime, agen wajib mengacu pada padanan sintaks berikut:
+
+| Kebutuhan SQL | MySQL Syntax (Legacy) | PostgreSQL Syntax (Wajib Gunakan Ini) |
+|---|---|---|
+| **Paginasi Data** | `LIMIT offset, count` | `LIMIT count OFFSET offset` |
+| **Pencarian Case-Insensitive** | `WHERE name LIKE '%abc%'` | `WHERE name ILIKE '%abc%'` |
+| **Dapatkan ID Baru** | `LAST_INSERT_ID()` | `RETURNING id` (pada query INSERT) |
+| **Tanggal / Waktu** | `NOW()` / `CURRENT_TIMESTAMP` | `CURRENT_TIMESTAMP` / `NOW()` |
+| **Tipe Data Boolean** | `1` / `0` atau `'1'` / `'0'` | `TRUE` / `FALSE` (strict boolean) |
+| **Filter Data JSON** | `JSON_EXTRACT(col, '$.key')` | `col->>'key'` (text) atau `col->'key'` (json) |
+| **Upsert (Insert / Update)** | `ON DUPLICATE KEY UPDATE` | `ON CONFLICT (target_col) DO UPDATE SET ...` |
+| **Inspeksi Struktur Tabel** | `SHOW COLUMNS FROM tbl` | Kueri `information_schema.columns` |
+| **Prefix Skema** | `nama_tabel` | `skema.nama_tabel` (misal: `siswa.buku_induk`) |
+
+
+## Template Standar Fast-Development (Modular Controller & Model)
+
+### Template Controller: `app/Modules/[NamaModul]/Controllers/[NamaModul]Controller.php`
+```php
+<?php
+namespace App\Modules\[NamaModul]\Controllers;
+
+use App\Core\BaseController;
+use App\Modules\[NamaModul]\Models\[NamaModul]Model;
+use Exception;
+
+class [NamaModul]Controller extends BaseController
+{
+    private $model;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->model = new [NamaModul]Model();
+    }
+
+    public function index()
+    {
+        try {
+            $tenantId = $this->getSecureTenantId();
+            $data = $this->model->getAllByTenant($tenantId);
+            return $this->jsonResponse(['success' => true, 'data' => $data], 200);
+        } catch (Exception $e) {
+            return $this->jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+}
+```
+
+### Template Model: `app/Modules/[NamaModul]/Models/[NamaModul]Model.php`
+```php
+<?php
+namespace App\Modules\[NamaModul]\Models;
+
+use App\Config\Database;
+use PDO;
+
+class [NamaModul]Model
+{
+    protected $db;
+    protected $table = '[skema].[nama_tabel]';
+
+    public function __construct()
+    {
+        $this->db = Database::getConnection();
+    }
+
+    public function getAllByTenant(string $tenantId): array
+    {
+        $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE tenant_id = :tenant_id AND deleted_at IS NULL ORDER BY created_at DESC");
+        $stmt->bindValue(':tenant_id', $tenantId, PDO::PARAM_STR);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+}
+```
+
+
+## Automated Dynamic System Auditor & Fast-Track Runner (WAJIB DIJALANKAN)
+Setiap kali membuat modul baru, mengubah controller/model, atau melakukan refactoring kueri database, agen **WAJIB** secara otomatis menjalankan program audit dinamis untuk memverifikasi 16 skema PostgreSQL, namespace modul, dan sintaks kueri:
+
+```powershell
+php scratch/pengujian/sinta_dynamic_auditor_and_runner.php
+```
+
+**Standar Kelulusan Sistem:**
+1. **Status Aplikasi**: Harus menunjukkan `100% DINAMIS, MODULAR, DAN SESUAI STANDAR POSTGRESQL!`.
+2. **Peringatan MySQL Legacy**: Harus `0`.
+3. **Kesalahan Namespace**: Harus `0`.
+4. **Skema Terhubung**: Seluruh 16 skema (`sistem`, `core`, `akademik`, `kesiswaan`, `bk`, `absensi`, `kepegawaian`, `keuangan`, `perpustakaan`, `persuratan`, `sarpras`, `siswa`, `pdss`, `tracer`, `cms`, `smk`) harus dalam status `[OK]`.
+
+
 # Custom Rules
 ## Testing and Checking Files
 Selalu simpan file percobaan, pengujian (*testing*), atau pengecekan (seperti file dengan awalan `test_`, `check_`, `grant_`,`audit_`,`inspect_`, dsb.) HANYA ke dalam folder `C:\laragon\www\sinta\scratch\pengujian`. Jangan pernah menyimpan file-file sementara ini di *root directory* atau direktori inti aplikasi lainnya.
 
-## Implementation Plans
-Setiap kali ada rencana implementasi (*implementation plan*) yang telah diselesaikan atau dijalankan, **SELURUH ISI plan** (bukan hanya ringkasan) wajib **ditambahkan (append)** ke dalam **satu file gabungan per hari** di folder `C:\laragon\www\sinta\scratch\docs` dengan format nama: `YYYY-MM-DD_Implementation_Plans_Harian.md` (contoh: `2026-07-17_Implementation_Plans_Harian.md`).
+## Implementation Plans & Walkthroughs (Flexible Overhead Rule)
+Setiap kali pekerjaan diselesaikan, dokumen rencana (*implementation plan*) dan dokumen hasil (*walkthrough*) wajib dicatat ke dalam **satu file harian** di `C:\laragon\www\sinta\scratch\docs`:
+- `YYYY-MM-DD_Implementation_Plans_Harian.md`
+- `YYYY-MM-DD_Walkthrough_Harian.md`
 
-> ⚠️ **PERINGATAN KRITIS**: Jangan pernah hanya menyimpan rangkuman atau deskripsi singkat. Seluruh konten plan — termasuk semua kode SQL, kode PHP, kode JavaScript, tabel, diagram, dan verification plan — WAJIB disertakan secara lengkap verbatim (apa adanya) di dalam file harian. File harian adalah **satu-satunya sumber kebenaran** untuk semua rencana implementasi; file plan terpisah per fitur tidak boleh menjadi satu-satunya tempat penyimpanan.
+**Ketentuan Format & Beban Dokumentasi:**
+1. **Fitur Baru / Refactoring Arsitektur Besar**: Wajib menyertakan seluruh konten rencana & walkthrough secara lengkap verbatim (termasuk kueri SQL, kode PHP/JS, tabel, dan verification plan).
+2. **Perbaikan Bug Kecil / Minor Tweaks**: Cukup gunakan format **Compact Log** (10-25 baris) yang mencakup: *Root Cause + Files Changed + Solution + Quick Verification Result*. Hal ini bertujuan untuk menjaga kecepatan alur kerja pengembangan (*fast-track development*).
 
-**Aturan file implementation plan harian:**
-- **Satu file per hari** — jika file `YYYY-MM-DD_Implementation_Plans_Harian.md` sudah ada, tambahkan (*append*) entri baru di bawahnya. Jangan membuat file baru per plan.
-- Setiap entri dipisahkan dengan garis pemisah `---` dan diberi subjudul `## [Nama Fitur/Plan]` beserta waktu penulisannya.
-- **Format setiap entri (WAJIB LENGKAP):**
-  ```
-  ---
-  ## [Nama Fitur atau Rencana]
-  **Waktu**: HH:MM WIB
-  **Status**: Draft / Disetujui / Dieksekusi
-
-  [SELURUH ISI IMPLEMENTATION PLAN DITEMPEL DI SINI — VERBATIM]
-  Mencakup:
-  - Latar belakang & root cause
-  - Semua proposed changes lengkap per file (dengan kode sebelum/sesudah)
-  - Semua query SQL, kode PHP, kode JavaScript yang direncanakan
-  - Matriks hak akses (jika ada)
-  - Verification plan (manual + automated)
-  ```
-- **DILARANG** hanya mengisi bagian `**Deskripsi**` dengan satu baris ringkasan. Jika plan memiliki 200 baris konten, maka semua 200 baris tersebut harus ada di file harian.
-
-
-## Walkthroughs
-Setiap kali pekerjaan diselesaikan, dokumen penjelasan hasil akhir (*walkthrough*) wajib **ditambahkan (append)** ke dalam **satu file gabungan per hari** di folder `C:\laragon\www\sinta\scratch\docs` dengan format nama: `YYYY-MM-DD_Walkthrough_Harian.md` (contoh: `2026-07-17_Walkthrough_Harian.md`).
-
-> ⚠️ **PERINGATAN KRITIS**: Jangan pernah hanya menyimpan rangkuman atau deskripsi singkat. Seluruh konten penjelasan hasil akhir (walkthrough.md) — termasuk semua file yang diubah/dibuat, hasil pengujian static analysis, dan regresi keamanan — WAJIB disertakan secara lengkap verbatim (apa adanya) di dalam file harian. File harian adalah **satu-satunya sumber kebenaran** untuk semua penjelasan hasil akhir; file walkthrough terpisah per fitur tidak boleh menjadi satu-satunya tempat penyimpanan.
-
-**Aturan file walkthrough harian:**
-- **Satu file per hari** — jika file `YYYY-MM-DD_Walkthrough_Harian.md` sudah ada, tambahkan (*append*) entri baru di bawahnya. Jangan membuat file baru per tugas.
-- Setiap entri dipisahkan dengan garis pemisah `---` dan diberi subjudul `## [Nama Perbaikan/Tugas]` beserta waktu penyelesaiannya.
-- **Format setiap entri (WAJIB LENGKAP):**
-  ```
-  ---
-  ## [Nama Perbaikan atau Tugas]
-  **Waktu**: HH:MM WIB
-  **Jenis**: Bug Fix / Feature / Refactor / dll.
-
-  [SELURUH ISI WALKTHROUGH ARTIFACT DITEMPEL DI SINI — VERBATIM]
-  Mencakup:
-  - Deskripsi dan root cause (jika bug)
-  - Semua file yang diubah / dibuat
-  - Seluruh visualisasi / screenshot (jika ada)
-  - Hasil pengujian & verifikasi lengkap (PHPStan + security audit)
-  ```
-- **DILARANG** hanya mengisi dengan satu baris ringkasan. Jika walkthrough memiliki 100 baris konten, maka semua 100 baris tersebut harus ada di file harian.
+## Automatic Code Syntax Check Rule (WAJIB)
+Setiap kali memodifikasi atau membuat berkas PHP baru, agen **WAJIB** secara otomatis menjalankan tes sintaks bebas error sebelum melaporkan pekerjaan selesai:
+```powershell
+php -l <path_file_php>
+```
+Pastikan output menunjukkan `No syntax errors detected`.
 
 ## Git Commits and Pushing (OPSIONAL)
 *(Tidak wajib dieksekusi. Hanya lakukan proses git commit dan push jika ada instruksi eksplisit dari pengguna).*
@@ -104,7 +165,6 @@ try {
     exit(1);
 }
 ```
-Format di atas akan menyebabkan error `Galat: File migrasi tidak menyediakan fungsi 'up'` setiap kali deploy, dan migrasi tidak akan dicatat ke tabel `migrations` sehingga diulang terus.
 
 **✅ FORMAT BENAR — Selalu gunakan ini:**
 ```php
@@ -132,18 +192,16 @@ return [
 - **Gunakan** `CASCADE` pada operasi `DROP TABLE` jika tabel tersebut memiliki *foreign key* yang saling terikat (PostgreSQL tidak mendukung perintah `SET FOREIGN_KEY_CHECKS = 0` seperti di MySQL).
 
 ## Static Analysis & Security Audit Verification (OPSIONAL)
-*(Tidak wajib dieksekusi di setiap akhir sesi. Hanya jalankan langkah verifikasi ini jika pengguna secara spesifik memintanya).*
+*(Tidak wajib dieksekusi di meingkatkan efisiensi kerja).*
 Ketika pengguna meminta verifikasi, agen wajib secara otomatis menjalankan 2 langkah berikut:
-1. **PHPStan Static Analysis**: Jalankan analisis statis PHPStan pada berkas yang diubah atau direktori aplikasi:
+1. **PHPStan Static Analysis**:
    ```powershell
    vendor/bin/phpstan analyse <path-file-atau-folder> --level=5
    ```
-   Pastikan tidak ada error atau warning yang tersisa (`[OK] No errors`).
-2. **Automated Security Audit Script**: Jalankan skrip uji regresi keamanan otomatis suite:
+2. **Automated Security Audit Script**:
    ```powershell
    php scratch/tests/test_security_audit.php
    ```
-   Pastikan hasilnya menunjukkan `Failed Checks: 0`.
 
 ## Strict Prohibition on Folder Deletion in Scratch (PERMANENT RULE)
 DILARANG KERAS menghapus atau mengosongkan folder-folder berikut beserta seluruh isi berkas dan sub-foldernya dalam kondisi apa pun:
@@ -152,5 +210,3 @@ DILARANG KERAS menghapus atau mengosongkan folder-folder berikut beserta seluruh
 3. `C:\laragon\www\sinta\scratch\tests`
 
 Setiap kali pembersihan berkas dilakukan, ketiga direktori di atas WAJIB tetap aman, utuh, dan terlindungi dari segala bentuk perintah penghapusan.
-
-

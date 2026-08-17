@@ -132,7 +132,7 @@
     <div class="card border-0 shadow-sm rounded-4 p-3 mb-4" style="background:#fff;">
         <div class="row g-2 align-items-center">
             <!-- Search -->
-            <div class="col-12 col-md-5">
+            <div class="col-12 col-md-4">
                 <div class="position-relative">
                     <label for="errSearchQuery" class="visually-hidden">Cari Log Error</label>
                     <i class="bi bi-search position-absolute text-slate-600"
@@ -176,20 +176,37 @@
                     <option value="10">10 / hal</option>
                     <option value="20">20 / hal</option>
                     <option value="50">50 / hal</option>
+                    <option value="100">100 / hal</option>
                 </select>
             </div>
 
-            <!-- Refresh & Counter -->
-            <div class="col-12 col-md-2 d-flex align-items-center justify-content-end gap-2">
-                <span class="text-muted fs-9 d-none d-md-inline">
-                    {{ totalErrors }} entri
-                </span>
-                <button class="btn btn-light border rounded-pill px-3 fs-8 d-flex align-items-center gap-2"
+            <!-- Auto Refresh Toggle & Refresh Action -->
+            <div class="col-12 col-md-3 d-flex align-items-center justify-content-end gap-2">
+                <!-- Auto Refresh Select -->
+                <div class="d-flex align-items-center gap-1">
+                    <span v-if="autoRefreshSeconds > 0" class="d-inline-flex align-items-center me-1" title="Live Auto Refreshing Active">
+                        <span class="spinner-grow spinner-grow-sm text-danger" role="status" style="width:10px;height:10px;"></span>
+                    </span>
+                    <select id="autoRefreshSelect"
+                            name="auto_refresh"
+                            class="form-select rounded-pill fs-8 border-0 bg-light fw-semibold"
+                            style="height:40px;"
+                            v-model="autoRefreshSeconds"
+                            @change="onAutoRefreshChange">
+                        <option :value="0">Auto: Off</option>
+                        <option :value="5">Auto: 5s</option>
+                        <option :value="10">Auto: 10s</option>
+                        <option :value="30">Auto: 30s</option>
+                    </select>
+                </div>
+
+                <!-- Manual Refresh Button -->
+                <button class="btn btn-light border rounded-pill px-3 fs-8 d-flex align-items-center gap-2 flex-shrink-0"
                         style="height:40px;"
                         @click="loadErrors(currentPage)"
                         :disabled="loading">
                     <i class="bi bi-arrow-clockwise" :style="loading ? 'animation:spin 1s linear infinite;display:inline-block;' : ''"></i>
-                    Refresh
+                    <span>Refresh</span>
                 </button>
             </div>
         </div>
@@ -316,28 +333,44 @@
         </div>
 
         <!-- Pagination Footer -->
-        <div class="d-flex align-items-center justify-content-between px-4 py-3 border-top"
+        <div class="d-flex align-items-center justify-content-between px-4 py-3 border-top flex-wrap gap-2"
              style="background:#f8fafc;"
              v-if="totalPages > 0">
             <div class="text-muted fs-8">
                 <span v-if="totalErrors > 0">
                     Halaman <strong class="text-dark">{{ currentPage }}</strong> / <strong class="text-dark">{{ totalPages }}</strong>
                     &nbsp;·&nbsp; Total <strong class="text-dark">{{ totalErrors }}</strong> entri
+                    <span v-if="lastUpdatedTime" class="ms-2 text-secondary fs-9 font-monospace">
+                        <i class="bi bi-clock me-1"></i>Diperbarui {{ lastUpdatedTime }}
+                    </span>
                 </span>
                 <span v-else class="text-muted fs-8">Tidak ada data</span>
             </div>
-            <div class="d-flex gap-2" v-if="totalPages > 1">
-                <button class="btn btn-sm btn-light border rounded-3 px-3"
+
+            <!-- Numbered Pagination -->
+            <div class="d-flex align-items-center gap-1 flex-wrap" v-if="totalPages > 1">
+                <button class="btn btn-sm btn-light border rounded-3 px-2 py-1"
                         @click="loadErrors(currentPage - 1)"
-                        :disabled="currentPage <= 1 || loading">
+                        :disabled="currentPage <= 1 || loading"
+                        title="Halaman Sebelumnya">
                     <i class="bi bi-chevron-left"></i>
                 </button>
-                <span class="btn btn-sm btn-primary rounded-3 px-3 pe-none" style="cursor:default;">
-                    {{ currentPage }}
-                </span>
-                <button class="btn btn-sm btn-light border rounded-3 px-3"
+
+                <template v-for="(p, idx) in visiblePages" :key="idx">
+                    <span v-if="p === '...'" class="px-2 text-muted fs-8 select-none">...</span>
+                    <button v-else
+                            class="btn btn-sm rounded-3 px-3 py-1 font-monospace fw-semibold"
+                            :class="p === currentPage ? 'btn-primary shadow-sm' : 'btn-light border text-dark'"
+                            @click="loadErrors(p)"
+                            :disabled="loading">
+                        {{ p }}
+                    </button>
+                </template>
+
+                <button class="btn btn-sm btn-light border rounded-3 px-2 py-1"
                         @click="loadErrors(currentPage + 1)"
-                        :disabled="currentPage >= totalPages || loading">
+                        :disabled="currentPage >= totalPages || loading"
+                        title="Halaman Selanjutnya">
                     <i class="bi bi-chevron-right"></i>
                 </button>
             </div>
@@ -405,42 +438,82 @@
     window.VueAppRegistry.register('#errorMonitorApp', {
         data() {
             return {
-                errors:        [],
-                stats:         [],
-                loading:       false,
-                loadingClear:  false,
-                searchQuery:   '',
-                levelFilter:   '',
-                perPage:       20,
-                currentPage:   1,
-                totalErrors:   0,
-                totalPages:    1,
-                searchTimer:   null,
-                // Modal dikelola via Vanilla JS (di luar scope Vue karena Bootstrap modal)
-                _traceModal:   null,
-                _currentErrId: null,
+                errors:              [],
+                stats:               [],
+                loading:             false,
+                loadingClear:        false,
+                searchQuery:         '',
+                levelFilter:         '',
+                perPage:             20,
+                currentPage:         1,
+                totalErrors:         0,
+                totalPages:          1,
+                searchTimer:         null,
+                autoRefreshSeconds:  0,
+                autoRefreshTimer:    null,
+                lastUpdatedTime:     '',
+                // Modal dikelola via Vanilla JS
+                _traceModal:         null,
+                _currentErrId:       null,
             };
+        },
+
+        computed: {
+            visiblePages() {
+                const pages = [];
+                const total = this.totalPages;
+                const current = this.currentPage;
+                if (total <= 7) {
+                    for (let i = 1; i <= total; i++) pages.push(i);
+                } else {
+                    if (current <= 4) {
+                        pages.push(1, 2, 3, 4, 5, '...', total);
+                    } else if (current >= total - 3) {
+                        pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total);
+                    } else {
+                        pages.push(1, '...', current - 1, current, current + 1, '...', total);
+                    }
+                }
+                return pages;
+            }
         },
 
         mounted() {
             // Inisialisasi Bootstrap Modal
-            this._traceModal = new bootstrap.Modal(document.getElementById('modalErrorTrace'));
+            const modalEl = document.getElementById('modalErrorTrace');
+            if (modalEl) {
+                this._traceModal = new bootstrap.Modal(modalEl);
+            }
 
-            // Bind tombol delete di footer modal (overwrite event handler to avoid duplication under Turbo)
-            document.getElementById('btn-modal-delete-error').onclick = () => {
-                if (this._currentErrId) {
-                    this.deleteOne(this._currentErrId);
-                    this._traceModal.hide();
-                }
-            };
+            const btnDelete = document.getElementById('btn-modal-delete-error');
+            if (btnDelete) {
+                btnDelete.onclick = () => {
+                    if (this._currentErrId) {
+                        this.deleteOne(this._currentErrId);
+                        if (this._traceModal) this._traceModal.hide();
+                    }
+                };
+            }
 
             this.loadErrors(1);
         },
 
+        beforeUnmount() {
+            if (this.autoRefreshTimer) {
+                clearInterval(this.autoRefreshTimer);
+                this.autoRefreshTimer = null;
+            }
+            if (this.searchTimer) {
+                clearTimeout(this.searchTimer);
+            }
+        },
+
         methods: {
             // ─── Data Fetching ─────────────────────────────────────────
-            async loadErrors(page = 1) {
-                this.loading     = true;
+            async loadErrors(page = 1, isSilent = false) {
+                if (!isSilent) {
+                    this.loading = true;
+                }
                 this.currentPage = page;
                 try {
                     const params = new URLSearchParams({
@@ -452,17 +525,22 @@
                     const res  = await axios.get(`<?= $this->getBaseUrl() ?>/api/v1/error-monitor?${params}`);
                     const data = res.data;
 
-                    this.errors      = data.data              || [];
-                    this.stats       = data.stats             || [];
-                    this.totalErrors = (data && data.pagination && data.pagination.total) || 0;
-                    this.totalPages  = (data && data.pagination && data.pagination.pages) || 1;
+                    this.errors          = data.data              || [];
+                    this.stats           = data.stats             || [];
+                    this.totalErrors     = (data && data.pagination && data.pagination.total) || 0;
+                    this.totalPages      = (data && data.pagination && data.pagination.pages) || 1;
+                    
+                    const now = new Date();
+                    this.lastUpdatedTime = now.toLocaleTimeString('id-ID');
                 } catch {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Gagal Memuat',
-                        text: 'Tidak dapat memuat data error log. Periksa koneksi server.',
-                        confirmButtonColor: '#2563eb'
-                    });
+                    if (!isSilent) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal Memuat',
+                            text: 'Tidak dapat memuat data error log. Periksa koneksi server.',
+                            confirmButtonColor: '#2563eb'
+                        });
+                    }
                 } finally {
                     this.loading = false;
                 }
@@ -470,18 +548,31 @@
 
             onSearch() {
                 clearTimeout(this.searchTimer);
-                this.searchTimer = setTimeout(() => this.loadErrors(1), 400);
+                this.searchTimer = setTimeout(() => this.loadErrors(1), 300);
+            },
+
+            onAutoRefreshChange() {
+                if (this.autoRefreshTimer) {
+                    clearInterval(this.autoRefreshTimer);
+                    this.autoRefreshTimer = null;
+                }
+                const sec = parseInt(this.autoRefreshSeconds) || 0;
+                if (sec > 0) {
+                    this.autoRefreshTimer = setInterval(() => {
+                        this.loadErrors(this.currentPage, true);
+                    }, sec * 1000);
+                }
             },
 
             // ─── Modal Stack Trace ─────────────────────────────────────
             openTraceModal(err) {
                 this._currentErrId = err.id;
 
-                // Isi subtitle
-                document.getElementById('modal-trace-subtitle').textContent =
-                    `${err.error_level} — ${this.shortenPath(err.file)} (Baris ${err.line || '?'})`;
+                const subtitleEl = document.getElementById('modal-trace-subtitle');
+                if (subtitleEl) {
+                    subtitleEl.textContent = `${err.error_level} — ${this.shortenPath(err.file)} (Baris ${err.line || '?'})`;
+                }
 
-                // Build HTML konten modal secara Vanilla JS (aman dari XSS via escapeHtml)
                 const esc = (s) => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
                 let traceHtml = '';
@@ -528,12 +619,10 @@
                     traceHtml = `<pre class="bg-dark text-light p-3 rounded-3 mb-0" style="font-size:0.72rem;max-height:280px;overflow-y:auto;">${esc(err.trace)}</pre>`;
                 }
 
-                // Parse Context jika ada
                 let contextHtml = '';
                 if (err.context) {
                     try {
                         const ctx = typeof err.context === 'string' ? JSON.parse(err.context) : err.context;
-                        // Format ke string JSON yang rapi
                         const ctxString = JSON.stringify(ctx, null, 2);
                         contextHtml = `
                         <div class="mb-3">
@@ -548,66 +637,71 @@
                     }
                 }
 
-                document.getElementById('modal-trace-body').innerHTML = `
-                    <!-- Metadata Row -->
-                    <div class="row g-2 mb-3">
-                        <div class="col-md-4">
-                            <div class="rounded-3 p-3 h-100" style="background:#f8fafc;border:1px solid #e2e8f0;">
-                                <div class="fs-9 text-muted fw-semibold text-uppercase mb-1" style="letter-spacing:.5px;">Level</div>
-                                <span class="badge fw-semibold font-monospace px-2 py-1 ${this.levelBadgeClass(err.error_level)}">${esc(err.error_level)}</span>
+                const modalBodyEl = document.getElementById('modal-trace-body');
+                if (modalBodyEl) {
+                    modalBodyEl.innerHTML = `
+                        <!-- Metadata Row -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-4">
+                                <div class="rounded-3 p-3 h-100" style="background:#f8fafc;border:1px solid #e2e8f0;">
+                                    <div class="fs-9 text-muted fw-semibold text-uppercase mb-1" style="letter-spacing:.5px;">Level</div>
+                                    <span class="badge fw-semibold font-monospace px-2 py-1 ${this.levelBadgeClass(err.error_level)}">${esc(err.error_level)}</span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="rounded-3 p-3 h-100" style="background:#f8fafc;border:1px solid #e2e8f0;">
-                                <div class="fs-9 text-muted fw-semibold text-uppercase mb-1" style="letter-spacing:.5px;">Waktu</div>
-                                <div class="fs-8 font-monospace text-dark">${esc(this.formatDateTime(err.created_at))}</div>
+                            <div class="col-md-4">
+                                <div class="rounded-3 p-3 h-100" style="background:#f8fafc;border:1px solid #e2e8f0;">
+                                    <div class="fs-9 text-muted fw-semibold text-uppercase mb-1" style="letter-spacing:.5px;">Waktu</div>
+                                    <div class="fs-8 font-monospace text-dark">${esc(this.formatDateTime(err.created_at))}</div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="rounded-3 p-3 h-100" style="background:#f8fafc;border:1px solid #e2e8f0;">
-                                <div class="fs-9 text-muted fw-semibold text-uppercase mb-1" style="letter-spacing:.5px;">Request</div>
-                                <div class="fs-9 font-monospace text-dark text-break">
-                                    <span class="badge bg-secondary me-1">${esc(err.request_method)}</span>${esc(err.request_url)}
+                            <div class="col-md-4">
+                                <div class="rounded-3 p-3 h-100" style="background:#f8fafc;border:1px solid #e2e8f0;">
+                                    <div class="fs-9 text-muted fw-semibold text-uppercase mb-1" style="letter-spacing:.5px;">Request</div>
+                                    <div class="fs-9 font-monospace text-dark text-break">
+                                        <span class="badge bg-secondary me-1">${esc(err.request_method)}</span>${esc(err.request_url)}
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Pesan Error -->
-                    <div class="mb-3">
-                        <div class="fs-8 fw-bold text-muted mb-2 text-uppercase d-flex align-items-center gap-1" style="letter-spacing:.5px;">
-                            <i class="bi bi-exclamation-octagon-fill text-danger"></i> Pesan Error
+                        <!-- Pesan Error -->
+                        <div class="mb-3">
+                            <div class="fs-8 fw-bold text-muted mb-2 text-uppercase d-flex align-items-center gap-1" style="letter-spacing:.5px;">
+                                <i class="bi bi-exclamation-octagon-fill text-danger"></i> Pesan Error
+                            </div>
+                            <div class="rounded-3 p-3" style="background:#fff5f5;border:1px solid #fecaca;">
+                                <code class="text-danger" style="font-size:0.8rem;white-space:pre-wrap;word-break:break-word;">${esc(err.message)}</code>
+                            </div>
                         </div>
-                        <div class="rounded-3 p-3" style="background:#fff5f5;border:1px solid #fecaca;">
-                            <code class="text-danger" style="font-size:0.8rem;white-space:pre-wrap;word-break:break-word;">${esc(err.message)}</code>
-                        </div>
-                    </div>
 
-                    <!-- File Sumber -->
-                    <div class="mb-3">
-                        <div class="fs-8 fw-bold text-muted mb-2 text-uppercase d-flex align-items-center gap-1" style="letter-spacing:.5px;">
-                            <i class="bi bi-file-code-fill text-primary"></i> File Sumber
+                        <!-- File Sumber -->
+                        <div class="mb-3">
+                            <div class="fs-8 fw-bold text-muted mb-2 text-uppercase d-flex align-items-center gap-1" style="letter-spacing:.5px;">
+                                <i class="bi bi-file-code-fill text-primary"></i> File Sumber
+                            </div>
+                            <div class="rounded-3 p-3 d-flex align-items-center gap-3 flex-wrap" style="background:#f0f9ff;border:1px solid #bae6fd;">
+                                <code class="text-primary flex-grow-1" style="font-size:0.78rem;word-break:break-all;">${esc(err.file)}</code>
+                                <span class="badge fw-bold flex-shrink-0" style="background:#fefce8;color:#854d0e;border:1px solid #fde68a;font-size:0.78rem;">
+                                    Baris ${esc(err.line || '?')}
+                                </span>
+                            </div>
                         </div>
-                        <div class="rounded-3 p-3 d-flex align-items-center gap-3 flex-wrap" style="background:#f0f9ff;border:1px solid #bae6fd;">
-                            <code class="text-primary flex-grow-1" style="font-size:0.78rem;word-break:break-all;">${esc(err.file)}</code>
-                            <span class="badge fw-bold flex-shrink-0" style="background:#fefce8;color:#854d0e;border:1px solid #fde68a;font-size:0.78rem;">
-                                Baris ${esc(err.line || '?')}
-                            </span>
+
+                        <!-- Stack Trace -->
+                        <div>
+                            <div class="fs-8 fw-bold text-muted mb-2 text-uppercase d-flex align-items-center gap-1" style="letter-spacing:.5px;">
+                                <i class="bi bi-list-ol text-secondary"></i> Stack Trace
+                            </div>
+                            ${traceHtml}
                         </div>
-                    </div>
 
-                    <!-- Stack Trace -->
-                    <div>
-                        <div class="fs-8 fw-bold text-muted mb-2 text-uppercase d-flex align-items-center gap-1" style="letter-spacing:.5px;">
-                            <i class="bi bi-list-ol text-secondary"></i> Stack Trace
-                        </div>
-                        ${traceHtml}
-                    </div>
+                        ${contextHtml}
+                    `;
+                }
 
-                    ${contextHtml}
-                `;
-
-                this._traceModal.show();
+                if (this._traceModal) {
+                    this._traceModal.show();
+                }
             },
 
             // ─── Clear All ─────────────────────────────────────────────
@@ -719,5 +813,9 @@
             },
         }
     });
+
+    if (window.VueAppRegistry && typeof window.VueAppRegistry.mountAll === 'function') {
+        window.VueAppRegistry.mountAll();
+    }
 }
 </script>

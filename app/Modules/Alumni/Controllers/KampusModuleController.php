@@ -258,9 +258,9 @@ class KampusModuleController extends BaseController
         $db = Database::getConnection();
         try {
             $stmt = $db->prepare("
-                INSERT INTO kampus_prodi_riwayat (prodi_id, tahun, daya_tampung, jumlah_pendaftar)
+                INSERT INTO pdss.kampus_prodi_riwayat (prodi_id, tahun, daya_tampung, jumlah_pendaftar)
                 VALUES (?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE daya_tampung = VALUES(daya_tampung), jumlah_pendaftar = VALUES(jumlah_pendaftar)
+                ON CONFLICT (prodi_id, tahun) DO UPDATE SET daya_tampung = EXCLUDED.daya_tampung, jumlah_pendaftar = EXCLUDED.jumlah_pendaftar
             ");
             $stmt->execute([$prodi_id, $tahun, $daya_tampung, $jumlah_pendaftar]);
             $this->jsonResponse(['success' => true, 'message' => 'Riwayat berhasil disimpan.']);
@@ -477,7 +477,7 @@ class KampusModuleController extends BaseController
                     $stmtProdi->execute([$kodeProdi, $kampusId]);
                     $prodiId = $stmtProdi->fetchColumn();
 
-                    $stmtCheckCol = $db->prepare("SHOW COLUMNS FROM `master_kampus_prodi` LIKE 'kode_prodi'");
+                    $stmtCheckCol = $db->prepare("SELECT column_name FROM information_schema.columns WHERE table_name = 'master_kampus_prodi' AND column_name = 'kode_prodi'");
                     $stmtCheckCol->execute();
                     $hasKodeCol = $stmtCheckCol->fetch() !== false;
 
@@ -504,9 +504,9 @@ class KampusModuleController extends BaseController
                     // 3. Insert or Update Riwayat
                     $activeYear = $dtYear ?: date('Y');
                     $stmtRiw = $db->prepare("
-                        INSERT INTO kampus_prodi_riwayat (prodi_id, tahun, daya_tampung, jumlah_pendaftar)
+                        INSERT INTO pdss.kampus_prodi_riwayat (prodi_id, tahun, daya_tampung, jumlah_pendaftar)
                         VALUES (?, ?, ?, ?)
-                        ON DUPLICATE KEY UPDATE daya_tampung = VALUES(daya_tampung), jumlah_pendaftar = VALUES(jumlah_pendaftar)
+                        ON CONFLICT (prodi_id, tahun) DO UPDATE SET daya_tampung = EXCLUDED.daya_tampung, jumlah_pendaftar = EXCLUDED.jumlah_pendaftar
                     ");
                     $stmtRiw->execute([$prodiId, $activeYear, $dtVal, $pmVal]);
                     $insertedRiwayat++;
@@ -782,9 +782,9 @@ class KampusModuleController extends BaseController
 
                 // Upsert Riwayat
                 $stmtRiwayat = $db->prepare("
-                    INSERT INTO kampus_prodi_riwayat (prodi_id, tahun, daya_tampung, jumlah_pendaftar)
+                    INSERT INTO pdss.kampus_prodi_riwayat (prodi_id, tahun, daya_tampung, jumlah_pendaftar)
                     VALUES (?, ?, ?, ?)
-                    ON DUPLICATE KEY UPDATE daya_tampung = VALUES(daya_tampung), jumlah_pendaftar = VALUES(jumlah_pendaftar)
+                    ON CONFLICT (prodi_id, tahun) DO UPDATE SET daya_tampung = EXCLUDED.daya_tampung, jumlah_pendaftar = EXCLUDED.jumlah_pendaftar
                 ");
                 $stmtRiwayat->execute([$prodiId, $tahun, $dt, $pendaftar]);
                 $inserted++;

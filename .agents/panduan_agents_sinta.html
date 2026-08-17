@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SINTA SaaS - Panduan Standar Arsitektur & Rules Agen AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #f0f6ff;
+            --bg-card: #ffffff;
+            --bg-card-hover: #ffffff;
+            --border-color: #e2e8f0;
+            --border-accent: rgba(37, 99, 235, 0.25);
+            
+            --primary: #2563eb;
+            --primary-glow: rgba(37, 99, 235, 0.15);
+            --secondary: #0284c7;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
+            
+            --text-main: #334155;
+            --text-muted: #64748b;
+            --text-heading: #0f172a;
+            
+            --sidebar-width: 280px;
+            --shadow-soft: 0 4px 20px -2px rgba(37, 99, 235, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+            --shadow-card: 0 10px 25px -5px rgba(37, 99, 235, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+            line-height: 1.65;
+            background-image: 
+                radial-gradient(circle at 10% 10%, rgba(37, 99, 235, 0.06) 0%, transparent 45%),
+                radial-gradient(circle at 90% 90%, rgba(2, 132, 199, 0.06) 0%, transparent 45%);
+            background-attachment: fixed;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Sidebar Styles */
+        aside.sidebar {
+            width: var(--sidebar-width);
+            background: #ffffff;
+            border-right: 1px solid var(--border-color);
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 24px 16px;
+            z-index: 100;
+            box-shadow: 4px 0 20px rgba(37, 99, 235, 0.04);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Collapsed Sidebar State */
+        body.sidebar-collapsed aside.sidebar {
+            transform: translateX(-100%);
+        }
+
+        body.sidebar-collapsed main.content {
+            margin-left: 0;
+            max-width: 1300px;
+        }
+
+        /* Brand & Toggle Header */
+        .brand {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .brand-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-logo {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #2563eb, #0284c7);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 20px;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .brand-text h2 {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-heading);
+            letter-spacing: -0.2px;
+        }
+
+        .brand-text p {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .sidebar-close-btn {
+            background: #f1f5f9;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+
+        .sidebar-close-btn:hover {
+            background: #e2e8f0;
+            color: var(--text-heading);
+        }
+
+        .nav-search {
+            margin-bottom: 20px;
+        }
+
+        .nav-search input {
+            width: 100%;
+            padding: 11px 16px;
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-main);
+            font-size: 13px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .nav-search input:focus {
+            background: #ffffff;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+
+        .nav-menu {
+            list-style: none;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .nav-item {
+            margin-bottom: 4px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 11px 14px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 13.5px;
+            font-weight: 500;
+            border-radius: 10px;
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover {
+            color: var(--primary);
+            background: #eff6ff;
+        }
+
+        .nav-link.active {
+            color: #2563eb;
+            background: #dbeafe;
+            font-weight: 600;
+        }
+
+        /* Floating / Top Toggle Button */
+        .top-toggle-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 90;
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            color: #2563eb;
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.15);
+            transition: all 0.2s;
+        }
+
+        .top-toggle-btn:hover {
+            background: #2563eb;
+            color: #ffffff;
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.3);
+        }
+
+        /* Main Content */
+        main.content {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            padding: 40px 60px;
+            max-width: 1200px;
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.3s;
+        }
+
+        .header-banner {
+            background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            border-radius: 20px;
+            padding: 36px;
+            margin-bottom: 36px;
+            box-shadow: var(--shadow-card);
+            position: relative;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        .header-banner::after {
+            content: '';
+            position: absolute;
+            top: -50px; right: -50px;
+            width: 250px; height: 250px;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .header-banner h1 {
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--text-heading);
+            margin-bottom: 10px;
+            letter-spacing: -0.3px;
+        }
+
+        .header-banner p {
+            color: var(--text-muted);
+            font-size: 14.5px;
+            max-width: 800px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 14px;
+            background: #dcfce7;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+
+        /* Section Cards */
+        .section-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 36px;
+            margin-bottom: 32px;
+            box-shadow: var(--shadow-card);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .section-card:hover {
+            box-shadow: 0 14px 30px -5px rgba(37, 99, 235, 0.12);
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-heading);
+            margin-bottom: 22px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 14px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+
+        .section-title span.icon {
+            font-size: 24px;
+        }
+
+        .rule-list {
+            list-style: none;
+        }
+
+        .rule-item {
+            margin-bottom: 16px;
+            padding-left: 28px;
+            position: relative;
+            font-size: 14px;
+        }
+
+        .rule-item::before {
+            content: '🔹';
+            position: absolute;
+            left: 0;
+            top: 1px;
+            font-size: 14px;
+        }
+
+        .rule-item strong {
+            color: #1e40af;
+        }
+
+        /* Table Styling */
+        .table-container {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 14px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-soft);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13.5px;
+            text-align: left;
+        }
+
+        th {
+            background: #f8fafc;
+            color: var(--text-heading);
+            padding: 16px 20px;
+            font-weight: 700;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        td {
+            padding: 16px 20px;
+            border-bottom: 1px solid #f1f5f9;
+            background: #ffffff;
+        }
+
+        tr:nth-child(even) td {
+            background: #fafcff;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        td code {
+            font-family: 'Fira Code', monospace;
+            background: #eff6ff;
+            color: #1d4ed8;
+            padding: 4px 9px;
+            border-radius: 6px;
+            font-size: 12.5px;
+            font-weight: 500;
+            border: 1px solid #dbeafe;
+        }
+
+        /* Code Block Styling */
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1e293b;
+            padding: 12px 20px;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            font-size: 12px;
+            font-family: 'Fira Code', monospace;
+            color: #94a3b8;
+        }
+
+        .copy-btn {
+            background: #3b82f6;
+            border: none;
+            color: #ffffff;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: #2563eb;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
+        }
+
+        pre {
+            background: #0f172a !important;
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
+            padding: 22px;
+            overflow-x: auto;
+            font-family: 'Fira Code', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #38bdf8;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-soft);
+        }
+
+        /* Callout Boxes */
+        .callout {
+            padding: 20px 24px;
+            border-radius: 14px;
+            margin: 24px 0;
+            display: flex;
+            gap: 16px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .callout-warning {
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            color: #92400e;
+        }
+
+        .callout-danger {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+        }
+
+        .callout-success {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #166534;
+        }
+
+        .callout-icon {
+            font-size: 22px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Floating / Top Toggle Button -->
+    <button class="top-toggle-btn" id="toggleSidebarBtn" onclick="toggleSidebar()">
+        <span id="toggleIcon">☰</span>
+        <span id="toggleText">Menu Sidebar</span>
+    </button>
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+        <div class="brand">
+            <div class="brand-left">
+                <div class="brand-logo">S</div>
+                <div class="brand-text">
+                    <h2>SINTA SaaS</h2>
+                    <p>Rules & Architecture Guide</p>
+                </div>
+            </div>
+            <button class="sidebar-close-btn" onclick="toggleSidebar()" title="Tutup Sidebar">✕</button>
+        </div>
+
+        <div class="nav-search">
+            <input type="text" id="searchInput" placeholder="Cari aturan & sintaks..." onkeyup="filterDocs()">
+        </div>
+
+        <ul class="nav-menu">
+            <li class="nav-item"><a href="#modular-architecture" class="nav-link active" onclick="selectMenu(this)"><span>🏢</span> Arsitektur Modular</a></li>
+            <li class="nav-item"><a href="#security-guidelines" class="nav-link" onclick="selectMenu(this)"><span>🛡️</span> Keamanan & Anti-XSS</a></li>
+            <li class="nav-item"><a href="#modern-architecture" class="nav-link" onclick="selectMenu(this)"><span>⚡</span> API & Dynamic Rendering</a></li>
+            <li class="nav-item"><a href="#migration-cheat-sheet" class="nav-link" onclick="selectMenu(this)"><span>🔄</span> Cheat Sheet MySQL ➔ Postgres</a></li>
+            <li class="nav-item"><a href="#templates" class="nav-link" onclick="selectMenu(this)"><span>📋</span> Template Controller & Model</a></li>
+            <li class="nav-item"><a href="#automated-auditor" class="nav-link" onclick="selectMenu(this)"><span>🔍</span> Dynamic System Auditor</a></li>
+            <li class="nav-item"><a href="#documentation-rules" class="nav-link" onclick="selectMenu(this)"><span>📝</span> Rencana & Walkthrough Harian</a></li>
+            <li class="nav-item"><a href="#database-migrations" class="nav-link" onclick="selectMenu(this)"><span>💾</span> Migration Rules (Array Return)</a></li>
+            <li class="nav-item"><a href="#scratch-protection" class="nav-link" onclick="selectMenu(this)"><span>🚫</span> Perlindungan Folder Scratch</a></li>
+        </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="content">
+
+        <!-- Banner Header -->
+        <header class="header-banner">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <h1>Panduan Resmi & Aturan Kerja Agen AI SINTA SaaS</h1>
+                    <p>Standardisasi Arsitektur Modular 16 Skema PostgreSQL, Keamanan Zero-Data Leakage, & Sistem Audit Otomatis.</p>
+                </div>
+                <span class="badge">Aturan Aktif V2.5</span>
+            </div>
+        </header>
+
+        <!-- 1. Arsitektur Modular -->
+        <section id="modular-architecture" class="section-card">
+            <div class="section-title">
+                <span class="icon">🏢</span>
+                <h2>1. Standar Arsitektur Modular & PostgreSQL Multi-Schema</h2>
+            </div>
+            <ul class="rule-list">
+                <li class="rule-item">
+                    <strong>Struktur Direktori & Namespace:</strong> Seluruh modul berlokasi di <code>app/Modules/[NamaModul]/</code>. Controller menggunakan <code>namespace App\Modules\[NamaModul]\Controllers;</code> dan Model menggunakan <code>namespace App\Modules\[NamaModul]\Models;</code>.
+                </li>
+                <li class="rule-item">
+                    <strong>Pendefinisian Model PostgreSQL:</strong> Model wajib mendefinisikan prefix skema secara eksplisit (contoh: <code>protected $table = 'sistem.nama_tabel';</code>). Terapkan tipe data cast yang sangat ketat untuk tipe Boolean, Integer, dan JSON.
+                </li>
+                <li class="rule-item">
+                    <strong>Batasan Controller:</strong> Controller wajib menggunakan <code>BaseController</code> & <code>jsonResponse()</code> serta Prepared Statements PDO tanpa mencampur kueri kotor langsung.
+                </li>
+            </ul>
+        </section>
+
+        <!-- 2. Keamanan & Anti-XSS -->
+        <section id="security-guidelines" class="section-card">
+            <div class="section-title">
+                <span class="icon">🛡️</span>
+                <h2>2. Security Guidelines (Anti-XSS & Protection)</h2>
+            </div>
+            <ul class="rule-list">
+                <li class="rule-item">
+                    <strong>Pencegahan Kebocoran Kredensial:</strong> Hapus data sensitif (hash password, token, api_key) menggunakan <code>unset()</code> sebelum dikirim ke sisi klien.
+                </li>
+                <li class="rule-item">
+                    <strong>Anti-XSS pada Tag Script:</strong> Selalu gunakan bendera <code>JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT</code> saat mencetak <code>json_encode()</code> di dalam tag <code>&lt;script&gt;</code>.
+                </li>
+                <li class="rule-item">
+                    <strong>Anti-XSS pada Atribut HTML:</strong> Wajib membungkus data JSON atribut HTML dengan <code>htmlspecialchars(..., ENT_QUOTES, 'UTF-8')</code>.
+                </li>
+                <li class="rule-item">
+                    <strong>Pencegahan SQL Injection:</strong> Gunakan Prepared Statements dengan Parameter Binding PDO. Dilarang menggabungkan variabel langsung ke string SQL.
+                </li>
+            </ul>
+        </section>
+
+        <!-- 3. Modern Architecture -->
+        <section id="modern-architecture" class="section-card">
+            <div class="section-title">
+                <span class="icon">⚡</span>
+                <h2>3. Modern Architecture & Zero Data Leakage</h2>
+            </div>
+            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">
+                Hindari mencetak data mentah dari database langsung ke HTML via PHP <code>json_encode</code>. Pemuatan data wajib menggunakan <strong>Dynamic AJAX Fetch Asinkronus</strong> pada saat komponen ter-mount di sisi klien untuk mencegah data bocor lewat "View Page Source" (Ctrl+U).
+            </p>
+            <div class="callout callout-success">
+                <div class="callout-icon">💡</div>
+                <div>
+                    <strong>Standardisasi Respon API JSON:</strong> Selalu gunakan format terstandardisasi: <code>['success' => true/false, 'data' => ..., 'error' => ...]</code> dengan HTTP status code yang tepat (200 OK, 400 Bad Request, 403 Forbidden, 422 Unprocessable Entity).
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. Migration Cheat Sheet -->
+        <section id="migration-cheat-sheet" class="section-card">
+            <div class="section-title">
+                <span class="icon">🔄</span>
+                <h2>4. Fast-Track Migration Cheat Sheet (MySQL ➔ PostgreSQL)</h2>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Kebutuhan SQL</th>
+                            <th>MySQL Syntax (Legacy / Dilarang)</th>
+                            <th>PostgreSQL Syntax (Wajib Gunakan Ini)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Paginasi Data</strong></td>
+                            <td><code>LIMIT offset, count</code></td>
+                            <td><code>LIMIT count OFFSET offset</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Pencarian Case-Insensitive</strong></td>
+                            <td><code>WHERE name LIKE '%abc%'</code></td>
+                            <td><code>WHERE name ILIKE '%abc%'</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Dapatkan ID Baru</strong></td>
+                            <td><code>LAST_INSERT_ID()</code></td>
+                            <td><code>RETURNING id</code> (pada query INSERT)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Tanggal & Waktu</strong></td>
+                            <td><code>NOW()</code> / <code>CURRENT_TIMESTAMP</code></td>
+                            <td><code>CURRENT_TIMESTAMP</code> / <code>NOW()</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Tipe Data Boolean</strong></td>
+                            <td><code>1</code> / <code>0</code> atau <code>'1'</code></td>
+                            <td><code>TRUE</code> / <code>FALSE</code> (Strict Boolean)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Filter Data JSON</strong></td>
+                            <td><code>JSON_EXTRACT(col, '$.key')</code></td>
+                            <td><code>col->>'key'</code> (text) atau <code>col->'key'</code> (json)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Upsert (Insert / Update)</strong></td>
+                            <td><code>ON DUPLICATE KEY UPDATE</code></td>
+                            <td><code>ON CONFLICT (target) DO UPDATE SET ...</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Inspeksi Struktur Tabel</strong></td>
+                            <td><code>SHOW COLUMNS FROM tbl</code></td>
+                            <td>Kueri <code>information_schema.columns</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Prefix Skema</strong></td>
+                            <td><code>nama_tabel</code></td>
+                            <td><code>skema.nama_tabel</code> (misal: <code>siswa.buku_induk</code>)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 5. Templates -->
+        <section id="templates" class="section-card">
+            <div class="section-title">
+                <span class="icon">📋</span>
+                <h2>5. Template Standar Fast-Development</h2>
+            </div>
+
+            <h4 style="margin-bottom: 10px; color: var(--secondary);">Template Controller Modular</h4>
+            <div class="code-header">
+                <span>app/Modules/[NamaModul]/Controllers/[NamaModul]Controller.php</span>
+                <button class="copy-btn" onclick="copyCode('code-controller')">Salin Kode</button>
+            </div>
+            <pre><code id="code-controller">&lt;?php
+namespace App\Modules\[NamaModul]\Controllers;
+
+use App\Core\BaseController;
+use App\Modules\[NamaModul]\Models\[NamaModul]Model;
+use Exception;
+
+class [NamaModul]Controller extends BaseController
+{
+    private $model;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->model = new [NamaModul]Model();
+    }
+
+    public function index()
+    {
+        try {
+            $tenantId = $this->getSecureTenantId();
+            $data = $this->model->getAllByTenant($tenantId);
+            return $this->jsonResponse(['success' => true, 'data' => $data], 200);
+        } catch (Exception $e) {
+            return $this->jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+}</code></pre>
+
+            <h4 style="margin-bottom: 10px; color: var(--secondary); margin-top: 24px;">Template Model Modular</h4>
+            <div class="code-header">
+                <span>app/Modules/[NamaModul]/Models/[NamaModul]Model.php</span>
+                <button class="copy-btn" onclick="copyCode('code-model')">Salin Kode</button>
+            </div>
+            <pre><code id="code-model">&lt;?php
+namespace App\Modules\[NamaModul]\Models;
+
+use App\Config\Database;
+use PDO;
+
+class [NamaModul]Model
+{
+    protected $db;
+    protected $table = '[skema].[nama_tabel]';
+
+    public function __construct()
+    {
+        $this->db = Database::getConnection();
+    }
+
+    public function getAllByTenant(string $tenantId): array
+    {
+        $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE tenant_id = :tenant_id AND deleted_at IS NULL ORDER BY created_at DESC");
+        $stmt->bindValue(':tenant_id', $tenantId, PDO::PARAM_STR);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+}</code></pre>
+        </section>
+
+        <!-- 6. Automated Dynamic System Auditor -->
+        <section id="automated-auditor" class="section-card">
+            <div class="section-title">
+                <span class="icon">🔍</span>
+                <h2>6. Automated Dynamic System Auditor (WAJIB DIJALANKAN)</h2>
+            </div>
+            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">
+                Setiap kali membuat modul baru, mengubah controller/model, atau refactoring database, agen <strong>WAJIB</strong> menguji 16 skema PostgreSQL dan sintaks kueri menggunakan program audit dinamis:
+            </p>
+            <div class="code-header">
+                <span>PowerShell / Terminal Command</span>
+                <button class="copy-btn" onclick="copyCode('cmd-auditor')">Salin Perintah</button>
+            </div>
+            <pre><code id="cmd-auditor">php scratch/pengujian/sinta_dynamic_auditor_and_runner.php</code></pre>
+
+            <div class="callout callout-warning">
+                <div class="callout-icon">⚠️</div>
+                <div>
+                    <strong>Standar Kelulusan Sistem:</strong>
+                    <br>1. Status Aplikasi harus menunjukkan <code>100% DINAMIS, MODULAR, DAN SESUAI STANDAR POSTGRESQL!</code>.
+                    <br>2. Peringatan MySQL Legacy = 0.
+                    <br>3. Kesalahan Namespace = 0.
+                    <br>4. Seluruh 16 skema PostgreSQL dalam status <code>[OK]</code>.
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. Implementation Plans & Walkthroughs -->
+        <section id="documentation-rules" class="section-card">
+            <div class="section-title">
+                <span class="icon">📝</span>
+                <h2>7. Aturan Dokumentasi Rencana & Walkthrough Harian</h2>
+            </div>
+            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">
+                Seluruh catatan rencana implementasi dan walkthrough hasil akhir wajib dicatat ke dalam satu file harian di <code>scratch/docs/</code>:
+            </p>
+            <ul class="rule-list">
+                <li class="rule-item"><strong>Fitur Baru / Refactoring Arsitektur Besar:</strong> Wajib menyertakan seluruh konten rencana & walkthrough secara lengkap verbatim.</li>
+                <li class="rule-item"><strong>Perbaikan Bug Kecil / Minor Tweaks:</strong> Cukup gunakan format <strong>Compact Log (10-25 baris)</strong> yang mencakup <em>Root Cause + Files Changed + Solution + Quick Verification Result</em> untuk mempercepat alur pengerjaan.</li>
+            </ul>
+        </section>
+
+        <!-- 8. Database Migrations -->
+        <section id="database-migrations" class="section-card">
+            <div class="section-title">
+                <span class="icon">💾</span>
+                <h2>8. Database Migration Rules (Format Return Array)</h2>
+            </div>
+            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">
+                Seluruh file migrasi di <code>database/migrations/</code> wajib menggunakan format <code>return [...]</code> array agar <code>migrate.php</code> dapat mengeksekusi dan mencatat migrasi ke tabel <code>migrations</code>.
+            </p>
+
+            <div class="code-header">
+                <span>✅ Format Migrasi Benar (database/migrations/YYYY_MM_DD_NN_deskripsi.php)</span>
+                <button class="copy-btn" onclick="copyCode('code-migration')">Salin Kode</button>
+            </div>
+            <pre><code id="code-migration">&lt;?php
+return [
+    'up' => function (PDO $pdo): void {
+        $pdo->exec("ALTER TABLE skema.nama_tabel ADD COLUMN IF NOT EXISTS nama_kolom VARCHAR(255)");
+        echo "- Kolom berhasil ditambahkan.\n";
+    },
+    'down' => function (PDO $pdo): void {
+        $pdo->exec("ALTER TABLE skema.nama_tabel DROP COLUMN IF EXISTS nama_kolom");
+    },
+];</code></pre>
+        </section>
+
+        <!-- 9. Scratch Folder Protection -->
+        <section id="scratch-protection" class="section-card">
+            <div class="section-title">
+                <span class="icon">🚫</span>
+                <h2>9. Strict Prohibition on Folder Deletion in Scratch (PERMANENT RULE)</h2>
+            </div>
+            <div class="callout callout-danger">
+                <div class="callout-icon">🛑</div>
+                <div>
+                    <strong>DILARANG KERAS</strong> menghapus atau mengosongkan folder-folder berikut beserta seluruh isinya dalam kondisi apa pun:
+                    <br>1. <code>C:\laragon\www\sinta\scratch\docs</code>
+                    <br>2. <code>C:\laragon\www\sinta\scratch\folder legacy</code>
+                    <br>3. <code>C:\laragon\www\sinta\scratch\tests</code>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        function toggleSidebar() {
+            document.body.classList.toggle('sidebar-collapsed');
+            const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+            
+            document.getElementById('toggleIcon').innerText = isCollapsed ? '☰' : '✕';
+            document.getElementById('toggleText').innerText = isCollapsed ? 'Buka Sidebar' : 'Tutup Sidebar';
+        }
+
+        function selectMenu(element) {
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+            element.classList.add('active');
+        }
+
+        function filterDocs() {
+            const input = document.getElementById('searchInput').value.toLowerCase();
+            const cards = document.querySelectorAll('.section-card');
+
+            cards.forEach(card => {
+                const text = card.innerText.toLowerCase();
+                if (text.includes(input)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        function copyCode(elementId) {
+            const codeText = document.getElementById(elementId).innerText;
+            navigator.clipboard.writeText(codeText).then(() => {
+                alert('Kode berhasil disalin ke clipboard!');
+            });
+        }
+    </script>
+</body>
+</html>

@@ -3,6 +3,7 @@
 namespace App\Modules\Core\Controllers;
 
 use App\Core\BaseController;
+use App\Core\FileStorage;
 use App\Core\SessionManager;
 use App\Config\Database;
 use PDO;
@@ -74,31 +75,26 @@ class BantuanModuleController extends BaseController {
         $lampiranPath = null;
         if (isset($_FILES['lampiran']) && $_FILES['lampiran']['error'] === UPLOAD_ERR_OK) {
             $file = $_FILES['lampiran'];
-            
+
             if ($file['size'] > 3 * 1024 * 1024) {
                 $this->jsonResponse(false, null, 'Ukuran file maksimal 3 MB.', 422);
             }
 
-            $finfo = finfo_open(FILEINFO_MIME_TYPE);
-            $mime = finfo_file($finfo, $file['tmp_name']);
-            finfo_close($finfo);
+            // Upload ke: uploads/tickets/{tenant_id}/{user_id}/{sha1}.ext
+            $newPath = FileStorage::store(
+                $file['tmp_name'],
+                'uploads/tickets',
+                $tenantId ?? 'global',
+                $userId   ?? 'anonymous',
+                'image_only'
+            );
 
-            $allowedMime = ['image/jpeg', 'image/png', 'image/jpg'];
-            if (!in_array($mime, $allowedMime)) {
+            if ($newPath === null) {
                 $this->jsonResponse(false, null, 'Format file tidak diizinkan. Hanya menerima PNG/JPG.', 422);
             }
 
-            $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
-            $newFileName = 'ticket_' . bin2hex(random_bytes(8)) . '.' . $ext;
-            
-            $targetDir = __DIR__ . '/../../../../storage/app/public/uploads/tickets/';
-            if (!is_dir($targetDir)) {
-                mkdir($targetDir, 0755, true);
-            }
-
-            if (move_uploaded_file($file['tmp_name'], $targetDir . $newFileName)) {
-                $lampiranPath = '/uploads/tickets/' . $newFileName;
-            }
+            // Path relatif untuk disimpan di DB (strip storage/app/public/)
+            $lampiranPath = str_replace('storage/app/public/', '', $newPath);
         }
 
         try {

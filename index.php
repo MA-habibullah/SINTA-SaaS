@@ -104,6 +104,11 @@ try {
     }
 
     switch ($path) {
+        // ─── Secure File Serve (wajib login, anti path traversal, whitelist MIME) ────
+        case '/api/v1/file/serve':
+            (new \App\Modules\Core\Controllers\SecureFileController())->serve();
+            break;
+
         case '/api/v1/log-js-error':
             $data = json_decode(file_get_contents('php://input'), true);
             if ($data) {
@@ -673,7 +678,7 @@ case '/perpustakaan':
                 header('Location: /SINTA-SaaS/login');
                 exit;
             }
-            $controller = new App\Modules\Core\Controllers\UnderConstructionController();
+            $controller = new App\Modules\Sistem\Controllers\DocumentScannerModuleController();
             $controller->index();
             break;
 
@@ -995,6 +1000,11 @@ case '/api/v1/keuangan/dashboard-metrics':
             $controller->layanan();
             break;
 
+        case '/bk/kedisiplinan':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->kedisiplinan();
+            break;
+
         case '/bk/akademik':
             $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
             $controller->akademik();
@@ -1089,6 +1099,12 @@ case '/api/v1/keuangan/dashboard-metrics':
             // API: POST upload file CSV absensi kelas per semester
             $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
             $controller->apiImportAbsensiSemester();
+            break;
+
+        case '/api/v1/bk/absensi-semester/toggle-lock':
+            // API: POST toggle kunci/buka kunci data absensi semester
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiToggleLockAbsensiSemester();
             break;
 
         case '/api/v1/bk/kasus':
@@ -2028,17 +2044,6 @@ case '/api/v1/keuangan/dashboard-metrics':
             $controller->fetchApi();
             break;
 
-        case '/api/v1/error-monitor/clear':
-            $controller = new App\Modules\Core\Controllers\ErrorMonitorModuleController();
-            $controller->clearAll();
-            break;
-
-        case '/api/v1/error-monitor/delete':
-            break;
-
-
-        case '/api/v1/super-admin/tenant-menus/fetch':
-            // API: Ambil menu & status centang per-sekolah
             $controller = new App\Modules\Sistem\Controllers\SuperAdminModuleController();
             $controller->fetchTenantMenus();
             break;
@@ -2157,6 +2162,13 @@ case '/api/v1/keuangan/dashboard-metrics':
             break;
 
         case '/api/v1/error-monitor/delete':
+            $controller = new App\Modules\Core\Controllers\ErrorMonitorModuleController();
+            $controller->deleteOne();
+            break;
+
+        case '/api/v1/error-monitor/log-client':
+            $controller = new App\Modules\Core\Controllers\ErrorMonitorModuleController();
+            $controller->logClientErrorApi();
             break;
 
 
