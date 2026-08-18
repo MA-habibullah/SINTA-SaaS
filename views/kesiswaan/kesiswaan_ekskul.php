@@ -4,6 +4,17 @@ $user_roles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
 $show_all_tabs = in_array('super_admin', $user_roles, true) || in_array('operator_sekolah', $user_roles, true) || in_array('kesiswaan', $user_roles, true);
 $active_tab = $_GET['tab'] ?? ($show_all_tabs ? 'master' : 'anggota');
 
+// Fallback defaults for template variables
+$is_super_admin = $is_super_admin ?? (($_SESSION['role_name'] ?? '') === 'super_admin');
+$selected_tenant = $selected_tenant ?? ($_GET['tenant_id'] ?? ($_SESSION['tenant_id'] ?? ''));
+$master_ekskul = $master_ekskul ?? [];
+$all_tahun_ajaran = $all_tahun_ajaran ?? [];
+$selected_semester = $selected_semester ?? ($_GET['semester'] ?? 'Ganjil');
+$selected_ekskul_id = $selected_ekskul_id ?? ($_GET['ekskul_id'] ?? '');
+$pembina_list = $pembina_list ?? [];
+$tenants = $tenants ?? [];
+$active_ta = $active_ta ?? null;
+
 // Check if user has lock authority (super_admin, operator_sekolah, or kesiswaan)
 $can_lock = in_array('super_admin', $user_roles, true) || in_array('operator_sekolah', $user_roles, true) || in_array('kesiswaan', $user_roles, true);
 ?>

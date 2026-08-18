@@ -31,6 +31,10 @@ class KesiswaanModuleController extends BaseController {
     /**
      * GET /kesiswaan/ekskul
      */
+    public function index(): void {
+        $this->ekskulIndex();
+    }
+
     public function ekskulIndex(): void {
         require_once __DIR__ . '/../../../../views/kesiswaan/kesiswaan_ekskul.php';
     }
