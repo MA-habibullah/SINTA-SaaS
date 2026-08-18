@@ -26,17 +26,16 @@ class KurikulumModuleController extends BaseController {
     public function index(): void {
         $db = Database::getConnection();
         
-        $tenantId = SessionManager::getTenantId();
-        if ((!$tenantId || $tenantId === '00000000-0000-0000-0000-000000000000') && !empty($_GET['tenant_id'])) {
-            $tenantId = $_GET['tenant_id'];
-        }
+        $requestedTenant = $_GET['tenant_id'] ?? ($_GET['filter_tenant_id'] ?? null);
+        $sessionTenant = SessionManager::getTenantId();
+        $tenantId = (!empty($requestedTenant)) ? $requestedTenant : $sessionTenant;
         if ($tenantId === '00000000-0000-0000-0000-000000000000') {
             $tenantId = null;
         }
 
-        $sqlTahun = "SELECT id, nama_tahun_ajaran AS tahun_ajaran, kategori AS status FROM akademik.tahun_ajaran WHERE is_active = true";
+        $sqlTahun = "SELECT id, nama_tahun_ajaran AS tahun_ajaran, nama_tahun_ajaran, kategori AS status FROM akademik.tahun_ajaran WHERE is_active = true";
         if ($tenantId) {
-            $sqlTahun .= " AND tenant_id = :tenant_id";
+            $sqlTahun .= " AND (tenant_id = :tenant_id OR tenant_id IS NULL)";
         }
         $sqlTahun .= " ORDER BY nama_tahun_ajaran DESC";
         $stmtTahun = $db->prepare($sqlTahun);
@@ -77,26 +76,38 @@ class KurikulumModuleController extends BaseController {
         $activeKurikulumId = '';
 
         if (!empty($kelasId) && !empty($tahunAjaran) && !empty($semester)) {
-            $stmtExist = $db->prepare("SELECT kelompok_id, mapel_id FROM akademik.pemetaan_mapel WHERE kelas_id = :kelas_id AND tahun_ajaran = :tahun_ajaran AND semester = :semester AND tenant_id = :tenant_id AND is_active = true");
-            $stmtExist->execute([
+            $stmtExist = $db->prepare("SELECT kelompok_id, mapel_id FROM akademik.pemetaan_mapel WHERE kelas_id = :kelas_id AND tahun_ajaran = :tahun_ajaran AND semester = :semester AND (tenant_id = :tenant_id OR tenant_id IS NULL) AND is_active = true");
+            $paramsExist = [
                 'kelas_id' => $kelasId,
                 'tahun_ajaran' => $tahunAjaran,
-                'semester' => $semester,
-                'tenant_id' => $tenantId
-            ]);
+                'semester' => $semester
+            ];
+            if ($tenantId) { $paramsExist['tenant_id'] = $tenantId; }
+            $stmtExist->execute($paramsExist);
             $existingMapping = $stmtExist->fetchAll(PDO::FETCH_ASSOC);
 
-            $stmtActive = $db->prepare("SELECT kurikulum_id FROM akademik.kelas_kurikulum WHERE kelas_id = :kelas_id AND tahun_ajaran = :tahun_ajaran AND tenant_id = :tenant_id LIMIT 1");
-            $stmtActive->execute([
+            $sqlActive = "SELECT kurikulum_id FROM akademik.kelas_kurikulum WHERE kelas_id = :kelas_id AND tahun_ajaran = :tahun_ajaran";
+            $paramsActive = [
                 'kelas_id' => $kelasId,
-                'tahun_ajaran' => $tahunAjaran,
-                'tenant_id' => $tenantId
-            ]);
+                'tahun_ajaran' => $tahunAjaran
+            ];
+            if ($tenantId) {
+                $sqlActive .= " AND tenant_id = :tenant_id";
+                $paramsActive['tenant_id'] = $tenantId;
+            }
+            $sqlActive .= " LIMIT 1";
+            $stmtActive = $db->prepare($sqlActive);
+            $stmtActive->execute($paramsActive);
             $activeKurikulumId = $stmtActive->fetchColumn() ?: '';
         }
 
-        $stmtRef = $db->prepare("SELECT id, nama_ref_kurikulum AS nama_kurikulum, kategori AS tipe_penilaian FROM akademik.ref_kurikulum WHERE is_active = true AND (tenant_id = :tenant_id OR tenant_id IS NULL) ORDER BY nama_ref_kurikulum ASC");
-        $stmtRef->execute(['tenant_id' => $tenantId]);
+        if ($tenantId) {
+            $stmtRef = $db->prepare("SELECT id, nama_ref_kurikulum AS nama_kurikulum, kategori AS tipe_penilaian FROM akademik.ref_kurikulum WHERE is_active = true AND (tenant_id = :tenant_id OR tenant_id IS NULL) ORDER BY nama_ref_kurikulum ASC");
+            $stmtRef->execute(['tenant_id' => $tenantId]);
+        } else {
+            $stmtRef = $db->prepare("SELECT id, nama_ref_kurikulum AS nama_kurikulum, kategori AS tipe_penilaian FROM akademik.ref_kurikulum WHERE is_active = true ORDER BY nama_ref_kurikulum ASC");
+            $stmtRef->execute();
+        }
         $kurikulumList = $stmtRef->fetchAll(PDO::FETCH_ASSOC);
 
         $this->jsonResponse(true, [
@@ -206,14 +217,22 @@ class KurikulumModuleController extends BaseController {
 
     /**
      * POST /api/v1/kurikulum/copy
+     * Mendukung salin lintas semester & tahun ajaran.
+     * Params:
+     *   source_kelas_id, target_kelas_id, tahun_ajaran, semester   (sumber)
+     *   target_tahun_ajaran (opsional, default = tahun_ajaran)
+     *   target_semester     (opsional, default = semester)
      */
     public function copyCurriculum(): void {
         $input = $this->getJsonInput();
 
-        $sourceKelasId = $input['source_kelas_id'] ?? '';
-        $targetKelasId = $input['target_kelas_id'] ?? '';
-        $tahunAjaran = $input['tahun_ajaran'] ?? '';
-        $semester = $input['semester'] ?? '';
+        $sourceKelasId      = $input['source_kelas_id']       ?? '';
+        $targetKelasId      = $input['target_kelas_id']       ?? '';
+        $tahunAjaran        = $input['tahun_ajaran']          ?? '';
+        $semester           = $input['semester']              ?? '';
+        // Target bisa berbeda semester/TA dari sumber
+        $targetTahunAjaran  = !empty($input['target_tahun_ajaran']) ? $input['target_tahun_ajaran'] : $tahunAjaran;
+        $targetSemester     = !empty($input['target_semester'])     ? $input['target_semester']     : $semester;
 
         $db = Database::getConnection();
         $tenantId = SessionManager::getTenantId();
@@ -231,8 +250,9 @@ class KurikulumModuleController extends BaseController {
             return;
         }
 
-        if ($sourceKelasId == $targetKelasId) {
-            $this->jsonResponse(false, null, 'Kelas sumber dan kelas tujuan tidak boleh sama.', 400);
+        // Boleh sama kelas asal beda semester/TA
+        if ($sourceKelasId === $targetKelasId && $semester === $targetSemester && $tahunAjaran === $targetTahunAjaran) {
+            $this->jsonResponse(false, null, 'Kelas sumber & tujuan, semester, dan tahun ajaran tidak boleh semua sama persis.', 400);
             return;
         }
 
@@ -241,52 +261,59 @@ class KurikulumModuleController extends BaseController {
             return;
         }
 
+        // Cek kunci pada semester/TA TUJUAN
         $stmtLock = $db->prepare("SELECT is_locked_kurikulum FROM akademik.kunci_akademik WHERE tenant_id = ? AND tahun_ajaran = ? AND semester = ?");
-        $stmtLock->execute([$tenantId, $tahunAjaran, $semester]);
+        $stmtLock->execute([$tenantId, $targetTahunAjaran, $targetSemester]);
         if ($stmtLock->fetchColumn()) {
-            $this->jsonResponse(false, null, 'Gagal menyalin. Seting Kurikulum pada Tahun Ajaran & Semester ini telah dikunci oleh administrator.', 403);
+            $this->jsonResponse(false, null, 'Gagal menyalin. Seting Kurikulum Semester tujuan telah dikunci oleh administrator.', 403);
             return;
         }
 
         $db->beginTransaction();
         try {
+            // Ambil mapping dari sumber (semester & TA sumber)
             $stmtSource = $db->prepare("SELECT kelompok_id, mapel_id FROM akademik.pemetaan_mapel WHERE kelas_id = :source_kelas_id AND semester = :semester AND tahun_ajaran = :tahun_ajaran AND tenant_id = :tenant_id AND is_active = true");
             $stmtSource->execute([
                 'source_kelas_id' => $sourceKelasId,
-                'semester' => $semester,
-                'tahun_ajaran' => $tahunAjaran,
-                'tenant_id' => $tenantId
+                'semester'        => $semester,
+                'tahun_ajaran'    => $tahunAjaran,
+                'tenant_id'       => $tenantId
             ]);
             $sourceMappings = $stmtSource->fetchAll(PDO::FETCH_ASSOC);
 
             if (empty($sourceMappings)) {
                 $db->rollBack();
-                $this->jsonResponse(false, null, 'Kelas sumber tidak memiliki pemetaan kurikulum pada semester & tahun ajaran ini.', 404);
+                $this->jsonResponse(false, null, 'Kelas sumber tidak memiliki pemetaan kurikulum pada semester & tahun ajaran ini. Pastikan kelas sumber sudah disetting kurikulumnya terlebih dahulu.', 422);
                 return;
             }
 
+            // Hapus data lama di tujuan (semester & TA tujuan)
             $stmtDelete = $db->prepare("DELETE FROM akademik.pemetaan_mapel WHERE kelas_id = :target_kelas_id AND semester = :semester AND tahun_ajaran = :tahun_ajaran AND tenant_id = :tenant_id");
             $stmtDelete->execute([
                 'target_kelas_id' => $targetKelasId,
-                'semester' => $semester,
-                'tahun_ajaran' => $tahunAjaran,
-                'tenant_id' => $tenantId
+                'semester'        => $targetSemester,
+                'tahun_ajaran'    => $targetTahunAjaran,
+                'tenant_id'       => $tenantId
             ]);
 
+            // Insert ke tujuan dengan semester & TA tujuan
             $stmtInsert = $db->prepare("INSERT INTO akademik.pemetaan_mapel (tenant_id, tahun_ajaran, semester, kelas_id, kelompok_id, mapel_id) VALUES (:tenant_id, :tahun_ajaran, :semester, :kelas_id, :kelompok_id, :mapel_id)");
             foreach ($sourceMappings as $row) {
                 $stmtInsert->execute([
-                    'tenant_id' => $tenantId,
-                    'tahun_ajaran' => $tahunAjaran,
-                    'semester' => $semester,
-                    'kelas_id' => $targetKelasId,
-                    'kelompok_id' => $row['kelompok_id'],
-                    'mapel_id' => $row['mapel_id']
+                    'tenant_id'    => $tenantId,
+                    'tahun_ajaran' => $targetTahunAjaran,
+                    'semester'     => $targetSemester,
+                    'kelas_id'     => $targetKelasId,
+                    'kelompok_id'  => $row['kelompok_id'],
+                    'mapel_id'     => $row['mapel_id']
                 ]);
             }
 
             $db->commit();
-            $this->jsonResponse(true, ['message' => 'Kurikulum berhasil disalin ke kelas tujuan.']);
+            $this->jsonResponse(true, [
+                'message' => 'Kurikulum berhasil disalin.',
+                'total'   => count($sourceMappings)
+            ]);
         } catch (\Throwable $e) {
             $db->rollBack();
             $this->jsonResponse(false, null, 'Gagal menyalin kurikulum: ' . $e->getMessage(), 500);
@@ -296,12 +323,23 @@ class KurikulumModuleController extends BaseController {
     /**
      * GET /api/v1/kunci-akademik/status
      */
+    public function getStatus(): void {
+        $this->getLockStatus();
+    }
+
+    public function toggle(): void {
+        $this->toggleLock();
+    }
+
+    /**
+     * GET /api/v1/kunci-akademik/status
+     */
     public function getLockStatus(): void {
-        $tenantId = SessionManager::getTenantId();
-        $filterTenant = $_GET['filter_tenant_id'] ?? '';
-        
-        if (!$tenantId && $filterTenant) {
-            $tenantId = $filterTenant;
+        $requestedTenant = $_GET['filter_tenant_id'] ?? $_GET['tenant_id'] ?? null;
+        $sessionTenant = SessionManager::getTenantId();
+        $tenantId = (!empty($requestedTenant)) ? $requestedTenant : $sessionTenant;
+        if ($tenantId === '00000000-0000-0000-0000-000000000000') {
+            $tenantId = null;
         }
 
         if (!$tenantId) {
@@ -344,10 +382,11 @@ class KurikulumModuleController extends BaseController {
         }
 
         $data = $this->getJsonInput();
-        $tenantId = SessionManager::getTenantId();
-        
-        if (!$tenantId && !empty($data['filter_tenant_id'])) {
-            $tenantId = $data['filter_tenant_id'];
+        $requestedTenant = $data['filter_tenant_id'] ?? $data['tenant_id'] ?? null;
+        $sessionTenant = SessionManager::getTenantId();
+        $tenantId = (!empty($requestedTenant)) ? $requestedTenant : $sessionTenant;
+        if ($tenantId === '00000000-0000-0000-0000-000000000000') {
+            $tenantId = null;
         }
 
         if (!$tenantId) {
@@ -382,5 +421,112 @@ class KurikulumModuleController extends BaseController {
         }
 
         $this->jsonResponse(true, ['message' => 'Status kunci berhasil diperbarui.']);
+    }
+
+    /**
+     * POST /api/v1/kurikulum/mapel
+     * Tambah mata pelajaran baru ke bank mapel sekolah
+     */
+    public function storeMapel(): void {
+        $input = $this->getJsonInput();
+
+        $namaMapel = trim($input['nama_mata_pelajaran'] ?? '');
+        $kategori  = trim($input['kategori'] ?? '');
+        $deskripsi = trim($input['deskripsi'] ?? '');
+
+        if (empty($namaMapel)) {
+            $this->jsonResponse(false, null, 'Nama mata pelajaran tidak boleh kosong.', 422);
+            return;
+        }
+
+        $db = Database::getConnection();
+        $tenantId = SessionManager::getTenantId();
+        if ((!$tenantId || $tenantId === '00000000-0000-0000-0000-000000000000') && !empty($input['tenant_id'])) {
+            $tenantId = $input['tenant_id'];
+        }
+        if (!$tenantId) {
+            $this->jsonResponse(false, null, 'Tenant ID tidak terdeteksi.', 400);
+            return;
+        }
+
+        // Cek duplikat nama (case-insensitive) untuk sekolah ini
+        $stmtCheck = $db->prepare("SELECT id FROM akademik.mata_pelajaran WHERE tenant_id = :tenant_id AND LOWER(nama_mata_pelajaran) = LOWER(:nama) AND is_active = TRUE");
+        $stmtCheck->execute(['tenant_id' => $tenantId, 'nama' => $namaMapel]);
+        if ($stmtCheck->fetchColumn()) {
+            $this->jsonResponse(false, null, "Mata pelajaran \"{$namaMapel}\" sudah ada di bank mapel sekolah ini.", 409);
+            return;
+        }
+
+        try {
+            $stmt = $db->prepare(
+                "INSERT INTO akademik.mata_pelajaran (tenant_id, nama_mata_pelajaran, kategori, deskripsi, is_active)
+                 VALUES (:tenant_id, :nama, :kategori, :deskripsi, TRUE)
+                 RETURNING id::text AS id, nama_mata_pelajaran AS nama_mapel, id::text AS kode_mapel"
+            );
+            $stmt->execute([
+                'tenant_id' => $tenantId,
+                'nama'      => $namaMapel,
+                'kategori'  => $kategori ?: null,
+                'deskripsi' => $deskripsi ?: null,
+            ]);
+            $newMapel = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            $this->jsonResponse(true, [
+                'mapel'   => $newMapel,
+                'message' => "Mata pelajaran \"{$namaMapel}\" berhasil ditambahkan ke bank mapel sekolah."
+            ], null, 201);
+        } catch (\Throwable $e) {
+            $this->jsonResponse(false, null, 'Gagal menambahkan mata pelajaran: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * DELETE /api/v1/kurikulum/mapel
+     * Hapus (soft-delete) mata pelajaran dari bank mapel sekolah
+     */
+    public function deleteMapel(): void {
+        $input = $this->getJsonInput();
+
+        $mapelId = trim($input['mapel_id'] ?? '');
+        if (empty($mapelId)) {
+            $this->jsonResponse(false, null, 'mapel_id tidak boleh kosong.', 422);
+            return;
+        }
+
+        $db = Database::getConnection();
+        $tenantId = SessionManager::getTenantId();
+        if ((!$tenantId || $tenantId === '00000000-0000-0000-0000-000000000000') && !empty($input['tenant_id'])) {
+            $tenantId = $input['tenant_id'];
+        }
+        if (!$tenantId) {
+            $this->jsonResponse(false, null, 'Tenant ID tidak terdeteksi.', 400);
+            return;
+        }
+
+        // Cek apakah mapel sedang digunakan di pemetaan aktif
+        $stmtUsed = $db->prepare("SELECT COUNT(*) FROM akademik.pemetaan_mapel WHERE mapel_id = :mapel_id AND tenant_id = :tenant_id AND is_active = TRUE");
+        $stmtUsed->execute(['mapel_id' => $mapelId, 'tenant_id' => $tenantId]);
+        $usedCount = (int)$stmtUsed->fetchColumn();
+        if ($usedCount > 0) {
+            $this->jsonResponse(false, null, "Tidak dapat menghapus. Mata pelajaran ini masih digunakan di {$usedCount} pemetaan kurikulum aktif.", 409);
+            return;
+        }
+
+        try {
+            $stmt = $db->prepare(
+                "UPDATE akademik.mata_pelajaran SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
+                 WHERE id = :mapel_id AND tenant_id = :tenant_id"
+            );
+            $stmt->execute(['mapel_id' => $mapelId, 'tenant_id' => $tenantId]);
+
+            if ($stmt->rowCount() === 0) {
+                $this->jsonResponse(false, null, 'Mata pelajaran tidak ditemukan atau tidak memiliki akses.', 404);
+                return;
+            }
+
+            $this->jsonResponse(true, ['message' => 'Mata pelajaran berhasil dihapus dari bank mapel sekolah.']);
+        } catch (\Throwable $e) {
+            $this->jsonResponse(false, null, 'Gagal menghapus mata pelajaran: ' . $e->getMessage(), 500);
+        }
     }
 }

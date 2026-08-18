@@ -100,16 +100,16 @@
                     </div>
                 </div>
 
-                <!-- Filter Jenjang -->
-                <div class="col-6 col-md-2">
-                    <select class="form-select form-select-sm rounded-3" v-model="filterJenjang">
+                <!-- Filter Jenjang / Bentuk Pendidikan -->
+                <div class="col-6 col-md-3">
+                    <select class="form-select form-select-sm rounded-3" v-model="filterJenjang" @change="onJenjangFilterChange">
                         <option value="">🎓 Semua Jenjang</option>
-                        <option v-for="j in jenjangOptions" :value="j.id" :key="j.id">{{ j.nama_jenjang || j.nama }}</option>
+                        <option v-for="j in jenjangOptions" :value="j.id" :key="j.id">{{ j.nama || j.nama_jenjang || j.kode_jenjang }}</option>
                     </select>
                 </div>
 
-                <!-- Filter Kelas -->
-                <div class="col-6 col-md-3">
+                <!-- Filter Kelas (Cascading berdasarkan Jenjang) -->
+                <div class="col-6 col-md-2">
                     <select class="form-select form-select-sm rounded-3" v-model="filterKelas" @change="fetchData(1)">
                         <option value="">🏫 Semua Kelas</option>
                         <option v-for="k in filteredKelasOptions" :value="k.id" :key="k.id">{{ k.nama_kelas || k.nama }}</option>
@@ -117,20 +117,19 @@
                 </div>
 
                 <!-- Filter Status -->
-                <div class="col-6 col-md-3">
+                <div class="col-6 col-md-2">
                     <select class="form-select form-select-sm rounded-3" v-model="filterStatus" @change="fetchData(1)">
-                        <option value="">📋 Semua Status</option>
-                        <option value="Aktif">Aktif</option>
-                        <option value="Lulus">Lulus</option>
-                        <option value="Pindah">Pindah</option>
-                        <option value="Keluar">Keluar</option>
+                        <option value="">📋 Semua Status Siswa</option>
+                        <option value="Aktif">✅ Aktif</option>
+                        <option value="Lulus">🎓 Lulus (Alumni)</option>
+                        <option value="Pindah">🔀 Pindah Sekolah</option>
+                        <option value="Keluar">❌ Keluar / Drop Out</option>
                     </select>
                 </div>
 
                 <!-- Per Page -->
-                <div class="col-12 col-md-2 d-flex align-items-center justify-content-md-end gap-2">
-                    <label for="per_page_select" class="fs-8 text-muted mb-0">Baris</label>
-                    <select id="per_page_select" name="per_page" class="form-select form-select-sm rounded-3" v-model="perPage" @change="fetchData(1)" style="width: 75px;">
+                <div class="col-6 col-md-1 d-flex align-items-center justify-content-md-end gap-1">
+                    <select id="per_page_select" name="per_page" class="form-select form-select-sm rounded-3 px-1" v-model="perPage" @change="fetchData(1)" style="width: 65px;" title="Jumlah baris per halaman">
                         <option value="10">10</option>
                         <option value="25">25</option>
                         <option value="50">50</option>
@@ -212,8 +211,15 @@
                         <!-- Empty State -->
                         <tr v-if="listData.length === 0">
                             <td :colspan="userRole === 'super_admin' ? 9 : 8" class="text-center py-5 text-muted">
-                                <i class="bi bi-journal-x fs-2 d-block mb-2 text-secondary"></i>
-                                <span>Tidak ada data siswa ditemukan di Buku Induk.</span>
+                                <i class="bi bi-journal-x fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                                <h6 class="fw-bold text-dark mb-1">Belum Ada Data Siswa Ditemukan</h6>
+                                <p class="fs-8 text-muted mb-0 mx-auto" style="max-width: 550px;">
+                                    Belum ada rekam data siswa yang cocok dengan filter yang dipilih.<br>
+                                    <small class="text-muted">
+                                        <strong>Pendidikan:</strong> SMA, SMK, SMP, SD, MA, MTs, MI.<br>
+                                        <strong>Jenjang:</strong> 7, 8, 9, 10, 11, 12 | <strong>Kelas:</strong> VII A, VIII B, IX C, X IPA 1, XI TKJ 1, XII DKV 1.
+                                    </small>
+                                </p>
                             </td>
                         </tr>
                     </tbody>
@@ -269,8 +275,8 @@
                                 v-model="kurikulum.tahunAjaran"
                                 @change="loadKurikulumMapping">
                             <option value="">-- Pilih TA --</option>
-                            <option v-for="t in masterKurikulum.tahun_ajaran" :key="t.id" :value="t.tahun_ajaran">
-                                {{ t.tahun_ajaran }}
+                            <option v-for="t in masterKurikulum.tahun_ajaran" :key="t.id" :value="t.tahun_ajaran || t.nama_tahun_ajaran">
+                                {{ t.tahun_ajaran || t.nama_tahun_ajaran }}
                             </option>
                         </select>
                     </div>
@@ -319,7 +325,7 @@
                                 v-model="kurikulum.kurikulumId">
                             <option value="">-- Pilih Kurikulum --</option>
                             <option v-for="c in kurikulumList" :key="c.id" :value="c.id">
-                                {{ c.nama_kurikulum }}
+                                {{ c.nama_kurikulum || c.nama_ref_kurikulum }}
                             </option>
                         </select>
                     </div>
@@ -373,9 +379,110 @@
                     </span>
                     <span>)</span>
                 </h5>
-                <button class="btn btn-primary btn-sm rounded-3 px-3 py-2 fs-8 fw-semibold" @click="addGroup">
-                    <i class="bi bi-plus-lg me-1"></i> Tambah Kelompok
-                </button>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <div class="dropdown">
+                        <button class="btn btn-primary btn-sm rounded-3 px-3 py-2 fs-8 fw-semibold dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-plus-lg me-1"></i> Tambah Kelompok
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded-3 fs-8">
+                            <li><a class="dropdown-item py-2 fw-semibold text-primary" href="#" @click.prevent="autoGroupPresets()"><i class="bi bi-magic text-primary me-2"></i>Bagi Kelompok Otomatis (A, B, C)</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item py-2" href="#" @click.prevent="addGroup('Kelompok A (Umum)')"><i class="bi bi-bookmark-plus text-primary me-2"></i>Kelompok A (Umum)</a></li>
+                            <li><a class="dropdown-item py-2" href="#" @click.prevent="addGroup('Kelompok B (Peminatan/Kejuruan)')"><i class="bi bi-bookmark-plus text-success me-2"></i>Kelompok B (Peminatan/Kejuruan)</a></li>
+                            <li><a class="dropdown-item py-2" href="#" @click.prevent="addGroup('Kelompok C (Pilihan)')"><i class="bi bi-bookmark-plus text-info me-2"></i>Kelompok C (Pilihan)</a></li>
+                            <li><a class="dropdown-item py-2" href="#" @click.prevent="addGroup('Muatan Lokal')"><i class="bi bi-bookmark-plus text-warning me-2"></i>Muatan Lokal</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item py-2" href="#" @click.prevent="addGroup()"><i class="bi bi-plus-lg text-secondary me-2"></i>Kelompok Kustom...</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bank Mapel Sekolah (Collapsible Panel) -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden">
+                <div class="card-header bg-white border-bottom-0 px-4 py-3 d-flex align-items-center justify-content-between"
+                     @click="showBankMapelPanel = !showBankMapelPanel" 
+                     style="cursor: pointer;">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-journal-bookmark-fill text-primary fs-6"></i>
+                        <span class="fw-bold text-dark fs-7">Bank Mata Pelajaran Sekolah</span>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-9 rounded-pill">
+                            {{ masterKurikulum.bank_mapel.length }} Mapel
+                        </span>
+                        <span class="text-muted fs-8 fst-italic ms-1">— Kelola mapel yang tersedia untuk semua kelas</span>
+                    </div>
+                    <i :class="showBankMapelPanel ? 'bi bi-chevron-up' : 'bi bi-chevron-down'" class="text-muted fs-7"></i>
+                </div>
+                <div v-show="showBankMapelPanel" class="card-body p-3 p-md-4 pt-0">
+                    <hr class="mt-0 mb-3">
+                    <!-- Search + Add New Mapel form -->
+                    <div class="row g-3 mb-3 align-items-end">
+                        <div class="col-12 col-md-5">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-light border-end-0 rounded-start-3"><i class="bi bi-search text-muted"></i></span>
+                                <input type="text" class="form-control bg-light border-start-0 rounded-end-3"
+                                       placeholder="Cari mapel di bank sekolah..."
+                                       v-model="bankMapelSearch">
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-7">
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="text" class="form-control form-control-sm rounded-3 flex-grow-1"
+                                       id="bankMapelNamaInput"
+                                       placeholder="Nama Mata Pelajaran Baru..."
+                                       v-model="bankNewMapelNama"
+                                       @keyup.enter="createMapelToBank(null)"
+                                       style="max-width: 280px;">
+                                <input type="text" class="form-control form-control-sm rounded-3"
+                                       placeholder="Kategori (opsional)"
+                                       v-model="bankNewMapelKategori"
+                                       style="max-width: 160px;">
+                                <button class="btn btn-success btn-sm rounded-3 px-3 fw-semibold flex-shrink-0"
+                                        @click="createMapelToBank(null)">
+                                    <i class="bi bi-plus-lg me-1"></i> Tambahkan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Mapel List Table -->
+                    <div class="border rounded-3 overflow-hidden">
+                        <table class="table table-hover table-sm mb-0 fs-8">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3 py-2 fw-semibold text-muted">#</th>
+                                    <th class="py-2 fw-semibold text-muted">Nama Mata Pelajaran</th>
+                                    <th class="py-2 fw-semibold text-muted">Kategori</th>
+                                    <th class="py-2 fw-semibold text-muted text-center">Status</th>
+                                    <th class="py-2 fw-semibold text-muted text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(m, mIdx) in filteredBankMapel" :key="m.id">
+                                    <td class="ps-3 py-2 text-muted">{{ mIdx + 1 }}</td>
+                                    <td class="py-2 fw-semibold text-dark">{{ m.nama_mapel }}</td>
+                                    <td class="py-2 text-muted">{{ m.kategori || '-' }}</td>
+                                    <td class="py-2 text-center">
+                                        <span v-if="isMapelAllocated(m.id)" class="badge bg-success-subtle text-success border border-success-subtle fs-9">✓ Teralokasi</span>
+                                        <span v-else class="badge bg-secondary-subtle text-secondary border border-secondary-subtle fs-9">Belum dialokasikan</span>
+                                    </td>
+                                    <td class="py-2 text-center">
+                                        <button class="btn btn-sm btn-link text-danger p-0 border-0"
+                                                @click="deleteMapelFromBank(m.id, m.nama_mapel)"
+                                                title="Hapus dari bank sekolah">
+                                            <i class="bi bi-trash-fill fs-7"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr v-if="filteredBankMapel.length === 0">
+                                    <td colspan="5" class="text-center py-4 text-muted fst-italic">
+                                        <i class="bi bi-inbox d-block fs-4 mb-1"></i>
+                                        {{ bankMapelSearch ? 'Tidak ada mapel yang cocok dengan pencarian.' : 'Belum ada mata pelajaran di bank sekolah ini.' }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
 
             <!-- Groups List -->
@@ -387,57 +494,74 @@
                             <!-- Group Title & Delete -->
                             <div class="d-flex align-items-center justify-content-between mb-3 gap-2">
                                 <div class="flex-grow-1">
-                                    <input type="text" class="form-control form-control-sm rounded-3 fw-bold border-secondary-subtle" 
+                                    <input type="text" class="form-control form-control-sm rounded-3 fw-bold border-secondary-subtle fs-7 text-primary" 
                                            v-model="group.kelompok_id" 
+                                           list="presetGroupNames"
                                            placeholder="Nama Kelompok (cth: Kelompok A)">
                                 </div>
-                                <button class="btn btn-outline-danger btn-sm rounded-3 border-0 px-2 py-1" 
+                                <button class="btn btn-outline-danger btn-sm rounded-3 px-2.5 py-1 fs-8 fw-semibold" 
                                         @click="removeGroup(gIdx)" 
-                                        title="Hapus Kelompok">
-                                    <i class="bi bi-trash"></i>
+                                        title="Hapus Kelompok Ini">
+                                    <i class="bi bi-trash-fill me-1"></i> Hapus Kelompok
                                 </button>
                             </div>
 
-                            <!-- Subject Search Filter -->
-                            <div class="input-group input-group-sm mb-3">
-                                <span class="input-group-text bg-light border-end-0 rounded-start-3"><i class="bi bi-search text-muted"></i></span>
-                                <input type="text" class="form-control bg-light border-start-0 rounded-end-3" 
-                                       placeholder="Cari mata pelajaran..." 
-                                       v-model="group.searchQuery">
+                            <!-- List of Assigned Subjects in this Group -->
+                            <div class="border rounded-3 p-2 bg-white mb-3 shadow-sm" style="min-height: 140px; max-height: 260px; overflow-y: auto;">
+                                <div v-if="getGroupMapelObjects(group).length > 0" class="list-group list-group-flush">
+                                    <div v-for="m in getGroupMapelObjects(group)" :key="m.id"
+                                         class="list-group-item d-flex align-items-center justify-content-between border-0 px-2.5 py-2 rounded-3 mb-1 bg-light transition">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-check-circle-fill text-success fs-7"></i>
+                                            <span class="fs-8 fw-semibold text-dark">{{ m.nama_mapel }}</span>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-secondary-subtle text-secondary font-monospace fs-9">{{ m.kode_mapel }}</span>
+                                            <button class="btn btn-sm btn-link text-danger p-0 border-0 ms-1" 
+                                                    @click="removeMapelFromGroup(group, m.id)" 
+                                                    title="Keluarkan mapel dari kelompok ini">
+                                                <i class="bi bi-x-circle-fill fs-7"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div v-else class="text-center py-4 text-muted fs-8">
+                                    <i class="bi bi-journal-x d-block fs-4 text-secondary mb-1"></i>
+                                    Belum ada mata pelajaran di kelompok ini.
+                                </div>
                             </div>
 
-                            <!-- Subjects Checklist Area -->
-                            <div class="border rounded-3 p-2 bg-light-subtle overflow-y-auto" style="max-height: 250px;">
-                                <div class="list-group list-group-flush">
-                                    
-                                    <!-- Loop Subjects -->
-                                    <label v-for="m in filteredMapelList(group.searchQuery)" 
-                                           :key="m.id" 
-                                           class="list-group-item list-group-item-action d-flex align-items-center justify-content-between border-0 px-2 py-1.5 rounded-2 mb-1 cursor-pointer transition"
-                                           :class="group.mapel_ids.includes(m.id) ? 'bg-primary-subtle text-primary fw-semibold' : 'bg-transparent text-dark'">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <input class="form-check-input mt-0 border-secondary" 
-                                                   type="checkbox" 
-                                                   :value="m.id" 
-                                                   v-model="group.mapel_ids">
-                                            <span class="fs-8">{{ m.nama_mapel }}</span>
-                                        </div>
-                                        <span class="text-muted font-monospace fs-9">{{ m.kode_mapel }}</span>
-                                    </label>
-
-                                    <!-- Empty Search Result -->
-                                    <div v-if="filteredMapelList(group.searchQuery).length === 0" class="text-center py-4 text-muted fs-8">
-                                        <i class="bi bi-search d-block mb-1"></i> Tidak ditemukan pelajaran
+                            <!-- Add Subject Picker Area inside Group Card -->
+                            <div class="card bg-light border-0 rounded-3 p-2.5">
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <span class="fs-8 fw-semibold text-secondary"><i class="bi bi-plus-circle me-1"></i>Tambah Mapel ke {{ group.kelompok_id }}:</span>
+                                </div>
+                                <div class="input-group input-group-sm mb-2">
+                                    <span class="input-group-text bg-white border-end-0 rounded-start-3"><i class="bi bi-search text-muted"></i></span>
+                                    <input type="text" class="form-control bg-white border-start-0 rounded-end-3" 
+                                           placeholder="Cari mapel belum teralokasi..." 
+                                           v-model="group.searchQuery">
+                                </div>
+                                <!-- Dropdown / List of Available Mapels -->
+                                <div class="overflow-y-auto" style="max-height: 140px;">
+                                    <div v-if="getAvailableMapelForGroup(group).length > 0" class="d-flex flex-wrap gap-1.5 p-1">
+                                        <button v-for="m in getAvailableMapelForGroup(group)" :key="m.id"
+                                                class="btn btn-sm btn-outline-primary rounded-pill fs-9 py-1 px-2.5 d-inline-flex align-items-center gap-1 transition"
+                                                @click="addMapelToGroup(group, m.id)">
+                                            <i class="bi bi-plus-lg"></i> {{ m.nama_mapel }}
+                                        </button>
                                     </div>
-
+                                    <div v-else class="text-muted fs-9 fst-italic py-2 px-1">
+                                        <i class="bi bi-check-all me-1 text-success fs-7"></i>Semua mapel sekolah sudah dialokasikan ke kelompok.
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- Selected Count -->
                             <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
-                                <span class="text-muted fs-8">Pelajaran terpilih:</span>
-                                <span class="badge bg-primary rounded-pill px-2.5 py-1.5 fs-9 fw-bold">
-                                    {{ group.mapel_ids.length }} Pelajaran
+                                <span class="text-muted fs-8">Pelajaran terpilih di kelompok ini:</span>
+                                <span class="badge bg-primary rounded-pill px-3 py-1.5 fs-8 fw-bold">
+                                    {{ getGroupMapelObjects(group).length }} Pelajaran
                                 </span>
                             </div>
 
@@ -464,48 +588,67 @@
     </div>
 
     <!-- Reusable Copy Kurikulum Modal -->
-    <div class="modal fade" id="copyKurikulumModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="copyKurikulumModal" tabindex="-1" aria-labelledby="copyKurikulumModalLabel">
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content border-0 shadow rounded-4">
                 <div class="modal-header border-bottom py-3">
-                    <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2">
+                    <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2" id="copyKurikulumModalLabel">
                         <i class="bi bi-files text-primary"></i>
                         Salin Kurikulum
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold text-muted fs-8">Tahun Ajaran & Semester</label>
-                        <div class="p-2.5 bg-light rounded-3 text-dark fw-bold fs-7">
-                            {{ kurikulum.tahunAjaran }} - Semester {{ kurikulum.semester }}
+                    <!-- Info Sumber -->
+                    <div class="alert alert-success border-0 rounded-3 py-2 px-3 mb-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-check-circle-fill fs-6"></i>
+                        <div>
+                            <div class="fw-bold fs-7">Sumber: {{ getKelasName(kurikulum.kelasId) }}</div>
+                            <div class="fs-9 opacity-75">{{ kurikulum.tahunAjaran }} &bull; Semester {{ kurikulum.semester }}</div>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold text-muted fs-8">Kelas Tujuan (Target)</label>
-                        <div class="p-2.5 bg-light rounded-3 text-primary fw-bold fs-7">
-                            {{ getKelasName(kurikulum.kelasId) }}
+
+                    <!-- 1. Semester Tujuan & Tahun Ajaran Tujuan -->
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-dark fs-7">Semester Tujuan <span class="text-danger">*</span></label>
+                            <select class="form-select rounded-3" v-model="copyTargetSemester" @change="copySourceKelasId = ''">
+                                <option value="">-- Sama dengan sumber --</option>
+                                <option value="Ganjil">Ganjil</option>
+                                <option value="Genap">Genap</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-dark fs-7">Tahun Ajaran Tujuan</label>
+                            <select class="form-select rounded-3" v-model="copyTargetTahunAjaran" @change="copySourceKelasId = ''">
+                                <option value="">-- Sama dengan sumber --</option>
+                                <option v-for="t in masterKurikulum.tahun_ajaran" :key="t.id" :value="t.tahun_ajaran || t.nama_tahun_ajaran">
+                                    {{ t.tahun_ajaran || t.nama_tahun_ajaran }}
+                                </option>
+                            </select>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="source_kelas_select" class="form-label fw-semibold text-dark fs-7">Pilih Kelas Sumber (Source)</label>
-                        <select id="source_kelas_select" class="form-select rounded-3" v-model="copySourceKelasId">
-                            <option value="">-- Pilih Kelas Sumber --</option>
-                            <option v-for="k in filteredCopyKelasOptions" 
-                                    :value="k.id" 
+                    <small class="text-muted fs-9 d-block mb-3">
+                        <i class="bi bi-info-circle me-1"></i>Biarkan kosong agar menggunakan semester/tahun ajaran yang sama dengan sumber.
+                    </small>
+
+                    <!-- 2. Kelas Tujuan (muncul setelah semester/TA dipilih) -->
+                    <div class="mb-1">
+                        <label for="target_kelas_select" class="form-label fw-semibold text-dark fs-7">Kelas Tujuan <span class="text-danger">*</span></label>
+                        <select id="target_kelas_select" class="form-select rounded-3" v-model="copySourceKelasId">
+                            <option value="">-- Pilih Kelas Tujuan --</option>
+                            <option v-for="k in filteredCopyKelasOptions"
+                                    :value="k.id"
                                     :key="k.id">
                                 {{ k.nama_kelas || k.nama }}
                             </option>
                         </select>
-                        <small class="text-muted fs-8 mt-1 d-block">
-                            <i class="bi bi-info-circle me-1"></i>Seluruh pemetaan kelompok & mata pelajaran kelas sumber akan disalin ke kelas tujuan.
-                        </small>
                     </div>
                 </div>
                 <div class="modal-footer border-top bg-light py-2.5 rounded-bottom-4">
                     <button type="button" class="btn btn-light rounded-3 fs-8 px-4" data-bs-dismiss="modal">Batal</button>
                     <button type="button" class="btn btn-primary rounded-3 fs-8 px-4" @click="submitCopyKurikulum" :disabled="!copySourceKelasId">
-                        Salin Sekarang
+                        <i class="bi bi-files me-1"></i> Salin ke Kelas Tujuan
                     </button>
                 </div>
             </div>
@@ -539,8 +682,8 @@
                                     v-model="nilaiRapor.tahunAjaran"
                                     @change="loadNilaiRaporGrid">
                                 <option value="">-- Pilih TA --</option>
-                                <option v-for="t in masterNilaiRapor.tahun_ajaran" :key="t.id" :value="t.tahun_ajaran">
-                                    {{ t.tahun_ajaran }}
+                                <option v-for="t in masterNilaiRapor.tahun_ajaran" :key="t.id" :value="t.tahun_ajaran || t.nama_tahun_ajaran">
+                                    {{ t.tahun_ajaran || t.nama_tahun_ajaran }}
                                 </option>
                             </select>
                         </div>
@@ -765,7 +908,7 @@
                     <!-- Jenjang -->
                     <div class="col-12 col-md-2">
                         <label class="form-label fw-bold text-dark fs-8 mb-1">Filter Jenjang</label>
-                        <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle" v-model="filterJenjang">
+                        <select class="form-select form-select-sm rounded-3 shadow-none border-secondary-subtle" v-model="filterJenjang" @change="loadMatrixData">
                             <option value="">-- Semua Jenjang --</option>
                             <option v-for="j in jenjangOptions" :key="j.id" :value="j.id">{{ j.nama_jenjang || j.nama }}</option>
                         </select>
@@ -961,7 +1104,7 @@
 
     <!-- Arsip Alumni Tab -->
     <div v-show="mainActiveTab === 'arsip_alumni'" class="card border-0 shadow-sm rounded-4 animate-fade-in">
-        <?php require __DIR__ . '/arsip_alumni.php'; ?>
+        <?php require __DIR__ . '/../alumni/arsip_alumni.php'; ?>
     </div>
 
     <!-- Modal View Alumni Doc (PDF Viewer) -->
@@ -2513,6 +2656,18 @@
     }
 </style>
 
+<!-- Datalist Presets for Kelompok Mata Pelajaran -->
+<datalist id="presetGroupNames">
+    <option value="Kelompok A (Umum)"></option>
+    <option value="Kelompok B (Peminatan)"></option>
+    <option value="Kelompok B (Kejuruan)"></option>
+    <option value="Kelompok C (Pilihan)"></option>
+    <option value="Muatan Lokal"></option>
+    <option value="Praktik Kerja Lapangan (PKL)"></option>
+    <option value="Matrikulasi"></option>
+    <option value="Ekstrakurikuler Wajib"></option>
+</datalist>
+
 <!-- Script Inisialisasi Vue App -->
 <script>
 {
@@ -2598,7 +2753,17 @@
                     kelas: [],
                     bank_mapel: []
                 },
+                // Form inline untuk buat mapel baru per group card (indexed by gIdx)
+                newMapelForms: {},
+                // Panel kelola bank mapel (toggle show)
+                showBankMapelPanel: false,
+                bankMapelSearch: '',
+                // Inline form fields for the bank panel
+                bankNewMapelNama: '',
+                bankNewMapelKategori: '',
                 copySourceKelasId: '',
+                copyTargetSemester: '',
+                copyTargetTahunAjaran: '',
                 copyModalObj: null,
 
                 // Nilai Rapor State
@@ -2679,11 +2844,16 @@
             
             // Load options via AJAX
             try {
-                const response = await axios.get('<?= $this->getBaseUrl() ?>/api/v1/buku-induk?action=get_options');
+                const optUrl = '<?= $this->getBaseUrl() ?>/api/v1/buku-induk?action=get_options' + (this.filterTenantId ? '&filter_tenant_id=' + encodeURIComponent(this.filterTenantId) : '');
+                const response = await axios.get(optUrl);
                 const payload = (response.data && response.data.data) ? response.data.data : (response.data || {});
-                this.listTenants = payload.tenantList || payload.tenant_list || [];
-                this.jenjangOptions = payload.jenjangList || payload.jenjang_list || [];
-                this.kelasOptions = payload.kelasList || payload.kelas_list || [];
+                if (payload.tenantList || payload.tenant_list) this.listTenants = payload.tenantList || payload.tenant_list;
+                if (payload.jenjangList && Array.isArray(payload.jenjangList) && payload.jenjangList.length > 0) {
+                    this.jenjangOptions = payload.jenjangList;
+                }
+                if (payload.kelasList && Array.isArray(payload.kelasList) && payload.kelasList.length > 0) {
+                    this.kelasOptions = payload.kelasList;
+                }
             } catch (err) {
                 console.error("Gagal memuat opsi filter buku induk:", err);
             }
@@ -2698,6 +2868,8 @@
                 }
             }
             
+            this.fetchKurikulumMaster();
+            this.fetchNilaiRaporMaster();
             this.fetchData(1);
             this.fetchRiwayatKepsek();
         },
@@ -2723,7 +2895,22 @@
             },
             filteredCopyKelasOptions() {
                 if (!this.masterKurikulum || !this.masterKurikulum.kelas) return [];
-                return this.masterKurikulum.kelas.filter(k => k.id != this.kurikulum.kelasId);
+                const targetSemester = this.copyTargetSemester   || this.kurikulum.semester;
+                const targetTahun    = this.copyTargetTahunAjaran || this.kurikulum.tahunAjaran;
+                // Jika periode tujuan SAMA dengan sumber → kelas tujuan harus berbeda
+                // Jika periode tujuan BERBEDA (beda semester atau beda TA) → kelas yang sama pun boleh
+                const isSamePeriod = (targetSemester === this.kurikulum.semester)
+                                  && (targetTahun    === this.kurikulum.tahunAjaran);
+                return this.masterKurikulum.kelas.filter(k => isSamePeriod ? k.id !== this.kurikulum.kelasId : true);
+            },
+            filteredBankMapel() {
+                const list = this.masterKurikulum.bank_mapel || [];
+                if (!this.bankMapelSearch) return list;
+                const q = this.bankMapelSearch.toLowerCase();
+                return list.filter(m => 
+                    (m.nama_mapel || '').toLowerCase().includes(q) ||
+                    (m.kategori || '').toLowerCase().includes(q)
+                );
             },
             activeAcademicYears() {
                 if (!this.selectedSiswa || !this.selectedSiswa.nilai_rapor) return [];
@@ -2779,22 +2966,43 @@
                 return this.selectedSiswa.pelanggaran.reduce((sum, item) => sum + parseInt(item.bobot_poin || 0), 0);
             },
             filteredKelasOptions() {
+                if (!this.kelasOptions || !Array.isArray(this.kelasOptions)) return [];
                 if (!this.filterJenjang) {
                     return this.kelasOptions;
                 }
-                return this.kelasOptions.filter(k => k.id_jenjang == this.filterJenjang);
+                const selectedJ = this.jenjangOptions.find(j => String(j.id) === String(this.filterJenjang));
+                const jCode = selectedJ ? String(selectedJ.kode_jenjang || selectedJ.kode || '').toUpperCase() : '';
+                const romanMap = {
+                    '7': 'VII', '8': 'VIII', '9': 'IX',
+                    '10': 'X', '11': 'XI', '12': 'XII',
+                    '1': 'I', '2': 'II', '3': 'III', '4': 'IV', '5': 'V', '6': 'VI'
+                };
+                const roman = romanMap[jCode] || '';
+
+                const matched = this.kelasOptions.filter(k => {
+                    const kJenjang = String(k.id_jenjang || k.jenjang_id || '');
+                    if (kJenjang === String(this.filterJenjang)) return true;
+                    if (roman && k.nama_kelas) {
+                        return k.nama_kelas.startsWith(roman + ' ') || k.nama_kelas.startsWith('Kelas ' + jCode);
+                    }
+                    return false;
+                });
+
+                return matched.length > 0 ? matched : this.kelasOptions;
             },
             filteredKurikulumKelas() {
+                if (!this.masterKurikulum || !this.masterKurikulum.kelas) return [];
                 if (!this.kurikulum.jenjangId) {
                     return this.masterKurikulum.kelas;
                 }
-                return this.masterKurikulum.kelas.filter(k => k.id_jenjang == this.kurikulum.jenjangId);
+                return this.masterKurikulum.kelas.filter(k => String(k.id_jenjang) === String(this.kurikulum.jenjangId));
             },
             filteredNilaiRaporKelas() {
+                if (!this.masterNilaiRapor || !this.masterNilaiRapor.kelas) return [];
                 if (!this.nilaiRapor.jenjangId) {
                     return this.masterNilaiRapor.kelas;
                 }
-                return this.masterNilaiRapor.kelas.filter(k => k.id_jenjang == this.nilaiRapor.jenjangId);
+                return this.masterNilaiRapor.kelas.filter(k => String(k.id_jenjang) === String(this.nilaiRapor.jenjangId));
             }
         },
         watch: {
@@ -3285,20 +3493,45 @@
             fetchNilaiRaporMaster() {
                 this.loadingNilaiRapor = true;
                 const params = {};
-                if (this.userRole === 'super_admin' && this.filterTenantId) {
-                    params.tenant_id = this.filterTenantId;
+                let tenantId = this.filterTenantId;
+                if (!tenantId && this.listTenants && this.listTenants.length > 0) {
+                    tenantId = this.listTenants[0].id;
+                    this.filterTenantId = tenantId;
+                    this.tempFilterTenantId = tenantId;
+                }
+                if (tenantId) {
+                    params.tenant_id = tenantId;
+                    params.filter_tenant_id = tenantId;
                 }
                 axios.get('<?= $this->getBaseUrl() ?>/api/v1/kurikulum', { params })
                     .then(res => {
-                        this.masterNilaiRapor.tahun_ajaran = res.data.tahun_ajaran || [];
-                        this.masterNilaiRapor.kelas = res.data.kelas || [];
-                        this.jenjangOptions = res.data.jenjang || [];
-                        
-                        if (this.masterNilaiRapor.tahun_ajaran.length > 0 && !this.nilaiRapor.tahunAjaran) {
-                            this.nilaiRapor.tahunAjaran = this.masterNilaiRapor.tahun_ajaran[0].tahun_ajaran;
+                        const payload = (res.data && res.data.data) ? res.data.data : (res.data || {});
+                        this.masterNilaiRapor.tahun_ajaran = payload.tahun_ajaran || [];
+                        this.masterNilaiRapor.kelas = payload.kelas || [];
+                        if (payload.jenjang && Array.isArray(payload.jenjang) && payload.jenjang.length > 0) {
+                            this.jenjangOptions = payload.jenjang;
                         }
-                        if (this.masterNilaiRapor.kelas.length > 0 && !this.nilaiRapor.kelasId) {
-                            this.nilaiRapor.kelasId = this.masterNilaiRapor.kelas[0].id;
+                        
+                        if (this.masterNilaiRapor.tahun_ajaran.length > 0) {
+                            const exists = this.masterNilaiRapor.tahun_ajaran.some(t => (t.tahun_ajaran || t.nama_tahun_ajaran) === this.nilaiRapor.tahunAjaran);
+                            if (!exists || !this.nilaiRapor.tahunAjaran) {
+                                this.nilaiRapor.tahunAjaran = this.masterNilaiRapor.tahun_ajaran[0].tahun_ajaran || this.masterNilaiRapor.tahun_ajaran[0].nama_tahun_ajaran;
+                            }
+                        } else {
+                            this.nilaiRapor.tahunAjaran = '';
+                        }
+
+                        if (this.masterNilaiRapor.kelas.length > 0) {
+                            const exists = this.masterNilaiRapor.kelas.some(k => String(k.id) === String(this.nilaiRapor.kelasId));
+                            if (!exists || !this.nilaiRapor.kelasId) {
+                                this.nilaiRapor.kelasId = this.masterNilaiRapor.kelas[0].id;
+                            }
+                            const selK = this.masterNilaiRapor.kelas.find(k => String(k.id) === String(this.nilaiRapor.kelasId));
+                            if (selK && selK.id_jenjang) {
+                                this.nilaiRapor.jenjangId = selK.id_jenjang;
+                            }
+                        } else {
+                            this.nilaiRapor.kelasId = '';
                         }
                         
                         this.loadingNilaiRapor = false;
@@ -3662,11 +3895,27 @@
                 this.onFilterTenantChange();
             },
             onFilterTenantChange() {
-                // Ambil daftar kelas dan jenjang yang sesuai dengan tenant terpilih (untuk Super Admin)
+                // Reset filter selections so dropdowns don't hold stale IDs from another tenant
                 this.filterKelas = '';
                 this.filterJenjang = '';
+                this.filterTahunAjaranCetak = '';
+                this.kurikulum.tahunAjaran = '';
+                this.kurikulum.jenjangId = '';
+                this.kurikulum.kelasId = '';
+                this.kurikulum.kurikulumId = '';
+                this.kurikulum.groups = [];
+                this.nilaiRapor.tahunAjaran = '';
+                this.nilaiRapor.jenjangId = '';
+                this.nilaiRapor.kelasId = '';
+                this.nilaiRapor.mapelId = '';
+                this.nilaiRapor.students = [];
+                this.nilaiRapor.subjects = [];
+                this.nilaiRapor.grades = {};
+                this.matrixData = [];
+
                 this.fetchKelasOptions(this.filterTenantId || null);
                 this.fetchJenjangOptions(this.filterTenantId || null);
+
                 if (this.mainActiveTab === 'seting_kurikulum') {
                     this.fetchKurikulumMaster();
                 } else if (this.mainActiveTab === 'input_nilai_rapor') {
@@ -3684,22 +3933,53 @@
             fetchKurikulumMaster() {
                 this.loadingKurikulum = true;
                 const params = {};
-                if (this.userRole === 'super_admin' && this.filterTenantId) {
-                    params.tenant_id = this.filterTenantId;
+                let tenantId = this.filterTenantId;
+                if (!tenantId && this.listTenants && this.listTenants.length > 0) {
+                    tenantId = this.listTenants[0].id;
+                    this.filterTenantId = tenantId;
+                    this.tempFilterTenantId = tenantId;
+                }
+                if (tenantId) {
+                    params.tenant_id = tenantId;
+                    params.filter_tenant_id = tenantId;
                 }
                 axios.get('<?= $this->getBaseUrl() ?>/api/v1/kurikulum', { params })
                     .then(res => {
-                        this.masterKurikulum.tahun_ajaran = res.data.tahun_ajaran || [];
-                        this.masterKurikulum.kelas = res.data.kelas || [];
-                        this.masterKurikulum.bank_mapel = res.data.bank_mapel || [];
-                        this.jenjangOptions = res.data.jenjang || [];
-                        this.kurikulumList = res.data.kurikulum_list || [];
-                        
-                        if (this.masterKurikulum.tahun_ajaran.length > 0 && !this.kurikulum.tahunAjaran) {
-                            this.kurikulum.tahunAjaran = this.masterKurikulum.tahun_ajaran[0].tahun_ajaran;
+                        const payload = (res.data && res.data.data) ? res.data.data : (res.data || {});
+                        this.masterKurikulum.tahun_ajaran = payload.tahun_ajaran || [];
+                        this.masterKurikulum.kelas = payload.kelas || [];
+                        this.masterKurikulum.bank_mapel = payload.bank_mapel || [];
+                        if (payload.jenjang && Array.isArray(payload.jenjang) && payload.jenjang.length > 0) {
+                            this.jenjangOptions = payload.jenjang;
                         }
-                        if (this.masterKurikulum.kelas.length > 0 && !this.kurikulum.kelasId) {
-                            this.kurikulum.kelasId = this.masterKurikulum.kelas[0].id;
+                        this.kurikulumList = payload.kurikulum_list || [];
+                        
+                        if (this.masterKurikulum.tahun_ajaran.length > 0) {
+                            const exists = this.masterKurikulum.tahun_ajaran.some(t => (t.tahun_ajaran || t.nama_tahun_ajaran) === this.kurikulum.tahunAjaran);
+                            if (!exists || !this.kurikulum.tahunAjaran) {
+                                this.kurikulum.tahunAjaran = this.masterKurikulum.tahun_ajaran[0].tahun_ajaran || this.masterKurikulum.tahun_ajaran[0].nama_tahun_ajaran;
+                            }
+                        } else {
+                            this.kurikulum.tahunAjaran = '';
+                        }
+
+                        if (this.masterKurikulum.kelas.length > 0) {
+                            const exists = this.masterKurikulum.kelas.some(k => String(k.id) === String(this.kurikulum.kelasId));
+                            if (!exists || !this.kurikulum.kelasId) {
+                                this.kurikulum.kelasId = this.masterKurikulum.kelas[0].id;
+                            }
+                            const selK = this.masterKurikulum.kelas.find(k => String(k.id) === String(this.kurikulum.kelasId));
+                            if (selK && selK.id_jenjang) {
+                                this.kurikulum.jenjangId = selK.id_jenjang;
+                            }
+                        } else {
+                            this.kurikulum.kelasId = '';
+                        }
+
+                        if (payload.active_kurikulum_id) {
+                            this.kurikulum.kurikulumId = payload.active_kurikulum_id;
+                        } else if (this.kurikulumList && this.kurikulumList.length > 0 && !this.kurikulum.kurikulumId) {
+                            this.kurikulum.kurikulumId = this.kurikulumList[0].id;
                         }
                         
                         this.loadingKurikulum = false;
@@ -3735,15 +4015,20 @@
 
                 axios.get('<?= $this->getBaseUrl() ?>/api/v1/kurikulum', { params })
                     .then(res => {
-                        const mapping = res.data.existing_mapping || [];
-                        this.kurikulum.kurikulumId = res.data.active_kurikulum_id || '';
-                        this.kurikulumList = res.data.kurikulum_list || [];
+                        const payload = (res.data && res.data.data) ? res.data.data : (res.data || {});
+                        const mapping = payload.existing_mapping || [];
+                        if (payload.active_kurikulum_id) {
+                            this.kurikulum.kurikulumId = payload.active_kurikulum_id;
+                        }
+                        if (payload.kurikulum_list && Array.isArray(payload.kurikulum_list) && payload.kurikulum_list.length > 0) {
+                            this.kurikulumList = payload.kurikulum_list;
+                        }
                         
                         const groupsMap = {};
                         
                         mapping.forEach(row => {
                             const groupName = row.kelompok_id;
-                            const mapelId = parseInt(row.mapel_id);
+                            const mapelId = String(row.mapel_id);
                             if (!groupsMap[groupName]) {
                                 groupsMap[groupName] = [];
                             }
@@ -3775,11 +4060,196 @@
                         this.toast.fire({ icon: 'error', title: 'Gagal memuat pemetaan kurikulum.' });
                     });
             },
-            addGroup() {
+            addGroup(presetName = null) {
+                const defaultName = presetName || `Kelompok ${String.fromCharCode(65 + this.kurikulum.groups.length)} (Umum/Pilihan)`;
                 this.kurikulum.groups.push({
-                    kelompok_id: 'Kelompok Baru',
+                    kelompok_id: defaultName,
                     mapel_ids: [],
                     searchQuery: ''
+                });
+            },
+            autoGroupPresets() {
+                const groupA = {
+                    kelompok_id: 'Kelompok A (Umum)',
+                    mapel_ids: [],
+                    searchQuery: ''
+                };
+                const groupB = {
+                    kelompok_id: 'Kelompok B (Peminatan / Kejuruan)',
+                    mapel_ids: [],
+                    searchQuery: ''
+                };
+                const groupC = {
+                    kelompok_id: 'Kelompok C (Muatan Lokal & Keterampilan)',
+                    mapel_ids: [],
+                    searchQuery: ''
+                };
+
+                (this.masterKurikulum.bank_mapel || []).forEach(m => {
+                    const name = (m.nama_mapel || '').toLowerCase();
+                    if (name.includes('indonesia') || name.includes('inggris') || name.includes('matematika') || name.includes('pancasila') || name.includes('ppkn') || name.includes('agama') || name.includes('sejarah')) {
+                        groupA.mapel_ids.push(String(m.id));
+                    } else if (name.includes('biologi') || name.includes('fisika') || name.includes('kimia') || name.includes('ekonomi') || name.includes('sosiologi') || name.includes('geografi') || name.includes('kejuruan')) {
+                        groupB.mapel_ids.push(String(m.id));
+                    } else {
+                        groupC.mapel_ids.push(String(m.id));
+                    }
+                });
+
+                this.kurikulum.groups = [groupA, groupB, groupC];
+                this.toast.fire({ icon: 'success', title: 'Berhasil membagi mata pelajaran ke dalam 3 kelompok (A, B, C).' });
+            },
+            getOtherGroupForMapel(mapelId, currentGIdx) {
+                for (let i = 0; i < this.kurikulum.groups.length; i++) {
+                    if (i !== currentGIdx) {
+                        const g = this.kurikulum.groups[i];
+                        if (Array.isArray(g.mapel_ids) && g.mapel_ids.includes(String(mapelId))) {
+                            return g.kelompok_id || `Kelompok ${i + 1}`;
+                        }
+                    }
+                }
+                return null;
+            },
+            getGroupMapelObjects(group) {
+                if (!group || !Array.isArray(group.mapel_ids)) return [];
+                return (this.masterKurikulum.bank_mapel || []).filter(m => 
+                    group.mapel_ids.includes(String(m.id))
+                );
+            },
+            getAvailableMapelForGroup(group) {
+                const assignedIds = new Set();
+                (this.kurikulum.groups || []).forEach(g => {
+                    if (Array.isArray(g.mapel_ids)) {
+                        g.mapel_ids.forEach(id => assignedIds.add(String(id)));
+                    }
+                });
+                
+                return (this.masterKurikulum.bank_mapel || []).filter(m => {
+                    const idStr = String(m.id);
+                    const matchSearch = !group.searchQuery || 
+                        (m.nama_mapel && m.nama_mapel.toLowerCase().includes(group.searchQuery.toLowerCase())) ||
+                        (m.kode_mapel && m.kode_mapel.toLowerCase().includes(group.searchQuery.toLowerCase()));
+                    return !assignedIds.has(idStr) && matchSearch;
+                });
+            },
+            addMapelToGroup(group, mapelId) {
+                const idStr = String(mapelId);
+                if (!group.mapel_ids.includes(idStr)) {
+                    group.mapel_ids.push(idStr);
+                }
+            },
+            removeMapelFromGroup(group, mapelId) {
+                const idStr = String(mapelId);
+                const idx = group.mapel_ids.indexOf(idStr);
+                if (idx !== -1) {
+                    group.mapel_ids.splice(idx, 1);
+                }
+            },
+            isMapelAllocated(mapelId) {
+                const idStr = String(mapelId);
+                return (this.kurikulum.groups || []).some(g =>
+                    Array.isArray(g.mapel_ids) && g.mapel_ids.includes(idStr)
+                );
+            },
+            openNewMapelForm(gIdx) {
+                this.newMapelForms[gIdx] = { show: true, nama: '', kategori: '', loading: false };
+            },
+            closeNewMapelForm(gIdx) {
+                this.newMapelForms[gIdx] = { show: false, nama: '', kategori: '', loading: false };
+            },
+            createMapelAndAddToGroup(group, gIdx) {
+                const nama = (this.newMapelForms[gIdx]?.nama || '').trim();
+                if (!nama) {
+                    this.toast.fire({ icon: 'warning', title: 'Nama mata pelajaran tidak boleh kosong.' });
+                    return;
+                }
+                this.newMapelForms[gIdx].loading = true;
+
+                const payload = {
+                    nama_mata_pelajaran: nama,
+                    kategori: (this.newMapelForms[gIdx]?.kategori || '').trim()
+                };
+                if (this.userRole === 'super_admin' && this.filterTenantId) {
+                    payload.tenant_id = this.filterTenantId;
+                }
+
+                axios.post('<?= $this->getBaseUrl() ?>/api/v1/kurikulum/mapel', payload)
+                    .then(res => {
+                        const newMapel = res.data.data.mapel;
+                        // Tambah ke bank_mapel master
+                        this.masterKurikulum.bank_mapel.push(newMapel);
+                        // Langsung alokasikan ke kelompok ini
+                        this.addMapelToGroup(group, newMapel.id);
+                        this.closeNewMapelForm(gIdx);
+                        this.toast.fire({ icon: 'success', title: `"${nama}" berhasil dibuat dan ditambahkan ke kelompok.` });
+                    })
+                    .catch(err => {
+                        this.newMapelForms[gIdx].loading = false;
+                        const msg = err.response?.data?.error || err.response?.data?.message || 'Gagal membuat mata pelajaran baru.';
+                        this.toast.fire({ icon: 'error', title: msg });
+                    });
+            },
+            createMapelToBank(group) {
+                const nama = (this.bankNewMapelNama || '').trim();
+                if (!nama) {
+                    this.toast.fire({ icon: 'warning', title: 'Nama mata pelajaran tidak boleh kosong.' });
+                    return;
+                }
+
+                const payload = {
+                    nama_mata_pelajaran: nama,
+                    kategori: (this.bankNewMapelKategori || '').trim()
+                };
+                if (this.userRole === 'super_admin' && this.filterTenantId) {
+                    payload.tenant_id = this.filterTenantId;
+                }
+
+                axios.post('<?= $this->getBaseUrl() ?>/api/v1/kurikulum/mapel', payload)
+                    .then(res => {
+                        const newMapel = res.data.data.mapel;
+                        this.masterKurikulum.bank_mapel.push(newMapel);
+                        this.bankNewMapelNama = '';
+                        this.bankNewMapelKategori = '';
+                        this.toast.fire({ icon: 'success', title: `"${nama}" berhasil ditambahkan ke bank mapel sekolah.` });
+                    })
+                    .catch(err => {
+                        const msg = err.response?.data?.error || err.response?.data?.message || 'Gagal menambahkan mata pelajaran.';
+                        this.toast.fire({ icon: 'error', title: msg });
+                    });
+            },
+            deleteMapelFromBank(mapelId, namaMapel) {
+                Swal.fire({
+                    title: 'Hapus dari Bank Mapel?',
+                    html: `Mata pelajaran <strong>"${namaMapel}"</strong> akan dihapus dari bank mapel sekolah.<br><small class="text-muted">Tidak dapat dihapus jika masih digunakan di pemetaan kurikulum aktif.</small>`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc2626',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: 'Ya, Hapus',
+                    cancelButtonText: 'Batal'
+                }).then(result => {
+                    if (!result.isConfirmed) return;
+
+                    const payload = { mapel_id: String(mapelId) };
+                    if (this.userRole === 'super_admin' && this.filterTenantId) {
+                        payload.tenant_id = this.filterTenantId;
+                    }
+
+                    axios.delete('<?= $this->getBaseUrl() ?>/api/v1/kurikulum/mapel', { data: payload })
+                        .then(res => {
+                            const idStr = String(mapelId);
+                            const idx = this.masterKurikulum.bank_mapel.findIndex(m => String(m.id) === idStr);
+                            if (idx !== -1) this.masterKurikulum.bank_mapel.splice(idx, 1);
+                            // Juga remove dari semua group jika ada
+                            (this.kurikulum.groups || []).forEach(g => {
+                                this.removeMapelFromGroup(g, mapelId);
+                            });
+                            this.toast.fire({ icon: 'success', title: `"${namaMapel}" berhasil dihapus dari bank mapel.` });
+                        })
+                        .catch(err => {
+                            const msg = err.response?.data?.error || err.response?.data?.message || 'Gagal menghapus mata pelajaran.';
+                            this.toast.fire({ icon: 'error', title: msg });
+                        });
                 });
             },
             removeGroup(index) {
@@ -3827,7 +4297,9 @@
                 return normalized.startsWith('12') || normalized.startsWith('XII');
             },
             showCopyModal() {
-                this.copySourceKelasId = '';
+                this.copySourceKelasId    = '';
+                this.copyTargetSemester   = '';
+                this.copyTargetTahunAjaran= '';
                 this.copyModalObj.show();
             },
             submitCopyKurikulum() {
@@ -3836,53 +4308,82 @@
                     return;
                 }
                 if (!this.copySourceKelasId) return;
-                
-                const payload = {
-                    source_kelas_id: this.copySourceKelasId,
-                    target_kelas_id: this.kurikulum.kelasId,
-                    tahun_ajaran: this.kurikulum.tahunAjaran,
-                    semester: this.kurikulum.semester
-                };
 
+                const sourceNama  = this.getKelasName(this.kurikulum.kelasId);   // kelas aktif = sumber
+                const targetNama  = this.getKelasName(this.copySourceKelasId);    // kelas dipilih = tujuan
+
+                // Kelas aktif = SUMBER, kelas yang dipilih = TUJUAN
+                const payload = {
+                    source_kelas_id     : this.kurikulum.kelasId,
+                    target_kelas_id     : this.copySourceKelasId,
+                    tahun_ajaran        : this.kurikulum.tahunAjaran,
+                    semester            : this.kurikulum.semester,
+                    target_semester     : this.copyTargetSemester     || this.kurikulum.semester,
+                    target_tahun_ajaran : this.copyTargetTahunAjaran  || this.kurikulum.tahunAjaran
+                };
                 if (this.userRole === 'super_admin' && this.filterTenantId) {
                     payload.tenant_id = this.filterTenantId;
                 }
 
-                Swal.fire({
-                    title: 'Konfirmasi Salin',
-                    text: `Salin kurikulum dari kelas "${this.getKelasName(this.copySourceKelasId)}" ke "${this.getKelasName(this.kurikulum.kelasId)}"? Ini akan menghapus data kurikulum yang ada di kelas tujuan.`,
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#2563eb',
-                    cancelButtonColor: '#64748b',
-                    confirmButtonText: 'Ya, Salin',
-                    cancelButtonText: 'Batal'
-                }).then((result) => {
-                    if (result.isConfirmed) {
+                // ─── Tutup Bootstrap modal lebih dulu agar tidak ada konflik
+                //     aria-hidden antara Bootstrap & SweetAlert2 ───────────────
+                this.copyModalObj.hide();
+
+                // Beri waktu animasi modal selesai (300ms) baru buka Swal
+                setTimeout(() => {
+                    Swal.fire({
+                        title: 'Konfirmasi Salin',
+                        html: `Salin kurikulum dari kelas <strong>"${sourceNama}"</strong> ke <strong>"${targetNama}"</strong>?<br><small class="text-muted">Data kurikulum yang ada di kelas tujuan akan digantikan.</small>`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#2563eb',
+                        cancelButtonColor: '#64748b',
+                        confirmButtonText: 'Ya, Salin',
+                        cancelButtonText: 'Batal'
+                    }).then((result) => {
+                        if (!result.isConfirmed) {
+                            // Kembalikan modal jika user batalkan
+                            this.copyModalObj.show();
+                            return;
+                        }
+
                         Swal.fire({
-                            title: 'Menyalin...',
+                            title: 'Menyalin Kurikulum...',
                             allowOutsideClick: false,
-                            didOpen: () => {
-                                Swal.showLoading();
-                            }
+                            didOpen: () => { Swal.showLoading(); }
                         });
 
                         axios.post('<?= $this->getBaseUrl() ?>/api/v1/kurikulum/copy', payload)
                             .then(res => {
-                                Swal.close();
-                                this.copyModalObj.hide();
-                                this.toast.fire({ icon: 'success', title: res.data.message || 'Kurikulum berhasil disalin.' });
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Berhasil Disalin!',
+                                    html: `Kurikulum dari <strong>"${sourceNama}"</strong> berhasil disalin ke <strong>"${targetNama}"</strong><br><small class="text-muted">${res.data.data?.total ?? ''} pemetaan mapel berhasil disalin.</small>`,
+                                    confirmButtonColor: '#2563eb',
+                                    timer: 3500,
+                                    timerProgressBar: true
+                                });
+                                this.copySourceKelasId    = '';
+                                this.copyTargetSemester   = '';
+                                this.copyTargetTahunAjaran= '';
                                 this.loadKurikulumMapping();
                             })
                             .catch(err => {
                                 Swal.close();
-                                const msg = err.response && err.response.data && err.response.data.message 
-                                    ? err.response.data.message 
-                                    : 'Gagal menyalin kurikulum.';
-                                this.toast.fire({ icon: 'error', title: msg });
+                                const resp = err.response?.data || {};
+                                const msg  = resp.error || resp.message || 'Gagal menyalin kurikulum.';
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Gagal Menyalin',
+                                    text: msg,
+                                    confirmButtonColor: '#2563eb'
+                                }).then(() => {
+                                    // Kembalikan modal setelah user dismiss error
+                                    this.copyModalObj.show();
+                                });
                             });
-                    }
-                });
+                    });
+                }, 350);
             },
             saveKurikulum() {
                 if (this.userRole === 'super_admin' && !this.filterTenantId) {
@@ -3897,19 +4398,18 @@
                 const cleanMappings = [];
                 for (let i = 0; i < this.kurikulum.groups.length; i++) {
                     const group = this.kurikulum.groups[i];
-                    const gName = group.kelompok_id.trim();
-                    if (!gName) {
-                        this.toast.fire({ icon: 'warning', title: `Nama Kelompok pada baris ${i + 1} tidak boleh kosong.` });
-                        return;
-                    }
-                    if (group.mapel_ids.length === 0) {
-                        this.toast.fire({ icon: 'warning', title: `Kelompok "${gName}" harus memilih minimal satu mata pelajaran.` });
-                        return;
-                    }
+                    const gName = (group.kelompok_id || '').trim();
+                    if (!gName) continue;
+                    if (!group.mapel_ids || group.mapel_ids.length === 0) continue;
                     cleanMappings.push({
                         kelompok_id: gName,
                         mapel_ids: group.mapel_ids
                     });
+                }
+
+                if (cleanMappings.length === 0) {
+                    this.toast.fire({ icon: 'warning', title: 'Pilih minimal 1 mata pelajaran pada setidaknya 1 kelompok untuk disimpan.' });
+                    return;
                 }
 
                 const payload = {
@@ -3924,9 +4424,11 @@
                     payload.tenant_id = this.filterTenantId;
                 }
 
+                const totalMapelSelected = cleanMappings.reduce((acc, m) => acc + m.mapel_ids.length, 0);
+
                 Swal.fire({
                     title: 'Simpan Kurikulum?',
-                    text: "Penyimpanan akan menggantikan konfigurasi kurikulum yang sudah ada untuk kelas dan semester terpilih.",
+                    text: `Penyimpanan akan mencatat ${totalMapelSelected} mata pelajaran terpilih ke dalam ${cleanMappings.length} kelompok pada kelas ini.`,
                     icon: 'question',
                     showCancelButton: true,
                     confirmButtonColor: '#2563eb',
@@ -3961,12 +4463,14 @@
             },
             fetchKelasOptions(tenantId = null) {
                 const params = { module: 'kelas' };
-                if (tenantId) {
-                    params.tenant_id = tenantId;
+                const tid = tenantId || this.filterTenantId;
+                if (tid) {
+                    params.tenant_id = tid;
+                    params.filter_tenant_id = tid;
                 }
                 axios.get('<?= $this->getBaseUrl() ?>/api/v1/kelembagaan/options', { params })
                      .then(res => {
-                         this.kelasOptions = res.data.data;
+                         this.kelasOptions = res.data.data || [];
                      })
                      .catch(err => {
                          console.error("Gagal memuat filter kelas:", err);
@@ -3974,31 +4478,44 @@
             },
             fetchJenjangOptions(tenantId = null) {
                 const params = { module: 'jenjang' };
-                if (tenantId) {
-                    params.tenant_id = tenantId;
+                const tid = tenantId || this.filterTenantId;
+                if (tid) {
+                    params.tenant_id = tid;
+                    params.filter_tenant_id = tid;
                 }
                 axios.get('<?= $this->getBaseUrl() ?>/api/v1/kelembagaan/options', { params })
                      .then(res => {
-                         this.jenjangOptions = res.data.data;
+                         this.jenjangOptions = res.data.data || [];
                      })
                      .catch(err => {
                          console.error("Gagal memuat filter jenjang:", err);
                      });
+            },
+            onJenjangFilterChange() {
+                if (this.filterKelas) {
+                    const exists = this.filteredKelasOptions.some(k => String(k.id) === String(this.filterKelas));
+                    if (!exists) {
+                        this.filterKelas = '';
+                    }
+                }
+                this.fetchData(1);
             },
             fetchData(page = 1) {
                 this.loading = true;
                 this.currentPage = page;
 
                 const params = {
-                    page:      this.currentPage,
-                    per_page:  this.perPage,
-                    search:    this.search,
-                    kelas_id:  this.filterKelas,
-                    status:    this.filterStatus
+                    page:       this.currentPage,
+                    per_page:   this.perPage,
+                    search:     this.search,
+                    jenjang_id: this.filterJenjang,
+                    kelas_id:   this.filterKelas,
+                    status:     this.filterStatus
                 };
 
-                if (this.userRole === 'super_admin' && this.filterTenantId) {
+                if (this.filterTenantId) {
                     params.filter_tenant_id = this.filterTenantId;
+                    params.tenant_id = this.filterTenantId;
                 }
 
                 axios.get('<?= $this->getBaseUrl() ?>/api/v1/buku-induk', { params })
