@@ -11,51 +11,86 @@ class StorageGuard {
      * Get the total storage space currently used by a school/tenant (in bytes).
      */
     public static function getTenantStorageUsage(string $tenantId): int {
+        $storageRoot = dirname(__DIR__, 2) . '/storage/app/public';
+        $bytes = 0;
+
+        if (!is_dir($storageRoot)) {
+            return 0;
+        }
+
         try {
-            $db = Database::getConnection();
-            $stmt = $db->prepare("
-                SELECT d.file_sizes 
-                FROM dokumen d 
-                JOIN siswa s ON d.id_siswa = s.id 
-                WHERE s.tenant_id = :tenant_id AND s.deleted_at IS NULL
-            ");
-            $stmt->execute(['tenant_id' => $tenantId]);
-            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            $totalSize = 0;
-            foreach ($rows as $row) {
-                if (!empty($row['file_sizes'])) {
-                    $sizes = json_decode($row['file_sizes'], true);
-                    if (is_array($sizes)) {
-                        foreach ($sizes as $size) {
-                            $totalSize += (int)$size;
-                        }
+            $modules = array_diff(scandir($storageRoot) ?: [], ['.', '..']);
+            foreach ($modules as $modul) {
+                $modulPath = $storageRoot . '/' . $modul;
+                if (!is_dir($modulPath)) continue;
+
+                // Direct folder: storage/app/public/{modul}/{tenant_id}
+                $tenantDir = $modulPath . '/' . $tenantId;
+                if (is_dir($tenantDir)) {
+                    $bytes += self::calcFolderBytes($tenantDir);
+                }
+
+                // Nested folder: e.g. storage/app/public/perpustakaan/covers/{tenant_id}
+                $subDirs = array_diff(scandir($modulPath) ?: [], ['.', '..']);
+                foreach ($subDirs as $sub) {
+                    $nestedTenantDir = $modulPath . '/' . $sub . '/' . $tenantId;
+                    if (is_dir($nestedTenantDir)) {
+                        $bytes += self::calcFolderBytes($nestedTenantDir);
                     }
                 }
             }
-            return $totalSize;
         } catch (\Throwable $e) {
-            error_log("Failed to calculate storage usage: " . $e->getMessage());
-            return 0;
+            error_log("StorageGuard: Failed to calculate usage for {$tenantId}: " . $e->getMessage());
         }
+
+        return $bytes;
     }
 
+    private static function calcFolderBytes(string $dir): int {
+        $bytes = 0;
+        try {
+            $iterator = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($dir, \RecursiveDirectoryIterator::SKIP_DOTS),
+                \RecursiveIteratorIterator::LEAVES_ONLY
+            );
+            foreach ($iterator as $file) {
+                if ($file->isFile()) {
+                    $bytes += $file->getSize();
+                }
+            }
+        } catch (\Throwable $e) {}
+        return $bytes;
+    }
+
+    /**
+     * Get tenant storage limit in bytes based on active package from database.
+     */
     public static function getTenantStorageLimit(string $tenantId): int {
         try {
             $db = Database::getConnection();
-            $stmt = $db->prepare("SELECT storage_limit_mb FROM tenants WHERE id = :tenant_id LIMIT 1");
-            $stmt->execute(['tenant_id' => $tenantId]);
-            $limitMb = $stmt->fetchColumn();
-            
-            if ($limitMb !== false && $limitMb > 0) {
-                return (int)$limitMb * 1024 * 1024; // MB to bytes
+            $stmt = $db->prepare("SELECT storage_limit_mb, paket_aktif FROM core.tenants WHERE id = ?");
+            $stmt->execute([$tenantId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($row) {
+                if (!empty($row['storage_limit_mb']) && (int)$row['storage_limit_mb'] > 0) {
+                    return (int)$row['storage_limit_mb'] * 1024 * 1024;
+                }
+
+                $paket = $row['paket_aktif'] ?? '';
+                if ($paket === 'Basic') {
+                    return 50 * 1024 * 1024; // 50 MB
+                } elseif ($paket === 'Pro') {
+                    return 250 * 1024 * 1024; // 250 MB
+                } elseif ($paket === 'Enterprise SaaS') {
+                    return 5120 * 1024 * 1024; // 5 GB (5120 MB)
+                }
             }
-            
-            return 50 * 1024 * 1024;  // 50 MB fallback
         } catch (\Throwable $e) {
-            error_log("Failed to fetch storage limit: " . $e->getMessage());
-            return 50 * 1024 * 1024; // 50 MB fallback
+            error_log("StorageGuard limit check error for {$tenantId}: " . $e->getMessage());
         }
+
+        return 1024 * 1024 * 1024; // 1 GB default
     }
 
     /**
