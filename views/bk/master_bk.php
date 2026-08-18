@@ -3183,100 +3183,377 @@ function applySuperAdminTenantFilter(tenantId) {
     <!-- ═══════════════════════════════════════════════════════════
          TAB: KESIAPAN & ELIGIBILITAS SISWA (PDSS)
     ════════════════════════════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════
+         TAB: KESIAPAN & ELIGIBILITAS SISWA (PDSS)
+    ════════════════════════════════════════════════════════════ -->
     <div v-show="activeTab === 'kesiapan'">
-        <div class="card border-0 shadow-sm rounded-4 mb-4">
-            <div class="card-header bg-white border-0 rounded-top-4 p-4 pb-3">
+        <!-- Premium Header Banner -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);">
+            <div class="card-body p-4 text-white">
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
                     <div>
-                        <h5 class="fw-bold mb-1"><i class="bi bi-person-check-fill me-2 text-primary"></i>Kesiapan & Eligibilitas Siswa PDSS</h5>
-                        <p class="text-muted fs-8 mb-0">Daftar siswa Kelas 12 yang eligible mengikuti SNBP berdasarkan kuota dan nilai rata-rata 5 semester.</p>
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="badge bg-white bg-opacity-20 text-white rounded-pill px-3 py-1 fs-8 text-uppercase tracking-wider fw-bold">
+                                <i class="bi bi-patch-check-fill text-warning me-1"></i> Portal PDSS SNPMB
+                            </span>
+                            <span class="badge bg-success bg-opacity-25 text-success-light rounded-pill px-3 py-1 fs-8 border border-success border-opacity-25">
+                                Real-Time Analytics
+                            </span>
+                        </div>
+                        <h4 class="fw-bold mb-1 text-white"><i class="bi bi-award-fill me-2 text-warning"></i>Kesiapan & Eligibilitas Siswa PDSS</h4>
+                        <p class="text-white-50 fs-7 mb-0" style="max-width: 680px;">
+                            Sistem perangkingan otomatis rata-rata nilai rapor 5 semester dan penentuan eligibilitas siswa Kelas 12 sesuai kuota akreditasi sekolah untuk pendaftaran SNBP.
+                        </p>
                     </div>
                     <div class="d-flex gap-2 flex-wrap align-items-center">
-                        <select class="form-select form-select-sm rounded-3" v-model="kesiapanFilter.tahun_ajaran_id" @change="loadKesiapan()" style="min-width:180px;">
-                            <option value="">— Tahun Ajaran —</option>
-                            <option v-for="ta in tahunAjaranList" :key="ta.id" :value="ta.id">{{ ta.tahun_ajaran }}</option>
-                        </select>
-                        <button class="btn btn-sm btn-outline-success rounded-3" @click="exportKesiapanExcel()" :disabled="!kesiapanList || kesiapanList?.length === 0">
-                            <i class="bi bi-file-earmark-excel me-1"></i> Export Excel
+                        <button class="btn btn-warning text-dark font-semibold rounded-3 px-3 shadow-sm d-flex align-items-center gap-2"
+                                @click="autoCalculateKesiapan()" :disabled="autoCalculatingKesiapan">
+                            <span v-if="autoCalculatingKesiapan" class="spinner-border spinner-border-sm"></span>
+                            <i v-else class="bi bi-lightning-charge-fill fs-6"></i>
+                            <span>Hitung Eligibilitas Otomatis</span>
+                        </button>
+                        <button class="btn btn-outline-light rounded-3 px-3 d-flex align-items-center gap-2"
+                                data-bs-toggle="modal" data-bs-target="#modalConfigKuotaPDSS">
+                            <i class="bi bi-sliders"></i>
+                            <span>Kuota ({{ selectedKuotaPct }}%)</span>
+                        </button>
+                        <button class="btn btn-success rounded-3 px-3 d-flex align-items-center gap-2 shadow-sm"
+                                @click="exportKesiapanExcel()" :disabled="!kesiapanList || kesiapanList?.length === 0">
+                            <i class="bi bi-file-earmark-excel-fill"></i>
+                            <span>Export Excel</span>
                         </button>
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- KPI Summary Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="card border-0 shadow-sm rounded-4 h-100 p-3 bg-white hover-shadow transition">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-4 p-3 d-flex align-items-center justify-content-center" style="background:#eef2ff; color:#4f46e5; width:54px; height:54px;">
+                            <i class="bi bi-people-fill fs-3"></i>
+                        </div>
+                        <div>
+                            <div class="fs-8 text-muted fw-semibold">Total Siswa Kelas 12</div>
+                            <div class="fs-3 fw-bold text-dark">{{ kesiapanSummary.total_siswa || 0 }} <span class="fs-8 text-muted font-normal">Siswa</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="card border-0 shadow-sm rounded-4 h-100 p-3 bg-white hover-shadow transition">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-4 p-3 d-flex align-items-center justify-content-center" style="background:#ecfdf5; color:#10b981; width:54px; height:54px;">
+                            <i class="bi bi-check-circle-fill fs-3"></i>
+                        </div>
+                        <div>
+                            <div class="fs-8 text-muted fw-semibold">Siswa Eligible SNBP</div>
+                            <div class="fs-3 fw-bold text-success">{{ kesiapanSummary.total_eligible || 0 }} <span class="fs-8 text-muted font-normal">Siswa</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="card border-0 shadow-sm rounded-4 h-100 p-3 bg-white hover-shadow transition">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-4 p-3 d-flex align-items-center justify-content-center" style="background:#fffbeb; color:#f59e0b; width:54px; height:54px;">
+                            <i class="bi bi-pie-chart-fill fs-3"></i>
+                        </div>
+                        <div>
+                            <div class="fs-8 text-muted fw-semibold">Kuota Terpenuhi</div>
+                            <div class="fs-3 fw-bold text-warning">{{ kesiapanSummary.persentase_eligible || 0 }}%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="card border-0 shadow-sm rounded-4 h-100 p-3 bg-white hover-shadow transition">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-4 p-3 d-flex align-items-center justify-content-center" style="background:#faf5ff; color:#a855f7; width:54px; height:54px;">
+                            <i class="bi bi-graph-up-arrow fs-3"></i>
+                        </div>
+                        <div>
+                            <div class="fs-8 text-muted fw-semibold">Rata-Rata Tertinggi</div>
+                            <div class="fs-3 fw-bold text-purple">{{ kesiapanSummary.max_nilai_rata_rata || '-' }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Bar & Table Card -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-header bg-white border-0 rounded-top-4 p-4 pb-3">
+                <div class="row g-2 align-items-center">
+                    <!-- Search Input -->
+                    <div class="col-12 col-md-4">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-light border-end-0 rounded-start-3"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" class="form-control form-control-sm bg-light border-start-0 rounded-end-3"
+                                   placeholder="Cari Nama Siswa, NISN, atau Kelas..." v-model="kesiapanFilter.search" @input="loadKesiapan()">
+                        </div>
+                    </div>
+
+                    <!-- Filter Jurusan -->
+                    <div class="col-6 col-md-3">
+                        <select class="form-select form-select-sm rounded-3 bg-light border-0" v-model="kesiapanFilter.jurusan" @change="loadKesiapan()">
+                            <option value="">— Semua Jurusan / Program —</option>
+                            <option value="MIPA">MIPA / IPA</option>
+                            <option value="IPS">IPS</option>
+                            <option value="Bahasa">Bahasa</option>
+                            <option value="TKJ">Teknik Komputer & Jaringan</option>
+                            <option value="RPL">Rekayasa Perangkat Lunak</option>
+                        </select>
+                    </div>
+
+                    <!-- Filter Status Eligible -->
+                    <div class="col-6 col-md-3">
+                        <select class="form-select form-select-sm rounded-3 bg-light border-0" v-model="kesiapanFilter.status_eligible" @change="loadKesiapan()">
+                            <option value="">— Semua Status Status —</option>
+                            <option value="eligible">✅ Eligible SNBP saja</option>
+                            <option value="non_eligible">❌ Tidak Eligible saja</option>
+                        </select>
+                    </div>
+
+                    <!-- Filter Tahun Ajaran -->
+                    <div class="col-12 col-md-2">
+                        <select class="form-select form-select-sm rounded-3 bg-light border-0" v-model="kesiapanFilter.tahun_ajaran_id" @change="loadKesiapan()">
+                            <option value="">— Tahun Ajaran —</option>
+                            <option v-for="ta in tahunAjaranList" :key="ta.id" :value="ta.id">{{ ta.tahun_ajaran }}</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
             <div class="card-body p-0">
                 <div v-if="loadingKesiapan" class="text-center py-5">
                     <div class="spinner-border text-primary"></div>
-                    <p class="text-muted mt-2 fs-7">Memuat data kesiapan siswa...</p>
+                    <p class="text-muted mt-2 fs-7">Memuat data kesiapan PDSS siswa...</p>
                 </div>
                 <div v-else>
-                    <!-- KPI Strip -->
-                    <div class="row g-0 border-bottom">
-                        <div class="col-4 text-center py-3 border-end">
-                            <div class="fs-4 fw-bold text-primary">{{ kesiapanSummary.total_siswa }}</div>
-                            <div class="fs-8 text-muted">Total Siswa Kelas 12</div>
-                        </div>
-                        <div class="col-4 text-center py-3 border-end">
-                            <div class="fs-4 fw-bold text-success">{{ kesiapanSummary.total_eligible }}</div>
-                            <div class="fs-8 text-muted">Siswa Eligible SNBP</div>
-                        </div>
-                        <div class="col-4 text-center py-3">
-                            <div class="fs-4 fw-bold text-warning">{{ kesiapanSummary.persentase_eligible }}%</div>
-                            <div class="fs-8 text-muted">Kuota Terpenuhi</div>
-                        </div>
-                    </div>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0 fs-8">
-                            <thead class="table-light">
+                            <thead class="bg-light text-muted text-uppercase fs-9 tracking-wider">
                                 <tr>
-                                    <th class="px-4">#</th>
-                                    <th>Nama Siswa</th>
-                                    <th>NISN</th>
-                                    <th>Kelas</th>
-                                    <th class="text-center">Rata-rata 5 Sem</th>
-                                    <th class="text-center">Ranking</th>
-                                    <th class="text-center">Status Eligible</th>
-                                    <th class="text-center" v-if="userRole !== 'siswa'">Aksi</th>
+                                    <th class="px-4 py-3 text-center" style="width:70px;">Rank</th>
+                                    <th class="py-3">Nama Siswa</th>
+                                    <th class="py-3">NISN</th>
+                                    <th class="py-3">Kelas & Jurusan</th>
+                                    <th class="py-3 text-center">Rata-Rata 5 Sem</th>
+                                    <th class="py-3 text-center">Status Eligible</th>
+                                    <th class="py-3 text-center" style="width:210px;" v-if="userRole !== 'siswa'">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-for="(s, idx) in kesiapanList" :key="s.siswa_id"
-                                    :class="{'table-success': s.is_eligible, 'table-light': !s.is_eligible}">
-                                    <td class="px-4 text-muted">{{ idx + 1 }}</td>
-                                    <td class="fw-semibold">{{ s.nama_lengkap }}</td>
-                                    <td class="font-monospace">{{ s.nisn || '-' }}</td>
-                                    <td><span class="badge bg-secondary rounded-pill">{{ s.nama_kelas }}</span></td>
-                                    <td class="text-center">
-                                        <span class="badge rounded-pill" :class="s.nilai_rata_rata >= 80 ? 'bg-success' : s.nilai_rata_rata >= 70 ? 'bg-warning text-dark' : 'bg-danger'">
-                                            {{ s.nilai_rata_rata ? Number(s.nilai_rata_rata).toFixed(2) : '-' }}
+                                    :class="{'bg-success bg-opacity-10': s.is_eligible}">
+                                    <!-- Rank Badge -->
+                                    <td class="text-center px-4">
+                                        <span v-if="s.ranking_sekolah === 1" class="badge rounded-pill bg-warning text-dark px-2.5 py-1.5 fs-8 shadow-sm">🥇 #1</span>
+                                        <span v-else-if="s.ranking_sekolah === 2" class="badge rounded-pill bg-secondary text-white px-2.5 py-1.5 fs-8 shadow-sm">🥈 #2</span>
+                                        <span v-else-if="s.ranking_sekolah === 3" class="badge rounded-pill bg-amber text-dark px-2.5 py-1.5 fs-8 shadow-sm" style="background:#cd7f32; color:white!important;">🥉 #3</span>
+                                        <span v-else-if="s.ranking_sekolah > 0" class="fw-bold text-muted">#{{ s.ranking_sekolah }}</span>
+                                        <span v-else class="text-muted fs-9">-</span>
+                                    </td>
+
+                                    <!-- Student Name -->
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="rounded-circle bg-primary bg-opacity-10 text-primary fw-bold d-flex align-items-center justify-content-center"
+                                                 style="width:36px; height:36px; font-size:14px;">
+                                                {{ s.nama_lengkap.charAt(0).toUpperCase() }}
+                                            </div>
+                                            <div>
+                                                <a href="javascript:void(0)" class="fw-bold text-dark text-decoration-none hover-primary"
+                                                   @click="openDetailNilaiSiswa(s.siswa_id)">
+                                                    {{ s.nama_lengkap }}
+                                                </a>
+                                                <div class="fs-9 text-muted">ID: {{ s.siswa_id.substring(0,8) }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- NISN -->
+                                    <td class="font-monospace fw-semibold text-secondary">{{ s.nisn || '-' }}</td>
+
+                                    <!-- Class & Major -->
+                                    <td>
+                                        <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-2.5 py-1 me-1">
+                                            <i class="bi bi-mortarboard me-1"></i>{{ s.nama_kelas }}
+                                        </span>
+                                        <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-2.5 py-1">
+                                            {{ s.jurusan }}
                                         </span>
                                     </td>
-                                    <td class="text-center fw-bold">#{{ s.ranking_sekolah || '-' }}</td>
+
+                                    <!-- 5-Semester Average -->
                                     <td class="text-center">
-                                        <span v-if="s.is_eligible" class="badge bg-success rounded-pill px-3">
-                                            <i class="bi bi-check-circle me-1"></i> Eligible
+                                        <div class="d-inline-block text-center">
+                                            <span class="badge rounded-pill px-3 py-1.5 fs-8 fw-bold shadow-2xs"
+                                                  :class="s.nilai_rata_rata >= 85 ? 'bg-success text-white' : s.nilai_rata_rata >= 78 ? 'bg-primary text-white' : 'bg-warning text-dark'">
+                                                {{ s.nilai_rata_rata ? Number(s.nilai_rata_rata).toFixed(2) : '-' }}
+                                            </span>
+                                            <div class="progress mt-1" style="height: 4px; width: 64px;">
+                                                <div class="progress-bar bg-success" :style="{ width: Math.min(100, s.nilai_rata_rata) + '%' }"></div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- Status Eligible -->
+                                    <td class="text-center">
+                                        <span v-if="s.is_eligible" class="badge bg-success rounded-pill px-3 py-1.5 shadow-2xs">
+                                            <i class="bi bi-check-circle-fill me-1"></i> Eligible SNBP
                                         </span>
-                                        <span v-else class="badge bg-secondary rounded-pill px-3">
+                                        <span v-else class="badge bg-secondary bg-opacity-25 text-secondary rounded-pill px-3 py-1.5">
                                             Tidak Eligible
                                         </span>
                                     </td>
+
+                                    <!-- Actions -->
                                     <td class="text-center" v-if="userRole !== 'siswa'">
-                                        <button class="btn btn-xs rounded-2 px-2 py-1"
-                                                :class="s.is_eligible ? 'btn-outline-danger' : 'btn-outline-success'"
-                                                @click="toggleEligible(s.siswa_id, s.is_eligible)"
-                                                title="Toggle Status Eligible">
-                                            <i :class="s.is_eligible ? 'bi bi-x-circle' : 'bi bi-check-circle'"></i>
-                                            {{ s.is_eligible ? 'Batalkan' : 'Set Eligible' }}
-                                        </button>
+                                        <div class="d-flex justify-content-center gap-1">
+                                            <button class="btn btn-sm btn-outline-primary rounded-3 px-2 py-1 fs-9"
+                                                    @click="openDetailNilaiSiswa(s.siswa_id)" title="Rincian Nilai 5 Semester">
+                                                <i class="bi bi-eye me-1"></i> Rapor
+                                            </button>
+                                            <button class="btn btn-sm rounded-3 px-2 py-1 fs-9"
+                                                    :class="s.is_eligible ? 'btn-outline-danger' : 'btn-outline-success'"
+                                                    @click="toggleEligible(s.siswa_id, s.is_eligible)"
+                                                    title="Ubah Status Eligible Manual">
+                                                <i :class="s.is_eligible ? 'bi bi-x-circle me-1' : 'bi bi-check-circle me-1'"></i>
+                                                {{ s.is_eligible ? 'Batalkan' : 'Set Eligible' }}
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
+
                                 <tr v-if="!kesiapanList || kesiapanList?.length === 0">
-                                    <td colspan="8" class="text-center py-5 text-muted">
+                                    <td colspan="7" class="text-center py-5 text-muted">
                                         <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
-                                        Pilih Tahun Ajaran untuk melihat data kesiapan siswa.
+                                        Tidak ada data siswa Kelas 12 yang cocok dengan filter.
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Konfigurasi Kuota Akreditasi -->
+    <div class="modal fade" id="modalConfigKuotaPDSS" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-sliders text-primary me-2"></i>Konfigurasi Kuota Akreditasi Sekolah</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-muted fs-8">Pilih persentase kuota siswa eligible sesuai standar akreditasi sekolah Anda untuk pendaftaran SNBP:</p>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <button class="btn w-100 py-3 rounded-3 text-start border"
+                                    :class="selectedKuotaPct === 40 ? 'btn-primary border-primary fw-bold' : 'btn-light'"
+                                    @click="selectedKuotaPct = 40">
+                                <div class="fs-6 mb-1">Akreditasi A (40%)</div>
+                                <div class="fs-9 opacity-75">40% siswa terbaik per jurusan</div>
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button class="btn w-100 py-3 rounded-3 text-start border"
+                                    :class="selectedKuotaPct === 25 ? 'btn-primary border-primary fw-bold' : 'btn-light'"
+                                    @click="selectedKuotaPct = 25">
+                                <div class="fs-6 mb-1">Akreditasi B (25%)</div>
+                                <div class="fs-9 opacity-75">25% siswa terbaik per jurusan</div>
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button class="btn w-100 py-3 rounded-3 text-start border"
+                                    :class="selectedKuotaPct === 5 ? 'btn-primary border-primary fw-bold' : 'btn-light'"
+                                    @click="selectedKuotaPct = 5">
+                                <div class="fs-6 mb-1">Akreditasi C (5%)</div>
+                                <div class="fs-9 opacity-75">5% siswa terbaik per jurusan</div>
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button class="btn w-100 py-3 rounded-3 text-start border"
+                                    :class="selectedKuotaPct === 100 ? 'btn-primary border-primary fw-bold' : 'btn-light'"
+                                    @click="selectedKuotaPct = 100">
+                                <div class="fs-6 mb-1">Semua Siswa (100%)</div>
+                                <div class="fs-9 opacity-75">100% siswa Kelas 12</div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-secondary rounded-3" data-bs-dismiss="modal">Tutup</button>
+                    <button type="button" class="btn btn-primary rounded-3" data-bs-dismiss="modal" @click="autoCalculateKesiapan()">
+                        Simpan & Hitung Ulang
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detail Nilai Rapor 5 Semester -->
+    <div class="modal fade" id="modalDetailNilaiPDSS" tabindex="-1" aria-hidden="true" :class="{'show d-block': detailNilaiModal.show}" style="background: rgba(0,0,0,0.5);" v-if="detailNilaiModal.show">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-0 pb-0">
+                    <div>
+                        <h5 class="fw-bold mb-1"><i class="bi bi-file-earmark-bar-graph text-primary me-2"></i>Rincian Nilai Rapor 5 Semester</h5>
+                        <p class="text-muted fs-8 mb-0" v-if="detailNilaiModal.siswa">
+                            <strong>{{ detailNilaiModal.siswa.nama_lengkap }}</strong> (NISN: {{ detailNilaiModal.siswa.nisn || '-' }}) — {{ detailNilaiModal.siswa.kelas_saat_ini }}
+                        </p>
+                    </div>
+                    <button type="button" class="btn-close" @click="detailNilaiModal.show = false"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div v-if="detailNilaiModal.loading" class="text-center py-4">
+                        <div class="spinner-border text-primary"></div>
+                        <p class="text-muted mt-2 fs-7">Memuat rincian nilai rapor...</p>
+                    </div>
+                    <div v-else>
+                        <div class="alert alert-primary border-0 rounded-3 py-2 px-3 mb-3 d-flex justify-content-between align-items-center">
+                            <span class="fs-8 fw-semibold"><i class="bi bi-info-circle me-1"></i> Rata-Rata Overall 5 Semester:</span>
+                            <span class="fs-6 fw-bold text-primary">{{ detailNilaiModal.overallAverage }}</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-bordered align-middle fs-8 mb-0">
+                                <thead class="table-light text-center">
+                                    <tr>
+                                        <th class="text-start">Mata Pelajaran Utama PDSS</th>
+                                        <th>Sem 1</th>
+                                        <th>Sem 2</th>
+                                        <th>Sem 3</th>
+                                        <th>Sem 4</th>
+                                        <th>Sem 5</th>
+                                        <th>Rata-Rata</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="b in detailNilaiModal.breakdown" :key="b.mata_pelajaran">
+                                        <td class="fw-semibold">{{ b.mata_pelajaran }}</td>
+                                        <td class="text-center">{{ b.sem_1 }}</td>
+                                        <td class="text-center">{{ b.sem_2 }}</td>
+                                        <td class="text-center">{{ b.sem_3 }}</td>
+                                        <td class="text-center">{{ b.sem_4 }}</td>
+                                        <td class="text-center">{{ b.sem_5 }}</td>
+                                        <td class="text-center fw-bold text-success">{{ b.rata_rata }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-secondary rounded-3" @click="detailNilaiModal.show = false">Tutup</button>
                 </div>
             </div>
         </div>
@@ -6056,9 +6333,18 @@ window.VueAppRegistry.register('#bkApp', {
 
         // ─── KESIAPAN & ELIGIBILITAS (PDSS) STATE ────────────────
         const loadingKesiapan = ref(false);
+        const autoCalculatingKesiapan = ref(false);
         const kesiapanList = ref([]);
-        const kesiapanSummary = ref({ total_siswa: 0, total_eligible: 0, persentase_eligible: 0 });
-        const kesiapanFilter = ref({ tahun_ajaran_id: '' });
+        const kesiapanSummary = ref({ total_siswa: 0, total_eligible: 0, persentase_eligible: 0, max_nilai_rata_rata: '-' });
+        const kesiapanFilter = ref({ tahun_ajaran_id: '', search: '', jurusan: '', status_eligible: '' });
+        const selectedKuotaPct = ref(40);
+        const detailNilaiModal = ref({
+            show: false,
+            loading: false,
+            siswa: null,
+            breakdown: [],
+            overallAverage: '-'
+        });
 
         // ─── SIMULASI PILIHAN KAMPUS STATE ──────────────────────────
         const loadingSimulasi = ref(false);
@@ -6258,11 +6544,13 @@ window.VueAppRegistry.register('#bkApp', {
 
         // ─── PDSS & ALUMNI API METHODS ─────────────────────
         function loadKesiapan() {
-            if (_userRole === 'super_admin' && !currentTenantId.value) return;
             loadingKesiapan.value = true;
             const params = new URLSearchParams();
             if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
             if (kesiapanFilter.value.tahun_ajaran_id) params.set('tahun_ajaran_id', kesiapanFilter.value.tahun_ajaran_id);
+            if (kesiapanFilter.value.search) params.set('search', kesiapanFilter.value.search);
+            if (kesiapanFilter.value.jurusan) params.set('jurusan', kesiapanFilter.value.jurusan);
+            if (kesiapanFilter.value.status_eligible) params.set('status_eligible', kesiapanFilter.value.status_eligible);
 
             axios.get(`${_baseUrl}/api/v1/bk/kesiapan/list?${params.toString()}`)
                 .then(res => {
@@ -6274,6 +6562,61 @@ window.VueAppRegistry.register('#bkApp', {
                     toast.fire({ icon: 'error', title: 'Gagal memuat data kesiapan PDSS.' });
                 })
                 .finally(() => { loadingKesiapan.value = false; });
+        }
+
+        function autoCalculateKesiapan() {
+            Swal.fire({
+                title: 'Hitung Eligibilitas PDSS Otomatis?',
+                text: `Sistem akan merangking seluruh siswa Kelas 12 berdasarkan rata-rata nilai 5 semester dan menetapkan ${selectedKuotaPct.value}% kuota eligible SNBP per jurusan.`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#2563eb',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: '⚡ Ya, Hitung Otomatis!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    autoCalculatingKesiapan.value = true;
+                    axios.post(`${_baseUrl}/api/v1/bk/kesiapan/auto-calculate`, {
+                        tenant_id: currentTenantId.value,
+                        tahun_ajaran_id: kesiapanFilter.value.tahun_ajaran_id,
+                        quota_pct: selectedKuotaPct.value
+                    })
+                    .then(res => {
+                        Swal.fire({
+                            title: 'Selesai!',
+                            text: res.data.message || 'Perhitungan eligibilitas PDSS selesai.',
+                            icon: 'success'
+                        });
+                        loadKesiapan();
+                    })
+                    .catch(err => {
+                        Swal.fire('Gagal', err.response?.data?.error || 'Gagal menghitung eligibilitas otomatis.', 'error');
+                    })
+                    .finally(() => {
+                        autoCalculatingKesiapan.value = false;
+                    });
+                }
+            });
+        }
+
+        function openDetailNilaiSiswa(siswaId) {
+            detailNilaiModal.value.loading = true;
+            detailNilaiModal.value.show = true;
+            axios.get(`${_baseUrl}/api/v1/bk/kesiapan/detail-nilai`, {
+                params: { siswa_id: siswaId, tenant_id: currentTenantId.value }
+            })
+            .then(res => {
+                detailNilaiModal.value.siswa = res.data.siswa;
+                detailNilaiModal.value.breakdown = res.data.data;
+                detailNilaiModal.value.overallAverage = res.data.overall_average;
+            })
+            .catch(() => {
+                toast.fire({ icon: 'error', title: 'Gagal memuat detail nilai rapor.' });
+            })
+            .finally(() => {
+                detailNilaiModal.value.loading = false;
+            });
         }
 
         function toggleEligible(siswaId, currentStatus) {
@@ -6294,6 +6637,7 @@ window.VueAppRegistry.register('#bkApp', {
         function exportKesiapanExcel() {
             const params = new URLSearchParams();
             if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
+            if (kesiapanFilter.value.tahun_ajaran_id) params.set('tahun_ajaran_id', kesiapanFilter.value.tahun_ajaran_id);
             window.open(`${_baseUrl}/api/v1/bk/kesiapan/export?${params.toString()}`, '_blank');
         }
 
@@ -6617,7 +6961,8 @@ window.VueAppRegistry.register('#bkApp', {
             // Daftar Semua Beasiswa
             allBeasiswaList, filterBeasiswaTahunAjaran, loadingBeasiswaList, loadAllBeasiswa, exportBeasiswaExcel,
             // PDSS & Akademik
-            loadingKesiapan, kesiapanList, kesiapanSummary, kesiapanFilter, loadKesiapan, toggleEligible, exportKesiapanExcel,
+            loadingKesiapan, autoCalculatingKesiapan, kesiapanList, kesiapanSummary, kesiapanFilter, selectedKuotaPct, detailNilaiModal,
+            loadKesiapan, autoCalculateKesiapan, openDetailNilaiSiswa, toggleEligible, exportKesiapanExcel,
             loadingSimulasi, simulasiList, simulasiSettings, simulasiFilter, loadSimulasi, loadSimulasiSettings, toggleSimulasiSetting, exportSimulasiXlsx,
             loadingKampus, kampusList, kampusSearch, kampusModal, loadKampus, openKampusModal, submitKampus, deleteKampus,
             loadingJalur, jalurList, jalurModal, loadJalur, openJalurModal, submitJalur, deleteJalur,
