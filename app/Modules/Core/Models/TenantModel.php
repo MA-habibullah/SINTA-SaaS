@@ -24,6 +24,11 @@ class TenantModel extends BaseModel {
                 cname_alias, 
                 status, 
                 paket_aktif, 
+                storage_limit_mb,
+                max_siswa_limit,
+                max_staff_limit,
+                enable_bk,
+                enable_tracer,
                 status_sinkronisasi, 
                 created_at, 
                 updated_at
@@ -47,6 +52,11 @@ class TenantModel extends BaseModel {
                 custom_domain, 
                 status, 
                 paket_aktif, 
+                storage_limit_mb,
+                max_siswa_limit,
+                max_staff_limit,
+                enable_bk,
+                enable_tracer,
                 status_sinkronisasi, 
                 created_at, 
                 updated_at 
@@ -75,6 +85,11 @@ class TenantModel extends BaseModel {
                 custom_domain, 
                 status, 
                 paket_aktif, 
+                storage_limit_mb,
+                max_siswa_limit,
+                max_staff_limit,
+                enable_bk,
+                enable_tracer,
                 status_sinkronisasi, 
                 created_at, 
                 updated_at 
@@ -104,6 +119,12 @@ class TenantModel extends BaseModel {
         $paketAktif = !empty($data['paket_aktif']) ? trim($data['paket_aktif']) : 'Premium SaaS';
         $statusSinkronisasi = !empty($data['status_sinkronisasi']) ? trim($data['status_sinkronisasi']) : 'Tersinkronisasi';
 
+        $storageLimitMb = isset($data['storage_limit_mb']) ? (int)$data['storage_limit_mb'] : 1024;
+        $maxSiswaLimit  = isset($data['max_siswa_limit']) ? (int)$data['max_siswa_limit'] : 1000;
+        $maxStaffLimit  = isset($data['max_staff_limit']) ? (int)$data['max_staff_limit'] : 100;
+        $enableBk       = !empty($data['enable_bk']) ? 1 : 0;
+        $enableTracer   = !empty($data['enable_tracer']) ? 1 : 0;
+
         if (empty($namaSekolah) || empty($npsn) || empty($subdomain)) {
             throw new \InvalidArgumentException('Nama Sekolah, NPSN, dan Subdomain wajib diisi.');
         }
@@ -118,6 +139,11 @@ class TenantModel extends BaseModel {
                     custom_domain = :custom_domain,
                     status = :status,
                     paket_aktif = :paket_aktif,
+                    storage_limit_mb = :storage_limit_mb,
+                    max_siswa_limit = :max_siswa_limit,
+                    max_staff_limit = :max_staff_limit,
+                    enable_bk = :enable_bk,
+                    enable_tracer = :enable_tracer,
                     status_sinkronisasi = :status_sinkronisasi,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
@@ -129,6 +155,11 @@ class TenantModel extends BaseModel {
                 'custom_domain'       => $customDomain,
                 'status'              => $status,
                 'paket_aktif'         => $paketAktif,
+                'storage_limit_mb'    => $storageLimitMb,
+                'max_siswa_limit'     => $maxSiswaLimit,
+                'max_staff_limit'     => $maxStaffLimit,
+                'enable_bk'           => $enableBk,
+                'enable_tracer'       => $enableTracer,
                 'status_sinkronisasi' => $statusSinkronisasi,
                 'id'                  => $id
             ]);
@@ -137,9 +168,9 @@ class TenantModel extends BaseModel {
             // Insert
             $stmt = $pdo->prepare("
                 INSERT INTO core.tenants 
-                    (id, nama_sekolah, npsn, subdomain, custom_domain, status, paket_aktif, status_sinkronisasi)
+                    (id, nama_sekolah, npsn, subdomain, custom_domain, status, paket_aktif, storage_limit_mb, max_siswa_limit, max_staff_limit, enable_bk, enable_tracer, status_sinkronisasi)
                 VALUES 
-                    (gen_random_uuid(), :nama_sekolah, :npsn, :subdomain, :custom_domain, :status, :paket_aktif, :status_sinkronisasi)
+                    (gen_random_uuid(), :nama_sekolah, :npsn, :subdomain, :custom_domain, :status, :paket_aktif, :storage_limit_mb, :max_siswa_limit, :max_staff_limit, :enable_bk, :enable_tracer, :status_sinkronisasi)
                 RETURNING id
             ");
             $stmt->execute([
@@ -149,6 +180,11 @@ class TenantModel extends BaseModel {
                 'custom_domain'       => $customDomain,
                 'status'              => $status,
                 'paket_aktif'         => $paketAktif,
+                'storage_limit_mb'    => $storageLimitMb,
+                'max_siswa_limit'     => $maxSiswaLimit,
+                'max_staff_limit'     => $maxStaffLimit,
+                'enable_bk'           => $enableBk,
+                'enable_tracer'       => $enableTracer,
                 'status_sinkronisasi' => $statusSinkronisasi,
             ]);
             $newId = $stmt->fetchColumn();

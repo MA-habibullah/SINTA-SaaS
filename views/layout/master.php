@@ -164,23 +164,41 @@
         window.vueApps = window.vueApps || {};
 
         // Safe Bootstrap 5 Modal initialization under Hotwire Turbo Drive
-        document.addEventListener('DOMContentLoaded', function() {
-            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-                const _Modal = bootstrap.Modal;
-                _Modal.getOrCreateInstance = function(element, config) {
-                    if (!element) return null;
-                    try {
-                        let inst = _Modal.getInstance(element);
-                        if (!inst) {
-                            inst = new _Modal(element, config || {});
+        (function() {
+            function wrapBootstrapModal() {
+                if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                    const _Modal = bootstrap.Modal;
+                    const dummyModal = {
+                        show: function() {},
+                        hide: function() {},
+                        toggle: function() {},
+                        dispose: function() {}
+                    };
+
+                    _Modal.getOrCreateInstance = function(element, config) {
+                        if (!element) return dummyModal;
+                        try {
+                            let inst = _Modal.getInstance(element);
+                            if (!inst) {
+                                inst = new _Modal(element, config || {});
+                            }
+                            return inst || dummyModal;
+                        } catch (e) {
+                            try {
+                                return new _Modal(element, config || {}) || dummyModal;
+                            } catch (err) {
+                                return dummyModal;
+                            }
                         }
-                        return inst;
-                    } catch (e) {
-                        return new _Modal(element, config || {});
-                    }
-                };
+                    };
+                }
             }
-        });
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', wrapBootstrapModal);
+            } else {
+                wrapBootstrapModal();
+            }
+        })();
 
         // Fix for WAI-ARIA accessibility error: Blocked aria-hidden on an element because its descendant retained focus
         document.addEventListener('hide.bs.modal', function() {
@@ -309,6 +327,7 @@
                         delete window.vueApps[selector];
                     }
                 });
+                this.registry = [];
             },
             cleanupOrphanedApps() {
                 Object.keys(window.vueApps).forEach(selector => {

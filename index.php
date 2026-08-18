@@ -836,6 +836,27 @@ case '/api/v1/keuangan/dashboard-metrics':
             $controller->index();
             break;
 
+        case '/api/v1/nilai-rapor/grid':
+            $controller = new App\Modules\Akademik\Controllers\NilaiRaporModuleController();
+            $controller->getGrid();
+            break;
+
+        case '/api/v1/nilai-rapor/save':
+            $controller = new App\Modules\Akademik\Controllers\NilaiRaporModuleController();
+            $controller->save();
+            break;
+
+        case '/api/v1/nilai-rapor/export':
+            $controller = new App\Modules\Akademik\Controllers\NilaiRaporModuleController();
+            $controller->export();
+            break;
+
+        case '/api/v1/nilai-rapor/import':
+        case '/api/v1/nilai-rapor/import-validate':
+            $controller = new App\Modules\Akademik\Controllers\NilaiRaporModuleController();
+            $controller->import();
+            break;
+
         case '/api/v1/nilai-rapor/delete-siswa':
             // API: Hapus nilai siswa dari tabel matriks nilai rapor
             $controller = new App\Modules\Akademik\Controllers\NilaiRaporModuleController();
@@ -1597,6 +1618,16 @@ case '/api/v1/keuangan/dashboard-metrics':
         case '/api/v1/bk/kesiapan/toggle-eligible':
             $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
             $controller->apiToggleEligible();
+            break;
+
+        case '/api/v1/bk/kesiapan/auto-calculate':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiKesiapanAutoCalculate();
+            break;
+
+        case '/api/v1/bk/kesiapan/detail-nilai':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiKesiapanDetailNilai();
             break;
 
         // ─── PDSS: SIMULASI PILIHAN KAMPUS ────────────────────
@@ -2442,7 +2473,33 @@ case '/api/v1/keuangan/dashboard-metrics':
         // MODUL KURIKULUM
         case '/api/v1/kurikulum':
             $controller = new App\Modules\Akademik\Controllers\KurikulumModuleController();
-            $controller->index();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->store();
+            } else {
+                $controller->index();
+            }
+            break;
+
+        case '/api/v1/kurikulum/mapel':
+            $controller = new App\Modules\Akademik\Controllers\KurikulumModuleController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->storeMapel();
+            } elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+                $controller->deleteMapel();
+            } else {
+                http_response_code(405);
+                echo json_encode(['success' => false, 'error' => 'Method Not Allowed']);
+            }
+            break;
+
+        case '/api/v1/kurikulum/copy':
+            $controller = new App\Modules\Akademik\Controllers\KurikulumModuleController();
+            $controller->copyCurriculum();
+            break;
+
+        case '/api/v1/kurikulum/save':
+            $controller = new App\Modules\Akademik\Controllers\KurikulumModuleController();
+            $controller->store();
             break;
 
         // MODUL SUPER ADMIN
@@ -2462,23 +2519,23 @@ case '/api/v1/keuangan/dashboard-metrics':
             break;
 
         case '/super-admin/server-monitor':
-            $controller = new App\Modules\Sistem\Controllers\SuperAdminModuleController();
-            $controller->serverMonitorView();
+            $controller = new App\Modules\Sistem\Controllers\ServerMonitorModuleController();
+            $controller->index();
             break;
 
         case '/api/v1/super-admin/server-monitor/fetch':
-            $controller = new App\Modules\Sistem\Controllers\SuperAdminModuleController();
-            $controller->fetchServerMonitorApi();
+            $controller = new App\Modules\Sistem\Controllers\ServerMonitorModuleController();
+            $controller->fetchApi();
             break;
 
         case '/api/v1/super-admin/server-monitor/save-network':
-            $controller = new App\Modules\Sistem\Controllers\SuperAdminModuleController();
-            $controller->saveNetworkConfigApi();
+            $controller = new App\Modules\Sistem\Controllers\ServerMonitorModuleController();
+            $controller->saveNetworkConfig();
             break;
 
         case '/api/v1/super-admin/server-monitor/update-server':
-            $controller = new App\Modules\Sistem\Controllers\SuperAdminModuleController();
-            $controller->updateServerApi();
+            $controller = new App\Modules\Sistem\Controllers\ServerMonitorModuleController();
+            $controller->updateServer();
             break;
 
         // MODUL PENGGUNA
