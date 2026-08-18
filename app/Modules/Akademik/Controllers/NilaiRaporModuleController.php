@@ -25,10 +25,12 @@ class NilaiRaporModuleController extends BaseController {
         if (!$tenantId || $tenantId === '00000000-0000-0000-0000-000000000000') {
             $tenantId = null;
         }
-        if (!$tenantId && !empty($_GET['tenant_id']))  $tenantId = $_GET['tenant_id'];
-        if (!$tenantId && !empty($_POST['tenant_id'])) $tenantId = $_POST['tenant_id'];
+        if (!$tenantId && !empty($_GET['tenant_id']))        $tenantId = $_GET['tenant_id'];
+        if (!$tenantId && !empty($_GET['filter_tenant_id'])) $tenantId = $_GET['filter_tenant_id'];
+        if (!$tenantId && !empty($_POST['tenant_id']))       $tenantId = $_POST['tenant_id'];
+        if (!$tenantId && !empty($_POST['filter_tenant_id'])) $tenantId = $_POST['filter_tenant_id'];
         if (!$tenantId && !empty($kelasId)) {
-            $st = $db->prepare("SELECT tenant_id FROM akademik.kelas WHERE id::text = :id LIMIT 1");
+            $st = $db->prepare("SELECT tenant_id::text FROM akademik.kelas WHERE id::text = :id LIMIT 1");
             $st->execute(['id' => $kelasId]);
             $tenantId = $st->fetchColumn() ?: null;
         }
@@ -186,9 +188,9 @@ class NilaiRaporModuleController extends BaseController {
              WHERE  (p.kelas_id = :kelas_id OR p.kelas_id::text = :kelas_id)
                AND  p.tahun_ajaran = :tahun_ajaran
                AND  p.semester     = :semester
-               AND  p.tenant_id    = :tenant_id
-               AND  p.is_active    = true
-               AND  m.is_active    = true
+               AND  (p.tenant_id::text = :tenant_id OR p.tenant_id IS NULL)
+               AND  (p.is_active = true OR p.is_active IS NULL)
+               AND  (m.is_active = true OR m.is_active IS NULL)
              ORDER BY nama_mapel ASC"
         );
         $stMapel->execute(['kelas_id' => $kelasId, 'tahun_ajaran' => $tahunAjaran, 'semester' => $semester, 'tenant_id' => $tenantId]);
@@ -204,7 +206,7 @@ class NilaiRaporModuleController extends BaseController {
              JOIN   akademik.ref_kurikulum r ON (kk.kurikulum_id = r.id::text OR kk.kurikulum_id::text = r.id::text)
              WHERE  (kk.kelas_id = :kelas_id OR kk.kelas_id::text = :kelas_id)
                AND  kk.tahun_ajaran = :tahun_ajaran
-               AND  kk.tenant_id   = :tenant_id
+               AND  (kk.tenant_id::text = :tenant_id OR kk.tenant_id IS NULL)
              LIMIT 1"
         );
         $stActive->execute(['kelas_id' => $kelasId, 'tahun_ajaran' => $tahunAjaran, 'tenant_id' => $tenantId]);
@@ -214,7 +216,7 @@ class NilaiRaporModuleController extends BaseController {
             'is_locked'      => false,
         ];
 
-        $stKunci = $db->prepare("SELECT is_locked_nilai FROM akademik.kunci_akademik WHERE tenant_id = :tid AND tahun_ajaran = :ta AND semester = :sem AND is_active = true LIMIT 1");
+        $stKunci = $db->prepare("SELECT is_locked_nilai FROM akademik.kunci_akademik WHERE (tenant_id::text = :tid OR tenant_id IS NULL) AND tahun_ajaran = :ta AND semester = :sem AND is_active = true LIMIT 1");
         $stKunci->execute(['tid' => $tenantId, 'ta' => $tahunAjaran, 'sem' => $semester]);
         $isLocked = (bool)($stKunci->fetchColumn() ?: false);
 
@@ -224,7 +226,7 @@ class NilaiRaporModuleController extends BaseController {
              WHERE  (kelas_id = :kelas_id OR kelas_id::text = :kelas_id)
                AND  tahun_ajaran = :tahun_ajaran
                AND  semester     = :semester
-               AND  tenant_id    = :tenant_id
+               AND  (tenant_id::text = :tenant_id OR tenant_id IS NULL)
                AND  is_active    = true"
         );
         $stGrades->execute(['kelas_id' => $kelasId, 'tahun_ajaran' => $tahunAjaran, 'semester' => $semester, 'tenant_id' => $tenantId]);
