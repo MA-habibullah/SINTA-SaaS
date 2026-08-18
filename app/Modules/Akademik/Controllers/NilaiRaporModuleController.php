@@ -67,45 +67,61 @@ class NilaiRaporModuleController extends BaseController {
     }
 
     private function getStudentsInKelas(PDO $db, string $kelasId, string $tenantId, string $tahunAjaran, string $semester): array {
+        $stK = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id::text = :id LIMIT 1");
+        $stK->execute(['id' => $kelasId]);
+        $namaKelas = $stK->fetchColumn() ?: '';
+
         $st = $db->prepare(
-            "SELECT s.id, s.nama_lengkap, s.nisn, s.nis, s.agama
+            "SELECT DISTINCT s.id, s.nama_lengkap, s.nisn, s.nis, s.agama
              FROM   siswa.siswa s
-             WHERE  s.tenant_id = :tenant_id
+             WHERE  (s.tenant_id::text = :tenant_id OR s.tenant_id IS NULL)
                AND  (s.is_active = true OR s.is_active IS NULL)
                AND  (
-                     -- Match by UUID langsung
+                     -- 1. Match kelas_saat_ini (UUID atau Nama Kelas)
                      s.kelas_saat_ini::text = :kelas_id1
-                     -- Match by nama_kelas (kelas_saat_ini menyimpan nama, bukan UUID)
-                  OR s.kelas_saat_ini IN (
-                         SELECT nama_kelas FROM akademik.kelas
-                         WHERE id::text = :kelas_id4
-                     )
+                  OR s.kelas_saat_ini = :nama_kelas1
+                  -- 2. Match penempatan anggota_kelas untuk TA ini
                   OR s.id::text IN (
                          SELECT siswa_id::text
-                         FROM   akademik.detail_nilai_rapor
-                         WHERE  kelas_id::text = :kelas_id2
-                           AND  tahun_ajaran = :tahun_ajaran
-                           AND  semester     = :semester
-                           AND  is_active    = true
+                         FROM   siswa.anggota_kelas
+                         WHERE  (kelas_id::text = :kelas_id2 OR kelas_id::text IN (SELECT id::text FROM akademik.kelas WHERE nama_kelas = :nama_kelas2))
+                           AND  tahun_ajaran = :tahun_ajaran1
                      )
+                  -- 3. Match riwayat_kenaikan_kelas untuk TA ini (dari_kelas / ke_kelas)
                   OR s.id::text IN (
                          SELECT siswa_id::text
                          FROM   siswa.riwayat_kenaikan_kelas
-                         WHERE  dari_kelas::text = :kelas_id3
+                         WHERE  (dari_kelas::text = :kelas_id3 OR dari_kelas = :nama_kelas3 OR ke_kelas::text = :kelas_id4 OR ke_kelas = :nama_kelas4)
                            AND  tahun_ajaran = :tahun_ajaran2
+                     )
+                  -- 4. Match detail_nilai_rapor yang sudah diinput pada TA & semester ini
+                  OR s.id::text IN (
+                         SELECT siswa_id::text
+                         FROM   akademik.detail_nilai_rapor
+                         WHERE  (kelas_id::text = :kelas_id5 OR kelas_id::text IN (SELECT id::text FROM akademik.kelas WHERE nama_kelas = :nama_kelas5))
+                           AND  tahun_ajaran = :tahun_ajaran3
+                           AND  semester     = :semester
+                           AND  is_active    = true
                      )
                )
              ORDER BY s.nama_lengkap ASC"
         );
         $st->execute([
+            'tenant_id'    => $tenantId,
             'kelas_id1'    => $kelasId,
             'kelas_id2'    => $kelasId,
             'kelas_id3'    => $kelasId,
             'kelas_id4'    => $kelasId,
-            'tahun_ajaran' => $tahunAjaran,
+            'kelas_id5'    => $kelasId,
+            'nama_kelas1'  => $namaKelas,
+            'nama_kelas2'  => $namaKelas,
+            'nama_kelas3'  => $namaKelas,
+            'nama_kelas4'  => $namaKelas,
+            'nama_kelas5'  => $namaKelas,
+            'tahun_ajaran1'=> $tahunAjaran,
             'tahun_ajaran2'=> $tahunAjaran,
+            'tahun_ajaran3'=> $tahunAjaran,
             'semester'     => $semester,
-            'tenant_id'    => $tenantId,
         ]);
         return $st->fetchAll(PDO::FETCH_ASSOC);
     }
