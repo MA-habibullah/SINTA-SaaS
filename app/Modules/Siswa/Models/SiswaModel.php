@@ -37,9 +37,15 @@ class SiswaModel extends BaseModel {
         $sql = "SELECT s.*,
                        COALESCE(k.nama_kelas, s.kelas_saat_ini, '-') as nama_kelas,
                        t.nama_sekolah,
-                       COALESCE(j.nama_jurusan, s.jurusan, '-') as nama_jurusan
+                       COALESCE(j.nama_jurusan, s.jurusan, '-') as nama_jurusan,
+                       k.id::text AS id_kelas,
+                       j.id::text AS id_jurusan,
+                       k.id_jenjang::text AS id_jenjang,
+                       (SELECT id::text FROM akademik.angkatan WHERE tenant_id = s.tenant_id AND (nama_angkatan = s.angkatan::text OR id::text = s.angkatan::text OR nama_angkatan = 'Angkatan ' || s.angkatan::text) LIMIT 1) AS id_angkatan,
+                       (SELECT id::text FROM akademik.tahun_ajaran WHERE tenant_id = s.tenant_id AND is_active = true LIMIT 1) AS id_tahun_ajaran,
+                       (SELECT id::text FROM akademik.pendidikan WHERE (tenant_id = s.tenant_id OR tenant_id IS NULL) LIMIT 1) AS id_pendidikan
                 FROM {$table} s
-                LEFT JOIN akademik.kelas k ON (s.tenant_id = k.tenant_id AND (s.kelas_saat_ini = k.id::text OR s.kelas_saat_ini = k.nama_kelas))
+                LEFT JOIN akademik.kelas k ON (s.tenant_id = k.tenant_id AND (s.kelas_saat_ini = k.id::text OR s.kelas_saat_ini = k.nama_kelas OR s.kelas_saat_ini = k.kode_kelas))
                 LEFT JOIN core.tenants t ON s.tenant_id = t.id
                 LEFT JOIN akademik.jurusan j ON (s.tenant_id = j.tenant_id AND (s.jurusan = j.id::text OR s.jurusan = j.nama_jurusan))
                 WHERE s.id::text = :id";

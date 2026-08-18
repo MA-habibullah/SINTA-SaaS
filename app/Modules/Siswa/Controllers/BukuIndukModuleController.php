@@ -92,7 +92,21 @@ class BukuIndukModuleController extends BaseController {
         if ($tenantId === '00000000-0000-0000-0000-000000000000' || ($_SESSION['role_name'] ?? '') === 'super_admin') {
             $tenantId = null;
         }
-        $filterTenant = isset($_GET['filter_tenant_id']) ? trim($_GET['filter_tenant_id']) : '';
+        $filterTenant = isset($_GET['filter_tenant_id']) ? trim($_GET['filter_tenant_id']) : (isset($_GET['tenant_id']) ? trim($_GET['tenant_id']) : '');
+
+        $effectiveTenant = $tenantId ?: $filterTenant;
+
+        // Build query
+        $where = [
+            "s.tenant_id != '00000000-0000-0000-0000-000000000000'"
+        ];
+        $params = [];
+
+        // Tenant filter
+        if ($effectiveTenant) {
+            $where[] = "s.tenant_id = :effective_tenant_id";
+            $params['effective_tenant_id'] = $effectiveTenant;
+        }
 
         if (isset($_GET['action']) && $_GET['action'] === 'get_options') {
             $effectiveTenant = $tenantId ?: $filterTenant;
@@ -153,6 +167,7 @@ class BukuIndukModuleController extends BaseController {
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
         $perPage = isset($_GET['per_page']) ? (int)$_GET['per_page'] : 10;
         $search = isset($_GET['search']) ? trim($_GET['search']) : '';
+        $filterJenjang = isset($_GET['jenjang_id']) ? trim($_GET['jenjang_id']) : '';
         $filterKelas = isset($_GET['kelas_id']) ? trim($_GET['kelas_id']) : '';
         $filterStatus = isset($_GET['status']) ? trim($_GET['status']) : '';
 
@@ -160,26 +175,51 @@ class BukuIndukModuleController extends BaseController {
 
         // Build query
         $where = [
-            "(s.is_active = true OR s.is_active IS NULL)",
             "s.tenant_id != '00000000-0000-0000-0000-000000000000'"
         ];
         $params = [];
 
         // Tenant filter
-        if ($tenantId) {
-            $where[] = "s.tenant_id = :tenant_id";
-            $params['tenant_id'] = $tenantId;
-        } elseif (!empty($filterTenant)) {
-            $where[] = "s.tenant_id = :filter_tenant_id";
-            $params['filter_tenant_id'] = $filterTenant;
+        if ($effectiveTenant) {
+            $where[] = "s.tenant_id = :effective_tenant_id";
+            $params['effective_tenant_id'] = $effectiveTenant;
         }
 
-        // Search filter (Nama, NISN, NIS)
+        // Search filter (Nama, NISN, NIS) - PostgreSQL ILIKE
         if ($search !== '') {
-            $where[] = "(s.nama_lengkap LIKE :search_nama OR s.nisn LIKE :search_nisn OR s.nis LIKE :search_nis)";
-            $params['search_nama'] = "%$search%";
-            $params['search_nisn'] = "%$search%";
-            $params['search_nis'] = "%$search%";
+            $where[] = "(s.nama_lengkap ILIKE :search OR s.nisn ILIKE :search OR s.nis ILIKE :search)";
+            $params['search'] = "%$search%";
+        }
+
+        // Jenjang filter
+        if ($filterJenjang !== '') {
+            $stmtJ = $db->prepare("SELECT kode_jenjang, nama_jenjang FROM core.jenjang WHERE id::text = ? OR kode_jenjang = ? LIMIT 1");
+            $stmtJ->execute([$filterJenjang, $filterJenjang]);
+            $jDetail = $stmtJ->fetch(PDO::FETCH_ASSOC);
+
+            if ($jDetail) {
+                $kodeJ = strtoupper($jDetail['kode_jenjang'] ?? '');
+                $romanMap = [
+                    '7' => 'VII', '8' => 'VIII', '9' => 'IX',
+                    '10' => 'X', '11' => 'XI', '12' => 'XII',
+                    '1' => 'I', '2' => 'II', '3' => 'III', '4' => 'IV', '5' => 'V', '6' => 'VI'
+                ];
+                $roman = $romanMap[$kodeJ] ?? '';
+
+                if ($roman !== '') {
+                    $where[] = "(k.id_jenjang::text = :jenjang_id OR k.nama_kelas ILIKE :roman_prefix OR s.kelas_saat_ini ILIKE :roman_prefix OR k.nama_kelas ILIKE :num_prefix OR s.kelas_saat_ini ILIKE :num_prefix)";
+                    $params['jenjang_id'] = $filterJenjang;
+                    $params['roman_prefix'] = $roman . ' %';
+                    $params['num_prefix'] = 'Kelas ' . $kodeJ . '%';
+                } else {
+                    $where[] = "(k.id_jenjang::text = :jenjang_id OR k.id_jenjang IN (SELECT id::text FROM core.jenjang WHERE kode_jenjang = :kode_j OR UPPER(nama_jenjang) = :kode_j))";
+                    $params['jenjang_id'] = $filterJenjang;
+                    $params['kode_j'] = $kodeJ;
+                }
+            } else {
+                $where[] = "k.id_jenjang::text = :jenjang_id";
+                $params['jenjang_id'] = $filterJenjang;
+            }
         }
 
         // Kelas filter
@@ -188,10 +228,21 @@ class BukuIndukModuleController extends BaseController {
             $params['kelas_id'] = $filterKelas;
         }
 
-        // Status filter
-        if ($filterStatus !== '') {
-            $where[] = "LOWER(s.status_siswa) = LOWER(:status)";
-            $params['status'] = $filterStatus;
+        // Status filter logic
+        if ($filterStatus === '') {
+            // Default view: show active students
+            $where[] = "(s.is_active = true OR s.is_active IS NULL OR LOWER(s.status_siswa) = 'aktif')";
+        } elseif (strtolower($filterStatus) === 'aktif') {
+            $where[] = "(LOWER(s.status_siswa) = 'aktif' OR s.is_active = true OR s.status_siswa IS NULL)";
+        } else {
+            // Non-active status (Lulus, Pindah, Keluar, Drop Out)
+            $statusVal = strtolower($filterStatus);
+            if ($statusVal === 'keluar' || $statusVal === 'drop out' || $statusVal === 'putus_sekolah') {
+                $where[] = "(LOWER(s.status_siswa) IN ('keluar', 'drop out', 'putus_sekolah'))";
+            } else {
+                $where[] = "LOWER(s.status_siswa) = LOWER(:status)";
+                $params['status'] = $filterStatus;
+            }
         }
 
         $whereClause = implode(" AND ", $where);

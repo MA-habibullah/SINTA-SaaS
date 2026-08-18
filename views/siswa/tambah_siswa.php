@@ -2131,6 +2131,12 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                         const kesehatanPhp = response.data.kesehatan;
                         
                         if (phpData && Object.keys(phpData).length > 0) {
+                            // 1. Panggil opsi akademik terlebih dahulu secara asinkron agar <option> ter-render di DOM
+                            if (phpData.tenant_id) {
+                                await fetchAcademicOptions(phpData.tenant_id);
+                            }
+                            
+                            // 2. Petakan data siswa ke model form Vue
                             Object.keys(phpData).forEach(key => {
                                 if (key in form.value && key !== 'password') {
                                     let val = phpData[key] !== null ? phpData[key] : '';
@@ -2142,9 +2148,36 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                                 }
                             });
                             
-                            // Trigger pemuatan opsi akademik sesuai tenant_id siswa
-                            if (form.value.tenant_id) {
-                                fetchAcademicOptions(form.value.tenant_id);
+                            // 3. Resolusi fallback ID akademik jika bernilai kosong/nama string
+                            if (!form.value.id_kelas && phpData.kelas_saat_ini && acOptions.value.kelas) {
+                                const matchedKelas = acOptions.value.kelas.find(k => k.nama_kelas === phpData.kelas_saat_ini || k.id === phpData.kelas_saat_ini);
+                                if (matchedKelas) {
+                                    form.value.id_kelas = matchedKelas.id;
+                                    if (!form.value.id_jenjang && matchedKelas.id_jenjang) {
+                                        form.value.id_jenjang = matchedKelas.id_jenjang;
+                                    }
+                                    if (!form.value.id_jurusan && matchedKelas.id_jurusan) {
+                                        form.value.id_jurusan = matchedKelas.id_jurusan;
+                                    }
+                                }
+                            }
+
+                            if (!form.value.id_jurusan && phpData.jurusan && acOptions.value.jurusan) {
+                                const matchedJur = acOptions.value.jurusan.find(j => j.nama_jurusan === phpData.jurusan || j.id === phpData.jurusan);
+                                if (matchedJur) form.value.id_jurusan = matchedJur.id;
+                            }
+
+                            if (!form.value.id_angkatan && phpData.angkatan && acOptions.value.angkatan) {
+                                const matchedAng = acOptions.value.angkatan.find(a => String(a.tahun_angkatan).includes(String(phpData.angkatan)) || a.id === phpData.angkatan);
+                                if (matchedAng) form.value.id_angkatan = matchedAng.id;
+                            }
+
+                            if (!form.value.id_tahun_ajaran && acOptions.value.tahun_ajaran && acOptions.value.tahun_ajaran.length > 0) {
+                                form.value.id_tahun_ajaran = acOptions.value.tahun_ajaran[0].id;
+                            }
+
+                            if (!form.value.id_pendidikan && acOptions.value.pendidikan && acOptions.value.pendidikan.length > 0) {
+                                form.value.id_pendidikan = acOptions.value.pendidikan[0].id;
                             }
                             
                             // Trigger pemuatan chained dropdown alamat secara bertahap
