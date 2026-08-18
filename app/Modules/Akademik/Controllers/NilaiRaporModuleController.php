@@ -66,10 +66,58 @@ class NilaiRaporModuleController extends BaseController {
         return $stuKey !== $subKey;
     }
 
+    private function getCandidateClassNames(string $namaKelas): array {
+        $clean = trim($namaKelas);
+        if (empty($clean)) return [];
+
+        $suffix = preg_replace('/^(XII|XI|X|IX|VIII|VII|12|11|10|9|8|7)\s*/i', '', $clean);
+        $suffix = trim($suffix);
+
+        $level = null;
+        if (preg_match('/^XII\b/i', $clean) || preg_match('/^12\b/i', $clean)) $level = 12;
+        elseif (preg_match('/^XI\b/i', $clean) || preg_match('/^11\b/i', $clean)) $level = 11;
+        elseif (preg_match('/^X\b/i', $clean) || preg_match('/^10\b/i', $clean)) $level = 10;
+        elseif (preg_match('/^IX\b/i', $clean) || preg_match('/^9\b/i', $clean)) $level = 9;
+        elseif (preg_match('/^VIII\b/i', $clean) || preg_match('/^8\b/i', $clean)) $level = 8;
+        elseif (preg_match('/^VII\b/i', $clean) || preg_match('/^7\b/i', $clean)) $level = 7;
+
+        $candidates = [$clean];
+        if (!empty($suffix) && $level !== null) {
+            $prefixes = [];
+            if ($level <= 10) { $prefixes = ['X', 'XI', 'XII', '10', '11', '12']; }
+            elseif ($level <= 11) { $prefixes = ['XI', 'XII', '11', '12']; }
+            elseif ($level <= 12) { $prefixes = ['XII', '12']; }
+            
+            foreach ($prefixes as $p) {
+                $candidates[] = $p . ' ' . $suffix;
+            }
+        }
+        return array_values(array_unique($candidates));
+    }
+
     private function getStudentsInKelas(PDO $db, string $kelasId, string $tenantId, string $tahunAjaran, string $semester): array {
         $stK = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id::text = :id LIMIT 1");
         $stK->execute(['id' => $kelasId]);
         $namaKelas = $stK->fetchColumn() ?: '';
+
+        $candidates = $this->getCandidateClassNames($namaKelas);
+        if (empty($candidates)) {
+            $candidates = [$namaKelas];
+        }
+
+        $inPlaceholders = [];
+        $params = [
+            'tenant_id'    => $tenantId,
+            'kelas_id'     => $kelasId,
+            'tahun_ajaran' => $tahunAjaran,
+            'semester'     => $semester,
+        ];
+        foreach ($candidates as $idx => $cand) {
+            $key = 'cand_' . $idx;
+            $inPlaceholders[] = ':' . $key;
+            $params[$key] = $cand;
+        }
+        $inClause = implode(', ', $inPlaceholders);
 
         $st = $db->prepare(
             "SELECT DISTINCT s.id, s.nama_lengkap, s.nisn, s.nis, s.agama
@@ -77,52 +125,39 @@ class NilaiRaporModuleController extends BaseController {
              WHERE  (s.tenant_id::text = :tenant_id OR s.tenant_id IS NULL)
                AND  (s.is_active = true OR s.is_active IS NULL)
                AND  (
-                     -- 1. Match kelas_saat_ini (UUID atau Nama Kelas)
-                     s.kelas_saat_ini::text = :kelas_id1
-                  OR s.kelas_saat_ini = :nama_kelas1
-                  -- 2. Match penempatan anggota_kelas untuk TA ini
+                     -- 1. Match kelas_saat_ini (termasuk kelas siswa saat ini yang sudah naik ke tingkat lebih tinggi)
+                     s.kelas_saat_ini::text = :kelas_id
+                  OR s.kelas_saat_ini IN ($inClause)
+
+                  -- 2. Match penempatan di siswa.anggota_kelas untuk TA ini
                   OR s.id::text IN (
                          SELECT siswa_id::text
                          FROM   siswa.anggota_kelas
-                         WHERE  (kelas_id::text = :kelas_id2 OR kelas_id::text IN (SELECT id::text FROM akademik.kelas WHERE nama_kelas = :nama_kelas2))
-                           AND  tahun_ajaran = :tahun_ajaran1
+                         WHERE  (kelas_id::text = :kelas_id OR kelas_id::text IN (SELECT id::text FROM akademik.kelas WHERE nama_kelas IN ($inClause)))
+                           AND  tahun_ajaran = :tahun_ajaran
                      )
+
                   -- 3. Match riwayat_kenaikan_kelas untuk TA ini (dari_kelas / ke_kelas)
                   OR s.id::text IN (
                          SELECT siswa_id::text
                          FROM   siswa.riwayat_kenaikan_kelas
-                         WHERE  (dari_kelas::text = :kelas_id3 OR dari_kelas = :nama_kelas3 OR ke_kelas::text = :kelas_id4 OR ke_kelas = :nama_kelas4)
-                           AND  tahun_ajaran = :tahun_ajaran2
+                         WHERE  (dari_kelas::text = :kelas_id OR dari_kelas IN ($inClause) OR ke_kelas::text = :kelas_id OR ke_kelas IN ($inClause))
+                           AND  tahun_ajaran = :tahun_ajaran
                      )
+
                   -- 4. Match detail_nilai_rapor yang sudah diinput pada TA & semester ini
                   OR s.id::text IN (
                          SELECT siswa_id::text
                          FROM   akademik.detail_nilai_rapor
-                         WHERE  (kelas_id::text = :kelas_id5 OR kelas_id::text IN (SELECT id::text FROM akademik.kelas WHERE nama_kelas = :nama_kelas5))
-                           AND  tahun_ajaran = :tahun_ajaran3
+                         WHERE  (kelas_id::text = :kelas_id OR kelas_id::text IN (SELECT id::text FROM akademik.kelas WHERE nama_kelas IN ($inClause)))
+                           AND  tahun_ajaran = :tahun_ajaran
                            AND  semester     = :semester
                            AND  is_active    = true
                      )
                )
              ORDER BY s.nama_lengkap ASC"
         );
-        $st->execute([
-            'tenant_id'    => $tenantId,
-            'kelas_id1'    => $kelasId,
-            'kelas_id2'    => $kelasId,
-            'kelas_id3'    => $kelasId,
-            'kelas_id4'    => $kelasId,
-            'kelas_id5'    => $kelasId,
-            'nama_kelas1'  => $namaKelas,
-            'nama_kelas2'  => $namaKelas,
-            'nama_kelas3'  => $namaKelas,
-            'nama_kelas4'  => $namaKelas,
-            'nama_kelas5'  => $namaKelas,
-            'tahun_ajaran1'=> $tahunAjaran,
-            'tahun_ajaran2'=> $tahunAjaran,
-            'tahun_ajaran3'=> $tahunAjaran,
-            'semester'     => $semester,
-        ]);
+        $st->execute($params);
         return $st->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -239,8 +274,8 @@ class NilaiRaporModuleController extends BaseController {
             $this->jsonResponse(false, null, 'Input Nilai Rapor telah dikunci oleh administrator.', 403); return;
         }
 
-        $stSiswaList = $db->prepare("SELECT id, agama FROM siswa.siswa WHERE (kelas_saat_ini::text = :kelas_id OR kelas_saat_ini IN (SELECT nama_kelas FROM akademik.kelas WHERE id::text = :kelas_id)) AND tenant_id = :tenant_id AND is_active = true");
-        $stSiswaList->execute(['kelas_id' => $kelasId, 'tenant_id' => $tenantId]);
+        $stSiswaList = $db->prepare("SELECT id, agama FROM siswa.siswa WHERE (tenant_id::text = :tenant_id OR tenant_id IS NULL) AND (is_active = true OR is_active IS NULL)");
+        $stSiswaList->execute(['tenant_id' => $tenantId]);
         $studentsMap = [];
         foreach ($stSiswaList->fetchAll(PDO::FETCH_ASSOC) as $s) {
             $studentsMap[$s['id']] = $s['agama'] ?? null;
@@ -442,8 +477,8 @@ class NilaiRaporModuleController extends BaseController {
             $this->jsonResponse(false, null, 'Kolom mata pelajaran tidak ditemukan dalam file.', 400); return;
         }
 
-        $stSiswaList = $db->prepare("SELECT id, agama FROM siswa.siswa WHERE (kelas_saat_ini::text = :kelas_id OR kelas_saat_ini IN (SELECT nama_kelas FROM akademik.kelas WHERE id::text = :kelas_id)) AND tenant_id = :tenant_id AND is_active = true");
-        $stSiswaList->execute(['kelas_id' => $kelasId, 'tenant_id' => $tenantId]);
+        $stSiswaList = $db->prepare("SELECT id, agama FROM siswa.siswa WHERE (tenant_id::text = :tenant_id OR tenant_id IS NULL) AND (is_active = true OR is_active IS NULL)");
+        $stSiswaList->execute(['tenant_id' => $tenantId]);
         $studentsMap = [];
         foreach ($stSiswaList->fetchAll(PDO::FETCH_ASSOC) as $s) $studentsMap[$s['id']] = $s['agama'] ?? null;
 
