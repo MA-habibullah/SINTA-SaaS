@@ -41,13 +41,19 @@ class ServerMonitorModuleController extends BaseController
     {
         try {
             $isLinux = PHP_OS_FAMILY === 'Linux';
-            $this->jsonResponse([
-                'success'            => true,
+            $payload = [
                 'global_metrics'     => $this->getGlobalMetrics(),
                 'tenants'            => $this->getTenantMetrics(),
                 'network_interfaces' => $this->getNetworkInterfaces($isLinux),
                 'timestamp'          => date('Y-m-d H:i:s'),
-            ]);
+            ];
+
+            header('Content-Type: application/json');
+            echo json_encode(array_merge([
+                'success' => true,
+                'data'    => $payload,
+            ], $payload));
+            exit;
         } catch (\Throwable $e) {
             error_log("ServerMonitor fetchApi error: " . $e->getMessage());
             $this->jsonResponse(['error' => 'Gagal memuat metrik server.'], 500);
@@ -203,33 +209,32 @@ class ServerMonitorModuleController extends BaseController
                 t.npsn,
                 t.status,
                 t.paket_aktif,
-                (SELECT COUNT(*) FROM core.users u WHERE u.tenant_id = t.id AND u.deleted_at IS NULL) AS total_staff,
+                (SELECT COUNT(*) FROM core.users u JOIN core.roles r ON u.role_id = r.id WHERE u.tenant_id = t.id AND u.is_active = true AND r.nama_role != 'siswa') AS total_staff,
                 (SELECT COUNT(*) FROM siswa.siswa s WHERE s.tenant_id = t.id AND s.is_active = true) AS total_siswa,
                 (SELECT COUNT(DISTINCT s.user_id) FROM sistem.active_sessions s WHERE s.tenant_id = t.id AND s.last_activity >= CURRENT_TIMESTAMP - INTERVAL '15 minutes') AS active_sessions
             FROM core.tenants t
-            WHERE t.deleted_at IS NULL
+            WHERE t.id != '00000000-0000-0000-0000-000000000000'
             ORDER BY t.nama_sekolah ASC
         ");
 
-        $tenants = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        $baseStoragePath = dirname(__DIR__, 4) . '/storage/app/public/uploads';
+        $tenants = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
         foreach ($tenants as &$tenant) {
-            $tenantDir = $baseStoragePath . '/' . $tenant['id'];
-            $tenant['disk_mb']         = is_dir($tenantDir)
-                ? round($this->calcDirectorySizeMB($tenantDir), 2)
-                : 0.0;
+            $tenantId = $tenant['id'];
+            $usedBytes = \App\Core\StorageGuard::getTenantStorageUsage($tenantId);
+            $diskMb    = round($usedBytes / 1048576, 2);
+
+            $tenant['disk_mb']         = $diskMb;
             $tenant['total_users']     = (int)$tenant['total_staff'] + (int)$tenant['total_siswa'];
             $tenant['active_sessions'] = (int)$tenant['active_sessions'];
             $tenant['total_siswa']     = (int)$tenant['total_siswa'];
             $tenant['total_staff']     = (int)$tenant['total_staff'];
 
-            $quotaBytes = \App\Core\StorageGuard::getTenantStorageLimit($tenant['id']);
-            $quotaMB = round($quotaBytes / 1048576, 1);
+            $quotaBytes = \App\Core\StorageGuard::getTenantStorageLimit($tenantId);
+            $quotaMB    = round($quotaBytes / 1048576, 1);
             $tenant['quota_mb']      = $quotaMB;
             $tenant['quota_percent'] = $quotaMB > 0
-                ? min(100, round(($tenant['disk_mb'] / $quotaMB) * 100, 1))
+                ? min(100, round(($diskMb / $quotaMB) * 100, 1))
                 : 0;
 
             if ($tenant['quota_percent'] >= 90) {

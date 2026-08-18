@@ -83,7 +83,8 @@ class PenggunaModuleController extends BaseController {
                 'per_page' => (int)($_GET['per_page'] ?? 10),
                 'trash' => $_GET['trash'] ?? 'false',
                 'status' => trim($_GET['status'] ?? ''),
-                'id_kelas' => trim($_GET['id_kelas'] ?? ''),
+                'id_jenjang' => trim($_GET['id_jenjang'] ?? ($_GET['jenjang_id'] ?? '')),
+                'id_kelas' => trim($_GET['id_kelas'] ?? ($_GET['kelas_id'] ?? '')),
                 'tenant_id' => trim($_GET['tenant_id'] ?? '')
             ];
 

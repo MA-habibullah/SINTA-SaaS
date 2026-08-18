@@ -82,9 +82,9 @@ class ActiveSessionModuleController extends BaseController {
                     s.user_agent, 
                     s.last_activity,
                     s.tanggal_login,
-                    COALESCE(u.nama_lengkap, sw.nama_lengkap, 'User') AS nama_lengkap,
+                    COALESCE(u.nama_lengkap, sw.nama_lengkap, 'Super Admin Platform') AS nama_lengkap,
                     COALESCE(r.nama_role, 'siswa') AS user_role,
-                    t.nama_sekolah
+                    COALESCE(t.nama_sekolah, 'Pusat Kendali SaaS (Global)') AS nama_sekolah
                 FROM sistem.active_sessions s
                 LEFT JOIN core.users u ON s.user_id = u.id
                 LEFT JOIN core.roles r ON u.role_id = r.id

@@ -245,24 +245,24 @@ class KelembagaanModel extends Model {
         $extraCols = "";
         if ($table === 'kelas') {
             $extraCols = ", id_jenjang, kode_kelas, nama_kelas";
+        } elseif ($table === 'jenjang') {
+            $extraCols = ", kode_jenjang";
         }
 
-        $orderSql = "ORDER BY nama ASC";
-        
-        if ($this->isSuperAdminContext()) {
+        if (!empty($this->tenantId) && $this->tenantId !== '00000000-0000-0000-0000-000000000000') {
             $sql = "SELECT id, {$nameCol} AS nama {$extraCols} 
                     FROM {$fullTable} 
-                    WHERE is_active = true 
-                    {$orderSql}";
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute();
-        } else {
-            $sql = "SELECT id, {$nameCol} AS nama {$extraCols} 
-                    FROM {$fullTable} 
-                    WHERE (tenant_id::text = :tenant_id OR tenant_id::text = '11111111-1111-1111-1111-111111111111' OR tenant_id IS NULL) AND is_active = true 
-                    {$orderSql}";
+                    WHERE (tenant_id::text = :tenant_id OR tenant_id IS NULL) AND is_active = true 
+                    ORDER BY {$nameCol} ASC";
             $stmt = $this->db->prepare($sql);
             $stmt->execute(['tenant_id' => (string)$this->tenantId]);
+        } else {
+            $sql = "SELECT DISTINCT ON ({$nameCol}) id, {$nameCol} AS nama {$extraCols} 
+                    FROM {$fullTable} 
+                    WHERE is_active = true 
+                    ORDER BY {$nameCol} ASC";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute();
         }
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }

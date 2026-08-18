@@ -796,14 +796,15 @@
                 this.loading = true;
                 try {
                     const res  = await axios.get(API_URL);
-                    const data = res.data;
+                    const resData = res.data || {};
+                    const payload = resData.data || resData;
 
-                    if (data.success) {
-                        this.metrics           = data.global_metrics || {};
-                        this.tenants           = data.tenants        || [];
-                        this.networkInterfaces = data.network_interfaces || [];
-                        this.lastUpdated = data.timestamp
-                            ? new Date(data.timestamp.replace(/-/g,'/')).toLocaleTimeString('id-ID')
+                    if (resData.success || payload.global_metrics) {
+                        this.metrics           = payload.global_metrics || {};
+                        this.tenants           = payload.tenants        || [];
+                        this.networkInterfaces = payload.network_interfaces || [];
+                        this.lastUpdated = payload.timestamp
+                            ? new Date(payload.timestamp.replace(/-/g,'/')).toLocaleTimeString('id-ID')
                             : '--:--:--';
                         this.countdown = 5;
                     }

@@ -49,8 +49,9 @@ class PenggunaModel extends Model {
 
             // Filter kelas / rombel
             if (!empty($filters['id_kelas'])) {
-                $whereClause .= " AND s.kelas_saat_ini = (SELECT nama_kelas FROM akademik.kelas WHERE id = :id_kelas LIMIT 1)";
-                $params['id_kelas'] = $filters['id_kelas'];
+                $whereClause .= " AND (s.kelas_saat_ini = (SELECT nama_kelas FROM akademik.kelas WHERE id::text = :id_kelas_sub LIMIT 1) OR s.kelas_saat_ini = :id_kelas_str)";
+                $params['id_kelas_sub'] = $filters['id_kelas'];
+                $params['id_kelas_str'] = $filters['id_kelas'];
             }
 
             // Mutasi: tidak filter berdasarkan is_active karena siswa mutasi/lulus sudah is_active=false
@@ -102,7 +103,8 @@ class PenggunaModel extends Model {
                           LEFT JOIN core.jenjang j ON k.id_jenjang::text = j.id::text";
             $countSql = "SELECT COUNT(*) FROM siswa.siswa s 
                           LEFT JOIN core.tenants t ON s.tenant_id = t.id
-                          LEFT JOIN akademik.kelas k ON (s.tenant_id = k.tenant_id AND (s.kelas_saat_ini = k.id::text OR s.kelas_saat_ini = k.nama_kelas OR s.kelas_saat_ini = k.kode_kelas))";
+                          LEFT JOIN akademik.kelas k ON (s.tenant_id = k.tenant_id AND (s.kelas_saat_ini = k.id::text OR s.kelas_saat_ini = k.nama_kelas OR s.kelas_saat_ini = k.kode_kelas))
+                          LEFT JOIN core.jenjang j ON k.id_jenjang::text = j.id::text";
             $whereClause = $isSuperAdmin ? " WHERE 1=1" : " WHERE s.tenant_id = :tenant_id";
 
             if ($isSuperAdmin && !empty($filters['tenant_id'])) {
@@ -123,13 +125,23 @@ class PenggunaModel extends Model {
             if (empty($status)) {
                 $status = 'aktif';
             }
-            $whereClause .= " AND s.status_siswa = :status";
-            $params['status'] = strtolower($status);
+            $whereClause .= " AND LOWER(s.status_siswa) = LOWER(:status)";
+            $params['status'] = $status;
+
+            // Filter jenjang
+            if (!empty($filters['id_jenjang'])) {
+                $whereClause .= " AND (k.id_jenjang::text = :id_jenjang OR j.kode_jenjang = :id_jenjang_kode OR j.id::text = :id_jenjang_jid)";
+                $params['id_jenjang'] = $filters['id_jenjang'];
+                $params['id_jenjang_kode'] = $filters['id_jenjang'];
+                $params['id_jenjang_jid'] = $filters['id_jenjang'];
+            }
 
             // Filter kelas / rombel
             if (!empty($filters['id_kelas'])) {
-                $whereClause .= " AND s.kelas_saat_ini = (SELECT nama_kelas FROM akademik.kelas WHERE id = :id_kelas LIMIT 1)";
+                $whereClause .= " AND (k.id::text = :id_kelas OR s.kelas_saat_ini = (SELECT nama_kelas FROM akademik.kelas WHERE id::text = :id_kelas_sub LIMIT 1) OR s.kelas_saat_ini = :id_kelas_str)";
                 $params['id_kelas'] = $filters['id_kelas'];
+                $params['id_kelas_sub'] = $filters['id_kelas'];
+                $params['id_kelas_str'] = $filters['id_kelas'];
             }
 
             if ($trashMode) {
@@ -289,15 +301,32 @@ class PenggunaModel extends Model {
             $sql = "SELECT u.*, r.nama_role,
                            EXISTS(
                                SELECT 1 FROM core.user_roles ur 
-                               WHERE ur.user_id = u.id AND ur.role_id = 20
+                               INNER JOIN core.roles sub_r ON ur.role_id = sub_r.id
+                               WHERE ur.user_id = u.id AND sub_r.nama_role = 'bk'
                            ) AS is_bk,
                            EXISTS(
                                SELECT 1 FROM core.user_roles ur 
-                               WHERE ur.user_id = u.id AND ur.role_id = 22
-                           ) AS is_kesiswaan
+                               INNER JOIN core.roles sub_r ON ur.role_id = sub_r.id
+                               WHERE ur.user_id = u.id AND sub_r.nama_role = 'kesiswaan'
+                           ) AS is_kesiswaan,
+                           EXISTS(
+                               SELECT 1 FROM core.user_roles ur 
+                               INNER JOIN core.roles sub_r ON ur.role_id = sub_r.id
+                               WHERE ur.user_id = u.id AND sub_r.nama_role = 'humas'
+                           ) AS is_humas,
+                           EXISTS(
+                               SELECT 1 FROM core.user_roles ur 
+                               INNER JOIN core.roles sub_r ON ur.role_id = sub_r.id
+                               WHERE ur.user_id = u.id AND sub_r.nama_role = 'kurikulum'
+                           ) AS is_kurikulum,
+                           EXISTS(
+                               SELECT 1 FROM core.user_roles ur 
+                               INNER JOIN core.roles sub_r ON ur.role_id = sub_r.id
+                               WHERE ur.user_id = u.id AND sub_r.nama_role = 'sarpras'
+                           ) AS is_sarpras
                     FROM core.users u
                     JOIN core.roles r ON u.role_id = r.id
-                    WHERE u.id = :id";
+                    WHERE u.id::text = :id";
             if (!$isSuperAdmin) {
                 $sql .= " AND u.tenant_id = :tenant_id";
             }
@@ -501,66 +530,39 @@ class PenggunaModel extends Model {
             ]);
 
             // Tulis role utama ke user_roles
-            $urSql = "INSERT INTO core.user_roles (user_id, role_id) VALUES (:user_id, :role_id) ON CONFLICT DO NOTHING";
+            $urSql = "INSERT INTO core.user_roles (user_id, role_id) VALUES (:user_id::uuid, :role_id::uuid) ON CONFLICT DO NOTHING";
             $urStmt = $this->db->prepare($urSql);
             $urStmt->execute([
                 'user_id' => $userId,
                 'role_id' => $roleId
             ]);
 
-            // Fungsi helper untuk mengecek ketersediaan role
-            $checkRoleExist = function($rId) {
-                $st = $this->db->prepare("SELECT COUNT(*) FROM core.roles WHERE id = ?");
-                $st->execute([$rId]);
-                return $st->fetchColumn() > 0;
+            $getRoleIdByName = function(string $roleName): ?string {
+                $st = $this->db->prepare("SELECT id::text FROM core.roles WHERE nama_role = ? OR nama_role ILIKE ? LIMIT 1");
+                $st->execute([$roleName, "%$roleName%"]);
+                return $st->fetchColumn() ?: null;
             };
 
-            // Jika kategori guru dan dicentang sebagai Guru BK (role_id 20)
-            if ($tab === 'guru' && !empty($data['is_bk'])) {
-                if ($checkRoleExist(20)) {
-                    $urStmt->execute([
-                        'user_id' => $userId,
-                        'role_id' => 20
-                    ]);
-                } else {
-                    throw new \Exception("Role Guru BK (20) belum tersedia di sistem. Harap jalankan migrasi database.");
+            $syncUserRole = function(string $uId, string $roleName, bool $enable) use ($getRoleIdByName) {
+                $rId = $getRoleIdByName($roleName);
+                if ($rId) {
+                    if ($enable) {
+                        $st = $this->db->prepare("INSERT INTO core.user_roles (user_id, role_id) VALUES (:user_id::uuid, :role_id::uuid) ON CONFLICT DO NOTHING");
+                        $st->execute(['user_id' => $uId, 'role_id' => $rId]);
+                    } else {
+                        $st = $this->db->prepare("DELETE FROM core.user_roles WHERE user_id::text = :user_id AND role_id::text = :role_id");
+                        $st->execute(['user_id' => $uId, 'role_id' => $rId]);
+                    }
                 }
-            }
+            };
 
-            // Jika kategori guru dan dicentang sebagai Kesiswaan (role_id 22)
-            if ($tab === 'guru' && !empty($data['is_kesiswaan'])) {
-                if ($checkRoleExist(22)) {
-                    $urStmt->execute([
-                        'user_id' => $userId,
-                        'role_id' => 22
-                    ]);
-                } else {
-                    throw new \Exception("Role Kesiswaan (22) belum tersedia di sistem. Harap jalankan migrasi database.");
-                }
-            }
-
-            if ($tab === 'guru' && !empty($data['is_humas'])) {
-                if ($checkRoleExist(23)) {
-                    $urStmt->execute(['user_id' => $userId, 'role_id' => 23]);
-                } else {
-                    throw new \Exception("Role Humas (23) belum tersedia di sistem. Harap jalankan migrasi database.");
-                }
-            }
-
-            if ($tab === 'guru' && !empty($data['is_kurikulum'])) {
-                if ($checkRoleExist(24)) {
-                    $urStmt->execute(['user_id' => $userId, 'role_id' => 24]);
-                } else {
-                    throw new \Exception("Role Kurikulum (24) belum tersedia di sistem. Harap jalankan migrasi database.");
-                }
-            }
-
-            if ($tab === 'guru' && !empty($data['is_sarpras'])) {
-                if ($checkRoleExist(25)) {
-                    $urStmt->execute(['user_id' => $userId, 'role_id' => 25]);
-                } else {
-                    throw new \Exception("Role Sarpras (25) belum tersedia di sistem. Harap jalankan migrasi database.");
-                }
+            // Jika kategori guru dan dicentang role tambahan (BK, Kesiswaan, Humas, Kurikulum, Sarpras)
+            if ($tab === 'guru') {
+                $syncUserRole($userId, 'bk', !empty($data['is_bk']));
+                $syncUserRole($userId, 'kesiswaan', !empty($data['is_kesiswaan']));
+                $syncUserRole($userId, 'humas', !empty($data['is_humas']));
+                $syncUserRole($userId, 'kurikulum', !empty($data['is_kurikulum']));
+                $syncUserRole($userId, 'sarpras', !empty($data['is_sarpras']));
             }
 
             $this->db->commit();
@@ -590,7 +592,7 @@ class PenggunaModel extends Model {
             $params['password_hash'] = password_hash($data['password'], PASSWORD_ARGON2ID);
         }
 
-        $sql .= " WHERE id = :id";
+        $sql .= " WHERE id::text = :id";
         if ($this->tenantId !== null) {
             $sql .= " AND tenant_id = :tenant_id";
         }
@@ -602,9 +604,11 @@ class PenggunaModel extends Model {
 
             // Tulis/sinkronisasikan role utama ke user_roles
             $roleName = $this->roleMap[$tab] ?? '';
-            $roleId = $this->db->query("SELECT id FROM core.roles WHERE nama_role = '$roleName'")->fetchColumn() ?: 0;
-            if ($roleId > 0) {
-                $urSql = "INSERT INTO core.user_roles (user_id, role_id) VALUES (:user_id, :role_id) ON CONFLICT DO NOTHING";
+            $stRole = $this->db->prepare("SELECT id::text FROM core.roles WHERE nama_role = ? LIMIT 1");
+            $stRole->execute([$roleName]);
+            $roleId = $stRole->fetchColumn();
+            if ($roleId) {
+                $urSql = "INSERT INTO core.user_roles (user_id, role_id) VALUES (:user_id::uuid, :role_id::uuid) ON CONFLICT DO NOTHING";
                 $urStmt = $this->db->prepare($urSql);
                 $urStmt->execute([
                     'user_id' => $id,
@@ -612,67 +616,32 @@ class PenggunaModel extends Model {
                 ]);
             }
 
-            // Kelola role Guru BK & Kesiswaan kustom jika tab adalah Guru
+            // Kelola role Guru BK, Kesiswaan, Humas, Kurikulum, Sarpras kustom jika tab adalah Guru
             if ($tab === 'guru') {
-                $checkRoleExist = function($rId) {
-                    $st = $this->db->prepare("SELECT COUNT(*) FROM core.roles WHERE id = ?");
-                    $st->execute([$rId]);
-                    return $st->fetchColumn() > 0;
+                $getRoleIdByName = function(string $rName): ?string {
+                    $st = $this->db->prepare("SELECT id::text FROM core.roles WHERE nama_role = ? OR nama_role ILIKE ? LIMIT 1");
+                    $st->execute([$rName, "%$rName%"]);
+                    return $st->fetchColumn() ?: null;
                 };
 
-                if (!empty($data['is_bk'])) {
-                    if ($checkRoleExist(20)) {
-                        $insertBk = "INSERT INTO core.user_roles (user_id, role_id) VALUES (?, 20) ON CONFLICT DO NOTHING";
-                        $this->db->prepare($insertBk)->execute([$id]);
-                    } else {
-                        throw new \Exception("Role Guru BK (20) belum tersedia. Harap jalankan migrasi database.");
+                $syncUserRole = function(string $uId, string $rName, bool $enable) use ($getRoleIdByName) {
+                    $rId = $getRoleIdByName($rName);
+                    if ($rId) {
+                        if ($enable) {
+                            $st = $this->db->prepare("INSERT INTO core.user_roles (user_id, role_id) VALUES (:user_id::uuid, :role_id::uuid) ON CONFLICT DO NOTHING");
+                            $st->execute(['user_id' => $uId, 'role_id' => $rId]);
+                        } else {
+                            $st = $this->db->prepare("DELETE FROM core.user_roles WHERE user_id::text = :user_id AND role_id::text = :role_id");
+                            $st->execute(['user_id' => $uId, 'role_id' => $rId]);
+                        }
                     }
-                } else {
-                    $deleteBk = "DELETE FROM core.user_roles WHERE user_id = ? AND role_id = 20";
-                    $this->db->prepare($deleteBk)->execute([$id]);
-                }
+                };
 
-                if (!empty($data['is_kesiswaan'])) {
-                    if ($checkRoleExist(22)) {
-                        $insertKis = "INSERT INTO core.user_roles (user_id, role_id) VALUES (?, 22) ON CONFLICT DO NOTHING";
-                        $this->db->prepare($insertKis)->execute([$id]);
-                    } else {
-                        throw new \Exception("Role Kesiswaan (22) belum tersedia. Harap jalankan migrasi database.");
-                    }
-                } else {
-                    $deleteKis = "DELETE FROM core.user_roles WHERE user_id = ? AND role_id = 22";
-                    $this->db->prepare($deleteKis)->execute([$id]);
-                }
-
-                if (!empty($data['is_humas'])) {
-                    if ($checkRoleExist(23)) {
-                        $this->db->prepare("INSERT INTO core.user_roles (user_id, role_id) VALUES (?, 23) ON CONFLICT DO NOTHING")->execute([$id]);
-                    } else {
-                        throw new \Exception("Role Humas (23) belum tersedia.");
-                    }
-                } else {
-                    $this->db->prepare("DELETE FROM core.user_roles WHERE user_id = ? AND role_id = 23")->execute([$id]);
-                }
-
-                if (!empty($data['is_kurikulum'])) {
-                    if ($checkRoleExist(24)) {
-                        $this->db->prepare("INSERT INTO core.user_roles (user_id, role_id) VALUES (?, 24) ON CONFLICT DO NOTHING")->execute([$id]);
-                    } else {
-                        throw new \Exception("Role Kurikulum (24) belum tersedia.");
-                    }
-                } else {
-                    $this->db->prepare("DELETE FROM core.user_roles WHERE user_id = ? AND role_id = 24")->execute([$id]);
-                }
-
-                if (!empty($data['is_sarpras'])) {
-                    if ($checkRoleExist(25)) {
-                        $this->db->prepare("INSERT INTO core.user_roles (user_id, role_id) VALUES (?, 25) ON CONFLICT DO NOTHING")->execute([$id]);
-                    } else {
-                        throw new \Exception("Role Sarpras (25) belum tersedia.");
-                    }
-                } else {
-                    $this->db->prepare("DELETE FROM core.user_roles WHERE user_id = ? AND role_id = 25")->execute([$id]);
-                }
+                $syncUserRole($id, 'bk', !empty($data['is_bk']));
+                $syncUserRole($id, 'kesiswaan', !empty($data['is_kesiswaan']));
+                $syncUserRole($id, 'humas', !empty($data['is_humas']));
+                $syncUserRole($id, 'kurikulum', !empty($data['is_kurikulum']));
+                $syncUserRole($id, 'sarpras', !empty($data['is_sarpras']));
             }
 
             $this->db->commit();
@@ -796,7 +765,7 @@ class PenggunaModel extends Model {
             }
 
             // Ambil status saat ini
-            $sql = "SELECT is_active FROM core.users WHERE id = :id LIMIT 1";
+            $sql = "SELECT is_active FROM core.users WHERE id::text = :id LIMIT 1";
             $stmt = $this->db->prepare($sql);
             $stmt->execute(['id' => $userId]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -806,13 +775,14 @@ class PenggunaModel extends Model {
                 return false;
             }
 
-            $newStatus = ($user['is_active'] === true) ? false : true;
+            $isCurrentActive = ($user['is_active'] === true || $user['is_active'] == 't' || $user['is_active'] === '1' || $user['is_active'] == 1);
+            $newStatusStr = $isCurrentActive ? 'false' : 'true';
 
             // Update status
-            $updateSql = "UPDATE core.users SET is_active = :is_active WHERE id = :id";
+            $updateSql = "UPDATE core.users SET is_active = :is_active::boolean WHERE id::text = :id";
             $updateStmt = $this->db->prepare($updateSql);
             $success = $updateStmt->execute([
-                'is_active' => $newStatus,
+                'is_active' => $newStatusStr,
                 'id' => $userId
             ]);
 

@@ -110,14 +110,21 @@
             <!-- Horizontal Filter Form (Tailwind CSS) -->
             <div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-100" v-if="activeTab === 'siswa' || activeTab === 'mutasi'">
                 <form @submit.prevent="fetchData(1)" class="flex flex-col md:flex-row md:items-end gap-3">
-                    <!-- Filter 1: Kelas / Rombel -->
+                    <!-- Filter 1: Jenjang / Tingkat -->
+                    <div class="flex-1 min-w-[150px]">
+                        <label for="filter_jenjang" class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Tingkat Jenjang</label>
+                        <select id="filter_jenjang" name="filter_jenjang" class="w-full h-10 px-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" v-model="filterJenjang" @change="onJenjangFilterChange">
+                            <option value="">-- Semua Jenjang --</option>
+                            <option v-for="j in listJenjang" :key="j.id" :value="j.id">{{ j.nama || j.nama_jenjang || j.kode_jenjang }}</option>
+                        </select>
+                    </div>
 
-                    <!-- Filter 2: Kelas / Rombel -->
+                    <!-- Filter 2: Kelas / Rombel (Filtering berdasarkan Jenjang) -->
                     <div class="flex-1 min-w-[150px]">
                         <label for="filter_kelas" class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Kelas / Rombel</label>
                         <select id="filter_kelas" name="filter_kelas" class="w-full h-10 px-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" v-model="filterKelas" @change="fetchData(1)">
                             <option value="">-- Semua Kelas --</option>
-                            <option v-for="k in listKelas" :key="k.id" :value="k.id">{{ k.nama_kelas }}</option>
+                            <option v-for="k in filteredKelasList" :key="k.id" :value="k.id">{{ k.nama_kelas || k.nama }}</option>
                         </select>
                     </div>
 
@@ -125,9 +132,11 @@
                     <div class="flex-1 min-w-[150px]" v-if="activeTab === 'siswa'">
                         <label for="filter_status" class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Status Siswa</label>
                         <select id="filter_status" name="filter_status" class="w-full h-10 px-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" v-model="filterStatus" @change="fetchData(1)">
+                            <option value="">-- Semua Status --</option>
                             <option value="Aktif">Aktif</option>
                             <option value="Lulus">Lulus</option>
                             <option value="Pindah">Pindah</option>
+                            <option value="Keluar">Keluar</option>
                         </select>
                     </div>
 
@@ -1439,9 +1448,11 @@
                 
                 // New Filters state
                 filterTenantId: '',
+                filterJenjang: '',
                 filterKelas: '',
                 filterStatus: 'Aktif',
                 listKelas: [],
+                listJenjang: [],
 
                 loading: false,
                 submitLoading: false,
@@ -1531,6 +1542,7 @@
                 this.activeTab = 'siswa';
             }
             
+            this.fetchJenjang();
             this.fetchKelas();
             this.fetchTahunAjaran();
             this.fetchData(1);
@@ -1548,6 +1560,31 @@
             this.printTanggal = `${day2} ${month2} ${year2}`;
         },
         computed: {
+            filteredKelasList() {
+                if (!this.listKelas || !Array.isArray(this.listKelas)) return [];
+                if (!this.filterJenjang) {
+                    return this.listKelas;
+                }
+                const selectedJ = (this.listJenjang || []).find(j => String(j.id) === String(this.filterJenjang));
+                const jCode = selectedJ ? String(selectedJ.kode_jenjang || selectedJ.kode || selectedJ.nama || '').toUpperCase() : '';
+                const romanMap = {
+                    '7': 'VII', '8': 'VIII', '9': 'IX',
+                    '10': 'X', '11': 'XI', '12': 'XII',
+                    '1': 'I', '2': 'II', '3': 'III', '4': 'IV', '5': 'V', '6': 'VI'
+                };
+                const roman = romanMap[jCode] || '';
+
+                const matched = this.listKelas.filter(k => {
+                    const kJenjang = String(k.id_jenjang || k.jenjang_id || '');
+                    if (kJenjang === String(this.filterJenjang)) return true;
+                    if (roman && k.nama_kelas) {
+                        return k.nama_kelas.startsWith(roman + ' ') || k.nama_kelas.startsWith('Kelas ' + jCode);
+                    }
+                    return false;
+                });
+
+                return matched.length > 0 ? matched : this.listKelas;
+            },
             paginationPages() {
                 const current = this.currentPage;
                 const total = this.totalPages;
@@ -1761,6 +1798,7 @@
 
                 if (this.activeTab === 'siswa' || this.activeTab === 'mutasi' || this.activeTab === 'profile_rapot') {
                     params.status = this.filterStatus;
+                    params.id_jenjang = this.filterJenjang;
                     params.id_kelas = this.filterKelas;
                 }
 
@@ -1786,6 +1824,36 @@
                      .catch(err => {
                           console.error("Gagal mengambil data sekolah:", err);
                      });
+            },
+            fetchJenjang() {
+                let tenantId = '';
+                if (this.userRole === 'super_admin') {
+                    tenantId = this.filterTenantId;
+                }
+                const params = { module: 'jenjang' };
+                if (tenantId) {
+                    params.tenant_id = tenantId;
+                    params.filter_tenant_id = tenantId;
+                }
+                axios.get('<?= $this->getBaseUrl() ?>/api/v1/kelembagaan/options', { params })
+                     .then(res => {
+                          const fetched = (res.data && res.data.data) ? res.data.data : (res.data || []);
+                          if (Array.isArray(fetched) && fetched.length > 0) {
+                              this.listJenjang = fetched;
+                          }
+                      })
+                     .catch(err => {
+                         console.error("Gagal mengambil data jenjang:", err);
+                     });
+            },
+            onJenjangFilterChange() {
+                if (this.filterKelas) {
+                    const exists = this.filteredKelasList.some(k => String(k.id) === String(this.filterKelas));
+                    if (!exists) {
+                        this.filterKelas = '';
+                    }
+                }
+                this.fetchData(1);
             },
             fetchKelas() {
                 let tenantId = '';
@@ -1825,8 +1893,10 @@
                 });
             },
             onFilterTenantChange() {
+                this.filterJenjang = '';
                 this.filterKelas = '';
                 this.aksiTenantId = this.filterTenantId;
+                this.fetchJenjang();
                 this.fetchKelas();
                 this.fetchTahunAjaran();
                 if (this.activeTab === 'naikkan_kelas') {
@@ -1850,6 +1920,9 @@
                 if (this.userRole === 'super_admin' && this.filterTenantId) {
                     url += '&tenant_id=' + encodeURIComponent(this.filterTenantId);
                 }
+                if (this.filterJenjang) {
+                    url += '&id_jenjang=' + encodeURIComponent(this.filterJenjang);
+                }
                 if (this.filterKelas) {
                     url += '&id_kelas=' + encodeURIComponent(this.filterKelas);
                 }
@@ -1866,10 +1939,12 @@
             },
             resetFilters() {
                 this.filterStatus = 'Aktif';
+                this.filterJenjang = '';
                 this.filterKelas = '';
                 if (this.userRole === 'super_admin') {
                     this.filterTenantId = '';
                 }
+                this.fetchJenjang();
                 this.fetchKelas();
                 this.fetchTahunAjaran();
                 this.fetchData(1);

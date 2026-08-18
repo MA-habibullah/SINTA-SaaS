@@ -248,7 +248,7 @@ class AksesModuleController extends BaseController {
 
         try {
             $db = Database::getConnection();
-            $stmt = $db->prepare("SELECT menu_id, access_grant FROM sistem.user_access_overrides WHERE user_id = ?");
+            $stmt = $db->prepare("SELECT menu_id::text, is_allowed AS access_grant FROM sistem.user_access_overrides WHERE user_id::text = ?");
             $stmt->execute([$userId]);
             $overrides = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
             $this->jsonResponse(true, ['overrides' => $overrides]);
@@ -274,13 +274,17 @@ class AksesModuleController extends BaseController {
             $db = Database::getConnection();
             $db->beginTransaction();
 
-            $stmtDel = $db->prepare("DELETE FROM sistem.user_access_overrides WHERE user_id = ?");
+            $stmtDel = $db->prepare("DELETE FROM sistem.user_access_overrides WHERE user_id::text = ?");
             $stmtDel->execute([$userId]);
 
-            $stmtIns = $db->prepare("INSERT INTO sistem.user_access_overrides (user_id, menu_id, access_grant) VALUES (?, ?, ?)");
+            $stmtIns = $db->prepare("INSERT INTO sistem.user_access_overrides (id, user_id, menu_id, is_allowed, created_at) VALUES (gen_random_uuid(), :user_id::uuid, :menu_id::uuid, :is_allowed, NOW())");
             foreach ($overrides as $ov) {
                 if (!empty($ov['menu_id']) && isset($ov['access_grant'])) {
-                    $stmtIns->execute([$userId, $ov['menu_id'], (bool)$ov['access_grant'] ? 'true' : 'false']);
+                    $grantVal = filter_var($ov['access_grant'], FILTER_VALIDATE_BOOLEAN);
+                    $stmtIns->bindValue(':user_id', $userId);
+                    $stmtIns->bindValue(':menu_id', $ov['menu_id']);
+                    $stmtIns->bindValue(':is_allowed', $grantVal ? 'true' : 'false', PDO::PARAM_STR);
+                    $stmtIns->execute();
                 }
             }
 

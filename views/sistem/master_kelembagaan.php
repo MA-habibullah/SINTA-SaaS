@@ -331,8 +331,36 @@
                         <!-- Empty State -->
                         <tr v-if="listData.length === 0">
                             <td :colspan="userRole === 'super_admin' ? 8 : 7" class="text-center py-5 text-muted">
-                                <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
-                                <span>Tidak ada data ditemukan dalam modul ini.</span>
+                                <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                                <h6 class="fw-bold text-dark mb-1">Belum ada data {{ getActiveTabName() }}</h6>
+                                <div class="fs-8 text-muted mb-2 mx-auto" style="max-width: 560px;">
+                                    <template v-if="activeTab === 'jenjang'">
+                                        <strong>Pendidikan (Bentuk Pendidikan):</strong> Sekolah Menengah Atas (SMA), Sekolah Menengah Kejuruan (SMK), Sekolah Menengah Pertama (SMP), Sekolah Dasar (SD), Madrasah Aliyah (MA), Madrasah Tsanawiyah (MTs), Madrasah Ibtidaiyah (MI).<br>
+                                        <strong>Jenjang (Tingkat Kelas):</strong> 7, 8, 9, 10, 11, 12.
+                                    </template>
+                                    <template v-else-if="activeTab === 'jurusan'">
+                                        <strong>SMA / MA:</strong> Umum, IPA (MIPA), IPS, Bahasa dan Budaya, Keagamaan.<br>
+                                        <strong>SMK / MAK:</strong> Teknik Komputer dan Jaringan (TKJ), Rekayasa Perangkat Lunak (RPL), Akuntansi dan Keuangan Lembaga (AKL), Desain Komunikasi Visual (DKV), Teknik Kendaraan Ringan (TKR), Teknik &amp; Bisnis Sepeda Motor (TBSM).
+                                    </template>
+                                    <template v-else-if="activeTab === 'kelas'">
+                                        <strong>Jenjang (Tingkat Kelas):</strong> 7, 8, 9, 10, 11, 12.<br>
+                                        <strong>Contoh Nama Rombel Kelas:</strong> VII A, VIII B, IX C, X IPA 1, XI TKJ 1, XII DKV 1.
+                                    </template>
+                                    <template v-else-if="activeTab === 'program_pengajaran'">
+                                        <p class="mb-2">Silakan klik tombol <strong>"Tambah Program Pengajaran"</strong> di atas untuk menambahkan data baru.</p>
+                                        <div class="bg-light border p-3 rounded-3 text-start font-monospace fs-8 text-dark">
+                                            <div class="fw-bold text-primary mb-1">Contoh data Program Pengajaran:</div>
+                                            <div>• <code>PROG-REG-01</code> : Program Pengajaran Reguler 5 Hari Kerja</div>
+                                            <div>• <code>PROG-REG-02</code> : Program Pengajaran Reguler 6 Hari Kerja</div>
+                                            <div>• <code>PROG-VOK-01</code> : Program Pengajaran Vokasi &amp; Kelas Industri</div>
+                                            <div>• <code>PROG-BIL-01</code> : Program Pengajaran Kelas Bilingual (Bahasa Inggris)</div>
+                                            <div>• <code>PROG-AKS-01</code> : Program Akselerasi Akademik Cepat</div>
+                                        </div>
+                                    </template>
+                                    <template v-else>
+                                        Silakan klik tombol "Tambah {{ getActiveTabName() }}" di atas untuk menambahkan data baru.
+                                    </template>
+                                </div>
                             </td>
                         </tr>
                     </tbody>
@@ -402,30 +430,33 @@
                             <!-- Form inputs khusus modul KELAS -->
                             <template v-if="activeTab === 'kelas'">
                                 <div class="col-12">
-                                    <label for="form_id_jenjang" class="form-label fw-semibold fs-8 text-muted mb-1">Jenjang Pendidikan <span class="text-danger">*</span></label>
+                                    <label for="form_id_jenjang" class="form-label fw-semibold fs-8 text-muted mb-1">Bentuk Pendidikan <span class="text-danger">*</span></label>
                                     <select id="form_id_jenjang" name="id_jenjang" class="form-select rounded-3" :class="{'is-invalid': errors.id_jenjang}" v-model="form.id_jenjang" required>
-                                        <option value="" disabled>-- Pilih Jenjang --</option>
+                                        <option value="" disabled>-- Pilih Bentuk Pendidikan (SMA/SMK/SMP/SD) --</option>
                                         <option v-for="j in listJenjang" :value="j.id" :key="j.id">{{ j.nama }}</option>
                                     </select>
                                     <div class="invalid-feedback">{{ getError('id_jenjang') }}</div>
+                                    <small class="text-muted fs-9">Contoh Bentuk Pendidikan: Sekolah Menengah Atas (SMA), Sekolah Menengah Kejuruan (SMK), Sekolah Menengah Pertama (SMP).</small>
                                 </div>
                                 <div class="col-12">
-                                    <label for="form_id_jurusan" class="form-label fw-semibold fs-8 text-muted mb-1">Jurusan / Peminatan <span class="text-danger">*</span></label>
+                                    <label for="form_id_jurusan" class="form-label fw-semibold fs-8 text-muted mb-1">Jurusan / Program Keahlian <span class="text-danger">*</span></label>
                                     <select id="form_id_jurusan" name="id_jurusan" class="form-select rounded-3" :class="{'is-invalid': errors.id_jurusan}" v-model="form.id_jurusan" required>
-                                        <option value="" disabled>-- Pilih Jurusan --</option>
+                                        <option value="" disabled>-- Pilih Jurusan (IPA/IPS/TKJ/RPL/AKL/Umum) --</option>
                                         <option v-for="j in listJurusan" :value="j.id" :key="j.id">{{ j.nama }}</option>
                                     </select>
                                     <div class="invalid-feedback">{{ getError('id_jurusan') }}</div>
+                                    <small class="text-muted fs-9">Contoh SMA: Umum, IPA (MIPA), IPS, Bahasa. Contoh SMK: TKJ, RPL, AKL, DKV, TKR.</small>
                                 </div>
                                 <div class="col-12">
                                     <label for="form_kode_kelas" class="form-label fw-semibold fs-8 text-muted mb-1">Kode Kelas <span class="text-danger">*</span></label>
-                                    <input id="form_kode_kelas" name="kode_kelas" type="text" class="form-control rounded-3" :class="{'is-invalid': errors.kode_kelas}" v-model="form.kode_kelas" placeholder="Misal: KLS-XA" required>
+                                    <input id="form_kode_kelas" name="kode_kelas" type="text" class="form-control rounded-3" :class="{'is-invalid': errors.kode_kelas}" v-model="form.kode_kelas" placeholder="Contoh: KLS-XIPA1, KLS-XRPL1, KLS-7A" required>
                                     <div class="invalid-feedback">{{ getError('kode_kelas') }}</div>
                                 </div>
                                 <div class="col-12">
                                     <label for="form_nama_kelas" class="form-label fw-semibold fs-8 text-muted mb-1">Nama Kelas / Rombel <span class="text-danger">*</span></label>
-                                    <input id="form_nama_kelas" name="nama_kelas" type="text" class="form-control rounded-3" :class="{'is-invalid': errors.nama_kelas}" v-model="form.nama_kelas" placeholder="Misal: Kelas X-A" required>
+                                    <input id="form_nama_kelas" name="nama_kelas" type="text" class="form-control rounded-3" :class="{'is-invalid': errors.nama_kelas}" v-model="form.nama_kelas" placeholder="Contoh Rombel Kelas: VII A, VIII B, IX C, X IPA 1, XI TKJ 1, XII DKV 1" required>
                                     <div class="invalid-feedback">{{ getError('nama_kelas') }}</div>
+                                    <small class="text-muted fs-9">Contoh Kelas: VII A, VIII B, IX C, X IPA 1, XI TKJ 1, XII DKV 1.</small>
                                 </div>
                             </template>
 
@@ -435,7 +466,7 @@
                                     <label for="form_tahun_ajaran" class="form-label fw-semibold fs-8 text-muted mb-1">Tahun Ajaran <span class="text-danger">*</span></label>
                                     <input id="form_tahun_ajaran" name="kode" type="text" class="form-control rounded-3" :class="{'is-invalid': errors.kode}" v-model="form.kode" placeholder="Contoh: 2025/2026" required>
                                     <div class="invalid-feedback">{{ getError('kode') }}</div>
-                                    <small class="text-muted fs-9">Gunakan format YYYY/YYYY.</small>
+                                    <small class="text-muted fs-9">Gunakan format YYYY/YYYY (misal: 2025/2026).</small>
                                 </div>
                             </template>
 
@@ -445,7 +476,7 @@
                                     <label for="form_tahun_angkatan" class="form-label fw-semibold fs-8 text-muted mb-1">Tahun Angkatan <span class="text-danger">*</span></label>
                                     <input id="form_tahun_angkatan" name="kode" type="text" class="form-control rounded-3" :class="{'is-invalid': errors.kode}" v-model="form.kode" placeholder="Contoh: 2026" required>
                                     <div class="invalid-feedback">{{ getError('kode') }}</div>
-                                    <small class="text-muted fs-9">Masukkan 4 digit angka tahun masuk siswa.</small>
+                                    <small class="text-muted fs-9">Masukkan 4 digit angka tahun masuk siswa (misal: 2026).</small>
                                 </div>
                             </template>
 
@@ -453,7 +484,7 @@
                             <template v-else-if="activeTab === 'kurikulum'">
                                 <div class="col-12">
                                     <label for="form_kurikulum_nama" class="form-label fw-semibold fs-8 text-muted mb-1">Nama Kurikulum <span class="text-danger">*</span></label>
-                                    <input id="form_kurikulum_nama" name="nama_kurikulum" type="text" class="form-control rounded-3" :class="{'is-invalid': errors.nama}" v-model="form.nama_kurikulum" placeholder="Contoh: Kurikulum Cambridge" required>
+                                    <input id="form_kurikulum_nama" name="nama_kurikulum" type="text" class="form-control rounded-3" :class="{'is-invalid': errors.nama}" v-model="form.nama_kurikulum" placeholder="Contoh: Kurikulum Merdeka, K-13 Revisi" required>
                                     <div class="invalid-feedback">{{ getError('nama') }}</div>
                                 </div>
                                 <div class="col-12">
@@ -471,14 +502,20 @@
                             <!-- Form inputs generik (Jenjang, Jurusan, Mapel, dll) -->
                             <template v-else>
                                 <div class="col-12">
-                                    <label for="form_generik_kode" class="form-label fw-semibold fs-8 text-muted mb-1">Kode <span class="text-danger">*</span></label>
-                                    <input id="form_generik_kode" name="kode" type="text" class="form-control rounded-3" :class="{'is-invalid': errors.kode}" v-model="form.kode" placeholder="Masukkan kode..." required>
+                                    <label for="form_generik_kode" class="form-label fw-semibold fs-8 text-muted mb-1">Kode {{ getActiveTabName() }} <span class="text-danger">*</span></label>
+                                    <input id="form_generik_kode" name="kode" type="text" class="form-control rounded-3" :class="{'is-invalid': errors.kode}" v-model="form.kode"
+                                           :placeholder="activeTab === 'jenjang' ? 'Contoh Kode: SMA, SMK, SMP, SD, MA' : activeTab === 'jurusan' ? 'Contoh Kode: IPA, IPS, RPL, TKJ, AKL' : 'Masukkan kode...'" required>
                                     <div class="invalid-feedback">{{ getError('kode') }}</div>
+                                    <small class="text-muted fs-9" v-if="activeTab === 'jenjang'">Singkatan Bentuk Pendidikan (misal: SMA, SMK, SMP, SD, MA, MTS).</small>
+                                    <small class="text-muted fs-9" v-else-if="activeTab === 'jurusan'">Singkatan Jurusan (misal: IPA, IPS, TKJ, RPL, AKL, DKV).</small>
                                 </div>
                                 <div class="col-12">
-                                    <label for="form_generik_nama" class="form-label fw-semibold fs-8 text-muted mb-1">Nama Data <span class="text-danger">*</span></label>
-                                    <input id="form_generik_nama" name="nama" type="text" class="form-control rounded-3" :class="{'is-invalid': errors.nama}" v-model="form.nama" placeholder="Masukkan nama..." required>
+                                    <label for="form_generik_nama" class="form-label fw-semibold fs-8 text-muted mb-1">Nama {{ getActiveTabName() }} <span class="text-danger">*</span></label>
+                                    <input id="form_generik_nama" name="nama" type="text" class="form-control rounded-3" :class="{'is-invalid': errors.nama}" v-model="form.nama"
+                                           :placeholder="activeTab === 'jenjang' ? 'Contoh Nama: Sekolah Menengah Atas, Sekolah Menengah Kejuruan' : activeTab === 'jurusan' ? 'Contoh Nama: Ilmu Pengetahuan Alam, Teknik Komputer dan Jaringan' : 'Masukkan nama...'" required>
                                     <div class="invalid-feedback">{{ getError('nama') }}</div>
+                                    <small class="text-muted fs-9" v-if="activeTab === 'jenjang'">Contoh Bentuk Pendidikan: Sekolah Menengah Atas (SMA), Sekolah Menengah Kejuruan (SMK), Sekolah Menengah Pertama (SMP).</small>
+                                    <small class="text-muted fs-9" v-else-if="activeTab === 'jurusan'">Contoh SMA: Umum, IPA, IPS, Bahasa. Contoh SMK: Teknik Komputer dan Jaringan, Rekayasa Perangkat Lunak, Akuntansi.</small>
                                 </div>
                             </template>
 
@@ -560,17 +597,17 @@
         data() {
             return {
                 tabs: [
+                    { id: 'pendidikan', name: 'Pendidikan', icon: 'bi bi-award-fill' },
                     { id: 'jenjang', name: 'Jenjang', icon: 'bi bi-award' },
                     { id: 'jurusan', name: 'Jurusan', icon: 'bi bi-diagram-3' },
                     { id: 'kelas', name: 'Kelas', icon: 'bi bi-mortarboard' },
                     { id: 'mata_pelajaran', name: 'Mata Pelajaran', icon: 'bi bi-book' },
-                    { id: 'pendidikan', name: 'Pendidikan', icon: 'bi bi-award-fill' },
                     { id: 'program_pengajaran', name: 'Program Pengajaran', icon: 'bi bi-journal-text' },
                     { id: 'tahun_ajaran', name: 'Tahun Ajaran', icon: 'bi bi-calendar-check' },
                     { id: 'angkatan', name: 'Angkatan', icon: 'bi bi-calendar2-range' },
                     { id: 'kurikulum', name: 'Kurikulum', icon: 'bi bi-gear-wide-connected' }
                 ],
-                activeTab: 'jenjang',
+                activeTab: 'pendidikan',
                 userRole: <?= json_encode($user_role ?? '', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
                 listTenants: <?php echo json_encode($tenant_list ?? [], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>,
                 filterTenantId: '', // Filter sekolah aktif (Super Admin only)
