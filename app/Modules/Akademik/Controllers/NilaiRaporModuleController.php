@@ -73,12 +73,17 @@ class NilaiRaporModuleController extends BaseController {
              WHERE  s.tenant_id = :tenant_id
                AND  (s.is_active = true OR s.is_active IS NULL)
                AND  (
-                     s.kelas_saat_ini = :kelas_id1
-                  OR s.kelas_saat_ini::text = :kelas_id1
+                     -- Match by UUID langsung
+                     s.kelas_saat_ini::text = :kelas_id1
+                     -- Match by nama_kelas (kelas_saat_ini menyimpan nama, bukan UUID)
+                  OR s.kelas_saat_ini IN (
+                         SELECT nama_kelas FROM akademik.kelas
+                         WHERE id::text = :kelas_id4
+                     )
                   OR s.id::text IN (
                          SELECT siswa_id::text
                          FROM   akademik.detail_nilai_rapor
-                         WHERE  (kelas_id = :kelas_id2 OR kelas_id::text = :kelas_id2)
+                         WHERE  kelas_id::text = :kelas_id2
                            AND  tahun_ajaran = :tahun_ajaran
                            AND  semester     = :semester
                            AND  is_active    = true
@@ -86,7 +91,7 @@ class NilaiRaporModuleController extends BaseController {
                   OR s.id::text IN (
                          SELECT siswa_id::text
                          FROM   siswa.riwayat_kenaikan_kelas
-                         WHERE  (dari_kelas = :kelas_id3 OR dari_kelas::text = :kelas_id3)
+                         WHERE  dari_kelas::text = :kelas_id3
                            AND  tahun_ajaran = :tahun_ajaran2
                      )
                )
@@ -96,6 +101,7 @@ class NilaiRaporModuleController extends BaseController {
             'kelas_id1'    => $kelasId,
             'kelas_id2'    => $kelasId,
             'kelas_id3'    => $kelasId,
+            'kelas_id4'    => $kelasId,
             'tahun_ajaran' => $tahunAjaran,
             'tahun_ajaran2'=> $tahunAjaran,
             'semester'     => $semester,
@@ -103,6 +109,7 @@ class NilaiRaporModuleController extends BaseController {
         ]);
         return $st->fetchAll(PDO::FETCH_ASSOC);
     }
+
 
     /**
      * GET /api/v1/nilai-rapor/grid
@@ -216,7 +223,7 @@ class NilaiRaporModuleController extends BaseController {
             $this->jsonResponse(false, null, 'Input Nilai Rapor telah dikunci oleh administrator.', 403); return;
         }
 
-        $stSiswaList = $db->prepare("SELECT id, agama FROM siswa.siswa WHERE (kelas_saat_ini = :kelas_id OR kelas_saat_ini::text = :kelas_id) AND tenant_id = :tenant_id AND is_active = true");
+        $stSiswaList = $db->prepare("SELECT id, agama FROM siswa.siswa WHERE (kelas_saat_ini::text = :kelas_id OR kelas_saat_ini IN (SELECT nama_kelas FROM akademik.kelas WHERE id::text = :kelas_id)) AND tenant_id = :tenant_id AND is_active = true");
         $stSiswaList->execute(['kelas_id' => $kelasId, 'tenant_id' => $tenantId]);
         $studentsMap = [];
         foreach ($stSiswaList->fetchAll(PDO::FETCH_ASSOC) as $s) {
@@ -419,7 +426,7 @@ class NilaiRaporModuleController extends BaseController {
             $this->jsonResponse(false, null, 'Kolom mata pelajaran tidak ditemukan dalam file.', 400); return;
         }
 
-        $stSiswaList = $db->prepare("SELECT id, agama FROM siswa.siswa WHERE (kelas_saat_ini = :kelas_id OR kelas_saat_ini::text = :kelas_id) AND tenant_id = :tenant_id AND is_active = true");
+        $stSiswaList = $db->prepare("SELECT id, agama FROM siswa.siswa WHERE (kelas_saat_ini::text = :kelas_id OR kelas_saat_ini IN (SELECT nama_kelas FROM akademik.kelas WHERE id::text = :kelas_id)) AND tenant_id = :tenant_id AND is_active = true");
         $stSiswaList->execute(['kelas_id' => $kelasId, 'tenant_id' => $tenantId]);
         $studentsMap = [];
         foreach ($stSiswaList->fetchAll(PDO::FETCH_ASSOC) as $s) $studentsMap[$s['id']] = $s['agama'] ?? null;

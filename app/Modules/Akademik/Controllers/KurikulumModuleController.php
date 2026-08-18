@@ -139,7 +139,7 @@ class KurikulumModuleController extends BaseController {
             $tenantId = $input['tenant_id'];
         }
         if (!$tenantId && $kelasId) {
-            $stmtKelasTenant = $db->prepare("SELECT tenant_id FROM akademik.kelas WHERE id = :kelas_id LIMIT 1");
+            $stmtKelasTenant = $db->prepare("SELECT tenant_id::text FROM akademik.kelas WHERE id::text = :kelas_id LIMIT 1");
             $stmtKelasTenant->execute(['kelas_id' => $kelasId]);
             $tenantId = $stmtKelasTenant->fetchColumn() ?: null;
         }
@@ -240,7 +240,7 @@ class KurikulumModuleController extends BaseController {
             $tenantId = $input['tenant_id'];
         }
         if (!$tenantId && $targetKelasId) {
-            $stmtKelasTenant = $db->prepare("SELECT tenant_id FROM akademik.kelas WHERE id = :kelas_id LIMIT 1");
+            $stmtKelasTenant = $db->prepare("SELECT tenant_id::text FROM akademik.kelas WHERE id::text = :kelas_id LIMIT 1");
             $stmtKelasTenant->execute(['kelas_id' => $targetKelasId]);
             $tenantId = $stmtKelasTenant->fetchColumn() ?: null;
         }
