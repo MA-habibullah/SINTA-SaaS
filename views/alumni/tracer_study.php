@@ -1,138 +1,74 @@
 <?php
 /**
  * View: Tracer Study / Portofolio Alumni
- * Hanya dapat diakses oleh siswa berstatus 'Lulus' atau Admin Sekolah / Super Admin.
- *
- * Hak Akses Per Role:
- * - siswa      : Hanya lihat & input data milik sendiri. Tidak bisa melihat data siswa lain.
- * - guru_bk    : Bisa input & lihat data alumni milik sekolahnya. Aksi hapus tersedia.
- * - operator_sekolah / admin : Sama seperti guru_bk.
- * - super_admin: Akses seluruh data lintas sekolah. Perlu memilih tenant dulu untuk input.
- *
- * Variabel opsional dari layout pemanggil:
- * - $active_tracer_tab : 'kuliah' | 'pekerjaan'  — tab aktif awal (default: 'kuliah')
- * - $is_sub_module     : true — sembunyikan header & sub-nav internal
+ * Mendukung data siswa terdaftar & alumni luar database (manual input).
  */
 $userRole  = $data['user_role']         ?? ($_SESSION['role_name']    ?? '');
 $userNama  = $data['user_nama']         ?? ($_SESSION['nama_lengkap'] ?? 'Alumni');
-$kuliah    = $data['riwayat_kuliah']    ?? [];
-$pekerjaan = $data['riwayat_pekerjaan'] ?? [];
-$baseUrl   = '<?= $this->getBaseUrl() ?>';
+$tenantId  = $data['tenant_id']         ?? ($_SESSION['tenant_id']    ?? '');
+$baseUrl   = $this->getBaseUrl();
 
-// Tentukan apakah user ini adalah role "admin" (bukan siswa)
+// Role Admin / BK
 $isAdmin = in_array($userRole, ['super_admin', 'operator_sekolah', 'admin', 'operator', 'guru_bk']);
 
-// --- Reusability Support ---
-// ID unik untuk Vue mount point (mendukung include 2x dalam halaman yang sama)
-$tracer_initial_tab  = $active_tracer_tab ?? 'kuliah'; // 'kuliah' | 'pekerjaan'
+// ID unik untuk Vue mount point (mendukung embed sub-module)
+$tracer_initial_tab  = $active_tracer_tab ?? 'kuliah';
 $tracer_instance_id  = 'tracerApp_' . $tracer_initial_tab;
 $tracer_vue_selector = '#' . $tracer_instance_id;
 ?>
 
 <style>
-    :root {
-        --tracer-blue:   #2563eb;
-        --tracer-green:  #10b981;
-        --tracer-amber:  #f59e0b;
-        --tracer-indigo: #6366f1;
-        --tracer-border: #e2e8f0;
-        --tracer-bg:     #f8fafc;
-    }
-
     .tracer-card {
         background: #fff;
         border-radius: 1.25rem;
-        box-shadow: 0 4px 20px rgba(15,23,42,0.06);
-        border: none;
+        box-shadow: 0 4px 20px rgba(15,23,42,0.05);
+        border: 1px solid #f1f5f9;
     }
-
-    /* Navigation Tabs Styling */
-    .scrollable-nav-tabs {
-        padding-bottom: 5px;
-        border-bottom: none;
-    }
-    .scrollable-nav-tabs::-webkit-scrollbar {
-        height: 4px;
-    }
-    .scrollable-nav-tabs::-webkit-scrollbar-thumb {
-        background-color: #cbd5e1;
-        border-radius: 4px;
-    }
-    .nav-tabs-wrapper .nav-link {
-        font-size: 14px;
-        color: #475569;
-        background-color: transparent;
-        border: none;
-        border-bottom: 2px solid transparent;
-        border-radius: 0;
-        font-weight: 600;
-        padding: 10px 16px;
-        transition: all 0.2s ease-in-out;
-    }
-    .nav-tabs-wrapper .nav-link:hover {
-        color: #2563eb;
-    }
-    .nav-tabs-wrapper .nav-link.active {
-        color: #2563eb !important;
-        background-color: transparent !important;
-        border-bottom: 2px solid #2563eb !important;
-    }
-
     .tracer-badge {
-        padding: 0.25rem 0.75rem;
+        padding: 0.25rem 0.65rem;
         border-radius: 9999px;
         font-size: 0.75rem;
-        font-weight: 600;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
     }
-
-    .status-aktif    { background: #ecfdf5; color: #059669; }
-    .status-lulus    { background: #eff6ff; color: #2563eb; }
-    .status-drop     { background: #fef2f2; color: #dc2626; }
-    .status-kontrak  { background: #fff7ed; color: #d97706; }
-    .status-tetap    { background: #ecfdf5; color: #059669; }
-    .status-magang   { background: #f0f9ff; color: #0284c7; }
+    .status-aktif    { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+    .status-lulus    { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+    .status-drop     { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .status-kontrak  { background: #fff7ed; color: #d97706; border: 1px solid #fed7aa; }
+    .status-tetap    { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+    .status-magang   { background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; }
+    .status-usaha    { background: #faf5ff; color: #7e22ce; border: 1px solid #e9d5ff; }
 
     .form-card {
-        background: var(--tracer-bg);
+        background: #f8fafc;
         border-radius: 1rem;
-        border: 1px dashed var(--tracer-border);
-        transition: border-color 0.2s;
+        border: 1px dashed #cbd5e1;
+        transition: border-color 0.2s, box-shadow 0.2s;
     }
-    .form-card:hover { border-color: var(--tracer-blue); }
-
-    .add-row-btn {
-        background: none;
-        border: 2px dashed var(--tracer-blue);
-        color: var(--tracer-blue);
-        border-radius: 0.75rem;
-        padding: 0.5rem 1.25rem;
-        font-weight: 600;
-        font-size: 0.85rem;
-        cursor: pointer;
-        transition: all 0.2s;
-        width: 100%;
+    .form-card:hover { 
+        border-color: #3b82f6; 
+        box-shadow: 0 4px 12px rgba(59,130,246,0.08);
     }
-    .add-row-btn:hover { background: #eff6ff; }
-
     .empty-state {
         text-align: center;
-        padding: 3rem 1rem;
+        padding: 3.5rem 1rem;
         color: #94a3b8;
     }
-
     [v-cloak] { display: none !important; }
 </style>
 
 <?php if (empty($is_sub_module)): ?>
 <!-- Page Header -->
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-2 pb-2 mb-4 border-bottom">
+<div class="d-flex justify-content-between flex-wrap align-items-center pt-2 pb-2 mb-4 border-bottom">
     <div>
         <h2 class="fw-bold text-dark mb-1">
             <i class="bi bi-mortarboard-fill me-2 text-primary"></i>
             Tracer Study / Portofolio Alumni
         </h2>
         <p class="text-muted fs-7 mb-0">
-            Rekam jejak pendidikan dan karir setelah kelulusan.
+            Rekam jejak pendidikan tinggi dan karir alumni terpusat.
             <?php if ($userRole === 'siswa'): ?>
                 Halo, <strong><?= htmlspecialchars($userNama) ?></strong>!
             <?php endif; ?>
@@ -140,8 +76,8 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
     </div>
     <?php if ($userRole !== 'siswa'): ?>
     <div>
-        <a href="<?= $baseUrl ?>/pengguna" class="btn btn-outline-secondary btn-sm rounded-3">
-            <i class="bi bi-arrow-left me-1"></i> Kembali
+        <a href="<?= $baseUrl ?>/bk/alumni" class="btn btn-outline-secondary btn-sm rounded-3">
+            <i class="bi bi-arrow-left me-1"></i> Kembali ke Hub Alumni
         </a>
     </div>
     <?php endif; ?>
@@ -151,69 +87,55 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
 <!-- Vue App Mount Point -->
 <div id="<?= htmlspecialchars($tracer_instance_id, ENT_QUOTES, 'UTF-8') ?>" v-cloak>
 
-    <!-- ================================================================
-         BANNER: Status tergantung role
-    ================================================================ -->
-    <!-- Banner untuk SISWA ALUMNI -->
-    <?php if ($userRole === 'siswa'): ?>
-    <div class="alert border-0 rounded-4 p-4 mb-4 shadow-sm d-flex align-items-center gap-3"
-         style="background: linear-gradient(135deg,#eff6ff,#ecfdf5);">
-        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-             style="width:52px;height:52px;background:linear-gradient(135deg,#2563eb,#10b981);">
-            <i class="bi bi-award-fill fs-4 text-white"></i>
-        </div>
-        <div>
-            <h5 class="fw-bold mb-1" style="color:#1e293b;">✅ Status: Alumni Lulus</h5>
-            <p class="mb-0 text-muted fs-7">
-                Anda dapat menambah riwayat kuliah dan pekerjaan di bawah ini.
-                Data ini bersifat informatif dan dikelola sendiri oleh alumni.
-            </p>
-        </div>
-    </div>
-    <?php endif; ?>
-
-    <!-- Banner untuk ADMIN / GURU BK / OPERATOR -->
+    <!-- BANNER: Status tergantung role -->
     <?php if ($isAdmin): ?>
-    <div class="alert border-0 rounded-4 p-3 mb-4 shadow-sm d-flex align-items-center gap-3"
-         style="background: linear-gradient(135deg,#f5f3ff,#ede9fe);">
-        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-             style="width:44px;height:44px;background:linear-gradient(135deg,#6366f1,#8b5cf6);">
-            <i class="bi bi-person-badge-fill fs-5 text-white"></i>
+    <div class="alert border-0 rounded-4 p-3.5 mb-4 shadow-xs d-flex align-items-center justify-content-between flex-wrap gap-3"
+         style="background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%); border: 1px solid #e0e7ff;">
+        <div class="d-flex align-items-center gap-3">
+            <div class="rounded-2xl d-flex align-items-center justify-content-center flex-shrink-0 shadow-xs"
+                 style="width:46px; height:46px; background: linear-gradient(135deg, #3b82f6, #6366f1); color: white;">
+                <i class="bi bi-mortarboard-fill fs-5"></i>
+            </div>
+            <div>
+                <h6 class="fw-bold mb-0 text-slate-800 flex items-center gap-2">
+                    Penelusuran Alumni & Tracer Study
+                    <span class="badge bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-lg border border-indigo-200">
+                        Mode <?= htmlspecialchars(ucwords(str_replace('_', ' ', $userRole))) ?>
+                    </span>
+                </h6>
+                <p class="mb-0 text-slate-500 text-xs mt-0.5">
+                    Dapat menginput siswa terdaftar di pangkalan data maupun <strong>alumni lawas di luar sistem</strong> beserta kampus swasta/luar negeri.
+                </p>
+            </div>
         </div>
-        <div>
-            <h6 class="fw-bold mb-0" style="color:#3730a3;">
-                Mode Admin — <?= htmlspecialchars(ucwords(str_replace('_', ' ', $userRole))) ?>
-            </h6>
-            <p class="mb-0 text-muted" style="font-size:0.78rem;">
-                Anda dapat menambah dan mengelola data tracer study alumni di sekolah ini.
-                <strong>Siswa hanya dapat melihat dan mengedit data milik dirinya sendiri.</strong>
-            </p>
+        <div class="d-flex items-center gap-2">
+            <button class="btn btn-sm btn-outline-primary rounded-xl font-bold px-3 py-1.5 flex items-center gap-1.5" @click="fetchAllData()">
+                <i class="bi bi-arrow-clockwise" :class="{'spin-anim': loadingKuliah || loadingPekerjaan}"></i> Refresh Data
+            </button>
         </div>
     </div>
     <?php endif; ?>
 
-    <!-- ================================================================
-         TAB NAVIGATION (disembunyikan jika dipanggil sebagai sub-module)
-    ================================================================ -->
+    <!-- TAB NAVIGATION (Hanya jika bukan sub-module) -->
     <?php if (empty($is_sub_module)): ?>
     <div class="card border-0 shadow-sm rounded-4 mb-4">
         <div class="card-body p-2 bg-white rounded-4">
             <div class="nav-tabs-wrapper">
                 <ul class="nav nav-tabs border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-3 px-2">
                     <li class="nav-item">
-                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" 
+                        <button class="nav-link border-0 fw-bold px-3.5 py-2.5 fs-7 transition" 
                                 :class="{active: activeTab === 'kuliah'}"
-                                @click="activeTab = 'kuliah'" id="tab-kuliah-<?= $tracer_instance_id ?>">
+                                @click="activeTab = 'kuliah'">
                             <i class="bi bi-mortarboard me-2 fs-6"></i> Riwayat Kuliah
-                            <span class="badge bg-primary ms-1 rounded-pill">{{ riwayatKuliah.length }}</span>
+                            <span class="badge bg-primary ms-1.5 rounded-pill">{{ riwayatKuliah.length }}</span>
                         </button>
                     </li>
                     <li class="nav-item">
-                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" 
+                        <button class="nav-link border-0 fw-bold px-3.5 py-2.5 fs-7 transition" 
                                 :class="{active: activeTab === 'pekerjaan'}"
-                                @click="activeTab = 'pekerjaan'" id="tab-pekerjaan-<?= $tracer_instance_id ?>">
+                                @click="activeTab = 'pekerjaan'">
                             <i class="bi bi-briefcase me-2 fs-6"></i> Riwayat Pekerjaan
-                            <span class="badge bg-success ms-1 rounded-pill">{{ riwayatPekerjaan.length }}</span>
+                            <span class="badge bg-success ms-1.5 rounded-pill">{{ riwayatPekerjaan.length }}</span>
                         </button>
                     </li>
                 </ul>
@@ -222,620 +144,1216 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
     </div>
     <?php endif; ?>
 
-    <!-- ================================================================
+    <!-- ═══════════════════════════════════════════════════════════════════════
          TAB PANEL: RIWAYAT KULIAH
-    ================================================================ -->
-    <div v-show="activeTab === 'kuliah'" class="tracer-card p-4">
-
-        <!-- Alert -->
-        <div v-if="alertKuliah.msg" :class="'alert alert-' + alertKuliah.type + ' border-0 rounded-3'" role="alert">
-            {{ alertKuliah.msg }}
-            <button type="button" class="btn-close float-end" @click="alertKuliah.msg = ''"></button>
+    ═══════════════════════════════════════════════════════════════════════ -->
+    <div v-show="activeTab === 'kuliah'" class="tracer-card p-4 space-y-4">
+        
+        <!-- Toolbar & Filter Kuliah -->
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pb-2 border-b border-slate-100">
+            <div class="d-flex items-center gap-2">
+                <h5 class="fw-black text-slate-800 mb-0 fs-6 flex items-center gap-2">
+                    <i class="bi bi-buildings text-primary"></i> Data Riwayat Pendidikan Tinggi Alumni
+                </h5>
+                <span class="badge bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-lg border border-slate-200 text-xs">
+                    {{ filteredKuliah.length }} Data
+                </span>
+            </div>
+            <div class="d-flex items-center gap-2">
+                <div class="input-group input-group-sm" style="width: 240px;">
+                    <span class="input-group-text bg-white border-slate-200 text-slate-400"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control border-slate-200 text-xs" v-model="searchKuliah" placeholder="Cari alumni, kampus, prodi...">
+                </div>
+                <select class="form-select form-select-sm border-slate-200 text-xs w-auto" v-model="filterStatusKuliah">
+                    <option value="">Semua Status</option>
+                    <option value="Aktif">Aktif</option>
+                    <option value="Lulus">Lulus</option>
+                    <option value="Drop">Drop Out</option>
+                </select>
+            </div>
         </div>
 
-        <!-- Data Table -->
-        <div v-if="riwayatKuliah.length > 0" class="table-responsive mb-4">
-            <table class="table table-hover align-middle" id="tbl-kuliah-<?= $tracer_instance_id ?>">
-                <thead class="table-light">
+        <!-- Data Table Kuliah -->
+        <div v-if="filteredKuliah.length > 0" class="table-responsive rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
+            <table class="table table-hover align-middle mb-0 text-slate-700">
+                <thead class="bg-slate-50 text-slate-500 text-[11px] font-bold uppercase tracking-wider border-b border-slate-200">
                     <tr>
-                        <th>#</th>
-                        <th v-if="isAdmin">Nama Alumni</th>
-                        <th>Kampus</th>
-                        <th>Fakultas / Jurusan</th>
-                        <th>Jalur</th>
-                        <th>Tahun Masuk</th>
-                        <th>Tahun Lulus</th>
-                        <th>Status</th>
-                        <th v-if="isAdmin" class="text-center">Aksi</th>
+                        <th class="py-3 px-3 text-center" style="width: 45px;">#</th>
+                        <th v-if="isAdmin" class="py-3">Nama Alumni</th>
+                        <th class="py-3">Perguruan Tinggi / Kampus</th>
+                        <th class="py-3">Program Studi & Fakultas</th>
+                        <th class="py-3 text-center">Jalur</th>
+                        <th class="py-3 text-center">Tahun</th>
+                        <th class="py-3 text-center">Status</th>
+                        <th v-if="isAdmin" class="py-3 text-center" style="width: 110px;">Aksi</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr v-for="(item, idx) in riwayatKuliah" :key="item.id">
-                        <td class="text-muted">{{ idx + 1 }}</td>
-                        <td v-if="isAdmin" class="fw-semibold text-truncate" style="max-width:140px;">
-                            {{ item.nama_lengkap || item.nama_alumni || '—' }}
+                <tbody class="text-xs divide-y divide-slate-100">
+                    <tr v-for="(item, idx) in filteredKuliah" :key="item.id">
+                        <td class="text-center text-slate-400 font-bold px-3">{{ idx + 1 }}</td>
+                        <td v-if="isAdmin" class="py-2.5">
+                            <div class="font-bold text-slate-800 flex items-center gap-1.5">
+                                {{ item.nama_lengkap }}
+                                <span v-if="item.is_manual" class="badge bg-amber-50 text-amber-700 border border-amber-200 text-[9px] px-1.5 py-0.2 rounded font-bold" title="Diinput manual di luar database siswa">
+                                    Luar Sistem
+                                </span>
+                                <span v-else class="badge bg-indigo-50 text-indigo-700 border border-indigo-100 text-[9px] px-1.5 py-0.2 rounded font-bold">
+                                    Siswa Sistem
+                                </span>
+                            </div>
+                            <div class="text-[10px] text-slate-400 font-mono">NISN: {{ item.nisn_display || item.nisn || '—' }}</div>
                         </td>
-                        <td class="fw-semibold">{{ item.nama_kampus }}</td>
-                        <td class="text-muted">{{ item.fakultas || '—' }} / {{ item.jurusan || '—' }}</td>
-                        <td class="text-muted">{{ item.nama_jalur || '—' }}</td>
-                        <td>{{ item.tahun_masuk }}</td>
-                        <td>{{ item.tahun_lulus || 'Masih Kuliah' }}</td>
-                        <td>
+                        <td class="py-2.5">
+                            <div class="font-bold text-indigo-700 text-xs flex items-center gap-1">
+                                <i class="bi bi-building text-indigo-500"></i> {{ item.nama_kampus_display || item.nama_kampus }}
+                            </div>
+                            <div v-if="item.is_kampus_swasta" class="text-[10px] text-amber-600 font-semibold flex items-center gap-1">
+                                <i class="bi bi-patch-check"></i> Kampus Swasta / Mandiri
+                            </div>
+                        </td>
+                        <td class="py-2.5">
+                            <div class="font-semibold text-slate-800">{{ item.nama_prodi_display || item.nama_prodi || item.jurusan || '—' }}</div>
+                            <div class="text-[10px] text-slate-500">{{ item.fakultas ? 'Fakultas ' + item.fakultas : (item.jenjang || 'S1') }}</div>
+                        </td>
+                        <td class="py-2.5 text-center">
+                            <span class="badge bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-lg border border-slate-200">
+                                {{ item.nama_jalur || '—' }}
+                            </span>
+                        </td>
+                        <td class="py-2.5 text-center font-mono text-[11px]">
+                            {{ item.tahun_masuk }} <span class="text-slate-400">s/d</span> {{ item.tahun_lulus || 'Aktif' }}
+                        </td>
+                        <td class="py-2.5 text-center">
                             <span class="tracer-badge"
                                   :class="{
                                       'status-aktif': item.status_kuliah === 'Aktif',
                                       'status-lulus': item.status_kuliah === 'Lulus',
                                       'status-drop':  item.status_kuliah === 'Drop'
                                   }">
-                                {{ item.status_kuliah }}
+                                <i class="bi" :class="item.status_kuliah === 'Lulus' ? 'bi-check-circle-fill' : (item.status_kuliah === 'Drop' ? 'bi-x-circle-fill' : 'bi-clock-fill')"></i>
+                                {{ item.status_kuliah === 'Drop' ? 'Drop Out' : item.status_kuliah }}
                             </span>
                         </td>
-                        <td v-if="isAdmin" class="text-center">
-                            <button class="btn btn-sm btn-outline-danger rounded-2 px-2 py-1"
-                                    @click="hapusKuliah(item.id)"
-                                    title="Hapus riwayat kuliah ini">
-                                <i class="bi bi-trash3 fs-7"></i>
-                            </button>
+                        <td v-if="isAdmin" class="py-2.5 text-center">
+                            <div class="d-inline-flex items-center gap-1">
+                                <button class="btn btn-sm btn-light text-primary hover:bg-primary-50 rounded-lg p-1.5"
+                                        @click="openEditKuliah(item)"
+                                        title="Edit data riwayat kuliah">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                                <button class="btn btn-sm btn-light text-danger hover:bg-rose-50 rounded-lg p-1.5"
+                                        @click="hapusKuliah(item.id, item.nama_lengkap)"
+                                        title="Hapus riwayat kuliah">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
-        <div v-else class="empty-state">
-            <i class="bi bi-mortarboard fs-1 d-block mb-2"></i>
-            Belum ada riwayat kuliah. Tambahkan di bawah ini.
+        <div v-else class="empty-state bg-slate-50/60 rounded-2xl border border-dashed border-slate-200">
+            <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-2.5">
+                <i class="bi bi-mortarboard fs-4"></i>
+            </div>
+            <div class="font-bold text-slate-700 text-sm">Belum Ada Riwayat Kuliah</div>
+            <p class="text-xs text-slate-400 mb-0">Tambahkan data mahasiswa baru / alumni diterima perguruan tinggi melalui form di bawah.</p>
         </div>
 
         <!-- Form Tambah Riwayat Kuliah (Reaktif) -->
-        <div class="form-card p-4 mt-3">
-            <h6 class="fw-bold mb-3"><i class="bi bi-plus-circle me-2 text-primary"></i>Tambah Riwayat Kuliah</h6>
+        <div class="form-card p-4 mt-4 shadow-2xs">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold mb-0 text-slate-800 flex items-center gap-2">
+                    <i class="bi bi-plus-circle-fill text-primary"></i> Tambah Riwayat Kuliah Baru
+                </h6>
+                <div v-if="isAdmin" class="form-check form-switch m-0 d-flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200">
+                    <input class="form-check-input mt-0 cursor-pointer" type="checkbox" id="toggleManualKuliah" v-model="formKuliah.is_manual" @change="resetFormKuliahInput()">
+                    <label class="form-check-label text-xs font-bold text-slate-700 cursor-pointer mb-0" for="toggleManualKuliah">
+                        Input Alumni Luar Sistem (Manual)
+                    </label>
+                </div>
+            </div>
 
             <div class="row g-3">
+                <!-- Pemilihan Siswa -->
                 <div class="col-md-12" v-if="isAdmin">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <label class="form-label fw-semibold fs-7 mb-0">Nama Alumni (Siswa) <span class="text-danger">*</span></label>
-                        <div class="form-check form-switch m-0">
-                            <input class="form-check-input" type="checkbox" id="manualInputKuliah-<?= $tracer_instance_id ?>" v-model="formKuliah.is_manual" @change="resetKuliah()">
-                            <label class="form-check-label fs-7" for="manualInputKuliah-<?= $tracer_instance_id ?>">Input Alumni Luar Sistem</label>
-                        </div>
-                    </div>
-                    
                     <div v-if="!formKuliah.is_manual">
+                        <label class="form-label fw-bold text-xs text-slate-700 mb-1">Cari Alumni Terdaftar di Sistem <span class="text-danger">*</span></label>
                         <div class="position-relative">
-                            <input type="text" class="form-control" v-model="formKuliah.nama_alumni"
+                            <input type="text" class="form-control rounded-xl text-xs" v-model="searchStudentQuery"
                                    @input="searchStudents('kuliah')" @focus="showSearchDropdown = true; activeForm = 'kuliah'"
-                                   placeholder="Ketik nama atau NISN siswa lulus..." autocomplete="off">
+                                   placeholder="Ketik nama lengkap atau NISN siswa lulus..." autocomplete="off">
                             <div v-if="showSearchDropdown && activeForm === 'kuliah' && searchResults.length > 0" 
-                                 class="dropdown-menu show w-100 position-absolute overflow-auto shadow-sm" style="max-height: 200px; z-index: 999;">
-                                <button type="button" class="dropdown-item py-2 border-bottom" v-for="s in searchResults" :key="s.id" @mousedown.prevent="selectStudent(s, 'kuliah')">
-                                    <div class="fw-bold">{{ s.nama_lengkap }}</div>
-                                    <small class="text-muted">NISN: {{ s.nisn || '-' }} | NIS: {{ s.nis || '-' }}</small>
+                                 class="dropdown-menu show w-100 position-absolute overflow-auto shadow-lg rounded-xl border-slate-200 mt-1" style="max-height: 220px; z-index: 999;">
+                                <button type="button" class="dropdown-item py-2 px-3 border-bottom text-xs" v-for="s in searchResults" :key="s.id" @mousedown.prevent="selectStudent(s, 'kuliah')">
+                                    <div class="fw-bold text-slate-800">{{ s.nama_lengkap }}</div>
+                                    <div class="text-[10px] text-slate-400">NISN: {{ s.nisn || '-' }} | Kelas: {{ s.kelas_saat_ini || '-' }} ({{ s.jurusan || '-' }})</div>
                                 </button>
                             </div>
-                            <div v-else-if="showSearchDropdown && activeForm === 'kuliah' && searchResults.length === 0 && formKuliah.nama_alumni.trim().length >= 2"
-                                 class="dropdown-menu show w-100 position-absolute p-3 text-center text-muted shadow-sm" style="z-index: 999;">
-                                <i class="bi bi-info-circle me-1"></i> Tidak ada siswa cocok.
-                            </div>
                         </div>
-                        <div v-if="selectedStudent && activeForm === 'kuliah'" class="mt-2 p-2 bg-success bg-opacity-10 border border-success border-opacity-25 rounded d-flex align-items-center gap-2">
-                            <i class="bi bi-check-circle-fill text-success"></i>
-                            <div style="font-size: 0.8rem;">
-                                <span class="d-block fw-bold text-success">{{ selectedStudent.nama_lengkap }}</span>
-                                <span class="text-success text-opacity-75">Siswa Terpilih</span>
+                        <div v-if="selectedStudent && activeForm === 'kuliah'" class="mt-2 p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-check-circle-fill text-emerald-600 fs-6"></i>
+                                <div>
+                                    <span class="d-block fw-bold text-emerald-900 text-xs">{{ selectedStudent.nama_lengkap }}</span>
+                                    <span class="text-emerald-700 text-[10px]">NISN: {{ selectedStudent.nisn || '-' }} | Terpilih dari database siswa</span>
+                                </div>
                             </div>
+                            <button type="button" class="btn btn-xs btn-link text-emerald-800 font-bold p-0 text-decoration-none" @click="selectedStudent = null; formKuliah.siswa_id = ''">Ganti</button>
                         </div>
                     </div>
-                    <div v-else>
-                        <input type="text" class="form-control" v-model="formKuliah.nama_alumni" placeholder="Ketik nama alumni secara manual..." autocomplete="off">
-                        <small class="text-muted">Menambahkan data alumni lawas yang tidak terdaftar di sistem.</small>
+                    <div v-else class="row g-2">
+                        <div class="col-md-7">
+                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">Nama Lengkap Alumni Lawas <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control rounded-xl text-xs" v-model="formKuliah.nama_alumni" placeholder="Contoh: Budi Santoso" autocomplete="off">
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">NISN / NIS (Opsional)</label>
+                            <input type="text" class="form-control rounded-xl text-xs" v-model="formKuliah.nisn" placeholder="Nomor Induk Siswa..." autocomplete="off">
+                        </div>
                     </div>
                 </div>
 
+                <!-- Kampus Source Mode -->
+                <div class="col-md-12">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <label class="form-label fw-bold text-xs text-slate-700 mb-0">Pilihan Kampus & Perguruan Tinggi <span class="text-danger">*</span></label>
+                        <div class="form-check form-switch m-0 d-flex items-center gap-1.5">
+                            <input class="form-check-input mt-0 cursor-pointer" type="checkbox" id="toggleManualKampus" v-model="formKuliah.is_kampus_swasta" @change="resetKampusSelection()">
+                            <label class="form-check-label text-[11px] font-bold text-slate-600 cursor-pointer mb-0" for="toggleManualKampus">
+                                Input Kampus Swasta / Manual
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Dropdown PDSS Master Kampus -->
+                    <div v-if="!formKuliah.is_kampus_swasta" class="row g-2">
+                        <div class="col-md-6">
+                            <select class="form-select rounded-xl text-xs" v-model="formKuliah.kampus_id" @change="onKampusChange()">
+                                <option value="">-- Pilih Perguruan Tinggi (PDSS) --</option>
+                                <option v-for="k in listKampusFlat" :key="k.id" :value="k.id">
+                                    {{ k.nama_kampus }} ({{ k.jenis_kampus || 'PTN' }})
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <select class="form-select rounded-xl text-xs" v-model="formKuliah.prodi_id" @change="onProdiChange()">
+                                <option value="">-- Pilih Program Studi --</option>
+                                <option v-for="p in listProdiBySelectedKampus" :key="p.id" :value="p.id">
+                                    {{ p.program_studi || p.nama_prodi }} ({{ p.jenjang || 'S1' }})
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Input Manual Kampus Swasta -->
+                    <div v-else class="row g-2">
+                        <div class="col-md-6">
+                            <input type="text" class="form-control rounded-xl text-xs" v-model="formKuliah.nama_kampus" placeholder="Ketik nama kampus swasta / luar negeri...">
+                        </div>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control rounded-xl text-xs" v-model="formKuliah.nama_prodi" placeholder="Ketik nama program studi...">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Jalur Masuk & Fakultas -->
                 <div class="col-md-4">
-                    <label class="form-label fw-semibold fs-7">Jalur Masuk</label>
-                    <select class="form-select" v-model="formKuliah.jalur_masuk_id">
-                        <option value="">-- Pilih Jalur --</option>
+                    <label class="form-label fw-bold text-xs text-slate-700 mb-1">Jalur Masuk / Seleksi</label>
+                    <select class="form-select rounded-xl text-xs" v-model="formKuliah.jalur_masuk_id">
+                        <option value="">-- Pilih Jalur Masuk --</option>
                         <option v-for="j in listJalur" :key="j.id" :value="j.id">{{ j.nama_jalur }}</option>
                     </select>
                 </div>
-                <div class="col-md-8">
-                    <label class="form-label fw-semibold fs-7">Kampus & Program Studi <span class="text-danger">*</span></label>
-                    <select class="form-select" v-model="formKuliah.kampus_prodi_id" @change="syncKampusData()">
-                        <option value="">-- Pilih dari Pangkalan Data (PDSS) --</option>
-                        <option v-for="p in listKampusProdi" :key="p.prodi_id" :value="p.prodi_id">
-                            {{ p.nama_kampus }} - {{ p.program_studi }} ({{ p.jenjang }})
-                        </option>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold text-xs text-slate-700 mb-1">Fakultas (Opsional)</label>
+                    <input type="text" class="form-control rounded-xl text-xs" v-model="formKuliah.fakultas" placeholder="Contoh: Teknik / Ekonomi">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold text-xs text-slate-700 mb-1">Jenjang Pendidikan</label>
+                    <select class="form-select rounded-xl text-xs" v-model="formKuliah.jenjang">
+                        <option value="S1">S1 (Sarjana)</option>
+                        <option value="D4">D4 (Sarjana Terapan)</option>
+                        <option value="D3">D3 (Diploma Tiga)</option>
+                        <option value="S2">S2 (Magister)</option>
                     </select>
                 </div>
 
-                <div class="col-md-6" v-show="!formKuliah.kampus_prodi_id">
-                    <label class="form-label fw-semibold fs-7">Nama Kampus (Manual) <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" v-model="formKuliah.nama_kampus" placeholder="Ketik jika kampus tidak ada di daftar" maxlength="255">
-                </div>
-                <div class="col-md-6" v-show="!formKuliah.kampus_prodi_id">
-                    <label class="form-label fw-semibold fs-7">Program Studi (Manual)</label>
-                    <input type="text" class="form-control" v-model="formKuliah.jurusan" placeholder="Ketik manual" maxlength="255">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label fw-semibold fs-7">Tahun Masuk <span class="text-danger">*</span></label>
-                    <input type="number" class="form-control" v-model.number="formKuliah.tahun_masuk"
-                           :min="2000" :max="currentYear + 1" placeholder="2022" id="input-tahun-masuk-<?= $tracer_instance_id ?>">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label fw-semibold fs-7">Tahun Lulus</label>
-                    <input type="number" class="form-control" v-model.number="formKuliah.tahun_lulus"
-                           :min="formKuliah.tahun_masuk" :max="currentYear + 5"
-                           placeholder="Kosongkan jika masih aktif" id="input-tahun-lulus-<?= $tracer_instance_id ?>">
+                <!-- Tahun & Status -->
+                <div class="col-md-4">
+                    <label class="form-label fw-bold text-xs text-slate-700 mb-1">Tahun Masuk <span class="text-danger">*</span></label>
+                    <input type="number" class="form-control rounded-xl text-xs" v-model.number="formKuliah.tahun_masuk" :min="1990" :max="currentYear + 1">
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label fw-semibold fs-7">Status Kuliah <span class="text-danger">*</span></label>
-                    <select class="form-select" v-model="formKuliah.status_kuliah" id="select-status-kuliah-<?= $tracer_instance_id ?>">
+                    <label class="form-label fw-bold text-xs text-slate-700 mb-1">Tahun Lulus</label>
+                    <input type="number" class="form-control rounded-xl text-xs" v-model.number="formKuliah.tahun_lulus" :min="formKuliah.tahun_masuk" :max="currentYear + 7" placeholder="Kosongkan jika aktif">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold text-xs text-slate-700 mb-1">Status Kuliah <span class="text-danger">*</span></label>
+                    <select class="form-select rounded-xl text-xs" v-model="formKuliah.status_kuliah">
                         <option value="Aktif">Aktif</option>
                         <option value="Lulus">Lulus</option>
                         <option value="Drop">Drop Out</option>
                     </select>
                 </div>
-                <div class="col-12 d-flex justify-content-end">
-                    <button class="btn btn-primary px-4 rounded-3" :disabled="loadingKuliah"
-                            @click="submitKuliah" id="btn-simpan-kuliah-<?= $tracer_instance_id ?>">
-                        <span v-if="loadingKuliah" class="spinner-border spinner-border-sm me-2"></span>
-                        <i v-else class="bi bi-floppy me-2"></i>
-                        {{ loadingKuliah ? 'Menyimpan...' : 'Simpan Kuliah' }}
+
+                <div class="col-12 d-flex justify-content-end gap-2 pt-2">
+                    <button type="button" class="btn btn-sm btn-light rounded-xl font-bold px-3" @click="resetFormKuliahInput()">Reset</button>
+                    <button type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-4 flex items-center gap-1.5" :disabled="loadingKuliah" @click="submitKuliah()">
+                        <span v-if="loadingKuliah" class="spinner-border spinner-border-sm"></span>
+                        <i v-else class="bi bi-save"></i> Simpan Riwayat Kuliah
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ================================================================
-         TAB PANEL: RIWAYAT PEKERJAAN
-    ================================================================ -->
-    <div v-show="activeTab === 'pekerjaan'" class="tracer-card p-4">
 
-        <div v-if="alertPekerjaan.msg" :class="'alert alert-' + alertPekerjaan.type + ' border-0 rounded-3'" role="alert">
-            {{ alertPekerjaan.msg }}
-            <button type="button" class="btn-close float-end" @click="alertPekerjaan.msg = ''"></button>
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         TAB PANEL: RIWAYAT PEKERJAAN
+    ═══════════════════════════════════════════════════════════════════════ -->
+    <div v-show="activeTab === 'pekerjaan'" class="tracer-card p-4 space-y-4">
+        
+        <!-- Toolbar & Filter Pekerjaan -->
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pb-2 border-b border-slate-100">
+            <div class="d-flex items-center gap-2">
+                <h5 class="fw-black text-slate-800 mb-0 fs-6 flex items-center gap-2">
+                    <i class="bi bi-briefcase text-emerald-600"></i> Data Riwayat Karir & Pekerjaan Alumni
+                </h5>
+                <span class="badge bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-lg border border-slate-200 text-xs">
+                    {{ filteredPekerjaan.length }} Data
+                </span>
+            </div>
+            <div class="d-flex items-center gap-2">
+                <div class="input-group input-group-sm" style="width: 240px;">
+                    <span class="input-group-text bg-white border-slate-200 text-slate-400"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control border-slate-200 text-xs" v-model="searchPekerjaan" placeholder="Cari alumni, perusahaan, posisi...">
+                </div>
+                <select class="form-select form-select-sm border-slate-200 text-xs w-auto" v-model="filterStatusKerja">
+                    <option value="">Semua Status</option>
+                    <option value="Tetap">Tetap</option>
+                    <option value="Kontrak">Kontrak</option>
+                    <option value="Magang">Magang</option>
+                    <option value="Wirausaha">Wirausaha</option>
+                </select>
+            </div>
         </div>
 
-        <!-- Data Table -->
-        <div v-if="riwayatPekerjaan.length > 0" class="table-responsive mb-4">
-            <table class="table table-hover align-middle" id="tbl-pekerjaan-<?= $tracer_instance_id ?>">
-                <thead class="table-light">
+        <!-- Data Table Pekerjaan -->
+        <div v-if="filteredPekerjaan.length > 0" class="table-responsive rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
+            <table class="table table-hover align-middle mb-0 text-slate-700">
+                <thead class="bg-slate-50 text-slate-500 text-[11px] font-bold uppercase tracking-wider border-b border-slate-200">
                     <tr>
-                        <th>#</th>
-                        <th v-if="isAdmin">Nama Alumni</th>
-                        <th>Perusahaan</th>
-                        <th>Posisi / Jabatan</th>
-                        <th>Tahun Mulai</th>
-                        <th>Tahun Selesai</th>
-                        <th>Pendapatan</th>
-                        <th>Status</th>
-                        <th v-if="isAdmin" class="text-center">Aksi</th>
+                        <th class="py-3 px-3 text-center" style="width: 45px;">#</th>
+                        <th v-if="isAdmin" class="py-3">Nama Alumni</th>
+                        <th class="py-3">Perusahaan / Instansi</th>
+                        <th class="py-3">Posisi / Jabatan</th>
+                        <th class="py-3 text-center">Tahun Bekerja</th>
+                        <th class="py-3 text-center">Pendapatan</th>
+                        <th class="py-3 text-center">Status</th>
+                        <th v-if="isAdmin" class="py-3 text-center" style="width: 110px;">Aksi</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr v-for="(item, idx) in riwayatPekerjaan" :key="item.id">
-                        <td class="text-muted">{{ idx + 1 }}</td>
-                        <td v-if="isAdmin" class="fw-semibold text-truncate" style="max-width:140px;">
-                            {{ item.nama_lengkap || item.nama_alumni || '—' }}
+                <tbody class="text-xs divide-y divide-slate-100">
+                    <tr v-for="(item, idx) in filteredPekerjaan" :key="item.id">
+                        <td class="text-center text-slate-400 font-bold px-3">{{ idx + 1 }}</td>
+                        <td v-if="isAdmin" class="py-2.5">
+                            <div class="font-bold text-slate-800 flex items-center gap-1.5">
+                                {{ item.nama_lengkap }}
+                                <span v-if="item.is_manual" class="badge bg-amber-50 text-amber-700 border border-amber-200 text-[9px] px-1.5 py-0.2 rounded font-bold" title="Diinput manual di luar database siswa">
+                                    Luar Sistem
+                                </span>
+                                <span v-else class="badge bg-indigo-50 text-indigo-700 border border-indigo-100 text-[9px] px-1.5 py-0.2 rounded font-bold">
+                                    Siswa Sistem
+                                </span>
+                            </div>
+                            <div class="text-[10px] text-slate-400 font-mono">NISN: {{ item.nisn_display || item.nisn || '—' }}</div>
                         </td>
-                        <td class="fw-semibold">{{ item.nama_perusahaan }}</td>
-                        <td>{{ item.posisi_jabatan }}</td>
-                        <td>{{ item.tahun_mulai }}</td>
-                        <td>{{ item.tahun_selesai || 'Masih Bekerja' }}</td>
-                        <td class="text-muted">{{ item.pendapatan_bulanan || '—' }}</td>
-                        <td>
+                        <td class="py-2.5">
+                            <div class="font-bold text-slate-800 text-xs flex items-center gap-1">
+                                <i class="bi bi-buildings text-slate-400"></i> {{ item.nama_perusahaan }}
+                            </div>
+                            <div class="text-[10px] text-slate-400">{{ item.jenis_instansi || 'Perusahaan Swasta' }}</div>
+                        </td>
+                        <td class="py-2.5 font-semibold text-slate-800">
+                            {{ item.posisi_jabatan }}
+                        </td>
+                        <td class="py-2.5 text-center font-mono text-[11px]">
+                            {{ item.tahun_mulai }} <span class="text-slate-400">s/d</span> {{ item.tahun_selesai || 'Sekarang' }}
+                        </td>
+                        <td class="py-2.5 text-center text-slate-600 font-medium">
+                            {{ item.pendapatan_bulanan || '—' }}
+                        </td>
+                        <td class="py-2.5 text-center">
                             <span class="tracer-badge"
                                   :class="{
-                                      'status-kontrak': item.status_kerja === 'Kontrak',
                                       'status-tetap':   item.status_kerja === 'Tetap',
-                                      'status-magang':  item.status_kerja === 'Magang'
+                                      'status-kontrak': item.status_kerja === 'Kontrak',
+                                      'status-magang':  item.status_kerja === 'Magang',
+                                      'status-usaha':   item.status_kerja === 'Wirausaha'
                                   }">
-                                {{ item.status_kerja }}
+                                <i class="bi bi-briefcase-fill"></i> {{ item.status_kerja }}
                             </span>
                         </td>
-                        <td v-if="isAdmin" class="text-center">
-                            <button class="btn btn-sm btn-outline-danger rounded-2 px-2 py-1"
-                                    @click="hapusPekerjaan(item.id)"
-                                    title="Hapus riwayat pekerjaan ini">
-                                <i class="bi bi-trash3 fs-7"></i>
-                            </button>
+                        <td v-if="isAdmin" class="py-2.5 text-center">
+                            <div class="d-inline-flex items-center gap-1">
+                                <button class="btn btn-sm btn-light text-primary hover:bg-primary-50 rounded-lg p-1.5"
+                                        @click="openEditPekerjaan(item)"
+                                        title="Edit data riwayat pekerjaan">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                                <button class="btn btn-sm btn-light text-danger hover:bg-rose-50 rounded-lg p-1.5"
+                                        @click="hapusPekerjaan(item.id, item.nama_lengkap)"
+                                        title="Hapus riwayat pekerjaan">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
-        <div v-else class="empty-state">
-            <i class="bi bi-briefcase fs-1 d-block mb-2"></i>
-            Belum ada riwayat pekerjaan. Tambahkan di bawah ini.
+        <div v-else class="empty-state bg-slate-50/60 rounded-2xl border border-dashed border-slate-200">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-2.5">
+                <i class="bi bi-briefcase fs-4"></i>
+            </div>
+            <div class="font-bold text-slate-700 text-sm">Belum Ada Riwayat Pekerjaan</div>
+            <p class="text-xs text-slate-400 mb-0">Tambahkan data alumni bekerja atau berwirausaha melalui form di bawah.</p>
         </div>
 
-        <!-- Form Tambah Riwayat Pekerjaan (Reaktif) -->
-        <div class="form-card p-4 mt-3">
-            <h6 class="fw-bold mb-3"><i class="bi bi-plus-circle me-2 text-success"></i>Tambah Riwayat Pekerjaan</h6>
+        <!-- Form Tambah Riwayat Pekerjaan -->
+        <div class="form-card p-4 mt-4 shadow-2xs">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold mb-0 text-slate-800 flex items-center gap-2">
+                    <i class="bi bi-plus-circle-fill text-emerald-600"></i> Tambah Riwayat Pekerjaan Baru
+                </h6>
+                <div v-if="isAdmin" class="form-check form-switch m-0 d-flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200">
+                    <input class="form-check-input mt-0 cursor-pointer" type="checkbox" id="toggleManualPekerjaan" v-model="formPekerjaan.is_manual" @change="resetFormPekerjaanInput()">
+                    <label class="form-check-label text-xs font-bold text-slate-700 cursor-pointer mb-0" for="toggleManualPekerjaan">
+                        Input Alumni Luar Sistem (Manual)
+                    </label>
+                </div>
+            </div>
 
             <div class="row g-3">
+                <!-- Pemilihan Siswa -->
                 <div class="col-md-12" v-if="isAdmin">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <label class="form-label fw-semibold fs-7 mb-0">Nama Alumni (Siswa) <span class="text-danger">*</span></label>
-                        <div class="form-check form-switch m-0">
-                            <input class="form-check-input" type="checkbox" id="manualInputPekerjaan-<?= $tracer_instance_id ?>" v-model="formPekerjaan.is_manual" @change="resetPekerjaan()">
-                            <label class="form-check-label fs-7" for="manualInputPekerjaan-<?= $tracer_instance_id ?>">Input Alumni Luar Sistem</label>
-                        </div>
-                    </div>
-
                     <div v-if="!formPekerjaan.is_manual">
+                        <label class="form-label fw-bold text-xs text-slate-700 mb-1">Cari Alumni Terdaftar di Sistem <span class="text-danger">*</span></label>
                         <div class="position-relative">
-                            <input type="text" class="form-control" v-model="formPekerjaan.nama_alumni"
+                            <input type="text" class="form-control rounded-xl text-xs" v-model="searchStudentQueryPekerjaan"
                                    @input="searchStudents('pekerjaan')" @focus="showSearchDropdown = true; activeForm = 'pekerjaan'"
-                                   placeholder="Ketik nama atau NISN siswa lulus..." autocomplete="off">
+                                   placeholder="Ketik nama lengkap atau NISN siswa lulus..." autocomplete="off">
                             <div v-if="showSearchDropdown && activeForm === 'pekerjaan' && searchResults.length > 0" 
-                                 class="dropdown-menu show w-100 position-absolute overflow-auto shadow-sm" style="max-height: 200px; z-index: 999;">
-                                <button type="button" class="dropdown-item py-2 border-bottom" v-for="s in searchResults" :key="s.id" @mousedown.prevent="selectStudent(s, 'pekerjaan')">
-                                    <div class="fw-bold">{{ s.nama_lengkap }}</div>
-                                    <small class="text-muted">NISN: {{ s.nisn || '-' }} | NIS: {{ s.nis || '-' }}</small>
+                                 class="dropdown-menu show w-100 position-absolute overflow-auto shadow-lg rounded-xl border-slate-200 mt-1" style="max-height: 220px; z-index: 999;">
+                                <button type="button" class="dropdown-item py-2 px-3 border-bottom text-xs" v-for="s in searchResults" :key="s.id" @mousedown.prevent="selectStudent(s, 'pekerjaan')">
+                                    <div class="fw-bold text-slate-800">{{ s.nama_lengkap }}</div>
+                                    <div class="text-[10px] text-slate-400">NISN: {{ s.nisn || '-' }} | Kelas: {{ s.kelas_saat_ini || '-' }}</div>
                                 </button>
                             </div>
-                            <div v-else-if="showSearchDropdown && activeForm === 'pekerjaan' && searchResults.length === 0 && formPekerjaan.nama_alumni.trim().length >= 2"
-                                 class="dropdown-menu show w-100 position-absolute p-3 text-center text-muted shadow-sm" style="z-index: 999;">
-                                <i class="bi bi-info-circle me-1"></i> Tidak ada siswa cocok.
-                            </div>
                         </div>
-                        <div v-if="selectedStudent && activeForm === 'pekerjaan'" class="mt-2 p-2 bg-success bg-opacity-10 border border-success border-opacity-25 rounded d-flex align-items-center gap-2">
-                            <i class="bi bi-check-circle-fill text-success"></i>
-                            <div style="font-size: 0.8rem;">
-                                <span class="d-block fw-bold text-success">{{ selectedStudent.nama_lengkap }}</span>
-                                <span class="text-success text-opacity-75">Siswa Terpilih</span>
+                        <div v-if="selectedStudentPekerjaan && activeForm === 'pekerjaan'" class="mt-2 p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-check-circle-fill text-emerald-600 fs-6"></i>
+                                <div>
+                                    <span class="d-block fw-bold text-emerald-900 text-xs">{{ selectedStudentPekerjaan.nama_lengkap }}</span>
+                                    <span class="text-emerald-700 text-[10px]">NISN: {{ selectedStudentPekerjaan.nisn || '-' }} | Terpilih dari database siswa</span>
+                                </div>
                             </div>
+                            <button type="button" class="btn btn-xs btn-link text-emerald-800 font-bold p-0 text-decoration-none" @click="selectedStudentPekerjaan = null; formPekerjaan.siswa_id = ''">Ganti</button>
                         </div>
                     </div>
-                    <div v-else>
-                        <input type="text" class="form-control" v-model="formPekerjaan.nama_alumni" placeholder="Ketik nama alumni secara manual..." autocomplete="off">
-                        <small class="text-muted">Menambahkan data alumni lawas yang tidak terdaftar di sistem.</small>
+                    <div v-else class="row g-2">
+                        <div class="col-md-7">
+                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">Nama Lengkap Alumni Lawas <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control rounded-xl text-xs" v-model="formPekerjaan.nama_alumni" placeholder="Contoh: Siti Rahmawati" autocomplete="off">
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">NISN / NIS (Opsional)</label>
+                            <input type="text" class="form-control rounded-xl text-xs" v-model="formPekerjaan.nisn" placeholder="Nomor Induk Siswa..." autocomplete="off">
+                        </div>
                     </div>
                 </div>
 
+                <!-- Perusahaan & Posisi -->
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold fs-7">Nama Perusahaan <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" v-model="formPekerjaan.nama_perusahaan"
-                           placeholder="PT. Contoh Indonesia" id="input-nama-perusahaan-<?= $tracer_instance_id ?>" maxlength="255">
+                    <label class="form-label fw-bold text-xs text-slate-700 mb-1">Nama Perusahaan / Tempat Kerja <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control rounded-xl text-xs" v-model="formPekerjaan.nama_perusahaan" placeholder="Contoh: PT. Telkom Indonesia">
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold fs-7">Posisi / Jabatan <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" v-model="formPekerjaan.posisi_jabatan"
-                           placeholder="Software Engineer" id="input-posisi-<?= $tracer_instance_id ?>" maxlength="255">
+                    <label class="form-label fw-bold text-xs text-slate-700 mb-1">Posisi / Jabatan Pekerjaan <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control rounded-xl text-xs" v-model="formPekerjaan.posisi_jabatan" placeholder="Contoh: Junior Software Developer">
                 </div>
+
+                <!-- Jenis Instansi & Pendapatan -->
                 <div class="col-md-4">
-                    <label class="form-label fw-semibold fs-7">Pendapatan Bulanan</label>
-                    <select class="form-select" v-model="formPekerjaan.pendapatan_bulanan" id="select-pendapatan-<?= $tracer_instance_id ?>">
-                        <option value="">Pilih rentang...</option>
-                        <option value="< 1 Juta">Kurang dari 1 Juta</option>
-                        <option value="1-3 Juta">1 – 3 Juta</option>
-                        <option value="3-5 Juta">3 – 5 Juta</option>
-                        <option value="5-10 Juta">5 – 10 Juta</option>
-                        <option value="> 10 Juta">Lebih dari 10 Juta</option>
+                    <label class="form-label fw-bold text-xs text-slate-700 mb-1">Jenis Instansi</label>
+                    <select class="form-select rounded-xl text-xs" v-model="formPekerjaan.jenis_instansi">
+                        <option value="Swasta">Perusahaan Swasta / Multinasional</option>
+                        <option value="BUMN">BUMN / BUMD</option>
+                        <option value="Pemerintah">Pemerintah / Instansi Negeri</option>
+                        <option value="Wirausaha">Wirausaha / Bisnis Mandiri</option>
+                        <option value="Lainnya">Lainnya</option>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label fw-semibold fs-7">Tahun Mulai <span class="text-danger">*</span></label>
-                    <input type="number" class="form-control" v-model.number="formPekerjaan.tahun_mulai"
-                           :min="2000" :max="currentYear + 1" placeholder="2023" id="input-tahun-mulai-kerja-<?= $tracer_instance_id ?>">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label fw-semibold fs-7">Tahun Selesai</label>
-                    <input type="number" class="form-control" v-model.number="formPekerjaan.tahun_selesai"
-                           :min="formPekerjaan.tahun_mulai" :max="currentYear + 5"
-                           placeholder="Kosongkan jika aktif" id="input-tahun-selesai-kerja-<?= $tracer_instance_id ?>">
-                </div>
                 <div class="col-md-4">
-                    <label class="form-label fw-semibold fs-7">Status Kerja <span class="text-danger">*</span></label>
-                    <select class="form-select" v-model="formPekerjaan.status_kerja" id="select-status-kerja-<?= $tracer_instance_id ?>">
-                        <option value="Kontrak">Kontrak</option>
-                        <option value="Tetap">Tetap / Permanent</option>
-                        <option value="Magang">Magang</option>
+                    <label class="form-label fw-bold text-xs text-slate-700 mb-1">Rentang Pendapatan Bulanan</label>
+                    <select class="form-select rounded-xl text-xs" v-model="formPekerjaan.pendapatan_bulanan">
+                        <option value="">-- Pilih Rentang Pendapatan --</option>
+                        <option value="< 3 Juta">< Rp 3.000.000</option>
+                        <option value="3 - 5 Juta">Rp 3.000.000 - Rp 5.000.000</option>
+                        <option value="5 - 10 Juta">Rp 5.000.000 - Rp 10.000.000</option>
+                        <option value="> 10 Juta">> Rp 10.000.000</option>
                     </select>
                 </div>
-                <div class="col-12 d-flex justify-content-end">
-                    <button class="btn btn-success px-4 rounded-3" :disabled="loadingPekerjaan"
-                            @click="submitPekerjaan" id="btn-simpan-pekerjaan-<?= $tracer_instance_id ?>">
-                        <span v-if="loadingPekerjaan" class="spinner-border spinner-border-sm me-2"></span>
-                        <i v-else class="bi bi-floppy me-2"></i>
-                        {{ loadingPekerjaan ? 'Menyimpan...' : 'Simpan Pekerjaan' }}
+                <div class="col-md-4">
+                    <label class="form-label fw-bold text-xs text-slate-700 mb-1">Status Kerja <span class="text-danger">*</span></label>
+                    <select class="form-select rounded-xl text-xs" v-model="formPekerjaan.status_kerja">
+                        <option value="Tetap">Karyawan Tetap</option>
+                        <option value="Kontrak">Karyawan Kontrak</option>
+                        <option value="Magang">Magang / Internship</option>
+                        <option value="Wirausaha">Wirausaha / Freelance</option>
+                    </select>
+                </div>
+
+                <!-- Tahun Mulai & Selesai -->
+                <div class="col-md-6">
+                    <label class="form-label fw-bold text-xs text-slate-700 mb-1">Tahun Mulai Bekerja <span class="text-danger">*</span></label>
+                    <input type="number" class="form-control rounded-xl text-xs" v-model.number="formPekerjaan.tahun_mulai" :min="1990" :max="currentYear + 1">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold text-xs text-slate-700 mb-1">Tahun Selesai</label>
+                    <input type="number" class="form-control rounded-xl text-xs" v-model.number="formPekerjaan.tahun_selesai" :min="formPekerjaan.tahun_mulai" :max="currentYear + 10" placeholder="Kosongkan jika masih aktif bekerja">
+                </div>
+
+                <div class="col-12 d-flex justify-content-end gap-2 pt-2">
+                    <button type="button" class="btn btn-sm btn-light rounded-xl font-bold px-3" @click="resetFormPekerjaanInput()">Reset</button>
+                    <button type="button" class="btn btn-sm btn-success rounded-xl font-bold px-4 flex items-center gap-1.5" :disabled="loadingPekerjaan" @click="submitPekerjaan()">
+                        <span v-if="loadingPekerjaan" class="spinner-border spinner-border-sm"></span>
+                        <i v-else class="bi bi-save"></i> Simpan Riwayat Pekerjaan
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-</div><!-- End Vue mount -->
 
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         MODAL EDIT: RIWAYAT KULIAH
+    ═══════════════════════════════════════════════════════════════════════ -->
+    <div v-if="modalEditKuliah.show" class="modal fade show block" tabindex="-1" style="background: rgba(15, 23, 42, 0.55); z-index: 1060; backdrop-filter: blur(4px);">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 rounded-3xl shadow-2xl bg-white overflow-hidden">
+                <div class="modal-header border-b border-slate-100 px-6 py-4 flex items-center justify-between bg-slate-50">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-primary-50 text-primary flex items-center justify-center shadow-2xs">
+                            <i class="bi bi-pencil-square fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title font-black text-slate-800 text-sm md:text-base">Edit Riwayat Kuliah Alumni</h5>
+                            <p class="text-[11px] text-slate-500 mb-0">Perbarui data perguruan tinggi atau program studi</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" @click="modalEditKuliah.show = false"></button>
+                </div>
+
+                <div class="modal-body px-6 py-4 space-y-3 text-xs">
+                    <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                        <span class="text-[10px] text-slate-400 font-bold uppercase block">Nama Alumni:</span>
+                        <span class="font-bold text-slate-800 text-sm">{{ modalEditKuliah.form.nama_lengkap || modalEditKuliah.form.nama_alumni }}</span>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">Nama Perguruan Tinggi <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control rounded-xl text-xs" v-model="modalEditKuliah.form.nama_kampus">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">Program Studi <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control rounded-xl text-xs" v-model="modalEditKuliah.form.nama_prodi">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">Jalur Masuk</label>
+                            <select class="form-select rounded-xl text-xs" v-model="modalEditKuliah.form.jalur_masuk_id">
+                                <option value="">-- Pilih Jalur --</option>
+                                <option v-for="j in listJalur" :key="j.id" :value="j.id">{{ j.nama_jalur }}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">Fakultas</label>
+                            <input type="text" class="form-control rounded-xl text-xs" v-model="modalEditKuliah.form.fakultas">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">Jenjang</label>
+                            <select class="form-select rounded-xl text-xs" v-model="modalEditKuliah.form.jenjang">
+                                <option value="S1">S1 (Sarjana)</option>
+                                <option value="D4">D4 (Sarjana Terapan)</option>
+                                <option value="D3">D3 (Diploma Tiga)</option>
+                                <option value="S2">S2 (Magister)</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">Tahun Masuk</label>
+                            <input type="number" class="form-control rounded-xl text-xs" v-model.number="modalEditKuliah.form.tahun_masuk">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">Tahun Lulus</label>
+                            <input type="number" class="form-control rounded-xl text-xs" v-model.number="modalEditKuliah.form.tahun_lulus" placeholder="Kosongkan jika aktif">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">Status Kuliah</label>
+                            <select class="form-select rounded-xl text-xs" v-model="modalEditKuliah.form.status_kuliah">
+                                <option value="Aktif">Aktif</option>
+                                <option value="Lulus">Lulus</option>
+                                <option value="Drop">Drop Out</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-t border-slate-100 px-6 py-4 flex items-center justify-end gap-2 bg-slate-50">
+                    <button type="button" class="btn btn-sm btn-light rounded-xl font-bold px-4" @click="modalEditKuliah.show = false">Batal</button>
+                    <button type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-4 flex items-center gap-1.5" :disabled="modalEditKuliah.saving" @click="submitUpdateKuliah()">
+                        <span v-if="modalEditKuliah.saving" class="spinner-border spinner-border-sm"></span>
+                        Simpan Perubahan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         MODAL EDIT: RIWAYAT PEKERJAAN
+    ═══════════════════════════════════════════════════════════════════════ -->
+    <div v-if="modalEditPekerjaan.show" class="modal fade show block" tabindex="-1" style="background: rgba(15, 23, 42, 0.55); z-index: 1060; backdrop-filter: blur(4px);">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 rounded-3xl shadow-2xl bg-white overflow-hidden">
+                <div class="modal-header border-b border-slate-100 px-6 py-4 flex items-center justify-between bg-slate-50">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-2xs">
+                            <i class="bi bi-pencil-square fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title font-black text-slate-800 text-sm md:text-base">Edit Riwayat Pekerjaan Alumni</h5>
+                            <p class="text-[11px] text-slate-500 mb-0">Perbarui data instansi atau jabatan karir</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" @click="modalEditPekerjaan.show = false"></button>
+                </div>
+
+                <div class="modal-body px-6 py-4 space-y-3 text-xs">
+                    <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                        <span class="text-[10px] text-slate-400 font-bold uppercase block">Nama Alumni:</span>
+                        <span class="font-bold text-slate-800 text-sm">{{ modalEditPekerjaan.form.nama_lengkap || modalEditPekerjaan.form.nama_alumni }}</span>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">Nama Perusahaan / Tempat Kerja <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control rounded-xl text-xs" v-model="modalEditPekerjaan.form.nama_perusahaan">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">Posisi / Jabatan <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control rounded-xl text-xs" v-model="modalEditPekerjaan.form.posisi_jabatan">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">Jenis Instansi</label>
+                            <select class="form-select rounded-xl text-xs" v-model="modalEditPekerjaan.form.jenis_instansi">
+                                <option value="Swasta">Perusahaan Swasta / Multinasional</option>
+                                <option value="BUMN">BUMN / BUMD</option>
+                                <option value="Pemerintah">Pemerintah / Instansi Negeri</option>
+                                <option value="Wirausaha">Wirausaha / Bisnis Mandiri</option>
+                                <option value="Lainnya">Lainnya</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">Rentang Pendapatan</label>
+                            <select class="form-select rounded-xl text-xs" v-model="modalEditPekerjaan.form.pendapatan_bulanan">
+                                <option value="">-- Pilih Pendapatan --</option>
+                                <option value="< 3 Juta">< Rp 3.000.000</option>
+                                <option value="3 - 5 Juta">Rp 3.000.000 - Rp 5.000.000</option>
+                                <option value="5 - 10 Juta">Rp 5.000.000 - Rp 10.000.000</option>
+                                <option value="> 10 Juta">> Rp 10.000.000</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">Status Kerja</label>
+                            <select class="form-select rounded-xl text-xs" v-model="modalEditPekerjaan.form.status_kerja">
+                                <option value="Tetap">Karyawan Tetap</option>
+                                <option value="Kontrak">Karyawan Kontrak</option>
+                                <option value="Magang">Magang / Internship</option>
+                                <option value="Wirausaha">Wirausaha / Freelance</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">Tahun Mulai</label>
+                            <input type="number" class="form-control rounded-xl text-xs" v-model.number="modalEditPekerjaan.form.tahun_mulai">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">Tahun Selesai</label>
+                            <input type="number" class="form-control rounded-xl text-xs" v-model.number="modalEditPekerjaan.form.tahun_selesai" placeholder="Kosongkan jika aktif">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-t border-slate-100 px-6 py-4 flex items-center justify-end gap-2 bg-slate-50">
+                    <button type="button" class="btn btn-sm btn-light rounded-xl font-bold px-4" @click="modalEditPekerjaan.show = false">Batal</button>
+                    <button type="button" class="btn btn-sm btn-success rounded-xl font-bold px-4 flex items-center gap-1.5" :disabled="modalEditPekerjaan.saving" @click="submitUpdatePekerjaan()">
+                        <span v-if="modalEditPekerjaan.saving" class="spinner-border spinner-border-sm"></span>
+                        Simpan Perubahan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Vue.js 3 Script Setup -->
 <script>
 {
     const { ref, computed, onMounted } = Vue;
 
     window.VueAppRegistry.register(<?= json_encode($tracer_vue_selector, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>, {
         setup() {
-            const activeTab      = ref(<?= json_encode($tracer_initial_tab, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
-            const currentYear    = ref(new Date().getFullYear());
-            const loadingKuliah  = ref(false);
+            const activeTab        = ref(<?= json_encode($tracer_initial_tab, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
+            const currentYear      = ref(new Date().getFullYear());
+            const loadingKuliah    = ref(false);
             const loadingPekerjaan = ref(false);
-
-            const alertKuliah    = ref({ msg: '', type: 'success' });
-            const alertPekerjaan = ref({ msg: '', type: 'success' });
 
             const riwayatKuliah    = ref([]);
             const riwayatPekerjaan = ref([]);
             const listJalur        = ref([]);
-            const listKampusProdi  = ref([]);
+            const listKampusFlat   = ref([]);
+            const listProdiByKampus = ref({});
+
+            const searchKuliah       = ref('');
+            const filterStatusKuliah = ref('');
+            const searchPekerjaan    = ref('');
+            const filterStatusKerja  = ref('');
 
             const userRole = ref(<?= json_encode($userRole, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
             const isAdmin  = ref(<?= json_encode($isAdmin, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
 
+            // Form Kuliah State
             const formKuliah = ref({
                 is_manual: false,
+                is_kampus_swasta: false,
                 siswa_id: '',
                 nama_alumni: '',
-                kampus_prodi_id: '',
-                jalur_masuk_id: '',
+                nisn: '',
+                kampus_id: '',
+                prodi_id: '',
                 nama_kampus: '',
+                nama_prodi: '',
                 fakultas: '',
-                jurusan: '',
+                jenjang: 'S1',
+                jalur_masuk_id: '',
                 tahun_masuk: new Date().getFullYear(),
                 tahun_lulus: null,
                 status_kuliah: 'Aktif'
             });
 
+            // Form Pekerjaan State
             const formPekerjaan = ref({
                 is_manual: false,
-                siswa_id: '', nama_alumni: '',
-                nama_perusahaan: '', posisi_jabatan: '', pendapatan_bulanan: '',
+                siswa_id: '',
+                nama_alumni: '',
+                nisn: '',
+                nama_perusahaan: '',
+                posisi_jabatan: '',
+                jenis_instansi: 'Swasta',
+                pendapatan_bulanan: '',
                 tahun_mulai: new Date().getFullYear(),
                 tahun_selesai: null,
                 status_kerja: 'Kontrak'
             });
 
+            // Modal Edit State
+            const modalEditKuliah = ref({
+                show: false,
+                saving: false,
+                form: {}
+            });
+
+            const modalEditPekerjaan = ref({
+                show: false,
+                saving: false,
+                form: {}
+            });
+
+            // Autocomplete Siswa
             const showSearchDropdown = ref(false);
             const searchResults = ref([]);
-            const searchingStudents = ref(false);
+            const searchStudentQuery = ref('');
+            const searchStudentQueryPekerjaan = ref('');
             const selectedStudent = ref(null);
+            const selectedStudentPekerjaan = ref(null);
             const activeForm = ref('');
 
             const urlParams = new URLSearchParams(window.location.search);
-            const tenantId  = urlParams.get('tenant_id') || '';
+            const tenantId  = urlParams.get('tenant_id') || <?= json_encode($tenantId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?> || '';
 
-            async function fetchMasterData() {
-                if (userRole.value === 'super_admin' && !tenantId) {
-                    listJalur.value = [];
-                    listKampusProdi.value = [];
-                    return;
+            // Computed Filters
+            const filteredKuliah = computed(() => {
+                let res = riwayatKuliah.value || [];
+                if (filterStatusKuliah.value) {
+                    res = res.filter(r => r.status_kuliah === filterStatusKuliah.value);
                 }
-                try {
-                    const resJalur = await fetch(`<?= $this->getBaseUrl() ?>/api/v1/kampus/jalur?tenant_id=${tenantId}`);
-                    const dataJalur = await resJalur.json();
-                    if(dataJalur.success) listJalur.value = dataJalur.data;
+                if (searchKuliah.value.trim()) {
+                    const q = searchKuliah.value.toLowerCase().trim();
+                    res = res.filter(r => 
+                        (r.nama_lengkap || '').toLowerCase().includes(q) ||
+                        (r.nama_kampus || '').toLowerCase().includes(q) ||
+                        (r.nama_prodi || '').toLowerCase().includes(q) ||
+                        (r.nisn_display || '').includes(q)
+                    );
+                }
+                return res;
+            });
 
-                    const resProdi = await fetch(`<?= $this->getBaseUrl() ?>/api/v1/kampus/all-prodi?tenant_id=${tenantId}`);
-                    const dataProdi = await resProdi.json();
-                    if(dataProdi.success) listKampusProdi.value = dataProdi.data;
+            const filteredPekerjaan = computed(() => {
+                let res = riwayatPekerjaan.value || [];
+                if (filterStatusKerja.value) {
+                    res = res.filter(r => r.status_kerja === filterStatusKerja.value);
+                }
+                if (searchPekerjaan.value.trim()) {
+                    const q = searchPekerjaan.value.toLowerCase().trim();
+                    res = res.filter(r => 
+                        (r.nama_lengkap || '').toLowerCase().includes(q) ||
+                        (r.nama_perusahaan || '').toLowerCase().includes(q) ||
+                        (r.posisi_jabatan || '').toLowerCase().includes(q) ||
+                        (r.nisn_display || '').includes(q)
+                    );
+                }
+                return res;
+            });
+
+            const listProdiBySelectedKampus = computed(() => {
+                if (!formKuliah.value.kampus_id) return [];
+                return listProdiByKampus.value[formKuliah.value.kampus_id] || [];
+            });
+
+            // Master Data API
+            async function fetchMasterData() {
+                try {
+                    const resJalur = await axios.get(`<?= $baseUrl ?>/api/v1/kampus/jalur?tenant_id=${tenantId}`);
+                    if (resJalur.data?.success) listJalur.value = resJalur.data.data;
+
+                    const resKampus = await axios.get(`<?= $baseUrl ?>/api/v1/kampus/master?tenant_id=${tenantId}`);
+                    if (resKampus.data?.success) listKampusFlat.value = resKampus.data.data;
                 } catch (e) {
-                    console.error("Gagal load master kampus:", e);
+                    console.error("Gagal load master data kampus/jalur:", e);
                 }
             }
 
-            async function fetchRiwayat(type) {
-                if (userRole.value === 'super_admin' && !tenantId) {
-                    if (type === 'kuliah') riwayatKuliah.value = [];
-                    else riwayatPekerjaan.value = [];
-                    return;
-                }
-                try {
-                    const res = await fetch(`<?= $this->getBaseUrl() ?>/api/v1/tracer/${type}?tenant_id=${tenantId}`);
-                    const data = await res.json();
-                    if (data.success) {
-                        if (type === 'kuliah') riwayatKuliah.value = data.data;
-                        else riwayatPekerjaan.value = data.data;
+            async function onKampusChange() {
+                const kid = formKuliah.value.kampus_id;
+                formKuliah.value.prodi_id = '';
+                if (!kid) return;
+
+                const k = listKampusFlat.value.find(x => x.id === kid);
+                if (k) formKuliah.value.nama_kampus = k.nama_kampus;
+
+                if (!listProdiByKampus.value[kid]) {
+                    try {
+                        const res = await axios.get(`<?= $baseUrl ?>/api/v1/kampus/prodi?kampus_id=${kid}&tenant_id=${tenantId}`);
+                        if (res.data?.success) {
+                            listProdiByKampus.value[kid] = res.data.data;
+                        }
+                    } catch (e) {
+                        console.error("Gagal load prodi:", e);
                     }
-                } catch (e) { console.error(e); }
+                }
+            }
+
+            function onProdiChange() {
+                const pid = formKuliah.value.prodi_id;
+                const prodis = listProdiBySelectedKampus.value;
+                const p = prodis.find(x => x.id === pid);
+                if (p) {
+                    formKuliah.value.nama_prodi = p.program_studi || p.nama_prodi;
+                    formKuliah.value.jenjang = p.jenjang || 'S1';
+                    if (p.fakultas) formKuliah.value.fakultas = p.fakultas;
+                }
+            }
+
+            function resetKampusSelection() {
+                formKuliah.value.kampus_id = '';
+                formKuliah.value.prodi_id = '';
+                formKuliah.value.nama_kampus = '';
+                formKuliah.value.nama_prodi = '';
+                formKuliah.value.fakultas = '';
+            }
+
+            // Fetch Riwayat API
+            async function fetchRiwayat(type) {
+                if (type === 'kuliah') loadingKuliah.value = true;
+                else loadingPekerjaan.value = true;
+
+                try {
+                    const res = await axios.get(`<?= $baseUrl ?>/api/v1/tracer/${type}?tenant_id=${tenantId}`);
+                    if (res.data?.success) {
+                        if (type === 'kuliah') riwayatKuliah.value = res.data.data;
+                        else riwayatPekerjaan.value = res.data.data;
+                    }
+                } catch (e) {
+                    console.error("Gagal load data " + type, e);
+                } finally {
+                    if (type === 'kuliah') loadingKuliah.value = false;
+                    else loadingPekerjaan.value = false;
+                }
+            }
+
+            function fetchAllData() {
+                fetchRiwayat('kuliah');
+                fetchRiwayat('pekerjaan');
             }
 
             onMounted(() => {
                 fetchMasterData();
-                fetchRiwayat('kuliah');
-                fetchRiwayat('pekerjaan');
+                fetchAllData();
             });
 
-            function syncKampusData() {
-                const p = listKampusProdi.value.find(x => x.prodi_id === formKuliah.value.kampus_prodi_id);
-                if(p) {
-                    formKuliah.value.nama_kampus = p.nama_kampus;
-                    formKuliah.value.jurusan = p.program_studi;
-                    formKuliah.value.fakultas = p.fakultas;
-                } else {
-                    formKuliah.value.nama_kampus = '';
-                    formKuliah.value.jurusan = '';
-                    formKuliah.value.fakultas = '';
-                }
-            }
-
+            // Autocomplete Siswa
             async function searchStudents(formType) {
                 activeForm.value = formType;
-                selectedStudent.value = null;
-                const query = formType === 'kuliah' ? formKuliah.value.nama_alumni : formPekerjaan.value.nama_alumni;
+                const query = formType === 'kuliah' ? searchStudentQuery.value : searchStudentQueryPekerjaan.value;
                 if (query.trim().length < 2) {
                     searchResults.value = [];
                     showSearchDropdown.value = false;
                     return;
                 }
-                searchingStudents.value = true;
                 try {
-                    const res = await fetch(`<?= $this->getBaseUrl() ?>/api/v1/pdss/students/search?q=${encodeURIComponent(query)}&tenant_id=${tenantId}`);
-                    const data = await res.json();
-                    if (data.success) {
-                        searchResults.value = data.data || [];
+                    const res = await axios.get(`<?= $baseUrl ?>/api/v1/pdss/students/search?q=${encodeURIComponent(query)}&tenant_id=${tenantId}`);
+                    if (res.data?.success) {
+                        searchResults.value = res.data.data || [];
                         showSearchDropdown.value = true;
                     }
                 } catch (e) {
                     console.error(e);
-                } finally {
-                    searchingStudents.value = false;
                 }
             }
 
             function selectStudent(student, formType) {
-                selectedStudent.value = student;
                 if (formType === 'kuliah') {
-                    formKuliah.value.nama_alumni = student.nama_lengkap;
+                    selectedStudent.value = student;
                     formKuliah.value.siswa_id = student.id;
+                    formKuliah.value.nama_alumni = student.nama_lengkap;
+                    formKuliah.value.nisn = student.nisn || '';
+                    searchStudentQuery.value = student.nama_lengkap;
                 } else {
-                    formPekerjaan.value.nama_alumni = student.nama_lengkap;
+                    selectedStudentPekerjaan.value = student;
                     formPekerjaan.value.siswa_id = student.id;
+                    formPekerjaan.value.nama_alumni = student.nama_lengkap;
+                    formPekerjaan.value.nisn = student.nisn || '';
+                    searchStudentQueryPekerjaan.value = student.nama_lengkap;
                 }
                 showSearchDropdown.value = false;
                 searchResults.value = [];
             }
 
-            function resetKuliah() {
+            function resetFormKuliahInput() {
                 formKuliah.value = {
                     is_manual: formKuliah.value.is_manual,
-                    siswa_id: '', nama_alumni: '',
-                    kampus_prodi_id: '', jalur_masuk_id: '',
-                    nama_kampus: '', fakultas: '', jurusan: '',
+                    is_kampus_swasta: formKuliah.value.is_kampus_swasta,
+                    siswa_id: '',
+                    nama_alumni: '',
+                    nisn: '',
+                    kampus_id: '',
+                    prodi_id: '',
+                    nama_kampus: '',
+                    nama_prodi: '',
+                    fakultas: '',
+                    jenjang: 'S1',
+                    jalur_masuk_id: '',
                     tahun_masuk: new Date().getFullYear(),
-                    tahun_lulus: null, status_kuliah: 'Aktif'
+                    tahun_lulus: null,
+                    status_kuliah: 'Aktif'
                 };
-                if (activeForm.value === 'kuliah') selectedStudent.value = null;
+                selectedStudent.value = null;
+                searchStudentQuery.value = '';
             }
 
-            function resetPekerjaan() {
+            function resetFormPekerjaanInput() {
                 formPekerjaan.value = {
                     is_manual: formPekerjaan.value.is_manual,
-                    siswa_id: '', nama_alumni: '',
-                    nama_perusahaan: '', posisi_jabatan: '', pendapatan_bulanan: '',
+                    siswa_id: '',
+                    nama_alumni: '',
+                    nisn: '',
+                    nama_perusahaan: '',
+                    posisi_jabatan: '',
+                    jenis_instansi: 'Swasta',
+                    pendapatan_bulanan: '',
                     tahun_mulai: new Date().getFullYear(),
-                    tahun_selesai: null, status_kerja: 'Kontrak'
+                    tahun_selesai: null,
+                    status_kerja: 'Kontrak'
                 };
-                if (activeForm.value === 'pekerjaan') selectedStudent.value = null;
+                selectedStudentPekerjaan.value = null;
+                searchStudentQueryPekerjaan.value = '';
             }
 
+            // Submit Kuliah (Create)
             async function submitKuliah() {
                 if (isAdmin.value && !formKuliah.value.is_manual && !formKuliah.value.siswa_id) {
-                    alertKuliah.value = { msg: 'Silakan cari dan pilih alumni (siswa) terlebih dahulu. Atau centang "Input Alumni Luar Sistem".', type: 'danger' };
+                    Swal.fire({ icon: 'warning', title: 'Pilih Siswa', text: 'Silakan cari dan pilih siswa terdaftar, atau centang "Input Alumni Luar Sistem".' });
+                    return;
+                }
+                if (formKuliah.value.is_manual && !formKuliah.value.nama_alumni.trim()) {
+                    Swal.fire({ icon: 'warning', title: 'Nama Alumni Wajib', text: 'Silakan isi nama lengkap alumni luar sistem.' });
                     return;
                 }
                 if (!formKuliah.value.nama_kampus.trim()) {
-                    alertKuliah.value = { msg: 'Nama kampus wajib diisi.', type: 'danger' };
+                    Swal.fire({ icon: 'warning', title: 'Kampus Wajib', text: 'Silakan pilih kampus atau ketik nama kampus.' });
                     return;
                 }
+
                 loadingKuliah.value = true;
-                alertKuliah.value   = { msg: '', type: 'success' };
                 try {
-                    const res = await fetch(`<?= $this->getBaseUrl() ?>/api/v1/tracer/kuliah?tenant_id=${tenantId}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                        body: JSON.stringify(formKuliah.value)
-                    });
-                    const data = await res.json();
-                    if (res.ok && data.success) {
-                        alertKuliah.value = { msg: '✅ ' + data.message, type: 'success' };
+                    const res = await axios.post(`<?= $baseUrl ?>/api/v1/tracer/kuliah?tenant_id=${tenantId}`, formKuliah.value);
+                    if (res.data?.success) {
+                        Swal.fire({ icon: 'success', title: 'Berhasil Disimpan', text: res.data.message, timer: 2000, showConfirmButton: false });
                         await fetchRiwayat('kuliah');
-                        resetKuliah();
+                        resetFormKuliahInput();
                     } else {
-                        alertKuliah.value = { msg: '❌ ' + (data.error || 'Gagal menyimpan.'), type: 'danger' };
+                        Swal.fire({ icon: 'error', title: 'Gagal Menyimpan', text: res.data.error || 'Terjadi kesalahan sistem.' });
                     }
-                } catch (err) {
-                    alertKuliah.value = { msg: '❌ Koneksi gagal. Coba lagi.', type: 'danger' };
+                } catch (e) {
+                    Swal.fire({ icon: 'error', title: 'Error Koneksi', text: e.response?.data?.error || e.message });
                 } finally {
                     loadingKuliah.value = false;
                 }
             }
 
-            async function submitPekerjaan() {
-                if (isAdmin.value && !formPekerjaan.value.is_manual && !formPekerjaan.value.siswa_id) {
-                    alertPekerjaan.value = { msg: 'Silakan cari dan pilih alumni (siswa) terlebih dahulu. Atau centang "Input Alumni Luar Sistem".', type: 'danger' };
+            // Edit & Update Kuliah
+            function openEditKuliah(item) {
+                modalEditKuliah.value = {
+                    show: true,
+                    saving: false,
+                    form: {
+                        id: item.id,
+                        nama_lengkap: item.nama_lengkap,
+                        nama_alumni: item.nama_alumni,
+                        nisn: item.nisn,
+                        kampus_id: item.kampus_id || '',
+                        prodi_id: item.prodi_id || '',
+                        nama_kampus: item.nama_kampus_display || item.nama_kampus || '',
+                        nama_prodi: item.nama_prodi_display || item.nama_prodi || item.jurusan || '',
+                        fakultas: item.fakultas || '',
+                        jenjang: item.jenjang || 'S1',
+                        jalur_masuk_id: item.jalur_masuk_id || '',
+                        tahun_masuk: item.tahun_masuk,
+                        tahun_lulus: item.tahun_lulus,
+                        status_kuliah: item.status_kuliah || 'Aktif'
+                    }
+                };
+            }
+
+            async function submitUpdateKuliah() {
+                if (!modalEditKuliah.value.form.nama_kampus.trim()) {
+                    Swal.fire({ icon: 'warning', title: 'Nama Kampus Wajib', text: 'Nama perguruan tinggi tidak boleh kosong.' });
                     return;
                 }
-                if (isAdmin.value && formPekerjaan.value.is_manual && !formPekerjaan.value.nama_alumni.trim()) {
-                    alertPekerjaan.value = { msg: 'Nama alumni wajib diisi untuk input luar sistem.', type: 'danger' };
+                modalEditKuliah.value.saving = true;
+                try {
+                    const res = await axios.post(`<?= $baseUrl ?>/api/v1/tracer/kuliah/update?tenant_id=${tenantId}`, modalEditKuliah.value.form);
+                    if (res.data?.success) {
+                        modalEditKuliah.value.show = false;
+                        Swal.fire({ icon: 'success', title: 'Berhasil Diperbarui', text: res.data.message, timer: 2000, showConfirmButton: false });
+                        await fetchRiwayat('kuliah');
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Gagal', text: res.data.error || 'Gagal update data.' });
+                    }
+                } catch (e) {
+                    Swal.fire({ icon: 'error', title: 'Error', text: e.response?.data?.error || e.message });
+                } finally {
+                    modalEditKuliah.value.saving = false;
+                }
+            }
+
+            // Hapus Kuliah
+            async function hapusKuliah(id, nama) {
+                const confirm = await Swal.fire({
+                    title: 'Hapus Riwayat Kuliah?',
+                    text: `Apakah Anda yakin ingin menghapus data kuliah untuk ${nama || 'alumni ini'}?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc2626',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: 'Ya, Hapus Data',
+                    cancelButtonText: 'Batal'
+                });
+
+                if (!confirm.isConfirmed) return;
+
+                try {
+                    const res = await axios.post(`<?= $baseUrl ?>/api/v1/tracer/kuliah/delete?tenant_id=${tenantId}`, { id: id });
+                    if (res.data?.success) {
+                        Swal.fire({ icon: 'success', title: 'Terhapus', text: res.data.message, timer: 1500, showConfirmButton: false });
+                        await fetchRiwayat('kuliah');
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Gagal', text: res.data.error });
+                    }
+                } catch (e) {
+                    Swal.fire({ icon: 'error', title: 'Error', text: e.response?.data?.error || e.message });
+                }
+            }
+
+            // Submit Pekerjaan (Create)
+            async function submitPekerjaan() {
+                if (isAdmin.value && !formPekerjaan.value.is_manual && !formPekerjaan.value.siswa_id) {
+                    Swal.fire({ icon: 'warning', title: 'Pilih Siswa', text: 'Silakan cari dan pilih siswa terdaftar, atau centang "Input Alumni Luar Sistem".' });
+                    return;
+                }
+                if (formPekerjaan.value.is_manual && !formPekerjaan.value.nama_alumni.trim()) {
+                    Swal.fire({ icon: 'warning', title: 'Nama Alumni Wajib', text: 'Silakan isi nama lengkap alumni luar sistem.' });
                     return;
                 }
                 if (!formPekerjaan.value.nama_perusahaan.trim() || !formPekerjaan.value.posisi_jabatan.trim()) {
-                    alertPekerjaan.value = { msg: 'Nama perusahaan dan posisi wajib diisi.', type: 'danger' };
+                    Swal.fire({ icon: 'warning', title: 'Data Belum Lengkap', text: 'Nama perusahaan dan posisi/jabatan wajib diisi.' });
                     return;
                 }
+
                 loadingPekerjaan.value = true;
-                alertPekerjaan.value   = { msg: '', type: 'success' };
                 try {
-                    const res = await fetch(`<?= $this->getBaseUrl() ?>/api/v1/tracer/pekerjaan?tenant_id=${tenantId}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                        body: JSON.stringify(formPekerjaan.value)
-                    });
-                    const data = await res.json();
-                    if (res.ok && data.success) {
-                        alertPekerjaan.value = { msg: '✅ ' + data.message, type: 'success' };
+                    const res = await axios.post(`<?= $baseUrl ?>/api/v1/tracer/pekerjaan?tenant_id=${tenantId}`, formPekerjaan.value);
+                    if (res.data?.success) {
+                        Swal.fire({ icon: 'success', title: 'Berhasil Disimpan', text: res.data.message, timer: 2000, showConfirmButton: false });
                         await fetchRiwayat('pekerjaan');
-                        resetPekerjaan();
+                        resetFormPekerjaanInput();
                     } else {
-                        alertPekerjaan.value = { msg: '❌ ' + (data.error || 'Gagal menyimpan.'), type: 'danger' };
+                        Swal.fire({ icon: 'error', title: 'Gagal Menyimpan', text: res.data.error || 'Terjadi kesalahan sistem.' });
                     }
-                } catch (err) {
-                    alertPekerjaan.value = { msg: '❌ Koneksi gagal. Coba lagi.', type: 'danger' };
+                } catch (e) {
+                    Swal.fire({ icon: 'error', title: 'Error Koneksi', text: e.response?.data?.error || e.message });
                 } finally {
                     loadingPekerjaan.value = false;
                 }
             }
 
-            async function hapusKuliah(id) {
-                if (!confirm('Hapus riwayat kuliah ini? Tindakan tidak dapat dibatalkan.')) return;
+            // Edit & Update Pekerjaan
+            function openEditPekerjaan(item) {
+                modalEditPekerjaan.value = {
+                    show: true,
+                    saving: false,
+                    form: {
+                        id: item.id,
+                        nama_lengkap: item.nama_lengkap,
+                        nama_alumni: item.nama_alumni,
+                        nisn: item.nisn,
+                        nama_perusahaan: item.nama_perusahaan,
+                        posisi_jabatan: item.posisi_jabatan,
+                        jenis_instansi: item.jenis_instansi || 'Swasta',
+                        pendapatan_bulanan: item.pendapatan_bulanan || '',
+                        tahun_mulai: item.tahun_mulai,
+                        tahun_selesai: item.tahun_selesai,
+                        status_kerja: item.status_kerja || 'Kontrak'
+                    }
+                };
+            }
+
+            async function submitUpdatePekerjaan() {
+                if (!modalEditPekerjaan.value.form.nama_perusahaan.trim() || !modalEditPekerjaan.value.form.posisi_jabatan.trim()) {
+                    Swal.fire({ icon: 'warning', title: 'Data Wajib', text: 'Nama perusahaan dan posisi/jabatan tidak boleh kosong.' });
+                    return;
+                }
+                modalEditPekerjaan.value.saving = true;
                 try {
-                    const res = await fetch(`<?= $this->getBaseUrl() ?>/api/v1/tracer/kuliah/delete?id=${id}&tenant_id=${tenantId}`, {
-                        method: 'DELETE',
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                    });
-                    const data = await res.json();
-                    if (res.ok && data.success) {
-                        riwayatKuliah.value = riwayatKuliah.value.filter(k => k.id !== id);
-                        alertKuliah.value = { msg: '✅ Data berhasil dihapus.', type: 'success' };
+                    const res = await axios.post(`<?= $baseUrl ?>/api/v1/tracer/pekerjaan/update?tenant_id=${tenantId}`, modalEditPekerjaan.value.form);
+                    if (res.data?.success) {
+                        modalEditPekerjaan.value.show = false;
+                        Swal.fire({ icon: 'success', title: 'Berhasil Diperbarui', text: res.data.message, timer: 2000, showConfirmButton: false });
+                        await fetchRiwayat('pekerjaan');
                     } else {
-                        alert(data.error || 'Gagal menghapus data.');
+                        Swal.fire({ icon: 'error', title: 'Gagal', text: res.data.error || 'Gagal update data.' });
                     }
                 } catch (e) {
-                    alert('Koneksi gagal. Coba lagi.');
+                    Swal.fire({ icon: 'error', title: 'Error', text: e.response?.data?.error || e.message });
+                } finally {
+                    modalEditPekerjaan.value.saving = false;
                 }
             }
 
-            async function hapusPekerjaan(id) {
-                if (!confirm('Hapus riwayat pekerjaan ini? Tindakan tidak dapat dibatalkan.')) return;
+            // Hapus Pekerjaan
+            async function hapusPekerjaan(id, nama) {
+                const confirm = await Swal.fire({
+                    title: 'Hapus Riwayat Pekerjaan?',
+                    text: `Apakah Anda yakin ingin menghapus data pekerjaan untuk ${nama || 'alumni ini'}?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc2626',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: 'Ya, Hapus Data',
+                    cancelButtonText: 'Batal'
+                });
+
+                if (!confirm.isConfirmed) return;
+
                 try {
-                    const res = await fetch(`<?= $this->getBaseUrl() ?>/api/v1/tracer/pekerjaan/delete?id=${id}&tenant_id=${tenantId}`, {
-                        method: 'DELETE',
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                    });
-                    const data = await res.json();
-                    if (res.ok && data.success) {
-                        riwayatPekerjaan.value = riwayatPekerjaan.value.filter(p => p.id !== id);
-                        alertPekerjaan.value = { msg: '✅ Data berhasil dihapus.', type: 'success' };
+                    const res = await axios.post(`<?= $baseUrl ?>/api/v1/tracer/pekerjaan/delete?tenant_id=${tenantId}`, { id: id });
+                    if (res.data?.success) {
+                        Swal.fire({ icon: 'success', title: 'Terhapus', text: res.data.message, timer: 1500, showConfirmButton: false });
+                        await fetchRiwayat('pekerjaan');
                     } else {
-                        alert(data.error || 'Gagal menghapus data.');
+                        Swal.fire({ icon: 'error', title: 'Gagal', text: res.data.error });
                     }
                 } catch (e) {
-                    alert('Koneksi gagal. Coba lagi.');
+                    Swal.fire({ icon: 'error', title: 'Error', text: e.response?.data?.error || e.message });
                 }
             }
 
             return {
-                activeTab, currentYear, isAdmin,
-                loadingKuliah, loadingPekerjaan,
-                alertKuliah, alertPekerjaan,
-                riwayatKuliah, riwayatPekerjaan,
-                formKuliah, formPekerjaan,
-                submitKuliah, submitPekerjaan,
-                hapusKuliah, hapusPekerjaan,
-                userRole, showSearchDropdown, searchResults, searchingStudents, selectedStudent, activeForm,
-                searchStudents, selectStudent,
-                listJalur, listKampusProdi, syncKampusData, resetKuliah, resetPekerjaan
+                activeTab,
+                currentYear,
+                loadingKuliah,
+                loadingPekerjaan,
+                riwayatKuliah,
+                riwayatPekerjaan,
+                listJalur,
+                listKampusFlat,
+                listProdiBySelectedKampus,
+                searchKuliah,
+                filterStatusKuliah,
+                searchPekerjaan,
+                filterStatusKerja,
+                userRole,
+                isAdmin,
+                formKuliah,
+                formPekerjaan,
+                modalEditKuliah,
+                modalEditPekerjaan,
+                showSearchDropdown,
+                searchResults,
+                searchStudentQuery,
+                searchStudentQueryPekerjaan,
+                selectedStudent,
+                selectedStudentPekerjaan,
+                activeForm,
+                filteredKuliah,
+                filteredPekerjaan,
+                onKampusChange,
+                onProdiChange,
+                resetKampusSelection,
+                fetchAllData,
+                searchStudents,
+                selectStudent,
+                resetFormKuliahInput,
+                resetFormPekerjaanInput,
+                submitKuliah,
+                openEditKuliah,
+                submitUpdateKuliah,
+                hapusKuliah,
+                submitPekerjaan,
+                openEditPekerjaan,
+                submitUpdatePekerjaan,
+                hapusPekerjaan
             };
         }
     });

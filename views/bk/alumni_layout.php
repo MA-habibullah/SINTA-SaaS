@@ -117,7 +117,10 @@ $tenantId   = $tenant_id ?? '';
                 <div class="card-body p-4">
                     <?php 
                         $allowed_pdss_tabs = ['tracking']; 
-                        include __DIR__ . '/../pdss_index.php'; 
+                        $hide_pdss_tabs    = true;
+                        $is_sub_module     = true;
+                        include __DIR__ . '/../pdss/pdss_index.php'; 
+                        unset($allowed_pdss_tabs, $hide_pdss_tabs, $is_sub_module);
                     ?>
                 </div>
             </div>
@@ -129,7 +132,7 @@ $tenantId   = $tenant_id ?? '';
             <?php
                 $active_tracer_tab = 'kuliah';
                 $is_sub_module     = true;
-                include __DIR__ . '/../tracer_study.php';
+                include __DIR__ . '/../alumni/tracer_study.php';
                 unset($active_tracer_tab, $is_sub_module);
             ?>
         </div>
@@ -139,7 +142,7 @@ $tenantId   = $tenant_id ?? '';
             <?php
                 $active_tracer_tab = 'pekerjaan';
                 $is_sub_module     = true;
-                include __DIR__ . '/../tracer_study.php';
+                include __DIR__ . '/../alumni/tracer_study.php';
                 unset($active_tracer_tab, $is_sub_module);
             ?>
         </div>
