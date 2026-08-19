@@ -384,17 +384,17 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
     <!-- ═══════════════════════════════════════════════════════════════════════
          MODAL POP-UP: FORM RIWAYAT KULIAH (TAMBAH & EDIT)
     ═══════════════════════════════════════════════════════════════════════ -->
-    <div v-if="modalFormKuliah.show" class="modal fade show block" tabindex="-1" style="background: rgba(15, 23, 42, 0.55); z-index: 1060; backdrop-filter: blur(4px);">
+    <div v-if="modalFormKuliah.show" class="modal fade show block" tabindex="-1" style="background: rgba(15, 23, 42, 0.6); z-index: 1060; backdrop-filter: blur(6px);">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 rounded-3xl shadow-2xl bg-white overflow-hidden">
-                <!-- Header -->
-                <div class="modal-header border-b border-slate-100 px-6 py-4 flex items-center justify-between bg-slate-50">
-                    <div class="flex items-center gap-2.5">
-                        <div class="w-9 h-9 rounded-xl bg-primary-50 text-primary flex items-center justify-center shadow-2xs">
+                <!-- Header Modal -->
+                <div class="modal-header border-b border-slate-100 px-6 py-4 flex items-center justify-between bg-gradient-to-r from-slate-50 to-indigo-50/40">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-primary text-white flex items-center justify-center shadow-md flex-shrink-0">
                             <i class="bi" :class="modalFormKuliah.isEdit ? 'bi-pencil-square fs-5' : 'bi-mortarboard-fill fs-5'"></i>
                         </div>
                         <div>
-                            <h5 class="modal-title font-black text-slate-800 text-sm md:text-base">
+                            <h5 class="modal-title font-black text-slate-800 text-sm md:text-base mb-0">
                                 {{ modalFormKuliah.isEdit ? 'Edit Riwayat Kuliah Alumni' : 'Tambah Riwayat Kuliah Baru' }}
                             </h5>
                             <p class="text-[11px] text-slate-500 mb-0">
@@ -405,155 +405,215 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
                     <button type="button" class="btn-close" @click="modalFormKuliah.show = false"></button>
                 </div>
 
-                <!-- Body Form -->
-                <div class="modal-body px-6 py-4 space-y-3 text-xs">
-                    <!-- Toggle Alumni Luar Sistem (Hanya saat Tambah Baru) -->
-                    <div v-if="isAdmin && !modalFormKuliah.isEdit" class="d-flex justify-content-end mb-2">
-                        <div class="form-check form-switch m-0 d-flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
-                            <input class="form-check-input mt-0 cursor-pointer" type="checkbox" id="modalToggleManualKuliah" v-model="modalFormKuliah.form.is_manual" @change="resetModalKuliahStudentSelection()">
-                            <label class="form-check-label text-xs font-bold text-slate-700 cursor-pointer mb-0" for="modalToggleManualKuliah">
-                                Input Alumni Luar Sistem (Manual)
-                            </label>
+                <!-- Body Modal Form -->
+                <div class="modal-body px-6 py-4 space-y-4 text-xs">
+                    
+                    <!-- 1. IDENTITAS ALUMNI SECTION -->
+                    <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2.5">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[11px] font-black uppercase text-slate-500 tracking-wider flex items-center gap-1.5">
+                                <i class="bi bi-person-badge-fill text-primary"></i> 1. Identitas Alumni
+                            </span>
+                            <span v-if="modalFormKuliah.isEdit" class="badge bg-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded-md text-[10px]">
+                                Mode Edit
+                            </span>
                         </div>
-                    </div>
 
-                    <!-- Display Alumni Name (Mode Edit) -->
-                    <div v-if="modalFormKuliah.isEdit" class="p-3 bg-slate-50 rounded-2xl border border-slate-200">
-                        <span class="text-[10px] text-slate-400 font-bold uppercase block">Nama Alumni:</span>
-                        <span class="font-bold text-slate-800 text-sm">{{ modalFormKuliah.form.nama_lengkap || modalFormKuliah.form.nama_alumni }}</span>
-                    </div>
+                        <!-- Segmented Pill Selector for Alumni Source (Hanya saat Tambah Baru) -->
+                        <div v-if="isAdmin && !modalFormKuliah.isEdit">
+                            <div class="d-flex gap-2 p-1 bg-white rounded-xl border border-slate-200 shadow-2xs mb-2.5">
+                                <button type="button" 
+                                        class="btn btn-sm py-1.5 px-3 rounded-lg font-bold text-xs flex-1 flex items-center justify-center gap-2 transition-all border-0"
+                                        :class="!modalFormKuliah.form.is_manual ? 'bg-primary text-white shadow-xs' : 'text-slate-600 hover:text-slate-800 bg-transparent'"
+                                        @click="modalFormKuliah.form.is_manual = false; resetModalKuliahStudentSelection()">
+                                    <i class="bi bi-database-check"></i>
+                                    <span>Alumni Terdaftar di Sistem</span>
+                                </button>
+                                <button type="button" 
+                                        class="btn btn-sm py-1.5 px-3 rounded-lg font-bold text-xs flex-1 flex items-center justify-center gap-2 transition-all border-0"
+                                        :class="modalFormKuliah.form.is_manual ? 'bg-amber-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-800 bg-transparent'"
+                                        @click="modalFormKuliah.form.is_manual = true; resetModalKuliahStudentSelection()">
+                                    <i class="bi bi-pencil-square"></i>
+                                    <span>Alumni Luar Sistem (Manual)</span>
+                                </button>
+                            </div>
+                        </div>
 
-                    <!-- Pemilihan Siswa (Mode Tambah Baru) -->
-                    <div class="row g-3" v-if="!modalFormKuliah.isEdit && isAdmin">
-                        <div class="col-md-12">
-                            <div v-if="!modalFormKuliah.form.is_manual">
-                                <label class="form-label fw-bold text-xs text-slate-700 mb-1">Cari Alumni Terdaftar di Sistem <span class="text-danger">*</span></label>
-                                <div class="position-relative">
-                                    <input type="text" class="form-control rounded-xl text-xs" v-model="searchStudentQuery"
+                        <!-- Display Alumni Name (Mode Edit) -->
+                        <div v-if="modalFormKuliah.isEdit" class="bg-white p-3 rounded-xl border border-slate-200 d-flex items-center justify-between">
+                            <div>
+                                <div class="font-bold text-slate-800 text-sm">{{ modalFormKuliah.form.nama_lengkap || modalFormKuliah.form.nama_alumni }}</div>
+                                <div class="text-[10px] text-slate-400 font-mono">NISN: {{ modalFormKuliah.form.nisn || '—' }}</div>
+                            </div>
+                            <span v-if="modalFormKuliah.form.is_manual" class="badge bg-amber-50 text-amber-700 border border-amber-200 text-[10px] px-2 py-1 rounded-lg font-bold">
+                                Alumni Luar Sistem
+                            </span>
+                            <span v-else class="badge bg-indigo-50 text-indigo-700 border border-indigo-100 text-[10px] px-2 py-1 rounded-lg font-bold">
+                                Siswa Sistem
+                            </span>
+                        </div>
+
+                        <!-- Pemilihan Siswa Terdaftar (Mode Tambah) -->
+                        <div v-if="!modalFormKuliah.isEdit && !modalFormKuliah.form.is_manual && isAdmin">
+                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">Cari Alumni di Database Siswa <span class="text-danger">*</span></label>
+                            <div class="position-relative">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-white border-slate-200 text-slate-400"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control rounded-r-xl text-xs border-slate-200" v-model="searchStudentQuery"
                                            @input="searchStudents('kuliah')" @focus="showSearchDropdown = true; activeForm = 'kuliah'"
-                                           placeholder="Ketik nama lengkap atau NISN siswa lulus..." autocomplete="off">
-                                    <div v-if="showSearchDropdown && activeForm === 'kuliah' && searchResults.length > 0" 
-                                         class="dropdown-menu show w-100 position-absolute overflow-auto shadow-lg rounded-xl border-slate-200 mt-1" style="max-height: 200px; z-index: 9999;">
-                                        <button type="button" class="dropdown-item py-2 px-3 border-bottom text-xs" v-for="s in searchResults" :key="s.id" @mousedown.prevent="selectStudentForModal(s, 'kuliah')">
-                                            <div class="fw-bold text-slate-800">{{ s.nama_lengkap }}</div>
-                                            <div class="text-[10px] text-slate-400">NISN: {{ s.nisn || '-' }} | Kelas: {{ s.kelas_saat_ini || '-' }} ({{ s.jurusan || '-' }})</div>
-                                        </button>
-                                    </div>
+                                           placeholder="Ketik nama lengkap atau NISN siswa..." autocomplete="off">
                                 </div>
-                                <div v-if="selectedStudent && activeForm === 'kuliah'" class="mt-2 p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl d-flex align-items-center justify-content-between">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <i class="bi bi-check-circle-fill text-emerald-600 fs-6"></i>
-                                        <div>
-                                            <span class="d-block fw-bold text-emerald-900 text-xs">{{ selectedStudent.nama_lengkap }}</span>
-                                            <span class="text-emerald-700 text-[10px]">NISN: {{ selectedStudent.nisn || '-' }} | Siswa Sistem</span>
-                                        </div>
-                                    </div>
-                                    <button type="button" class="btn btn-xs btn-link text-emerald-800 font-bold p-0 text-decoration-none" @click="selectedStudent = null; modalFormKuliah.form.siswa_id = ''">Ganti</button>
+                                <div v-if="showSearchDropdown && activeForm === 'kuliah' && searchResults.length > 0" 
+                                     class="dropdown-menu show w-100 position-absolute overflow-auto shadow-xl rounded-2xl border-slate-200 mt-1.5 p-1 bg-white" style="max-height: 200px; z-index: 9999;">
+                                    <button type="button" class="dropdown-item py-2 px-3 rounded-xl border-0 text-xs hover:bg-indigo-50 text-left transition" 
+                                            v-for="s in searchResults" :key="s.id" @mousedown.prevent="selectStudentForModal(s, 'kuliah')">
+                                        <div class="fw-bold text-slate-800">{{ s.nama_lengkap }}</div>
+                                        <div class="text-[10px] text-slate-400">NISN: {{ s.nisn || '-' }} | Kelas: {{ s.kelas_saat_ini || '-' }} ({{ s.jurusan || '-' }})</div>
+                                    </button>
                                 </div>
                             </div>
-                            <div v-else class="row g-2">
-                                <div class="col-md-7">
-                                    <label class="form-label fw-bold text-xs text-slate-700 mb-1">Nama Lengkap Alumni Luar Sistem <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control rounded-xl text-xs" v-model="modalFormKuliah.form.nama_alumni" placeholder="Contoh: Budi Santoso" autocomplete="off">
+                            <div v-if="selectedStudent && activeForm === 'kuliah'" class="mt-2 p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-check-circle-fill text-emerald-600 fs-5"></i>
+                                    <div>
+                                        <span class="d-block fw-bold text-emerald-900 text-xs">{{ selectedStudent.nama_lengkap }}</span>
+                                        <span class="text-emerald-700 text-[10px]">NISN: {{ selectedStudent.nisn || '-' }} | Terpilih dari database siswa</span>
+                                    </div>
                                 </div>
-                                <div class="col-md-5">
-                                    <label class="form-label fw-bold text-xs text-slate-700 mb-1">NISN / NIS (Opsional)</label>
-                                    <input type="text" class="form-control rounded-xl text-xs" v-model="modalFormKuliah.form.nisn" placeholder="Nomor Induk Siswa..." autocomplete="off">
-                                </div>
+                                <button type="button" class="btn btn-xs btn-outline-emerald font-bold px-2 py-1 rounded-lg" @click="selectedStudent = null; modalFormKuliah.form.siswa_id = ''">Ganti</button>
+                            </div>
+                        </div>
+
+                        <!-- Input Manual Alumni Luar Sistem (Mode Tambah) -->
+                        <div v-if="!modalFormKuliah.isEdit && modalFormKuliah.form.is_manual && isAdmin" class="row g-2">
+                            <div class="col-md-7">
+                                <label class="form-label fw-bold text-xs text-slate-700 mb-1">Nama Lengkap Alumni <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control rounded-xl text-xs border-slate-200" v-model="modalFormKuliah.form.nama_alumni" placeholder="Contoh: Budi Santoso" autocomplete="off">
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label fw-bold text-xs text-slate-700 mb-1">NISN / NIS (Opsional)</label>
+                                <input type="text" class="form-control rounded-xl text-xs border-slate-200" v-model="modalFormKuliah.form.nisn" placeholder="Nomor Induk Siswa..." autocomplete="off">
                             </div>
                         </div>
                     </div>
 
-                    <!-- Kampus Selection & Manual Mode -->
-                    <div class="row g-3">
-                        <div class="col-md-12">
-                            <div class="d-flex align-items-center justify-content-between mb-1">
-                                <label class="form-label fw-bold text-xs text-slate-700 mb-0">Pilihan Kampus & Perguruan Tinggi <span class="text-danger">*</span></label>
-                                <div class="form-check form-switch m-0 d-flex items-center gap-1.5">
-                                    <input class="form-check-input mt-0 cursor-pointer" type="checkbox" id="modalToggleManualKampus" v-model="modalFormKuliah.form.is_kampus_swasta" @change="resetModalKampusSelection()">
-                                    <label class="form-check-label text-[11px] font-bold text-slate-600 cursor-pointer mb-0" for="modalToggleManualKampus">
-                                        Input Kampus Swasta / Manual
-                                    </label>
-                                </div>
+
+                    <!-- 2. PERGURUAN TINGGI & PROGRAM STUDI SECTION -->
+                    <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2.5">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[11px] font-black uppercase text-slate-500 tracking-wider flex items-center gap-1.5">
+                                <i class="bi bi-buildings text-primary"></i> 2. Perguruan Tinggi & Program Studi
+                            </span>
+                        </div>
+
+                        <!-- Segmented Pill Selector for Kampus Type -->
+                        <div class="d-flex gap-2 p-1 bg-white rounded-xl border border-slate-200 shadow-2xs mb-2.5">
+                            <button type="button" 
+                                    class="btn btn-sm py-1.5 px-3 rounded-lg font-bold text-xs flex-1 flex items-center justify-center gap-2 transition-all border-0"
+                                    :class="!modalFormKuliah.form.is_kampus_swasta ? 'bg-primary text-white shadow-xs' : 'text-slate-600 hover:text-slate-800 bg-transparent'"
+                                    @click="modalFormKuliah.form.is_kampus_swasta = false; resetModalKampusSelection()">
+                                <i class="bi bi-building-check"></i>
+                                <span>Pilih dari Master PDSS / PTN</span>
+                            </button>
+                            <button type="button" 
+                                    class="btn btn-sm py-1.5 px-3 rounded-lg font-bold text-xs flex-1 flex items-center justify-center gap-2 transition-all border-0"
+                                    :class="modalFormKuliah.form.is_kampus_swasta ? 'bg-amber-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-800 bg-transparent'"
+                                    @click="modalFormKuliah.form.is_kampus_swasta = true; resetModalKampusSelection()">
+                                <i class="bi bi-input-cursor-text"></i>
+                                <span>Ketik Manual (Swasta / Luar Negeri)</span>
+                            </button>
+                        </div>
+
+                        <!-- Dropdown PDSS Master Kampus -->
+                        <div v-if="!modalFormKuliah.form.is_kampus_swasta" class="row g-2">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-xs text-slate-700 mb-1">Perguruan Tinggi <span class="text-danger">*</span></label>
+                                <select class="form-select rounded-xl text-xs border-slate-200" v-model="modalFormKuliah.form.kampus_id" @change="onModalKampusChange()">
+                                    <option value="">-- Pilih Perguruan Tinggi (PDSS) --</option>
+                                    <option v-for="k in listKampusFlat" :key="k.id" :value="k.id">
+                                        {{ k.nama_kampus }} ({{ k.jenis_kampus || 'PTN' }})
+                                    </option>
+                                </select>
                             </div>
-
-                            <!-- Dropdown PDSS Master Kampus -->
-                            <div v-if="!modalFormKuliah.form.is_kampus_swasta" class="row g-2">
-                                <div class="col-md-6">
-                                    <select class="form-select rounded-xl text-xs" v-model="modalFormKuliah.form.kampus_id" @change="onModalKampusChange()">
-                                        <option value="">-- Pilih Perguruan Tinggi (PDSS) --</option>
-                                        <option v-for="k in listKampusFlat" :key="k.id" :value="k.id">
-                                            {{ k.nama_kampus }} ({{ k.jenis_kampus || 'PTN' }})
-                                        </option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <select class="form-select rounded-xl text-xs" v-model="modalFormKuliah.form.prodi_id" @change="onModalProdiChange()">
-                                        <option value="">-- Pilih Program Studi --</option>
-                                        <option v-for="p in listProdiByModalKampus" :key="p.id" :value="p.id">
-                                            {{ p.program_studi || p.nama_prodi }} ({{ p.jenjang || 'S1' }})
-                                        </option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <!-- Input Manual Kampus Swasta -->
-                            <div v-else class="row g-2">
-                                <div class="col-md-6">
-                                    <input type="text" class="form-control rounded-xl text-xs" v-model="modalFormKuliah.form.nama_kampus" placeholder="Ketik nama kampus swasta / luar negeri...">
-                                </div>
-                                <div class="col-md-6">
-                                    <input type="text" class="form-control rounded-xl text-xs" v-model="modalFormKuliah.form.nama_prodi" placeholder="Ketik nama program studi...">
-                                </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-xs text-slate-700 mb-1">Program Studi <span class="text-danger">*</span></label>
+                                <select class="form-select rounded-xl text-xs border-slate-200" v-model="modalFormKuliah.form.prodi_id" @change="onModalProdiChange()">
+                                    <option value="">-- Pilih Program Studi --</option>
+                                    <option v-for="p in listProdiByModalKampus" :key="p.id" :value="p.id">
+                                        {{ p.program_studi || p.nama_prodi }} ({{ p.jenjang || 'S1' }})
+                                    </option>
+                                </select>
                             </div>
                         </div>
 
-                        <!-- Jalur Masuk & Fakultas -->
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">Jalur Masuk / Seleksi</label>
-                            <select class="form-select rounded-xl text-xs" v-model="modalFormKuliah.form.jalur_masuk_id">
-                                <option value="">-- Pilih Jalur Masuk --</option>
-                                <option v-for="j in listJalur" :key="j.id" :value="j.id">{{ j.nama_jalur }}</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">Fakultas (Opsional)</label>
-                            <input type="text" class="form-control rounded-xl text-xs" v-model="modalFormKuliah.form.fakultas" placeholder="Contoh: Teknik / Ekonomi">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">Jenjang Pendidikan</label>
-                            <select class="form-select rounded-xl text-xs" v-model="modalFormKuliah.form.jenjang">
-                                <option value="S1">S1 (Sarjana)</option>
-                                <option value="D4">D4 (Sarjana Terapan)</option>
-                                <option value="D3">D3 (Diploma Tiga)</option>
-                                <option value="S2">S2 (Magister)</option>
-                            </select>
+                        <!-- Input Manual Kampus Swasta -->
+                        <div v-else class="row g-2">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-xs text-slate-700 mb-1">Nama Perguruan Tinggi Swasta / Luar Negeri <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control rounded-xl text-xs border-slate-200" v-model="modalFormKuliah.form.nama_kampus" placeholder="Contoh: Universitas Telkom / Monash University">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-xs text-slate-700 mb-1">Program Studi <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control rounded-xl text-xs border-slate-200" v-model="modalFormKuliah.form.nama_prodi" placeholder="Contoh: Sistem Informasi / Teknik Informatika">
+                            </div>
                         </div>
 
-                        <!-- Tahun & Status -->
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">Tahun Masuk <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control rounded-xl text-xs" v-model.number="modalFormKuliah.form.tahun_masuk" :min="1990" :max="currentYear + 1">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">Tahun Lulus</label>
-                            <input type="number" class="form-control rounded-xl text-xs" v-model.number="modalFormKuliah.form.tahun_lulus" :min="modalFormKuliah.form.tahun_masuk" :max="currentYear + 7" placeholder="Kosongkan jika aktif">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">Status Kuliah <span class="text-danger">*</span></label>
-                            <select class="form-select rounded-xl text-xs" v-model="modalFormKuliah.form.status_kuliah">
-                                <option value="Aktif">Aktif</option>
-                                <option value="Lulus">Lulus</option>
-                                <option value="Drop">Drop Out</option>
-                            </select>
+                        <div class="row g-2 pt-1">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-xs text-slate-700 mb-1">Jalur Masuk / Seleksi</label>
+                                <select class="form-select rounded-xl text-xs border-slate-200" v-model="modalFormKuliah.form.jalur_masuk_id">
+                                    <option value="">-- Pilih Jalur Masuk --</option>
+                                    <option v-for="j in listJalur" :key="j.id" :value="j.id">{{ j.nama_jalur }}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-xs text-slate-700 mb-1">Fakultas (Opsional)</label>
+                                <input type="text" class="form-control rounded-xl text-xs border-slate-200" v-model="modalFormKuliah.form.fakultas" placeholder="Contoh: Teknik / Ekonomi">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-xs text-slate-700 mb-1">Jenjang Pendidikan</label>
+                                <select class="form-select rounded-xl text-xs border-slate-200" v-model="modalFormKuliah.form.jenjang">
+                                    <option value="S1">S1 (Sarjana)</option>
+                                    <option value="D4">D4 (Sarjana Terapan)</option>
+                                    <option value="D3">D3 (Diploma Tiga)</option>
+                                    <option value="S2">S2 (Magister)</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
+
+
+                    <!-- 3. PERIODE & STATUS KULIAH SECTION -->
+                    <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2.5">
+                        <span class="text-[11px] font-black uppercase text-slate-500 tracking-wider flex items-center gap-1.5 mb-1">
+                            <i class="bi bi-clock-history text-primary"></i> 3. Periode & Status Kelulusan
+                        </span>
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-xs text-slate-700 mb-1">Tahun Masuk <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control rounded-xl text-xs border-slate-200" v-model.number="modalFormKuliah.form.tahun_masuk" :min="1990" :max="currentYear + 1">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-xs text-slate-700 mb-1">Tahun Lulus</label>
+                                <input type="number" class="form-control rounded-xl text-xs border-slate-200" v-model.number="modalFormKuliah.form.tahun_lulus" :min="modalFormKuliah.form.tahun_masuk" :max="currentYear + 7" placeholder="Kosongkan jika aktif">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-xs text-slate-700 mb-1">Status Kuliah <span class="text-danger">*</span></label>
+                                <select class="form-select rounded-xl text-xs border-slate-200" v-model="modalFormKuliah.form.status_kuliah">
+                                    <option value="Aktif">Aktif</option>
+                                    <option value="Lulus">Lulus</option>
+                                    <option value="Drop">Drop Out</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
 
                 <!-- Footer Modal -->
                 <div class="modal-footer border-t border-slate-100 px-6 py-4 flex items-center justify-end gap-2 bg-slate-50">
-                    <button type="button" class="btn btn-sm btn-light rounded-xl font-bold px-4" @click="modalFormKuliah.show = false">Batal</button>
-                    <button type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-4 flex items-center gap-1.5 shadow-xs" :disabled="modalFormKuliah.saving" @click="submitModalKuliah()">
+                    <button type="button" class="btn btn-sm btn-light rounded-xl font-bold px-4 text-slate-600" @click="modalFormKuliah.show = false">Batal</button>
+                    <button type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-4 flex items-center gap-1.5 shadow-sm" :disabled="modalFormKuliah.saving" @click="submitModalKuliah()">
                         <span v-if="modalFormKuliah.saving" class="spinner-border spinner-border-sm"></span>
                         <i v-else class="bi bi-save"></i> {{ modalFormKuliah.isEdit ? 'Simpan Perubahan' : 'Simpan Riwayat Kuliah' }}
                     </button>
@@ -566,17 +626,17 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
     <!-- ═══════════════════════════════════════════════════════════════════════
          MODAL POP-UP: FORM RIWAYAT PEKERJAAN (TAMBAH & EDIT)
     ═══════════════════════════════════════════════════════════════════════ -->
-    <div v-if="modalFormPekerjaan.show" class="modal fade show block" tabindex="-1" style="background: rgba(15, 23, 42, 0.55); z-index: 1060; backdrop-filter: blur(4px);">
+    <div v-if="modalFormPekerjaan.show" class="modal fade show block" tabindex="-1" style="background: rgba(15, 23, 42, 0.6); z-index: 1060; backdrop-filter: blur(6px);">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 rounded-3xl shadow-2xl bg-white overflow-hidden">
-                <!-- Header -->
-                <div class="modal-header border-b border-slate-100 px-6 py-4 flex items-center justify-between bg-slate-50">
-                    <div class="flex items-center gap-2.5">
-                        <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-2xs">
+                <!-- Header Modal -->
+                <div class="modal-header border-b border-slate-100 px-6 py-4 flex items-center justify-between bg-gradient-to-r from-slate-50 to-emerald-50/40">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-md flex-shrink-0">
                             <i class="bi" :class="modalFormPekerjaan.isEdit ? 'bi-pencil-square fs-5' : 'bi-briefcase-fill fs-5'"></i>
                         </div>
                         <div>
-                            <h5 class="modal-title font-black text-slate-800 text-sm md:text-base">
+                            <h5 class="modal-title font-black text-slate-800 text-sm md:text-base mb-0">
                                 {{ modalFormPekerjaan.isEdit ? 'Edit Riwayat Pekerjaan Alumni' : 'Tambah Riwayat Pekerjaan Baru' }}
                             </h5>
                             <p class="text-[11px] text-slate-500 mb-0">
@@ -587,17 +647,178 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
                     <button type="button" class="btn-close" @click="modalFormPekerjaan.show = false"></button>
                 </div>
 
-                <!-- Body Form -->
-                <div class="modal-body px-6 py-4 space-y-3 text-xs">
-                    <!-- Toggle Alumni Luar Sistem (Hanya saat Tambah Baru) -->
-                    <div v-if="isAdmin && !modalFormPekerjaan.isEdit" class="d-flex justify-content-end mb-2">
-                        <div class="form-check form-switch m-0 d-flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
-                            <input class="form-check-input mt-0 cursor-pointer" type="checkbox" id="modalToggleManualPekerjaan" v-model="modalFormPekerjaan.form.is_manual" @change="resetModalPekerjaanStudentSelection()">
-                            <label class="form-check-label text-xs font-bold text-slate-700 cursor-pointer mb-0" for="modalToggleManualPekerjaan">
-                                Input Alumni Luar Sistem (Manual)
-                            </label>
+                <!-- Body Modal Form -->
+                <div class="modal-body px-6 py-4 space-y-4 text-xs">
+                    
+                    <!-- 1. IDENTITAS ALUMNI SECTION -->
+                    <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2.5">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[11px] font-black uppercase text-slate-500 tracking-wider flex items-center gap-1.5">
+                                <i class="bi bi-person-badge-fill text-emerald-600"></i> 1. Identitas Alumni
+                            </span>
+                            <span v-if="modalFormPekerjaan.isEdit" class="badge bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-md text-[10px]">
+                                Mode Edit
+                            </span>
+                        </div>
+
+                        <!-- Segmented Pill Selector for Alumni Source (Hanya saat Tambah Baru) -->
+                        <div v-if="isAdmin && !modalFormPekerjaan.isEdit">
+                            <div class="d-flex gap-2 p-1 bg-white rounded-xl border border-slate-200 shadow-2xs mb-2.5">
+                                <button type="button" 
+                                        class="btn btn-sm py-1.5 px-3 rounded-lg font-bold text-xs flex-1 flex items-center justify-center gap-2 transition-all border-0"
+                                        :class="!modalFormPekerjaan.form.is_manual ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-800 bg-transparent'"
+                                        @click="modalFormPekerjaan.form.is_manual = false; resetModalPekerjaanStudentSelection()">
+                                    <i class="bi bi-database-check"></i>
+                                    <span>Alumni Terdaftar di Sistem</span>
+                                </button>
+                                <button type="button" 
+                                        class="btn btn-sm py-1.5 px-3 rounded-lg font-bold text-xs flex-1 flex items-center justify-center gap-2 transition-all border-0"
+                                        :class="modalFormPekerjaan.form.is_manual ? 'bg-amber-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-800 bg-transparent'"
+                                        @click="modalFormPekerjaan.form.is_manual = true; resetModalPekerjaanStudentSelection()">
+                                    <i class="bi bi-pencil-square"></i>
+                                    <span>Alumni Luar Sistem (Manual)</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Display Alumni Name (Mode Edit) -->
+                        <div v-if="modalFormPekerjaan.isEdit" class="bg-white p-3 rounded-xl border border-slate-200 d-flex items-center justify-between">
+                            <div>
+                                <div class="font-bold text-slate-800 text-sm">{{ modalFormPekerjaan.form.nama_lengkap || modalFormPekerjaan.form.nama_alumni }}</div>
+                                <div class="text-[10px] text-slate-400 font-mono">NISN: {{ modalFormPekerjaan.form.nisn || '—' }}</div>
+                            </div>
+                            <span v-if="modalFormPekerjaan.form.is_manual" class="badge bg-amber-50 text-amber-700 border border-amber-200 text-[10px] px-2 py-1 rounded-lg font-bold">
+                                Alumni Luar Sistem
+                            </span>
+                            <span v-else class="badge bg-emerald-50 text-emerald-700 border border-emerald-100 text-[10px] px-2 py-1 rounded-lg font-bold">
+                                Siswa Sistem
+                            </span>
+                        </div>
+
+                        <!-- Pemilihan Siswa Terdaftar (Mode Tambah) -->
+                        <div v-if="!modalFormPekerjaan.isEdit && !modalFormPekerjaan.form.is_manual && isAdmin">
+                            <label class="form-label fw-bold text-xs text-slate-700 mb-1">Cari Alumni di Database Siswa <span class="text-danger">*</span></label>
+                            <div class="position-relative">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-white border-slate-200 text-slate-400"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control rounded-r-xl text-xs border-slate-200" v-model="searchStudentQueryPekerjaan"
+                                           @input="searchStudents('pekerjaan')" @focus="showSearchDropdown = true; activeForm = 'pekerjaan'"
+                                           placeholder="Ketik nama lengkap atau NISN siswa lulus..." autocomplete="off">
+                                </div>
+                                <div v-if="showSearchDropdown && activeForm === 'pekerjaan' && searchResults.length > 0" 
+                                     class="dropdown-menu show w-100 position-absolute overflow-auto shadow-xl rounded-2xl border-slate-200 mt-1.5 p-1 bg-white" style="max-height: 200px; z-index: 9999;">
+                                    <button type="button" class="dropdown-item py-2 px-3 rounded-xl border-0 text-xs hover:bg-emerald-50 text-left transition" 
+                                            v-for="s in searchResults" :key="s.id" @mousedown.prevent="selectStudentForModal(s, 'pekerjaan')">
+                                        <div class="fw-bold text-slate-800">{{ s.nama_lengkap }}</div>
+                                        <div class="text-[10px] text-slate-400">NISN: {{ s.nisn || '-' }} | Kelas: {{ s.kelas_saat_ini || '-' }}</div>
+                                    </button>
+                                </div>
+                            </div>
+                            <div v-if="selectedStudentPekerjaan && activeForm === 'pekerjaan'" class="mt-2 p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-check-circle-fill text-emerald-600 fs-5"></i>
+                                    <div>
+                                        <span class="d-block fw-bold text-emerald-900 text-xs">{{ selectedStudentPekerjaan.nama_lengkap }}</span>
+                                        <span class="text-emerald-700 text-[10px]">NISN: {{ selectedStudentPekerjaan.nisn || '-' }} | Terpilih dari database siswa</span>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-xs btn-outline-emerald font-bold px-2 py-1 rounded-lg" @click="selectedStudentPekerjaan = null; modalFormPekerjaan.form.siswa_id = ''">Ganti</button>
+                            </div>
+                        </div>
+
+                        <!-- Input Manual Alumni Luar Sistem (Mode Tambah) -->
+                        <div v-if="!modalFormPekerjaan.isEdit && modalFormPekerjaan.form.is_manual && isAdmin" class="row g-2">
+                            <div class="col-md-7">
+                                <label class="form-label fw-bold text-xs text-slate-700 mb-1">Nama Lengkap Alumni <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control rounded-xl text-xs border-slate-200" v-model="modalFormPekerjaan.form.nama_alumni" placeholder="Contoh: Siti Rahmawati" autocomplete="off">
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label fw-bold text-xs text-slate-700 mb-1">NISN / NIS (Opsional)</label>
+                                <input type="text" class="form-control rounded-xl text-xs border-slate-200" v-model="modalFormPekerjaan.form.nisn" placeholder="Nomor Induk Siswa..." autocomplete="off">
+                            </div>
                         </div>
                     </div>
+
+
+                    <!-- 2. INFORMASI PERUSAHAAN & KARIR SECTION -->
+                    <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2.5">
+                        <span class="text-[11px] font-black uppercase text-slate-500 tracking-wider flex items-center gap-1.5 mb-1">
+                            <i class="bi bi-buildings text-emerald-600"></i> 2. Informasi Perusahaan & Karir
+                        </span>
+
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-xs text-slate-700 mb-1">Nama Perusahaan / Tempat Kerja <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control rounded-xl text-xs border-slate-200" v-model="modalFormPekerjaan.form.nama_perusahaan" placeholder="Contoh: PT. Telkom Indonesia">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-xs text-slate-700 mb-1">Posisi / Jabatan Pekerjaan <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control rounded-xl text-xs border-slate-200" v-model="modalFormPekerjaan.form.posisi_jabatan" placeholder="Contoh: Junior Software Developer">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-xs text-slate-700 mb-1">Jenis Instansi</label>
+                                <select class="form-select rounded-xl text-xs border-slate-200" v-model="modalFormPekerjaan.form.jenis_instansi">
+                                    <option value="Swasta">Perusahaan Swasta / Multinasional</option>
+                                    <option value="BUMN">BUMN / BUMD</option>
+                                    <option value="Pemerintah">Pemerintah / Instansi Negeri</option>
+                                    <option value="Wirausaha">Wirausaha / Bisnis Mandiri</option>
+                                    <option value="Lainnya">Lainnya</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-xs text-slate-700 mb-1">Rentang Pendapatan Bulanan</label>
+                                <select class="form-select rounded-xl text-xs border-slate-200" v-model="modalFormPekerjaan.form.pendapatan_bulanan">
+                                    <option value="">-- Pilih Rentang Pendapatan --</option>
+                                    <option value="< 3 Juta">< Rp 3.000.000</option>
+                                    <option value="3 - 5 Juta">Rp 3.000.000 - Rp 5.000.000</option>
+                                    <option value="5 - 10 Juta">Rp 5.000.000 - Rp 10.000.000</option>
+                                    <option value="> 10 Juta">> Rp 10.000.000</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <!-- 3. PERIODE & STATUS KERJA SECTION -->
+                    <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2.5">
+                        <span class="text-[11px] font-black uppercase text-slate-500 tracking-wider flex items-center gap-1.5 mb-1">
+                            <i class="bi bi-clock-history text-emerald-600"></i> 3. Periode & Status Karir
+                        </span>
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-xs text-slate-700 mb-1">Tahun Mulai Bekerja <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control rounded-xl text-xs border-slate-200" v-model.number="modalFormPekerjaan.form.tahun_mulai" :min="1990" :max="currentYear + 1">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-xs text-slate-700 mb-1">Tahun Selesai</label>
+                                <input type="number" class="form-control rounded-xl text-xs border-slate-200" v-model.number="modalFormPekerjaan.form.tahun_selesai" :min="modalFormPekerjaan.form.tahun_mulai" :max="currentYear + 10" placeholder="Kosongkan jika aktif">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-xs text-slate-700 mb-1">Status Kerja <span class="text-danger">*</span></label>
+                                <select class="form-select rounded-xl text-xs border-slate-200" v-model="modalFormPekerjaan.form.status_kerja">
+                                    <option value="Tetap">Karyawan Tetap</option>
+                                    <option value="Kontrak">Karyawan Kontrak</option>
+                                    <option value="Magang">Magang / Internship</option>
+                                    <option value="Wirausaha">Wirausaha / Freelance</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Footer Modal -->
+                <div class="modal-footer border-t border-slate-100 px-6 py-4 flex items-center justify-end gap-2 bg-slate-50">
+                    <button type="button" class="btn btn-sm btn-light rounded-xl font-bold px-4 text-slate-600" @click="modalFormPekerjaan.show = false">Batal</button>
+                    <button type="button" class="btn btn-sm btn-success rounded-xl font-bold px-4 flex items-center gap-1.5 shadow-sm" :disabled="modalFormPekerjaan.saving" @click="submitModalPekerjaan()">
+                        <span v-if="modalFormPekerjaan.saving" class="spinner-border spinner-border-sm"></span>
+                        <i v-else class="bi bi-save"></i> {{ modalFormPekerjaan.isEdit ? 'Simpan Perubahan' : 'Simpan Riwayat Pekerjaan' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
                     <!-- Display Alumni Name (Mode Edit) -->
                     <div v-if="modalFormPekerjaan.isEdit" class="p-3 bg-slate-50 rounded-2xl border border-slate-200">
