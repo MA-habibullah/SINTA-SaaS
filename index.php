@@ -852,9 +852,13 @@ case '/api/v1/keuangan/dashboard-metrics':
             break;
 
         case '/api/v1/nilai-rapor/import':
-        case '/api/v1/nilai-rapor/import-validate':
             $controller = new App\Modules\Akademik\Controllers\NilaiRaporModuleController();
             $controller->import();
+            break;
+
+        case '/api/v1/nilai-rapor/import-validate':
+            $controller = new App\Modules\Akademik\Controllers\NilaiRaporModuleController();
+            $controller->importValidate();
             break;
 
         case '/api/v1/nilai-rapor/delete-siswa':
@@ -994,10 +998,22 @@ case '/api/v1/keuangan/dashboard-metrics':
             }
             break;
 
+        case '/api/v1/tracer/kuliah/update':
+            // API: Update riwayat kuliah
+            $controller = new App\Modules\Alumni\Controllers\TracerModuleController();
+            $controller->updateKuliah();
+            break;
+
         case '/api/v1/tracer/kuliah/delete':
             // API: Hapus riwayat kuliah (hanya admin/guru_bk)
             $controller = new App\Modules\Alumni\Controllers\TracerModuleController();
             $controller->deleteKuliah();
+            break;
+
+        case '/api/v1/tracer/pekerjaan/update':
+            // API: Update riwayat pekerjaan
+            $controller = new App\Modules\Alumni\Controllers\TracerModuleController();
+            $controller->updatePekerjaan();
             break;
 
         case '/api/v1/tracer/pekerjaan/delete':
@@ -1010,6 +1026,65 @@ case '/api/v1/keuangan/dashboard-metrics':
             // API: Pencarian siswa alumni untuk form tracer study admin
             $controller = new App\Modules\Pdss\Controllers\PdssDetailModuleController();
             $controller->apiSearchStudents();
+            break;
+
+        // ================================================================
+        // MASTER KAMPUS, PRODI & JALUR MASUK (ALUMNI & PDSS)
+        // ================================================================
+        case '/api/v1/kampus/master':
+            $controller = new App\Modules\Alumni\Controllers\KampusModuleController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveKampus();
+            } else {
+                $controller->apiGetKampus();
+            }
+            break;
+
+        case '/api/v1/kampus/master/delete':
+            $controller = new App\Modules\Alumni\Controllers\KampusModuleController();
+            $controller->apiDeleteKampus();
+            break;
+
+        case '/api/v1/kampus/prodi':
+            $controller = new App\Modules\Alumni\Controllers\KampusModuleController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveProdi();
+            } else {
+                $controller->apiGetProdi();
+            }
+            break;
+
+        case '/api/v1/kampus/prodi/delete':
+            $controller = new App\Modules\Alumni\Controllers\KampusModuleController();
+            $controller->apiDeleteProdi();
+            break;
+
+        case '/api/v1/kampus/riwayat':
+            $controller = new App\Modules\Alumni\Controllers\KampusModuleController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveRiwayat();
+            } else {
+                $controller->apiGetRiwayat();
+            }
+            break;
+
+        case '/api/v1/kampus/riwayat/delete':
+            $controller = new App\Modules\Alumni\Controllers\KampusModuleController();
+            $controller->apiDeleteRiwayat();
+            break;
+
+        case '/api/v1/kampus/jalur':
+            $controller = new App\Modules\Alumni\Controllers\KampusModuleController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveJalurMasuk();
+            } else {
+                $controller->apiGetJalurMasuk();
+            }
+            break;
+
+        case '/api/v1/kampus/jalur/delete':
+            $controller = new App\Modules\Alumni\Controllers\KampusModuleController();
+            $controller->apiDeleteJalurMasuk();
             break;
 
         // ================================================================
@@ -1198,6 +1273,16 @@ case '/api/v1/keuangan/dashboard-metrics':
             $controller->apiGetKesiapan();
             break;
 
+        case '/api/v1/pdss/recalc-kesiapan':
+            $controller = new App\Modules\Pdss\Controllers\PdssDetailModuleController();
+            $controller->apiRecalcKesiapan();
+            break;
+
+        case '/api/v1/pdss/export-snbp':
+            $controller = new App\Modules\Pdss\Controllers\PdssDetailModuleController();
+            $controller->apiExportSnbp();
+            break;
+
         case '/api/v1/pdss/config-mapel':
             $controller = new App\Modules\Pdss\Controllers\PdssDetailModuleController();
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -1212,9 +1297,29 @@ case '/api/v1/keuangan/dashboard-metrics':
             $controller->apiSaveManualEligible();
             break;
 
+        case '/api/v1/pdss/reset-eligible':
+            $controller = new App\Modules\Pdss\Controllers\PdssDetailModuleController();
+            $controller->apiResetEligible();
+            break;
+
         case '/api/v1/pdss/lock':
             $controller = new App\Modules\Pdss\Controllers\PdssDetailModuleController();
             $controller->apiToggleLock();
+            break;
+
+        case '/api/v1/pdss/pengunduran-diri/save':
+            $controller = new App\Modules\Pdss\Controllers\PdssDetailModuleController();
+            $controller->apiSavePengunduranDiri();
+            break;
+
+        case '/api/v1/pdss/pengunduran-diri/detail':
+            $controller = new App\Modules\Pdss\Controllers\PdssDetailModuleController();
+            $controller->apiGetPengunduranDiriDetail();
+            break;
+
+        case '/api/v1/pdss/pengunduran-diri/cancel':
+            $controller = new App\Modules\Pdss\Controllers\PdssDetailModuleController();
+            $controller->apiCancelPengunduranDiri();
             break;
 
         case '/api/v1/pdss/student-grades':

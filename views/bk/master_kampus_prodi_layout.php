@@ -134,10 +134,13 @@ foreach ($userRoles as $r) {
                         </template>
                         <td v-if="canWrite" class="px-3 py-3 text-center border-l border-slate-100">
                             <div class="d-flex flex-column gap-1 align-items-center justify-content-center">
+                                <button v-if="row.prodi_id" class="btn btn-xs btn-primary font-semibold px-2 py-1 rounded-lg text-[10px] w-100 shadow-2xs" @click="openEditProdiModal(row)">
+                                    <i class="bi bi-pencil-square"></i> Edit & Kuota
+                                </button>
                                 <button v-if="row.prodi_id" class="btn btn-xs btn-light border text-rose-600 font-semibold px-2 py-1 rounded-lg text-[10px] w-100" @click="deleteProdi(row.prodi_id, row.program_studi)">
                                     <i class="bi bi-trash"></i> Hapus Prodi
                                 </button>
-                                <button class="btn btn-xs btn-light border text-slate-700 font-semibold px-2 py-1 rounded-lg text-[10px] w-100" @click="deleteKampus(row.kampus_id, row.nama_kampus)">
+                                <button class="btn btn-xs btn-light border text-slate-600 font-semibold px-2 py-1 rounded-lg text-[10px] w-100" @click="deleteKampus(row.kampus_id, row.nama_kampus)">
                                     <i class="bi bi-building-x"></i> Hapus Kampus
                                 </button>
                             </div>
@@ -182,34 +185,36 @@ foreach ($userRoles as $r) {
     </div>
 
 
-    <!-- MODAL IMPORT EXCEL -->
+    <!-- MODAL IMPORT DAYA TAMPUNG -->
     <Teleport to="body">
     <div v-if="modalImportDayaTampung.show" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <div class="bg-white border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in">
-            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
                 <h3 class="font-bold text-slate-800 text-base mb-0 flex items-center gap-2">
-                    <i class="bi bi-upload text-emerald-500"></i> Import Daya Tampung
+                    <i class="bi bi-upload text-emerald-600"></i> Import Daya Tampung
                 </h3>
                 <button class="text-slate-400 hover:text-slate-600 text-xl font-bold bg-transparent border-0" @click="modalImportDayaTampung.show = false">&times;</button>
             </div>
-            <div class="p-5 space-y-4 text-left">
-                <p class="text-xs text-slate-600">
-                    Upload file excel yang berisi data Daya Tampung dan Jumlah Pendaftar per tahun. Pastikan format kolom sesuai dengan yang di-download dari menu Export.
-                </p>
-                <form @submit.prevent="importExcelDayaTampung">
-                    <div class="mt-4">
-                        <label class="block text-xs font-semibold text-slate-500 mb-1.5">File Excel (.xls, .xlsx) <span class="text-rose-500">*</span></label>
+            <form @submit.prevent="importExcelDayaTampung">
+                <div class="p-5 space-y-4 text-left">
+                    <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-3">
+                        <p class="text-xs text-emerald-800 mb-0">
+                            <i class="bi bi-info-circle me-1"></i> Upload file Excel berisi data Daya Tampung dan Jumlah Pendaftar per tahun. Format kolom sesuai dengan file yang di-download dari menu Export.
+                        </p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">File Excel (.xls, .xlsx) <span class="text-rose-500">*</span></label>
                         <input type="file" ref="fileImportDayaTampung" accept=".xlsx, .xls" required class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 border border-slate-200 rounded-xl">
                     </div>
-                    <div class="mt-5 flex items-center justify-end gap-2">
-                        <button type="button" class="btn btn-light border rounded-xl px-4 py-2 text-xs font-semibold text-slate-600" @click="modalImportDayaTampung.show = false">Batal</button>
-                        <button type="submit" class="btn btn-success rounded-xl px-4 py-2 text-xs font-semibold text-white flex items-center gap-1.5 shadow-sm" :disabled="importingDayaTampung">
-                            <i class="bi" :class="importingDayaTampung ? 'bi-hourglass-split' : 'bi-check-circle'"></i>
-                            {{ importingDayaTampung ? 'Memproses...' : 'Import Data' }}
-                        </button>
-                    </div>
-                </form>
-            </div>
+                </div>
+                <div class="px-5 py-3.5 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-2">
+                    <button type="button" class="btn btn-light border rounded-xl px-4 py-2 text-xs font-semibold text-slate-600" @click="modalImportDayaTampung.show = false">Batal</button>
+                    <button type="submit" class="btn btn-success rounded-xl px-4 py-2 text-xs font-bold text-white flex items-center gap-1.5 shadow-sm" :disabled="importingDayaTampung">
+                        <i class="bi" :class="importingDayaTampung ? 'bi-hourglass-split' : 'bi-check-circle'"></i>
+                        {{ importingDayaTampung ? 'Memproses...' : 'Mulai Import' }}
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
     </Teleport>
@@ -218,39 +223,38 @@ foreach ($userRoles as $r) {
     <Teleport to="body">
     <div v-if="modalBulkDelete.show" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <div class="bg-white border rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in">
-            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
                 <h3 class="font-bold text-slate-800 text-base mb-0 flex items-center gap-2">
                     <i class="bi bi-trash text-rose-500"></i> Hapus Kolektif Riwayat
                 </h3>
                 <button class="text-slate-400 hover:text-slate-600 text-xl font-bold bg-transparent border-0" @click="modalBulkDelete.show = false">&times;</button>
             </div>
-            <div class="p-5 space-y-4 text-left">
-                <p class="text-[11px] text-slate-500 bg-rose-50 p-2 rounded-lg border border-rose-100 text-rose-700">
-                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Aksi ini akan menghapus riwayat daya tampung dan jumlah pendaftar. Tidak bisa dibatalkan.
-                </p>
-                <form @submit.prevent="executeBulkDelete">
-                    <div class="mb-3">
+            <form @submit.prevent="executeBulkDelete">
+                <div class="p-5 space-y-4 text-left">
+                    <p class="text-[11px] text-rose-700 bg-rose-50 p-2.5 rounded-xl border border-rose-100 mb-0">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i> Aksi ini akan menghapus riwayat daya tampung dan jumlah pendaftar. Tidak bisa dibatalkan.
+                    </p>
+                    <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Berdasarkan Tahun</label>
                         <input type="number" v-model="modalBulkDelete.form.tahun" placeholder="Contoh: 2023" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:ring-2 focus:ring-rose-500 outline-none">
                         <small class="text-[9px] text-slate-400">Kosongkan jika tidak memfilter tahun.</small>
                     </div>
-                    <div class="mb-4">
+                    <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Berdasarkan Kampus</label>
                         <select v-model="modalBulkDelete.form.kampus_id" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:ring-2 focus:ring-rose-500 outline-none">
                             <option value="">-- Semua Kampus --</option>
                             <option v-for="k in uniqueKampusList" :key="k.id" :value="k.id">{{ k.nama_kampus }}</option>
                         </select>
-                        <small class="text-[9px] text-slate-400">Kosongkan jika menghapus untuk semua kampus (berbahaya!).</small>
+                        <small class="text-[9px] text-slate-400">Kosongkan jika menghapus untuk semua kampus.</small>
                     </div>
-                    
-                    <div class="flex items-center justify-end gap-2">
-                        <button type="button" class="btn btn-light border rounded-xl px-4 py-2 text-xs font-semibold text-slate-600" @click="modalBulkDelete.show = false">Batal</button>
-                        <button type="submit" class="btn btn-danger rounded-xl px-4 py-2 text-xs font-semibold text-white flex items-center gap-1.5 shadow-sm" :disabled="bulkDeleting || (!modalBulkDelete.form.tahun && !modalBulkDelete.form.kampus_id)">
-                            <i class="bi bi-trash"></i> {{ bulkDeleting ? 'Menghapus...' : 'Hapus Data' }}
-                        </button>
-                    </div>
-                </form>
-            </div>
+                </div>
+                <div class="px-5 py-3.5 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-2">
+                    <button type="button" class="btn btn-light border rounded-xl px-4 py-2 text-xs font-semibold text-slate-600" @click="modalBulkDelete.show = false">Batal</button>
+                    <button type="submit" class="btn btn-danger rounded-xl px-4 py-2 text-xs font-bold text-white flex items-center gap-1.5 shadow-sm" :disabled="bulkDeleting || (!modalBulkDelete.form.tahun && !modalBulkDelete.form.kampus_id)">
+                        <i class="bi bi-trash"></i> {{ bulkDeleting ? 'Menghapus...' : 'Hapus Data' }}
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
     </Teleport>
@@ -259,29 +263,167 @@ foreach ($userRoles as $r) {
     <Teleport to="body">
     <div v-if="modalImportKampusProdi.show" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <div class="bg-white border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in">
-            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
                 <h3 class="font-bold text-slate-800 text-base mb-0 flex items-center gap-2">
-                    <i class="bi bi-building text-blue-500"></i> Import Kampus & Prodi
+                    <i class="bi bi-building text-blue-600"></i> Import Kampus & Prodi
                 </h3>
                 <button class="text-slate-400 hover:text-slate-600 text-xl font-bold bg-transparent border-0" @click="modalImportKampusProdi.show = false">&times;</button>
             </div>
-            <div class="p-5 text-left">
-                <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-4">
-                    <p class="text-xs text-blue-700 mb-0"><i class="bi bi-info-circle me-1"></i> Upload file Excel berisi data Kampus dan Prodi. Kampus baru akan dibuat otomatis jika belum ada. Prodi yang sudah ada akan diperbarui.</p>
-                </div>
-                <form @submit.prevent="importKampusProdi">
-                    <div class="mb-4">
-                        <label class="block text-xs font-semibold text-slate-500 mb-1.5">File Excel (.xls, .xlsx) <span class="text-rose-500">*</span></label>
+            <form @submit.prevent="importKampusProdi">
+                <div class="p-5 text-left space-y-4">
+                    <div class="bg-blue-50 border border-blue-100 rounded-xl p-3">
+                        <p class="text-xs text-blue-700 mb-0"><i class="bi bi-info-circle me-1"></i> Upload file Excel berisi data Kampus dan Prodi. Kampus baru akan dibuat otomatis jika belum ada. Prodi yang sudah ada akan diperbarui.</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">File Excel (.xls, .xlsx) <span class="text-rose-500">*</span></label>
                         <input type="file" ref="fileImportKampusProdi" accept=".xlsx, .xls" required class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border border-slate-200 rounded-xl">
                     </div>
-                    <div class="flex items-center justify-end gap-2">
-                        <button type="button" class="btn btn-light border rounded-xl px-4 py-2 text-xs font-semibold text-slate-600" @click="modalImportKampusProdi.show = false">Batal</button>
-                        <button type="submit" class="btn btn-primary rounded-xl px-4 py-2 text-xs font-semibold text-white flex items-center gap-1.5 shadow-sm" :disabled="importingKampusProdi">
-                            <i class="bi" :class="importingKampusProdi ? 'bi-hourglass-split' : 'bi-check-circle'"></i>
-                            {{ importingKampusProdi ? 'Memproses...' : 'Import Data' }}
-                        </button>
+                </div>
+                <div class="px-5 py-3.5 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-2">
+                    <button type="button" class="btn btn-light border rounded-xl px-4 py-2 text-xs font-semibold text-slate-600" @click="modalImportKampusProdi.show = false">Batal</button>
+                    <button type="submit" class="btn btn-primary rounded-xl px-4 py-2 text-xs font-bold text-white flex items-center gap-1.5 shadow-sm" :disabled="importingKampusProdi">
+                        <i class="bi" :class="importingKampusProdi ? 'bi-hourglass-split' : 'bi-cloud-upload'"></i>
+                        {{ importingKampusProdi ? 'Memproses...' : 'Mulai Import' }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    </Teleport>
+
+    <!-- MODAL EDIT PRODI & KUOTA -->
+    <Teleport to="body">
+    <div v-if="modalEditProdi.show" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div class="bg-white border rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-fade-in flex flex-col max-h-[90vh]">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                        <i class="bi bi-pencil-square"></i>
                     </div>
-                </form>
+                    <div>
+                        <h4 class="font-bold text-slate-800 text-sm mb-0">Edit Program Studi & Kuota</h4>
+                        <p class="text-[11px] text-slate-500 mb-0">{{ modalEditProdi.kampus_nama }}</p>
+                    </div>
+                </div>
+                <button class="text-slate-400 hover:text-slate-600 text-xl font-bold bg-transparent border-0" @click="modalEditProdi.show = false">&times;</button>
+            </div>
+            
+            <div class="p-5 overflow-y-auto space-y-5">
+                <!-- 1. DETAIL PRODI -->
+                <div class="bg-white rounded-xl border border-slate-200 p-4">
+                    <h5 class="text-xs font-bold text-slate-800 mb-3 flex items-center gap-1.5">
+                        <i class="bi bi-mortarboard text-indigo-600"></i> Informasi Program Studi
+                    </h5>
+                    <form @submit.prevent="saveProdiDetail" class="space-y-3">
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <label class="form-label text-slate-500 text-xs font-semibold mb-1">Kode Prodi</label>
+                                <input type="text" v-model="modalEditProdi.form.kode_prodi" class="form-control form-control-sm rounded-lg text-xs" placeholder="Contoh: 11111001">
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label text-slate-500 text-xs font-semibold mb-1">Nama Program Studi <span class="text-rose-500">*</span></label>
+                                <input type="text" v-model="modalEditProdi.form.program_studi" required class="form-control form-control-sm rounded-lg text-xs" placeholder="Nama Jurusan / Prodi">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-slate-500 text-xs font-semibold mb-1">Jenjang</label>
+                                <select v-model="modalEditProdi.form.jenjang" class="form-select form-select-sm rounded-lg text-xs">
+                                    <option value="S1">S1 (Sarjana)</option>
+                                    <option value="D4">D4 (Sarjana Terapan)</option>
+                                    <option value="D3">D3 (Diploma Tiga)</option>
+                                    <option value="D2">D2</option>
+                                    <option value="D1">D1</option>
+                                    <option value="S2">S2</option>
+                                    <option value="S3">S3</option>
+                                    <option value="Profesi">Profesi</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-slate-500 text-xs font-semibold mb-1">Fakultas</label>
+                                <input type="text" v-model="modalEditProdi.form.fakultas" class="form-control form-control-sm rounded-lg text-xs" placeholder="Fakultas">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-slate-500 text-xs font-semibold mb-1">Portofolio</label>
+                                <input type="text" v-model="modalEditProdi.form.jenis_portofolio" class="form-control form-control-sm rounded-lg text-xs" placeholder="ex: Tidak Ada">
+                            </div>
+                        </div>
+                        <div class="text-end pt-1">
+                            <button type="submit" class="btn btn-sm btn-primary rounded-lg text-xs font-bold px-3 py-1.5" :disabled="modalEditProdi.savingProdi">
+                                <i class="bi bi-check2"></i> {{ modalEditProdi.savingProdi ? 'Menyimpan...' : 'Simpan Data Prodi' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- 2. RIWAYAT DAYA TAMPUNG & PENDAFTAR -->
+                <div class="bg-white rounded-xl border border-slate-200 p-4">
+                    <h5 class="text-xs font-bold text-slate-800 mb-2 flex items-center justify-between">
+                        <span class="flex items-center gap-1.5"><i class="bi bi-bar-chart-fill text-emerald-600"></i> Riwayat Daya Tampung & Pendaftar per Tahun</span>
+                    </h5>
+                    <p class="text-[11px] text-slate-500 mb-3">Tambahkan atau ubah kuota daya tampung dan peminat untuk tahun tertentu.</p>
+
+                    <!-- Form Tambah / Update Riwayat Tahun -->
+                    <form @submit.prevent="saveProdiRiwayat" class="bg-slate-50 p-3 rounded-xl border border-slate-200 mb-3">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-4 col-md-3">
+                                <label class="form-label text-slate-500 text-[10px] font-bold mb-1">Tahun</label>
+                                <input type="number" v-model="modalEditProdi.formRiwayat.tahun" required min="2000" max="2030" class="form-control form-control-sm rounded-lg text-xs font-bold text-slate-800">
+                            </div>
+                            <div class="col-4 col-md-3">
+                                <label class="form-label text-slate-500 text-[10px] font-bold mb-1">Daya Tampung</label>
+                                <input type="number" v-model="modalEditProdi.formRiwayat.daya_tampung" required min="0" class="form-control form-control-sm rounded-lg text-xs">
+                            </div>
+                            <div class="col-4 col-md-3">
+                                <label class="form-label text-slate-500 text-[10px] font-bold mb-1">Jml Pendaftar</label>
+                                <input type="number" v-model="modalEditProdi.formRiwayat.jumlah_pendaftar" required min="0" class="form-control form-control-sm rounded-lg text-xs">
+                            </div>
+                            <div class="col-12 col-md-3 text-end">
+                                <button type="submit" class="btn btn-sm btn-success rounded-lg text-xs font-bold w-100 py-1.5" :disabled="modalEditProdi.savingRiwayat">
+                                    <i class="bi bi-plus-lg"></i> Simpan Kuota
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Tabel Riwayat -->
+                    <div class="table-responsive rounded-lg border border-slate-200">
+                        <table class="table table-sm table-hover align-middle mb-0 text-xs">
+                            <thead class="bg-slate-50 text-slate-600 font-bold text-center">
+                                <tr>
+                                    <th class="py-2">Tahun</th>
+                                    <th class="py-2">Daya Tampung</th>
+                                    <th class="py-2">Jumlah Pendaftar</th>
+                                    <th class="py-2">Keketatan</th>
+                                    <th class="py-2 text-end pe-3">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-center divide-y divide-slate-100">
+                                <tr v-if="modalEditProdi.listRiwayat.length === 0">
+                                    <td colspan="5" class="py-4 text-slate-400 italic">Belum ada riwayat daya tampung. Silakan isi form di atas.</td>
+                                </tr>
+                                <tr v-for="r in modalEditProdi.listRiwayat" :key="r.id || r.tahun">
+                                    <td class="font-black text-slate-800">{{ r.tahun }}</td>
+                                    <td class="font-bold text-indigo-700">{{ r.daya_tampung }}</td>
+                                    <td class="font-bold text-slate-700">{{ r.jumlah_pendaftar }}</td>
+                                    <td>
+                                        <span class="badge bg-slate-100 text-slate-700 border text-[10px]" v-if="r.daya_tampung > 0 && r.jumlah_pendaftar > 0">
+                                            {{ ((r.daya_tampung / r.jumlah_pendaftar) * 100).toFixed(2) }}%
+                                        </span>
+                                        <span class="text-slate-300" v-else>—</span>
+                                    </td>
+                                    <td class="text-end pe-3">
+                                        <button type="button" class="btn btn-xs btn-outline-danger px-2 py-0.5 rounded text-[10px]" @click="deleteProdiRiwayat(r.id, r.tahun)">
+                                            <i class="bi bi-trash"></i> Hapus
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="px-5 py-3 border-t border-slate-100 flex items-center justify-end gap-2 bg-slate-50 shrink-0">
+                <button type="button" class="btn btn-light rounded-xl px-4 py-2 text-xs font-semibold" @click="modalEditProdi.show = false">Tutup</button>
             </div>
         </div>
     </div>
@@ -320,7 +462,29 @@ if (window.VueAppRegistry.register) {
                     kampus_id: ''
                 }
             },
-            bulkDeleting: false
+            bulkDeleting: false,
+
+            modalEditProdi: {
+                show: false,
+                kampus_nama: '',
+                form: {
+                    id: '',
+                    kampus_id: '',
+                    program_studi: '',
+                    kode_prodi: '',
+                    fakultas: '',
+                    jenjang: 'S1',
+                    jenis_portofolio: 'Tidak Ada'
+                },
+                listRiwayat: [],
+                formRiwayat: {
+                    tahun: 2026,
+                    daya_tampung: 0,
+                    jumlah_pendaftar: 0
+                },
+                savingProdi: false,
+                savingRiwayat: false
+            }
         }
     },
     watch: {
@@ -333,13 +497,12 @@ if (window.VueAppRegistry.register) {
     },
     computed: {
         displayYears() {
-            // Kumpulkan semua tahun dari seluruh data, ambil 6 terbesar dengan tahun terbaru di kiri
             const years = new Set();
             this.dataList.forEach(item => {
                 if (item.riwayat) item.riwayat.forEach(r => years.add(r.tahun));
             });
             const sorted = Array.from(years).sort((a, b) => b - a);
-            return sorted.slice(0, 6); // 6 tahun terbaru (descending)
+            return sorted.slice(0, 6);
         },
         filteredData() {
             let data = this.dataList;
@@ -350,7 +513,8 @@ if (window.VueAppRegistry.register) {
                 const q = this.searchQuery.toLowerCase();
                 data = data.filter(item =>
                     (item.program_studi && item.program_studi.toLowerCase().includes(q)) ||
-                    (item.nama_kampus && item.nama_kampus.toLowerCase().includes(q))
+                    (item.nama_kampus && item.nama_kampus.toLowerCase().includes(q)) ||
+                    (item.kode_prodi && item.kode_prodi.includes(q))
                 );
             }
             return data;
@@ -424,6 +588,100 @@ if (window.VueAppRegistry.register) {
                 if (window.Swal) Swal.fire('Error', 'Gagal memuat data master kampus', 'error');
             } finally {
                 this.loading = false;
+            }
+        },
+        openEditProdiModal(row) {
+            this.modalEditProdi.kampus_nama = row.nama_kampus;
+            this.modalEditProdi.form = {
+                id: row.prodi_id,
+                kampus_id: row.kampus_id,
+                program_studi: row.program_studi,
+                kode_prodi: row.kode_prodi || '',
+                fakultas: row.fakultas || '',
+                jenjang: row.jenjang || 'S1',
+                jenis_portofolio: row.jenis_portofolio || 'Tidak Ada'
+            };
+            this.modalEditProdi.listRiwayat = Array.isArray(row.riwayat) ? JSON.parse(JSON.stringify(row.riwayat)) : [];
+            this.modalEditProdi.formRiwayat = {
+                tahun: new Date().getFullYear(),
+                daya_tampung: 0,
+                jumlah_pendaftar: 0
+            };
+            this.modalEditProdi.show = true;
+        },
+        async saveProdiDetail() {
+            this.modalEditProdi.savingProdi = true;
+            try {
+                const res = await axios.post(`${this.baseUrl}/api/v1/kampus/prodi?tenant_id=${this.tenantId}`, this.modalEditProdi.form);
+                if (res.data.success) {
+                    if (window.Swal) Swal.fire('Berhasil', 'Data prodi berhasil disimpan.', 'success');
+                    this.loadData();
+                } else {
+                    if (window.Swal) Swal.fire('Gagal', res.data.error || 'Gagal menyimpan prodi', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                if (window.Swal) Swal.fire('Error', err.response?.data?.error || 'Gagal menyimpan prodi', 'error');
+            } finally {
+                this.modalEditProdi.savingProdi = false;
+            }
+        },
+        async saveProdiRiwayat() {
+            if (!this.modalEditProdi.form.id) {
+                if (window.Swal) Swal.fire('Perhatian', 'Simpan data prodi terlebih dahulu.', 'warning');
+                return;
+            }
+            this.modalEditProdi.savingRiwayat = true;
+            try {
+                const payload = {
+                    prodi_id: this.modalEditProdi.form.id,
+                    tahun: this.modalEditProdi.formRiwayat.tahun,
+                    daya_tampung: this.modalEditProdi.formRiwayat.daya_tampung,
+                    jumlah_pendaftar: this.modalEditProdi.formRiwayat.jumlah_pendaftar
+                };
+                const res = await axios.post(`${this.baseUrl}/api/v1/kampus/prodi/riwayat?tenant_id=${this.tenantId}`, payload);
+                if (res.data.success) {
+                    if (window.Swal) Swal.fire('Berhasil', 'Riwayat kuota tahun ' + payload.tahun + ' berhasil disimpan.', 'success');
+                    // Refresh riwayat list in modal
+                    const existingIdx = this.modalEditProdi.listRiwayat.findIndex(r => parseInt(r.tahun) === parseInt(payload.tahun));
+                    if (existingIdx >= 0) {
+                        this.modalEditProdi.listRiwayat[existingIdx].daya_tampung = payload.daya_tampung;
+                        this.modalEditProdi.listRiwayat[existingIdx].jumlah_pendaftar = payload.jumlah_pendaftar;
+                    } else {
+                        this.modalEditProdi.listRiwayat.unshift(payload);
+                        this.modalEditProdi.listRiwayat.sort((a,b) => b.tahun - a.tahun);
+                    }
+                    this.loadData();
+                }
+            } catch (err) {
+                console.error(err);
+                if (window.Swal) Swal.fire('Error', err.response?.data?.error || 'Gagal menyimpan riwayat', 'error');
+            } finally {
+                this.modalEditProdi.savingRiwayat = false;
+            }
+        },
+        async deleteProdiRiwayat(id, tahun) {
+            if (window.Swal) {
+                const conf = await Swal.fire({
+                    title: 'Hapus Riwayat?',
+                    text: `Hapus kuota untuk tahun ${tahun}?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, Hapus!',
+                    cancelButtonText: 'Batal',
+                    confirmButtonColor: '#e3342f'
+                });
+                if (!conf.isConfirmed) return;
+            }
+            try {
+                const res = await axios.post(`${this.baseUrl}/api/v1/kampus/prodi/riwayat/delete?tenant_id=${this.tenantId}`, { id });
+                if (res.data.success) {
+                    this.modalEditProdi.listRiwayat = this.modalEditProdi.listRiwayat.filter(r => r.id !== id && parseInt(r.tahun) !== parseInt(tahun));
+                    this.loadData();
+                }
+            } catch (err) {
+                console.error(err);
+                if (window.Swal) Swal.fire('Error', err.response?.data?.error || 'Gagal menghapus riwayat', 'error');
             }
         },
         async importExcelDayaTampung() {

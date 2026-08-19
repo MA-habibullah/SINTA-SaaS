@@ -5,7 +5,10 @@
  */
 $userRole   = $user_role ?? ($_SESSION['role_name'] ?? '');
 $tenantList = $tenant_list ?? [];
-$tenantId   = $tenant_id ?? '';
+$tenantId   = $tenant_id ?? ($_GET['tenant_id'] ?? (App\Core\SessionManager::getTenantId() ?: ''));
+if ($userRole === 'super_admin' && empty($tenantId) && !empty($tenantList)) {
+    $tenantId = $tenantList[0]['id'];
+}
 ?>
 <div class="container-fluid py-4 animate-fade-in">
 
@@ -18,7 +21,7 @@ $tenantId   = $tenant_id ?? '';
             <label for="unified-tenant-select" class="fw-semibold text-dark mb-0" style="white-space:nowrap;">
                 Filter Sekolah (Super Admin):
             </label>
-            <select id="unified-tenant-select" class="form-select form-select-sm rounded-3" style="max-width:320px;">
+            <select id="unified-tenant-select" class="form-select form-select-sm rounded-3" style="max-width:320px;" onchange="applyUnifiedFilter()">
                 <option value="">— Semua Sekolah —</option>
                 <?php foreach ($tenantList as $t): ?>
                 <option value="<?= htmlspecialchars($t['id']) ?>" <?= ($t['id'] === $tenantId ? 'selected' : '') ?>>
@@ -127,7 +130,9 @@ $tenantId   = $tenant_id ?? '';
                 <div class="card-body p-4">
                     <?php 
                         $allowed_bk_tabs = ['penjurusan']; 
-                        include __DIR__ . '/../master_bk.php'; 
+                        $is_sub_module   = true;
+                        include __DIR__ . '/master_bk.php'; 
+                        unset($allowed_bk_tabs, $is_sub_module);
                     ?>
                 </div>
             </div>
@@ -140,7 +145,9 @@ $tenantId   = $tenant_id ?? '';
                     <?php 
                         $allowed_pdss_tabs = ['kesiapan', 'master_jalur', 'simulasi']; 
                         $hide_pdss_tabs = true; // Sembunyikan tabs internal PDSS karena sudah naik ke tingkat 1
-                        include __DIR__ . '/../pdss_index.php'; 
+                        $is_sub_module = true;
+                        include __DIR__ . '/../pdss/pdss_index.php'; 
+                        unset($allowed_pdss_tabs, $hide_pdss_tabs, $is_sub_module);
                     ?>
                 </div>
             </div>

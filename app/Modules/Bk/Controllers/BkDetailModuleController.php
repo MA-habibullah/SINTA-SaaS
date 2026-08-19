@@ -65,7 +65,7 @@ class BkDetailModuleController extends BaseController {
 
             try {
                 $db   = \App\Config\Database::getConnection();
-                $stmt = $db->query("SELECT id FROM core.tenants WHERE id != '00000000-0000-0000-0000-000000000000' AND status = 'active' ORDER BY created_at ASC LIMIT 1");
+                $stmt = $db->query("SELECT id FROM core.tenants WHERE id != '00000000-0000-0000-0000-000000000000' AND status = 'active' ORDER BY nama_sekolah ASC LIMIT 1");
                 $firstId = $stmt->fetchColumn();
                 if ($firstId) return $firstId;
             } catch (\Throwable) {
@@ -75,7 +75,7 @@ class BkDetailModuleController extends BaseController {
         if (empty($tenantId) || $tenantId === '00000000-0000-0000-0000-000000000000') {
             try {
                 $db   = \App\Config\Database::getConnection();
-                $stmt = $db->query("SELECT id FROM core.tenants WHERE id != '00000000-0000-0000-0000-000000000000' AND status = 'active' ORDER BY created_at ASC LIMIT 1");
+                $stmt = $db->query("SELECT id FROM core.tenants WHERE id != '00000000-0000-0000-0000-000000000000' AND status = 'active' ORDER BY nama_sekolah ASC LIMIT 1");
                 $tenantId = $stmt->fetchColumn() ?: null;
             } catch (\Throwable) {
             }
@@ -139,15 +139,19 @@ class BkDetailModuleController extends BaseController {
         }
 
         $pageTitle = 'Layanan BK';
+        $viewName  = 'bk/master_bk';
         if ($activeGroup === 'kedisiplinan') {
             $pageTitle = 'Kedisiplinan Siswa';
+            $viewName  = 'bk/master_bk';
         } elseif ($activeGroup === 'akademik') {
             $pageTitle = 'Kesiapan Akademik & PDSS';
+            $viewName  = 'bk/akademik_layout';
         } elseif ($activeGroup === 'alumni') {
             $pageTitle = 'Alumni & Tracer Study';
+            $viewName  = 'bk/alumni_layout';
         }
 
-        $this->render('bk/master_bk', [
+        $this->render($viewName, [
             'title'             => $pageTitle,
             'user_role'         => $role,
             'can_write'         => in_array($role, ['guru_bk', 'operator_sekolah', 'super_admin']),
