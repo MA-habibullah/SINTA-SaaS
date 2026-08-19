@@ -262,17 +262,17 @@ class KurikulumModuleController extends BaseController {
         }
 
         // Cek kunci pada semester/TA TUJUAN
-        $stmtLock = $db->prepare("SELECT is_locked_kurikulum FROM akademik.kunci_akademik WHERE tenant_id = ? AND tahun_ajaran = ? AND semester = ?");
-        $stmtLock->execute([$tenantId, $targetTahunAjaran, $targetSemester]);
-        if ($stmtLock->fetchColumn()) {
-            $this->jsonResponse(false, null, 'Gagal menyalin. Seting Kurikulum Semester tujuan telah dikunci oleh administrator.', 403);
+        $stmtLock = $db->prepare("SELECT is_locked_kurikulum FROM akademik.kunci_akademik WHERE (tenant_id::text = :tenant_id OR tenant_id IS NULL) AND tahun_ajaran = :ta AND semester = :sem AND is_active = true LIMIT 1");
+        $stmtLock->execute(['tenant_id' => $tenantId, 'ta' => $targetTahunAjaran, 'sem' => $targetSemester]);
+        if ((bool)$stmtLock->fetchColumn()) {
+            $this->jsonResponse(false, null, 'Gagal menyalin. Seting Kurikulum Semester tujuan sedang dikunci. Silakan buka kunci rombel/kurikulum terlebih dahulu.', 403);
             return;
         }
 
         $db->beginTransaction();
         try {
             // Ambil mapping dari sumber (semester & TA sumber)
-            $stmtSource = $db->prepare("SELECT kelompok_id, mapel_id FROM akademik.pemetaan_mapel WHERE kelas_id = :source_kelas_id AND semester = :semester AND tahun_ajaran = :tahun_ajaran AND tenant_id = :tenant_id AND is_active = true");
+            $stmtSource = $db->prepare("SELECT kelompok_id, mapel_id FROM akademik.pemetaan_mapel WHERE (kelas_id = :source_kelas_id OR kelas_id::text = :source_kelas_id) AND semester = :semester AND tahun_ajaran = :tahun_ajaran AND (tenant_id::text = :tenant_id OR tenant_id IS NULL) AND (is_active = true OR is_active IS NULL)");
             $stmtSource->execute([
                 'source_kelas_id' => $sourceKelasId,
                 'semester'        => $semester,
@@ -288,7 +288,7 @@ class KurikulumModuleController extends BaseController {
             }
 
             // Hapus data lama di tujuan (semester & TA tujuan)
-            $stmtDelete = $db->prepare("DELETE FROM akademik.pemetaan_mapel WHERE kelas_id = :target_kelas_id AND semester = :semester AND tahun_ajaran = :tahun_ajaran AND tenant_id = :tenant_id");
+            $stmtDelete = $db->prepare("DELETE FROM akademik.pemetaan_mapel WHERE (kelas_id = :target_kelas_id OR kelas_id::text = :target_kelas_id) AND semester = :semester AND tahun_ajaran = :tahun_ajaran AND (tenant_id::text = :tenant_id OR tenant_id IS NULL)");
             $stmtDelete->execute([
                 'target_kelas_id' => $targetKelasId,
                 'semester'        => $targetSemester,
