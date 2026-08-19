@@ -101,8 +101,19 @@ class BaseController {
                 $data = null;
             } else if (array_key_exists('success', $payload) && array_key_exists('data', $payload)) {
                 $success = (bool)$payload['success'];
-                $data = $payload['data'];
                 $error = $payload['error'] ?? null;
+                // If payload has extra top-level metadata (e.g. locks, years, accreditation, stats)
+                if (count($payload) > 3) {
+                    $responseArr = $payload;
+                    $responseArr['success'] = $success;
+                    $responseArr['error'] = $error;
+                    http_response_code($statusCode);
+                    header('Content-Type: application/json; charset=utf-8');
+                    $responseArr = $this->sanitizeDataArray($responseArr);
+                    echo json_encode($responseArr, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+                    exit;
+                }
+                $data = $payload['data'];
             } else if (array_key_exists('data', $payload) && count($payload) === 1) {
                 // Just ['data' => ...]
                 $success = true;

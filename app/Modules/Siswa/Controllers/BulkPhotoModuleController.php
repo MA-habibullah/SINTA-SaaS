@@ -126,15 +126,13 @@ class BulkPhotoModuleController extends BaseController {
             }
 
             $stmtSiswa = $db->prepare("
-                SELECT s.id AS siswa_id, s.tenant_id, rp.foto_profil, d.file_sizes, rp.id AS id_rincian_pelajar, d.id AS id_dokumen
+                SELECT s.id AS siswa_id, s.tenant_id, s.foto_url AS foto_profil, d.file_sizes, d.id AS id_dokumen
                 FROM siswa.siswa s
                 JOIN core.tenants t ON s.tenant_id = t.id
-                LEFT JOIN siswa.rincian_pelajar rp ON s.id = rp.id_siswa
-                LEFT JOIN siswa.dokumen d ON s.id = d.id_siswa
+                LEFT JOIN siswa.dokumen d ON (s.id = d.siswa_id OR s.id::text = d.siswa_id::text)
                 WHERE t.npsn = :npsn
                   AND s.nisn = :nisn
-                  AND s.deleted_at IS NULL
-                  AND t.deleted_at IS NULL
+                  AND (s.is_active = true OR s.is_active IS NULL)
                 LIMIT 1
             ");
             $stmtSiswa->execute(['npsn' => $npsn, 'nisn' => $nisn]);
@@ -180,24 +178,11 @@ class BulkPhotoModuleController extends BaseController {
                 }
             }
 
-            if (!empty($siswa['id_rincian_pelajar'])) {
-                $stmtUpdateRP = $db->prepare("UPDATE siswa.rincian_pelajar SET foto_profil = :foto_profil, updated_at = NOW() WHERE id_siswa = :siswa_id");
-                $stmtUpdateRP->execute([
-                    'foto_profil' => 'uploads/' . $tenantId . '/' . $siswaId . '/' . $newFileName,
-                    'siswa_id' => $siswaId
-                ]);
-            } else {
-                $stmtInsertRP = $db->prepare("
-                    INSERT INTO siswa.rincian_pelajar 
-                        (id_siswa, lingkar_kepala, tinggi_badan, berat_badan, golongan_darah, anak_ke, jarak_rumah, transportasi, jumlah_saudara, foto_profil) 
-                    VALUES 
-                        (:siswa_id, 0, 0, 0, 'A', 1, 0, 'Lainnya', 0, :foto_profil)
-                ");
-                $stmtInsertRP->execute([
-                    'siswa_id' => $siswaId,
-                    'foto_profil' => 'uploads/' . $tenantId . '/' . $siswaId . '/' . $newFileName
-                ]);
-            }
+            $stmtUpdateS = $db->prepare("UPDATE siswa.siswa SET foto_url = :foto_url, updated_at = NOW() WHERE id::text = :siswa_id");
+            $stmtUpdateS->execute([
+                'foto_url' => 'uploads/' . $tenantId . '/' . $siswaId . '/' . $newFileName,
+                'siswa_id' => $siswaId
+            ]);
 
             $oldSizes = [];
             if (!empty($siswa['file_sizes'])) {

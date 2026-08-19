@@ -48,7 +48,7 @@ class SiswaModel extends BaseModel {
                 LEFT JOIN akademik.kelas k ON (s.tenant_id = k.tenant_id AND (s.kelas_saat_ini = k.id::text OR s.kelas_saat_ini = k.nama_kelas OR s.kelas_saat_ini = k.kode_kelas))
                 LEFT JOIN core.tenants t ON s.tenant_id = t.id
                 LEFT JOIN akademik.jurusan j ON (s.tenant_id = j.tenant_id AND (s.jurusan = j.id::text OR s.jurusan = j.nama_jurusan))
-                WHERE s.id::text = :id";
+                WHERE (s.id::text = :id OR s.id IN (SELECT siswa_id FROM siswa.registrasi WHERE id::text = :id))";
 
         $hasTenantFilter = (!empty($this->tenantId) && $this->tenantId !== '00000000-0000-0000-0000-000000000000');
         if ($hasTenantFilter) {
@@ -64,7 +64,118 @@ class SiswaModel extends BaseModel {
         $stmt->execute();
 
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $result ?: null;
+        if (!$result) return null;
+
+        $actualSiswaId = $result['id'];
+
+        // Sub-table: siswa.orang_tua (Ayah, Ibu, Wali)
+        $stOrtu = self::getPdo()->prepare("SELECT * FROM siswa.orang_tua WHERE siswa_id::text = :sid");
+        $stOrtu->execute([':sid' => $actualSiswaId]);
+        $rowsOrtu = $stOrtu->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        foreach ($rowsOrtu as $r) {
+            $h = strtolower($r['hubungan'] ?? '');
+            if ($h === 'ayah') {
+                $result['nama_ayah']             = $r['nama_lengkap'] ?? '';
+                $result['nik_ayah']              = $r['nik'] ?? '';
+                $result['pekerjaan_ayah']        = $r['pekerjaan'] ?? '';
+                $result['pendidikan_ayah']       = self::normalizePendidikan($r['pendidikan'] ?? '');
+                $result['penghasilan_ayah']      = self::formatPenghasilanToRange($r['penghasilan'] ?? null);
+                $result['penghasilan_ayah_raw']  = $r['penghasilan'] ?? '';
+                $result['tahun_lahir_ayah']      = $r['tahun_lahir'] ?? '';
+                $result['tanggal_lahir_ayah']    = $r['tanggal_lahir'] ?? '';
+                $result['agama_ayah']            = $r['agama'] ?? '';
+                $result['kewarganegaraan_ayah']  = $r['kewarganegaraan'] ?? 'WNI';
+                $result['status_hidup_ayah']     = $r['status_hidup'] ?? 'Hidup';
+                $result['tempat_lahir_ayah']     = $r['tempat_lahir'] ?? '';
+                $result['id_tempat_lahir_ayah']  = $r['id_tempat_lahir'] ?? '';
+                if (empty($result['no_telepon_orang_tua']) && !empty($r['no_hp'])) {
+                    $result['no_telepon_orang_tua'] = $r['no_hp'];
+                }
+            } elseif ($h === 'ibu') {
+                $result['nama_ibu']              = $r['nama_lengkap'] ?? '';
+                $result['nik_ibu']               = $r['nik'] ?? '';
+                $result['pekerjaan_ibu']         = $r['pekerjaan'] ?? '';
+                $result['pendidikan_ibu']        = self::normalizePendidikan($r['pendidikan'] ?? '');
+                $result['penghasilan_ibu']       = self::formatPenghasilanToRange($r['penghasilan'] ?? null);
+                $result['penghasilan_ibu_raw']   = $r['penghasilan'] ?? '';
+                $result['tahun_lahir_ibu']       = $r['tahun_lahir'] ?? '';
+                $result['tanggal_lahir_ibu']     = $r['tanggal_lahir'] ?? '';
+                $result['agama_ibu']             = $r['agama'] ?? '';
+                $result['kewarganegaraan_ibu']   = $r['kewarganegaraan'] ?? 'WNI';
+                $result['status_hidup_ibu']      = $r['status_hidup'] ?? 'Hidup';
+                $result['tempat_lahir_ibu']      = $r['tempat_lahir'] ?? '';
+                $result['id_tempat_lahir_ibu']   = $r['id_tempat_lahir'] ?? '';
+                if (empty($result['no_telepon_orang_tua']) && !empty($r['no_hp'])) {
+                    $result['no_telepon_orang_tua'] = $r['no_hp'];
+                }
+            } elseif ($h === 'wali') {
+                $result['nama_wali']             = $r['nama_lengkap'] ?? '';
+                $result['nik_wali']              = $r['nik'] ?? '';
+                $result['pekerjaan_wali']        = $r['pekerjaan'] ?? '';
+                $result['pendidikan_wali']       = self::normalizePendidikan($r['pendidikan'] ?? '');
+                $result['penghasilan_wali']      = self::formatPenghasilanToRange($r['penghasilan'] ?? null);
+                $result['penghasilan_wali_raw']  = $r['penghasilan'] ?? '';
+                $result['tahun_lahir_wali']      = $r['tahun_lahir'] ?? '';
+                $result['tanggal_lahir_wali']    = $r['tanggal_lahir'] ?? '';
+                $result['agama_wali']            = $r['agama'] ?? '';
+                $result['kewarganegaraan_wali']  = $r['kewarganegaraan'] ?? 'WNI';
+                $result['hubungan_wali']         = $r['hubungan_wali'] ?? '';
+                $result['tempat_lahir_wali']     = $r['tempat_lahir'] ?? '';
+                $result['id_tempat_lahir_wali']  = $r['id_tempat_lahir'] ?? '';
+                if (empty($result['no_telepon_orang_tua']) && !empty($r['no_hp'])) {
+                    $result['no_telepon_orang_tua'] = $r['no_hp'];
+                }
+            }
+        }
+
+        // Sub-table: siswa.registrasi
+        $stReg = self::getPdo()->prepare("SELECT * FROM siswa.registrasi WHERE siswa_id::text = :sid LIMIT 1");
+        $stReg->execute([':sid' => $actualSiswaId]);
+        $rowReg = $stReg->fetch(PDO::FETCH_ASSOC);
+        if ($rowReg) {
+            $result['id_registrasi'] = $rowReg['id'];
+            foreach ($rowReg as $rk => $rv) {
+                if (in_array($rk, ['id', 'siswa_id', 'tenant_id', 'created_at', 'updated_at'], true)) {
+                    continue;
+                }
+                if ($rv !== null) $result[$rk] = $rv;
+            }
+            if (!empty($rowReg['asal_sekolah'])) {
+                $result['sekolah_asal'] = $rowReg['asal_sekolah'];
+            }
+        }
+
+        // Sub-table: siswa.fisik_kesehatan_siswa
+        $stFisik = self::getPdo()->prepare("SELECT * FROM siswa.fisik_kesehatan_siswa WHERE siswa_id::text = :sid LIMIT 1");
+        $stFisik->execute([':sid' => $actualSiswaId]);
+        $rowFisik = $stFisik->fetch(PDO::FETCH_ASSOC);
+        if ($rowFisik) {
+            if (!empty($rowFisik['tinggi_badan'])) $result['tinggi_badan'] = $rowFisik['tinggi_badan'];
+            if (!empty($rowFisik['berat_badan'])) $result['berat_badan'] = $rowFisik['berat_badan'];
+            if (!empty($rowFisik['lingkar_kepala'])) $result['lingkar_kepala'] = $rowFisik['lingkar_kepala'];
+            if (!empty($rowFisik['golongan_darah'])) $result['golongan_darah'] = $rowFisik['golongan_darah'];
+            if (!empty($rowFisik['riwayat_penyakit'])) $result['penyakit_yang_diderita'] = $rowFisik['riwayat_penyakit'];
+            if (!empty($rowFisik['disabilitas'])) $result['kelainan_jasmani'] = $rowFisik['disabilitas'];
+            if (!empty($rowFisik['detail_semester'])) {
+                $result['kesehatan'] = is_string($rowFisik['detail_semester']) ? json_decode($rowFisik['detail_semester'], true) : $rowFisik['detail_semester'];
+            }
+        }
+
+        // Sub-table: siswa.dokumen
+        $stDocs = self::getPdo()->prepare("SELECT jenis_dokumen, url_file, nama_file FROM siswa.dokumen WHERE siswa_id::text = :sid");
+        $stDocs->execute([':sid' => $actualSiswaId]);
+        $rowsDocs = $stDocs->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        foreach ($rowsDocs as $doc) {
+            if (!empty($doc['jenis_dokumen']) && !empty($doc['url_file'])) {
+                $result[$doc['jenis_dokumen']] = $doc['url_file'];
+            }
+        }
+        if (!empty($result['foto_url']) && empty($result['foto_profil'])) {
+            $result['foto_profil'] = $result['foto_url'];
+        }
+
+        $result['id'] = $actualSiswaId;
+        return $result;
     }
 
     /**
@@ -108,7 +219,14 @@ class SiswaModel extends BaseModel {
         );
         $stmt->bindValue(':siswa_id', $siswaId);
         $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        $res = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        if ($res && !empty($res['detail_semester'])) {
+            $semData = is_string($res['detail_semester']) ? json_decode($res['detail_semester'], true) : $res['detail_semester'];
+            if (is_array($semData)) {
+                $res['semester'] = $semData;
+            }
+        }
+        return $res;
     }
 
     // ═══════════════════════════════════════════════════════
@@ -168,12 +286,44 @@ class SiswaModel extends BaseModel {
             $sql = "INSERT INTO siswa.siswa (
                         id, tenant_id, nisn, nis, nama_lengkap,
                         tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, agama,
-                        angkatan, jurusan, kelas_saat_ini, status_siswa, password
+                        angkatan, jurusan, kelas_saat_ini, status_siswa, password,
+                        nik, no_kk, nama_panggilan, kewarganegaraan, bahasa_sehari_hari,
+                        ukuran_seragam_sekolah, ukuran_seragam_olahraga,
+                        alamat_domisili, rt, rw, kode_pos,
+                        id_provinsi, id_kota, id_kecamatan, id_kelurahan,
+                        status_tinggal, tinggal_dengan, no_telepon_rumah, no_telepon_orang_tua,
+                        anak_ke, jumlah_saudara, saudara_tiri, saudara_angkat,
+                        status_anak, jarak_rumah, transportasi,
+                        penerima_kps, punya_kip, layak_kip, no_kip, alasan_layak
                     ) VALUES (
                         :id, :tenant_id, :nisn, :nis, :nama_lengkap,
                         :tempat_lahir, :tanggal_lahir, :jenis_kelamin, :alamat, :agama,
-                        :angkatan, :jurusan, :kelas_saat_ini, :status_siswa, :password
+                        :angkatan, :jurusan, :kelas_saat_ini, :status_siswa, :password,
+                        :nik, :no_kk, :nama_panggilan, :kewarganegaraan, :bahasa_sehari_hari,
+                        :ukuran_seragam_sekolah, :ukuran_seragam_olahraga,
+                        :alamat_domisili, :rt, :rw, :kode_pos,
+                        :id_provinsi, :id_kota, :id_kecamatan, :id_kelurahan,
+                        :status_tinggal, :tinggal_dengan, :no_telepon_rumah, :no_telepon_orang_tua,
+                        :anak_ke, :jumlah_saudara, :saudara_tiri, :saudara_angkat,
+                        :status_anak, :jarak_rumah, :transportasi,
+                        :penerima_kps, :punya_kip, :layak_kip, :no_kip, :alasan_layak
                     )";
+
+            $angkatanVal = $data['id_angkatan'] ?? ($data['angkatan'] ?? null);
+            if ($angkatanVal !== null) {
+                if (is_numeric($angkatanVal)) {
+                    $angkatanVal = (int) $angkatanVal;
+                } else {
+                    $stAng = $db->prepare("SELECT nama_angkatan FROM akademik.angkatan WHERE id::text = ? LIMIT 1");
+                    $stAng->execute([$angkatanVal]);
+                    $namaAng = $stAng->fetchColumn();
+                    if ($namaAng && preg_match('/\d{4}/', $namaAng, $m)) {
+                        $angkatanVal = (int) $m[0];
+                    } else {
+                        $angkatanVal = (int) date('Y');
+                    }
+                }
+            }
 
             $stmt = $db->prepare($sql);
             $stmt->execute([
@@ -187,13 +337,44 @@ class SiswaModel extends BaseModel {
                 'jenis_kelamin' => $data['jenis_kelamin'],
                 'alamat'        => $data['alamat_kk'] ?? ($data['alamat'] ?? null),
                 'agama'         => $data['agama'] ?? null,
-                'angkatan'      => $data['id_angkatan'] ?? ($data['angkatan'] ?? null),
+                'angkatan'      => $angkatanVal,
                 'jurusan'       => $data['id_jurusan'] ?? ($data['jurusan'] ?? null),
                 'kelas_saat_ini'=> $data['id_kelas'] ?? ($data['kelas_saat_ini'] ?? null),
                 'status_siswa'  => $data['status'] ?? ($data['status_siswa'] ?? 'Aktif'),
                 'password'      => !empty($data['password'])
                                     ? password_hash($data['password'], PASSWORD_BCRYPT)
                                     : password_hash($data['tanggal_lahir'] ?? '123456', PASSWORD_BCRYPT),
+                'nik'           => !empty($data['nik']) ? $data['nik'] : null,
+                'no_kk'         => !empty($data['no_kk']) ? $data['no_kk'] : null,
+                'nama_panggilan'=> $data['nama_panggilan'] ?? null,
+                'kewarganegaraan'=> $data['kewarganegaraan'] ?? 'WNI',
+                'bahasa_sehari_hari' => $data['bahasa_sehari_hari'] ?? null,
+                'ukuran_seragam_sekolah' => $data['ukuran_seragam_sekolah'] ?? null,
+                'ukuran_seragam_olahraga' => $data['ukuran_seragam_olahraga'] ?? null,
+                'alamat_domisili' => $data['alamat_domisili'] ?? null,
+                'rt'            => $data['rt'] ?? null,
+                'rw'            => $data['rw'] ?? null,
+                'kode_pos'      => $data['kode_pos'] ?? null,
+                'id_provinsi'   => !empty($data['id_provinsi']) ? (int)$data['id_provinsi'] : null,
+                'id_kota'       => !empty($data['id_kota']) ? (int)$data['id_kota'] : null,
+                'id_kecamatan'  => !empty($data['id_kecamatan']) ? (int)$data['id_kecamatan'] : null,
+                'id_kelurahan'  => !empty($data['id_kelurahan']) ? (int)$data['id_kelurahan'] : null,
+                'status_tinggal'=> $data['status_tinggal'] ?? null,
+                'tinggal_dengan'=> $data['tinggal_dengan'] ?? 'Orang Tua',
+                'no_telepon_rumah' => $data['no_telepon_rumah'] ?? null,
+                'no_telepon_orang_tua' => $data['no_telepon_orang_tua'] ?? null,
+                'anak_ke'       => !empty($data['anak_ke']) ? (int)$data['anak_ke'] : null,
+                'jumlah_saudara'=> isset($data['jumlah_saudara']) && $data['jumlah_saudara'] !== '' ? (int)$data['jumlah_saudara'] : null,
+                'saudara_tiri'  => isset($data['saudara_tiri']) && $data['saudara_tiri'] !== '' ? (int)$data['saudara_tiri'] : null,
+                'saudara_angkat'=> isset($data['saudara_angkat']) && $data['saudara_angkat'] !== '' ? (int)$data['saudara_angkat'] : null,
+                'status_anak'   => $data['status_anak'] ?? null,
+                'jarak_rumah'   => !empty($data['jarak_rumah']) ? (int)$data['jarak_rumah'] : null,
+                'transportasi'  => $data['transportasi'] ?? null,
+                'penerima_kps'  => !empty($data['penerima_kps']) ? 'true' : 'false',
+                'punya_kip'     => !empty($data['punya_kip']) ? 'true' : 'false',
+                'layak_kip'     => !empty($data['layak_kip']) ? 'true' : 'false',
+                'no_kip'        => $data['no_kip'] ?? null,
+                'alasan_layak'  => $data['alasan_layak'] ?? null,
             ]);
 
             $this->saveOrUpdateSubTables($db, $id, $data, true);
@@ -215,19 +396,19 @@ class SiswaModel extends BaseModel {
         try {
             if ($isOuterTransaction) $db->beginTransaction();
 
-            // Kolom yang benar-benar ada di tabel siswa.siswa utama
+            // Kolom yang ada di tabel siswa.siswa utama
             $siswaCols = [
                 'nisn', 'nis', 'nama_lengkap', 'jenis_kelamin', 'tempat_lahir', 'tanggal_lahir',
-                'agama', 'foto_url', 'email', 'no_hp'
+                'agama', 'foto_url', 'email', 'no_hp',
+                'nik', 'no_kk', 'nama_panggilan', 'kewarganegaraan', 'bahasa_sehari_hari',
+                'ukuran_seragam_sekolah', 'ukuran_seragam_olahraga',
+                'alamat_domisili', 'rt', 'rw', 'kode_pos',
+                'id_provinsi', 'id_kota', 'id_kecamatan', 'id_kelurahan',
+                'status_tinggal', 'tinggal_dengan', 'no_telepon_rumah', 'no_telepon_orang_tua',
+                'anak_ke', 'jumlah_saudara', 'saudara_tiri', 'saudara_angkat',
+                'status_anak', 'jarak_rumah', 'transportasi',
+                'penerima_kps', 'punya_kip', 'layak_kip', 'no_kip', 'alasan_layak'
             ];
-
-            $setParts = [];
-            $params   = ['id' => $id];
-
-            $isSuperAdmin = (empty($this->tenantId) || $this->tenantId === '00000000-0000-0000-0000-000000000000');
-            if (!$isSuperAdmin) {
-                $params['tenant_id'] = $this->tenantId;
-            }
 
             $setParts = [];
             $params   = ['id' => $id];
@@ -240,31 +421,59 @@ class SiswaModel extends BaseModel {
             foreach ($siswaCols as $col) {
                 if (array_key_exists($col, $data)) {
                     $setParts[]     = "{$col} = :{$col}";
-                    $params[$col]   = ($data[$col] !== '') ? $data[$col] : null;
+                    $val = $data[$col];
+                    if (in_array($col, ['penerima_kps', 'punya_kip', 'layak_kip'], true)) {
+                        $params[$col] = !empty($val) ? 'true' : 'false';
+                    } elseif (in_array($col, ['id_provinsi', 'id_kota', 'id_kecamatan', 'id_kelurahan', 'anak_ke', 'jumlah_saudara', 'saudara_tiri', 'saudara_angkat', 'jarak_rumah'], true)) {
+                        $params[$col] = ($val !== '' && $val !== null) ? (int)$val : null;
+                    } else {
+                        $params[$col] = ($val !== '' && $val !== null) ? $val : null;
+                    }
                 }
             }
 
-            // Field mapping: input lama → kolom baru di siswa.siswa
-            $mappings = [
-                'status'        => 'status_siswa',
-                'status_siswa'  => 'status_siswa',
-                'id_kelas'      => 'kelas_saat_ini',
-                'id_jurusan'    => 'jurusan',
-                'id_angkatan'   => 'angkatan',
-                'id_tahun_ajaran' => 'tahun_ajaran',
-                'id_jenjang'    => 'jenjang',
-                'alamat_kk'     => 'alamat',
-                'alamat'        => 'alamat',
+            // Mapped columns prioritizing non-empty Vue inputs over empty legacy fields
+            $mappedFields = [
+                'status_siswa'   => ['id_status', 'status_siswa', 'status'],
+                'kelas_saat_ini' => ['id_kelas', 'kelas_saat_ini', 'kelas'],
+                'jurusan'        => ['id_jurusan', 'jurusan'],
+                'angkatan'       => ['id_angkatan', 'angkatan'],
+                'alamat'         => ['alamat_kk', 'alamat_domisili', 'alamat'],
             ];
 
-            foreach ($mappings as $inputKey => $dbCol) {
-                if (array_key_exists($inputKey, $data)) {
-                    $val = ($data[$inputKey] !== '') ? $data[$inputKey] : null;
-                    // Hindari duplikat param jika input_key === dbCol sudah ditambahkan sebelumnya
-                    if (!isset($params[$dbCol])) {
-                        $setParts[]       = "{$dbCol} = :{$dbCol}";
-                        $params[$dbCol]   = ($dbCol === 'status_siswa' && $val === null) ? 'Aktif' : $val;
+            foreach ($mappedFields as $dbCol => $possibleKeys) {
+                $val = null;
+                $keyFound = false;
+                foreach ($possibleKeys as $pk) {
+                    if (array_key_exists($pk, $data)) {
+                        $keyFound = true;
+                        if ($data[$pk] !== '' && $data[$pk] !== null) {
+                            $val = $data[$pk];
+                            break;
+                        }
                     }
+                }
+
+                if ($keyFound && !isset($params[$dbCol])) {
+                    if ($dbCol === 'angkatan' && $val !== null) {
+                        if (is_numeric($val)) {
+                            $val = (int) $val;
+                        } else {
+                            $stAng = $db->prepare("SELECT nama_angkatan FROM akademik.angkatan WHERE id::text = ? LIMIT 1");
+                            $stAng->execute([$val]);
+                            $namaAng = $stAng->fetchColumn();
+                            if ($namaAng && preg_match('/\d{4}/', $namaAng, $m)) {
+                                $val = (int) $m[0];
+                            } else {
+                                $val = (int) date('Y');
+                            }
+                        }
+                    }
+                    if ($dbCol === 'status_siswa' && $val === null) {
+                        $val = 'Aktif';
+                    }
+                    $setParts[]     = "{$dbCol} = :{$dbCol}";
+                    $params[$dbCol] = $val;
                 }
             }
 
@@ -301,18 +510,12 @@ class SiswaModel extends BaseModel {
     }
 
     /**
-     * Soft delete siswa.
+     * Nonaktifkan siswa (Soft Delete)
      */
     public function delete(string $id): bool {
-        $isSuperAdmin = (empty($this->tenantId) || $this->tenantId === '00000000-0000-0000-0000-000000000000');
-        if ($isSuperAdmin) {
-            $sql    = "UPDATE siswa.siswa SET is_active = false WHERE id::text = :id";
-            $params = ['id' => $id];
-        } else {
-            $sql    = "UPDATE siswa.siswa SET is_active = false WHERE id::text = :id AND tenant_id = :tenant_id";
-            $params = ['id' => $id, 'tenant_id' => $this->tenantId];
-        }
-        return self::getPdo()->prepare($sql)->execute($params);
+        $db = self::getPdo();
+        $stmt = $db->prepare("UPDATE siswa.siswa SET is_active = false, updated_at = NOW() WHERE id::text = :id");
+        return $stmt->execute(['id' => $id]);
     }
 
     /**
@@ -320,42 +523,66 @@ class SiswaModel extends BaseModel {
      */
     public function saveKesehatanSiswa(string $idSiswa, array $kesehatanData): void {
         $db = self::getPdo();
-        foreach ($kesehatanData as $semester => $data) {
-            $stmt = $db->prepare(
-                "SELECT id FROM siswa.fisik_kesehatan_siswa WHERE siswa_id::text = ? AND semester = ? LIMIT 1"
-            );
-            $stmt->execute([$idSiswa, $semester]);
-            $existingId = $stmt->fetchColumn();
+        $stmtT = $db->prepare("SELECT tenant_id FROM siswa.siswa WHERE id::text = ? LIMIT 1");
+        $stmtT->execute([$idSiswa]);
+        $tenantId = $stmtT->fetchColumn() ?: $this->tenantId;
 
-            $tinggi       = !empty($data['tinggi_badan'])   ? (int) $data['tinggi_badan']   : null;
-            $berat        = !empty($data['berat_badan'])    ? (int) $data['berat_badan']    : null;
-            $pendengaran  = !empty($data['pendengaran'])    ? $data['pendengaran']           : null;
-            $pengelihatan = !empty($data['pengelihatan'])   ? $data['pengelihatan']          : null;
-            $gigi         = !empty($data['gigi'])           ? $data['gigi']                  : null;
+        $tb = null; $bb = null; $lk = null; $goldar = null; $penyakit = null; $alergi = null; $disab = null;
+        $detailSemesterJson = null;
 
-            if ($existingId) {
-                $db->prepare(
-                    "UPDATE siswa.fisik_kesehatan_siswa SET
-                        tinggi_badan=:tb, berat_badan=:bb, pendengaran=:pd, pengelihatan=:pe, gigi=:gi
-                     WHERE id = :id"
-                )->execute([
-                    'tb' => $tinggi, 'bb' => $berat,
-                    'pd' => $pendengaran, 'pe' => $pengelihatan, 'gi' => $gigi,
-                    'id' => $existingId,
-                ]);
-            } else {
-                if ($tinggi || $berat || $pendengaran || $pengelihatan || $gigi) {
-                    $db->prepare(
-                        "INSERT INTO siswa.fisik_kesehatan_siswa
-                            (id, siswa_id, semester, tinggi_badan, berat_badan, pendengaran, pengelihatan, gigi)
-                         VALUES (gen_random_uuid(), :siswa_id, :semester, :tb, :bb, :pd, :pe, :gi)"
-                    )->execute([
-                        'siswa_id' => $idSiswa, 'semester' => $semester,
-                        'tb' => $tinggi, 'bb' => $berat,
-                        'pd' => $pendengaran, 'pe' => $pengelihatan, 'gi' => $gigi,
-                    ]);
+        if (isset($kesehatanData['tinggi_badan']) || isset($kesehatanData['berat_badan']) || isset($kesehatanData['golongan_darah'])) {
+            $data = $kesehatanData;
+            $tb       = !empty($data['tinggi_badan']) ? (int)$data['tinggi_badan'] : null;
+            $bb       = !empty($data['berat_badan']) ? (int)$data['berat_badan'] : null;
+            $lk       = !empty($data['lingkar_kepala']) ? (int)$data['lingkar_kepala'] : null;
+            $goldar   = $data['golongan_darah'] ?? null;
+            $penyakit = $data['riwayat_penyakit'] ?? ($data['penyakit_yang_diderita'] ?? null);
+            $alergi   = $data['alergi'] ?? null;
+            $disab    = $data['disabilitas'] ?? ($data['kelainan_jasmani'] ?? null);
+        } else {
+            $detailSemesterJson = json_encode($kesehatanData);
+            foreach ($kesehatanData as $sem => $data) {
+                if (is_array($data)) {
+                    if (!empty($data['tinggi_badan'])) $tb = (int)$data['tinggi_badan'];
+                    if (!empty($data['berat_badan'])) $bb = (int)$data['berat_badan'];
+                    if (!empty($data['lingkar_kepala'])) $lk = (int)$data['lingkar_kepala'];
+                    if (!empty($data['golongan_darah'])) $goldar = $data['golongan_darah'];
+                    if (!empty($data['riwayat_penyakit']) || !empty($data['penyakit_yang_diderita'])) {
+                        $penyakit = $data['riwayat_penyakit'] ?? $data['penyakit_yang_diderita'];
+                    }
+                    if (!empty($data['alergi'])) $alergi = $data['alergi'];
+                    if (!empty($data['disabilitas']) || !empty($data['kelainan_jasmani'])) {
+                        $disab = $data['disabilitas'] ?? $data['kelainan_jasmani'];
+                    }
                 }
             }
+        }
+
+        $stK = $db->prepare("SELECT id FROM siswa.fisik_kesehatan_siswa WHERE siswa_id::text = ? LIMIT 1");
+        $stK->execute([$idSiswa]);
+        $kId = $stK->fetchColumn();
+
+        if ($kId) {
+            $db->prepare("UPDATE siswa.fisik_kesehatan_siswa SET 
+                tinggi_badan = COALESCE(:tb, tinggi_badan), 
+                berat_badan = COALESCE(:bb, berat_badan), 
+                lingkar_kepala = COALESCE(:lk, lingkar_kepala),
+                golongan_darah = COALESCE(:goldar, golongan_darah), 
+                riwayat_penyakit = COALESCE(:penyakit, riwayat_penyakit), 
+                alergi = COALESCE(:alergi, alergi), 
+                disabilitas = COALESCE(:disab, disabilitas), 
+                detail_semester = COALESCE(:detail_sem, detail_semester),
+                updated_at = NOW() 
+                WHERE id = :id")->execute([
+                'tb' => $tb, 'bb' => $bb, 'lk' => $lk, 'goldar' => $goldar, 'penyakit' => $penyakit, 'alergi' => $alergi, 'disab' => $disab,
+                'detail_sem' => $detailSemesterJson, 'id' => $kId
+            ]);
+        } else if ($tb || $bb || $lk || $goldar || $penyakit || $alergi || $disab || $detailSemesterJson) {
+            $db->prepare("INSERT INTO siswa.fisik_kesehatan_siswa (id, siswa_id, tenant_id, tinggi_badan, berat_badan, lingkar_kepala, golongan_darah, riwayat_penyakit, alergi, disabilitas, detail_semester) VALUES (gen_random_uuid(), :siswa_id, :tenant_id, :tb, :bb, :lk, :goldar, :penyakit, :alergi, :disab, :detail_sem)")->execute([
+                'siswa_id' => $idSiswa, 'tenant_id' => $tenantId,
+                'tb' => $tb, 'bb' => $bb, 'lk' => $lk, 'goldar' => $goldar, 'penyakit' => $penyakit, 'alergi' => $alergi, 'disab' => $disab,
+                'detail_sem' => $detailSemesterJson
+            ]);
         }
     }
 
@@ -367,181 +594,342 @@ class SiswaModel extends BaseModel {
      * Save or update data in all student sub-tables (native PostgreSQL multi-schema).
      */
     private function saveOrUpdateSubTables(\PDO $db, string $idSiswa, array $data, bool $isCreate): void {
-        $subTables = [
-            'rincian_pelajar' => [
-                'lingkar_kepala'       => (int)  ($data['lingkar_kepala']     ?? 0),
-                'tinggi_badan'         => (int)  ($data['tinggi_badan']       ?? 0),
-                'berat_badan'          => (int)  ($data['berat_badan']        ?? 0),
-                'golongan_darah'       => $data['golongan_darah']              ?? 'A',
-                'anak_ke'              => (int)  ($data['anak_ke']            ?? 1),
-                'jarak_rumah'          => (int)  ($data['jarak_rumah']        ?? 0),
-                'transportasi'         => $data['transportasi']               ?? 'Lainnya',
-                'jumlah_saudara'       => (int)  ($data['jumlah_saudara']     ?? 0),
-                'saudara_tiri'         => (int)  ($data['saudara_tiri']       ?? 0),
-                'saudara_angkat'       => (int)  ($data['saudara_angkat']     ?? 0),
-                'penyakit_yang_diderita' => $data['penyakit_yang_diderita']   ?? null,
-                'foto_profil'          => $data['foto_profil']                ?? null,
-                'kelainan_jasmani'     => $data['kelainan_jasmani']           ?? 'Tidak Ada',
-            ],
-            'rincian_alamat' => [
-                'id_kelurahan'   => !empty($data['id_kelurahan']) ? (int) $data['id_kelurahan'] : null,
-                'alamat_kk'      => $data['alamat_kk']            ?? '',
-                'alamat_domisili'=> $data['alamat_domisili']       ?? '',
-                'rt'             => $data['rt']                    ?? '',
-                'rw'             => $data['rw']                    ?? '',
-                'kode_pos'       => $data['kode_pos']              ?? '',
-                'status_tinggal' => $data['status_tinggal']        ?? 'Lainnya',
-                'tinggal_dengan' => $data['tinggal_dengan']        ?? 'Orang Tua',
-            ],
-            'orang_tua' => [
-                'id_tempat_lahir_ayah'  => !empty($data['id_tempat_lahir_ayah']) ? (int) $data['id_tempat_lahir_ayah'] : null,
-                'nik_ayah'              => $data['nik_ayah']              ?? null,
-                'nama_ayah'             => $data['nama_ayah']             ?? null,
-                'tahun_lahir_ayah'      => !empty($data['tahun_lahir_ayah']) ? (int) $data['tahun_lahir_ayah'] : null,
-                'pendidikan_ayah'       => $data['pendidikan_ayah']       ?? null,
-                'pekerjaan_ayah'        => $data['pekerjaan_ayah']        ?? null,
-                'penghasilan_ayah'      => $data['penghasilan_ayah']      ?? null,
-                'agama_ayah'            => $data['agama_ayah']            ?? null,
-                'tanggal_lahir_ayah'    => $data['tanggal_lahir_ayah']    ?? null,
-                'kewarganegaraan_ayah'  => $data['kewarganegaraan_ayah']  ?? 'WNI',
-                'status_hidup_ayah'     => $data['status_hidup_ayah']     ?? 'Hidup',
-                'id_tempat_lahir_ibu'   => !empty($data['id_tempat_lahir_ibu']) ? (int) $data['id_tempat_lahir_ibu'] : null,
-                'nik_ibu'               => $data['nik_ibu']               ?? '',
-                'nama_ibu'              => $data['nama_ibu']              ?? '',
-                'tahun_lahir_ibu'       => !empty($data['tahun_lahir_ibu']) ? (int) $data['tahun_lahir_ibu'] : null,
-                'pendidikan_ibu'        => $data['pendidikan_ibu']        ?? 'SMP',
-                'pekerjaan_ibu'         => $data['pekerjaan_ibu']         ?? 'Tidak Bekerja',
-                'penghasilan_ibu'       => $data['penghasilan_ibu']       ?? 'Tidak Berpenghasilan',
-                'agama_ibu'             => $data['agama_ibu']             ?? 'Islam',
-                'tanggal_lahir_ibu'     => $data['tanggal_lahir_ibu']     ?? null,
-                'kewarganegaraan_ibu'   => $data['kewarganegaraan_ibu']   ?? 'WNI',
-                'status_hidup_ibu'      => $data['status_hidup_ibu']      ?? 'Hidup',
-                'id_tempat_lahir_wali'  => !empty($data['id_tempat_lahir_wali']) ? (int) $data['id_tempat_lahir_wali'] : null,
-                'nik_wali'              => $data['nik_wali']              ?? null,
-                'nama_wali'             => $data['nama_wali']             ?? null,
-                'tahun_lahir_wali'      => !empty($data['tahun_lahir_wali']) ? (int) $data['tahun_lahir_wali'] : null,
-                'pendidikan_wali'       => $data['pendidikan_wali']       ?? null,
-                'pekerjaan_wali'        => $data['pekerjaan_wali']        ?? null,
-                'penghasilan_wali'      => $data['penghasilan_wali']      ?? null,
-                'agama_wali'            => $data['agama_wali']            ?? null,
-                'tanggal_lahir_wali'    => $data['tanggal_lahir_wali']    ?? null,
-                'kewarganegaraan_wali'  => $data['kewarganegaraan_wali']  ?? null,
-                'hubungan_wali'         => $data['hubungan_wali']         ?? null,
-            ],
-            'kontak' => [
-                'email'                 => $data['email']                  ?? '',
-                'no_telepon_rumah'      => $data['no_telepon_rumah']       ?? null,
-                'no_telepon_orang_tua'  => $data['no_telepon_orang_tua']   ?? null,
-                'no_telepon_siswa'      => $data['no_telepon_siswa']       ?? '',
-            ],
-            'kip' => [
-                'penerima_kps' => isset($data['penerima_kps']) ? (int) $data['penerima_kps'] : 0,
-                'punya_kip'    => isset($data['punya_kip'])    ? (int) $data['punya_kip']    : 0,
-                'layak_kip'    => isset($data['layak_kip'])    ? (int) $data['layak_kip']    : 0,
-                'alasan_layak' => $data['alasan_layak']        ?? 'Tidak Ada',
-                'no_kip'       => $data['no_kip']              ?? null,
-                'status_anak'  => $data['status_anak']         ?? null,
-            ],
-            'registrasi' => [
-                'jalur_diterima'        => $data['jalur_diterima']     ?? null,
-                'jenis_pendaftaran'     => $data['jenis_pendaftaran']  ?? 'Siswa Baru',
-                'tanggal_masuk'         => $data['tanggal_masuk']      ?? date('Y-m-d'),
-                'paud_formal'           => isset($data['paud_formal'])     ? (int) $data['paud_formal']    : 1,
-                'paud_non_formal'       => isset($data['paud_non_formal']) ? (int) $data['paud_non_formal'] : 0,
-                'hobi'                  => $data['hobi']               ?? '',
-                'keluar_karena'         => $data['keluar_karena']      ?? null,
-                'tanggal_keluar'        => $data['tanggal_keluar']     ?? null,
-                'alasan_keluar'         => $data['alasan_keluar']      ?? null,
-                'sekolah_asal_mutasi'   => $data['sekolah_asal_mutasi'] ?? null,
-                'pindah_dari_tingkat'   => $data['pindah_dari_tingkat'] ?? null,
-                'pindah_no_surat'       => $data['pindah_no_surat']    ?? null,
-                'tingkat_ditinggalkan'  => $data['tingkat_ditinggalkan'] ?? null,
-                'diterima_di_tingkat'   => $data['diterima_di_tingkat'] ?? null,
-                'sekolah_tujuan'        => $data['sekolah_tujuan']     ?? null,
-                'nomor_skp'             => $data['nomor_skp']          ?? null,
-            ],
-            'dokumen' => [
-                'berkas_kk'               => $data['berkas_kk']               ?? null,
-                'berkas_akta'             => $data['berkas_akta']             ?? null,
-                'berkas_ijazah_sd'        => $data['berkas_ijazah_sd']        ?? null,
-                'berkas_ijazah_smp'       => $data['berkas_ijazah_smp']       ?? null,
-                'berkas_ijazah_sma'       => $data['berkas_ijazah_sma']       ?? null,
-                'berkas_mutasi_masuk'     => $data['berkas_mutasi_masuk']     ?? null,
-                'berkas_mutasi_keluar'    => $data['berkas_mutasi_keluar']    ?? null,
-                'berkas_kip'              => $data['berkas_kip']              ?? null,
-                'berkas_pernyataan_baru'  => $data['berkas_pernyataan_baru']  ?? null,
-                'berkas_pernyataan_tka'   => $data['berkas_pernyataan_tka']   ?? null,
-                'file_sizes'              => !empty($data['file_sizes'])
-                    ? (is_array($data['file_sizes']) ? json_encode($data['file_sizes']) : $data['file_sizes'])
-                    : null,
-            ],
-        ];
+        // Fetch student's tenant_id
+        $stmtT = $db->prepare("SELECT tenant_id FROM siswa.siswa WHERE id::text = ? LIMIT 1");
+        $stmtT->execute([$idSiswa]);
+        $tenantId = $stmtT->fetchColumn() ?: $this->tenantId;
 
-        // Required fields per sub-tabel (untuk cek sebelum INSERT baru pada operasi update)
-        $requiredKeys = [
-            'rincian_pelajar' => ['tinggi_badan', 'berat_badan'],
-            'rincian_alamat'  => ['alamat_kk', 'id_kelurahan'],
-            'orang_tua'       => ['nama_ibu', 'nik_ibu'],
-            'kontak'          => ['email', 'no_telepon_siswa'],
-            'kip'             => ['punya_kip', 'layak_kip'],
-            'registrasi'      => ['jenis_pendaftaran', 'hobi'],
-            'dokumen'         => ['berkas_kk', 'berkas_akta'],
-        ];
+        // 1. Update foto_url, email, no_hp, alamat directly on siswa.siswa if present
+        $mainUpdates = [];
+        $mainParams  = ['id_siswa' => $idSiswa];
+        if (array_key_exists('foto_profil', $data) && !empty($data['foto_profil'])) {
+            $mainUpdates[] = "foto_url = :foto_url";
+            $mainParams['foto_url'] = $data['foto_profil'];
+        } elseif (array_key_exists('foto_url', $data) && !empty($data['foto_url'])) {
+            $mainUpdates[] = "foto_url = :foto_url";
+            $mainParams['foto_url'] = $data['foto_url'];
+        }
+        if (array_key_exists('email', $data) && $data['email'] !== '') {
+            $mainUpdates[] = "email = :email";
+            $mainParams['email'] = $data['email'];
+        }
+        if (array_key_exists('no_telepon_siswa', $data) && $data['no_telepon_siswa'] !== '') {
+            $mainUpdates[] = "no_hp = :no_hp";
+            $mainParams['no_hp'] = $data['no_telepon_siswa'];
+        }
+        if (array_key_exists('alamat_kk', $data) && $data['alamat_kk'] !== '') {
+            $mainUpdates[] = "alamat = :alamat";
+            $mainParams['alamat'] = $data['alamat_kk'];
+        } elseif (array_key_exists('alamat_domisili', $data) && $data['alamat_domisili'] !== '') {
+            $mainUpdates[] = "alamat = :alamat";
+            $mainParams['alamat'] = $data['alamat_domisili'];
+        }
+        if (!empty($mainUpdates)) {
+            $db->prepare("UPDATE siswa.siswa SET " . implode(', ', $mainUpdates) . " WHERE id::text = :id_siswa")->execute($mainParams);
+        }
 
-        foreach ($subTables as $table => $cols) {
-            // Saring kolom yang benar-benar ada di payload $data
-            $passedCols = [];
-            foreach ($cols as $colName => $processedValue) {
-                if (array_key_exists($colName, $data)) {
-                    $passedCols[$colName] = $processedValue;
-                }
+        // 2. Sub-table: siswa.fisik_kesehatan_siswa
+        $kesehatanFields = ['tinggi_badan', 'berat_badan', 'lingkar_kepala', 'golongan_darah', 'penyakit_yang_diderita', 'riwayat_penyakit', 'alergi', 'disabilitas', 'kelainan_jasmani', 'kesehatan'];
+        $hasKesehatan = false;
+        foreach ($kesehatanFields as $kf) {
+            if (array_key_exists($kf, $data)) {
+                $hasKesehatan = true;
+                break;
             }
+        }
+        if ($hasKesehatan || $isCreate) {
+            $stK = $db->prepare("SELECT id FROM siswa.fisik_kesehatan_siswa WHERE siswa_id::text = ? LIMIT 1");
+            $stK->execute([$idSiswa]);
+            $kId = $stK->fetchColumn();
 
-            // Jika update dan tidak ada kolom yang dikirim untuk tabel ini, lewati
-            if (!$isCreate && empty($passedCols)) continue;
+            $tb       = !empty($data['tinggi_badan']) ? (int)$data['tinggi_badan'] : null;
+            $bb       = !empty($data['berat_badan']) ? (int)$data['berat_badan'] : null;
+            $lk       = !empty($data['lingkar_kepala']) ? (int)$data['lingkar_kepala'] : null;
+            $goldar   = $data['golongan_darah'] ?? 'A';
+            $penyakit = $data['penyakit_yang_diderita'] ?? ($data['riwayat_penyakit'] ?? null);
+            $alergi   = $data['alergi'] ?? null;
+            $disab    = $data['kelainan_jasmani'] ?? ($data['disabilitas'] ?? null);
+            $detailSem= isset($data['kesehatan']) && is_array($data['kesehatan']) ? json_encode($data['kesehatan']) : null;
 
-            $stmt = $db->prepare("SELECT COUNT(*) FROM siswa.{$table} WHERE id_siswa::text = ?");
-            $stmt->execute([$idSiswa]);
-            $exists = $stmt->fetchColumn() > 0;
+            if ($kId) {
+                $db->prepare("UPDATE siswa.fisik_kesehatan_siswa SET tinggi_badan = COALESCE(:tb, tinggi_badan), berat_badan = COALESCE(:bb, berat_badan), lingkar_kepala = COALESCE(:lk, lingkar_kepala), golongan_darah = COALESCE(:goldar, golongan_darah), riwayat_penyakit = COALESCE(:penyakit, riwayat_penyakit), alergi = COALESCE(:alergi, alergi), disabilitas = COALESCE(:disab, disabilitas), detail_semester = COALESCE(:detail_sem, detail_semester), updated_at = NOW() WHERE id = :id")->execute([
+                    'tb' => $tb, 'bb' => $bb, 'lk' => $lk, 'goldar' => $goldar, 'penyakit' => $penyakit, 'alergi' => $alergi, 'disab' => $disab, 'detail_sem' => $detailSem, 'id' => $kId
+                ]);
+            } else if ($tb || $bb || $lk || $penyakit || $alergi || $disab || $detailSem) {
+                $db->prepare("INSERT INTO siswa.fisik_kesehatan_siswa (id, siswa_id, tenant_id, tinggi_badan, berat_badan, lingkar_kepala, golongan_darah, riwayat_penyakit, alergi, disabilitas, detail_semester) VALUES (:id, :siswa_id, :tenant_id, :tb, :bb, :lk, :goldar, :penyakit, :alergi, :disab, :detail_sem)")->execute([
+                    'id' => $this->generateUuidV4(), 'siswa_id' => $idSiswa, 'tenant_id' => $tenantId,
+                    'tb' => $tb, 'bb' => $bb, 'lk' => $lk, 'goldar' => $goldar, 'penyakit' => $penyakit, 'alergi' => $alergi, 'disab' => $disab, 'detail_sem' => $detailSem
+                ]);
+            }
+        }
 
-            if ($exists) {
-                if (empty($passedCols)) continue;
-                $setParts = [];
-                $params   = [];
-                foreach ($passedCols as $colName => $value) {
-                    $setParts[]         = "{$colName} = :{$colName}";
-                    $params[$colName]   = $value;
-                }
-                $params['id_siswa'] = $idSiswa;
-                $db->prepare(
-                    "UPDATE siswa.{$table} SET " . implode(', ', $setParts) . " WHERE id_siswa::text = :id_siswa"
-                )->execute($params);
-            } else {
-                // Pada operasi UPDATE, cek dulu apakah ada minimal 1 field wajib yang dikirim
-                if (!$isCreate && isset($requiredKeys[$table])) {
-                    $hasRequired = false;
-                    foreach ($requiredKeys[$table] as $reqKey) {
-                        if (array_key_exists($reqKey, $data) && $data[$reqKey] !== '') {
-                            $hasRequired = true;
-                            break;
+        // 3. Sub-table: siswa.orang_tua (Ayah, Ibu, Wali)
+        $parentTypes = [
+            'Ayah' => [
+                'nama' => 'nama_ayah', 'nik' => 'nik_ayah', 'pekerjaan' => 'pekerjaan_ayah', 
+                'pendidikan' => 'pendidikan_ayah', 'penghasilan' => 'penghasilan_ayah', 
+                'tahun_lahir' => 'tahun_lahir_ayah', 'tanggal_lahir' => 'tanggal_lahir_ayah', 
+                'agama' => 'agama_ayah', 'kewarganegaraan' => 'kewarganegaraan_ayah', 
+                'status_hidup' => 'status_hidup_ayah', 'tempat_lahir' => 'tempat_lahir_ayah', 
+                'id_tempat_lahir' => 'id_tempat_lahir_ayah'
+            ],
+            'Ibu'  => [
+                'nama' => 'nama_ibu', 'nik' => 'nik_ibu', 'pekerjaan' => 'pekerjaan_ibu', 
+                'pendidikan' => 'pendidikan_ibu', 'penghasilan' => 'penghasilan_ibu', 
+                'tahun_lahir' => 'tahun_lahir_ibu', 'tanggal_lahir' => 'tanggal_lahir_ibu', 
+                'agama' => 'agama_ibu', 'kewarganegaraan' => 'kewarganegaraan_ibu', 
+                'status_hidup' => 'status_hidup_ibu', 'tempat_lahir' => 'tempat_lahir_ibu', 
+                'id_tempat_lahir' => 'id_tempat_lahir_ibu'
+            ],
+            'Wali' => [
+                'nama' => 'nama_wali', 'nik' => 'nik_wali', 'pekerjaan' => 'pekerjaan_wali', 
+                'pendidikan' => 'pendidikan_wali', 'penghasilan' => 'penghasilan_wali', 
+                'tahun_lahir' => 'tahun_lahir_wali', 'tanggal_lahir' => 'tanggal_lahir_wali', 
+                'agama' => 'agama_wali', 'kewarganegaraan' => 'kewarganegaraan_wali', 
+                'hubungan_wali' => 'hubungan_wali', 'tempat_lahir' => 'tempat_lahir_wali', 
+                'id_tempat_lahir' => 'id_tempat_lahir_wali'
+            ],
+        ];
+
+        foreach ($parentTypes as $hub => $pKeys) {
+            $namaVal = $data[$pKeys['nama']] ?? null;
+            $nikVal  = $data[$pKeys['nik']] ?? null;
+            if ($namaVal !== null || $nikVal !== null || $isCreate) {
+                $stO = $db->prepare("SELECT id FROM siswa.orang_tua WHERE siswa_id::text = :sid AND hubungan = :hub LIMIT 1");
+                $stO->execute(['sid' => $idSiswa, 'hub' => $hub]);
+                $oId = $stO->fetchColumn();
+
+                $pekerjaanVal  = $data[$pKeys['pekerjaan']] ?? null;
+                $pendidikanVal = $data[$pKeys['pendidikan']] ?? null;
+                $thnLahirVal   = !empty($data[$pKeys['tahun_lahir']]) ? (int)$data[$pKeys['tahun_lahir']] : null;
+                $tglLahirVal   = $data[$pKeys['tanggal_lahir']] ?? null;
+                $agamaVal      = $data[$pKeys['agama']] ?? null;
+                $kwgVal        = $data[$pKeys['kewarganegaraan']] ?? 'WNI';
+                $statusHidupVal= isset($pKeys['status_hidup']) ? ($data[$pKeys['status_hidup']] ?? 'Hidup') : null;
+                $hubWaliVal    = isset($pKeys['hubungan_wali']) ? ($data[$pKeys['hubungan_wali']] ?? null) : null;
+                $tempatLahirVal= $data[$pKeys['tempat_lahir']] ?? null;
+                $idTmptLahirVal= !empty($data[$pKeys['id_tempat_lahir']]) ? (int)$data[$pKeys['id_tempat_lahir']] : null;
+                
+                $penghasilanRaw = $data[$pKeys['penghasilan']] ?? null;
+                $penghasilanVal = null;
+                if ($penghasilanRaw !== null && $penghasilanRaw !== '') {
+                    if (is_numeric($penghasilanRaw)) {
+                        $penghasilanVal = (int) $penghasilanRaw;
+                    } else {
+                        $cleanDigits = preg_replace('/[^\d]/', '', (string)$penghasilanRaw);
+                        if ($cleanDigits !== '' && is_numeric($cleanDigits) && (int)$cleanDigits >= 500000) {
+                            $penghasilanVal = (int) $cleanDigits;
+                        } else {
+                            $lower = strtolower((string)$penghasilanRaw);
+                            if (strpos($lower, '< 1') !== false || strpos($lower, 'kurang') !== false) {
+                                $penghasilanVal = 500000;
+                            } elseif (strpos($lower, '1 - 2') !== false || strpos($lower, '1 juta') !== false || strpos($lower, '1.000.000') !== false) {
+                                $penghasilanVal = 1500000;
+                            } elseif (strpos($lower, '2 - 5') !== false || strpos($lower, '2 juta') !== false || strpos($lower, '2.000.000') !== false) {
+                                $penghasilanVal = 3500000;
+                            } elseif (strpos($lower, '5 - 20') !== false || strpos($lower, '5 juta') !== false || strpos($lower, '5.000.000') !== false) {
+                                $penghasilanVal = 10000000;
+                            } elseif (strpos($lower, '> 20') !== false || strpos($lower, 'lebih') !== false || strpos($lower, '20.000.000') !== false) {
+                                $penghasilanVal = 25000000;
+                            } else {
+                                $penghasilanVal = 0;
+                            }
                         }
                     }
-                    if (!$hasRequired) continue;
                 }
+                $noHpVal       = $data['no_telepon_orang_tua'] ?? null;
 
-                // INSERT dengan semua kolom default dari definisi $cols
-                $insertData = $cols; // gunakan nilai default dari $cols
-                $colNames   = array_keys($insertData);
-                $placeholders = array_map(fn($c) => ":{$c}", $colNames);
-                $colNames[]   = 'id_siswa';
-                $placeholders[] = ':id_siswa';
-                $params       = $insertData;
-                $params['id_siswa'] = $idSiswa;
+                if ($oId) {
+                    $db->prepare("UPDATE siswa.orang_tua SET 
+                        nama_lengkap = COALESCE(:nama, nama_lengkap), 
+                        nik = COALESCE(:nik, nik), 
+                        pekerjaan = COALESCE(:pekerjaan, pekerjaan), 
+                        pendidikan = COALESCE(:pendidikan, pendidikan), 
+                        penghasilan = COALESCE(:penghasilan, penghasilan), 
+                        no_hp = COALESCE(:no_hp, no_hp), 
+                        tahun_lahir = COALESCE(:thn_lahir, tahun_lahir),
+                        tanggal_lahir = COALESCE(:tgl_lahir, tanggal_lahir),
+                        agama = COALESCE(:agama, agama),
+                        kewarganegaraan = COALESCE(:kwg, kewarganegaraan),
+                        status_hidup = COALESCE(:status_hidup, status_hidup),
+                        hubungan_wali = COALESCE(:hub_wali, hubungan_wali),
+                        tempat_lahir = COALESCE(:tempat_lahir, tempat_lahir),
+                        id_tempat_lahir = COALESCE(:id_tempat_lahir, id_tempat_lahir),
+                        updated_at = NOW() 
+                        WHERE id = :id")->execute([
+                        'nama' => $namaVal, 'nik' => $nikVal, 'pekerjaan' => $pekerjaanVal, 'pendidikan' => $pendidikanVal,
+                        'penghasilan' => $penghasilanVal, 'no_hp' => $noHpVal, 'thn_lahir' => $thnLahirVal,
+                        'tgl_lahir' => $tglLahirVal, 'agama' => $agamaVal, 'kwg' => $kwgVal,
+                        'status_hidup' => $statusHidupVal, 'hub_wali' => $hubWaliVal, 
+                        'tempat_lahir' => $tempatLahirVal, 'id_tempat_lahir' => $idTmptLahirVal,
+                        'id' => $oId
+                    ]);
+                } else if ($namaVal || $nikVal) {
+                    $db->prepare("INSERT INTO siswa.orang_tua (
+                        id, siswa_id, tenant_id, hubungan, nama_lengkap, nik, pekerjaan, pendidikan, penghasilan, no_hp,
+                        tahun_lahir, tanggal_lahir, agama, kewarganegaraan, status_hidup, hubungan_wali,
+                        tempat_lahir, id_tempat_lahir
+                    ) VALUES (
+                        :id, :siswa_id, :tenant_id, :hub, :nama, :nik, :pekerjaan, :pendidikan, :penghasilan, :no_hp,
+                        :thn_lahir, :tgl_lahir, :agama, :kwg, :status_hidup, :hub_wali,
+                        :tempat_lahir, :id_tempat_lahir
+                    )")->execute([
+                        'id' => $this->generateUuidV4(), 'siswa_id' => $idSiswa, 'tenant_id' => $tenantId, 'hub' => $hub,
+                        'nama' => $namaVal ?: 'Tidak Diisi', 'nik' => $nikVal, 'pekerjaan' => $pekerjaanVal, 'pendidikan' => $pendidikanVal,
+                        'penghasilan' => $penghasilanVal, 'no_hp' => $noHpVal, 'thn_lahir' => $thnLahirVal,
+                        'tgl_lahir' => $tglLahirVal, 'agama' => $agamaVal, 'kwg' => $kwgVal,
+                        'status_hidup' => $statusHidupVal, 'hub_wali' => $hubWaliVal,
+                        'tempat_lahir' => $tempatLahirVal, 'id_tempat_lahir' => $idTmptLahirVal
+                    ]);
+                }
+            }
+        }
 
-                $db->prepare(
-                    "INSERT INTO siswa.{$table} (" . implode(', ', $colNames) . ")
-                     VALUES (" . implode(', ', $placeholders) . ")"
-                )->execute($params);
+        // 4. Sub-table: siswa.registrasi
+        $regFields = [
+            'jenis_pendaftaran', 'asal_sekolah', 'sekolah_asal', 'npsn_asal', 'tahun_daftar', 'no_pendaftaran', 'status_ppdb', 'catatan', 'hobi',
+            'jalur_diterima', 'tanggal_masuk', 'paud_formal', 'paud_non_formal',
+            'no_ijazah_sebelumnya', 'tanggal_ijazah_sebelumnya', 'lama_belajar_sebelumnya',
+            'keluar_karena', 'tanggal_keluar', 'alasan_keluar', 'sekolah_tujuan', 'nomor_skp',
+            'tingkat_ditinggalkan', 'diterima_di_tingkat', 'nomor_ijazah_kelulusan', 'nomor_skl', 'keterangan_setelah_lulus',
+            'sekolah_asal_mutasi', 'pindah_dari_tingkat', 'pindah_no_surat'
+        ];
+        $hasReg = false;
+        foreach ($regFields as $rf) {
+            if (array_key_exists($rf, $data)) {
+                $hasReg = true;
+                break;
+            }
+        }
+        if ($hasReg || $isCreate) {
+            $stR = $db->prepare("SELECT id FROM siswa.registrasi WHERE siswa_id::text = ? LIMIT 1");
+            $stR->execute([$idSiswa]);
+            $rId = $stR->fetchColumn();
+
+            $jnsReg    = $data['jenis_pendaftaran'] ?? 'Siswa Baru';
+            $asalSek   = $data['asal_sekolah'] ?? ($data['sekolah_asal'] ?? ($data['sekolah_asal_mutasi'] ?? null));
+            $npsnAsal  = $data['npsn_asal'] ?? null;
+            $thnDaftar = !empty($data['tahun_daftar']) ? (int)$data['tahun_daftar'] : (int)date('Y');
+            $noReg     = $data['no_pendaftaran'] ?? null;
+            $statusPpdb= $data['status_ppdb'] ?? 'Diterima';
+            $catatan   = $data['catatan'] ?? ($data['hobi'] ?? null);
+
+            $jalur     = $data['jalur_diterima'] ?? null;
+            $tglMasuk  = $data['tanggal_masuk'] ?? null;
+            $hobi      = $data['hobi'] ?? null;
+            $paudF     = !empty($data['paud_formal']) ? 'true' : 'false';
+            $paudNf    = !empty($data['paud_non_formal']) ? 'true' : 'false';
+            $noIjz     = $data['no_ijazah_sebelumnya'] ?? null;
+            $tglIjz    = $data['tanggal_ijazah_sebelumnya'] ?? null;
+            $lamaBljr  = !empty($data['lama_belajar_sebelumnya']) ? (int)$data['lama_belajar_sebelumnya'] : null;
+
+            $keluarKrna= $data['keluar_karena'] ?? null;
+            $tglKeluar = $data['tanggal_keluar'] ?? null;
+            $alasanKlr = $data['alasan_keluar'] ?? null;
+            $sekTujuan = $data['sekolah_tujuan'] ?? null;
+            $noSkp     = $data['nomor_skp'] ?? null;
+            $tingDiting= $data['tingkat_ditinggalkan'] ?? null;
+            $terimaTing= $data['diterima_di_tingkat'] ?? null;
+            $noIjzLls  = $data['nomor_ijazah_kelulusan'] ?? null;
+            $noSkl     = $data['nomor_skl'] ?? null;
+            $ketLls    = $data['keterangan_setelah_lulus'] ?? null;
+            $sekAsalMut= $data['sekolah_asal_mutasi'] ?? null;
+            $pindTing  = $data['pindah_dari_tingkat'] ?? null;
+            $pindSurat = $data['pindah_no_surat'] ?? null;
+
+            if ($rId) {
+                $db->prepare("UPDATE siswa.registrasi SET 
+                    jenis_pendaftaran = COALESCE(:jns, jenis_pendaftaran), 
+                    asal_sekolah = COALESCE(:asal, asal_sekolah), 
+                    npsn_asal = COALESCE(:npsn, npsn_asal), 
+                    tahun_daftar = COALESCE(:thn, tahun_daftar), 
+                    no_pendaftaran = COALESCE(:noreg, no_pendaftaran), 
+                    status_ppdb = COALESCE(:status, status_ppdb), 
+                    catatan = COALESCE(:catatan, catatan),
+                    jalur_diterima = COALESCE(:jalur, jalur_diterima),
+                    tanggal_masuk = COALESCE(:tgl_masuk, tanggal_masuk),
+                    hobi = COALESCE(:hobi, hobi),
+                    paud_formal = :paud_f,
+                    paud_non_formal = :paud_nf,
+                    no_ijazah_sebelumnya = COALESCE(:no_ijz, no_ijazah_sebelumnya),
+                    tanggal_ijazah_sebelumnya = COALESCE(:tgl_ijz, tanggal_ijazah_sebelumnya),
+                    lama_belajar_sebelumnya = COALESCE(:lama_bljr, lama_belajar_sebelumnya),
+                    keluar_karena = COALESCE(:keluar_krna, keluar_karena),
+                    tanggal_keluar = COALESCE(:tgl_keluar, tanggal_keluar),
+                    alasan_keluar = COALESCE(:alasan_klr, alasan_keluar),
+                    sekolah_tujuan = COALESCE(:sek_tujuan, sekolah_tujuan),
+                    nomor_skp = COALESCE(:no_skp, nomor_skp),
+                    tingkat_ditinggalkan = COALESCE(:ting_diting, tingkat_ditinggalkan),
+                    diterima_di_tingkat = COALESCE(:terima_ting, diterima_di_tingkat),
+                    nomor_ijazah_kelulusan = COALESCE(:no_ijz_lls, nomor_ijazah_kelulusan),
+                    nomor_skl = COALESCE(:no_skl, nomor_skl),
+                    keterangan_setelah_lulus = COALESCE(:ket_lls, keterangan_setelah_lulus),
+                    sekolah_asal_mutasi = COALESCE(:sek_asal_mut, sekolah_asal_mutasi),
+                    pindah_dari_tingkat = COALESCE(:pind_ting, pindah_dari_tingkat),
+                    pindah_no_surat = COALESCE(:pind_surat, pindah_no_surat),
+                    updated_at = NOW() 
+                    WHERE id = :id")->execute([
+                    'jns' => $jnsReg, 'asal' => $asalSek, 'npsn' => $npsnAsal, 'thn' => $thnDaftar, 'noreg' => $noReg,
+                    'status' => $statusPpdb, 'catatan' => $catatan,
+                    'jalur' => $jalur, 'tgl_masuk' => $tglMasuk, 'hobi' => $hobi, 'paud_f' => $paudF, 'paud_nf' => $paudNf,
+                    'no_ijz' => $noIjz, 'tgl_ijz' => $tglIjz, 'lama_bljr' => $lamaBljr,
+                    'keluar_krna' => $keluarKrna, 'tgl_keluar' => $tglKeluar, 'alasan_klr' => $alasanKlr,
+                    'sek_tujuan' => $sekTujuan, 'no_skp' => $noSkp, 'ting_diting' => $tingDiting,
+                    'terima_ting' => $terimaTing, 'no_ijz_lls' => $noIjzLls, 'no_skl' => $noSkl,
+                    'ket_lls' => $ketLls, 'sek_asal_mut' => $sekAsalMut, 'pind_ting' => $pindTing,
+                    'pind_surat' => $pindSurat, 'id' => $rId
+                ]);
+            } else if ($jnsReg || $asalSek) {
+                $db->prepare("INSERT INTO siswa.registrasi (
+                    id, siswa_id, tenant_id, jenis_pendaftaran, asal_sekolah, npsn_asal, tahun_daftar, no_pendaftaran, status_ppdb, catatan,
+                    jalur_diterima, tanggal_masuk, hobi, paud_formal, paud_non_formal,
+                    no_ijazah_sebelumnya, tanggal_ijazah_sebelumnya, lama_belajar_sebelumnya,
+                    keluar_karena, tanggal_keluar, alasan_keluar, sekolah_tujuan, nomor_skp,
+                    tingkat_ditinggalkan, diterima_di_tingkat, nomor_ijazah_kelulusan, nomor_skl, keterangan_setelah_lulus,
+                    sekolah_asal_mutasi, pindah_dari_tingkat, pindah_no_surat
+                ) VALUES (
+                    :id, :siswa_id, :tenant_id, :jns, :asal, :npsn, :thn, :noreg, :status, :catatan,
+                    :jalur, :tgl_masuk, :hobi, :paud_f, :paud_nf,
+                    :no_ijz, :tgl_ijz, :lama_bljr,
+                    :keluar_krna, :tgl_keluar, :alasan_klr, :sek_tujuan, :no_skp,
+                    :ting_diting, :terima_ting, :no_ijz_lls, :no_skl, :ket_lls,
+                    :sek_asal_mut, :pind_ting, :pind_surat
+                )")->execute([
+                    'id' => $this->generateUuidV4(), 'siswa_id' => $idSiswa, 'tenant_id' => $tenantId,
+                    'jns' => $jnsReg, 'asal' => $asalSek, 'npsn' => $npsnAsal, 'thn' => $thnDaftar, 'noreg' => $noReg,
+                    'status' => $statusPpdb, 'catatan' => $catatan,
+                    'jalur' => $jalur, 'tgl_masuk' => $tglMasuk, 'hobi' => $hobi, 'paud_f' => $paudF, 'paud_nf' => $paudNf,
+                    'no_ijz' => $noIjz, 'tgl_ijz' => $tglIjz, 'lama_bljr' => $lamaBljr,
+                    'keluar_krna' => $keluarKrna, 'tgl_keluar' => $tglKeluar, 'alasan_klr' => $alasanKlr,
+                    'sek_tujuan' => $sekTujuan, 'no_skp' => $noSkp, 'ting_diting' => $tingDiting,
+                    'terima_ting' => $terimaTing, 'no_ijz_lls' => $noIjzLls, 'no_skl' => $noSkl,
+                    'ket_lls' => $ketLls, 'sek_asal_mut' => $sekAsalMut, 'pind_ting' => $pindTing,
+                    'pind_surat' => $pindSurat
+                ]);
+            }
+        }
+
+        // 5. Sub-table: siswa.dokumen
+        $docKeys = ['berkas_kk', 'berkas_akta', 'berkas_ijazah_sd', 'berkas_ijazah_smp', 'berkas_ijazah_sma', 'berkas_mutasi_masuk', 'berkas_mutasi_keluar', 'berkas_kip', 'berkas_pernyataan_baru', 'berkas_pernyataan_tka'];
+        foreach ($docKeys as $dKey) {
+            if (array_key_exists($dKey, $data) && !empty($data[$dKey])) {
+                $fileUrl = $data[$dKey];
+                $fileName = basename($fileUrl);
+
+                $stD = $db->prepare("SELECT id FROM siswa.dokumen WHERE siswa_id::text = :sid AND jenis_dokumen = :jenis LIMIT 1");
+                $stD->execute(['sid' => $idSiswa, 'jenis' => $dKey]);
+                $dId = $stD->fetchColumn();
+
+                if ($dId) {
+                    $db->prepare("UPDATE siswa.dokumen SET url_file = :url, nama_file = :nama, updated_at = NOW() WHERE id = :id")->execute([
+                        'url' => $fileUrl, 'nama' => $fileName, 'id' => $dId
+                    ]);
+                } else {
+                    $db->prepare("INSERT INTO siswa.dokumen (id, siswa_id, tenant_id, jenis_dokumen, nama_file, url_file) VALUES (:id, :siswa_id, :tenant_id, :jenis, :nama, :url)")->execute([
+                        'id' => $this->generateUuidV4(), 'siswa_id' => $idSiswa, 'tenant_id' => $tenantId,
+                        'jenis' => $dKey, 'nama' => $fileName, 'url' => $fileUrl
+                    ]);
+                }
             }
         }
     }
@@ -554,5 +942,43 @@ class SiswaModel extends BaseModel {
         $bytes[6] = chr(ord($bytes[6]) & 0x0f | 0x40);
         $bytes[8] = chr(ord($bytes[8]) & 0x3f | 0x80);
         return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($bytes), 4));
+    }
+
+    /**
+     * Normalisasi string pendidikan agar sesuai opsi dropdown di UI
+     */
+    public static function normalizePendidikan(?string $pendidikan): string {
+        if (!$pendidikan) return '';
+        $p = trim($pendidikan);
+        if (stripos($p, 'tidak tamat') !== false) return 'Tidak Tamat SD';
+        if (preg_match('/\b(S3|Doktor)\b/i', $p)) return 'S3';
+        if (preg_match('/\b(S2|Magister)\b/i', $p)) return 'S2';
+        if (preg_match('/\b(S1|Sarjana)\b/i', $p)) return 'S1';
+        if (preg_match('/\b(D4|Diploma 4)\b/i', $p)) return 'D4';
+        if (preg_match('/\b(D3|Diploma 3)\b/i', $p)) return 'D3';
+        if (preg_match('/\b(D2|Diploma 2)\b/i', $p)) return 'D2';
+        if (preg_match('/\b(D1|Diploma 1)\b/i', $p)) return 'D1';
+        if (preg_match('/\b(SMA|SMK|MA|Sederajat)\b/i', $p)) return 'SMA/Sederajat';
+        if (preg_match('/\b(SMP|MTs)\b/i', $p)) return 'SMP/Sederajat';
+        if (preg_match('/\b(SD|MI)\b/i', $p)) return 'SD/Sederajat';
+        return $p;
+    }
+
+    /**
+     * Konversi nilai integer / string penghasilan ke label rentang dropdown di UI
+     */
+    public static function formatPenghasilanToRange($penghasilan): string {
+        if ($penghasilan === null || $penghasilan === '') return '';
+        if (!is_numeric($penghasilan)) {
+            return (string)$penghasilan;
+        }
+        $num = (int)$penghasilan;
+        if ($num <= 0) return 'Tidak Berpenghasilan';
+        if ($num < 500000) return 'Kurang dari Rp500.000';
+        if ($num <= 999999) return 'Rp500.000 sampai Rp999.999';
+        if ($num <= 1999999) return 'Rp1.000.000 sampai Rp1.999.999';
+        if ($num <= 4999999) return 'Rp2.000.000 sampai Rp4.999.999';
+        if ($num <= 20000000) return 'Rp5.000.000 sampai Rp20.000.000';
+        return 'Lebih dari Rp20.000.000';
     }
 }

@@ -5,7 +5,7 @@ namespace App\Modules\Siswa\Controllers;
 use App\Core\BaseController;
 use App\Modules\Siswa\Models\SiswaModel;
 use App\Core\SessionManager;
-use App\Libraries\FileCompressor;
+use App\Core\FileCompressor;
 
 /**
  * SiswaModuleController — Controller Modul Siswa (Arsitektur Baru).
@@ -97,7 +97,7 @@ class SiswaModuleController extends BaseController {
             
             if ($action === 'get_kecamatan') {
                 $idKota = $_GET['id_kota'] ?? 0;
-                $stmt = $db->prepare("SELECT id_kecamatan, id_kota, nama_kecamatan FROM core.kecamatan WHERE id_kota = ? ORDER BY nama_kota ASC");
+                $stmt = $db->prepare("SELECT id_kecamatan, id_kota, nama_kecamatan FROM core.kecamatan WHERE id_kota = ? ORDER BY nama_kecamatan ASC");
                 $stmt->execute([$idKota]);
                 $this->jsonResponse($stmt->fetchAll(\PDO::FETCH_ASSOC));
             }
@@ -173,6 +173,7 @@ class SiswaModuleController extends BaseController {
 
     private function validateUploadedFiles(?string $tenantId, array $existingSizes, array &$errors): void {
         $fileKeys = [
+            'foto_profil', 'berkas_kk', 'berkas_akta', 'berkas_ijazah_sd',
             'berkas_ijazah_smp', 'berkas_ijazah_sma', 'berkas_mutasi_masuk',
             'berkas_mutasi_keluar', 'berkas_kip', 'berkas_pernyataan_baru', 'berkas_pernyataan_tka'
         ];
@@ -181,6 +182,7 @@ class SiswaModuleController extends BaseController {
             'jpg'  => ['image/jpeg'],
             'jpeg' => ['image/jpeg'],
             'png'  => ['image/png'],
+            'webp' => ['image/webp'],
             'pdf'  => ['application/pdf'],
         ];
 
@@ -208,14 +210,14 @@ class SiswaModuleController extends BaseController {
                 continue;
             }
 
-            if ($fileSize > 500 * 1024) {
-                $errors[$key] = "Ukuran {$fieldLabel} melebihi batas maksimal 500 KB.";
+            if ($fileSize > 10 * 1024 * 1024) {
+                $errors[$key] = "Ukuran {$fieldLabel} melebihi batas maksimal server (10 MB).";
                 continue;
             }
 
             $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
             if (!array_key_exists($ext, $allowedMimes)) {
-                $errors[$key] = "Format {$fieldLabel} tidak valid. Diizinkan: jpg, jpeg, png, pdf.";
+                $errors[$key] = "Format {$fieldLabel} tidak valid. Diizinkan: jpg, jpeg, png, webp, pdf.";
                 continue;
             }
 
@@ -271,10 +273,7 @@ class SiswaModuleController extends BaseController {
             $fileSize      = $_FILES[$key]['size'];
 
             $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-            if (!in_array($fileExtension, ['jpg', 'jpeg', 'png', 'pdf'], true)) {
-                continue;
-            }
-            if ($fileSize > 500 * 1024) {
+            if (!in_array($fileExtension, ['jpg', 'jpeg', 'png', 'webp', 'pdf'], true)) {
                 continue;
             }
 
@@ -285,9 +284,9 @@ class SiswaModuleController extends BaseController {
             try {
                 if (in_array($fileExtension, ['jpg', 'jpeg', 'png', 'webp'], true)) {
                     $maxWidth = ($key === 'foto_profil') ? 800 : 1200;
-                    $result   = FileCompressor::compressImage($fileTmpPath, $baseDir, $maxWidth, 75);
+                    $result   = FileCompressor::compressImage($fileTmpPath, $baseDir, $maxWidth, 80, 500 * 1024);
                 } else {
-                    $result = FileCompressor::processPdf($fileTmpPath, $baseDir, 500 * 1024);
+                    $result = FileCompressor::processPdf($fileTmpPath, $baseDir, 10 * 1024 * 1024);
                 }
             } catch (\RuntimeException $e) {
                 throw new \Exception('Berkas ' . str_replace('_', ' ', $key) . ': ' . $e->getMessage());
@@ -311,7 +310,7 @@ class SiswaModuleController extends BaseController {
 
             $relativeDbPath      = $trustedPrefix . $newFileName;
             $uploaded[$key]      = $relativeDbPath;
-            $uploadedSizes[$key] = $fileSize;
+            $uploadedSizes[$key] = $result['size_after'] ?? $fileSize;
         }
 
         return [
@@ -436,7 +435,7 @@ class SiswaModuleController extends BaseController {
             if (isset($_POST['kesehatan']) && is_array($_POST['kesehatan'])) {
                 $this->siswaModel->saveKesehatanSiswa($siswaId, $_POST['kesehatan']);
             }
-            \App\Helpers\ActivityLogger::record('INSERT', 'siswa', $siswaId, null, $input);
+            \App\Helpers\ActivityLogger::record('INSERT', 'siswa.siswa', null, $input, $tenantId);
 
             $db->commit();
 
@@ -482,6 +481,23 @@ class SiswaModuleController extends BaseController {
      */
     public function edit(): void {
         if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
+            $action = $_GET['action'] ?? '';
+            $id = $_GET['id'] ?? '';
+            if ($action === 'get_siswa_detail' && !empty($id)) {
+                $siswa = $this->siswaModel->findFullById($id);
+                if ($siswa) {
+                    if (isset($siswa['password'])) unset($siswa['password']);
+                    $siswa['kesehatan'] = $this->siswaModel->getKesehatanSiswa($id);
+                    $this->jsonResponse([
+                        'success' => true,
+                        'data'    => $siswa
+                    ], 200);
+                    return;
+                } else {
+                    $this->jsonResponse(['success' => false, 'error' => 'Data siswa tidak ditemukan.'], 404);
+                    return;
+                }
+            }
             $this->handleAjax();
             return;
         }
@@ -647,21 +663,18 @@ class SiswaModuleController extends BaseController {
         $db = \App\Config\Database::getConnection();
 
         if ($currentStep === null || $currentStep === 5) {
-            $stmt = $db->prepare("SELECT foto_profil FROM siswa.rincian_pelajar WHERE id_siswa::text = ?");
+            $stmt = $db->prepare("SELECT foto_url AS foto_profil FROM siswa.siswa WHERE id::text = ?");
             $stmt->execute([$id]);
             $existing['foto_profil'] = $stmt->fetchColumn() ?: '';
             
-            $stmt = $db->prepare("SELECT berkas_kk, berkas_akta, berkas_ijazah_sd, berkas_ijazah_smp, berkas_ijazah_sma, berkas_mutasi_masuk, berkas_mutasi_keluar, berkas_kip, berkas_pernyataan_baru, berkas_pernyataan_tka, file_sizes FROM siswa.dokumen WHERE id_siswa::text = ?");
+            $stmt = $db->prepare("SELECT jenis_dokumen, url_file FROM siswa.dokumen WHERE siswa_id::text = ?");
             $stmt->execute([$id]);
-            $row = $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+            $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
             
-            if (!empty($row['file_sizes'])) {
-                $existingSizes = json_decode($row['file_sizes'], true) ?: [];
-            }
-            unset($row['file_sizes']);
-            
-            foreach ($row as $k => $v) {
-                $existing[$k] = $v ?: '';
+            foreach ($rows as $r) {
+                if (!empty($r['jenis_dokumen'])) {
+                    $existing[$r['jenis_dokumen']] = $r['url_file'] ?: '';
+                }
             }
 
             $this->validateUploadedFiles($tenantId, $existingSizes, $errors);
@@ -728,7 +741,7 @@ class SiswaModuleController extends BaseController {
             if (isset($_POST['kesehatan']) && is_array($_POST['kesehatan'])) {
                 $this->siswaModel->saveKesehatanSiswa($id, $_POST['kesehatan']);
             }
-            \App\Helpers\ActivityLogger::record('UPDATE', 'siswa', $id, $siswa, $input);
+            \App\Helpers\ActivityLogger::record('UPDATE', 'siswa.siswa', $siswa, $input, $tenantId);
             \App\Helpers\CacheInvalidator::clearStudentCache($id, $tenantId);
 
             $db->commit();
@@ -810,7 +823,7 @@ class SiswaModuleController extends BaseController {
 
         try {
             $this->siswaModel->delete($id);
-            \App\Helpers\ActivityLogger::record('DELETE', 'siswa', $id, $siswa, null);
+            \App\Helpers\ActivityLogger::record('DELETE', 'siswa.siswa', $siswa, null, $siswa['tenant_id'] ?? null);
             \App\Helpers\CacheInvalidator::clearStudentCache($id, $siswa['tenant_id'] ?? null);
             $this->redirectWithSuccess('Data siswa berhasil dihapus.', '/SINTA-SaaS/pengguna');
         } catch (\PDOException $e) {
@@ -846,204 +859,204 @@ class SiswaModuleController extends BaseController {
     private function validateSiswaData(array $data, ?string $excludeId = null, ?int $currentStep = null): array {
         $errors = [];
 
-        if ($currentStep === 1 || $currentStep === null) {
+        if ($currentStep === null || $currentStep >= 1) {
             if (empty($data['nama_lengkap'])) {
-                $errors['nama_lengkap'] = 'Nama lengkap wajib diisi.';
+                $errors['nama_lengkap'] = '[Langkah 1 - Data Pokok] Nama lengkap wajib diisi.';
             } elseif (strlen($data['nama_lengkap']) > 255) {
-                $errors['nama_lengkap'] = 'Nama lengkap tidak boleh melebihi 255 karakter.';
+                $errors['nama_lengkap'] = '[Langkah 1 - Data Pokok] Nama lengkap tidak boleh melebihi 255 karakter.';
             }
             if (empty($data['jenis_kelamin'])) {
-                $errors['jenis_kelamin'] = 'Jenis kelamin wajib dipilih.';
+                $errors['jenis_kelamin'] = '[Langkah 1 - Data Pokok] Jenis kelamin wajib dipilih.';
             } elseif (!in_array($data['jenis_kelamin'], ['L', 'P'])) {
-                $errors['jenis_kelamin'] = 'Pilihan jenis kelamin tidak valid.';
+                $errors['jenis_kelamin'] = '[Langkah 1 - Data Pokok] Pilihan jenis kelamin tidak valid.';
             }
             if (empty($data['nik'])) {
-                $errors['nik'] = 'NIK wajib diisi.';
+                $errors['nik'] = '[Langkah 1 - Data Pokok] NIK wajib diisi.';
             }
             if (empty($data['nisn'])) {
-                $errors['nisn'] = 'NISN wajib diisi.';
+                $errors['nisn'] = '[Langkah 1 - Data Pokok] NISN wajib diisi.';
             } else {
                 if (!preg_match('/^[0-9]{10}$/', $data['nisn'])) {
-                    $errors['nisn'] = 'NISN harus berupa 10 digit angka.';
+                    $errors['nisn'] = '[Langkah 1 - Data Pokok] NISN harus berupa 10 digit angka.';
                 } elseif (!$this->siswaModel->isNisnUnique($data['nisn'], $excludeId)) {
-                    $errors['nisn'] = 'NISN sudah terdaftar pada sekolah lain (NISN harus unik nasional).';
+                    $errors['nisn'] = '[Langkah 1 - Data Pokok] NISN sudah terdaftar pada sekolah lain (NISN harus unik nasional).';
                 }
             }
             if (!empty($data['nis'])) {
                 if (strlen($data['nis']) > 20) {
-                    $errors['nis'] = 'NIS tidak boleh melebihi 20 karakter.';
+                    $errors['nis'] = '[Langkah 1 - Data Pokok] NIS tidak boleh melebihi 20 karakter.';
                 } elseif (!$this->siswaModel->isNisUnique($data['nis'], $excludeId)) {
-                    $errors['nis'] = 'NIS sudah terdaftar di sekolah ini.';
+                    $errors['nis'] = '[Langkah 1 - Data Pokok] NIS sudah terdaftar di sekolah ini.';
                 }
             }
             if (empty($data['agama'])) {
-                $errors['agama'] = 'Agama wajib dipilih.';
+                $errors['agama'] = '[Langkah 1 - Data Pokok] Agama wajib dipilih.';
             }
             if (empty($data['tempat_lahir'])) {
-                $errors['tempat_lahir'] = 'Tempat lahir wajib diisi.';
+                $errors['tempat_lahir'] = '[Langkah 1 - Data Pokok] Tempat lahir wajib diisi.';
             }
             if (empty($data['tanggal_lahir'])) {
-                $errors['tanggal_lahir'] = 'Tanggal lahir wajib diisi.';
+                $errors['tanggal_lahir'] = '[Langkah 1 - Data Pokok] Tanggal lahir wajib diisi.';
             } else {
                 $d = \DateTime::createFromFormat('Y-m-d', $data['tanggal_lahir']);
                 if (!$d || $d->format('Y-m-d') !== $data['tanggal_lahir']) {
-                    $errors['tanggal_lahir'] = 'Format tanggal lahir tidak valid (gunakan format YYYY-MM-DD).';
+                    $errors['tanggal_lahir'] = '[Langkah 1 - Data Pokok] Format tanggal lahir tidak valid (gunakan format YYYY-MM-DD).';
                 }
             }
-            if (empty($data['sekolah_asal'])) {
-                $errors['sekolah_asal'] = 'Sekolah asal wajib diisi.';
+            if (empty($data['sekolah_asal']) && empty($data['asal_sekolah'])) {
+                $errors['sekolah_asal'] = '[Langkah 1 - Data Pokok] Sekolah asal wajib diisi.';
             }
             if (empty($data['kewarganegaraan'])) {
-                $errors['kewarganegaraan'] = 'Kewarganegaraan wajib dipilih.';
+                $errors['kewarganegaraan'] = '[Langkah 1 - Data Pokok] Kewarganegaraan wajib dipilih.';
             }
             if (!empty($data['kontak_wali'])) {
                 if (!preg_match('/^[0-9]{8,15}$/', $data['kontak_wali'])) {
-                    $errors['kontak_wali'] = 'Kontak wali harus berupa angka telepon valid (8-15 digit).';
+                    $errors['kontak_wali'] = '[Langkah 1 - Data Pokok] Kontak wali harus berupa angka telepon valid (8-15 digit).';
                 }
             }
             if (!empty($data['password'])) {
                 if (strlen($data['password']) < 6) {
-                    $errors['password'] = 'Password minimal 6 karakter.';
+                    $errors['password'] = '[Langkah 1 - Data Pokok] Password minimal 6 karakter.';
                 }
             }
         }
 
-        if ($currentStep === 2 || $currentStep === null) {
+        if ($currentStep === null || $currentStep >= 2) {
             if (empty($data['alamat_kk'])) {
-                $errors['alamat_kk'] = 'Alamat sesuai KK wajib diisi.';
+                $errors['alamat_kk'] = '[Langkah 2 - Alamat & Kontak] Alamat sesuai KK wajib diisi.';
             }
             if (empty($data['alamat_domisili'])) {
-                $errors['alamat_domisili'] = 'Alamat domisili wajib diisi.';
+                $errors['alamat_domisili'] = '[Langkah 2 - Alamat & Kontak] Alamat domisili wajib diisi.';
             }
             if (empty($data['rt']) || !preg_match('/^[0-9]{1,3}$/', $data['rt'])) {
-                $errors['rt'] = 'RT wajib diisi dengan angka (max 3 digit).';
+                $errors['rt'] = '[Langkah 2 - Alamat & Kontak] RT wajib diisi dengan angka (max 3 digit).';
             }
             if (empty($data['rw']) || !preg_match('/^[0-9]{1,3}$/', $data['rw'])) {
-                $errors['rw'] = 'RW wajib diisi dengan angka (max 3 digit).';
+                $errors['rw'] = '[Langkah 2 - Alamat & Kontak] RW wajib diisi dengan angka (max 3 digit).';
             }
             if (empty($data['kode_pos']) || !preg_match('/^[0-9]{5}$/', $data['kode_pos'])) {
-                $errors['kode_pos'] = 'Kode pos harus berupa 5 digit angka.';
+                $errors['kode_pos'] = '[Langkah 2 - Alamat & Kontak] Kode pos harus berupa 5 digit angka.';
             }
             if (empty($data['id_kelurahan'])) {
-                $errors['id_kelurahan'] = 'Kelurahan wajib dipilih.';
+                $errors['id_kelurahan'] = '[Langkah 2 - Alamat & Kontak] Kelurahan wajib dipilih.';
             }
             if (empty($data['status_tinggal'])) {
-                $errors['status_tinggal'] = 'Status tinggal wajib dipilih.';
+                $errors['status_tinggal'] = '[Langkah 2 - Alamat & Kontak] Status tinggal wajib dipilih.';
             }
             if (empty($data['email'])) {
-                $errors['email'] = 'Email wajib diisi.';
+                $errors['email'] = '[Langkah 2 - Alamat & Kontak] Email wajib diisi.';
             } elseif (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-                $errors['email'] = 'Format email tidak valid.';
+                $errors['email'] = '[Langkah 2 - Alamat & Kontak] Format email tidak valid.';
             }
             if (empty($data['no_telepon_siswa']) || !preg_match('/^[0-9]{8,13}$/', $data['no_telepon_siswa'])) {
-                $errors['no_telepon_siswa'] = 'No. HP siswa wajib diisi (8-13 digit angka).';
+                $errors['no_telepon_siswa'] = '[Langkah 2 - Alamat & Kontak] No. HP siswa wajib diisi (8-13 digit angka).';
             }
             if (!empty($data['no_telepon_orang_tua']) && !preg_match('/^[0-9]{8,15}$/', $data['no_telepon_orang_tua'])) {
-                $errors['no_telepon_orang_tua'] = 'No. HP orang tua harus berupa angka valid (8-15 digit).';
+                $errors['no_telepon_orang_tua'] = '[Langkah 2 - Alamat & Kontak] No. HP orang tua harus berupa angka valid (8-15 digit).';
             }
         }
 
-        if ($currentStep === 3 || $currentStep === null) {
+        if ($currentStep === null || $currentStep >= 3) {
             if (!isset($data['tinggi_badan']) || $data['tinggi_badan'] === '' || $data['tinggi_badan'] < 30) {
-                $errors['tinggi_badan'] = 'Tinggi badan wajib diisi minimal 30 cm.';
+                $errors['tinggi_badan'] = '[Langkah 3 - Fisik & Riwayat] Tinggi badan wajib diisi minimal 30 cm.';
             } elseif ($data['tinggi_badan'] > 255) {
-                $errors['tinggi_badan'] = 'Tinggi badan maksimal 255 cm.';
+                $errors['tinggi_badan'] = '[Langkah 3 - Fisik & Riwayat] Tinggi badan maksimal 255 cm.';
             }
             if (!isset($data['berat_badan']) || $data['berat_badan'] === '' || $data['berat_badan'] < 5) {
-                $errors['berat_badan'] = 'Berat badan wajib diisi minimal 5 kg.';
+                $errors['berat_badan'] = '[Langkah 3 - Fisik & Riwayat] Berat badan wajib diisi minimal 5 kg.';
             } elseif ($data['berat_badan'] > 255) {
-                $errors['berat_badan'] = 'Berat badan maksimal 255 kg.';
+                $errors['berat_badan'] = '[Langkah 3 - Fisik & Riwayat] Berat badan maksimal 255 kg.';
             }
             if (!isset($data['lingkar_kepala']) || $data['lingkar_kepala'] === '' || $data['lingkar_kepala'] < 20) {
-                $errors['lingkar_kepala'] = 'Lingkar kepala wajib diisi minimal 20 cm.';
+                $errors['lingkar_kepala'] = '[Langkah 3 - Fisik & Riwayat] Lingkar kepala wajib diisi minimal 20 cm.';
             } elseif ($data['lingkar_kepala'] > 255) {
-                $errors['lingkar_kepala'] = 'Lingkar kepala maksimal 255 cm.';
+                $errors['lingkar_kepala'] = '[Langkah 3 - Fisik & Riwayat] Lingkar kepala maksimal 255 cm.';
             }
             if (empty($data['golongan_darah'])) {
-                $errors['golongan_darah'] = 'Golongan darah wajib dipilih.';
+                $errors['golongan_darah'] = '[Langkah 3 - Fisik & Riwayat] Golongan darah wajib dipilih.';
             }
             if (!isset($data['anak_ke']) || $data['anak_ke'] === '' || $data['anak_ke'] < 1) {
-                $errors['anak_ke'] = 'Kolom anak ke- wajib diisi minimal 1.';
+                $errors['anak_ke'] = '[Langkah 3 - Fisik & Riwayat] Kolom anak ke- wajib diisi minimal 1.';
             }
             if (!isset($data['jumlah_saudara']) || $data['jumlah_saudara'] === '' || $data['jumlah_saudara'] < 0) {
-                $errors['jumlah_saudara'] = 'Jumlah saudara kandung wajib diisi.';
+                $errors['jumlah_saudara'] = '[Langkah 3 - Fisik & Riwayat] Jumlah saudara kandung wajib diisi.';
             }
             if (!isset($data['jarak_rumah']) || $data['jarak_rumah'] === '' || $data['jarak_rumah'] < 1) {
-                $errors['jarak_rumah'] = 'Jarak rumah ke sekolah wajib diisi.';
+                $errors['jarak_rumah'] = '[Langkah 3 - Fisik & Riwayat] Jarak rumah ke sekolah wajib diisi.';
             }
             if (empty($data['transportasi'])) {
-                $errors['transportasi'] = 'Alat transportasi wajib dipilih.';
+                $errors['transportasi'] = '[Langkah 3 - Fisik & Riwayat] Alat transportasi wajib dipilih.';
             }
             if (isset($data['punya_kip']) && $data['punya_kip'] == 1) {
                 if (empty($data['no_kip'])) {
-                    $errors['no_kip'] = 'Nomor KIP wajib diisi jika Anda memilih Ya pada Memiliki KIP.';
+                    $errors['no_kip'] = '[Langkah 3 - Fisik & Riwayat] Nomor KIP wajib diisi jika Anda memilih Ya pada Memiliki KIP.';
                 }
             }
             if (isset($data['layak_kip']) && $data['layak_kip'] == 1 && empty($data['alasan_layak'])) {
-                $errors['alasan_layak'] = 'Alasan layak KIP wajib diisi.';
+                $errors['alasan_layak'] = '[Langkah 3 - Fisik & Riwayat] Alasan layak KIP wajib diisi.';
             }
         }
 
-        if ($currentStep === 4 || $currentStep === null) {
+        if ($currentStep === null || $currentStep >= 4) {
             if (empty($data['nik_ibu']) || !preg_match('/^[0-9]{16}$/', $data['nik_ibu'])) {
-                $errors['nik_ibu'] = 'NIK Ibu kandung wajib berupa 16 digit angka.';
+                $errors['nik_ibu'] = '[Langkah 4 - Data Orang Tua] NIK Ibu kandung wajib berupa 16 digit angka.';
             }
             if (empty($data['nama_ibu'])) {
-                $errors['nama_ibu'] = 'Nama Ibu kandung wajib diisi.';
+                $errors['nama_ibu'] = '[Langkah 4 - Data Orang Tua] Nama Ibu kandung wajib diisi.';
             }
             if (empty($data['id_tempat_lahir_ibu'])) {
-                $errors['id_tempat_lahir_ibu'] = 'Tempat lahir Ibu kandung wajib dipilih.';
+                $errors['id_tempat_lahir_ibu'] = '[Langkah 4 - Data Orang Tua] Tempat lahir Ibu kandung wajib dipilih.';
             }
             if (empty($data['tanggal_lahir_ibu'])) {
-                $errors['tanggal_lahir_ibu'] = 'Tanggal lahir Ibu kandung wajib diisi.';
+                $errors['tanggal_lahir_ibu'] = '[Langkah 4 - Data Orang Tua] Tanggal lahir Ibu kandung wajib diisi.';
             } else {
                 $d = \DateTime::createFromFormat('Y-m-d', $data['tanggal_lahir_ibu']);
                 if (!$d || $d->format('Y-m-d') !== $data['tanggal_lahir_ibu']) {
-                    $errors['tanggal_lahir_ibu'] = 'Format tanggal lahir Ibu kandung tidak valid.';
+                    $errors['tanggal_lahir_ibu'] = '[Langkah 4 - Data Orang Tua] Format tanggal lahir Ibu kandung tidak valid.';
                 } else {
                     $year = (int) $d->format('Y');
                     if ($year < 1930 || $year > 2020) {
-                        $errors['tanggal_lahir_ibu'] = 'Tahun lahir Ibu kandung tidak valid (1930-2020).';
+                        $errors['tanggal_lahir_ibu'] = '[Langkah 4 - Data Orang Tua] Tahun lahir Ibu kandung tidak valid (1930-2020).';
                     }
                 }
             }
             if (empty($data['pendidikan_ibu'])) {
-                $errors['pendidikan_ibu'] = 'Pendidikan Ibu kandung wajib dipilih.';
+                $errors['pendidikan_ibu'] = '[Langkah 4 - Data Orang Tua] Pendidikan Ibu kandung wajib dipilih.';
             }
             if (empty($data['pekerjaan_ibu'])) {
-                $errors['pekerjaan_ibu'] = 'Pekerjaan Ibu kandung wajib dipilih.';
+                $errors['pekerjaan_ibu'] = '[Langkah 4 - Data Orang Tua] Pekerjaan Ibu kandung wajib dipilih.';
             }
             if (empty($data['penghasilan_ibu'])) {
-                $errors['penghasilan_ibu'] = 'Penghasilan Ibu kandung wajib dipilih.';
+                $errors['penghasilan_ibu'] = '[Langkah 4 - Data Orang Tua] Penghasilan Ibu kandung wajib dipilih.';
             }
             if (empty($data['agama_ibu'])) {
-                $errors['agama_ibu'] = 'Agama Ibu kandung wajib dipilih.';
+                $errors['agama_ibu'] = '[Langkah 4 - Data Orang Tua] Agama Ibu kandung wajib dipilih.';
             }
             if (!empty($data['nik_ayah']) && !preg_match('/^[0-9]{16}$/', $data['nik_ayah'])) {
-                $errors['nik_ayah'] = 'NIK Ayah harus berupa 16 digit angka.';
+                $errors['nik_ayah'] = '[Langkah 4 - Data Orang Tua] NIK Ayah harus berupa 16 digit angka.';
             }
             if (!empty($data['nik_wali']) && !preg_match('/^[0-9]{16}$/', $data['nik_wali'])) {
-                $errors['nik_wali'] = 'NIK Wali harus berupa 16 digit angka.';
+                $errors['nik_wali'] = '[Langkah 4 - Data Orang Tua] NIK Wali harus berupa 16 digit angka.';
             }
         }
 
-        if ($currentStep === 5 || $currentStep === null) {
+        if ($currentStep === null || $currentStep >= 5) {
             if (empty($data['jenis_pendaftaran'])) {
-                $errors['jenis_pendaftaran'] = 'Jenis pendaftaran wajib dipilih.';
+                $errors['jenis_pendaftaran'] = '[Langkah 5 - Registrasi & Berkas] Jenis pendaftaran wajib dipilih.';
             }
             $roleName = $_SESSION['role_name'] ?? '';
             if (empty($data['tanggal_masuk'])) {
-                $errors['tanggal_masuk'] = 'Tanggal masuk wajib diisi.';
+                $errors['tanggal_masuk'] = '[Langkah 5 - Registrasi & Berkas] Tanggal masuk wajib diisi.';
             }
             if (empty($data['hobi'])) {
-                $errors['hobi'] = 'Hobi wajib diisi.';
+                $errors['hobi'] = '[Langkah 5 - Registrasi & Berkas] Hobi wajib diisi.';
             }
             if ($roleName !== 'siswa' && isset($data['status']) && $data['status'] !== 'Aktif') {
                 if (empty($data['keluar_karena'])) {
-                    $errors['keluar_karena'] = 'Alasan keluar wajib dipilih karena status siswa bukan Aktif.';
+                    $errors['keluar_karena'] = '[Langkah 5 - Registrasi & Berkas] Alasan keluar wajib dipilih karena status siswa bukan Aktif.';
                 }
                 if (empty($data['tanggal_keluar'])) {
-                    $errors['tanggal_keluar'] = 'Tanggal keluar wajib diisi karena status siswa bukan Aktif.';
+                    $errors['tanggal_keluar'] = '[Langkah 5 - Registrasi & Berkas] Tanggal keluar wajib diisi karena status siswa bukan Aktif.';
                 }
             }
         }

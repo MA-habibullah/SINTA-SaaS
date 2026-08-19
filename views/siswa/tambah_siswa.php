@@ -166,24 +166,77 @@ $kesehatanData = $isEdit ? ($data['kesehatan'] ?? []) : [];
         color: var(--saas-blue);
     }
 
-    /* Upload Area Interface */
-    .upload-box {
-        border: 2px dashed var(--saas-border);
+    /* =========================================================
+       Ultra-Modern Document Upload Cards Interface
+       ========================================================= */
+    .doc-upload-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 1rem;
+        padding: 1.25rem;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        position: relative;
+    }
+    .doc-upload-card:hover {
+        border-color: #93c5fd;
+        box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.08);
+        transform: translateY(-2px);
+    }
+    .doc-upload-card.is-uploaded {
+        border-color: rgba(34, 197, 94, 0.35);
+        background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);
+    }
+    .doc-upload-card.is-selected {
+        border-color: rgba(59, 130, 246, 0.45);
+        background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
+    }
+    .doc-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.85rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px dashed #e2e8f0;
+    }
+    .doc-card-title {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0;
+    }
+    .doc-dropzone {
+        border: 1.5px dashed #cbd5e1;
         border-radius: 0.75rem;
-        padding: 1.5rem;
+        padding: 1.15rem 0.75rem;
         text-align: center;
-        background-color: var(--saas-gray);
+        background-color: #f8fafc;
         transition: all 0.2s ease;
         cursor: pointer;
         position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 135px;
+        margin-bottom: 0.75rem;
     }
-
-    .upload-box:hover {
-        border-color: var(--saas-blue);
-        background-color: var(--saas-blue-light);
+    .doc-dropzone:hover {
+        border-color: #3b82f6;
+        background-color: #eff6ff;
     }
-
-    .upload-box input[type="file"] {
+    .doc-dropzone.has-file {
+        border-style: solid;
+        border-color: rgba(34, 197, 94, 0.3);
+        background-color: rgba(240, 253, 244, 0.7);
+    }
+    .doc-dropzone input[type="file"] {
         position: absolute;
         top: 0;
         left: 0;
@@ -191,92 +244,66 @@ $kesehatanData = $isEdit ? ($data['kesehatan'] ?? []) : [];
         height: 100%;
         opacity: 0;
         cursor: pointer;
+        z-index: 5;
     }
-
-    .upload-icon {
-        font-size: 1.75rem;
-        color: var(--saas-text-gray);
-        margin-bottom: 0.5rem;
-        transition: color 0.2s ease;
+    .doc-preview-img-box {
+        text-align: center;
     }
-
-    .upload-box:hover .upload-icon {
-        color: var(--saas-blue);
+    .doc-preview-img {
+        max-height: 75px;
+        max-width: 100%;
+        object-fit: cover;
+        border-radius: 0.5rem;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
     }
-
-    [v-cloak] {
-        display: none !important;
-    }
-
-    /* Vue transition classes for KIP fade in/out */
-    .fade-enter-active, .fade-leave-active {
-        transition: opacity 0.3s ease, transform 0.3s ease;
-    }
-    .fade-enter-from, .fade-leave-to {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-
-    /* Modern Upload Status Bar */
-    .upload-status-bar {
+    .doc-card-actions {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-top: 0.75rem;
-        padding: 0.5rem 0.85rem;
-        border-radius: 0.5rem;
-        background-color: rgba(25, 135, 84, 0.08);
-        border: 1px solid rgba(25, 135, 84, 0.15);
-        transition: all 0.2s ease-in-out;
-    }
-    .upload-status-bar:hover {
-        background-color: rgba(25, 135, 84, 0.12);
-        border-color: rgba(25, 135, 84, 0.25);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 6px rgba(25, 135, 84, 0.05);
-    }
-    .upload-status-bar .status-text {
-        display: flex;
-        align-items: center;
         gap: 0.5rem;
-        font-size: 0.875rem; /* 14px - proportional & modern */
-        font-weight: 600;
-        color: #146c43;
+        margin-top: auto;
+        padding-top: 0.65rem;
+        border-top: 1px solid #f1f5f9;
+        min-height: 40px;
     }
-    .upload-status-bar .status-text i {
-        font-size: 1.05rem;
-    }
-    .upload-status-bar .status-actions {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    .upload-status-bar .btn-view-file {
-        background-color: #198754;
+    .doc-card-actions .btn-view-doc {
+        background-color: #10b981;
         color: #ffffff;
-        padding: 0.25rem 0.75rem;
-        border-radius: 0.375rem;
+        border: none;
+        border-radius: 0.5rem;
+        padding: 0.35rem 0.85rem;
         font-size: 0.8rem;
         font-weight: 600;
-        text-decoration: none;
-        transition: all 0.15s ease-in-out;
-        box-shadow: 0 2px 4px rgba(25, 135, 84, 0.15);
-    }
-    .upload-status-bar .btn-view-file:hover {
-        background-color: #146c43;
-        color: #ffffff;
-        box-shadow: 0 4px 8px rgba(25, 135, 84, 0.25);
-    }
-    .upload-status-bar .btn-external-link {
-        color: rgba(25, 135, 84, 0.7);
-        transition: color 0.15s ease-in-out, transform 0.15s ease-in-out;
         display: inline-flex;
         align-items: center;
+        gap: 0.35rem;
+        transition: all 0.15s ease;
+        box-shadow: 0 1px 2px 0 rgba(16, 185, 129, 0.2);
         text-decoration: none;
     }
-    .upload-status-bar .btn-external-link:hover {
-        color: #146c43;
-        transform: scale(1.1);
+    .doc-card-actions .btn-view-doc:hover {
+        background-color: #059669;
+        color: #ffffff;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
+    }
+    .doc-card-actions .btn-ext-doc {
+        color: #64748b;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        padding: 0.35rem 0.6rem;
+        font-size: 0.8rem;
+        display: inline-flex;
+        align-items: center;
+        transition: all 0.15s ease;
+        text-decoration: none;
+    }
+    .doc-card-actions .btn-ext-doc:hover {
+        color: #0f172a;
+        background: #e2e8f0;
+        border-color: #cbd5e1;
     }
 </style>
 
@@ -590,7 +617,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 <!-- Jurusan -->
                 <div class="col-md-4">
                     <label for="id_jurusan" class="form-label">Jurusan <span class="text-danger">*</span></label>
-                    <select class="form-select" id="id_jurusan" name="id_jurusan" v-model="form.id_jurusan" @change="onJurusanChange" :disabled="loadingAcademic || !form.id_jenjang" required>
+                    <select class="form-select" id="id_jurusan" name="id_jurusan" v-model="form.id_jurusan" @change="onJurusanChange" :disabled="loadingAcademic" required>
                         <option value="" disabled>{{ loadingAcademic ? 'Memuat data...' : '-- Pilih Jurusan --' }}</option>
                         <option v-for="opt in filteredJurusan" :key="opt.id" :value="opt.id">{{ opt.nama_jurusan }}</option>
                     </select>
@@ -599,7 +626,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 <!-- Kelas (Rombel) - Di-filter reaktif berdasarkan Jenjang & Jurusan -->
                 <div class="col-md-4">
                     <label for="id_kelas" class="form-label">Rombel / Kelas <span class="text-danger">*</span></label>
-                    <select class="form-select" id="id_kelas" name="id_kelas" v-model="form.id_kelas" :disabled="loadingAcademic || !form.id_jenjang || !form.id_jurusan" required>
+                    <select class="form-select" id="id_kelas" name="id_kelas" v-model="form.id_kelas" :disabled="loadingAcademic" required>
                         <option value="" disabled>{{ loadingAcademic ? 'Memuat data...' : '-- Pilih Rombel --' }}</option>
                         <option v-for="opt in filteredKelas" :key="opt.id" :value="opt.id">{{ opt.nama_kelas }}</option>
                     </select>
@@ -933,11 +960,11 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                         <tbody>
                             <tr v-for="sem in 6" :key="sem">
                                 <td class="text-center fw-bold">{{ sem }}</td>
-                                <td><input type="number" class="form-control form-control-sm" :name="`kesehatan[${sem}][tinggi_badan]`" v-model="form.kesehatan[sem].tinggi_badan" min="0"></td>
-                                <td><input type="number" class="form-control form-control-sm" :name="`kesehatan[${sem}][berat_badan]`" v-model="form.kesehatan[sem].berat_badan" min="0"></td>
-                                <td><input type="text" class="form-control form-control-sm" :name="`kesehatan[${sem}][pendengaran]`" v-model="form.kesehatan[sem].pendengaran" placeholder="Normal/Kurang"></td>
-                                <td><input type="text" class="form-control form-control-sm" :name="`kesehatan[${sem}][pengelihatan]`" v-model="form.kesehatan[sem].pengelihatan" placeholder="Normal/Minus"></td>
-                                <td><input type="text" class="form-control form-control-sm" :name="`kesehatan[${sem}][gigi]`" v-model="form.kesehatan[sem].gigi" placeholder="Bersih/Berlubang"></td>
+                                <td><input type="number" class="form-control form-control-sm" :name="`kesehatan[${sem}][tinggi_badan]`" v-model="form.kesehatan[sem].tinggi_badan" min="0" v-if="form.kesehatan && form.kesehatan[sem]"></td>
+                                <td><input type="number" class="form-control form-control-sm" :name="`kesehatan[${sem}][berat_badan]`" v-model="form.kesehatan[sem].berat_badan" min="0" v-if="form.kesehatan && form.kesehatan[sem]"></td>
+                                <td><input type="text" class="form-control form-control-sm" :name="`kesehatan[${sem}][pendengaran]`" v-model="form.kesehatan[sem].pendengaran" placeholder="Normal/Kurang" v-if="form.kesehatan && form.kesehatan[sem]"></td>
+                                <td><input type="text" class="form-control form-control-sm" :name="`kesehatan[${sem}][pengelihatan]`" v-model="form.kesehatan[sem].pengelihatan" placeholder="Normal/Minus" v-if="form.kesehatan && form.kesehatan[sem]"></td>
+                                <td><input type="text" class="form-control form-control-sm" :name="`kesehatan[${sem}][gigi]`" v-model="form.kesehatan[sem].gigi" placeholder="Bersih/Berlubang" v-if="form.kesehatan && form.kesehatan[sem]"></td>
                             </tr>
                         </tbody>
                     </table>
@@ -1447,290 +1474,773 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
                 <!-- UPLOAD AREA DOKUMEN DAN FOTO PROFIL -->
                 <div class="col-12 mt-4">
-                    <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-cloud-upload-fill me-2"></i>Upload Berkas & Dokumen Pendukung (PDF/JPG, Max 500 KB)</h6>
-                    <div class="alert alert-info border-info-subtle bg-info-subtle py-2 fs-8 mb-3 d-flex align-items-center">
-                        <i class="bi bi-info-circle-fill fs-5 text-info me-3"></i>
-                        <div>
-                            <strong>Penting:</strong> Harap upload 1 file lalu klik <strong>Simpan</strong>, dan ulangi proses tersebut untuk meng-upload file berikutnya satu per satu.
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                        <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                            <span class="rounded-circle bg-primary bg-opacity-10 p-2 text-primary d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                <i class="bi bi-cloud-arrow-up-fill fs-6"></i>
+                            </span>
+                            Upload Berkas & Dokumen Pendukung
+                        </h6>
+                        <span class="badge bg-light text-muted border px-2.5 py-1.5 fs-9 fw-medium">
+                            <i class="bi bi-shield-check text-success me-1"></i>Maksimal 500 KB / Berkas (Auto-Compress)
+                        </span>
+                    </div>
+
+                    <div class="alert alert-light border border-info-subtle rounded-4 p-3 mb-4 shadow-2xs d-flex align-items-center gap-3" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);">
+                        <div class="rounded-circle bg-info bg-opacity-15 p-2 text-info d-flex align-items-center justify-content-center flex-shrink-0" style="width: 38px; height: 38px;">
+                            <i class="bi bi-info-circle-fill fs-5 text-primary"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold text-dark fs-8">Petunjuk Pengunggahan & Kompresi Berkas Otomatis</div>
+                            <div class="text-muted fs-9">Format yang didukung: PDF, JPG, PNG, atau WebP (Maks 500 KB). <strong>Tips Perangkat HP:</strong> Jika mengalami kendala saat mengunggah banyak berkas sekaligus, silakan upload 1 file lalu klik <strong>Simpan</strong>, dan ulangi secara bertahap satu per satu hingga semua dokumen terunggah.</div>
                         </div>
                     </div>
-                    <div class="row g-3">
+
+                    <div class="row g-3 g-lg-4">
                         
                         <!-- 1. Foto Profil -->
-                        <div class="col-md-4">
-                            <div class="form-label fw-bold mb-2">Foto Profil Murid</div>
-                            <div class="upload-box shadow-xs">
-                                <div v-if="filePreviews.foto_profil || (form.foto_profil && !filesSelected.foto_profil)" class="mb-2">
-                                    <img :src="filePreviews.foto_profil ? filePreviews.foto_profil : getFileUrl(form.foto_profil, 'foto_profil')" class="img-thumbnail rounded-3" style="max-height: 80px;">
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <div class="doc-upload-card" :class="{'is-uploaded': form.foto_profil && !filesSelected.foto_profil, 'is-selected': filesSelected.foto_profil}">
+                                <div class="doc-card-header">
+                                    <div class="doc-card-title">
+                                        <i class="bi bi-person-bounding-box text-primary fs-5"></i>
+                                        <span>Foto Profil Murid</span>
+                                    </div>
+                                    <div class="doc-card-badge">
+                                        <span v-if="form.foto_profil && !filesSelected.foto_profil" class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fs-9 fw-semibold">
+                                            <i class="bi bi-check-circle-fill me-1"></i>Terunggah
+                                        </span>
+                                        <span v-else-if="filesSelected.foto_profil" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fs-9 fw-semibold">
+                                            <i class="bi bi-arrow-repeat me-1"></i>Siap Simpan
+                                        </span>
+                                        <span v-else class="badge bg-light text-secondary border rounded-pill px-2 py-1 fs-9">
+                                            Belum Ada
+                                        </span>
+                                    </div>
                                 </div>
-                                <i v-else class="bi bi-image upload-icon"></i>
-                                <div class="fs-8 fw-semibold text-secondary">
-                                    {{ filesSelected.foto_profil ? filesSelected.foto_profil : 'Pilih Foto Profil' }}
+
+                                <div class="doc-dropzone" :class="{'has-file': form.foto_profil || filesSelected.foto_profil}">
+                                    <input type="file" name="foto_profil" accept="image/*" @change="onFileSelected($event, 'foto_profil')">
+                                    
+                                    <!-- Preview Image -->
+                                    <div v-if="filePreviews.foto_profil || (form.foto_profil && !filesSelected.foto_profil && isImageFile(form.foto_profil))" class="doc-preview-img-box">
+                                        <img :src="filePreviews.foto_profil ? filePreviews.foto_profil : getFileUrl(form.foto_profil, 'foto_profil')" class="doc-preview-img">
+                                        <div class="fs-9 text-muted mt-1.5"><i class="bi bi-pencil-fill me-1"></i>Klik untuk ganti foto</div>
+                                    </div>
+                                    
+                                    <!-- File newly selected -->
+                                    <div v-else-if="filesSelected.foto_profil" class="text-center">
+                                        <i class="bi bi-file-earmark-check-fill text-primary fs-1"></i>
+                                        <div class="fs-8 fw-bold text-dark mt-1 text-truncate" style="max-width: 200px;">{{ filesSelected.foto_profil }}</div>
+                                        <div class="fs-9 text-primary mt-0.5">Berkas siap disimpan</div>
+                                    </div>
+
+                                    <!-- Empty state -->
+                                    <div v-else class="text-center">
+                                        <i class="bi bi-image fs-1 text-secondary opacity-75"></i>
+                                        <div class="fs-8 fw-bold text-dark mt-1">Pilih Foto Profil</div>
+                                        <div class="fs-9 text-muted mt-0.5">Ekstensi .jpg, .png, .webp</div>
+                                    </div>
                                 </div>
-                                <div class="fs-9 text-muted mt-1">Ekstensi .jpg / .png</div>
-                                <input type="file" name="foto_profil" accept="image/*" @change="onFileSelected($event, 'foto_profil')">
-                            </div>
-                            <div v-if="form.foto_profil && !filesSelected.foto_profil" class="upload-status-bar">
-                                <span class="status-text">
-                                    <i class="bi bi-check-circle-fill text-success"></i> Berkas sudah terunggah
-                                </span>
-                                <span class="status-actions">
-                                    <a href="#" @click.prevent="openDocumentViewer(form.foto_profil, 'Foto Profil Murid')" class="btn-view-file">Lihat Berkas</a>
-                                    <a :href="getFileUrl(form.foto_profil, 'foto_profil')" target="_blank" class="btn-external-link" title="Buka di tab baru"><i class="bi bi-box-arrow-up-right"></i></a>
-                                </span>
+
+                                <div class="doc-card-actions">
+                                    <template v-if="form.foto_profil && !filesSelected.foto_profil">
+                                        <button type="button" @click.prevent="openDocumentViewer(form.foto_profil, 'Foto Profil Murid')" class="btn-view-doc">
+                                            <i class="bi bi-eye-fill"></i> Lihat Foto
+                                        </button>
+                                        <a :href="getFileUrl(form.foto_profil, 'foto_profil')" target="_blank" class="btn-ext-doc" title="Buka berkas di tab baru">
+                                            <i class="bi bi-box-arrow-up-right"></i>
+                                        </a>
+                                    </template>
+                                    <template v-else-if="filesSelected.foto_profil">
+                                        <span class="fs-9 text-primary fw-medium"><i class="bi bi-arrow-repeat me-1"></i>Klik Simpan di bawah</span>
+                                    </template>
+                                    <template v-else>
+                                        <span class="fs-9 text-muted"><i class="bi bi-shield-check me-1"></i>Format JPG, PNG, WebP</span>
+                                    </template>
+                                </div>
                             </div>
                         </div>
 
                         <!-- 2. Berkas KK -->
-                        <div class="col-md-4">
-                            <div class="form-label fw-bold mb-2">Kartu Keluarga (KK)</div>
-                            <div class="upload-box shadow-xs">
-                                <div v-if="filePreviews.berkas_kk" class="mb-2">
-                                    <img :src="filePreviews.berkas_kk" class="img-thumbnail rounded-3" style="max-height: 80px;">
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <div class="doc-upload-card" :class="{'is-uploaded': form.berkas_kk && !filesSelected.berkas_kk, 'is-selected': filesSelected.berkas_kk}">
+                                <div class="doc-card-header">
+                                    <div class="doc-card-title">
+                                        <i class="bi bi-people-fill text-primary fs-5"></i>
+                                        <span>Kartu Keluarga (KK)</span>
+                                    </div>
+                                    <div class="doc-card-badge">
+                                        <span v-if="form.berkas_kk && !filesSelected.berkas_kk" class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fs-9 fw-semibold">
+                                            <i class="bi bi-check-circle-fill me-1"></i>Terunggah
+                                        </span>
+                                        <span v-else-if="filesSelected.berkas_kk" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fs-9 fw-semibold">
+                                            <i class="bi bi-arrow-repeat me-1"></i>Siap Simpan
+                                        </span>
+                                        <span v-else class="badge bg-light text-secondary border rounded-pill px-2 py-1 fs-9">
+                                            Belum Ada
+                                        </span>
+                                    </div>
                                 </div>
-                                <i v-else class="bi bi-file-earmark-pdf upload-icon"></i>
-                                <div class="fs-8 fw-semibold text-secondary">
-                                    {{ filesSelected.berkas_kk ? filesSelected.berkas_kk : 'Pilih Berkas KK' }}
+
+                                <div class="doc-dropzone" :class="{'has-file': form.berkas_kk || filesSelected.berkas_kk}">
+                                    <input type="file" name="berkas_kk" accept="image/*,application/pdf" @change="onFileSelected($event, 'berkas_kk')">
+                                    
+                                    <div v-if="filePreviews.berkas_kk || (form.berkas_kk && !filesSelected.berkas_kk && isImageFile(form.berkas_kk))" class="doc-preview-img-box">
+                                        <img :src="filePreviews.berkas_kk ? filePreviews.berkas_kk : getFileUrl(form.berkas_kk, 'berkas_kk')" class="doc-preview-img">
+                                        <div class="fs-9 text-muted mt-1.5"><i class="bi bi-pencil-fill me-1"></i>Klik untuk ganti berkas</div>
+                                    </div>
+                                    
+                                    <div v-else-if="form.berkas_kk && !filesSelected.berkas_kk && isPdfFile(form.berkas_kk)" class="text-center">
+                                        <i class="bi bi-file-earmark-pdf-fill text-danger fs-1"></i>
+                                        <div class="fs-8 fw-semibold text-dark mt-1 text-truncate" style="max-width: 220px;">{{ getDisplayFileName(form.berkas_kk) }}</div>
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-9 mt-1">Dokumen PDF</span>
+                                    </div>
+
+                                    <div v-else-if="filesSelected.berkas_kk" class="text-center">
+                                        <i :class="filesSelected.berkas_kk.toLowerCase().endsWith('.pdf') ? 'bi bi-file-earmark-pdf-fill text-danger fs-1' : 'bi bi-file-earmark-image-fill text-primary fs-1'"></i>
+                                        <div class="fs-8 fw-bold text-dark mt-1 text-truncate" style="max-width: 220px;">{{ filesSelected.berkas_kk }}</div>
+                                        <div class="fs-9 text-primary mt-0.5">Berkas siap disimpan</div>
+                                    </div>
+
+                                    <div v-else class="text-center">
+                                        <i class="bi bi-file-earmark-pdf fs-1 text-secondary opacity-75"></i>
+                                        <div class="fs-8 fw-bold text-dark mt-1">Pilih Berkas KK</div>
+                                        <div class="fs-9 text-muted mt-0.5">Format .pdf / .jpg / .png</div>
+                                    </div>
                                 </div>
-                                <div class="fs-9 text-muted mt-1">Ekstensi .pdf / .jpg</div>
-                                <input type="file" name="berkas_kk" accept="image/*,application/pdf" @change="onFileSelected($event, 'berkas_kk')">
-                            </div>
-                            <div v-if="form.berkas_kk && !filesSelected.berkas_kk" class="upload-status-bar">
-                                <span class="status-text">
-                                    <i class="bi bi-check-circle-fill text-success"></i> Berkas sudah terunggah
-                                </span>
-                                <span class="status-actions">
-                                    <a href="#" @click.prevent="openDocumentViewer(form.berkas_kk, 'Kartu Keluarga (KK)')" class="btn-view-file">Lihat Berkas</a>
-                                    <a :href="getFileUrl(form.berkas_kk, 'berkas_kk')" target="_blank" class="btn-external-link" title="Buka di tab baru"><i class="bi bi-box-arrow-up-right"></i></a>
-                                </span>
+
+                                <div class="doc-card-actions">
+                                    <template v-if="form.berkas_kk && !filesSelected.berkas_kk">
+                                        <button type="button" @click.prevent="openDocumentViewer(form.berkas_kk, 'Kartu Keluarga (KK)')" class="btn-view-doc">
+                                            <i class="bi bi-eye-fill"></i> Lihat Berkas
+                                        </button>
+                                        <a :href="getFileUrl(form.berkas_kk, 'berkas_kk')" target="_blank" class="btn-ext-doc" title="Buka berkas di tab baru">
+                                            <i class="bi bi-box-arrow-up-right"></i>
+                                        </a>
+                                    </template>
+                                    <template v-else-if="filesSelected.berkas_kk">
+                                        <span class="fs-9 text-primary fw-medium"><i class="bi bi-arrow-repeat me-1"></i>Klik Simpan di bawah</span>
+                                    </template>
+                                    <template v-else>
+                                        <span class="fs-9 text-muted"><i class="bi bi-shield-check me-1"></i>Format PDF, JPG, PNG</span>
+                                    </template>
+                                </div>
                             </div>
                         </div>
 
                         <!-- 3. Berkas Akta Lahir -->
-                        <div class="col-md-4">
-                            <div class="form-label fw-bold mb-2">Akta Kelahiran</div>
-                            <div class="upload-box shadow-xs">
-                                <div v-if="filePreviews.berkas_akta" class="mb-2">
-                                    <img :src="filePreviews.berkas_akta" class="img-thumbnail rounded-3" style="max-height: 80px;">
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <div class="doc-upload-card" :class="{'is-uploaded': form.berkas_akta && !filesSelected.berkas_akta, 'is-selected': filesSelected.berkas_akta}">
+                                <div class="doc-card-header">
+                                    <div class="doc-card-title">
+                                        <i class="bi bi-file-earmark-person-fill text-primary fs-5"></i>
+                                        <span>Akta Kelahiran</span>
+                                    </div>
+                                    <div class="doc-card-badge">
+                                        <span v-if="form.berkas_akta && !filesSelected.berkas_akta" class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fs-9 fw-semibold">
+                                            <i class="bi bi-check-circle-fill me-1"></i>Terunggah
+                                        </span>
+                                        <span v-else-if="filesSelected.berkas_akta" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fs-9 fw-semibold">
+                                            <i class="bi bi-arrow-repeat me-1"></i>Siap Simpan
+                                        </span>
+                                        <span v-else class="badge bg-light text-secondary border rounded-pill px-2 py-1 fs-9">
+                                            Belum Ada
+                                        </span>
+                                    </div>
                                 </div>
-                                <i v-else class="bi bi-file-earmark-pdf upload-icon"></i>
-                                <div class="fs-8 fw-semibold text-secondary">
-                                    {{ filesSelected.berkas_akta ? filesSelected.berkas_akta : 'Pilih Berkas Akta' }}
+
+                                <div class="doc-dropzone" :class="{'has-file': form.berkas_akta || filesSelected.berkas_akta}">
+                                    <input type="file" name="berkas_akta" accept="image/*,application/pdf" @change="onFileSelected($event, 'berkas_akta')">
+                                    
+                                    <div v-if="filePreviews.berkas_akta || (form.berkas_akta && !filesSelected.berkas_akta && isImageFile(form.berkas_akta))" class="doc-preview-img-box">
+                                        <img :src="filePreviews.berkas_akta ? filePreviews.berkas_akta : getFileUrl(form.berkas_akta, 'berkas_akta')" class="doc-preview-img">
+                                        <div class="fs-9 text-muted mt-1.5"><i class="bi bi-pencil-fill me-1"></i>Klik untuk ganti berkas</div>
+                                    </div>
+                                    
+                                    <div v-else-if="form.berkas_akta && !filesSelected.berkas_akta && isPdfFile(form.berkas_akta)" class="text-center">
+                                        <i class="bi bi-file-earmark-pdf-fill text-danger fs-1"></i>
+                                        <div class="fs-8 fw-semibold text-dark mt-1 text-truncate" style="max-width: 220px;">{{ getDisplayFileName(form.berkas_akta) }}</div>
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-9 mt-1">Dokumen PDF</span>
+                                    </div>
+
+                                    <div v-else-if="filesSelected.berkas_akta" class="text-center">
+                                        <i :class="filesSelected.berkas_akta.toLowerCase().endsWith('.pdf') ? 'bi bi-file-earmark-pdf-fill text-danger fs-1' : 'bi bi-file-earmark-image-fill text-primary fs-1'"></i>
+                                        <div class="fs-8 fw-bold text-dark mt-1 text-truncate" style="max-width: 220px;">{{ filesSelected.berkas_akta }}</div>
+                                        <div class="fs-9 text-primary mt-0.5">Berkas siap disimpan</div>
+                                    </div>
+
+                                    <div v-else class="text-center">
+                                        <i class="bi bi-file-earmark-pdf fs-1 text-secondary opacity-75"></i>
+                                        <div class="fs-8 fw-bold text-dark mt-1">Pilih Berkas Akta</div>
+                                        <div class="fs-9 text-muted mt-0.5">Format .pdf / .jpg / .png</div>
+                                    </div>
                                 </div>
-                                <div class="fs-9 text-muted mt-1">Ekstensi .pdf / .jpg</div>
-                                <input type="file" name="berkas_akta" accept="image/*,application/pdf" @change="onFileSelected($event, 'berkas_akta')">
-                            </div>
-                            <div v-if="form.berkas_akta && !filesSelected.berkas_akta" class="upload-status-bar">
-                                <span class="status-text">
-                                    <i class="bi bi-check-circle-fill text-success"></i> Berkas sudah terunggah
-                                </span>
-                                <span class="status-actions">
-                                    <a href="#" @click.prevent="openDocumentViewer(form.berkas_akta, 'Akta Kelahiran')" class="btn-view-file">Lihat Berkas</a>
-                                    <a :href="getFileUrl(form.berkas_akta, 'berkas_akta')" target="_blank" class="btn-external-link" title="Buka di tab baru"><i class="bi bi-box-arrow-up-right"></i></a>
-                                </span>
+
+                                <div class="doc-card-actions">
+                                    <template v-if="form.berkas_akta && !filesSelected.berkas_akta">
+                                        <button type="button" @click.prevent="openDocumentViewer(form.berkas_akta, 'Akta Kelahiran')" class="btn-view-doc">
+                                            <i class="bi bi-eye-fill"></i> Lihat Berkas
+                                        </button>
+                                        <a :href="getFileUrl(form.berkas_akta, 'berkas_akta')" target="_blank" class="btn-ext-doc" title="Buka berkas di tab baru">
+                                            <i class="bi bi-box-arrow-up-right"></i>
+                                        </a>
+                                    </template>
+                                    <template v-else-if="filesSelected.berkas_akta">
+                                        <span class="fs-9 text-primary fw-medium"><i class="bi bi-arrow-repeat me-1"></i>Klik Simpan di bawah</span>
+                                    </template>
+                                    <template v-else>
+                                        <span class="fs-9 text-muted"><i class="bi bi-shield-check me-1"></i>Format PDF, JPG, PNG</span>
+                                    </template>
+                                </div>
                             </div>
                         </div>
 
                         <!-- 4. Ijazah SD -->
-                        <div class="col-md-4">
-                            <div class="form-label fw-bold mb-2">Ijazah SD / MI</div>
-                            <div class="upload-box shadow-xs">
-                                <div v-if="filePreviews.berkas_ijazah_sd" class="mb-2">
-                                    <img :src="filePreviews.berkas_ijazah_sd" class="img-thumbnail rounded-3" style="max-height: 80px;">
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <div class="doc-upload-card" :class="{'is-uploaded': form.berkas_ijazah_sd && !filesSelected.berkas_ijazah_sd, 'is-selected': filesSelected.berkas_ijazah_sd}">
+                                <div class="doc-card-header">
+                                    <div class="doc-card-title">
+                                        <i class="bi bi-mortarboard-fill text-primary fs-5"></i>
+                                        <span>Ijazah SD / MI</span>
+                                    </div>
+                                    <div class="doc-card-badge">
+                                        <span v-if="form.berkas_ijazah_sd && !filesSelected.berkas_ijazah_sd" class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fs-9 fw-semibold">
+                                            <i class="bi bi-check-circle-fill me-1"></i>Terunggah
+                                        </span>
+                                        <span v-else-if="filesSelected.berkas_ijazah_sd" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fs-9 fw-semibold">
+                                            <i class="bi bi-arrow-repeat me-1"></i>Siap Simpan
+                                        </span>
+                                        <span v-else class="badge bg-light text-secondary border rounded-pill px-2 py-1 fs-9">
+                                            Belum Ada
+                                        </span>
+                                    </div>
                                 </div>
-                                <i v-else class="bi bi-file-earmark-text upload-icon"></i>
-                                <div class="fs-8 fw-semibold text-secondary">
-                                    {{ filesSelected.berkas_ijazah_sd ? filesSelected.berkas_ijazah_sd : 'Pilih Ijazah SD' }}
+
+                                <div class="doc-dropzone" :class="{'has-file': form.berkas_ijazah_sd || filesSelected.berkas_ijazah_sd}">
+                                    <input type="file" name="berkas_ijazah_sd" accept="image/*,application/pdf" @change="onFileSelected($event, 'berkas_ijazah_sd')">
+                                    
+                                    <div v-if="filePreviews.berkas_ijazah_sd || (form.berkas_ijazah_sd && !filesSelected.berkas_ijazah_sd && isImageFile(form.berkas_ijazah_sd))" class="doc-preview-img-box">
+                                        <img :src="filePreviews.berkas_ijazah_sd ? filePreviews.berkas_ijazah_sd : getFileUrl(form.berkas_ijazah_sd, 'berkas_ijazah_sd')" class="doc-preview-img">
+                                        <div class="fs-9 text-muted mt-1.5"><i class="bi bi-pencil-fill me-1"></i>Klik untuk ganti berkas</div>
+                                    </div>
+                                    
+                                    <div v-else-if="form.berkas_ijazah_sd && !filesSelected.berkas_ijazah_sd && isPdfFile(form.berkas_ijazah_sd)" class="text-center">
+                                        <i class="bi bi-file-earmark-pdf-fill text-danger fs-1"></i>
+                                        <div class="fs-8 fw-semibold text-dark mt-1 text-truncate" style="max-width: 220px;">{{ getDisplayFileName(form.berkas_ijazah_sd) }}</div>
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-9 mt-1">Dokumen PDF</span>
+                                    </div>
+
+                                    <div v-else-if="filesSelected.berkas_ijazah_sd" class="text-center">
+                                        <i :class="filesSelected.berkas_ijazah_sd.toLowerCase().endsWith('.pdf') ? 'bi bi-file-earmark-pdf-fill text-danger fs-1' : 'bi bi-file-earmark-image-fill text-primary fs-1'"></i>
+                                        <div class="fs-8 fw-bold text-dark mt-1 text-truncate" style="max-width: 220px;">{{ filesSelected.berkas_ijazah_sd }}</div>
+                                        <div class="fs-9 text-primary mt-0.5">Berkas siap disimpan</div>
+                                    </div>
+
+                                    <div v-else class="text-center">
+                                        <i class="bi bi-file-earmark-text fs-1 text-secondary opacity-75"></i>
+                                        <div class="fs-8 fw-bold text-dark mt-1">Pilih Ijazah SD</div>
+                                        <div class="fs-9 text-muted mt-0.5">Format .pdf / .jpg / .png</div>
+                                    </div>
                                 </div>
-                                <div class="fs-9 text-muted mt-1">Ekstensi .pdf / .jpg</div>
-                                <input type="file" name="berkas_ijazah_sd" accept="image/*,application/pdf" @change="onFileSelected($event, 'berkas_ijazah_sd')">
-                            </div>
-                            <div v-if="form.berkas_ijazah_sd && !filesSelected.berkas_ijazah_sd" class="upload-status-bar">
-                                <span class="status-text">
-                                    <i class="bi bi-check-circle-fill text-success"></i> Berkas sudah terunggah
-                                </span>
-                                <span class="status-actions">
-                                    <a href="#" @click.prevent="openDocumentViewer(form.berkas_ijazah_sd, 'Ijazah SD / MI')" class="btn-view-file">Lihat Berkas</a>
-                                    <a :href="getFileUrl(form.berkas_ijazah_sd, 'berkas_ijazah_sd')" target="_blank" class="btn-external-link" title="Buka di tab baru"><i class="bi bi-box-arrow-up-right"></i></a>
-                                </span>
+
+                                <div class="doc-card-actions">
+                                    <template v-if="form.berkas_ijazah_sd && !filesSelected.berkas_ijazah_sd">
+                                        <button type="button" @click.prevent="openDocumentViewer(form.berkas_ijazah_sd, 'Ijazah SD / MI')" class="btn-view-doc">
+                                            <i class="bi bi-eye-fill"></i> Lihat Berkas
+                                        </button>
+                                        <a :href="getFileUrl(form.berkas_ijazah_sd, 'berkas_ijazah_sd')" target="_blank" class="btn-ext-doc" title="Buka berkas di tab baru">
+                                            <i class="bi bi-box-arrow-up-right"></i>
+                                        </a>
+                                    </template>
+                                    <template v-else-if="filesSelected.berkas_ijazah_sd">
+                                        <span class="fs-9 text-primary fw-medium"><i class="bi bi-arrow-repeat me-1"></i>Klik Simpan di bawah</span>
+                                    </template>
+                                    <template v-else>
+                                        <span class="fs-9 text-muted"><i class="bi bi-shield-check me-1"></i>Format PDF, JPG, PNG</span>
+                                    </template>
+                                </div>
                             </div>
                         </div>
 
                         <!-- 5. Ijazah SMP -->
-                        <div class="col-md-4">
-                            <div class="form-label fw-bold mb-2">Ijazah SMP / MTs</div>
-                            <div class="upload-box shadow-xs">
-                                <div v-if="filePreviews.berkas_ijazah_smp" class="mb-2">
-                                    <img :src="filePreviews.berkas_ijazah_smp" class="img-thumbnail rounded-3" style="max-height: 80px;">
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <div class="doc-upload-card" :class="{'is-uploaded': form.berkas_ijazah_smp && !filesSelected.berkas_ijazah_smp, 'is-selected': filesSelected.berkas_ijazah_smp}">
+                                <div class="doc-card-header">
+                                    <div class="doc-card-title">
+                                        <i class="bi bi-mortarboard-fill text-primary fs-5"></i>
+                                        <span>Ijazah SMP / MTs</span>
+                                    </div>
+                                    <div class="doc-card-badge">
+                                        <span v-if="form.berkas_ijazah_smp && !filesSelected.berkas_ijazah_smp" class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fs-9 fw-semibold">
+                                            <i class="bi bi-check-circle-fill me-1"></i>Terunggah
+                                        </span>
+                                        <span v-else-if="filesSelected.berkas_ijazah_smp" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fs-9 fw-semibold">
+                                            <i class="bi bi-arrow-repeat me-1"></i>Siap Simpan
+                                        </span>
+                                        <span v-else class="badge bg-light text-secondary border rounded-pill px-2 py-1 fs-9">
+                                            Belum Ada
+                                        </span>
+                                    </div>
                                 </div>
-                                <i v-else class="bi bi-file-earmark-text upload-icon"></i>
-                                <div class="fs-8 fw-semibold text-secondary">
-                                    {{ filesSelected.berkas_ijazah_smp ? filesSelected.berkas_ijazah_smp : 'Pilih Ijazah SMP' }}
+
+                                <div class="doc-dropzone" :class="{'has-file': form.berkas_ijazah_smp || filesSelected.berkas_ijazah_smp}">
+                                    <input type="file" name="berkas_ijazah_smp" accept="image/*,application/pdf" @change="onFileSelected($event, 'berkas_ijazah_smp')">
+                                    
+                                    <div v-if="filePreviews.berkas_ijazah_smp || (form.berkas_ijazah_smp && !filesSelected.berkas_ijazah_smp && isImageFile(form.berkas_ijazah_smp))" class="doc-preview-img-box">
+                                        <img :src="filePreviews.berkas_ijazah_smp ? filePreviews.berkas_ijazah_smp : getFileUrl(form.berkas_ijazah_smp, 'berkas_ijazah_smp')" class="doc-preview-img">
+                                        <div class="fs-9 text-muted mt-1.5"><i class="bi bi-pencil-fill me-1"></i>Klik untuk ganti berkas</div>
+                                    </div>
+                                    
+                                    <div v-else-if="form.berkas_ijazah_smp && !filesSelected.berkas_ijazah_smp && isPdfFile(form.berkas_ijazah_smp)" class="text-center">
+                                        <i class="bi bi-file-earmark-pdf-fill text-danger fs-1"></i>
+                                        <div class="fs-8 fw-semibold text-dark mt-1 text-truncate" style="max-width: 220px;">{{ getDisplayFileName(form.berkas_ijazah_smp) }}</div>
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-9 mt-1">Dokumen PDF</span>
+                                    </div>
+
+                                    <div v-else-if="filesSelected.berkas_ijazah_smp" class="text-center">
+                                        <i :class="filesSelected.berkas_ijazah_smp.toLowerCase().endsWith('.pdf') ? 'bi bi-file-earmark-pdf-fill text-danger fs-1' : 'bi bi-file-earmark-image-fill text-primary fs-1'"></i>
+                                        <div class="fs-8 fw-bold text-dark mt-1 text-truncate" style="max-width: 220px;">{{ filesSelected.berkas_ijazah_smp }}</div>
+                                        <div class="fs-9 text-primary mt-0.5">Berkas siap disimpan</div>
+                                    </div>
+
+                                    <div v-else class="text-center">
+                                        <i class="bi bi-file-earmark-text fs-1 text-secondary opacity-75"></i>
+                                        <div class="fs-8 fw-bold text-dark mt-1">Pilih Ijazah SMP</div>
+                                        <div class="fs-9 text-muted mt-0.5">Format .pdf / .jpg / .png</div>
+                                    </div>
                                 </div>
-                                <div class="fs-9 text-muted mt-1">Ekstensi .pdf / .jpg</div>
-                                <input type="file" name="berkas_ijazah_smp" accept="image/*,application/pdf" @change="onFileSelected($event, 'berkas_ijazah_smp')">
-                            </div>
-                            <div v-if="form.berkas_ijazah_smp && !filesSelected.berkas_ijazah_smp" class="upload-status-bar">
-                                <span class="status-text">
-                                    <i class="bi bi-check-circle-fill text-success"></i> Berkas sudah terunggah
-                                </span>
-                                <span class="status-actions">
-                                    <a href="#" @click.prevent="openDocumentViewer(form.berkas_ijazah_smp, 'Ijazah SMP / MTs')" class="btn-view-file">Lihat Berkas</a>
-                                    <a :href="getFileUrl(form.berkas_ijazah_smp, 'berkas_ijazah_smp')" target="_blank" class="btn-external-link" title="Buka di tab baru"><i class="bi bi-box-arrow-up-right"></i></a>
-                                </span>
+
+                                <div class="doc-card-actions">
+                                    <template v-if="form.berkas_ijazah_smp && !filesSelected.berkas_ijazah_smp">
+                                        <button type="button" @click.prevent="openDocumentViewer(form.berkas_ijazah_smp, 'Ijazah SMP / MTs')" class="btn-view-doc">
+                                            <i class="bi bi-eye-fill"></i> Lihat Berkas
+                                        </button>
+                                        <a :href="getFileUrl(form.berkas_ijazah_smp, 'berkas_ijazah_smp')" target="_blank" class="btn-ext-doc" title="Buka berkas di tab baru">
+                                            <i class="bi bi-box-arrow-up-right"></i>
+                                        </a>
+                                    </template>
+                                    <template v-else-if="filesSelected.berkas_ijazah_smp">
+                                        <span class="fs-9 text-primary fw-medium"><i class="bi bi-arrow-repeat me-1"></i>Klik Simpan di bawah</span>
+                                    </template>
+                                    <template v-else>
+                                        <span class="fs-9 text-muted"><i class="bi bi-shield-check me-1"></i>Format PDF, JPG, PNG</span>
+                                    </template>
+                                </div>
                             </div>
                         </div>
 
                         <!-- 6. Ijazah SMA -->
-                        <div class="col-md-4">
-                            <div class="form-label fw-bold mb-2">Ijazah SMA / MA (Jika Ada)</div>
-                            <div class="upload-box shadow-xs">
-                                <div v-if="filePreviews.berkas_ijazah_sma" class="mb-2">
-                                    <img :src="filePreviews.berkas_ijazah_sma" class="img-thumbnail rounded-3" style="max-height: 80px;">
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <div class="doc-upload-card" :class="{'is-uploaded': form.berkas_ijazah_sma && !filesSelected.berkas_ijazah_sma, 'is-selected': filesSelected.berkas_ijazah_sma}">
+                                <div class="doc-card-header">
+                                    <div class="doc-card-title">
+                                        <i class="bi bi-mortarboard-fill text-primary fs-5"></i>
+                                        <span>Ijazah SMA / MA (Jika Ada)</span>
+                                    </div>
+                                    <div class="doc-card-badge">
+                                        <span v-if="form.berkas_ijazah_sma && !filesSelected.berkas_ijazah_sma" class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fs-9 fw-semibold">
+                                            <i class="bi bi-check-circle-fill me-1"></i>Terunggah
+                                        </span>
+                                        <span v-else-if="filesSelected.berkas_ijazah_sma" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fs-9 fw-semibold">
+                                            <i class="bi bi-arrow-repeat me-1"></i>Siap Simpan
+                                        </span>
+                                        <span v-else class="badge bg-light text-secondary border rounded-pill px-2 py-1 fs-9">
+                                            Belum Ada
+                                        </span>
+                                    </div>
                                 </div>
-                                <i v-else class="bi bi-file-earmark-text upload-icon"></i>
-                                <div class="fs-8 fw-semibold text-secondary">
-                                    {{ filesSelected.berkas_ijazah_sma ? filesSelected.berkas_ijazah_sma : 'Pilih Ijazah SMA' }}
+
+                                <div class="doc-dropzone" :class="{'has-file': form.berkas_ijazah_sma || filesSelected.berkas_ijazah_sma}">
+                                    <input type="file" name="berkas_ijazah_sma" accept="image/*,application/pdf" @change="onFileSelected($event, 'berkas_ijazah_sma')">
+                                    
+                                    <div v-if="filePreviews.berkas_ijazah_sma || (form.berkas_ijazah_sma && !filesSelected.berkas_ijazah_sma && isImageFile(form.berkas_ijazah_sma))" class="doc-preview-img-box">
+                                        <img :src="filePreviews.berkas_ijazah_sma ? filePreviews.berkas_ijazah_sma : getFileUrl(form.berkas_ijazah_sma, 'berkas_ijazah_sma')" class="doc-preview-img">
+                                        <div class="fs-9 text-muted mt-1.5"><i class="bi bi-pencil-fill me-1"></i>Klik untuk ganti berkas</div>
+                                    </div>
+                                    
+                                    <div v-else-if="form.berkas_ijazah_sma && !filesSelected.berkas_ijazah_sma && isPdfFile(form.berkas_ijazah_sma)" class="text-center">
+                                        <i class="bi bi-file-earmark-pdf-fill text-danger fs-1"></i>
+                                        <div class="fs-8 fw-semibold text-dark mt-1 text-truncate" style="max-width: 220px;">{{ getDisplayFileName(form.berkas_ijazah_sma) }}</div>
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-9 mt-1">Dokumen PDF</span>
+                                    </div>
+
+                                    <div v-else-if="filesSelected.berkas_ijazah_sma" class="text-center">
+                                        <i :class="filesSelected.berkas_ijazah_sma.toLowerCase().endsWith('.pdf') ? 'bi bi-file-earmark-pdf-fill text-danger fs-1' : 'bi bi-file-earmark-image-fill text-primary fs-1'"></i>
+                                        <div class="fs-8 fw-bold text-dark mt-1 text-truncate" style="max-width: 220px;">{{ filesSelected.berkas_ijazah_sma }}</div>
+                                        <div class="fs-9 text-primary mt-0.5">Berkas siap disimpan</div>
+                                    </div>
+
+                                    <div v-else class="text-center">
+                                        <i class="bi bi-file-earmark-text fs-1 text-secondary opacity-75"></i>
+                                        <div class="fs-8 fw-bold text-dark mt-1">Pilih Ijazah SMA</div>
+                                        <div class="fs-9 text-muted mt-0.5">Format .pdf / .jpg / .png</div>
+                                    </div>
                                 </div>
-                                <div class="fs-9 text-muted mt-1">Ekstensi .pdf / .jpg</div>
-                                <input type="file" name="berkas_ijazah_sma" accept="image/*,application/pdf" @change="onFileSelected($event, 'berkas_ijazah_sma')">
-                            </div>
-                            <div v-if="form.berkas_ijazah_sma && !filesSelected.berkas_ijazah_sma" class="upload-status-bar">
-                                <span class="status-text">
-                                    <i class="bi bi-check-circle-fill text-success"></i> Berkas sudah terunggah
-                                </span>
-                                <span class="status-actions">
-                                    <a href="#" @click.prevent="openDocumentViewer(form.berkas_ijazah_sma, 'Ijazah SMA / MA')" class="btn-view-file">Lihat Berkas</a>
-                                    <a :href="getFileUrl(form.berkas_ijazah_sma, 'berkas_ijazah_sma')" target="_blank" class="btn-external-link" title="Buka di tab baru"><i class="bi bi-box-arrow-up-right"></i></a>
-                                </span>
+
+                                <div class="doc-card-actions">
+                                    <template v-if="form.berkas_ijazah_sma && !filesSelected.berkas_ijazah_sma">
+                                        <button type="button" @click.prevent="openDocumentViewer(form.berkas_ijazah_sma, 'Ijazah SMA / MA')" class="btn-view-doc">
+                                            <i class="bi bi-eye-fill"></i> Lihat Berkas
+                                        </button>
+                                        <a :href="getFileUrl(form.berkas_ijazah_sma, 'berkas_ijazah_sma')" target="_blank" class="btn-ext-doc" title="Buka berkas di tab baru">
+                                            <i class="bi bi-box-arrow-up-right"></i>
+                                        </a>
+                                    </template>
+                                    <template v-else-if="filesSelected.berkas_ijazah_sma">
+                                        <span class="fs-9 text-primary fw-medium"><i class="bi bi-arrow-repeat me-1"></i>Klik Simpan di bawah</span>
+                                    </template>
+                                    <template v-else>
+                                        <span class="fs-9 text-muted"><i class="bi bi-shield-check me-1"></i>Format PDF, JPG, PNG</span>
+                                    </template>
+                                </div>
                             </div>
                         </div>
 
                         <!-- 7. Berkas Mutasi Masuk -->
-                        <div class="col-md-4" v-show="form.jenis_pendaftaran === 'Pindahan'">
-                            <div class="form-label fw-bold mb-2">Surat Mutasi Masuk</div>
-                            <div class="upload-box shadow-xs">
-                                <div v-if="filePreviews.berkas_mutasi_masuk" class="mb-2">
-                                    <img :src="filePreviews.berkas_mutasi_masuk" class="img-thumbnail rounded-3" style="max-height: 80px;">
+                        <div class="col-12 col-md-6 col-xl-4" v-show="form.jenis_pendaftaran === 'Pindahan'">
+                            <div class="doc-upload-card" :class="{'is-uploaded': form.berkas_mutasi_masuk && !filesSelected.berkas_mutasi_masuk, 'is-selected': filesSelected.berkas_mutasi_masuk}">
+                                <div class="doc-card-header">
+                                    <div class="doc-card-title">
+                                        <i class="bi bi-box-arrow-in-right text-info fs-5"></i>
+                                        <span>Surat Mutasi Masuk</span>
+                                    </div>
+                                    <div class="doc-card-badge">
+                                        <span v-if="form.berkas_mutasi_masuk && !filesSelected.berkas_mutasi_masuk" class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fs-9 fw-semibold">
+                                            <i class="bi bi-check-circle-fill me-1"></i>Terunggah
+                                        </span>
+                                        <span v-else-if="filesSelected.berkas_mutasi_masuk" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fs-9 fw-semibold">
+                                            <i class="bi bi-arrow-repeat me-1"></i>Siap Simpan
+                                        </span>
+                                        <span v-else class="badge bg-light text-secondary border rounded-pill px-2 py-1 fs-9">
+                                            Belum Ada
+                                        </span>
+                                    </div>
                                 </div>
-                                <i v-else class="bi bi-file-earmark-arrow-up upload-icon"></i>
-                                <div class="fs-8 fw-semibold text-secondary">
-                                    {{ filesSelected.berkas_mutasi_masuk ? filesSelected.berkas_mutasi_masuk : 'Pilih Berkas Mutasi' }}
+
+                                <div class="doc-dropzone" :class="{'has-file': form.berkas_mutasi_masuk || filesSelected.berkas_mutasi_masuk}">
+                                    <input type="file" name="berkas_mutasi_masuk" accept="image/*,application/pdf" @change="onFileSelected($event, 'berkas_mutasi_masuk')">
+                                    
+                                    <div v-if="filePreviews.berkas_mutasi_masuk || (form.berkas_mutasi_masuk && !filesSelected.berkas_mutasi_masuk && isImageFile(form.berkas_mutasi_masuk))" class="doc-preview-img-box">
+                                        <img :src="filePreviews.berkas_mutasi_masuk ? filePreviews.berkas_mutasi_masuk : getFileUrl(form.berkas_mutasi_masuk, 'berkas_mutasi_masuk')" class="doc-preview-img">
+                                        <div class="fs-9 text-muted mt-1.5"><i class="bi bi-pencil-fill me-1"></i>Klik untuk ganti berkas</div>
+                                    </div>
+                                    
+                                    <div v-else-if="form.berkas_mutasi_masuk && !filesSelected.berkas_mutasi_masuk && isPdfFile(form.berkas_mutasi_masuk)" class="text-center">
+                                        <i class="bi bi-file-earmark-pdf-fill text-danger fs-1"></i>
+                                        <div class="fs-8 fw-semibold text-dark mt-1 text-truncate" style="max-width: 220px;">{{ getDisplayFileName(form.berkas_mutasi_masuk) }}</div>
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-9 mt-1">Dokumen PDF</span>
+                                    </div>
+
+                                    <div v-else-if="filesSelected.berkas_mutasi_masuk" class="text-center">
+                                        <i :class="filesSelected.berkas_mutasi_masuk.toLowerCase().endsWith('.pdf') ? 'bi bi-file-earmark-pdf-fill text-danger fs-1' : 'bi bi-file-earmark-image-fill text-primary fs-1'"></i>
+                                        <div class="fs-8 fw-bold text-dark mt-1 text-truncate" style="max-width: 220px;">{{ filesSelected.berkas_mutasi_masuk }}</div>
+                                        <div class="fs-9 text-primary mt-0.5">Berkas siap disimpan</div>
+                                    </div>
+
+                                    <div v-else class="text-center">
+                                        <i class="bi bi-file-earmark-arrow-up fs-1 text-secondary opacity-75"></i>
+                                        <div class="fs-8 fw-bold text-dark mt-1">Pilih Berkas Mutasi</div>
+                                        <div class="fs-9 text-muted mt-0.5">Format .pdf / .jpg / .png</div>
+                                    </div>
                                 </div>
-                                <div class="fs-9 text-muted mt-1">Ekstensi .pdf / .jpg</div>
-                                <input type="file" name="berkas_mutasi_masuk" accept="image/*,application/pdf" @change="onFileSelected($event, 'berkas_mutasi_masuk')">
-                            </div>
-                            <div v-if="form.berkas_mutasi_masuk && !filesSelected.berkas_mutasi_masuk" class="upload-status-bar">
-                                <span class="status-text">
-                                    <i class="bi bi-check-circle-fill text-success"></i> Berkas sudah terunggah
-                                </span>
-                                <span class="status-actions">
-                                    <a href="#" @click.prevent="openDocumentViewer(form.berkas_mutasi_masuk, 'Surat Mutasi Masuk')" class="btn-view-file">Lihat Berkas</a>
-                                    <a :href="getFileUrl(form.berkas_mutasi_masuk, 'berkas_mutasi_masuk')" target="_blank" class="btn-external-link" title="Buka di tab baru"><i class="bi bi-box-arrow-up-right"></i></a>
-                                </span>
+
+                                <div class="doc-card-actions">
+                                    <template v-if="form.berkas_mutasi_masuk && !filesSelected.berkas_mutasi_masuk">
+                                        <button type="button" @click.prevent="openDocumentViewer(form.berkas_mutasi_masuk, 'Surat Mutasi Masuk')" class="btn-view-doc">
+                                            <i class="bi bi-eye-fill"></i> Lihat Berkas
+                                        </button>
+                                        <a :href="getFileUrl(form.berkas_mutasi_masuk, 'berkas_mutasi_masuk')" target="_blank" class="btn-ext-doc" title="Buka berkas di tab baru">
+                                            <i class="bi bi-box-arrow-up-right"></i>
+                                        </a>
+                                    </template>
+                                    <template v-else-if="filesSelected.berkas_mutasi_masuk">
+                                        <span class="fs-9 text-primary fw-medium"><i class="bi bi-arrow-repeat me-1"></i>Klik Simpan di bawah</span>
+                                    </template>
+                                    <template v-else>
+                                        <span class="fs-9 text-muted"><i class="bi bi-shield-check me-1"></i>Format PDF, JPG, PNG</span>
+                                    </template>
+                                </div>
                             </div>
                         </div>
 
                         <!-- 8. Berkas Mutasi Keluar -->
-                        <div class="col-md-4" v-show="form.status === 'Pindah'">
-                            <div class="form-label fw-bold mb-2">Surat Mutasi Keluar</div>
-                            <div class="upload-box shadow-xs">
-                                <div v-if="filePreviews.berkas_mutasi_keluar" class="mb-2">
-                                    <img :src="filePreviews.berkas_mutasi_keluar" class="img-thumbnail rounded-3" style="max-height: 80px;">
+                        <div class="col-12 col-md-6 col-xl-4" v-show="form.status === 'Pindah'">
+                            <div class="doc-upload-card" :class="{'is-uploaded': form.berkas_mutasi_keluar && !filesSelected.berkas_mutasi_keluar, 'is-selected': filesSelected.berkas_mutasi_keluar}">
+                                <div class="doc-card-header">
+                                    <div class="doc-card-title">
+                                        <i class="bi bi-box-arrow-right text-warning fs-5"></i>
+                                        <span>Surat Mutasi Keluar</span>
+                                    </div>
+                                    <div class="doc-card-badge">
+                                        <span v-if="form.berkas_mutasi_keluar && !filesSelected.berkas_mutasi_keluar" class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fs-9 fw-semibold">
+                                            <i class="bi bi-check-circle-fill me-1"></i>Terunggah
+                                        </span>
+                                        <span v-else-if="filesSelected.berkas_mutasi_keluar" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fs-9 fw-semibold">
+                                            <i class="bi bi-arrow-repeat me-1"></i>Siap Simpan
+                                        </span>
+                                        <span v-else class="badge bg-light text-secondary border rounded-pill px-2 py-1 fs-9">
+                                            Belum Ada
+                                        </span>
+                                    </div>
                                 </div>
-                                <i v-else class="bi bi-file-earmark-arrow-down upload-icon"></i>
-                                <div class="fs-8 fw-semibold text-secondary">
-                                    {{ filesSelected.berkas_mutasi_keluar ? filesSelected.berkas_mutasi_keluar : 'Pilih Berkas Mutasi' }}
+
+                                <div class="doc-dropzone" :class="{'has-file': form.berkas_mutasi_keluar || filesSelected.berkas_mutasi_keluar}">
+                                    <input type="file" name="berkas_mutasi_keluar" accept="image/*,application/pdf" @change="onFileSelected($event, 'berkas_mutasi_keluar')">
+                                    
+                                    <div v-if="filePreviews.berkas_mutasi_keluar || (form.berkas_mutasi_keluar && !filesSelected.berkas_mutasi_keluar && isImageFile(form.berkas_mutasi_keluar))" class="doc-preview-img-box">
+                                        <img :src="filePreviews.berkas_mutasi_keluar ? filePreviews.berkas_mutasi_keluar : getFileUrl(form.berkas_mutasi_keluar, 'berkas_mutasi_keluar')" class="doc-preview-img">
+                                        <div class="fs-9 text-muted mt-1.5"><i class="bi bi-pencil-fill me-1"></i>Klik untuk ganti berkas</div>
+                                    </div>
+                                    
+                                    <div v-else-if="form.berkas_mutasi_keluar && !filesSelected.berkas_mutasi_keluar && isPdfFile(form.berkas_mutasi_keluar)" class="text-center">
+                                        <i class="bi bi-file-earmark-pdf-fill text-danger fs-1"></i>
+                                        <div class="fs-8 fw-semibold text-dark mt-1 text-truncate" style="max-width: 220px;">{{ getDisplayFileName(form.berkas_mutasi_keluar) }}</div>
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-9 mt-1">Dokumen PDF</span>
+                                    </div>
+
+                                    <div v-else-if="filesSelected.berkas_mutasi_keluar" class="text-center">
+                                        <i :class="filesSelected.berkas_mutasi_keluar.toLowerCase().endsWith('.pdf') ? 'bi bi-file-earmark-pdf-fill text-danger fs-1' : 'bi bi-file-earmark-image-fill text-primary fs-1'"></i>
+                                        <div class="fs-8 fw-bold text-dark mt-1 text-truncate" style="max-width: 220px;">{{ filesSelected.berkas_mutasi_keluar }}</div>
+                                        <div class="fs-9 text-primary mt-0.5">Berkas siap disimpan</div>
+                                    </div>
+
+                                    <div v-else class="text-center">
+                                        <i class="bi bi-file-earmark-arrow-down fs-1 text-secondary opacity-75"></i>
+                                        <div class="fs-8 fw-bold text-dark mt-1">Pilih Berkas Mutasi</div>
+                                        <div class="fs-9 text-muted mt-0.5">Format .pdf / .jpg / .png</div>
+                                    </div>
                                 </div>
-                                <div class="fs-9 text-muted mt-1">Ekstensi .pdf / .jpg</div>
-                                <input type="file" name="berkas_mutasi_keluar" accept="image/*,application/pdf" @change="onFileSelected($event, 'berkas_mutasi_keluar')">
-                            </div>
-                            <div v-if="form.berkas_mutasi_keluar && !filesSelected.berkas_mutasi_keluar" class="upload-status-bar">
-                                <span class="status-text">
-                                    <i class="bi bi-check-circle-fill text-success"></i> Berkas sudah terunggah
-                                </span>
-                                <span class="status-actions">
-                                    <a href="#" @click.prevent="openDocumentViewer(form.berkas_mutasi_keluar, 'Surat Mutasi Keluar')" class="btn-view-file">Lihat Berkas</a>
-                                    <a :href="getFileUrl(form.berkas_mutasi_keluar, 'berkas_mutasi_keluar')" target="_blank" class="btn-external-link" title="Buka di tab baru"><i class="bi bi-box-arrow-up-right"></i></a>
-                                </span>
+
+                                <div class="doc-card-actions">
+                                    <template v-if="form.berkas_mutasi_keluar && !filesSelected.berkas_mutasi_keluar">
+                                        <button type="button" @click.prevent="openDocumentViewer(form.berkas_mutasi_keluar, 'Surat Mutasi Keluar')" class="btn-view-doc">
+                                            <i class="bi bi-eye-fill"></i> Lihat Berkas
+                                        </button>
+                                        <a :href="getFileUrl(form.berkas_mutasi_keluar, 'berkas_mutasi_keluar')" target="_blank" class="btn-ext-doc" title="Buka berkas di tab baru">
+                                            <i class="bi bi-box-arrow-up-right"></i>
+                                        </a>
+                                    </template>
+                                    <template v-else-if="filesSelected.berkas_mutasi_keluar">
+                                        <span class="fs-9 text-primary fw-medium"><i class="bi bi-arrow-repeat me-1"></i>Klik Simpan di bawah</span>
+                                    </template>
+                                    <template v-else>
+                                        <span class="fs-9 text-muted"><i class="bi bi-shield-check me-1"></i>Format PDF, JPG, PNG</span>
+                                    </template>
+                                </div>
                             </div>
                         </div>
 
                         <!-- 9. Berkas KIP -->
-                        <div class="col-md-4" v-show="form.punya_kip == 1">
-                            <div class="form-label fw-bold mb-2">Kartu KIP / PKH (PDF/JPG)</div>
-                            <div class="upload-box shadow-xs">
-                                <div v-if="filePreviews.berkas_kip" class="mb-2">
-                                    <img :src="filePreviews.berkas_kip" class="img-thumbnail rounded-3" style="max-height: 80px;">
+                        <div class="col-12 col-md-6 col-xl-4" v-show="form.punya_kip == 1">
+                            <div class="doc-upload-card" :class="{'is-uploaded': form.berkas_kip && !filesSelected.berkas_kip, 'is-selected': filesSelected.berkas_kip}">
+                                <div class="doc-card-header">
+                                    <div class="doc-card-title">
+                                        <i class="bi bi-credit-card-2-front-fill text-success fs-5"></i>
+                                        <span>Kartu KIP / PKH</span>
+                                    </div>
+                                    <div class="doc-card-badge">
+                                        <span v-if="form.berkas_kip && !filesSelected.berkas_kip" class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fs-9 fw-semibold">
+                                            <i class="bi bi-check-circle-fill me-1"></i>Terunggah
+                                        </span>
+                                        <span v-else-if="filesSelected.berkas_kip" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fs-9 fw-semibold">
+                                            <i class="bi bi-arrow-repeat me-1"></i>Siap Simpan
+                                        </span>
+                                        <span v-else class="badge bg-light text-secondary border rounded-pill px-2 py-1 fs-9">
+                                            Belum Ada
+                                        </span>
+                                    </div>
                                 </div>
-                                <i v-else class="bi bi-credit-card-2-front upload-icon"></i>
-                                <div class="fs-8 fw-semibold text-secondary">
-                                    {{ filesSelected.berkas_kip ? filesSelected.berkas_kip : 'Pilih Kartu KIP' }}
+
+                                <div class="doc-dropzone" :class="{'has-file': form.berkas_kip || filesSelected.berkas_kip}">
+                                    <input type="file" name="berkas_kip" accept="image/*,application/pdf" @change="onFileSelected($event, 'berkas_kip')">
+                                    
+                                    <div v-if="filePreviews.berkas_kip || (form.berkas_kip && !filesSelected.berkas_kip && isImageFile(form.berkas_kip))" class="doc-preview-img-box">
+                                        <img :src="filePreviews.berkas_kip ? filePreviews.berkas_kip : getFileUrl(form.berkas_kip, 'berkas_kip')" class="doc-preview-img">
+                                        <div class="fs-9 text-muted mt-1.5"><i class="bi bi-pencil-fill me-1"></i>Klik untuk ganti berkas</div>
+                                    </div>
+                                    
+                                    <div v-else-if="form.berkas_kip && !filesSelected.berkas_kip && isPdfFile(form.berkas_kip)" class="text-center">
+                                        <i class="bi bi-file-earmark-pdf-fill text-danger fs-1"></i>
+                                        <div class="fs-8 fw-semibold text-dark mt-1 text-truncate" style="max-width: 220px;">{{ getDisplayFileName(form.berkas_kip) }}</div>
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-9 mt-1">Dokumen PDF</span>
+                                    </div>
+
+                                    <div v-else-if="filesSelected.berkas_kip" class="text-center">
+                                        <i :class="filesSelected.berkas_kip.toLowerCase().endsWith('.pdf') ? 'bi bi-file-earmark-pdf-fill text-danger fs-1' : 'bi bi-file-earmark-image-fill text-primary fs-1'"></i>
+                                        <div class="fs-8 fw-bold text-dark mt-1 text-truncate" style="max-width: 220px;">{{ filesSelected.berkas_kip }}</div>
+                                        <div class="fs-9 text-primary mt-0.5">Berkas siap disimpan</div>
+                                    </div>
+
+                                    <div v-else class="text-center">
+                                        <i class="bi bi-credit-card-2-front fs-1 text-secondary opacity-75"></i>
+                                        <div class="fs-8 fw-bold text-dark mt-1">Pilih Kartu KIP</div>
+                                        <div class="fs-9 text-muted mt-0.5">Format .pdf / .jpg / .png / .webp</div>
+                                    </div>
                                 </div>
-                                <div class="fs-9 text-muted mt-1">Ekstensi .pdf / .jpg</div>
-                                <input type="file" name="berkas_kip" accept="image/*,application/pdf" @change="onFileSelected($event, 'berkas_kip')">
-                            </div>
-                            <div v-if="form.berkas_kip && !filesSelected.berkas_kip" class="upload-status-bar">
-                                <span class="status-text">
-                                    <i class="bi bi-check-circle-fill text-success"></i> Berkas sudah terunggah
-                                </span>
-                                <span class="status-actions">
-                                    <a href="#" @click.prevent="openDocumentViewer(form.berkas_kip, 'Kartu KIP / PKH')" class="btn-view-file">Lihat Berkas</a>
-                                    <a :href="getFileUrl(form.berkas_kip, 'berkas_kip')" target="_blank" class="btn-external-link" title="Buka di tab baru"><i class="bi bi-box-arrow-up-right"></i></a>
-                                </span>
+
+                                <div class="doc-card-actions">
+                                    <template v-if="form.berkas_kip && !filesSelected.berkas_kip">
+                                        <button type="button" @click.prevent="openDocumentViewer(form.berkas_kip, 'Kartu KIP / PKH')" class="btn-view-doc">
+                                            <i class="bi bi-eye-fill"></i> Lihat Berkas
+                                        </button>
+                                        <a :href="getFileUrl(form.berkas_kip, 'berkas_kip')" target="_blank" class="btn-ext-doc" title="Buka berkas di tab baru">
+                                            <i class="bi bi-box-arrow-up-right"></i>
+                                        </a>
+                                    </template>
+                                    <template v-else-if="filesSelected.berkas_kip">
+                                        <span class="fs-9 text-primary fw-medium"><i class="bi bi-arrow-repeat me-1"></i>Klik Simpan di bawah</span>
+                                    </template>
+                                    <template v-else>
+                                        <span class="fs-9 text-muted"><i class="bi bi-shield-check me-1"></i>Format PDF, JPG, PNG, WebP</span>
+                                    </template>
+                                </div>
                             </div>
                         </div>
 
                         <!-- 10. Surat Pernyataan Siswa Baru & Orang Tua -->
-                        <div class="col-md-4">
-                            <div class="form-label fw-bold mb-2">Surat Pernyataan Baru & Orang Tua</div>
-                            <div class="upload-box shadow-xs" :style="userRole === 'siswa' ? 'cursor: not-allowed; opacity: 0.65;' : ''">
-                                <div v-if="filePreviews.berkas_pernyataan_baru || (form.berkas_pernyataan_baru && !filesSelected.berkas_pernyataan_baru)" class="mb-2">
-                                    <img :src="filePreviews.berkas_pernyataan_baru ? filePreviews.berkas_pernyataan_baru : getFileUrl(form.berkas_pernyataan_baru, 'berkas_pernyataan_baru')" class="img-thumbnail rounded-3" style="max-height: 80px;">
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <div class="doc-upload-card" :class="{'is-uploaded': form.berkas_pernyataan_baru && !filesSelected.berkas_pernyataan_baru, 'is-selected': filesSelected.berkas_pernyataan_baru}" :style="userRole === 'siswa' ? 'cursor: not-allowed; opacity: 0.7;' : ''">
+                                <div class="doc-card-header">
+                                    <div class="doc-card-title">
+                                        <i class="bi bi-file-earmark-text-fill text-secondary fs-5"></i>
+                                        <span>Surat Pernyataan Baru & Ortu</span>
+                                    </div>
+                                    <div class="doc-card-badge">
+                                        <span v-if="userRole === 'siswa'" class="badge bg-secondary-subtle text-secondary border rounded-pill px-2 py-1 fs-9">
+                                            Admin Only
+                                        </span>
+                                        <span v-else-if="form.berkas_pernyataan_baru && !filesSelected.berkas_pernyataan_baru" class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fs-9 fw-semibold">
+                                            <i class="bi bi-check-circle-fill me-1"></i>Terunggah
+                                        </span>
+                                        <span v-else-if="filesSelected.berkas_pernyataan_baru" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fs-9 fw-semibold">
+                                            <i class="bi bi-arrow-repeat me-1"></i>Siap Simpan
+                                        </span>
+                                        <span v-else class="badge bg-light text-secondary border rounded-pill px-2 py-1 fs-9">
+                                            Belum Ada
+                                        </span>
+                                    </div>
                                 </div>
-                                <i v-else class="bi bi-file-earmark-pdf upload-icon"></i>
-                                <div class="fs-8 fw-semibold text-secondary">
-                                    {{ filesSelected.berkas_pernyataan_baru ? filesSelected.berkas_pernyataan_baru : (userRole === 'siswa' ? 'Tidak ada berkas' : 'Pilih Surat Pernyataan') }}
+
+                                <div class="doc-dropzone" :class="{'has-file': form.berkas_pernyataan_baru || filesSelected.berkas_pernyataan_baru}">
+                                    <input v-if="userRole !== 'siswa'" type="file" name="berkas_pernyataan_baru" accept="image/*,application/pdf" @change="onFileSelected($event, 'berkas_pernyataan_baru')">
+                                    
+                                    <div v-if="filePreviews.berkas_pernyataan_baru || (form.berkas_pernyataan_baru && !filesSelected.berkas_pernyataan_baru && isImageFile(form.berkas_pernyataan_baru))" class="doc-preview-img-box">
+                                        <img :src="filePreviews.berkas_pernyataan_baru ? filePreviews.berkas_pernyataan_baru : getFileUrl(form.berkas_pernyataan_baru, 'berkas_pernyataan_baru')" class="doc-preview-img">
+                                        <div class="fs-9 text-muted mt-1.5"><i class="bi bi-pencil-fill me-1"></i>Klik untuk ganti berkas</div>
+                                    </div>
+                                    
+                                    <div v-else-if="form.berkas_pernyataan_baru && !filesSelected.berkas_pernyataan_baru && isPdfFile(form.berkas_pernyataan_baru)" class="text-center">
+                                        <i class="bi bi-file-earmark-pdf-fill text-danger fs-1"></i>
+                                        <div class="fs-8 fw-semibold text-dark mt-1 text-truncate" style="max-width: 220px;">{{ getDisplayFileName(form.berkas_pernyataan_baru) }}</div>
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-9 mt-1">Dokumen PDF</span>
+                                    </div>
+
+                                    <div v-else-if="filesSelected.berkas_pernyataan_baru" class="text-center">
+                                        <i :class="filesSelected.berkas_pernyataan_baru.toLowerCase().endsWith('.pdf') ? 'bi bi-file-earmark-pdf-fill text-danger fs-1' : 'bi bi-file-earmark-image-fill text-primary fs-1'"></i>
+                                        <div class="fs-8 fw-bold text-dark mt-1 text-truncate" style="max-width: 220px;">{{ filesSelected.berkas_pernyataan_baru }}</div>
+                                        <div class="fs-9 text-primary mt-0.5">Berkas siap disimpan</div>
+                                    </div>
+
+                                    <div v-else class="text-center">
+                                        <i class="bi bi-file-earmark-text fs-1 text-secondary opacity-75"></i>
+                                        <div class="fs-8 fw-bold text-dark mt-1">{{ userRole === 'siswa' ? 'Hanya Diisi Admin' : 'Pilih Surat Pernyataan' }}</div>
+                                        <div class="fs-9 text-muted mt-0.5">Format .pdf / .jpg / .png</div>
+                                    </div>
                                 </div>
-                                <div class="fs-9 text-muted mt-1">Ekstensi .pdf / .jpg (Admin Only)</div>
-                                <input v-if="userRole !== 'siswa'" type="file" name="berkas_pernyataan_baru" accept="image/*,application/pdf" @change="onFileSelected($event, 'berkas_pernyataan_baru')">
-                            </div>
-                            <div v-if="form.berkas_pernyataan_baru && !filesSelected.berkas_pernyataan_baru" class="upload-status-bar">
-                                <span class="status-text">
-                                    <i class="bi bi-check-circle-fill text-success"></i> Berkas sudah terunggah
-                                </span>
-                                <span class="status-actions">
-                                    <a href="#" @click.prevent="openDocumentViewer(form.berkas_pernyataan_baru, 'Surat Pernyataan Baru & Orang Tua')" class="btn-view-file">Lihat Berkas</a>
-                                    <a :href="getFileUrl(form.berkas_pernyataan_baru, 'berkas_pernyataan_baru')" target="_blank" class="btn-external-link" title="Buka di tab baru"><i class="bi bi-box-arrow-up-right"></i></a>
-                                </span>
+
+                                <div class="doc-card-actions">
+                                    <template v-if="form.berkas_pernyataan_baru && !filesSelected.berkas_pernyataan_baru">
+                                        <button type="button" @click.prevent="openDocumentViewer(form.berkas_pernyataan_baru, 'Surat Pernyataan Baru & Orang Tua')" class="btn-view-doc">
+                                            <i class="bi bi-eye-fill"></i> Lihat Berkas
+                                        </button>
+                                        <a :href="getFileUrl(form.berkas_pernyataan_baru, 'berkas_pernyataan_baru')" target="_blank" class="btn-ext-doc" title="Buka berkas di tab baru">
+                                            <i class="bi bi-box-arrow-up-right"></i>
+                                        </a>
+                                    </template>
+                                    <template v-else-if="filesSelected.berkas_pernyataan_baru">
+                                        <span class="fs-9 text-primary fw-medium"><i class="bi bi-arrow-repeat me-1"></i>Klik Simpan di bawah</span>
+                                    </template>
+                                    <template v-else>
+                                        <span class="fs-9 text-muted"><i class="bi bi-lock-fill me-1"></i>Dikelola oleh Administrator</span>
+                                    </template>
+                                </div>
                             </div>
                         </div>
 
                         <!-- 11. Surat Pernyataan TKA -->
-                        <div class="col-md-4">
-                            <div class="form-label fw-bold mb-2">Surat Pernyataan TKA</div>
-                            <div class="upload-box shadow-xs" :style="userRole === 'siswa' ? 'cursor: not-allowed; opacity: 0.65;' : ''">
-                                <div v-if="filePreviews.berkas_pernyataan_tka || (form.berkas_pernyataan_tka && !filesSelected.berkas_pernyataan_tka)" class="mb-2">
-                                    <img :src="filePreviews.berkas_pernyataan_tka ? filePreviews.berkas_pernyataan_tka : getFileUrl(form.berkas_pernyataan_tka, 'berkas_pernyataan_tka')" class="img-thumbnail rounded-3" style="max-height: 80px;">
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <div class="doc-upload-card" :class="{'is-uploaded': form.berkas_pernyataan_tka && !filesSelected.berkas_pernyataan_tka, 'is-selected': filesSelected.berkas_pernyataan_tka}" :style="userRole === 'siswa' ? 'cursor: not-allowed; opacity: 0.7;' : ''">
+                                <div class="doc-card-header">
+                                    <div class="doc-card-title">
+                                        <i class="bi bi-award-fill text-warning fs-5"></i>
+                                        <span>Surat Pernyataan TKA</span>
+                                    </div>
+                                    <div class="doc-card-badge">
+                                        <span v-if="userRole === 'siswa'" class="badge bg-secondary-subtle text-secondary border rounded-pill px-2 py-1 fs-9">
+                                            Admin Only
+                                        </span>
+                                        <span v-else-if="form.berkas_pernyataan_tka && !filesSelected.berkas_pernyataan_tka" class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fs-9 fw-semibold">
+                                            <i class="bi bi-check-circle-fill me-1"></i>Terunggah
+                                        </span>
+                                        <span v-else-if="filesSelected.berkas_pernyataan_tka" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fs-9 fw-semibold">
+                                            <i class="bi bi-arrow-repeat me-1"></i>Siap Simpan
+                                        </span>
+                                        <span v-else class="badge bg-light text-secondary border rounded-pill px-2 py-1 fs-9">
+                                            Belum Ada
+                                        </span>
+                                    </div>
                                 </div>
-                                <i v-else class="bi bi-file-earmark-pdf upload-icon"></i>
-                                <div class="fs-8 fw-semibold text-secondary">
-                                    {{ filesSelected.berkas_pernyataan_tka ? filesSelected.berkas_pernyataan_tka : (userRole === 'siswa' ? 'Tidak ada berkas' : 'Pilih Surat Pernyataan TKA') }}
+
+                                <div class="doc-dropzone" :class="{'has-file': form.berkas_pernyataan_tka || filesSelected.berkas_pernyataan_tka}">
+                                    <input v-if="userRole !== 'siswa'" type="file" name="berkas_pernyataan_tka" accept="image/*,application/pdf" @change="onFileSelected($event, 'berkas_pernyataan_tka')">
+                                    
+                                    <div v-if="filePreviews.berkas_pernyataan_tka || (form.berkas_pernyataan_tka && !filesSelected.berkas_pernyataan_tka && isImageFile(form.berkas_pernyataan_tka))" class="doc-preview-img-box">
+                                        <img :src="filePreviews.berkas_pernyataan_tka ? filePreviews.berkas_pernyataan_tka : getFileUrl(form.berkas_pernyataan_tka, 'berkas_pernyataan_tka')" class="doc-preview-img">
+                                        <div class="fs-9 text-muted mt-1.5"><i class="bi bi-pencil-fill me-1"></i>Klik untuk ganti berkas</div>
+                                    </div>
+                                    
+                                    <div v-else-if="form.berkas_pernyataan_tka && !filesSelected.berkas_pernyataan_tka && isPdfFile(form.berkas_pernyataan_tka)" class="text-center">
+                                        <i class="bi bi-file-earmark-pdf-fill text-danger fs-1"></i>
+                                        <div class="fs-8 fw-semibold text-dark mt-1 text-truncate" style="max-width: 220px;">{{ getDisplayFileName(form.berkas_pernyataan_tka) }}</div>
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-9 mt-1">Dokumen PDF</span>
+                                    </div>
+
+                                    <div v-else-if="filesSelected.berkas_pernyataan_tka" class="text-center">
+                                        <i :class="filesSelected.berkas_pernyataan_tka.toLowerCase().endsWith('.pdf') ? 'bi bi-file-earmark-pdf-fill text-danger fs-1' : 'bi bi-file-earmark-image-fill text-primary fs-1'"></i>
+                                        <div class="fs-8 fw-bold text-dark mt-1 text-truncate" style="max-width: 220px;">{{ filesSelected.berkas_pernyataan_tka }}</div>
+                                        <div class="fs-9 text-primary mt-0.5">Berkas siap disimpan</div>
+                                    </div>
+
+                                    <div v-else class="text-center">
+                                        <i class="bi bi-award fs-1 text-secondary opacity-75"></i>
+                                        <div class="fs-8 fw-bold text-dark mt-1">{{ userRole === 'siswa' ? 'Hanya Diisi Admin' : 'Pilih Surat Pernyataan TKA' }}</div>
+                                        <div class="fs-9 text-muted mt-0.5">Format .pdf / .jpg / .png</div>
+                                    </div>
                                 </div>
-                                <div class="fs-9 text-muted mt-1">Ekstensi .pdf / .jpg (Admin Only)</div>
-                                <input v-if="userRole !== 'siswa'" type="file" name="berkas_pernyataan_tka" accept="image/*,application/pdf" @change="onFileSelected($event, 'berkas_pernyataan_tka')">
-                            </div>
-                            <div class="form-text text-warning fw-semibold mt-1" style="font-size: 0.75rem;">
-                                <i class="bi bi-info-circle-fill"></i> File TKA Hanya diisi ketika sudah kelas 12.
-                            </div>
-                            <div v-if="form.berkas_pernyataan_tka && !filesSelected.berkas_pernyataan_tka" class="upload-status-bar">
-                                <span class="status-text">
-                                    <i class="bi bi-check-circle-fill text-success"></i> Berkas sudah terunggah
-                                </span>
-                                <span class="status-actions">
-                                    <a href="#" @click.prevent="openDocumentViewer(form.berkas_pernyataan_tka, 'Surat Pernyataan TKA')" class="btn-view-file">Lihat Berkas</a>
-                                    <a :href="getFileUrl(form.berkas_pernyataan_tka, 'berkas_pernyataan_tka')" target="_blank" class="btn-external-link" title="Buka di tab baru"><i class="bi bi-box-arrow-up-right"></i></a>
-                                </span>
+
+                                <div class="px-1 mb-2" v-if="userRole !== 'siswa'">
+                                    <div class="text-warning fw-semibold d-flex align-items-center gap-1" style="font-size: 0.75rem;">
+                                        <i class="bi bi-info-circle-fill"></i> Diisi khusus ketika siswa sudah kelas 12
+                                    </div>
+                                </div>
+
+                                <div class="doc-card-actions">
+                                    <template v-if="form.berkas_pernyataan_tka && !filesSelected.berkas_pernyataan_tka">
+                                        <button type="button" @click.prevent="openDocumentViewer(form.berkas_pernyataan_tka, 'Surat Pernyataan TKA')" class="btn-view-doc">
+                                            <i class="bi bi-eye-fill"></i> Lihat Berkas
+                                        </button>
+                                        <a :href="getFileUrl(form.berkas_pernyataan_tka, 'berkas_pernyataan_tka')" target="_blank" class="btn-ext-doc" title="Buka berkas di tab baru">
+                                            <i class="bi bi-box-arrow-up-right"></i>
+                                        </a>
+                                    </template>
+                                    <template v-else-if="filesSelected.berkas_pernyataan_tka">
+                                        <span class="fs-9 text-primary fw-medium"><i class="bi bi-arrow-repeat me-1"></i>Klik Simpan di bawah</span>
+                                    </template>
+                                    <template v-else>
+                                        <span class="fs-9 text-muted"><i class="bi bi-lock-fill me-1"></i>Dikelola oleh Administrator</span>
+                                    </template>
+                                </div>
                             </div>
                         </div>
 
@@ -1826,6 +2336,8 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
             const userRole = ref('<?= htmlspecialchars($data['user_role'] ?? "") ?>');
             const isEdit = ref(<?= $isEdit ? 'true' : 'false' ?>);
             const idSiswa = <?= json_encode($idSiswa, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+            const initialSiswa = <?= json_encode($siswaFullData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+            const initialKesehatan = <?= json_encode($kesehatanData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 
             // List options untuk Super Admin
             const listTenants = ref([]);
@@ -2040,6 +2552,93 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 }
             });
 
+            // Helper aman untuk re-hydration data riwayat kesehatan tanpa merusak struktur semester {1..6}
+            const hydrateKesehatan = (kesehatanSource) => {
+                if (!kesehatanSource) return;
+                if (!form.value.kesehatan || typeof form.value.kesehatan !== 'object') {
+                    form.value.kesehatan = {
+                        1: { tinggi_badan: '', berat_badan: '', pendengaran: '', pengelihatan: '', gigi: '' },
+                        2: { tinggi_badan: '', berat_badan: '', pendengaran: '', pengelihatan: '', gigi: '' },
+                        3: { tinggi_badan: '', berat_badan: '', pendengaran: '', pengelihatan: '', gigi: '' },
+                        4: { tinggi_badan: '', berat_badan: '', pendengaran: '', pengelihatan: '', gigi: '' },
+                        5: { tinggi_badan: '', berat_badan: '', pendengaran: '', pengelihatan: '', gigi: '' },
+                        6: { tinggi_badan: '', berat_badan: '', pendengaran: '', pengelihatan: '', gigi: '' }
+                    };
+                }
+                for (let sem = 1; sem <= 6; sem++) {
+                    if (!form.value.kesehatan[sem]) {
+                        form.value.kesehatan[sem] = { tinggi_badan: '', berat_badan: '', pendengaran: '', pengelihatan: '', gigi: '' };
+                    }
+                }
+                if (Array.isArray(kesehatanSource)) {
+                    kesehatanSource.forEach(item => {
+                        const sem = item.semester || 1;
+                        if (form.value.kesehatan[sem]) {
+                            Object.assign(form.value.kesehatan[sem], item);
+                        }
+                    });
+                } else if (typeof kesehatanSource === 'object') {
+                    if (kesehatanSource[1] || kesehatanSource['1']) {
+                        for (let sem = 1; sem <= 6; sem++) {
+                            if (kesehatanSource[sem]) {
+                                Object.assign(form.value.kesehatan[sem], kesehatanSource[sem]);
+                            }
+                        }
+                    } else {
+                        const sem = kesehatanSource.semester || 1;
+                        if (form.value.kesehatan[sem]) {
+                            Object.assign(form.value.kesehatan[sem], kesehatanSource);
+                        }
+                    }
+                }
+            };
+
+            // Instant Server-Side Hydration (Mode Edit)
+            if (isEdit.value && initialSiswa && Object.keys(initialSiswa).length > 0) {
+                Object.keys(initialSiswa).forEach(key => {
+                    if (key in form.value && key !== 'password' && key !== 'kesehatan') {
+                        let val = initialSiswa[key] !== null ? initialSiswa[key] : '';
+                        if (val === '0000-00-00') val = '';
+                        form.value[key] = val;
+                    }
+                });
+                if (initialSiswa.kesehatan) {
+                    hydrateKesehatan(initialSiswa.kesehatan);
+                } else if (initialKesehatan) {
+                    hydrateKesehatan(initialKesehatan);
+                }
+                if (initialSiswa.alamat && !form.value.alamat_kk) {
+                    form.value.alamat_kk = initialSiswa.alamat;
+                }
+                if (initialSiswa.alamat_kk) {
+                    form.value.alamat_kk = initialSiswa.alamat_kk;
+                }
+                if (initialSiswa.alamat_domisili) {
+                    form.value.alamat_domisili = initialSiswa.alamat_domisili;
+                }
+                if (initialSiswa.no_hp && !form.value.no_telepon_siswa) {
+                    form.value.no_telepon_siswa = initialSiswa.no_hp;
+                }
+                if (initialSiswa.no_telepon_siswa) {
+                    form.value.no_telepon_siswa = initialSiswa.no_telepon_siswa;
+                }
+                if (initialSiswa.asal_sekolah && !form.value.sekolah_asal) {
+                    form.value.sekolah_asal = initialSiswa.asal_sekolah;
+                }
+                if (initialSiswa.sekolah_asal) {
+                    form.value.sekolah_asal = initialSiswa.sekolah_asal;
+                }
+                if (initialSiswa.status_siswa) {
+                    form.value.status = initialSiswa.status_siswa;
+                }
+                if (initialSiswa.id_kelas) form.value.id_kelas = initialSiswa.id_kelas;
+                if (initialSiswa.id_jurusan) form.value.id_jurusan = initialSiswa.id_jurusan;
+                if (initialSiswa.id_angkatan) form.value.id_angkatan = initialSiswa.id_angkatan;
+                if (initialSiswa.id_tahun_ajaran) form.value.id_tahun_ajaran = initialSiswa.id_tahun_ajaran;
+                if (initialSiswa.id_jenjang) form.value.id_jenjang = initialSiswa.id_jenjang;
+                if (initialSiswa.id_pendidikan) form.value.id_pendidikan = initialSiswa.id_pendidikan;
+            }
+
             // Map kota ke options untuk searchable dropdown
             const citiesOptions = computed(() => {
                 if (!Array.isArray(cities.value)) return [];
@@ -2051,26 +2650,28 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
             // Filter Jurusan secara reaktif berdasarkan jenjang & tenant terpilih
             const filteredJurusan = computed(() => {
-                if (!form.value.id_jenjang || !Array.isArray(acOptions.value.kelas) || !Array.isArray(acOptions.value.jurusan)) return [];
+                if (!form.value.id_jenjang || !Array.isArray(acOptions.value.kelas) || !Array.isArray(acOptions.value.jurusan)) return acOptions.value.jurusan || [];
                 const allowedJurusanIds = acOptions.value.kelas
-                    .filter(k => parseInt(k.id_jenjang) === parseInt(form.value.id_jenjang))
-                    .map(k => parseInt(k.id_jurusan));
+                    .filter(k => k && String(k.id_jenjang) === String(form.value.id_jenjang))
+                    .map(k => String(k.id_jurusan));
                 
                 if (allowedJurusanIds.length === 0) {
                     return acOptions.value.jurusan; // Fallback jika rombel belum ter-set
                 }
                 return acOptions.value.jurusan.filter(j => 
-                    allowedJurusanIds.includes(parseInt(j.id))
+                    allowedJurusanIds.includes(String(j.id))
                 );
             });
 
             // Filter Rombel Kelas secara reaktif berdasarkan jenjang & jurusan yang dipilih
             const filteredKelas = computed(() => {
-                if (!form.value.id_jenjang || !form.value.id_jurusan || !Array.isArray(acOptions.value.kelas)) return [];
-                return acOptions.value.kelas.filter(k => 
-                    parseInt(k.id_jenjang) === parseInt(form.value.id_jenjang) && 
-                    parseInt(k.id_jurusan) === parseInt(form.value.id_jurusan)
-                );
+                if (!form.value.id_jenjang || !Array.isArray(acOptions.value.kelas)) return acOptions.value.kelas || [];
+                return acOptions.value.kelas.filter(k => {
+                    if (!k) return false;
+                    const matchJenjang = String(k.id_jenjang) === String(form.value.id_jenjang);
+                    const matchJurusan = !form.value.id_jurusan || String(k.id_jurusan) === String(form.value.id_jurusan);
+                    return matchJenjang && matchJurusan;
+                });
             });
 
             // Validasi client-side global untuk mengunci tombol submit Step 5 (Edit Mode)
@@ -2125,7 +2726,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
             // Ambil data query Edit jika di-inject dari PHP
             const loadEditData = async () => {
                 try {
-                    const response = await axios.get(`<?= $this->getBaseUrl() ?>/siswa/tambah?ajax=1&action=get_siswa_detail&id=${idSiswa}`);
+                    const response = await axios.get(`${window.location.pathname}?ajax=1&action=get_siswa_detail&id=${idSiswa}`);
                     if (response.data && response.data.success) {
                         const phpData = response.data.data;
                         const kesehatanPhp = response.data.kesehatan;
@@ -2138,7 +2739,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                             
                             // 2. Petakan data siswa ke model form Vue
                             Object.keys(phpData).forEach(key => {
-                                if (key in form.value && key !== 'password') {
+                                if (key in form.value && key !== 'password' && key !== 'kesehatan') {
                                     let val = phpData[key] !== null ? phpData[key] : '';
                                     if (val === '0000-00-00') val = '';
                                     if (typeof form.value[key] === 'number' && val !== '') {
@@ -2147,10 +2748,92 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                                     form.value[key] = val;
                                 }
                             });
-                            
-                            // 3. Resolusi fallback ID akademik jika bernilai kosong/nama string
-                            if (!form.value.id_kelas && phpData.kelas_saat_ini && acOptions.value.kelas) {
-                                const matchedKelas = acOptions.value.kelas.find(k => k.nama_kelas === phpData.kelas_saat_ini || k.id === phpData.kelas_saat_ini);
+
+                            hydrateKesehatan(kesehatanPhp || phpData.kesehatan);
+
+                            // 3. Mapping spesifik untuk alias input Vue Step 1 - Step 5
+                            if (phpData.alamat && !form.value.alamat_kk) {
+                                form.value.alamat_kk = phpData.alamat;
+                            }
+                            if (phpData.alamat_kk) {
+                                form.value.alamat_kk = phpData.alamat_kk;
+                            }
+                            if (phpData.alamat_domisili) {
+                                form.value.alamat_domisili = phpData.alamat_domisili;
+                            }
+                            if (phpData.no_hp && !form.value.no_telepon_siswa) {
+                                form.value.no_telepon_siswa = phpData.no_hp;
+                            }
+                            if (phpData.no_telepon_siswa) {
+                                form.value.no_telepon_siswa = phpData.no_telepon_siswa;
+                            }
+                            if (phpData.no_telepon_orang_tua) {
+                                form.value.no_telepon_orang_tua = phpData.no_telepon_orang_tua;
+                            }
+                            if (phpData.status_siswa) {
+                                form.value.status = phpData.status_siswa;
+                            }
+                            if (phpData.asal_sekolah && !form.value.sekolah_asal) {
+                                form.value.sekolah_asal = phpData.asal_sekolah;
+                            }
+                            if (phpData.sekolah_asal) {
+                                form.value.sekolah_asal = phpData.sekolah_asal;
+                            }
+
+                            // Normalisasi Boolean Radio/Toggle
+                            if (phpData.penerima_kps !== undefined && phpData.penerima_kps !== null) {
+                                form.value.penerima_kps = (phpData.penerima_kps === true || phpData.penerima_kps === 'true' || phpData.penerima_kps === 1 || phpData.penerima_kps === '1') ? 1 : 0;
+                            }
+                            if (phpData.punya_kip !== undefined && phpData.punya_kip !== null) {
+                                form.value.punya_kip = (phpData.punya_kip === true || phpData.punya_kip === 'true' || phpData.punya_kip === 1 || phpData.punya_kip === '1') ? 1 : 0;
+                            }
+                            if (phpData.layak_kip !== undefined && phpData.layak_kip !== null) {
+                                form.value.layak_kip = (phpData.layak_kip === true || phpData.layak_kip === 'true' || phpData.layak_kip === 1 || phpData.layak_kip === '1') ? 1 : 0;
+                            }
+                            if (phpData.paud_formal !== undefined && phpData.paud_formal !== null) {
+                                form.value.paud_formal = (phpData.paud_formal === true || phpData.paud_formal === 'true' || phpData.paud_formal === 1 || phpData.paud_formal === '1') ? 1 : 0;
+                            }
+                            if (phpData.paud_non_formal !== undefined && phpData.paud_non_formal !== null) {
+                                form.value.paud_non_formal = (phpData.paud_non_formal === true || phpData.paud_non_formal === 'true' || phpData.paud_non_formal === 1 || phpData.paud_non_formal === '1') ? 1 : 0;
+                            }
+
+                            // Parent Tempat Lahir, Pendidikan & Penghasilan
+                            if (phpData.id_tempat_lahir_ayah) {
+                                form.value.id_tempat_lahir_ayah = Number(phpData.id_tempat_lahir_ayah);
+                            }
+                            if (phpData.id_tempat_lahir_ibu) {
+                                form.value.id_tempat_lahir_ibu = Number(phpData.id_tempat_lahir_ibu);
+                            }
+                            if (phpData.id_tempat_lahir_wali) {
+                                form.value.id_tempat_lahir_wali = Number(phpData.id_tempat_lahir_wali);
+                            }
+                            if (phpData.pendidikan_ayah) form.value.pendidikan_ayah = phpData.pendidikan_ayah;
+                            if (phpData.penghasilan_ayah) form.value.penghasilan_ayah = phpData.penghasilan_ayah;
+                            if (phpData.pendidikan_ibu) form.value.pendidikan_ibu = phpData.pendidikan_ibu;
+                            if (phpData.penghasilan_ibu) form.value.penghasilan_ibu = phpData.penghasilan_ibu;
+                            if (phpData.pendidikan_wali) form.value.pendidikan_wali = phpData.pendidikan_wali;
+                            if (phpData.penghasilan_wali) form.value.penghasilan_wali = phpData.penghasilan_wali;
+
+                            // Dokumen & Foto
+                            if (phpData.foto_profil || phpData.foto_url) {
+                                form.value.foto_profil = phpData.foto_profil || phpData.foto_url;
+                            }
+                            const docKeysList = ['berkas_kk', 'berkas_akta', 'berkas_ijazah_sd', 'berkas_ijazah_smp', 'berkas_ijazah_sma', 'berkas_mutasi_masuk', 'berkas_mutasi_keluar', 'berkas_kip', 'berkas_pernyataan_baru', 'berkas_pernyataan_tka'];
+                            docKeysList.forEach(dKey => {
+                                if (phpData[dKey]) form.value[dKey] = phpData[dKey];
+                            });
+
+                            // Mapping ID Akademik Relasional
+                            if (phpData.id_kelas) form.value.id_kelas = phpData.id_kelas;
+                            if (phpData.id_jurusan) form.value.id_jurusan = phpData.id_jurusan;
+                            if (phpData.id_angkatan) form.value.id_angkatan = phpData.id_angkatan;
+                            if (phpData.id_tahun_ajaran) form.value.id_tahun_ajaran = phpData.id_tahun_ajaran;
+                            if (phpData.id_jenjang) form.value.id_jenjang = phpData.id_jenjang;
+                            if (phpData.id_pendidikan) form.value.id_pendidikan = phpData.id_pendidikan;
+
+                            // 4. Resolusi fallback ID akademik dari Rombel/Kelas
+                            if (form.value.id_kelas && Array.isArray(acOptions.value.kelas)) {
+                                const matchedKelas = acOptions.value.kelas.find(k => String(k.id) === String(form.value.id_kelas) || k.nama_kelas === form.value.id_kelas || k.nama_kelas === phpData.kelas_saat_ini);
                                 if (matchedKelas) {
                                     form.value.id_kelas = matchedKelas.id;
                                     if (!form.value.id_jenjang && matchedKelas.id_jenjang) {
@@ -2162,45 +2845,33 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                                 }
                             }
 
-                            if (!form.value.id_jurusan && phpData.jurusan && acOptions.value.jurusan) {
-                                const matchedJur = acOptions.value.jurusan.find(j => j.nama_jurusan === phpData.jurusan || j.id === phpData.jurusan);
+                            if (form.value.id_jurusan && Array.isArray(acOptions.value.jurusan)) {
+                                const matchedJur = acOptions.value.jurusan.find(j => String(j.id) === String(form.value.id_jurusan) || j.nama_jurusan === form.value.id_jurusan || j.nama_jurusan === phpData.jurusan);
                                 if (matchedJur) form.value.id_jurusan = matchedJur.id;
                             }
 
-                            if (!form.value.id_angkatan && phpData.angkatan && acOptions.value.angkatan) {
-                                const matchedAng = acOptions.value.angkatan.find(a => String(a.tahun_angkatan).includes(String(phpData.angkatan)) || a.id === phpData.angkatan);
+                            if (form.value.id_angkatan && Array.isArray(acOptions.value.angkatan)) {
+                                const matchedAng = acOptions.value.angkatan.find(a => String(a.id) === String(form.value.id_angkatan) || String(a.tahun_angkatan).includes(String(form.value.id_angkatan)) || String(a.tahun_angkatan) === String(phpData.angkatan));
                                 if (matchedAng) form.value.id_angkatan = matchedAng.id;
-                            }
-
-                            if (!form.value.id_tahun_ajaran && acOptions.value.tahun_ajaran && acOptions.value.tahun_ajaran.length > 0) {
-                                form.value.id_tahun_ajaran = acOptions.value.tahun_ajaran[0].id;
-                            }
-
-                            if (!form.value.id_pendidikan && acOptions.value.pendidikan && acOptions.value.pendidikan.length > 0) {
-                                form.value.id_pendidikan = acOptions.value.pendidikan[0].id;
                             }
                             
                             // Trigger pemuatan chained dropdown alamat secara bertahap
                             if (form.value.id_provinsi) {
-                                fetchKota(form.value.id_provinsi, false);
+                                await fetchKota(form.value.id_provinsi, false);
                             }
                             if (form.value.id_kota) {
-                                fetchKecamatan(form.value.id_kota, false);
+                                await fetchKecamatan(form.value.id_kota, false);
                             }
                             if (form.value.id_kecamatan) {
-                                fetchKelurahan(form.value.id_kecamatan, false);
+                                await fetchKelurahan(form.value.id_kecamatan, false);
                             }
                             
                             if (kesehatanPhp && Object.keys(kesehatanPhp).length > 0) {
-                                for (let sem in kesehatanPhp) {
-                                    if (form.value.kesehatan[sem]) {
-                                        form.value.kesehatan[sem].tinggi_badan = kesehatanPhp[sem].tinggi_badan !== null ? kesehatanPhp[sem].tinggi_badan : '';
-                                        form.value.kesehatan[sem].berat_badan = kesehatanPhp[sem].berat_badan !== null ? kesehatanPhp[sem].berat_badan : '';
-                                        form.value.kesehatan[sem].pendengaran = kesehatanPhp[sem].pendengaran || '';
-                                        form.value.kesehatan[sem].pengelihatan = kesehatanPhp[sem].pengelihatan || '';
-                                        form.value.kesehatan[sem].gigi = kesehatanPhp[sem].gigi || '';
-                                    }
-                                }
+                                if (kesehatanPhp.tinggi_badan) form.value.tinggi_badan = kesehatanPhp.tinggi_badan;
+                                if (kesehatanPhp.berat_badan) form.value.berat_badan = kesehatanPhp.berat_badan;
+                                if (kesehatanPhp.golongan_darah) form.value.golongan_darah = kesehatanPhp.golongan_darah;
+                                if (kesehatanPhp.riwayat_penyakit) form.value.penyakit_yang_diderita = kesehatanPhp.riwayat_penyakit;
+                                if (kesehatanPhp.disabilitas) form.value.kelainan_jasmani = kesehatanPhp.disabilitas;
                             }
                         }
                     }
@@ -2386,38 +3057,162 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 }
             };
 
-            // File selection preview label and size/format validation (TUGAS 4)
-            const onFileSelected = (event, type) => {
-                const file = event.target.files[0];
-                if (file) {
-                    if (file.size > 500 * 1024) {
-                        if (typeof Swal !== 'undefined') {
-                            Swal.fire({
-                                icon: 'warning',
-                                title: 'Berkas Terlalu Besar',
-                                text: 'Ukuran berkas melebihi batas maksimal 500 KB!',
-                                confirmButtonColor: '#2563eb'
-                            });
-                        } else {
-                            alert("Ukuran berkas melebihi batas maksimal 500 KB!");
-                        }
-                        event.target.value = ""; // Reset file input
-                        filesSelected.value[type] = "";
-                        filePreviews.value[type] = "";
+            // Client-side smart image compressor (Canvas to WebP/JPEG under 500 KB)
+            const compressImageClient = (file, maxSizeBytes = 500 * 1024, maxWidth = 1600) => {
+                return new Promise((resolve) => {
+                    if (!file || !file.type.startsWith('image/')) {
+                        resolve({ file, originalSize: file ? file.size : 0, compressedSize: file ? file.size : 0, wasCompressed: false });
                         return;
                     }
-                    filesSelected.value[type] = file.name;
-                    
-                    // Generate image preview (TUGAS 4)
-                    if (file.type.startsWith('image/')) {
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            filePreviews.value[type] = e.target.result;
+
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = (event) => {
+                        const img = new Image();
+                        img.src = event.target.result;
+                        img.onload = () => {
+                            let width = img.width;
+                            let height = img.height;
+
+                            if (width > maxWidth) {
+                                height = Math.round((height * maxWidth) / width);
+                                width = maxWidth;
+                            }
+
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+
+                            let quality = 0.85;
+                            const tryCompress = (q, w, h) => {
+                                canvas.width = w;
+                                canvas.height = h;
+                                ctx.fillStyle = '#FFFFFF';
+                                ctx.fillRect(0, 0, w, h);
+                                ctx.drawImage(img, 0, 0, w, h);
+
+                                canvas.toBlob((blob) => {
+                                    if (!blob) {
+                                        resolve({ file, originalSize: file.size, compressedSize: file.size, wasCompressed: false });
+                                        return;
+                                    }
+                                    if (blob.size <= maxSizeBytes || (q <= 0.35 && w <= 400)) {
+                                        const cleanName = file.name.replace(/\.[^/.]+$/, "") + ".webp";
+                                        const convertedFile = new File([blob], cleanName, {
+                                            type: 'image/webp',
+                                            lastModified: Date.now()
+                                        });
+                                        resolve({
+                                            file: convertedFile,
+                                            originalSize: file.size,
+                                            compressedSize: blob.size,
+                                            wasCompressed: (file.size > maxSizeBytes || blob.size < file.size)
+                                        });
+                                    } else {
+                                        const nextQ = Math.max(0.35, q - 0.15);
+                                        const nextW = Math.round(w * 0.85);
+                                        const nextH = Math.round(h * 0.85);
+                                        tryCompress(nextQ, nextW, nextH);
+                                    }
+                                }, 'image/webp', q);
+                            };
+
+                            tryCompress(quality, width, height);
                         };
-                        reader.readAsDataURL(file);
+                        img.onerror = () => resolve({ file, originalSize: file.size, compressedSize: file.size, wasCompressed: false });
+                    };
+                    reader.onerror = () => resolve({ file, originalSize: file.size, compressedSize: file.size, wasCompressed: false });
+                });
+            };
+
+            // File selection preview label and automatic compression handler
+            const onFileSelected = async (event, type) => {
+                const originalFile = event.target.files[0];
+                if (!originalFile) return;
+
+                // Batas maksimal mutlak file mentah sebelum diproses (10 MB)
+                if (originalFile.size > 10 * 1024 * 1024) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Berkas Terlalu Besar',
+                            text: 'Ukuran file asli melebihi batas 10 MB. Harap pilih berkas yang lebih kecil.',
+                            confirmButtonColor: '#2563eb'
+                        });
                     } else {
-                        filePreviews.value[type] = "";
+                        alert("Ukuran file asli melebihi batas 10 MB!");
                     }
+                    event.target.value = "";
+                    filesSelected.value[type] = "";
+                    filePreviews.value[type] = "";
+                    return;
+                }
+
+                // 1. Jika Gambar (JPG/PNG/WebP), lakukan kompresi otomatis langsung di sisi klien
+                if (originalFile.type.startsWith('image/')) {
+                    const result = await compressImageClient(originalFile, 500 * 1024);
+                    const finalFile = result.file;
+
+                    // Pasang kembali file hasil kompresi ke input element menggunakan DataTransfer
+                    if (typeof DataTransfer !== 'undefined') {
+                        try {
+                            const dt = new DataTransfer();
+                            dt.items.add(finalFile);
+                            event.target.files = dt.files;
+                        } catch (e) {
+                            console.warn("DataTransfer assignment fallback", e);
+                        }
+                    }
+
+                    filesSelected.value[type] = finalFile.name;
+
+                    // Generate image preview
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        filePreviews.value[type] = e.target.result;
+                    };
+                    reader.readAsDataURL(finalFile);
+
+                    // Beri notifikasi toast informatif jika file berhasil dikompresi
+                    if (result.originalSize > 500 * 1024) {
+                        const origKb = Math.round(result.originalSize / 1024);
+                        const compKb = Math.round(result.compressedSize / 1024);
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Berkas Terkompresi Otomatis',
+                                text: `Ukuran berkas berhasil dikompresi dari ${origKb} KB menjadi ${compKb} KB (Maks 500 KB).`,
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 3500,
+                                timerProgressBar: true
+                            });
+                        }
+                    }
+                } 
+                // 2. Jika PDF, validasi dan siapkan untuk optimasi server otomatis
+                else if (originalFile.type === 'application/pdf') {
+                    filesSelected.value[type] = originalFile.name;
+                    filePreviews.value[type] = "";
+
+                    if (originalFile.size > 500 * 1024) {
+                        const kb = Math.round(originalFile.size / 1024);
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'info',
+                                title: 'Optimasi PDF Otomatis',
+                                text: `Dokumen PDF (${kb} KB) siap diunggah dan akan dioptimasi secara otomatis oleh sistem saat disimpan.`,
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 3500,
+                                timerProgressBar: true
+                            });
+                        }
+                    }
+                } else {
+                    filesSelected.value[type] = originalFile.name;
+                    filePreviews.value[type] = "";
                 }
             };
 
@@ -2433,6 +3228,24 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 return baseUrl + '/download.php?file=' + encodeURIComponent(path) + 
                        '&tenant=' + encodeURIComponent(form.value.tenant_id || '') + 
                        '&field=' + encodeURIComponent(fieldName);
+            };
+
+            const isImageFile = (path) => {
+                if (!path) return false;
+                const clean = String(path).split('?')[0].toLowerCase();
+                return clean.endsWith('.jpg') || clean.endsWith('.jpeg') || clean.endsWith('.png') || clean.endsWith('.webp') || clean.endsWith('.gif') || clean.startsWith('data:image/');
+            };
+
+            const isPdfFile = (path) => {
+                if (!path) return false;
+                const clean = String(path).split('?')[0].toLowerCase();
+                return clean.endsWith('.pdf') || clean.includes('.pdf');
+            };
+
+            const getDisplayFileName = (path) => {
+                if (!path) return '';
+                const parts = String(path).split('/');
+                return parts[parts.length - 1];
             };
 
             // Save draft payload (TUGAS 1) - local only to avoid server limit costs
@@ -2520,17 +3333,9 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                         baseFormData.append('current_step', currentStep.value);
                     }
                     
-                    if (isFullSubmit) {
-                        for (let s = 1; s <= 5; s++) {
-                            const fields = getFieldsForStep(s);
-                            fields.forEach(field => {
-                                if (form.value[field] !== undefined && form.value[field] !== null) {
-                                    baseFormData.append(field, form.value[field]);
-                                }
-                            });
-                        }
-                    } else {
-                        const fields = getFieldsForStep(currentStep.value);
+                    const maxStepToGather = isFullSubmit ? 5 : currentStep.value;
+                    for (let s = 1; s <= maxStepToGather; s++) {
+                        const fields = getFieldsForStep(s);
                         fields.forEach(field => {
                             if (form.value[field] !== undefined && form.value[field] !== null) {
                                 baseFormData.append(field, form.value[field]);
@@ -2623,16 +3428,24 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                                 }
                                 fData.append(filesToUpload[i].key, filesToUpload[i].file);
 
-                                let fResponse = await axios.post('<?= $this->getBaseUrl() ?>/siswa/update', fData, {
-                                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                                });
-                                
-                                if (fResponse.data && fResponse.data.success) {
-                                    if (fResponse.data.files) {
-                                        Object.assign(fileUpdates, fResponse.data.files);
+                                try {
+                                    let fResponse = await axios.post('<?= $this->getBaseUrl() ?>/siswa/update', fData, {
+                                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                                    });
+                                    
+                                    if (fResponse.data && fResponse.data.success) {
+                                        if (fResponse.data.files) {
+                                            Object.assign(fileUpdates, fResponse.data.files);
+                                        }
+                                    } else {
+                                        console.error("Gagal mengunggah file " + filesToUpload[i].key, fResponse.data);
                                     }
-                                } else {
-                                    console.error("Gagal mengunggah file " + filesToUpload[i].key, fResponse.data);
+                                } catch (fErr) {
+                                    console.error("Gagal upload file " + filesToUpload[i].key, fErr);
+                                    const fStatus = fErr.response ? fErr.response.status : 0;
+                                    if (fStatus === 404 || fStatus === 413 || fStatus === 500 || fStatus === 502 || fStatus === 522) {
+                                        throw fErr; // rethrow to be caught by main catch block
+                                    }
                                 }
                                 
                                 // Delay 500ms between uploads to prevent Cloudflare rate limits / Network Error
@@ -2666,6 +3479,9 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                                 }
                             });
                         } else {
+                            if (isEdit.value) {
+                                localStorage.removeItem('siswa_form_draft');
+                            }
                             // Update file names in form state
                             Object.keys(fileUpdates).forEach(key => {
                                 if (fileUpdates[key]) form.value[key] = fileUpdates[key];
@@ -2702,20 +3518,28 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                         throw new Error(finalResponse.data?.error || 'Terjadi kesalahan sistem.');
                     }
                 } catch (err) {
-                    let errMsg = (err.response && err.response.data && err.response.data.error) || err.message || 'Gagal menyimpan perubahan.';
-                    if (err.response && err.response.status === 413) {
-                        errMsg = "Total ukuran dokumen terlalu besar dan ditolak oleh server. Silakan unggah satu per satu.";
-                    } else if (err.response && (err.response.status === 522 || err.response.status === 524)) {
-                        errMsg = "Koneksi terputus (Timeout) saat memproses file. Jangan khawatir, file Anda sedang diunggah secara perlahan. Jika gagal, silakan coba unggah satu per satu.";
+                    const status = err.response ? err.response.status : 0;
+                    let errMsg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || err.message || 'Gagal menyimpan perubahan.';
+                    
+                    // Khusus jika terjadi kendala 404, 413, 500, atau koneksi timeout saat unggah banyak berkas di HP / jaringan lambat
+                    if (status === 404) {
+                        errMsg = "Terjadi kendala endpoint atau koneksi (Error 404). Silakan upload 1 file terlebih dahulu lalu klik Simpan, dan lakukan berulang satu per satu hingga semua file terunggah.";
+                    } else if (status === 413) {
+                        errMsg = "Total ukuran berkas terlalu besar untuk dikirim sekaligus (Error 413). Silakan upload 1 file terlebih dahulu lalu klik Simpan, dan ulangi satu per satu.";
+                    } else if (status === 522 || status === 524 || status === 504) {
+                        errMsg = "Koneksi terputus (Timeout) saat memproses dokumen. Silakan upload 1 file terlebih dahulu lalu klik Simpan, dan ulangi proses tersebut satu per satu.";
+                    } else if (status === 500 || status === 502) {
+                        errMsg = "Server sedang sibuk memproses dokumen (Error " + status + "). Silakan upload 1 file terlebih dahulu lalu klik Simpan, dan ulangi satu per satu.";
                     } else if (err.message && err.message.toLowerCase().includes('network error')) {
-                        errMsg = "Penting: Harap upload 1 file lalu klik Simpan, dan ulangi proses tersebut untuk meng-upload file berikutnya satu per satu.";
+                        errMsg = "Koneksi internet tidak stabil atau terputus. Silakan upload 1 file terlebih dahulu lalu klik Simpan, dan lakukan berulang hingga semua berkas terunggah.";
                     }
 
                     Swal.fire({
-                        icon: 'error',
-                        title: 'Penyimpanan Gagal',
+                        icon: (status === 404 || status === 413 || status === 522 || status === 524 || status === 500 || (err.message && err.message.toLowerCase().includes('network error'))) ? 'warning' : 'error',
+                        title: (status === 404 || status === 413 || status === 522 || status === 524 || status === 500) ? 'Tips Pengunggahan Berkas' : 'Penyimpanan Gagal',
                         text: errMsg,
-                        confirmButtonText: 'OK'
+                        confirmButtonText: 'Mengerti, Saya Coba 1 File',
+                        confirmButtonColor: '#2563eb'
                     });
                 } finally {
                     loadingSaveStep.value = false;
@@ -2995,7 +3819,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
             const viewerModalUrl = ref('');
             const isViewerFilePdf = computed(() => {
                 const url = viewerModalUrl.value || '';
-                return url.toLowerCase().endsWith('.pdf') || url.toLowerCase().includes('application/pdf');
+                return isPdfFile(url) || url.toLowerCase().includes('.pdf') || url.toLowerCase().includes('application/pdf');
             });
 
             const openDocumentViewer = (path, title) => {
@@ -3046,6 +3870,9 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 onDistrictChange,
                 onFileSelected,
                 getFileUrl,
+                isImageFile,
+                isPdfFile,
+                getDisplayFileName,
                 prevStep,
                 nextStep,
                 goToStep,

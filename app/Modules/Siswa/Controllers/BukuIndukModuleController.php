@@ -13,7 +13,7 @@ class BukuIndukModuleController extends BaseController {
         parent::__construct();
         
         // Bypass login check for public verification route
-        $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        $path = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '';
         $project_folder = '/SINTA-SaaS';
         if (strncasecmp($path, $project_folder, strlen($project_folder)) === 0) {
             $path = substr($path, strlen($project_folder));
@@ -314,8 +314,8 @@ class BukuIndukModuleController extends BaseController {
         $siswa['nama_kelas'] = '-';
         if (!empty($siswa['id_kelas'])) {
             try {
-                $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id = ?");
-                $stmtKelas->execute([$siswa['id_kelas']]);
+                $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id::text = ? OR id = ?");
+                $stmtKelas->execute([$siswa['id_kelas'], $siswa['id_kelas']]);
                 $siswa['nama_kelas'] = $stmtKelas->fetchColumn() ?: '-';
             } catch (\Throwable $e) {
                 // Ignore
@@ -326,8 +326,8 @@ class BukuIndukModuleController extends BaseController {
         $siswa['nama_sekolah'] = '-';
         if (!empty($siswa['tenant_id'])) {
             try {
-                $stmtTenant = $db->prepare("SELECT nama_sekolah FROM core.tenants WHERE id = ?");
-                $stmtTenant->execute([$siswa['tenant_id']]);
+                $stmtTenant = $db->prepare("SELECT nama_sekolah FROM core.tenants WHERE id::text = ? OR id = ?");
+                $stmtTenant->execute([$siswa['tenant_id'], $siswa['tenant_id']]);
                 $siswa['nama_sekolah'] = $stmtTenant->fetchColumn() ?: '-';
             } catch (\Throwable $e) {
                 // Ignore
@@ -351,28 +351,58 @@ class BukuIndukModuleController extends BaseController {
                 if ($wilayahNames) {
                     $siswa['nama_kelurahan'] = $wilayahNames['nama_kelurahan'];
                     $siswa['nama_kecamatan'] = $wilayahNames['nama_kecamatan'];
-                    $siswa['nama_kota'] = $wilayahNames['nama_kota'];
-                    $siswa['nama_provinsi'] = $wilayahNames['nama_provinsi'];
+                    $siswa['nama_kota']      = $wilayahNames['nama_kota'];
+                    $siswa['nama_provinsi']  = $wilayahNames['nama_provinsi'];
                 }
             } catch (\Throwable $e) {
                 // Ignore errors
             }
         }
 
+        // Fetch Parent/Guardian info from siswa.orang_tua and merge into $siswa
+        try {
+            $stOrtu = $db->prepare("SELECT * FROM siswa.orang_tua WHERE siswa_id::text = :id OR (tenant_id::text = :tenant_id AND siswa_id::text = :id)");
+            $stOrtu->execute(['id' => $id, 'tenant_id' => (string)($siswa['tenant_id'] ?? '')]);
+            $ortuRows = $stOrtu->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($ortuRows as $o) {
+                $hub = strtolower(trim($o['hubungan'] ?? ''));
+                if ($hub === 'ayah') {
+                    $siswa['nama_ayah']           = $o['nama_lengkap'] ?? ($siswa['nama_ayah'] ?? '-');
+                    $siswa['nik_ayah']            = $o['nik']          ?? ($siswa['nik_ayah'] ?? '-');
+                    $siswa['pekerjaan_ayah']      = $o['pekerjaan']    ?? ($siswa['pekerjaan_ayah'] ?? '-');
+                    $siswa['pendidikan_ayah']     = $o['pendidikan']   ?? ($siswa['pendidikan_ayah'] ?? '-');
+                    $siswa['penghasilan_ayah']    = $o['penghasilan']  ?? ($siswa['penghasilan_ayah'] ?? '-');
+                    $siswa['no_hp_ayah']          = $o['no_hp']        ?? ($siswa['no_hp_ayah'] ?? '-');
+                } else if ($hub === 'ibu') {
+                    $siswa['nama_ibu']            = $o['nama_lengkap'] ?? ($siswa['nama_ibu'] ?? '-');
+                    $siswa['nik_ibu']             = $o['nik']          ?? ($siswa['nik_ibu'] ?? '-');
+                    $siswa['pekerjaan_ibu']       = $o['pekerjaan']    ?? ($siswa['pekerjaan_ibu'] ?? '-');
+                    $siswa['pendidikan_ibu']      = $o['pendidikan']   ?? ($siswa['pendidikan_ibu'] ?? '-');
+                    $siswa['penghasilan_ibu']     = $o['penghasilan']  ?? ($siswa['penghasilan_ibu'] ?? '-');
+                    $siswa['no_hp_ibu']           = $o['no_hp']        ?? ($siswa['no_hp_ibu'] ?? '-');
+                } else if ($hub === 'wali') {
+                    $siswa['nama_wali']           = $o['nama_lengkap'] ?? ($siswa['nama_wali'] ?? '-');
+                    $siswa['nik_wali']            = $o['nik']          ?? ($siswa['nik_wali'] ?? '-');
+                    $siswa['pekerjaan_wali']      = $o['pekerjaan']    ?? ($siswa['pekerjaan_wali'] ?? '-');
+                    $siswa['pendidikan_wali']     = $o['pendidikan']   ?? ($siswa['pendidikan_wali'] ?? '-');
+                    $siswa['penghasilan_wali']    = $o['penghasilan']  ?? ($siswa['penghasilan_wali'] ?? '-');
+                    $siswa['kontak_wali']         = $o['no_hp']        ?? ($siswa['kontak_wali'] ?? '-');
+                }
+            }
+        } catch (\Throwable $e) {
+            // Ignore
+        }
+
         // Fetch class placement history
         $riwayatKelas = [];
         try {
             $stmtRK = $db->prepare("
-                SELECT * 
-                FROM siswa.siswa.riwayat_kenaikan_kelas 
-                WHERE siswa_id = :siswa_id 
-                  AND tenant_id = :tenant_id 
+                SELECT id, tahun_ajaran, dari_kelas, ke_kelas AS nama_kelas_tujuan, status AS jenis_aksi, catatan, created_at 
+                FROM siswa.riwayat_kenaikan_kelas 
+                WHERE siswa_id::text = :siswa_id 
                 ORDER BY created_at ASC
             ");
-            $stmtRK->execute([
-                'siswa_id' => $id,
-                'tenant_id' => $siswa['tenant_id']
-            ]);
+            $stmtRK->execute(['siswa_id' => $id]);
             $riwayatKelas = $stmtRK->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Throwable $e) {
             // Ignore
@@ -382,8 +412,8 @@ class BukuIndukModuleController extends BaseController {
         $tahunMasuk = '-';
         if (!empty($siswa['id_tahun_ajaran'])) {
             try {
-                $stmtTa = $db->prepare("SELECT tahun_ajaran FROM akademik.tahun_ajaran WHERE id = ?");
-                $stmtTa->execute([$siswa['id_tahun_ajaran']]);
+                $stmtTa = $db->prepare("SELECT nama_tahun_ajaran FROM akademik.tahun_ajaran WHERE id::text = ? OR id = ?");
+                $stmtTa->execute([$siswa['id_tahun_ajaran'], $siswa['id_tahun_ajaran']]);
                 $tahunMasuk = $stmtTa->fetchColumn() ?: '-';
             } catch (\Throwable $e) {
                 // Ignore
@@ -394,12 +424,12 @@ class BukuIndukModuleController extends BaseController {
         // Inject Penempatan Kelas Awal
         $kelasAwal = $siswa['nama_kelas'];
         if (!empty($riwayatKelas)) {
-            $kelasAwal = $riwayatKelas[0]['nama_kelas_asal'];
+            $kelasAwal = $riwayatKelas[0]['dari_kelas'] ?? ($riwayatKelas[0]['nama_kelas_tujuan'] ?? $siswa['nama_kelas']);
         }
         
         $penempatanAwal = [
             'id' => 'awal',
-            'tahun_ajaran' => $tahunMasuk,
+            'tahun_ajaran' => $tahunMasuk !== '-' ? $tahunMasuk : ($siswa['tahun_masuk'] ?? '-'),
             'nama_kelas_tujuan' => $kelasAwal,
             'nama_pelaku' => 'Admin Sekolah',
             'jenis_aksi' => 'penempatan_awal',
@@ -413,11 +443,19 @@ class BukuIndukModuleController extends BaseController {
         // Fetch kesehatan
         $kesehatan = [];
         try {
-            $stmtK = $db->prepare("SELECT * FROM siswa.siswa.fisik_kesehatan_siswa WHERE siswa_id = ? ORDER BY semester ASC");
+            $stmtK = $db->prepare("SELECT * FROM siswa.fisik_kesehatan_siswa WHERE siswa_id::text = ? ORDER BY created_at ASC");
             $stmtK->execute([$id]);
             $krows = $stmtK->fetchAll(PDO::FETCH_ASSOC);
             foreach ($krows as $k) {
-                $kesehatan[$k['semester']] = $k;
+                if (isset($k['semester'])) {
+                    $kesehatan[$k['semester']] = $k;
+                }
+            }
+            if (!empty($krows)) {
+                $lastK = end($krows);
+                $siswa['tinggi_badan']   = $lastK['tinggi_badan']   ?? ($siswa['tinggi_badan'] ?? '0');
+                $siswa['berat_badan']    = $lastK['berat_badan']    ?? ($siswa['berat_badan'] ?? '0');
+                $siswa['golongan_darah'] = $lastK['golongan_darah'] ?? ($siswa['golongan_darah'] ?? '-');
             }
         } catch (\Throwable $e) {
             // Ignore
@@ -428,41 +466,44 @@ class BukuIndukModuleController extends BaseController {
         $nilaiRapor = [];
         try {
             $stmtNR = $db->prepare("
-                SELECT dnr.*, mp.nama_mapel, mp.kode_mapel, k.nama_kelas
+                SELECT dnr.*, COALESCE(mp.nama_mata_pelajaran, dnr.mapel_id) AS nama_mapel, COALESCE(k.nama_kelas, dnr.kelas_id) AS nama_kelas
                 FROM akademik.detail_nilai_rapor dnr
-                JOIN akademik.mata_pelajaran mp ON dnr.mapel_id = mp.id
-                JOIN akademik.kelas k ON dnr.kelas_id = k.id
-                WHERE dnr.siswa_id = :siswa_id 
-                  AND dnr.tenant_id = :tenant_id 
-                  AND dnr.is_active = true
-                ORDER BY dnr.tahun_ajaran ASC, dnr.semester ASC, mp.nama_mapel ASC
+                LEFT JOIN akademik.mata_pelajaran mp ON (dnr.mapel_id = mp.id::text OR dnr.mapel_id::text = mp.id::text)
+                LEFT JOIN akademik.kelas k ON (dnr.kelas_id = k.id::text OR dnr.kelas_id::text = k.id::text)
+                WHERE dnr.siswa_id::text = :siswa_id
+                ORDER BY dnr.tahun_ajaran ASC, dnr.semester ASC
             ");
-            $stmtNR->execute([
-                'siswa_id' => $id,
-                'tenant_id' => $siswa['tenant_id']
-            ]);
+            $stmtNR->execute(['siswa_id' => $id]);
             $nilaiRapor = $stmtNR->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Throwable $e) {
             // Ignore
         }
         $siswa['nilai_rapor'] = $nilaiRapor;
 
-        // Fetch achievements
+        // Fetch achievements strictly for this student
         $prestasi = [];
         try {
             $stmtP = $db->prepare("
-                SELECT ps.*, ta.tahun_ajaran
+                SELECT DISTINCT ps.id, ps.*, COALESCE(ta.nama_tahun_ajaran, ps.tahun_ajaran_id, '-') AS tahun_ajaran
                 FROM kesiswaan.prestasi_siswa ps
-                JOIN prestasi_siswa_anggota psa ON ps.id = psa.id_prestasi
-                LEFT JOIN akademik.tahun_ajaran ta ON ps.tahun_ajaran_id = ta.id
-                WHERE psa.id_siswa = :siswa_id 
-                  AND ps.tenant_id = :tenant_id 
-                  AND ps.is_active = true
+                LEFT JOIN kesiswaan.prestasi_siswa_anggota psa ON ps.id = psa.id_prestasi
+                LEFT JOIN akademik.tahun_ajaran ta ON (ps.tahun_ajaran_id = ta.id::text OR ps.tahun_ajaran_id::text = ta.id::text)
+                WHERE (
+                    psa.id_siswa::text = :siswa_id
+                    OR (ps.nama_prestasi_siswa IS NOT NULL AND ps.nama_prestasi_siswa != '' AND (
+                        ps.nama_prestasi_siswa ILIKE :nama
+                        OR (:nisn != '' AND ps.nama_prestasi_siswa ILIKE :nisn)
+                        OR (:nis != '' AND ps.nama_prestasi_siswa ILIKE :nis)
+                    ))
+                )
+                AND (ps.is_active = true OR ps.is_active IS NULL)
                 ORDER BY ps.tanggal_lomba DESC
             ");
             $stmtP->execute([
                 'siswa_id' => $id,
-                'tenant_id' => $siswa['tenant_id']
+                'nama'     => '%' . ($siswa['nama_lengkap'] ?? '') . '%',
+                'nisn'     => '%' . ($siswa['nisn'] ?? '') . '%',
+                'nis'      => '%' . ($siswa['nis'] ?? '') . '%'
             ]);
             $prestasi = $stmtP->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Throwable $e) {
@@ -470,27 +511,83 @@ class BukuIndukModuleController extends BaseController {
         }
         $siswa['prestasi'] = $prestasi;
 
-        // Fetch violations / BK discipline records
+        // Fetch violations / BK discipline records strictly for this student (Zero Data Leakage)
         $pelanggaran = [];
         try {
-            $stmtPL = $db->prepare("
-                SELECT cps.*, COALESCE(mp.nama_pelanggaran, mp.nama_master_pelanggaran) AS nama_pelanggaran, mp.bobot_poin, mp.kategori
-                FROM bk.catatan_pelanggaran_siswa cps
-                JOIN bk.master_pelanggaran mp ON cps.pelanggaran_id = mp.id
-                WHERE cps.siswa_id = :siswa_id 
-                  AND cps.tenant_id = :tenant_id 
-                  AND cps.deleted_at IS NULL
-                ORDER BY cps.tanggal_kejadian DESC
+            // A. From bk.pelanggaran_siswa
+            $stmtPL1 = $db->prepare("
+                SELECT cps.id, 
+                       cps.tenant_id, 
+                       COALESCE(mp.nama_pelanggaran, mp.nama_master_pelanggaran, cps.nama_pelanggaran_siswa) AS nama_pelanggaran, 
+                       COALESCE(mp.bobot_poin, 5) AS bobot_poin, 
+                       COALESCE(mp.kategori, cps.kategori, 'Ringan') AS kategori, 
+                       cps.deskripsi AS catatan_keterangan,
+                       cps.created_at AS tanggal_kejadian
+                FROM bk.pelanggaran_siswa cps
+                LEFT JOIN bk.master_pelanggaran mp ON (cps.nama_pelanggaran_siswa = mp.nama_pelanggaran OR cps.id::text = mp.id::text)
+                WHERE cps.is_active = true
+                  AND (
+                      (cps.nama_pelanggaran_siswa IS NOT NULL AND cps.nama_pelanggaran_siswa != '' AND (
+                          cps.nama_pelanggaran_siswa ILIKE :nama
+                          OR (:nisn != '' AND cps.nama_pelanggaran_siswa ILIKE :nisn)
+                          OR (:nis != '' AND cps.nama_pelanggaran_siswa ILIKE :nis)
+                      ))
+                  )
+                ORDER BY cps.created_at DESC
             ");
-            $stmtPL->execute([
-                'siswa_id' => $id,
-                'tenant_id' => $siswa['tenant_id']
+            $stmtPL1->execute([
+                'nama' => '%' . ($siswa['nama_lengkap'] ?? '') . '%',
+                'nisn' => '%' . ($siswa['nisn'] ?? '') . '%',
+                'nis'  => '%' . ($siswa['nis'] ?? '') . '%'
             ]);
-            $pelanggaran = $stmtPL->fetchAll(PDO::FETCH_ASSOC);
+            $p1 = $stmtPL1->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            // B. From bk.catatan_bk
+            $stmtPL2 = $db->prepare("
+                SELECT cbk.id, 
+                       cbk.tenant_id, 
+                       COALESCE(cbk.jenis_kasus, cbk.nama_catatan_bk, 'Catatan Kedisiplinan BK') AS nama_pelanggaran, 
+                       COALESCE(cbk.kategori, 'Sedang') AS kategori, 
+                       5 AS bobot_poin, 
+                       COALESCE(cbk.catatan, cbk.deskripsi, '-') AS catatan_keterangan,
+                       COALESCE(cbk.tanggal_konseling, cbk.created_at) AS tanggal_kejadian
+                FROM bk.catatan_bk cbk
+                WHERE (cbk.is_active = true OR cbk.is_active IS NULL)
+                  AND (
+                      cbk.id_siswa::text = :id
+                      OR (cbk.snapshot_nisn IS NOT NULL AND cbk.snapshot_nisn != '' AND cbk.snapshot_nisn = :exact_nisn)
+                      OR (cbk.snapshot_nama_siswa IS NOT NULL AND cbk.snapshot_nama_siswa != '' AND cbk.snapshot_nama_siswa ILIKE :nama)
+                  )
+                ORDER BY cbk.created_at DESC
+            ");
+            $stmtPL2->execute([
+                'id'         => $id,
+                'exact_nisn' => (string)($siswa['nisn'] ?? ''),
+                'nama'       => '%' . ($siswa['nama_lengkap'] ?? '') . '%'
+            ]);
+            $p2 = $stmtPL2->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            $pelanggaran = array_merge($p1, $p2);
         } catch (\Throwable $e) {
             // Ignore
         }
         $siswa['pelanggaran'] = $pelanggaran;
+
+        // Fetch Registrasi PPDB & Mutasi
+        try {
+            $stmtReg = $db->prepare("SELECT * FROM siswa.registrasi WHERE siswa_id::text = :id LIMIT 1");
+            $stmtReg->execute(['id' => $id]);
+            $regData = $stmtReg->fetch(PDO::FETCH_ASSOC);
+            if ($regData) {
+                foreach ($regData as $rKey => $rVal) {
+                    if (!isset($siswa[$rKey]) || $siswa[$rKey] === null) {
+                        $siswa[$rKey] = $rVal;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // Ignore
+        }
 
         // Fetch tracer study data
         $tracerKuliah = [];
@@ -499,67 +596,36 @@ class BukuIndukModuleController extends BaseController {
             $stmtTK = $db->prepare("
                 SELECT * 
                 FROM tracer.riwayat_kuliah 
-                WHERE id_siswa = :siswa_id 
-                  AND tenant_id = :tenant_id
+                WHERE alumni_id::text = :siswa_id OR id_siswa::text = :siswa_id
                 ORDER BY tahun_masuk DESC
             ");
-            $stmtTK->execute([
-                'siswa_id' => $id,
-                'tenant_id' => $siswa['tenant_id']
-            ]);
+            $stmtTK->execute(['siswa_id' => $id]);
             $tracerKuliah = $stmtTK->fetchAll(PDO::FETCH_ASSOC);
 
             $stmtTP = $db->prepare("
                 SELECT * 
                 FROM tracer.riwayat_pekerjaan 
-                WHERE id_siswa = :siswa_id 
-                  AND tenant_id = :tenant_id
+                WHERE alumni_id::text = :siswa_id OR id_siswa::text = :siswa_id
                 ORDER BY tahun_mulai DESC
             ");
-            $stmtTP->execute([
-                'siswa_id' => $id,
-                'tenant_id' => $siswa['tenant_id']
-            ]);
+            $stmtTP->execute(['siswa_id' => $id]);
             $tracerPekerjaan = $stmtTP->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Throwable $e) {
             // Ignore
         }
-        $siswa['tracer_kuliah'] = $tracerKuliah;
+        $siswa['tracer_kuliah']    = $tracerKuliah;
         $siswa['tracer_pekerjaan'] = $tracerPekerjaan;
-        
-        // Fetch Prestasi
-        $prestasi = [];
-        try {
-            $stmtPrestasi = $db->prepare("
-                SELECT ps.* 
-                FROM kesiswaan.prestasi_siswa ps
-                JOIN prestasi_siswa_anggota psa ON ps.id = psa.id_prestasi
-                WHERE psa.id_siswa = :siswa_id AND ps.tenant_id = :tenant_id AND ps.is_active = true
-                ORDER BY ps.tanggal_lomba DESC
-            ");
-            $stmtPrestasi->execute([
-                'siswa_id' => $id,
-                'tenant_id' => $siswa['tenant_id']
-            ]);
-            $prestasi = $stmtPrestasi->fetchAll(PDO::FETCH_ASSOC);
-        } catch (\Throwable $e) {
-            // Ignore
-        }
-        $siswa['prestasi'] = $prestasi;
 
         // Fetch Beasiswa
         $beasiswa = [];
         try {
             $stmtBeasiswa = $db->prepare("
                 SELECT * 
-                FROM siswa.siswa.riwayat_beasiswa
-                WHERE siswa_id = :siswa_id AND tenant_id = :tenant_id
-                ORDER BY tahun_menerima DESC
+                FROM siswa.riwayat_beasiswa
+                WHERE siswa_id::text = :siswa_id
+                ORDER BY tahun_mulai DESC
             ");
-            $stmtBeasiswa->execute([
-                'siswa_id' => $id,
-                'tenant_id' => $siswa['tenant_id']
-            ]);
+            $stmtBeasiswa->execute(['siswa_id' => $id]);
             $beasiswa = $stmtBeasiswa->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Throwable $e) {
             // Ignore

@@ -1,7 +1,31 @@
 <?php
 // download.php - Gatekeeper Akses Berkas Sensitif (Secure by Design)
-require_once __DIR__ . '/app/Core/SessionManager.php';
-require_once __DIR__ . '/app/Config/Database.php';
+
+// Load Composer Autoloader if available
+if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    require_once __DIR__ . '/vendor/autoload.php';
+}
+
+// Definisikan Autoloader Kelas PSR-4 Sederhana
+spl_autoload_register(function ($class) {
+    $prefix = 'App\\';
+    $base_dir = __DIR__ . '/app/';
+
+    $len = strlen($prefix);
+    if (strncmp($prefix, $class, $len) !== 0) {
+        return;
+    }
+
+    $relative_class = substr($class, $len);
+    $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
+
+    if (file_exists($file)) {
+        require $file;
+    }
+});
+
+// Load Environment Configuration (.env)
+\App\Core\Env::load(__DIR__);
 
 use App\Core\SessionManager;
 use App\Config\Database;
@@ -78,11 +102,10 @@ if (!$isLegacy) {
     if ($roleName === 'siswa') {
         $stmt = $db->prepare("
             SELECT s.id, s.tenant_id 
-            FROM siswa s 
-            LEFT JOIN rincian_pelajar rp ON s.id = rp.id_siswa
-            LEFT JOIN dokumen d ON s.id = d.id_siswa
-            WHERE s.id = :user_id 
-              AND (rp.foto_profil = :file OR d.berkas_kk = :file OR d.berkas_akta = :file OR d.berkas_ijazah_sd = :file OR d.berkas_ijazah_smp = :file OR d.berkas_ijazah_sma = :file OR d.berkas_mutasi_masuk = :file OR d.berkas_mutasi_keluar = :file OR d.berkas_kip = :file)
+            FROM siswa.siswa s 
+            LEFT JOIN siswa.dokumen d ON (s.id = d.siswa_id OR s.id::text = d.siswa_id::text)
+            WHERE (s.id = :user_id OR s.id::text = :user_id) 
+              AND (s.foto_url = :file OR d.url_file = :file OR d.nama_file = :file)
             LIMIT 1
         ");
         $stmt->execute(['user_id' => $userId, 'file' => $file]);

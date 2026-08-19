@@ -728,16 +728,16 @@
                         <!-- Actions (Import/Export & Lock) -->
                         <div class="col-12 col-md-4 d-flex gap-2">
                             <button class="btn btn-outline-success btn-sm rounded-3 px-2 py-2 flex-grow-1 fs-8 fw-semibold"
-                                    :disabled="!nilaiRapor.kelasId || nilaiRapor.subjects.length === 0"
+                                    :disabled="!nilaiRapor.kelasId || !nilaiRapor.tahunAjaran || !nilaiRapor.semester"
                                     @click="exportNilaiRaporExcel"
                                     title="Unduh Format Excel (.xlsx)">
-                                <i class="bi bi-file-earmark-arrow-down"></i>
+                                <i class="bi bi-file-earmark-arrow-down fs-6"></i>
                             </button>
                             <button class="btn btn-outline-primary btn-sm rounded-3 px-2 py-2 flex-grow-1 fs-8 fw-semibold"
-                                    :disabled="!nilaiRapor.kelasId || nilaiRapor.subjects.length === 0 || isLockedNilai == 1 || isRombelLocked"
+                                    :disabled="!nilaiRapor.kelasId || !nilaiRapor.tahunAjaran || !nilaiRapor.semester || isLockedNilai == 1 || isRombelLocked"
                                     @click="showImportGradesModal"
                                     title="Unggah Nilai Excel (.xlsx)">
-                                <i class="bi bi-file-earmark-arrow-up"></i>
+                                <i class="bi bi-file-earmark-arrow-up fs-6"></i>
                             </button>
                             <button v-if="userRole === 'super_admin' || userRole === 'operator_sekolah' || userRole === 'admin'"
                                     :class="['btn btn-sm rounded-3 px-2 py-2 flex-grow-1 fs-8 fw-semibold', isLockedNilai == 1 ? 'btn-danger' : 'btn-outline-secondary']"
@@ -1257,46 +1257,46 @@
                             <div class="col-3">
                                 <div class="p-2 bg-light border rounded-3">
                                     <span class="fs-9 text-muted d-block fw-semibold text-uppercase">Total Baris</span>
-                                    <span class="fs-6 fw-bold text-dark">{{ validationSummary.total_rows }}</span>
+                                    <span class="fs-6 fw-bold text-dark">{{ (validationSummary && validationSummary.total_rows !== undefined) ? validationSummary.total_rows : 0 }}</span>
                                 </div>
                             </div>
                             <div class="col-3">
                                 <div class="p-2 bg-success-subtle border border-success-subtle rounded-3">
                                     <span class="fs-9 text-success d-block fw-semibold text-uppercase">Valid</span>
-                                    <span class="fs-6 fw-bold text-success">{{ validationSummary.valid }}</span>
+                                    <span class="fs-6 fw-bold text-success">{{ (validationSummary && validationSummary.valid !== undefined) ? validationSummary.valid : 0 }}</span>
                                 </div>
                             </div>
                             <div class="col-3">
                                 <div class="p-2 bg-warning-subtle border border-warning-subtle rounded-3">
                                     <span class="fs-9 text-warning d-block fw-semibold text-uppercase">Peringatan</span>
-                                    <span class="fs-6 fw-bold text-warning">{{ validationSummary.warning }}</span>
+                                    <span class="fs-6 fw-bold text-warning">{{ (validationSummary && validationSummary.warning !== undefined) ? validationSummary.warning : 0 }}</span>
                                 </div>
                             </div>
                             <div class="col-3">
                                 <div class="p-2 bg-danger-subtle border border-danger-subtle rounded-3">
                                     <span class="fs-9 text-danger d-block fw-semibold text-uppercase">Eror</span>
-                                    <span class="fs-6 fw-bold text-danger">{{ validationSummary.error }}</span>
+                                    <span class="fs-6 fw-bold text-danger">{{ (validationSummary && validationSummary.error !== undefined) ? validationSummary.error : 0 }}</span>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Rows Preview List -->
                         <div class="border rounded-3 p-2 bg-white mb-3" style="max-height: 250px; overflow-y: auto;">
-                            <div v-for="(row, rIdx) in validationData" :key="row.siswa_id" class="border-bottom py-2 px-2">
+                            <div v-for="(row, rIdx) in validationData" :key="row.siswa_id || rIdx" class="border-bottom py-2 px-2">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <span class="fw-bold text-dark fs-8">{{ rIdx + 1 }}. {{ row.nama_lengkap }}</span>
+                                    <span class="fw-bold text-dark fs-8">{{ rIdx + 1 }}. {{ row.nama_lengkap || row.siswa_id || 'Siswa' }}</span>
                                     <span :class="['badge rounded-pill fs-9 px-2 py-0.5', 
                                                   row.status === 'valid' ? 'bg-success-subtle text-success' : 
                                                   row.status === 'warning' ? 'bg-warning-subtle text-warning' : 'bg-danger-subtle text-danger']">
-                                        {{ row.status.toUpperCase() }}
+                                        {{ (row.status || '').toUpperCase() }}
                                     </span>
                                 </div>
                                 <!-- Errors/Warnings Details -->
-                                <ul class="mb-0 ps-3 text-danger fs-8" v-if="row.errors.length > 0">
-                                    <li v-for="err in row.errors" :key="err">{{ err }}</li>
+                                <ul class="mb-0 ps-3 text-danger fs-8" v-if="row.errors && row.errors.length > 0">
+                                    <li v-for="(err, eIdx) in row.errors" :key="eIdx">{{ err }}</li>
                                 </ul>
-                                <ul class="mb-0 ps-3 text-warning-emphasis fs-8" v-if="row.warnings.length > 0">
-                                    <li v-for="wrn in row.warnings" :key="wrn">{{ wrn }}</li>
+                                <ul class="mb-0 ps-3 text-warning-emphasis fs-8" v-if="row.warnings && row.warnings.length > 0">
+                                    <li v-for="(wrn, wIdx) in row.warnings" :key="wIdx">{{ wrn }}</li>
                                 </ul>
                             </div>
                         </div>
@@ -1353,7 +1353,7 @@
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body p-4" v-if="activeEditSiswa">
+                <div class="modal-body p-4" v-if="activeEditSiswa && nilaiRapor.grades && nilaiRapor.grades[activeEditSiswa.id]">
                     
                     <!-- Info Bar -->
                     <div class="p-3 bg-primary-subtle border border-primary-subtle rounded-3 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -2913,7 +2913,7 @@
                 );
             },
             activeAcademicYears() {
-                if (!this.selectedSiswa || !this.selectedSiswa.nilai_rapor) return [];
+                if (!this.selectedSiswa || !this.selectedSiswa.nilai_rapor || !Array.isArray(this.selectedSiswa.nilai_rapor)) return [];
                 const years = new Set();
                 this.selectedSiswa.nilai_rapor.forEach(g => {
                     if (g.tahun_ajaran) {
@@ -2923,7 +2923,7 @@
                 return Array.from(years).sort();
             },
             academicYearHeaders() {
-                if (!this.selectedSiswa || !this.selectedSiswa.nilai_rapor) return [];
+                if (!this.selectedSiswa || !this.selectedSiswa.nilai_rapor || !Array.isArray(this.selectedSiswa.nilai_rapor)) return [];
                 const cols = [];
                 this.activeAcademicYears.forEach(ta => {
                     cols.push({ ta: ta, sem: 'ganjil', label: 'Smt 1 (Ganjil)' });
@@ -2932,28 +2932,36 @@
                 return cols;
             },
             formattedGrades() {
-                if (!this.selectedSiswa || !this.selectedSiswa.nilai_rapor) return [];
+                if (!this.selectedSiswa || !this.selectedSiswa.nilai_rapor || !Array.isArray(this.selectedSiswa.nilai_rapor)) return [];
                 const mapelMap = {};
                 
                 this.selectedSiswa.nilai_rapor.forEach(g => {
-                    const mapelName = g.nama_mapel;
-                    const mapelCode = g.kode_mapel;
+                    const mapelName = g.nama_mapel || 'Mata Pelajaran';
+                    const mapelCode = g.kode_mapel || '-';
                     const val = g.nilai_akhir;
                     const pred = g.predikat || '';
-                    const ta = g.tahun_ajaran;
+                    const ta = g.tahun_ajaran || '2024/2025';
                     const semStr = (g.semester || '').toLowerCase().trim();
                     let semKey = 'genap';
-                    if (semStr.includes('ganjil')) {
+                    if (semStr.includes('ganjil') || semStr === '1') {
                         semKey = 'ganjil';
-                    } else if (semStr.includes('genap')) {
+                    } else if (semStr.includes('genap') || semStr === '2') {
                         semKey = 'genap';
                     } else if (!isNaN(parseInt(semStr))) {
                         semKey = (parseInt(semStr) % 2 !== 0) ? 'ganjil' : 'genap';
                     }
                     const key = `${ta}|${semKey}`;
                     
+                    if (!mapelMap[mapelName]) {
+                        mapelMap[mapelName] = {
+                            nama_mapel: mapelName,
+                            kode_mapel: mapelCode,
+                            grades: {}
+                        };
+                    }
+
                     mapelMap[mapelName].grades[key] = {
-                        val: val !== null ? parseFloat(val).toFixed(0) : '-',
+                        val: (val !== null && val !== undefined) ? parseFloat(val).toFixed(0) : '-',
                         pred: pred,
                         kelas: g.nama_kelas || '-'
                     };
@@ -3570,12 +3578,13 @@
 
                 axios.get('<?= $this->getBaseUrl() ?>/api/v1/nilai-rapor/grid', { params })
                     .then(res => {
-                        this.nilaiRapor.subjects = res.data.subjects || [];
-                        this.nilaiRapor.students = res.data.students || [];
-                        this.nilaiRapor.kurikulum = res.data.kurikulum || { tipe_penilaian: 'sederhana', nama_kurikulum: 'Kurikulum Merdeka' };
-                        this.nilaiRapor.sikapK13 = res.data.sikap_k13 || {};
-                        this.isRombelLocked = res.data.is_rombel_locked || false;
-                        const rawGrades = res.data.grades || {};
+                        const payload = (res.data && res.data.data) ? res.data.data : (res.data || {});
+                        this.nilaiRapor.subjects = payload.subjects || res.data.subjects || [];
+                        this.nilaiRapor.students = payload.students || res.data.students || [];
+                        this.nilaiRapor.kurikulum = payload.kurikulum || res.data.kurikulum || { tipe_penilaian: 'sederhana', nama_kurikulum: 'Kurikulum Merdeka' };
+                        this.nilaiRapor.sikapK13 = payload.sikap_k13 || res.data.sikap_k13 || {};
+                        this.isRombelLocked = payload.is_rombel_locked || res.data.is_rombel_locked || false;
+                        const rawGrades = payload.grades || res.data.grades || {};
                         
                         const gradesObj = {};
                         this.nilaiRapor.students.forEach(student => {
@@ -3736,6 +3745,34 @@
                 });
             },
             openInputDetailNilaiModal(student) {
+                if (!student || !student.id) return;
+                if (!this.nilaiRapor.grades) this.nilaiRapor.grades = {};
+                if (!this.nilaiRapor.grades[student.id]) {
+                    this.nilaiRapor.grades[student.id] = {};
+                }
+                if (this.nilaiRapor.subjects && Array.isArray(this.nilaiRapor.subjects)) {
+                    this.nilaiRapor.subjects.forEach(subject => {
+                        if (!this.nilaiRapor.grades[student.id][subject.mapel_id]) {
+                            this.nilaiRapor.grades[student.id][subject.mapel_id] = {
+                                nilai_akhir: '',
+                                kkm: '',
+                                detail: {
+                                    kognitif: '', psikomotorik: '', afektif: '',
+                                    pengetahuan_nilai: '', pengetahuan_predikat: '', pengetahuan_deskripsi: '',
+                                    keterampilan_nilai: '', keterampilan_predikat: '', keterampilan_deskripsi: '',
+                                    deskripsi_tertinggi: '', deskripsi_terendah: ''
+                                }
+                            };
+                        }
+                    });
+                }
+                if (!this.nilaiRapor.sikapK13) this.nilaiRapor.sikapK13 = {};
+                if (!this.nilaiRapor.sikapK13[student.id]) {
+                    this.nilaiRapor.sikapK13[student.id] = {
+                        predikat_spiritual: '', deskripsi_spiritual: '',
+                        predikat_sosial: '', deskripsi_sosial: ''
+                    };
+                }
                 this.activeEditSiswa = student;
                 this.detailNilaiModalObj.show();
             },
@@ -3817,12 +3854,13 @@
                     }
                 })
                 .then(res => {
-                    if (res.data.success) {
-                        this.validationSummary = res.data.summary;
-                        this.validationData = res.data.data;
+                    if (res.data && res.data.success) {
+                        const payload = res.data.data || res.data;
+                        this.validationSummary = payload.summary || res.data.summary || { total_rows: 0, valid: 0, warning: 0, error: 0 };
+                        this.validationData = payload.data || payload.rows || res.data.data || [];
                         this.importState = 'preview';
                     } else {
-                        this.toast.fire({ icon: 'error', title: res.data.error || 'Gagal memvalidasi file Excel.' });
+                        this.toast.fire({ icon: 'error', title: (res.data && res.data.error) ? res.data.error : 'Gagal memvalidasi file Excel.' });
                         this.importState = 'select';
                     }
                 })
@@ -4535,12 +4573,15 @@
             viewDetail(siswaId, defaultTab = 'identitas') {
                 this.detailLoading = true;
                 this.selectedSiswa = null;
+                this.riwayatBeasiswa = [];
                 this.activeDetailTab = defaultTab;
                 this.detailModalObj.show();
 
                 axios.get('<?= $this->getBaseUrl() ?>/api/v1/buku-induk/detail', { params: { id: siswaId } })
                      .then(res => {
-                          this.selectedSiswa = res.data;
+                          const payload = (res.data && res.data.data) ? res.data.data : (res.data || {});
+                          this.selectedSiswa = payload;
+                          this.riwayatBeasiswa = payload.beasiswa || [];
                           this.detailLoading = false;
                           if (defaultTab === 'beasiswa') {
                               this.fetchBeasiswa(siswaId);

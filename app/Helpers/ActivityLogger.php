@@ -21,17 +21,17 @@ class ActivityLogger {
         string $action, 
         string $tableName, 
         $oldData = null, 
-        ?array $newData = null,
-        ?string $tenantId = null,
-        ?string $userId = null
+        $newData = null,
+        $tenantId = null,
+        $userId = null
     ): bool {
         if (session_status() === PHP_SESSION_NONE) {
             @session_start();
         }
 
-        $effectiveUserId   = $userId ?? ($_SESSION['user_id'] ?? null);
+        $effectiveUserId   = is_string($userId) ? $userId : ($_SESSION['user_id'] ?? null);
         $effectiveUserRole = $_SESSION['role_name'] ?? 'system';
-        $effectiveTenantId = $tenantId ?? ($_SESSION['tenant_id'] ?? null);
+        $effectiveTenantId = is_string($tenantId) ? $tenantId : ($_SESSION['tenant_id'] ?? null);
 
         $ipAddress = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
         if (strpos($ipAddress, ',') !== false) {

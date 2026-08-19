@@ -375,7 +375,7 @@ if (!empty($roles)) {
     border-radius: 0.65rem;
     color: #475569;
     font-weight: 500;
-    font-size: 0.925rem;
+    font-size: 0.875rem;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
