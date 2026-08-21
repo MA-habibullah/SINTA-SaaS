@@ -26,11 +26,84 @@ Saat menulis, memodifikasi, atau membenahi program, agen wajib selalu menerapkan
 - **Validasi & Sanitasi Input Sisi Server**: Setiap input dari request client (GET, POST, COOKIE) wajib divalidasi tipe datanya dan disanitasi menggunakan fungsi seperti `strip_tags()`, `htmlspecialchars()`, `filter_var()`, atau regex sebelum digunakan dalam proses logika bisnis aplikasi.
 
 
-## Modern Architecture & Zero Data Leakage Development
-Saat merancang fitur baru atau memodifikasi modul yang ada, terapkan arsitektur modern dan aman:
-- **Migrasi ke AJAX Fetch Dinamis**: Hindari mencetak data mentah dari database langsung menggunakan PHP `json_encode` di dalam blok skrip HTML (`<script>`). Seluruh pemuatan data sensitif (seperti data siswa, guru, profil sekolah, agenda, dsb.) wajib dialihkan menggunakan arsitektur dynamic fetch asinkronus (misal menggunakan Axios/fetch) pada saat komponen ter-mount di sisi klien (`onMounted`/`mounted` di Vue). Hal ini penting untuk memastikan tidak ada data rahasia yang bocor lewat perintah "View Page Source" (Ctrl+U).
-- **Pengembangan dengan Ide Baru & Aman**: Setiap pembuatan fitur atau modul baru wajib dirancang menggunakan pola arsitektur modern (API-driven / dynamic rendering) dengan tetap mengutamakan keindahan estetika antarmuka (premium UI/UX) dan keamanan data yang ketat sejak fase awal perencanaan kode.
-- **Standardisasi Respon API JSON**: Saat membuat API endpoint baru yang menghasilkan respon JSON, selalu gunakan format terstandardisasi: `['success' => true/false, 'data' => ..., 'error' => ...]` lengkap dengan HTTP status code yang tepat (contoh: 200 OK, 400 Bad Request, 403 Forbidden, 422 Unprocessable Entity untuk error validasi).
+## Modern Architecture & Zero Data Leakage Development (Wajib Pola Asinkronus)
+Saat merancang fitur baru atau memodifikasi modul yang ada, agen WAJIB menerapkan arsitektur asinkronus modern (*API-driven*) dengan prinsip *Zero Data Leakage*:
+
+**1. Larangan Mutlak Server-Side Data Injection (Zero Data Leakage):**
+- **DILARANG KERAS** mencetak data mentah dari database langsung menggunakan PHP `json_encode` di dalam blok skrip HTML (`<script>`) seperti `const listData = <?= json_encode($data) ?>;`.
+- Seluruh pemuatan data sensitif (data siswa, guru, tagihan, nilai, buku, sirkulasi, agenda, profil sekolah, dsb.) **WAJIB** dialihkan menggunakan arsitektur dynamic fetch asinkronus (Axios / Fetch API) pada saat komponen terpasang di sisi klien (`onMounted` di Vue 3).
+- **Tujuan**: Memastikan kode sumber halaman saat ditekan `Ctrl + U` (View Page Source) 100% bersih dari kebocoran data rahasia/sensitif.
+
+**2. Standar Lifecycle & Re-Mounting Asinkronus (Anti-Blank Screen):**
+- Inisialisasi state reaktif Vue selalu dimulai dalam keadaan kosong (`ref([])`, `ref(null)`, `ref(false)`) dengan skeleton loading / spinner indicator.
+- Setiap aplikasi Vue pada view wajib didaftarkan melalui `window.VueAppRegistry` atau dilengkapi handler terhadap event `turbo:load`, `turbo:render`, dan `popstate` agar ketika pengguna menavigasi Back/Forward di browser, aplikasi di-mount ulang secara instan dan atribut `[v-cloak]` dilepas otomatis tanpa menyebabkan layar putih/kosong.
+
+**3. Standardisasi Endpoint API & JSON Response:**
+- Controller penyedia data asinkronus wajib mengembalikan format standar:
+  ```json
+  {
+    "success": true,
+    "data": [ ... ],
+    "message": "Data berhasil dimuat",
+    "error": null
+  }
+  ```
+- Gunakan HTTP Status Code yang tepat: `200 OK` (sukses), `400 Bad Request` (input salah), `403 Forbidden` (akses ditolak), `422 Unprocessable Entity` (validasi gagal), `500 Internal Server Error` (gangguan server).
+
+**4. Template Standar Pola Asinkronus di Sisi Klien (Vue 3 View):**
+```html
+<div id="app-container" v-cloak>
+    <!-- Skeleton / Spinner Loading -->
+    <div v-if="loading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="text-muted mt-2">Memuat data secara asinkron...</p>
+    </div>
+
+    <!-- Data Render -->
+    <div v-else>
+        <!-- Konten Halaman -->
+    </div>
+</div>
+
+<script>
+(() => {
+    const { createApp, ref, onMounted } = Vue;
+
+    const appConfig = {
+        setup() {
+            const items = ref([]);
+            const loading = ref(false);
+
+            const fetchData = async () => {
+                loading.value = true;
+                try {
+                    const res = await axios.get('<?= $this->getBaseUrl() ?>/[modul]/api/[endpoint]');
+                    if (res.data && res.data.success) {
+                        items.value = res.data.data;
+                    }
+                } catch (err) {
+                    console.error('Gagal memuat data asinkron:', err);
+                } finally {
+                    loading.value = false;
+                }
+            };
+
+            onMounted(() => {
+                fetchData();
+            });
+
+            return { items, loading, fetchData };
+        }
+    };
+
+    if (window.VueAppRegistry) {
+        window.VueAppRegistry.register('#app-container', appConfig);
+    } else {
+        document.addEventListener('DOMContentLoaded', () => createApp(appConfig).mount('#app-container'));
+    }
+})();
+</script>
+```
 
 
 ## Fast-Track Migration Cheat Sheet (MySQL -> PostgreSQL Multi-Schema)

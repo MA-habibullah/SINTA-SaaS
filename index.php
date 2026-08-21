@@ -660,6 +660,16 @@ try {
             $controller->apiBayarDenda();
             break;
 
+        case '/api/v1/perpustakaan/event-osn':
+            $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
+            $controller->apiGetEventOSN();
+            break;
+
+        case '/api/v1/perpustakaan/opname':
+            $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
+            $controller->apiGetOpname();
+            break;
+
         case '/api/v1/perpustakaan/usulan':
             $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -1033,6 +1043,10 @@ try {
         case '/api/v1/bantuan/unread-count':
             (new \App\Modules\Core\Controllers\BantuanModuleController())->apiGetUnreadCount();
             break; 
+
+        case '/api/v1/bantuan/categories':
+            (new \App\Modules\Core\Controllers\BantuanModuleController())->apiGetCategories();
+            break;
 
         // Rute Modul Keuangan & SPP Dinamis
         case '/keuangan/dashboard':
