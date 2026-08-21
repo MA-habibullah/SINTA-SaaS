@@ -2837,10 +2837,14 @@
             };
         },
         async mounted() {
-            this.detailModalObj = new bootstrap.Modal(document.getElementById('detailModal'));
-            this.copyModalObj = new bootstrap.Modal(document.getElementById('copyKurikulumModal'));
-            this.importModalObj = new bootstrap.Modal(document.getElementById('importNilaiModal'));
-            this.detailNilaiModalObj = new bootstrap.Modal(document.getElementById('modalInputDetailNilai'));
+            const dm = document.getElementById('detailModal');
+            if (dm && typeof bootstrap !== 'undefined' && bootstrap.Modal) this.detailModalObj = bootstrap.Modal.getOrCreateInstance(dm);
+            const cm = document.getElementById('copyKurikulumModal');
+            if (cm && typeof bootstrap !== 'undefined' && bootstrap.Modal) this.copyModalObj = bootstrap.Modal.getOrCreateInstance(cm);
+            const im = document.getElementById('importNilaiModal');
+            if (im && typeof bootstrap !== 'undefined' && bootstrap.Modal) this.importModalObj = bootstrap.Modal.getOrCreateInstance(im);
+            const dnm = document.getElementById('modalInputDetailNilai');
+            if (dnm && typeof bootstrap !== 'undefined' && bootstrap.Modal) this.detailNilaiModalObj = bootstrap.Modal.getOrCreateInstance(dnm);
             
             // Load options via AJAX
             try {

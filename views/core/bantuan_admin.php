@@ -312,9 +312,6 @@ window.VueAppRegistry.register('#bantuan-admin-app', {
         this.fetchUnreadCount();
         this.fetchCannedResponses();
 
-        // Initialize Modals
-        this.detailModal = new bootstrap.Modal(document.getElementById('ticketDetailModal'));
-
         // Polling unread count every 30 seconds
         this.pollInterval = setInterval(() => {
             this.fetchUnreadCount();
@@ -326,6 +323,10 @@ window.VueAppRegistry.register('#bantuan-admin-app', {
         }
     },
     methods: {
+        getDetailModal() {
+            const el = document.getElementById('ticketDetailModal');
+            return (el && typeof bootstrap !== 'undefined' && bootstrap.Modal) ? bootstrap.Modal.getOrCreateInstance(el) : null;
+        },
         fetchTickets() {
             this.loadingList = true;
             axios.get('<?= $this->getBaseUrl() ?>/api/v1/bantuan/list', {
@@ -364,6 +365,9 @@ window.VueAppRegistry.register('#bantuan-admin-app', {
             })
             .catch(err => console.error(err));
         },
+        insertCanned(content) {
+            this.replyText = (this.replyText ? this.replyText + "\n\n" : "") + content;
+        },
         applyCannedResponse() {
             if (!this.selectedCannedId) return;
             const canned = this.cannedResponses.find(c => c.id === this.selectedCannedId);
@@ -378,7 +382,8 @@ window.VueAppRegistry.register('#bantuan-admin-app', {
             this.replies = [];
             this.replyText = '';
             
-            this.detailModal.show();
+            const m = this.getDetailModal();
+            if (m) m.show();
 
             axios.get('<?= $this->getBaseUrl() ?>/api/v1/bantuan/detail', { params: { id } })
             .then(res => {
@@ -392,7 +397,8 @@ window.VueAppRegistry.register('#bantuan-admin-app', {
             })
             .catch(err => {
                 Swal.fire('Error!', err.response?.data?.error || 'Gagal memuat detail tiket.', 'error');
-                this.detailModal.hide();
+                const m = this.getDetailModal();
+                if (m) m.hide();
             })
             .finally(() => {
                 this.loadingDetail = false;

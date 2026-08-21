@@ -642,13 +642,15 @@
             };
         },
         mounted() {
-            // Bootstrap terjamin sudah termuat pada event DOMContentLoaded
-            this.modalObj = new bootstrap.Modal(document.getElementById('formModal'));
             this.fetchData(1);
             this.fetchAuxiliaryData();
             // listTenants sudah di-inject via PHP (json_encode), tidak perlu fetch API
         },
         methods: {
+            getModal() {
+                const el = document.getElementById('formModal');
+                return (el && typeof bootstrap !== 'undefined' && bootstrap.Modal) ? bootstrap.Modal.getOrCreateInstance(el) : null;
+            },
             switchTab(tabId) {
                 this.activeTab = tabId;
                 this.trashMode = false;
@@ -821,7 +823,8 @@
                         this.fetchAuxiliaryData(this.form.tenant_id);
                     }
                 }
-                this.modalObj.show();
+                const m = this.getModal();
+                if (m) m.show();
             },
             openEditModal(item) {
                 this.isEditMode = true;
@@ -859,7 +862,8 @@
                     }
                 }
                 
-                this.modalObj.show();
+                const m = this.getModal();
+                if (m) m.show();
             },
             submitForm() {
                 this.submitLoading = true;
@@ -884,7 +888,8 @@
                              this.toast.fire({ icon: 'error', title: 'Silakan periksa input form Anda.' });
                              return;
                          }
-                         this.modalObj.hide();
+                         const m = this.getModal();
+                         if (m) m.hide();
                          this.toast.fire({ icon: 'success', title: res.data.message });
                          this.fetchData(this.isEditMode ? this.currentPage : 1);
                          if (this.activeTab === 'jenjang' || this.activeTab === 'jurusan') {

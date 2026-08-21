@@ -400,11 +400,6 @@ window.VueAppRegistry.register('#bantuan-user-app', {
         this.fetchTickets();
         this.fetchUnreadCount();
 
-        // Initialize Modals
-        this.createModal = new bootstrap.Modal(document.getElementById('createTicketModal'));
-        this.detailModal = new bootstrap.Modal(document.getElementById('ticketDetailModal'));
-        this.faqDetailModal = new bootstrap.Modal(document.getElementById('faqDetailModal'));
-
         // Polling unread count every 30 seconds
         this.pollInterval = setInterval(() => {
             this.fetchUnreadCount();
@@ -457,7 +452,20 @@ window.VueAppRegistry.register('#bantuan-user-app', {
             if (this.$refs.lampiranInput) {
                 this.$refs.lampiranInput.value = '';
             }
-            this.createModal.show();
+            const m = this.getCreateModal();
+            if (m) m.show();
+        },
+        getCreateModal() {
+            const el = document.getElementById('createTicketModal');
+            return (el && typeof bootstrap !== 'undefined' && bootstrap.Modal) ? bootstrap.Modal.getOrCreateInstance(el) : null;
+        },
+        getDetailModal() {
+            const el = document.getElementById('ticketDetailModal');
+            return (el && typeof bootstrap !== 'undefined' && bootstrap.Modal) ? bootstrap.Modal.getOrCreateInstance(el) : null;
+        },
+        getFaqDetailModal() {
+            const el = document.getElementById('faqDetailModal');
+            return (el && typeof bootstrap !== 'undefined' && bootstrap.Modal) ? bootstrap.Modal.getOrCreateInstance(el) : null;
         },
         handleFileUpload(event) {
             this.form.lampiranFile = event.target.files[0];
@@ -484,10 +492,12 @@ window.VueAppRegistry.register('#bantuan-user-app', {
         },
         showFaqDetail(faq) {
             this.selectedFaq = faq;
-            this.faqDetailModal.show();
+            const m = this.getFaqDetailModal();
+            if (m) m.show();
         },
         closeFaqDetailModal() {
-            this.faqDetailModal.hide();
+            const m = this.getFaqDetailModal();
+            if (m) m.hide();
         },
         submitTicket() {
             this.loadingSubmit = true;
@@ -507,7 +517,8 @@ window.VueAppRegistry.register('#bantuan-user-app', {
             .then(res => {
                 if (res.data.success) {
                     Swal.fire('Sukses!', 'Tiket laporan berhasil dibuat. Tim IT Support akan segera meninjau masalah Anda.', 'success');
-                    this.createModal.hide();
+                    const m = this.getCreateModal();
+                    if (m) m.hide();
                     this.fetchTickets();
                     this.fetchUnreadCount();
                 } else {
@@ -527,7 +538,8 @@ window.VueAppRegistry.register('#bantuan-user-app', {
             this.replies = [];
             this.replyText = '';
             
-            this.detailModal.show();
+            const m = this.getDetailModal();
+            if (m) m.show();
 
             axios.get('<?= $this->getBaseUrl() ?>/api/v1/bantuan/detail', { params: { id } })
             .then(res => {
@@ -541,7 +553,8 @@ window.VueAppRegistry.register('#bantuan-user-app', {
             })
             .catch(err => {
                 Swal.fire('Error!', err.response?.data?.error || 'Gagal memuat detail tiket.', 'error');
-                this.detailModal.hide();
+                const m = this.getDetailModal();
+                if (m) m.hide();
             })
             .finally(() => {
                 this.loadingDetail = false;

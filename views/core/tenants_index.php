@@ -745,14 +745,24 @@
                 }
             },
 
+            // UI helper: Safe Bootstrap Modal Getter
+            getModal() {
+                const el = document.getElementById('tenantModal');
+                if (el && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                    return bootstrap.Modal.getOrCreateInstance(el);
+                }
+                return null;
+            },
+
             // Open Modal for Addition
             openAddModal() {
                 this.isEditMode = false;
                 this.resetForm();
-                this.modalObj.show();
+                const m = this.getModal();
+                if (m) m.show();
                 this.$nextTick(() => {
                     const firstTabEl = document.querySelector('#profile-tab');
-                    if (firstTabEl) {
+                    if (firstTabEl && typeof bootstrap !== 'undefined' && bootstrap.Tab) {
                         const tab = bootstrap.Tab.getInstance(firstTabEl) || new bootstrap.Tab(firstTabEl);
                         tab.show();
                     }
@@ -778,10 +788,11 @@
                     enable_bk: tenant.enable_bk !== undefined ? parseInt(tenant.enable_bk) : 1,
                     enable_tracer: tenant.enable_tracer !== undefined ? parseInt(tenant.enable_tracer) : 1
                 };
-                this.modalObj.show();
+                const m = this.getModal();
+                if (m) m.show();
                 this.$nextTick(() => {
                     const firstTabEl = document.querySelector('#profile-tab');
-                    if (firstTabEl) {
+                    if (firstTabEl && typeof bootstrap !== 'undefined' && bootstrap.Tab) {
                         const tab = bootstrap.Tab.getInstance(firstTabEl) || new bootstrap.Tab(firstTabEl);
                         tab.show();
                     }
@@ -802,7 +813,8 @@
                 .then(response => {
                     this.isSaving = false;
                     if (response.data.success) {
-                        this.modalObj.hide();
+                        const m = this.getModal();
+                        if (m) m.hide();
                         Swal.fire({
                             icon: 'success',
                             title: 'Berhasil Disimpan',
@@ -1024,10 +1036,7 @@
             }
         },
         mounted() {
-            // Instantiate Bootstrap Modal object
-            this.modalObj = new bootstrap.Modal(document.getElementById('tenantModal'));
-            
-            // Load initial tenant list
+            // Load initial tenant list safely
             this.fetchTenants();
         }
     });

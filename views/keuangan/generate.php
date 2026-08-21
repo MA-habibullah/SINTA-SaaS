@@ -832,10 +832,11 @@ window.VueAppRegistry.register('#keuangan-generate-app', {
                 nominal_tagihan: item.nominal_tagihan,
                 nominal_bayar: item.nominal_bayar
             };
-            if (!editModal) {
-                editModal = new bootstrap.Modal(document.getElementById('editNominalModal'));
+            const modalEl = document.getElementById('editNominalModal');
+            if (modalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                editModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                editModal.show();
             }
-            editModal.show();
         };
 
         const saveNominalTagihan = async () => {
