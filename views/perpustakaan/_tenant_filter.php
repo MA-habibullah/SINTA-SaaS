@@ -1,76 +1,86 @@
 <?php
 /**
- * Reusable Partial View: Super Admin Tenant / School Selector Bar
+ * Reusable Hero Header Banner with Multi-Tenant School Selector for Perpustakaan Module
+ * SINTA SaaS Platform — Modern Gradient Design (Ekstrakurikuler Style)
  */
 use App\Config\Database;
 
-$isSuperAdmin = $data['is_super_admin'] ?? (($_SESSION['role_name'] ?? '') === 'super_admin');
-$activeTenantId = $data['active_tenant_id'] ?? ($this->tenantId ?? ($_SESSION['tenant_id'] ?? null));
+$thisTenant = isset($this) ? ($this->tenantId ?? null) : null;
+$activeTenantId = $data['active_tenant_id'] ?? ($_GET['tenant_id'] ?? ($thisTenant ?? ($_SESSION['tenant_id'] ?? null)));
 $tenantsList = $data['tenants'] ?? [];
 
 $namaSekolahAktif = 'Sekolah Belum Dipilih';
 $npsnAktif = '-';
 
-if ($activeTenantId) {
-    try {
-        $db = Database::getConnection();
-        $stmtT = $db->prepare("SELECT nama_sekolah, npsn FROM tenants WHERE id = :id LIMIT 1");
+try {
+    $db = Database::getConnection();
+    if (empty($tenantsList)) {
+        $stmtAll = $db->query("SELECT id, nama_sekolah, npsn FROM core.tenants WHERE id != '00000000-0000-0000-0000-000000000000' AND (status = 'active' OR status IS NULL) ORDER BY nama_sekolah ASC");
+        $tenantsList = $stmtAll->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+    }
+
+    if (empty($activeTenantId) && !empty($tenantsList)) {
+        $activeTenantId = $tenantsList[0]['id'];
+    }
+
+    if ($activeTenantId) {
+        $stmtT = $db->prepare("SELECT nama_sekolah, npsn FROM core.tenants WHERE id = :id LIMIT 1");
         $stmtT->execute(['id' => $activeTenantId]);
         $rowT = $stmtT->fetch();
         if ($rowT) {
             $namaSekolahAktif = $rowT['nama_sekolah'];
             $npsnAktif = $rowT['npsn'];
         }
-    } catch (\Throwable $e) {}
-}
+    }
+} catch (\Throwable $e) {}
+
+$heroBadge = $heroBadge ?? 'Modul Perpustakaan Digital';
+$heroTitle = $heroTitle ?? ($data['title'] ?? 'Perpustakaan Digital');
+$heroDesc = $heroDesc ?? 'Sistem Manajemen Perpustakaan Terintegrasi (ILS) Akreditasi Sekolah.';
 ?>
 
-<div class="card border-0 shadow-sm rounded-4 bg-gradient bg-primary text-white p-3 mb-4">
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-        <div class="d-flex align-items-center gap-3">
-            <div class="bg-white bg-opacity-20 p-2.5 rounded-3 text-white">
-                <i class="bi bi-building-fill fs-3"></i>
+<div class="p-4 p-md-4.5 rounded-2xl text-white shadow-xs position-relative overflow-hidden mb-4" 
+     style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #0d9488 100%);">
+    <!-- Ambient Glow Circles -->
+    <div class="position-absolute rounded-circle" style="width: 280px; height: 280px; background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 70%); top: -90px; right: -40px; pointer-events: none;"></div>
+    <div class="position-absolute rounded-circle" style="width: 200px; height: 200px; background: radial-gradient(circle, rgba(20,184,166,0.2) 0%, rgba(255,255,255,0) 70%); bottom: -70px; left: 10%; pointer-events: none;"></div>
+
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 position-relative" style="z-index: 2;">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                <span class="badge px-3 py-1.5 rounded-pill text-xs font-semibold d-inline-flex align-items-center gap-1.5" style="background: rgba(255,255,255,0.18); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.25);">
+                    <i class="bi <?= !empty($heroIcon) ? htmlspecialchars($heroIcon) : 'bi-book-half' ?> text-amber-300"></i> <?= htmlspecialchars($heroBadge) ?>
+                </span>
             </div>
-            <div>
-                <div class="fs-8 text-uppercase tracking-wider opacity-75">Sekolah / Tenant Terpilih</div>
-                <h5 class="fw-bold mb-0 text-white"><?= htmlspecialchars($namaSekolahAktif) ?> <span class="fs-7 fw-normal opacity-75">(NPSN: <?= htmlspecialchars($npsnAktif) ?>)</span></h5>
-            </div>
+            <h2 class="h3 font-bold text-white mb-1 tracking-tight"><?= htmlspecialchars($heroTitle) ?></h2>
+            <p class="text-white/85 text-xs mb-0" style="max-width: 680px; line-height: 1.6;">
+                <?= htmlspecialchars($heroDesc) ?>
+            </p>
         </div>
 
-        <?php if ($isSuperAdmin): ?>
-            <div class="d-flex align-items-center gap-2">
-                <label for="selectFilterTenant" class="form-label mb-0 fw-semibold fs-7 text-white text-nowrap">
-                    <i class="bi bi-filter me-1"></i> Switch Sekolah:
-                </label>
-                <select id="selectFilterTenant" class="form-select form-select-sm rounded-3 border-0 bg-white text-dark shadow-sm fw-semibold px-3 py-2" style="min-width: 280px;" onchange="switchSuperAdminTenant(this.value)">
+        <div class="d-flex align-items-center gap-2 flex-wrap flex-shrink-0">
+            <!-- Active School / Tenant Filter Selector Dropdown -->
+            <div class="d-flex align-items-center gap-2 bg-white/15 p-2 rounded-xl border border-white/25 shadow-xs" style="backdrop-filter: blur(6px);">
+                <i class="bi bi-building text-white fs-6 ms-1.5"></i>
+                <label for="selectFilterTenant" class="visually-hidden">Pilih Sekolah</label>
+                <select id="selectFilterTenant" name="tenant_id_filter" class="form-select form-select-sm border-0 text-xs font-semibold bg-white text-slate-800 rounded-lg shadow-2xs cursor-pointer" style="min-width: 220px;" onchange="switchSuperAdminTenant(this.value)" aria-label="Pilih Sekolah">
                     <?php if (empty($activeTenantId)): ?>
-                        <option value="" selected>— PILIH SEKOLAH / TENANT DULU —</option>
+                        <option value="" selected disabled>— PILIH SEKOLAH / TENANT —</option>
                     <?php endif; ?>
                     <?php foreach ($tenantsList as $t): ?>
                         <option value="<?= htmlspecialchars($t['id']) ?>" <?= ($t['id'] === $activeTenantId) ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($t['nama_sekolah']) ?> (<?= htmlspecialchars($t['npsn']) ?>)
+                            <?= htmlspecialchars($t['nama_sekolah']) ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
             </div>
-        <?php else: ?>
-            <div>
-                <span class="badge bg-white text-primary px-3 py-2 rounded-pill fs-8">
-                    <i class="bi bi-shield-check me-1"></i> Admin Sekolah Terisolasi
-                </span>
-            </div>
-        <?php endif; ?>
-    </div>
-</div>
 
-<?php if ($isSuperAdmin && empty($activeTenantId)): ?>
-    <div class="alert alert-warning border-0 rounded-4 p-3 mb-4 d-flex align-items-center gap-3 shadow-sm">
-        <i class="bi bi-exclamation-triangle-fill text-warning fs-3"></i>
-        <div>
-            <strong>Perhatian Super Admin:</strong> Silakan pilih sekolah terlebih dahulu pada dropdown di atas sebelum menambah atau mengelola data perpustakaan.
+            <?php if (!empty($heroButtons)): ?>
+                <?= $heroButtons ?>
+            <?php endif; ?>
         </div>
     </div>
-<?php endif; ?>
+</div>
 
 <script>
 function switchSuperAdminTenant(tenantId) {
