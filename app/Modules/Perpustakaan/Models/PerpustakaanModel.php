@@ -381,7 +381,7 @@ class PerpustakaanModel {
     }
 
     // =========================================================================
-    // 3. ANGGOTA PERPUSTAKAAN
+    // 3. ANGGOTA PERPUSTAKAAN (AUTO-FEDERATION: SISWA, GURU, TENDIK, UMUM)
     // =========================================================================
     public function getAnggotaList(string $tenantId, array $filters = [], int $limit = 50, int $offset = 0): array {
         try {
@@ -390,25 +390,132 @@ class PerpustakaanModel {
                 return [];
             }
 
-            $sql = "SELECT a.id, a.tenant_id, a.nama_perpus_anggota, a.kategori, a.deskripsi, a.is_active, a.created_at,
-                    t.nama_sekolah as tenant_name
+            $search = trim($filters['search'] ?? '');
+            $kategori = trim($filters['kategori'] ?? '');
+            $kelas = trim($filters['kelas'] ?? '');
+
+            $params = [
+                'tid1' => $tenantId,
+                'tid2' => $tenantId,
+                'tid3' => $tenantId,
+            ];
+
+            $whereClause = "WHERE 1=1";
+            if (!empty($search)) {
+                $whereClause .= " AND (u.nama_lengkap ILIKE :search OR u.no_anggota ILIKE :search OR u.nisn ILIKE :search OR u.nip ILIKE :search OR u.nama_kelas ILIKE :search)";
+                $params['search'] = '%' . $search . '%';
+            }
+
+            if (!empty($kategori)) {
+                $whereClause .= " AND u.kategori = :kategori";
+                $params['kategori'] = $kategori;
+            }
+
+            if (!empty($kelas)) {
+                $whereClause .= " AND u.nama_kelas ILIKE :kelas";
+                $params['kelas'] = '%' . $kelas . '%';
+            }
+
+            $sql = "
+                WITH unified_members AS (
+                    -- 1. SISWA AKTIF DARI siswa.siswa
+                    SELECT 
+                        s.id::text as id,
+                        s.tenant_id::text as tenant_id,
+                        s.nama_lengkap as nama_lengkap,
+                        'Siswa' as kategori,
+                        'Siswa' as tipe_anggota,
+                        COALESCE('SIS-' || NULLIF(TRIM(s.nisn), ''), 'SIS-' || NULLIF(TRIM(s.nis), ''), 'SIS-' || SUBSTRING(s.id::text, 1, 8)) as no_anggota,
+                        COALESCE(NULLIF(TRIM(s.nisn), ''), '-') as nisn,
+                        COALESCE(NULLIF(TRIM(s.nis), ''), '-') as nip,
+                        COALESCE(k.nama_kelas, NULLIF(TRIM(s.kelas_saat_ini), ''), 'Kelas Reguler') as nama_kelas,
+                        COALESCE(NULLIF(TRIM(s.no_hp), ''), '-') as kontak,
+                        COALESCE(NULLIF(TRIM(s.alamat), ''), '-') as alamat,
+                        COALESCE(s.foto_url, '') as foto,
+                        s.created_at
+                    FROM siswa.siswa s
+                    LEFT JOIN akademik.kelas k ON (s.kelas_saat_ini = k.id::text OR s.kelas_saat_ini = k.nama_kelas)
+                    WHERE s.tenant_id = :tid1 AND (s.is_active = true OR s.is_active IS NULL)
+
+                    UNION ALL
+
+                    -- 2. GURU & KARYAWAN / TENDIK DARI core.users
+                    SELECT 
+                        u.id::text as id,
+                        u.tenant_id::text as tenant_id,
+                        u.nama_lengkap as nama_lengkap,
+                        CASE WHEN r.nama_role = 'guru' THEN 'Guru' ELSE 'Tendik' END as kategori,
+                        CASE WHEN r.nama_role = 'guru' THEN 'Guru' ELSE 'Tendik' END as tipe_anggota,
+                        CASE 
+                            WHEN r.nama_role = 'guru' THEN 'GUR-' || u.username
+                            ELSE 'STF-' || u.username
+                        END as no_anggota,
+                        '-' as nisn,
+                        u.username as nip,
+                        CASE 
+                            WHEN r.nama_role = 'guru' THEN 'Dewan Guru'
+                            ELSE 'Tenaga Kependidikan / ' || INITCAP(REPLACE(COALESCE(r.nama_role, 'Staf'), '_', ' '))
+                        END as nama_kelas,
+                        COALESCE(u.email, '-') as kontak,
+                        '-' as alamat,
+                        '' as foto,
+                        u.created_at
+                    FROM core.users u
+                    LEFT JOIN core.roles r ON u.role_id = r.id
+                    WHERE u.tenant_id = :tid2 
+                      AND u.is_active = true 
+                      AND r.nama_role NOT IN ('super_admin', 'siswa')
+
+                    UNION ALL
+
+                    -- 3. ANGGOTA MANUAL / UMUM DARI perpustakaan.perpus_anggota
+                    SELECT 
+                        a.id::text as id,
+                        a.tenant_id::text as tenant_id,
+                        a.nama_perpus_anggota as nama_lengkap,
+                        a.kategori as kategori,
+                        a.kategori as tipe_anggota,
+                        COALESCE(a.deskripsi::json->>'no_anggota', 'LIB-' || SUBSTRING(a.id::text, 1, 8)) as no_anggota,
+                        COALESCE(a.deskripsi::json->>'nisn', '-') as nisn,
+                        COALESCE(a.deskripsi::json->>'nip', '-') as nip,
+                        COALESCE(a.deskripsi::json->>'nama_kelas', 'Umum / Tamu') as nama_kelas,
+                        COALESCE(a.deskripsi::json->>'kontak', '-') as kontak,
+                        COALESCE(a.deskripsi::json->>'alamat', '-') as alamat,
+                        COALESCE(a.deskripsi::json->>'foto', '') as foto,
+                        a.created_at
                     FROM perpustakaan.perpus_anggota a
-                    LEFT JOIN core.tenants t ON a.tenant_id = t.id
-                    WHERE a.tenant_id = :tenant_id AND a.is_active = true";
-
-            $params = ['tenant_id' => $tenantId];
-
-            if (!empty($filters['search'])) {
-                $sql .= " AND (a.nama_perpus_anggota ILIKE :search OR a.kategori ILIKE :search OR a.deskripsi ILIKE :search)";
-                $params['search'] = '%' . $filters['search'] . '%';
-            }
-
-            if (!empty($filters['kategori'])) {
-                $sql .= " AND a.kategori = :kategori";
-                $params['kategori'] = $filters['kategori'];
-            }
-
-            $sql .= " ORDER BY a.created_at DESC LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
+                    WHERE a.tenant_id = :tid3 AND a.is_active = true
+                )
+                SELECT u.*,
+                    COALESCE((
+                        SELECT COUNT(*) 
+                        FROM perpustakaan.perpus_sirkulasi s 
+                        WHERE s.tenant_id = :tid1 
+                          AND s.is_active = true 
+                          AND (s.kategori = 'Dipinjam' OR s.deskripsi::json->>'status' = 'Dipinjam')
+                          AND (
+                              s.deskripsi::json->>'anggota_id' = u.id 
+                              OR s.deskripsi::json->>'anggota_id' = u.no_anggota 
+                              OR s.deskripsi::json->>'anggota_id' = u.nisn 
+                              OR s.deskripsi::json->>'anggota_id' = u.nip
+                          )
+                    ), 0) as pinjam_aktif,
+                    COALESCE((
+                        SELECT SUM(COALESCE((s.deskripsi::json->>'denda')::numeric, 0)) 
+                        FROM perpustakaan.perpus_sirkulasi s 
+                        WHERE s.tenant_id = :tid1 
+                          AND s.is_active = true 
+                          AND (
+                              s.deskripsi::json->>'anggota_id' = u.id 
+                              OR s.deskripsi::json->>'anggota_id' = u.no_anggota 
+                              OR s.deskripsi::json->>'anggota_id' = u.nisn 
+                              OR s.deskripsi::json->>'anggota_id' = u.nip
+                          )
+                    ), 0) as total_denda
+                FROM unified_members u
+                {$whereClause}
+                ORDER BY u.kategori ASC, u.nama_lengkap ASC 
+                LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
 
             $stmt = $this->db->prepare($sql);
             $stmt->execute($params);
@@ -416,7 +523,28 @@ class PerpustakaanModel {
 
             $result = [];
             foreach ($rows as $r) {
-                $result[] = $this->formatAnggotaData($r);
+                $pinjamAktif = (int)($r['pinjam_aktif'] ?? 0);
+                $totalDenda = (float)($r['total_denda'] ?? 0.0);
+                $statusBebas = ($pinjamAktif === 0 && $totalDenda <= 0) ? 1 : 0;
+
+                $result[] = [
+                    'id' => $r['id'],
+                    'tenant_id' => $r['tenant_id'],
+                    'nama_lengkap' => $r['nama_lengkap'],
+                    'kategori' => $r['kategori'],
+                    'tipe_anggota' => $r['tipe_anggota'],
+                    'no_anggota' => $r['no_anggota'],
+                    'nisn' => $r['nisn'],
+                    'nip' => $r['nip'],
+                    'nama_kelas' => $r['nama_kelas'],
+                    'kontak' => $r['kontak'],
+                    'alamat' => $r['alamat'],
+                    'foto' => $r['foto'],
+                    'pinjam_aktif' => $pinjamAktif,
+                    'total_denda' => $totalDenda,
+                    'status_bebas_pustaka' => $statusBebas,
+                    'created_at' => $r['created_at'] ?? date('Y-m-d H:i:s')
+                ];
             }
             return $result;
         } catch (\Throwable $e) {
@@ -431,18 +559,64 @@ class PerpustakaanModel {
                 return 0;
             }
 
-            $sql = "SELECT COUNT(*) FROM perpustakaan.perpus_anggota a WHERE a.tenant_id = :tenant_id AND a.is_active = true";
-            $params = ['tenant_id' => $tenantId];
+            $search = trim($filters['search'] ?? '');
+            $kategori = trim($filters['kategori'] ?? '');
+            $kelas = trim($filters['kelas'] ?? '');
 
-            if (!empty($filters['search'])) {
-                $sql .= " AND (a.nama_perpus_anggota ILIKE :search OR a.kategori ILIKE :search OR a.deskripsi ILIKE :search)";
-                $params['search'] = '%' . $filters['search'] . '%';
+            $params = [
+                'tid1' => $tenantId,
+                'tid2' => $tenantId,
+                'tid3' => $tenantId,
+            ];
+
+            $whereClause = "WHERE 1=1";
+            if (!empty($search)) {
+                $whereClause .= " AND (u.nama_lengkap ILIKE :search OR u.no_anggota ILIKE :search OR u.nisn ILIKE :search OR u.nip ILIKE :search OR u.nama_kelas ILIKE :search)";
+                $params['search'] = '%' . $search . '%';
             }
 
-            if (!empty($filters['kategori'])) {
-                $sql .= " AND a.kategori = :kategori";
-                $params['kategori'] = $filters['kategori'];
+            if (!empty($kategori)) {
+                $whereClause .= " AND u.kategori = :kategori";
+                $params['kategori'] = $kategori;
             }
+
+            if (!empty($kelas)) {
+                $whereClause .= " AND u.nama_kelas ILIKE :kelas";
+                $params['kelas'] = '%' . $kelas . '%';
+            }
+
+            $sql = "
+                WITH unified_members AS (
+                    SELECT s.id::text as id, s.tenant_id::text as tenant_id, s.nama_lengkap, 'Siswa' as kategori,
+                        COALESCE('SIS-' || NULLIF(TRIM(s.nisn), ''), 'SIS-' || NULLIF(TRIM(s.nis), ''), 'SIS-' || SUBSTRING(s.id::text, 1, 8)) as no_anggota,
+                        COALESCE(NULLIF(TRIM(s.nisn), ''), '-') as nisn, COALESCE(NULLIF(TRIM(s.nis), ''), '-') as nip,
+                        COALESCE(k.nama_kelas, NULLIF(TRIM(s.kelas_saat_ini), ''), 'Kelas Reguler') as nama_kelas
+                    FROM siswa.siswa s
+                    LEFT JOIN akademik.kelas k ON (s.kelas_saat_ini = k.id::text OR s.kelas_saat_ini = k.nama_kelas)
+                    WHERE s.tenant_id = :tid1 AND (s.is_active = true OR s.is_active IS NULL)
+
+                    UNION ALL
+
+                    SELECT u.id::text as id, u.tenant_id::text as tenant_id, u.nama_lengkap,
+                        CASE WHEN r.nama_role = 'guru' THEN 'Guru' ELSE 'Tendik' END as kategori,
+                        CASE WHEN r.nama_role = 'guru' THEN 'GUR-' || u.username ELSE 'STF-' || u.username END as no_anggota,
+                        '-' as nisn, u.username as nip,
+                        CASE WHEN r.nama_role = 'guru' THEN 'Dewan Guru' ELSE 'Tenaga Kependidikan' END as nama_kelas
+                    FROM core.users u
+                    LEFT JOIN core.roles r ON u.role_id = r.id
+                    WHERE u.tenant_id = :tid2 AND u.is_active = true AND r.nama_role NOT IN ('super_admin', 'siswa')
+
+                    UNION ALL
+
+                    SELECT a.id::text as id, a.tenant_id::text as tenant_id, a.nama_perpus_anggota as nama_lengkap, a.kategori,
+                        COALESCE(a.deskripsi::json->>'no_anggota', 'LIB-' || SUBSTRING(a.id::text, 1, 8)) as no_anggota,
+                        COALESCE(a.deskripsi::json->>'nisn', '-') as nisn, COALESCE(a.deskripsi::json->>'nip', '-') as nip,
+                        COALESCE(a.deskripsi::json->>'nama_kelas', 'Umum / Tamu') as nama_kelas
+                    FROM perpustakaan.perpus_anggota a
+                    WHERE a.tenant_id = :tid3 AND a.is_active = true
+                )
+                SELECT COUNT(*) FROM unified_members u {$whereClause}
+            ";
 
             $stmt = $this->db->prepare($sql);
             $stmt->execute($params);
@@ -452,9 +626,179 @@ class PerpustakaanModel {
         }
     }
 
+    public function findMemberByIdentifier(string $tenantId, string $identifier): ?array {
+        try {
+            $tenantId = $this->resolveTenantId($tenantId);
+            $identifier = trim($identifier);
+            if (empty($identifier)) return null;
+
+            $sql = "
+                WITH unified_members AS (
+                    SELECT 
+                        s.id::text as id,
+                        s.tenant_id::text as tenant_id,
+                        s.nama_lengkap as nama_lengkap,
+                        'Siswa' as kategori,
+                        'Siswa' as tipe_anggota,
+                        COALESCE('SIS-' || NULLIF(TRIM(s.nisn), ''), 'SIS-' || NULLIF(TRIM(s.nis), ''), 'SIS-' || SUBSTRING(s.id::text, 1, 8)) as no_anggota,
+                        COALESCE(NULLIF(TRIM(s.nisn), ''), '-') as nisn,
+                        COALESCE(NULLIF(TRIM(s.nis), ''), '-') as nip,
+                        COALESCE(k.nama_kelas, NULLIF(TRIM(s.kelas_saat_ini), ''), 'Kelas Reguler') as nama_kelas,
+                        COALESCE(NULLIF(TRIM(s.no_hp), ''), '-') as kontak,
+                        COALESCE(NULLIF(TRIM(s.alamat), ''), '-') as alamat,
+                        COALESCE(s.foto_url, '') as foto,
+                        s.created_at
+                    FROM siswa.siswa s
+                    LEFT JOIN akademik.kelas k ON (s.kelas_saat_ini = k.id::text OR s.kelas_saat_ini = k.nama_kelas)
+                    WHERE s.tenant_id = :tid1 AND (s.is_active = true OR s.is_active IS NULL)
+
+                    UNION ALL
+
+                    SELECT 
+                        u.id::text as id,
+                        u.tenant_id::text as tenant_id,
+                        u.nama_lengkap as nama_lengkap,
+                        CASE WHEN r.nama_role = 'guru' THEN 'Guru' ELSE 'Tendik' END as kategori,
+                        CASE WHEN r.nama_role = 'guru' THEN 'Guru' ELSE 'Tendik' END as tipe_anggota,
+                        CASE WHEN r.nama_role = 'guru' THEN 'GUR-' || u.username ELSE 'STF-' || u.username END as no_anggota,
+                        '-' as nisn,
+                        u.username as nip,
+                        CASE WHEN r.nama_role = 'guru' THEN 'Dewan Guru' ELSE 'Tenaga Kependidikan' END as nama_kelas,
+                        COALESCE(u.email, '-') as kontak,
+                        '-' as alamat,
+                        '' as foto,
+                        u.created_at
+                    FROM core.users u
+                    LEFT JOIN core.roles r ON u.role_id = r.id
+                    WHERE u.tenant_id = :tid2 AND u.is_active = true AND r.nama_role NOT IN ('super_admin', 'siswa')
+
+                    UNION ALL
+
+                    SELECT 
+                        a.id::text as id,
+                        a.tenant_id::text as tenant_id,
+                        a.nama_perpus_anggota as nama_lengkap,
+                        a.kategori as kategori,
+                        a.kategori as tipe_anggota,
+                        COALESCE(a.deskripsi::json->>'no_anggota', 'LIB-' || SUBSTRING(a.id::text, 1, 8)) as no_anggota,
+                        COALESCE(a.deskripsi::json->>'nisn', '-') as nisn,
+                        COALESCE(a.deskripsi::json->>'nip', '-') as nip,
+                        COALESCE(a.deskripsi::json->>'nama_kelas', 'Umum / Tamu') as nama_kelas,
+                        COALESCE(a.deskripsi::json->>'kontak', '-') as kontak,
+                        COALESCE(a.deskripsi::json->>'alamat', '-') as alamat,
+                        COALESCE(a.deskripsi::json->>'foto', '') as foto,
+                        a.created_at
+                    FROM perpustakaan.perpus_anggota a
+                    WHERE a.tenant_id = :tid3 AND a.is_active = true
+                )
+                SELECT * FROM unified_members 
+                WHERE (nisn = :q OR nip = :q OR no_anggota = :q OR id = :q OR nama_lengkap ILIKE :q_like)
+                LIMIT 1
+            ";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                'tid1' => $tenantId,
+                'tid2' => $tenantId,
+                'tid3' => $tenantId,
+                'q' => $identifier,
+                'q_like' => '%' . $identifier . '%'
+            ]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row ?: null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    public function checkBebasPustaka(string $tenantId, string $identifier): array {
+        try {
+            $member = $this->findMemberByIdentifier($tenantId, $identifier);
+            if (!$member) {
+                return [
+                    'success' => false,
+                    'message' => 'Anggota dengan NISN/NIP/Nama "' . $identifier . '" tidak ditemukan.'
+                ];
+            }
+
+            // Ambil semua transaksi sirkulasi terkait anggota ini
+            $stmt = $this->db->prepare("
+                SELECT id, nama_perpus_sirkulasi, kategori, deskripsi, created_at 
+                FROM perpustakaan.perpus_sirkulasi 
+                WHERE tenant_id = :tenant_id 
+                  AND is_active = true
+                  AND (
+                      deskripsi::json->>'anggota_id' = :id 
+                      OR deskripsi::json->>'anggota_id' = :no_anggota 
+                      OR deskripsi::json->>'anggota_id' = :nisn 
+                      OR deskripsi::json->>'anggota_id' = :nip
+                      OR deskripsi::json->>'nama_anggota' ILIKE :nama
+                  )
+                ORDER BY created_at DESC
+            ");
+            $stmt->execute([
+                'tenant_id' => $tenantId,
+                'id' => $member['id'],
+                'no_anggota' => $member['no_anggota'],
+                'nisn' => $member['nisn'],
+                'nip' => $member['nip'],
+                'nama' => '%' . $member['nama_lengkap'] . '%'
+            ]);
+            $circRows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            $pinjamanAktif = [];
+            $riwayatPinjam = [];
+            $totalDenda = 0.0;
+
+            foreach ($circRows as $r) {
+                $meta = json_decode($r['deskripsi'] ?? '{}', true) ?: [];
+                $status = $meta['status'] ?? $r['kategori'];
+                $denda = (float)($meta['denda'] ?? 0.0);
+                $totalDenda += $denda;
+
+                $item = [
+                    'id' => $r['id'],
+                    'barcode' => $meta['barcode'] ?? '-',
+                    'judul_buku' => $meta['judul_buku'] ?? ($r['nama_perpus_sirkulasi'] ?? 'Buku'),
+                    'tgl_pinjam' => $meta['tgl_pinjam'] ?? substr($r['created_at'], 0, 10),
+                    'tgl_harus_kembali' => $meta['tgl_harus_kembali'] ?? '-',
+                    'tgl_kembali' => $meta['tgl_kembali'] ?? null,
+                    'status' => $status,
+                    'denda' => $denda
+                ];
+
+                if ($status === 'Dipinjam' || empty($meta['tgl_kembali'])) {
+                    $pinjamanAktif[] = $item;
+                } else {
+                    $riwayatPinjam[] = $item;
+                }
+            }
+
+            $isClear = (count($pinjamanAktif) === 0 && $totalDenda <= 0);
+
+            return [
+                'success' => true,
+                'is_clear' => $isClear,
+                'status_label' => $isClear ? 'BEBAS PUSTAKA (CLEAR)' : 'MASIH ADA TANGGUNGAN',
+                'member' => $member,
+                'pinjaman_aktif' => $pinjamanAktif,
+                'riwayat_pinjam' => $riwayatPinjam,
+                'total_pinjam_aktif' => count($pinjamanAktif),
+                'total_denda_tertunggak' => $totalDenda,
+                'nomor_surat' => '421.3/' . rand(100, 999) . '/PERPUS/' . date('Y'),
+                'tanggal_terbit' => date('d F Y')
+            ];
+        } catch (\Throwable $e) {
+            return [
+                'success' => false,
+                'message' => 'Gagal verifikasi bebas pustaka: ' . $e->getMessage()
+            ];
+        }
+    }
+
     public function saveAnggota(string $tenantId, array $data, ?string $id = null): string {
         $nama = trim($data['nama_lengkap'] ?? ($data['nama_perpus_anggota'] ?? 'Nama Anggota'));
-        $kategori = trim($data['tipe_anggota'] ?? ($data['kategori'] ?? 'Siswa'));
+        $kategori = trim($data['tipe_anggota'] ?? ($data['kategori'] ?? 'Umum'));
         $noAnggota = trim($data['no_anggota'] ?? ($data['nomor_anggota'] ?? ('LIB-' . date('Y') . '-' . rand(1000, 9999))));
 
         $meta = [
@@ -463,13 +807,13 @@ class PerpustakaanModel {
             'nip' => $data['nip'] ?? '',
             'nama_lengkap' => $nama,
             'tipe_anggota' => $kategori,
-            'nama_kelas' => $data['nama_kelas'] ?? ($data['kelas'] ?? '-'),
+            'nama_kelas' => $data['nama_kelas'] ?? ($data['kelas'] ?? 'Umum / Tamu'),
             'jenis_kelamin' => $data['jenis_kelamin'] ?? 'L',
             'kontak' => $data['kontak'] ?? ($data['no_wa'] ?? ''),
             'alamat' => $data['alamat'] ?? '',
-            'pinjam_aktif' => isset($data['pinjam_aktif']) ? (int)$data['pinjam_aktif'] : 0,
-            'total_denda' => isset($data['total_denda']) ? (float)$data['total_denda'] : 0.0,
-            'status_bebas_pustaka' => (int)($data['status_bebas_pustaka'] ?? 1),
+            'pinjam_aktif' => 0,
+            'total_denda' => 0.0,
+            'status_bebas_pustaka' => 1,
             'foto' => $data['foto'] ?? ''
         ];
 
@@ -515,55 +859,42 @@ class PerpustakaanModel {
         }
     }
 
-    public function syncAnggotaFromSiswa(string $tenantId): int {
+    public function getVisitorStats(string $tenantId): array {
         try {
-            $stmt = $this->db->prepare("SELECT id, nama_lengkap, nisn, kelas FROM siswa.buku_induk WHERE tenant_id = :tenant_id AND status_siswa = 'Aktif'");
-            $stmt->execute(['tenant_id' => $tenantId]);
-            $siswaList = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $tenantId = $this->resolveTenantId($tenantId);
+            $tglHariIni = date('Y-m-d');
+            $tglAwalBulan = date('Y-m-01');
 
-            $synced = 0;
-            foreach ($siswaList as $s) {
-                $noAnggota = 'SIS-' . ($s['nisn'] ?: substr($s['id'], 0, 8));
-                $this->saveAnggota($tenantId, [
-                    'nama_lengkap' => $s['nama_lengkap'],
-                    'nisn' => $s['nisn'],
-                    'no_anggota' => $noAnggota,
-                    'tipe_anggota' => 'Siswa',
-                    'nama_kelas' => $s['kelas'] ?? 'Reguler'
-                ]);
-                $synced++;
-            }
-            return $synced;
+            $stmtHari = $this->db->prepare("SELECT COUNT(*) FROM perpustakaan.perpus_buku_tamu WHERE tenant_id = :tenant_id AND created_at::date = :tgl");
+            $stmtHari->execute(['tenant_id' => $tenantId, 'tgl' => $tglHariIni]);
+            $totalHariIni = (int)$stmtHari->fetchColumn();
+
+            $stmtBulan = $this->db->prepare("SELECT COUNT(*) FROM perpustakaan.perpus_buku_tamu WHERE tenant_id = :tenant_id AND created_at::date >= :tgl");
+            $stmtBulan->execute(['tenant_id' => $tenantId, 'tgl' => $tglAwalBulan]);
+            $totalBulanIni = (int)$stmtBulan->fetchColumn();
+
+            $stmtSiswa = $this->db->prepare("SELECT COUNT(*) FROM perpustakaan.perpus_buku_tamu WHERE tenant_id = :tenant_id AND (kategori = 'Siswa' OR deskripsi::json->>'tipe' = 'Siswa')");
+            $stmtSiswa->execute(['tenant_id' => $tenantId]);
+            $totalSiswa = (int)$stmtSiswa->fetchColumn();
+
+            $stmtGuru = $this->db->prepare("SELECT COUNT(*) FROM perpustakaan.perpus_buku_tamu WHERE tenant_id = :tenant_id AND (kategori IN ('Guru', 'Tendik', 'PTK') OR deskripsi::json->>'tipe' IN ('Guru', 'Tendik', 'PTK'))");
+            $stmtGuru->execute(['tenant_id' => $tenantId]);
+            $totalGuru = (int)$stmtGuru->fetchColumn();
+
+            return [
+                'total_hari_ini' => $totalHariIni,
+                'total_bulan_ini' => $totalBulanIni,
+                'total_siswa' => $totalSiswa,
+                'total_guru_staf' => $totalGuru
+            ];
         } catch (\Throwable $e) {
-            return 0;
+            return [
+                'total_hari_ini' => 0,
+                'total_bulan_ini' => 0,
+                'total_siswa' => 0,
+                'total_guru_staf' => 0
+            ];
         }
-    }
-
-    private function formatAnggotaData(array $r): array {
-        $meta = [];
-        if (!empty($r['deskripsi'])) {
-            $decoded = json_decode($r['deskripsi'], true);
-            if (is_array($decoded)) {
-                $meta = $decoded;
-            }
-        }
-
-        return array_merge($meta, [
-            'id' => $r['id'] ?? null,
-            'tenant_id' => $r['tenant_id'] ?? null,
-            'tenant_name' => $r['tenant_name'] ?? 'Sekolah Aktif',
-            'nama_lengkap' => $r['nama_perpus_anggota'] ?? ($meta['nama_lengkap'] ?? 'Anggota'),
-            'kategori' => $r['kategori'] ?? ($meta['tipe_anggota'] ?? 'Siswa'),
-            'tipe_anggota' => $r['kategori'] ?? ($meta['tipe_anggota'] ?? 'Siswa'),
-            'no_anggota' => $meta['no_anggota'] ?? ('LIB-' . substr($r['id'] ?? '000', 0, 6)),
-            'nisn' => $meta['nisn'] ?? ($meta['nip'] ?? '-'),
-            'nip' => $meta['nip'] ?? '-',
-            'nama_kelas' => $meta['nama_kelas'] ?? ($meta['kelas'] ?? 'Umum / Staf'),
-            'pinjam_aktif' => (int)($meta['pinjam_aktif'] ?? 0),
-            'total_denda' => (float)($meta['total_denda'] ?? 0.0),
-            'status_bebas_pustaka' => (int)($meta['status_bebas_pustaka'] ?? 1),
-            'created_at' => $r['created_at'] ?? date('Y-m-d H:i:s')
-        ]);
     }
 
     // =========================================================================
@@ -612,12 +943,40 @@ class PerpustakaanModel {
 
     public function prosesPeminjaman(string $tenantId, array $data): array {
         try {
+            $tenantId = $this->resolveTenantId($tenantId);
             $anggotaId = trim($data['anggota_id'] ?? '');
             $barcode = trim($data['eksemplar_id'] ?? ($data['barcode'] ?? ''));
             $durasiHari = (int)($data['durasi_hari'] ?? 7);
 
             if (empty($anggotaId) || empty($barcode)) {
-                return ['success' => false, 'message' => 'Nomor Anggota dan Barcode Buku wajib diisi!'];
+                return ['success' => false, 'message' => 'Nomor Anggota/NISN/NIP dan Barcode Buku wajib diisi!'];
+            }
+
+            // Auto-resolve member jika nama belum ada
+            $namaAnggota = trim($data['nama_anggota'] ?? '');
+            $tipeAnggota = 'Siswa';
+            $member = $this->findMemberByIdentifier($tenantId, $anggotaId);
+            if ($member) {
+                $namaAnggota = $member['nama_lengkap'];
+                $tipeAnggota = $member['kategori'];
+                // Standardize anggota_id to no_anggota or identifier
+                if (empty($data['anggota_id_raw'])) {
+                    $anggotaId = $member['no_anggota'];
+                }
+            }
+            if (empty($namaAnggota)) {
+                $namaAnggota = 'Anggota (' . $anggotaId . ')';
+            }
+
+            // Auto-resolve book title jika belum ada
+            $judulBuku = trim($data['judul_buku'] ?? '');
+            if (empty($judulBuku)) {
+                $buku = $this->getKatalogDetailByBarcode($tenantId, $barcode);
+                if ($buku && !empty($buku['judul'])) {
+                    $judulBuku = $buku['judul'];
+                } else {
+                    $judulBuku = 'Buku Referensi (' . $barcode . ')';
+                }
             }
 
             $id = $this->generateUuid();
@@ -626,9 +985,10 @@ class PerpustakaanModel {
 
             $meta = [
                 'anggota_id' => $anggotaId,
-                'nama_anggota' => $data['nama_anggota'] ?? 'Anggota (' . $anggotaId . ')',
+                'nama_anggota' => $namaAnggota,
+                'tipe_anggota' => $tipeAnggota,
                 'barcode' => $barcode,
-                'judul_buku' => $data['judul_buku'] ?? 'Buku Referensi (' . $barcode . ')',
+                'judul_buku' => $judulBuku,
                 'tgl_pinjam' => $tglPinjam,
                 'tgl_harus_kembali' => $tglHarusKembali,
                 'durasi_hari' => $durasiHari,
@@ -642,11 +1002,11 @@ class PerpustakaanModel {
             $stmt->execute([
                 'id' => $id,
                 'tenant_id' => $tenantId,
-                'nama' => 'Peminjaman ' . $barcode . ' oleh ' . $anggotaId,
-                'deskripsi' => json_encode($meta)
+                'nama' => 'Peminjaman ' . $barcode . ' oleh ' . $namaAnggota,
+                'deskripsi' => json_encode($meta, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)
             ]);
 
-            return ['success' => true, 'id' => $id, 'message' => 'Peminjaman berhasil dicatat!'];
+            return ['success' => true, 'id' => $id, 'message' => 'Peminjaman berhasil dicatat untuk ' . $namaAnggota . '!'];
         } catch (\Throwable $e) {
             return ['success' => false, 'message' => 'Gagal memproses peminjaman: ' . $e->getMessage()];
         }
@@ -1543,4 +1903,127 @@ class PerpustakaanModel {
         $data[8] = chr(ord($data[8]) & 0x3f | 0x80);
         return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
     }
+
+    // =========================================================================
+    // DENDA, EVENT OSN, OPNAME — Zero Data Leakage Async Endpoints
+    // =========================================================================
+
+    /**
+     * Daftar denda keterlambatan pengembalian buku per tenant.
+     * Jika tabel belum tersedia (fitur baru), kembalikan array kosong agar view tetap bekerja.
+     */
+    public function getDendaList(string $tenantId): array {
+        try {
+            $stmt = $this->db->prepare(
+                "SELECT
+                    s.id,
+                    COALESCE(a.nama_lengkap, a.nama_siswa, a.username) AS nama_siswa,
+                    b.judul AS judul_buku,
+                    GREATEST(0, CURRENT_DATE - s.tanggal_kembali_rencana::date) AS hari_terlambat,
+                    COALESCE(d.jumlah_denda, GREATEST(0, CURRENT_DATE - s.tanggal_kembali_rencana::date) * COALESCE(pp.denda_per_hari, 1000)) AS jumlah_denda,
+                    COALESCE(d.status, 'Belum Lunas') AS status,
+                    COALESCE(d.metode_bayar, 'Tunai / SPP') AS metode_bayar,
+                    d.id AS denda_id
+                FROM perpustakaan.sirkulasi s
+                LEFT JOIN perpustakaan.anggota a ON s.anggota_id = a.id
+                LEFT JOIN perpustakaan.bibliografi b ON s.bibliografi_id = b.id
+                LEFT JOIN perpustakaan.denda d ON d.sirkulasi_id = s.id
+                LEFT JOIN perpustakaan.pengaturan pp ON pp.tenant_id = s.tenant_id
+                WHERE s.tenant_id = :tenant_id
+                  AND s.status_kembali = 'Belum Kembali'
+                  AND s.tanggal_kembali_rencana IS NOT NULL
+                  AND s.tanggal_kembali_rencana::date < CURRENT_DATE
+                ORDER BY s.tanggal_kembali_rencana ASC
+                LIMIT 200"
+            );
+            $stmt->bindValue(':tenant_id', $tenantId, \PDO::PARAM_STR);
+            $stmt->execute();
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Catat pembayaran denda perpustakaan (Lunas).
+     */
+    public function bayarDenda(string $tenantId, string $dendaId): bool {
+        try {
+            $stmt = $this->db->prepare(
+                "UPDATE perpustakaan.denda
+                 SET status = 'Lunas', metode_bayar = 'Tunai', updated_at = CURRENT_TIMESTAMP
+                 WHERE id = :id AND tenant_id = :tenant_id"
+            );
+            $stmt->bindValue(':id', $dendaId, \PDO::PARAM_STR);
+            $stmt->bindValue(':tenant_id', $tenantId, \PDO::PARAM_STR);
+            $stmt->execute();
+            return $stmt->rowCount() > 0;
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Daftar event khusus / OSN / olimpiade per tenant.
+     */
+    public function getEventOSNList(string $tenantId): array {
+        try {
+            $stmt = $this->db->prepare(
+                "SELECT
+                    e.id,
+                    COALESCE(t.nama_sekolah, 'Sekolah Aktif') AS tenant_name,
+                    e.nama_event,
+                    e.bidang,
+                    COALESCE(a.nama_lengkap, a.nama_siswa) AS nama_siswa,
+                    b.judul AS judul_buku,
+                    e.tanggal_kembali_rencana,
+                    COALESCE(e.status_event, 'Aktif / Berjalan') AS status_event
+                FROM perpustakaan.event_osn e
+                LEFT JOIN sistem.tenants t ON t.id = e.tenant_id
+                LEFT JOIN perpustakaan.anggota a ON a.id = e.anggota_id
+                LEFT JOIN perpustakaan.bibliografi b ON b.id = e.bibliografi_id
+                WHERE e.tenant_id = :tenant_id
+                  AND e.deleted_at IS NULL
+                ORDER BY e.created_at DESC
+                LIMIT 100"
+            );
+            $stmt->bindValue(':tenant_id', $tenantId, \PDO::PARAM_STR);
+            $stmt->execute();
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Daftar sesi stock opname per tenant.
+     */
+    public function getOpnameList(string $tenantId): array {
+        try {
+            $stmt = $this->db->prepare(
+                "SELECT
+                    o.id,
+                    COALESCE(t.nama_sekolah, 'Sekolah Aktif') AS tenant_name,
+                    o.nama_sesi,
+                    o.tanggal,
+                    COALESCE(u.nama_lengkap, u.username) AS petugas,
+                    COALESCE(o.total_scanned, 0) AS total_scanned,
+                    COALESCE(o.total_selisih, 0) AS total_selisih,
+                    COALESCE(o.status_audit, 'Selesai') AS status_audit
+                FROM perpustakaan.stock_opname o
+                LEFT JOIN sistem.tenants t ON t.id = o.tenant_id
+                LEFT JOIN sistem.users u ON u.id = o.user_id
+                WHERE o.tenant_id = :tenant_id
+                  AND o.deleted_at IS NULL
+                ORDER BY o.tanggal DESC
+                LIMIT 100"
+            );
+            $stmt->bindValue(':tenant_id', $tenantId, \PDO::PARAM_STR);
+            $stmt->execute();
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
 }
+

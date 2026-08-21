@@ -1,11 +1,12 @@
 <?php
 /**
  * View: Event Khusus & Peminjaman OSN / Olimpiade
+ * Zero Data Leakage: Data dimuat async via Axios — tidak ada data mentah di View Source.
  */
 ?>
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-2 pb-2 mb-4 border-bottom">
     <div>
-        <h2 class="fw-bold text-dark mb-1">🏆 Event Khusus & Peminjaman Buku OSN / Kontingen</h2>
+        <h2 class="fw-bold text-dark mb-1">🏆 Event Khusus &amp; Peminjaman Buku OSN / Kontingen</h2>
         <p class="text-muted fs-7 mb-0">Fasilitas Peminjaman Buku Referensi Tambahan Khusus Siswa Peserta Olimpiade / Lomba.</p>
     </div>
     <div class="btn-toolbar gap-2 mb-2 mb-md-0">
@@ -20,54 +21,59 @@
 
 <?php include __DIR__ . '/_tenant_filter.php'; ?>
 
-<div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>No</th>
-                    <th>Sekolah / Tenant</th>
-                    <th>Nama Event / Lomba</th>
-                    <th>Bidang Studi / Cabang</th>
-                    <th>Siswa Peserta (Kontingen)</th>
-                    <th>Buku Referensi Diberikan</th>
-                    <th>Batas Pengembalian</th>
-                    <th>Status Event</th>
-                    <th class="text-center">Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($data['event_list'])): ?>
+<!-- Vue 3 Async App (Zero Data Leakage) -->
+<div id="eventOSNApp" v-cloak>
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+        <!-- Loading Skeleton -->
+        <div v-if="loading" class="text-center py-5">
+            <div class="spinner-border text-warning" role="status"></div>
+            <p class="text-muted mt-2 mb-0">Memuat data event OSN secara asinkron...</p>
+        </div>
+
+        <!-- Data Table -->
+        <div v-else class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
                     <tr>
+                        <th>No</th>
+                        <th>Sekolah / Tenant</th>
+                        <th>Nama Event / Lomba</th>
+                        <th>Bidang Studi / Cabang</th>
+                        <th>Siswa Peserta (Kontingen)</th>
+                        <th>Buku Referensi Diberikan</th>
+                        <th>Batas Pengembalian</th>
+                        <th>Status Event</th>
+                        <th class="text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-if="eventList.length === 0">
                         <td colspan="9" class="text-center text-muted py-4">
                             <i class="bi bi-trophy fs-3 d-block mb-2 text-warning"></i> Belum ada event khusus/OSN terdaftar. Klik <strong>Tambah Event OSN / Lomba</strong> untuk mendaftarkan kontingen.
                         </td>
                     </tr>
-                <?php else: ?>
-                    <?php foreach ($data['event_list'] as $idx => $ev): ?>
-                        <tr>
-                            <td><?= $idx + 1 ?></td>
-                            <td>
-                                <span class="badge bg-light text-dark border">
-                                    <i class="bi bi-building me-1 text-primary"></i><?= htmlspecialchars($ev['tenant_name'] ?? 'Sekolah Aktif') ?>
-                                </span>
-                            </td>
-                            <td><strong><?= htmlspecialchars($ev['nama_event'], ENT_QUOTES, 'UTF-8') ?></strong></td>
-                            <td><span class="badge bg-warning-subtle text-dark"><?= htmlspecialchars($ev['bidang'] ?? '-', ENT_QUOTES, 'UTF-8') ?></span></td>
-                            <td><?= htmlspecialchars($ev['nama_siswa'] ?? '-', ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= htmlspecialchars($ev['judul_buku'] ?? '-', ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= htmlspecialchars($ev['tanggal_kembali_rencana'] ?? '-', ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><span class="badge bg-success">Aktif / Berjalan</span></td>
-                            <td class="text-center">
-                                <a href="<?= $this->getBaseUrl() ?>/perpustakaan/cetak-laporan-peminjaman" class="btn btn-outline-primary btn-sm rounded-2">
-                                    <i class="bi bi-file-earmark-text me-1"></i> Cetak Berita Acara
-                                </a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
+                    <tr v-for="(ev, idx) in eventList" :key="ev.id">
+                        <td>{{ idx + 1 }}</td>
+                        <td>
+                            <span class="badge bg-light text-dark border">
+                                <i class="bi bi-building me-1 text-primary"></i>{{ ev.tenant_name || 'Sekolah Aktif' }}
+                            </span>
+                        </td>
+                        <td><strong>{{ ev.nama_event }}</strong></td>
+                        <td><span class="badge bg-warning-subtle text-dark">{{ ev.bidang || '-' }}</span></td>
+                        <td>{{ ev.nama_siswa || '-' }}</td>
+                        <td>{{ ev.judul_buku || '-' }}</td>
+                        <td>{{ ev.tanggal_kembali_rencana || '-' }}</td>
+                        <td><span class="badge bg-success">Aktif / Berjalan</span></td>
+                        <td class="text-center">
+                            <a href="<?= $this->getBaseUrl() ?>/perpustakaan/cetak-laporan-peminjaman" class="btn btn-outline-primary btn-sm rounded-2">
+                                <i class="bi bi-file-earmark-text me-1"></i> Cetak Berita Acara
+                            </a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
@@ -80,21 +86,8 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form action="<?= $this->getBaseUrl() ?>/perpustakaan/event" method="POST" data-turbo="false">
-                <input type="hidden" name="tenant_id" value="<?= htmlspecialchars($data['active_tenant_id'] ?? '') ?>">
                 <div class="modal-body p-4">
                     <div class="row g-3">
-                        <?php if ($data['is_super_admin'] ?? false): ?>
-                            <div class="col-12">
-                                <label class="form-label fw-semibold">Target Sekolah / Tenant <span class="text-danger">*</span></label>
-                                <select name="tenant_id" class="form-select rounded-3 bg-light border-warning" required>
-                                    <?php foreach ($data['tenants'] as $t): ?>
-                                        <option value="<?= htmlspecialchars($t['id']) ?>" <?= ($t['id'] === ($data['active_tenant_id'] ?? '')) ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars($t['nama_sekolah']) ?> (<?= htmlspecialchars($t['npsn']) ?>)
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        <?php endif; ?>
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-semibold">Nama Event / Olimpiade <span class="text-danger">*</span></label>
                             <input type="text" name="nama_event" class="form-control rounded-3" placeholder="Contoh: OSN Fisika Tingkat Provinsi" required>
@@ -113,3 +106,41 @@
         </div>
     </div>
 </div>
+
+<script>
+(() => {
+    const { createApp, ref, onMounted } = Vue;
+    const baseUrl = '<?= $this->getBaseUrl() ?>';
+
+    const appConfig = {
+        setup() {
+            const eventList = ref([]);
+            const loading = ref(true);
+
+            const fetchData = async () => {
+                loading.value = true;
+                try {
+                    const res = await axios.get(`${baseUrl}/api/v1/perpustakaan/event-osn`);
+                    if (res.data && res.data.success) {
+                        eventList.value = res.data.data || [];
+                    }
+                } catch (err) {
+                    console.error('Gagal memuat data event OSN:', err);
+                } finally {
+                    loading.value = false;
+                }
+            };
+
+            onMounted(fetchData);
+
+            return { eventList, loading };
+        }
+    };
+
+    if (window.VueAppRegistry) {
+        window.VueAppRegistry.register('#eventOSNApp', appConfig);
+    } else {
+        document.addEventListener('DOMContentLoaded', () => createApp(appConfig).mount('#eventOSNApp'));
+    }
+})();
+</script>

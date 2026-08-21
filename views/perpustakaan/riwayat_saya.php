@@ -3,7 +3,6 @@
  * View: Riwayat Peminjaman Pustaka Siswa & Guru (Riwayat Saya)
  * SINTA SaaS Platform — Modern Vue 3 Architecture & Dynamic PostgreSQL Multi-Schema
  */
-$sirkulasiListJson = json_encode($data['sirkulasi_list'] ?? [], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 ?>
 <div id="riwayatSayaApp" v-cloak class="container-fluid px-0">
     <!-- ═══════════════════════════════════════════════════════════════════════

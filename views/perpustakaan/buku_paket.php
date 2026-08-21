@@ -1,6 +1,7 @@
 <?php
 /**
  * View: Peminjaman Buku Paket Pelajaran per Kelas / Semester
+ * Zero Data Leakage: Data dimuat async via Axios — tidak ada data mentah di View Source.
  */
 ?>
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-2 pb-2 mb-4 border-bottom">
@@ -28,55 +29,59 @@
     </div>
 </div>
 
-<!-- Data Table -->
-<div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>No</th>
-                    <th>Sekolah / Tenant</th>
-                    <th>Nama Paket</th>
-                    <th>Kelas / Tingkat</th>
-                    <th>Tahun Ajaran</th>
-                    <th>Total Judul</th>
-                    <th>Siswa Penerima</th>
-                    <th>Status Pengembalian</th>
-                    <th class="text-center">Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($data['paket_list'])): ?>
+<!-- Data Table — Vue 3 Async Render (Zero Data Leakage) -->
+<div id="bukuPaketApp" v-cloak>
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+        <!-- Loading Skeleton -->
+        <div v-if="loading" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="text-muted mt-2 mb-0">Memuat data buku paket secara asinkron...</p>
+        </div>
+
+        <!-- Data Table -->
+        <div v-else class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
                     <tr>
+                        <th>No</th>
+                        <th>Sekolah / Tenant</th>
+                        <th>Nama Paket</th>
+                        <th>Kelas / Tingkat</th>
+                        <th>Tahun Ajaran</th>
+                        <th>Total Judul</th>
+                        <th>Siswa Penerima</th>
+                        <th>Status Pengembalian</th>
+                        <th class="text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-if="paketList.length === 0">
                         <td colspan="9" class="text-center text-muted py-4">
                             <i class="bi bi-box-seam fs-3 d-block mb-2"></i> Belum ada rekaman distribusi buku paket pelajaran. Klik <strong>Distribusi Paket Baru</strong> untuk memulai.
                         </td>
                     </tr>
-                <?php else: ?>
-                    <?php foreach ($data['paket_list'] as $idx => $p): ?>
-                        <tr>
-                            <td><?= $idx + 1 ?></td>
-                            <td>
-                                <span class="badge bg-light text-dark border">
-                                    <i class="bi bi-building me-1 text-primary"></i><?= htmlspecialchars($p['tenant_name'] ?? 'Sekolah Aktif') ?>
-                                </span>
-                            </td>
-                            <td><strong><?= htmlspecialchars($p['nama_paket'], ENT_QUOTES, 'UTF-8') ?></strong></td>
-                            <td><span class="badge bg-primary-subtle text-primary"><?= htmlspecialchars($p['kelas'] ?? '-', ENT_QUOTES, 'UTF-8') ?></span></td>
-                            <td><?= htmlspecialchars($p['tahun_ajaran'] ?? '-', ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= (int)($p['total_buku'] ?? 0) ?> Judul</td>
-                            <td><?= (int)($p['total_siswa'] ?? 0) ?> Siswa</td>
-                            <td><span class="badge bg-success">Berjalan (Semester 1)</span></td>
-                            <td class="text-center">
-                                <a href="<?= $this->getBaseUrl() ?>/perpustakaan/cetak-laporan-peminjaman" class="btn btn-outline-primary btn-sm rounded-2 me-1" title="Cetak Laporan Peminjaman Per Siswa">
-                                    <i class="bi bi-printer me-1"></i> Cetak Laporan
-                                </a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
+                    <tr v-for="(p, idx) in paketList" :key="p.id">
+                        <td>{{ idx + 1 }}</td>
+                        <td>
+                            <span class="badge bg-light text-dark border">
+                                <i class="bi bi-building me-1 text-primary"></i>{{ p.tenant_name || 'Sekolah Aktif' }}
+                            </span>
+                        </td>
+                        <td><strong>{{ p.nama_paket }}</strong></td>
+                        <td><span class="badge bg-primary-subtle text-primary">{{ p.kelas || '-' }}</span></td>
+                        <td>{{ p.tahun_ajaran || '-' }}</td>
+                        <td>{{ p.total_buku || 0 }} Judul</td>
+                        <td>{{ p.total_siswa || 0 }} Siswa</td>
+                        <td><span class="badge bg-success">Berjalan (Semester 1)</span></td>
+                        <td class="text-center">
+                            <a href="<?= $this->getBaseUrl() ?>/perpustakaan/cetak-laporan-peminjaman" class="btn btn-outline-primary btn-sm rounded-2 me-1" title="Cetak Laporan Peminjaman Per Siswa">
+                                <i class="bi bi-printer me-1"></i> Cetak Laporan
+                            </a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
@@ -89,21 +94,8 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form action="<?= $this->getBaseUrl() ?>/perpustakaan/buku-paket" method="POST" data-turbo="false">
-                <input type="hidden" name="tenant_id" value="<?= htmlspecialchars($data['active_tenant_id'] ?? '') ?>">
                 <div class="modal-body p-4">
                     <div class="row g-3">
-                        <?php if ($data['is_super_admin'] ?? false): ?>
-                            <div class="col-12">
-                                <label class="form-label fw-semibold">Target Sekolah / Tenant <span class="text-danger">*</span></label>
-                                <select name="tenant_id" class="form-select rounded-3 bg-light border-primary" required>
-                                    <?php foreach ($data['tenants'] as $t): ?>
-                                        <option value="<?= htmlspecialchars($t['id']) ?>" <?= ($t['id'] === ($data['active_tenant_id'] ?? '')) ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars($t['nama_sekolah']) ?> (<?= htmlspecialchars($t['npsn']) ?>)
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        <?php endif; ?>
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-semibold">Nama Paket Pelajaran <span class="text-danger">*</span></label>
                             <input type="text" name="nama_paket" class="form-control rounded-3" placeholder="Contoh: Paket Teks Kurikulum Merdeka Kelas X" required>
@@ -121,9 +113,47 @@
                 </div>
                 <div class="modal-footer bg-light rounded-bottom-4">
                     <button type="button" class="btn btn-secondary rounded-3 px-4" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary rounded-3 px-4"><i class="bi bi-check-circle me-1"></i> Simpan & Distribusikan</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4"><i class="bi bi-check-circle me-1"></i> Simpan &amp; Distribusikan</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+<script>
+(() => {
+    const { createApp, ref, onMounted } = Vue;
+    const baseUrl = '<?= $this->getBaseUrl() ?>';
+
+    const appConfig = {
+        setup() {
+            const paketList = ref([]);
+            const loading = ref(true);
+
+            const fetchData = async () => {
+                loading.value = true;
+                try {
+                    const res = await axios.get(`${baseUrl}/api/v1/perpustakaan/paket-buku`);
+                    if (res.data && res.data.success) {
+                        paketList.value = res.data.data || [];
+                    }
+                } catch (err) {
+                    console.error('Gagal memuat data buku paket:', err);
+                } finally {
+                    loading.value = false;
+                }
+            };
+
+            onMounted(fetchData);
+
+            return { paketList, loading };
+        }
+    };
+
+    if (window.VueAppRegistry) {
+        window.VueAppRegistry.register('#bukuPaketApp', appConfig);
+    } else {
+        document.addEventListener('DOMContentLoaded', () => createApp(appConfig).mount('#bukuPaketApp'));
+    }
+})();
+</script>

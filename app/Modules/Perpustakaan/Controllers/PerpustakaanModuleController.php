@@ -338,10 +338,11 @@ class PerpustakaanModuleController extends BaseController {
             $tenantId = $this->getResolvedTenantId();
             $search = $_GET['search'] ?? '';
             $kategori = $_GET['kategori'] ?? '';
+            $kelas = $_GET['kelas'] ?? '';
             $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 100;
             $offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
 
-            $filters = array_filter(['search' => $search, 'kategori' => $kategori]);
+            $filters = array_filter(['search' => $search, 'kategori' => $kategori, 'kelas' => $kelas]);
             $list = $this->model->getAnggotaList($tenantId, $filters, $limit, $offset);
             $total = $this->model->countAnggota($tenantId, $filters);
 
@@ -353,6 +354,55 @@ class PerpustakaanModuleController extends BaseController {
             ]);
         } catch (\Throwable $e) {
             $this->jsonResponse(false, ['list' => [], 'total' => 0, 'limit' => 100, 'offset' => 0], $e->getMessage(), 500);
+        }
+    }
+
+    public function apiFindMember(): void {
+        try {
+            $tenantId = $this->getResolvedTenantId();
+            $q = trim($_GET['q'] ?? ($_GET['identifier'] ?? ''));
+            if (empty($q)) {
+                $this->jsonResponse(false, null, 'Keyword pencarian kosong.', 400);
+                return;
+            }
+            $member = $this->model->findMemberByIdentifier($tenantId, $q);
+            if ($member) {
+                $this->jsonResponse(true, $member, 'Anggota ditemukan.');
+            } else {
+                $this->jsonResponse(false, null, 'Anggota tidak ditemukan.', 404);
+            }
+        } catch (\Throwable $e) {
+            $this->jsonResponse(false, null, $e->getMessage(), 500);
+        }
+    }
+
+    public function apiCekBebasPustaka(): void {
+        try {
+            $tenantId = $this->getResolvedTenantId();
+            $identifier = trim($_GET['identifier'] ?? ($_GET['q'] ?? ''));
+            if (empty($identifier)) {
+                $this->jsonResponse(false, null, 'Harap masukkan NISN, NIP, atau Nomor Anggota.', 400);
+                return;
+            }
+
+            $res = $this->model->checkBebasPustaka($tenantId, $identifier);
+            if ($res['success']) {
+                $this->jsonResponse(true, $res, $res['is_clear'] ? 'Anggota memenuhi syarat Bebas Pustaka.' : 'Anggota masih memiliki tanggungan pinjaman/denda.');
+            } else {
+                $this->jsonResponse(false, null, $res['message'], 404);
+            }
+        } catch (\Throwable $e) {
+            $this->jsonResponse(false, null, $e->getMessage(), 500);
+        }
+    }
+
+    public function apiGetVisitorStats(): void {
+        try {
+            $tenantId = $this->getResolvedTenantId();
+            $stats = $this->model->getVisitorStats($tenantId);
+            $this->jsonResponse(true, $stats);
+        } catch (\Throwable $e) {
+            $this->jsonResponse(false, [], $e->getMessage(), 500);
         }
     }
 
@@ -390,9 +440,7 @@ class PerpustakaanModuleController extends BaseController {
     }
 
     public function apiSyncAnggota(): void {
-        $tenantId = $this->getResolvedTenantId();
-        $synced = $this->model->syncAnggotaFromSiswa($tenantId);
-        $this->jsonResponse(true, ['synced' => $synced], "Sinkronisasi berhasil: {$synced} siswa disinkronkan.");
+        $this->jsonResponse(true, ['synced' => 0], 'Data anggota telah tersinkronisasi otomatis secara dinamis (Auto-Federated).');
     }
 
     public function apiGetSirkulasi(): void {
@@ -698,4 +746,63 @@ class PerpustakaanModuleController extends BaseController {
     public function apiCronNotifReminder(): void {
         $this->jsonResponse(true, null, 'Reminder notifikasi dieksekusi.');
     }
+
+    // =========================================================================
+    // API: Denda, Event OSN, Opname — untuk Zero Data Leakage (async view)
+    // =========================================================================
+
+    public function apiGetDenda(): void {
+        try {
+            SessionManager::requireLogin();
+            $tenantId = $this->getResolvedTenantId();
+            $list = $this->model->getDendaList($tenantId);
+            $this->jsonResponse(true, $list, 'Data denda berhasil dimuat.');
+        } catch (\Throwable $e) {
+            $this->jsonResponse(false, [], $e->getMessage(), 500);
+        }
+    }
+
+    public function apiBayarDenda(): void {
+        try {
+            SessionManager::requireLogin();
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                $this->jsonResponse(false, null, 'Metode tidak diizinkan.', 405);
+                return;
+            }
+            $tenantId = $this->getResolvedTenantId();
+            $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+            $dendaId = trim($input['denda_id'] ?? '');
+            if (empty($dendaId)) {
+                $this->jsonResponse(false, null, 'ID denda tidak boleh kosong.', 400);
+                return;
+            }
+            $ok = $this->model->bayarDenda($tenantId, $dendaId);
+            $this->jsonResponse($ok, null, $ok ? 'Pembayaran denda berhasil dicatat.' : 'Gagal memproses pembayaran.', $ok ? 200 : 400);
+        } catch (\Throwable $e) {
+            $this->jsonResponse(false, null, $e->getMessage(), 500);
+        }
+    }
+
+    public function apiGetEventOSN(): void {
+        try {
+            SessionManager::requireLogin();
+            $tenantId = $this->getResolvedTenantId();
+            $list = $this->model->getEventOSNList($tenantId);
+            $this->jsonResponse(true, $list, 'Data event OSN berhasil dimuat.');
+        } catch (\Throwable $e) {
+            $this->jsonResponse(false, [], $e->getMessage(), 500);
+        }
+    }
+
+    public function apiGetOpname(): void {
+        try {
+            SessionManager::requireLogin();
+            $tenantId = $this->getResolvedTenantId();
+            $list = $this->model->getOpnameList($tenantId);
+            $this->jsonResponse(true, $list, 'Data stock opname berhasil dimuat.');
+        } catch (\Throwable $e) {
+            $this->jsonResponse(false, [], $e->getMessage(), 500);
+        }
+    }
 }
+
