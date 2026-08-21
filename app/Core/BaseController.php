@@ -49,7 +49,7 @@ class BaseController {
 
         // Smart Fallback View Resolver: jika view tidak ditemukan di root views/, cari di subfolder modul
         if (!file_exists($contentView)) {
-            $possibleFolders = ['sistem', 'core', 'siswa', 'rapor', 'kesiswaan', 'bk', 'alumni', 'pdss', 'perpustakaan', 'keuangan', 'utility'];
+            $possibleFolders = ['sistem', 'core', 'humas', 'siswa', 'rapor', 'kesiswaan', 'bk', 'alumni', 'pdss', 'perpustakaan', 'keuangan', 'utility'];
             foreach ($possibleFolders as $folder) {
                 $fallbackPath = __DIR__ . '/../../views/' . $folder . '/' . $view . '.php';
                 if (file_exists($fallbackPath)) {

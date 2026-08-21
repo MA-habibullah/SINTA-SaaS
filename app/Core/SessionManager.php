@@ -9,21 +9,44 @@ class SessionManager {
      */
     public static function start(): void {
         if (session_status() === PHP_SESSION_NONE) {
-            // Force PHP garbage collection to 1 hour (3600 seconds)
-            ini_set('session.gc_maxlifetime', '3600');
-            
-            // Secure by Design cookie configuration
-            $cookieParams = [
-                'lifetime' => 0,                     // Session expires when browser closes
-                'path' => '/',
-                'domain' => '',                      // Defaults to current host
-                'secure' => isset($_SERVER['HTTPS']), // True only if HTTPS is used
-                'httponly' => true,                  // Prevent XSS access to cookie
-                'samesite' => 'Lax'                  // Protect against CSRF
-            ];
-            
-            session_set_cookie_params($cookieParams);
-            session_start();
+            // Set dedicated and writable session save path in storage/sessions
+            $storageDir = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'storage';
+            $sessionDir = $storageDir . DIRECTORY_SEPARATOR . 'sessions';
+            if (!is_dir($sessionDir)) {
+                @mkdir($sessionDir, 0777, true);
+            }
+            if (is_dir($sessionDir) && is_writable($sessionDir) && !headers_sent()) {
+                @session_save_path($sessionDir);
+            }
+
+            if (!headers_sent()) {
+                // Force PHP garbage collection to 1 hour (3600 seconds)
+                @ini_set('session.gc_maxlifetime', '3600');
+                
+                // Secure by Design cookie configuration
+                $cookieParams = [
+                    'lifetime' => 0,                     // Session expires when browser closes
+                    'path' => '/',
+                    'domain' => '',                      // Defaults to current host
+                    'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off', // True only if HTTPS is used
+                    'httponly' => true,                  // Prevent XSS access to cookie
+                    'samesite' => 'Lax'                  // Protect against CSRF
+                ];
+                
+                @session_set_cookie_params($cookieParams);
+            }
+
+            // Handle invalid session ID or permission locked session file gracefully
+            if (!@session_start()) {
+                if (isset($_COOKIE[session_name()]) && !headers_sent()) {
+                    unset($_COOKIE[session_name()]);
+                    @setcookie(session_name(), '', time() - 3600, '/');
+                }
+                if (!headers_sent()) {
+                    @session_id(bin2hex(random_bytes(16)));
+                }
+                @session_start();
+            }
         }
     }
 
@@ -34,7 +57,9 @@ class SessionManager {
         self::start();
         
         // Secure by Design: Hancurkan session lama dan buat ID baru untuk cegah session hijacking/fixation
-        session_regenerate_id(true);
+        if (session_status() === PHP_SESSION_ACTIVE && !headers_sent()) {
+            @session_regenerate_id(true);
+        }
 
         $_SESSION['logged_in'] = true;
         $_SESSION['user_id'] = $user['id'];
@@ -76,9 +101,9 @@ class SessionManager {
         $_SESSION = [];
 
         // Delete the session cookie
-        if (ini_get("session.use_cookies")) {
+        if (ini_get("session.use_cookies") && !headers_sent()) {
             $params = session_get_cookie_params();
-            setcookie(
+            @setcookie(
                 session_name(), 
                 '', 
                 time() - 42000,
@@ -90,7 +115,9 @@ class SessionManager {
         }
 
         // Destroy session file on server
-        session_destroy();
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            @session_destroy();
+        }
     }
 
     /**

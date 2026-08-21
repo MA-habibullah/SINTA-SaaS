@@ -183,14 +183,9 @@ try {
             $controller->index();
             break;
 
-case '/perpustakaan':
+        case '/perpustakaan':
             $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
             $controller->indexView();
-            break;
-
-        case '/api/v1/perpustakaan/katalog':
-            $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
-            $controller->getKatalogApi();
             break;
 
         case '/api/v1/sarpras/inventaris':
@@ -244,6 +239,60 @@ case '/perpustakaan':
             $controller->index();
             break;
             
+        case '/api/v1/pengumuman/options':
+            $controller = new App\Modules\Core\Controllers\PengumumanModuleController();
+            $controller->apiGetOptions();
+            break;
+            
+        case '/api/v1/pengumuman/summary':
+            $controller = new App\Modules\Core\Controllers\PengumumanModuleController();
+            $controller->apiGetSummary();
+            break;
+            
+        case '/api/v1/pengumuman':
+        case '/api/v1/pengumuman/list':
+            $controller = new App\Modules\Core\Controllers\PengumumanModuleController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSavePengumuman();
+            } else {
+                $controller->apiGetPengumuman();
+            }
+            break;
+            
+        case '/api/v1/pengumuman/save':
+            $controller = new App\Modules\Core\Controllers\PengumumanModuleController();
+            $controller->apiSavePengumuman();
+            break;
+            
+        case '/api/v1/pengumuman/toggle-status':
+            $controller = new App\Modules\Core\Controllers\PengumumanModuleController();
+            $controller->apiToggleStatus();
+            break;
+            
+        case '/api/v1/pengumuman/delete':
+            $controller = new App\Modules\Core\Controllers\PengumumanModuleController();
+            $controller->apiDeletePengumuman();
+            break;
+            
+        case '/api/v1/pengumuman/kategori':
+            $controller = new App\Modules\Core\Controllers\PengumumanModuleController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveKategori();
+            } else {
+                $controller->apiGetKategori();
+            }
+            break;
+            
+        case '/api/v1/pengumuman/kategori/save':
+            $controller = new App\Modules\Core\Controllers\PengumumanModuleController();
+            $controller->apiSaveKategori();
+            break;
+            
+        case '/api/v1/pengumuman/kategori/delete':
+            $controller = new App\Modules\Core\Controllers\PengumumanModuleController();
+            $controller->apiDeleteKategori();
+            break;
+            
         case '/informasi/pengumuman/kategori/store':
             $controller = new App\Modules\Core\Controllers\PengumumanModuleController();
             $controller->storeKategori();
@@ -277,6 +326,61 @@ case '/perpustakaan':
         case '/informasi/pengumuman/delete':
             $controller = new App\Modules\Core\Controllers\PengumumanModuleController();
             $controller->delete();
+            break;
+            
+        case '/informasi/agenda':
+            $controller = new App\Modules\Core\Controllers\AgendaModuleController();
+            $controller->index();
+            break;
+            
+        case '/api/v1/agenda/options':
+            $controller = new App\Modules\Core\Controllers\AgendaModuleController();
+            $controller->apiGetOptions();
+            break;
+            
+        case '/api/v1/agenda/summary':
+            $controller = new App\Modules\Core\Controllers\AgendaModuleController();
+            $controller->apiGetSummary();
+            break;
+            
+        case '/api/v1/agenda':
+        case '/api/v1/agenda/list':
+            $controller = new App\Modules\Core\Controllers\AgendaModuleController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveAgenda();
+            } else {
+                $controller->apiGetAgenda();
+            }
+            break;
+            
+        case '/api/v1/agenda/save':
+            $controller = new App\Modules\Core\Controllers\AgendaModuleController();
+            $controller->apiSaveAgenda();
+            break;
+            
+        case '/api/v1/agenda/toggle-status':
+            $controller = new App\Modules\Core\Controllers\AgendaModuleController();
+            $controller->apiToggleStatus();
+            break;
+            
+        case '/api/v1/agenda/delete':
+            $controller = new App\Modules\Core\Controllers\AgendaModuleController();
+            $controller->apiDeleteAgenda();
+            break;
+            
+        case '/informasi/agenda/store':
+            $controller = new App\Modules\Core\Controllers\AgendaModuleController();
+            $controller->apiSaveAgenda();
+            break;
+            
+        case '/informasi/agenda/update':
+            $controller = new App\Modules\Core\Controllers\AgendaModuleController();
+            $controller->apiSaveAgenda();
+            break;
+            
+        case '/informasi/agenda/delete':
+            $controller = new App\Modules\Core\Controllers\AgendaModuleController();
+            $controller->apiDeleteAgenda();
             break;
             
         case '/pembinaan':
@@ -443,9 +547,35 @@ case '/perpustakaan':
             $controller->apiCekBebasPustaka();
             break;
 
+        case '/api/v1/perpustakaan/anggota':
+            $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveAnggota();
+            } elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+                $controller->apiDeleteAnggota();
+            } else {
+                $controller->apiGetAnggota();
+            }
+            break;
+
+        case '/api/v1/perpustakaan/anggota/simpan':
+            $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
+            $controller->apiSaveAnggota();
+            break;
+
+        case '/api/v1/perpustakaan/anggota/hapus':
+            $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
+            $controller->apiDeleteAnggota();
+            break;
+
         case '/api/v1/perpustakaan/anggota/sync':
             $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
             $controller->apiSyncAnggota();
+            break;
+
+        case '/api/v1/perpustakaan/sirkulasi':
+            $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
+            $controller->apiGetSirkulasi();
             break;
 
         case '/api/v1/perpustakaan/summary':
@@ -457,14 +587,25 @@ case '/perpustakaan':
             $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $controller->apiSaveRak();
+            } elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+                $controller->apiDeleteRak();
             } else {
                 $controller->apiGetRak();
             }
             break;
 
+        case '/api/v1/perpustakaan/rak/hapus':
+            $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
+            $controller->apiDeleteRak();
+            break;
+
         case '/api/v1/perpustakaan/katalog':
             $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
-            $controller->apiGetKatalog();
+            if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+                $controller->apiDeleteBibliografi();
+            } else {
+                $controller->apiGetKatalog();
+            }
             break;
 
         case '/api/v1/perpustakaan/katalog/simpan':
@@ -472,14 +613,35 @@ case '/perpustakaan':
             $controller->apiSaveBibliografi();
             break;
 
+        case '/api/v1/perpustakaan/katalog/hapus':
+            $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
+            $controller->apiDeleteBibliografi();
+            break;
+
         case '/api/v1/perpustakaan/katalog/traceability':
             $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
             $controller->apiGetBibliografiTraceability();
             break;
 
+        case '/api/v1/perpustakaan/eksemplar':
+            $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveEksemplar();
+            } elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+                $controller->apiDeleteEksemplar();
+            } else {
+                $controller->apiGetEksemplarList();
+            }
+            break;
+
         case '/api/v1/perpustakaan/eksemplar/simpan':
             $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
             $controller->apiSaveEksemplar();
+            break;
+
+        case '/api/v1/perpustakaan/eksemplar/hapus':
+            $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
+            $controller->apiDeleteEksemplar();
             break;
 
         case '/api/v1/perpustakaan/pengaturan':
@@ -509,6 +671,16 @@ case '/perpustakaan':
             }
             break;
 
+        case '/api/v1/perpustakaan/usulan/hapus':
+            $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
+            $controller->apiDeleteUsulan();
+            break;
+
+        case '/api/v1/perpustakaan/usulan/status':
+            $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
+            $controller->apiUpdateStatusUsulan();
+            break;
+
         case '/api/v1/perpustakaan/serial':
             $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -518,6 +690,11 @@ case '/perpustakaan':
             } else {
                 $controller->apiGetSerial();
             }
+            break;
+
+        case '/api/v1/perpustakaan/serial/hapus':
+            $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
+            $controller->apiDeleteSerial();
             break;
 
         case '/api/v1/perpustakaan/kompetensi':
@@ -534,6 +711,30 @@ case '/perpustakaan':
         case '/api/v1/perpustakaan/visitor-logs':
             $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
             $controller->apiGetVisitorLogs();
+            break;
+
+        case '/api/v1/perpustakaan/visitor-logs/simpan':
+            $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
+            $controller->apiSaveVisitorLog();
+            break;
+
+        case '/api/v1/perpustakaan/paket-buku/referensi':
+            $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
+            $controller->apiGetMasterReferensiPaket();
+            break;
+
+        case '/api/v1/perpustakaan/paket-buku':
+            $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSimpanPaketBuku();
+            } else {
+                $controller->apiGetPaketBukuList();
+            }
+            break;
+
+        case '/api/v1/perpustakaan/paket-buku/simpan':
+            $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
+            $controller->apiSimpanPaketBuku();
             break;
 
         case '/api/v1/perpustakaan/ddc-categories':
@@ -596,6 +797,128 @@ case '/perpustakaan':
             $controller->apiCronNotifReminder();
             break;
 
+        // ================================================================
+        // MODUL KESISWAAN & EKSTRAKURIKULER
+        // ================================================================
+        case '/kesiswaan/ekskul':
+            $controller = new App\Modules\Kesiswaan\Controllers\KesiswaanModuleController();
+            $controller->ekskulIndex();
+            break;
+
+        case '/api/v1/kesiswaan/ekskul/options':
+            $controller = new App\Modules\Kesiswaan\Controllers\KesiswaanModuleController();
+            $controller->apiGetMasterOptions();
+            break;
+
+        case '/api/v1/kesiswaan/ekskul/summary':
+            $controller = new App\Modules\Kesiswaan\Controllers\KesiswaanModuleController();
+            $controller->apiGetSummary();
+            break;
+
+        case '/api/v1/kesiswaan/ekskul/master':
+            $controller = new App\Modules\Kesiswaan\Controllers\KesiswaanModuleController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveMasterEkskul();
+            } else {
+                $controller->apiGetMasterEkskul();
+            }
+            break;
+
+        case '/api/v1/kesiswaan/ekskul/master/delete':
+            $controller = new App\Modules\Kesiswaan\Controllers\KesiswaanModuleController();
+            $controller->apiDeleteMasterEkskul();
+            break;
+
+        case '/api/v1/kesiswaan/ekskul/master/toggle-status':
+            $controller = new App\Modules\Kesiswaan\Controllers\KesiswaanModuleController();
+            $controller->apiToggleMasterEkskul();
+            break;
+
+        case '/api/v1/kesiswaan/ekskul/pembina':
+            $controller = new App\Modules\Kesiswaan\Controllers\KesiswaanModuleController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSavePembina();
+            } else {
+                $controller->apiGetPembina();
+            }
+            break;
+
+        case '/api/v1/kesiswaan/ekskul/pembina/delete':
+            $controller = new App\Modules\Kesiswaan\Controllers\KesiswaanModuleController();
+            $controller->apiDeletePembina();
+            break;
+
+        case '/api/v1/kesiswaan/ekskul/pembina/toggle-status':
+            $controller = new App\Modules\Kesiswaan\Controllers\KesiswaanModuleController();
+            $controller->apiTogglePembina();
+            break;
+
+        case '/api/v1/kesiswaan/ekskul/anggota':
+            $controller = new App\Modules\Kesiswaan\Controllers\KesiswaanModuleController();
+            $controller->apiGetAnggota();
+            break;
+
+        case '/api/v1/kesiswaan/ekskul/anggota/search-siswa':
+            $controller = new App\Modules\Kesiswaan\Controllers\KesiswaanModuleController();
+            $controller->apiSearchSiswa();
+            break;
+
+        case '/api/v1/kesiswaan/ekskul/anggota/tambah':
+            $controller = new App\Modules\Kesiswaan\Controllers\KesiswaanModuleController();
+            $controller->apiAddAnggota();
+            break;
+
+        case '/api/v1/kesiswaan/ekskul/anggota/hapus':
+            $controller = new App\Modules\Kesiswaan\Controllers\KesiswaanModuleController();
+            $controller->apiRemoveAnggota();
+            break;
+
+        case '/api/v1/kesiswaan/ekskul/anggota/export':
+            $controller = new App\Modules\Kesiswaan\Controllers\KesiswaanModuleController();
+            $controller->apiExportAnggota();
+            break;
+
+        case '/api/v1/kesiswaan/ekskul/jurnal':
+            $controller = new App\Modules\Kesiswaan\Controllers\KesiswaanModuleController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveJurnal();
+            } else {
+                $controller->apiGetJurnal();
+            }
+            break;
+
+        case '/api/v1/kesiswaan/ekskul/jurnal/delete':
+            $controller = new App\Modules\Kesiswaan\Controllers\KesiswaanModuleController();
+            $controller->apiDeleteJurnal();
+            break;
+
+        case '/api/v1/kesiswaan/ekskul/nilai':
+            $controller = new App\Modules\Kesiswaan\Controllers\KesiswaanModuleController();
+            $controller->apiGetNilai();
+            break;
+
+        case '/api/v1/kesiswaan/ekskul/nilai/simpan':
+            $controller = new App\Modules\Kesiswaan\Controllers\KesiswaanModuleController();
+            $controller->apiSaveNilai();
+            break;
+
+        case '/api/v1/kesiswaan/ekskul/nilai/export':
+            $controller = new App\Modules\Kesiswaan\Controllers\KesiswaanModuleController();
+            $controller->apiExportNilai();
+            break;
+
+        case '/api/v1/kesiswaan/ekskul/nilai/import':
+            $controller = new App\Modules\Kesiswaan\Controllers\KesiswaanModuleController();
+            $controller->apiImportNilai();
+            break;
+
+        case '/api/v1/kesiswaan/ekskul/lock':
+        case '/api/v1/kesiswaan/ekskul/kunci':
+            $controller = new App\Modules\Kesiswaan\Controllers\KesiswaanModuleController();
+            $controller->apiToggleLock();
+            break;
+
+        // Legacy Aliases
         case '/api/v1/ekskul/tambah':
             $controller = new App\Modules\Kesiswaan\Controllers\KesiswaanModuleController();
             $controller->store();
@@ -1876,6 +2199,11 @@ case '/api/v1/keuangan/dashboard-metrics':
         case '/api/v1/activity-logs/filters':
             $controller = new App\Modules\Sistem\Controllers\ActivityLogModuleController();
             $controller->fetchFiltersApi();
+            break;
+
+        case '/api/v1/activity-logs/stats':
+            $controller = new App\Modules\Sistem\Controllers\ActivityLogModuleController();
+            $controller->fetchStatsApi();
             break;
 
         case '/api/v1/activity-logs':

@@ -14,6 +14,7 @@
 # =========================================================================
 /storage/app/public/*
 /storage/app/rate_limit/*
+/storage/sessions/*
 
 # PENGECUALIAN: Tetap lacak berkas .htaccess untuk keamanan direktori web server
 !/storage/app/public/.htaccess

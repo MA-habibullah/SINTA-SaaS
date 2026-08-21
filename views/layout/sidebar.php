@@ -224,11 +224,11 @@ if (!empty($roles)) {
         $unreadBadgeCount = 0;
         if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
             if (($_SESSION['role_name'] ?? '') === 'super_admin') {
-                $stmtUnread = $db->prepare("SELECT COUNT(*) FROM sistem.tickets WHERE admin_unread = 1");
+                $stmtUnread = $db->prepare("SELECT COUNT(*) FROM sistem.tickets WHERE is_active = TRUE");
                 $stmtUnread->execute();
             } else {
-                $stmtUnread = $db->prepare("SELECT COUNT(*) FROM sistem.tickets WHERE user_unread = 1 AND tenant_id = ? AND user_id = ?");
-                $stmtUnread->execute([$_SESSION['tenant_id'] ?? null, $_SESSION['user_id'] ?? null]);
+                $stmtUnread = $db->prepare("SELECT COUNT(*) FROM sistem.tickets WHERE is_active = TRUE AND tenant_id = ?");
+                $stmtUnread->execute([$_SESSION['tenant_id'] ?? null]);
             }
             $unreadBadgeCount = (int)$stmtUnread->fetchColumn();
         }

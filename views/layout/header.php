@@ -13,7 +13,7 @@ $npsnSekolah = 'PLATFORM';
 if ($tenantId) {
     try {
         $db = Database::getConnection();
-        $stmt = $db->prepare("SELECT nama_sekolah, npsn FROM core.tenants WHERE id = :id AND deleted_at IS NULL LIMIT 1");
+        $stmt = $db->prepare("SELECT nama_sekolah, npsn FROM core.tenants WHERE id = :id LIMIT 1");
         $stmt->execute(['id' => $tenantId]);
         $row = $stmt->fetch();
         if ($row) {
@@ -53,7 +53,7 @@ if ($tenantId) {
         <!-- Global Search Bar -->
         <div class="search-bar-container d-none d-xl-block me-2 position-relative" style="width: 250px;">
             <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted fs-7"></i>
-            <input type="text" class="form-control form-control-sm bg-light border-0 rounded-pill ps-5 py-2 shadow-sm transition" id="globalSearchBar" placeholder="Cari data pokok..." style="font-size:0.8rem;">
+            <input type="text" class="form-control form-control-sm bg-light border-0 rounded-pill ps-5 py-2 shadow-sm transition" id="globalSearchBar" name="global_search" placeholder="Cari data pokok..." aria-label="Cari data pokok..." style="font-size:0.8rem;">
         </div>
     </div>
 

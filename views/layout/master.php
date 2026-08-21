@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta id="viewport-meta" name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="turbo-cache-control" content="no-cache">
     <script data-turbo-track="reload">
         (function() {
             const pref = localStorage.getItem('sinta_viewport_preference');
@@ -271,17 +272,17 @@
                     if (el) {
                         const active = window.vueApps[selector];
                         
-                        // Singleton: jika sudah di-mount pada DOM node yang sama, abaikan!
-                        if (active && document.body.contains(active.el) && active.el === el) {
+                        // Singleton: jika sudah di-mount pada DOM node yang sama dan masih di dalam body, abaikan
+                        if (active && document.body.contains(active.el) && active.el === el && el.__vue_app__) {
                             return;
                         }
 
-                        // Jika ada instansi aktif pada DOM node berbeda (e.g. sisa halaman lama), bersihkan dulu
+                        // Jika ada instansi aktif pada DOM node berbeda (e.g. sisa halaman lama/cache), bersihkan dulu
                         if (active) {
                             try {
                                 active.app.unmount();
                             } catch (err) {
-                                console.error(`[Vue Registry] Failed to unmount old instance for: ${selector}`, err);
+                                console.warn(`[Vue Registry] Cleaned up instance for: ${selector}`);
                             }
                             delete window.vueApps[selector];
                         }
@@ -322,12 +323,12 @@
                         try {
                             active.app.unmount();
                         } catch (err) {
-                            console.error(`[Vue Registry] Failed to unmount: ${selector}`, err);
+                            console.warn(`[Vue Registry] Unmounted: ${selector}`);
                         }
                         delete window.vueApps[selector];
                     }
                 });
-                this.registry = [];
+                // Note: Keep this.registry intact so cached/back-navigated pages can re-hydrate seamlessly!
             },
             cleanupOrphanedApps() {
                 Object.keys(window.vueApps).forEach(selector => {
@@ -339,7 +340,7 @@
                             try {
                                 active.app.unmount();
                             } catch (err) {
-                                console.error(`[Vue Registry] Failed to unmount orphaned Vue app on: ${selector}`, err);
+                                console.warn(`[Vue Registry] Unmounted orphaned app: ${selector}`);
                             }
                             delete window.vueApps[selector];
                         }
@@ -393,10 +394,22 @@
             }
         }
 
-        // Integrasi dengan Lifecycle Turbo Drive
+        // Integrasi dengan Lifecycle Turbo Drive & Browser History Navigation (Back / Forward)
         document.addEventListener('turbo:load', function() {
             window.VueAppRegistry.mountAll();
             initSidebarToggle();
+        });
+
+        document.addEventListener('turbo:render', function() {
+            window.VueAppRegistry.mountAll();
+            initSidebarToggle();
+        });
+
+        window.addEventListener('popstate', function() {
+            setTimeout(function() {
+                window.VueAppRegistry.mountAll();
+                initSidebarToggle();
+            }, 50);
         });
 
         document.addEventListener('turbo:before-cache', function() {
@@ -496,6 +509,10 @@
     </script>
     
     <style>
+        [v-cloak] {
+            display: none !important;
+        }
+
         :root {
             --primary-blue: #2563eb;       /* Biru Modern */
             --primary-hover: #1d4ed8;      /* Biru Gelap Hover */

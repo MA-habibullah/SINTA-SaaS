@@ -6,13 +6,30 @@ use App\Config\Database;
 use PDO;
 
 class ActivityLogger {
+
+    /**
+     * Daftar kunci sensitif yang wajib disanitasi sebelum masuk audit trail
+     */
+    private static array $sensitiveKeys = [
+        'password',
+        'password_hash',
+        'kata_sandi',
+        'token',
+        'remember_token',
+        'secret',
+        'api_key',
+        'access_token',
+        'refresh_token',
+        'pin'
+    ];
+
     /**
      * Catat log audit trail aktivitas pengguna (INSERT, UPDATE, DELETE, LOGIN, LOGOUT, dsb.)
      * 
      * @param string $action Jenis aksi (INSERT, UPDATE, DELETE, LOGIN, LOGOUT, RESTORE, TOGGLE_STATUS, etc)
      * @param string $tableName Nama tabel / modul yang dimanipulasi
-     * @param string|array|null $oldData State data sebelum perubahan (atau Record ID / Detail)
-     * @param array|null $newData State data sesudah perubahan
+     * @param mixed $oldData State data sebelum perubahan (atau Record ID / Detail)
+     * @param mixed $newData State data sesudah perubahan
      * @param string|null $tenantId Tenant ID opsional (override)
      * @param string|null $userId User ID opsional (override)
      * @return bool
@@ -29,32 +46,49 @@ class ActivityLogger {
             @session_start();
         }
 
-        $effectiveUserId   = is_string($userId) ? $userId : ($_SESSION['user_id'] ?? null);
-        $effectiveUserRole = $_SESSION['role_name'] ?? 'system';
-        $effectiveTenantId = is_string($tenantId) ? $tenantId : ($_SESSION['tenant_id'] ?? null);
+        // Resolusi User ID
+        $effectiveUserId = is_string($userId) && !empty($userId) 
+            ? $userId 
+            : ($_SESSION['user_id'] ?? $_SESSION['user']['id'] ?? null);
 
+        // Resolusi User Role
+        $effectiveUserRole = $_SESSION['role_name'] ?? $_SESSION['user']['role'] ?? null;
+        if (!$effectiveUserRole && isset($_SESSION['roles']) && is_array($_SESSION['roles']) && !empty($_SESSION['roles'])) {
+            $effectiveUserRole = $_SESSION['roles'][0];
+        }
+        if (!$effectiveUserRole) {
+            $effectiveUserRole = 'system';
+        }
+
+        // Resolusi Tenant ID
+        $effectiveTenantId = is_string($tenantId) && !empty($tenantId) 
+            ? $tenantId 
+            : ($_SESSION['tenant_id'] ?? $_SESSION['user']['tenant_id'] ?? null);
+
+        if ($effectiveTenantId === '00000000-0000-0000-0000-000000000000' || $effectiveTenantId === 'global') {
+            $effectiveTenantId = null;
+        }
+
+        // IP Address
         $ipAddress = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
         if (strpos($ipAddress, ',') !== false) {
             $ipAddress = trim(explode(',', $ipAddress)[0]);
         }
         $ipAddress = filter_var($ipAddress, FILTER_VALIDATE_IP) ? $ipAddress : '127.0.0.1';
 
-        // Format payload old_data & new_data secara terstruktur
-        $oldPayload = is_array($oldData) ? $oldData : ($oldData !== null ? ['detail' => (string)$oldData] : null);
-        $newPayload = is_array($newData) ? $newData : ($newData !== null ? ['detail' => (string)$newData] : null);
+        // Sanitasi & format payload old_data & new_data
+        $oldPayload = self::sanitizePayload($oldData);
+        $newPayload = self::sanitizePayload($newData);
 
         try {
             $db = Database::getConnection();
 
+            // Verifikasi integritas relasi foreign key
             if ($effectiveTenantId) {
-                if ($effectiveTenantId === '00000000-0000-0000-0000-000000000000') {
+                $checkTenantStmt = $db->prepare("SELECT COUNT(*) FROM core.tenants WHERE id::text = ?");
+                $checkTenantStmt->execute([$effectiveTenantId]);
+                if ((int)$checkTenantStmt->fetchColumn() === 0) {
                     $effectiveTenantId = null;
-                } else {
-                    $checkTenantStmt = $db->prepare("SELECT COUNT(*) FROM core.tenants WHERE id::text = ?");
-                    $checkTenantStmt->execute([$effectiveTenantId]);
-                    if ((int)$checkTenantStmt->fetchColumn() === 0) {
-                        $effectiveTenantId = null;
-                    }
                 }
             }
 
@@ -77,9 +111,9 @@ class ActivityLogger {
             return $stmt->execute([
                 'tenant_id'  => $effectiveTenantId,
                 'user_id'    => $effectiveUserId,
-                'user_role'  => $effectiveUserRole,
-                'table_name' => $tableName,
-                'action'     => strtoupper($action),
+                'user_role'  => (string)$effectiveUserRole,
+                'table_name' => (string)$tableName,
+                'action'     => strtoupper(trim($action)),
                 'old_data'   => $oldPayload !== null ? json_encode($oldPayload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : null,
                 'new_data'   => $newPayload !== null ? json_encode($newPayload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : null,
                 'ip_address' => $ipAddress
@@ -97,10 +131,56 @@ class ActivityLogger {
         string $action, 
         string $tableName, 
         $oldData = null, 
-        ?array $newData = null,
+        $newData = null,
         ?string $tenantId = null,
         ?string $userId = null
     ): bool {
         return static::record($action, $tableName, $oldData, $newData, $tenantId, $userId);
+    }
+
+    /**
+     * Sanitasi data payload rekaman audit
+     */
+    private static function sanitizePayload($data): ?array {
+        if ($data === null) {
+            return null;
+        }
+
+        if (is_string($data)) {
+            $decoded = json_decode($data, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $data = $decoded;
+            } else {
+                return ['detail' => $data];
+            }
+        }
+
+        if (is_object($data)) {
+            $data = (array)$data;
+        }
+
+        if (!is_array($data)) {
+            return ['detail' => (string)$data];
+        }
+
+        return self::maskSensitiveRecursive($data);
+    }
+
+    /**
+     * Rekursif masking password dan kredensial rahasia
+     */
+    private static function maskSensitiveRecursive(array $arr): array {
+        $result = [];
+        foreach ($arr as $key => $val) {
+            $lowerKey = strtolower((string)$key);
+            if (in_array($lowerKey, self::$sensitiveKeys, true)) {
+                $result[$key] = '******** [DISAMARKAN_DEMI_KEAMANAN]';
+            } elseif (is_array($val)) {
+                $result[$key] = self::maskSensitiveRecursive($val);
+            } else {
+                $result[$key] = $val;
+            }
+        }
+        return $result;
     }
 }
