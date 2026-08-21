@@ -42,9 +42,7 @@
                         </select>
                         <select class="form-select form-select-sm border rounded-2" v-model="filterCategory" @change="fetchTickets" style="width: 160px;">
                             <option value="">Semua Kategori</option>
-                            <?php foreach ($categories as $cat): ?>
-                                <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['nama_kategori']) ?></option>
-                            <?php endforeach; ?>
+                            <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.nama_kategori }}</option>
                         </select>
                     </div>
                 </div>
@@ -290,6 +288,7 @@ window.VueAppRegistry.register('#bantuan-admin-app', {
             filterStatus: '',
             filterCategory: '',
             unreadCount: 0,
+            categories: [],
 
             // Canned responses
             cannedResponses: [],
@@ -311,6 +310,7 @@ window.VueAppRegistry.register('#bantuan-admin-app', {
         this.fetchTickets();
         this.fetchUnreadCount();
         this.fetchCannedResponses();
+        this.fetchCategories();
 
         // Polling unread count every 30 seconds
         this.pollInterval = setInterval(() => {
@@ -355,6 +355,15 @@ window.VueAppRegistry.register('#bantuan-admin-app', {
                 }
             })
             .catch(err => console.error(err));
+        },
+        fetchCategories() {
+            axios.get('<?= $this->getBaseUrl() ?>/api/v1/bantuan/categories')
+            .then(res => {
+                if (res.data.success) {
+                    this.categories = res.data.data || [];
+                }
+            })
+            .catch(err => console.error('Gagal memuat kategori:', err));
         },
         fetchCannedResponses() {
             axios.get('<?= $this->getBaseUrl() ?>/api/v1/bantuan/canned-responses')

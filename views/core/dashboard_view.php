@@ -699,7 +699,7 @@ $isAdminOrSuper = in_array('super_admin', $user_roles, true) || in_array('operat
                 activeTab: 'profil',
                 tabSearchQuery: '',
                 isLoadingStats: true,
-                userRole: <?= json_encode($stats['user_role'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+                userRole: '',
                 schoolInfo: {},
                 stats: {
                     user_nama: '',
@@ -1133,6 +1133,7 @@ $isAdminOrSuper = in_array('super_admin', $user_roles, true) || in_array('operat
                         this.recentChanges = response.data.recentChanges || [];
                         if (response.data.stats) {
                             this.stats = response.data.stats;
+                            this.userRole = response.data.stats.user_role || '';
                             this.schoolInfo = response.data.stats.school_info || {};
                         }
                     }

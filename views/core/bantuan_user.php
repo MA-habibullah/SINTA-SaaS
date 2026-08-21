@@ -48,9 +48,7 @@
                         </select>
                         <select class="form-select form-select-sm border rounded-2" v-model="filterCategory" @change="fetchTickets" style="width: 160px;">
                             <option value="">Semua Kategori</option>
-                            <?php foreach ($categories as $cat): ?>
-                                <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['nama_kategori']) ?></option>
-                            <?php endforeach; ?>
+                            <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.nama_kategori }}</option>
                         </select>
                     </div>
                 </div>
@@ -169,9 +167,7 @@
                                 <label class="form-label fw-bold text-dark" style="font-size: 0.85rem;">Kategori Laporan <span class="text-danger">*</span></label>
                                 <select class="form-select rounded-2 py-2" v-model="form.category_id" required>
                                     <option value="" disabled selected>Pilih Kategori</option>
-                                    <?php foreach ($categories as $cat): ?>
-                                        <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['nama_kategori']) ?></option>
-                                    <?php endforeach; ?>
+                                    <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.nama_kategori }}</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
@@ -367,6 +363,7 @@ window.VueAppRegistry.register('#bantuan-user-app', {
             filterStatus: '',
             filterCategory: '',
             unreadCount: 0,
+            categories: [],
 
             // Form Create
             form: {
@@ -399,6 +396,7 @@ window.VueAppRegistry.register('#bantuan-user-app', {
     mounted() {
         this.fetchTickets();
         this.fetchUnreadCount();
+        this.fetchCategories();
 
         // Polling unread count every 30 seconds
         this.pollInterval = setInterval(() => {
@@ -439,6 +437,15 @@ window.VueAppRegistry.register('#bantuan-user-app', {
                 }
             })
             .catch(err => console.error(err));
+        },
+        fetchCategories() {
+            axios.get('<?= $this->getBaseUrl() ?>/api/v1/bantuan/categories')
+            .then(res => {
+                if (res.data.success) {
+                    this.categories = res.data.data || [];
+                }
+            })
+            .catch(err => console.error('Gagal memuat kategori:', err));
         },
         openCreateModal() {
             this.form = {

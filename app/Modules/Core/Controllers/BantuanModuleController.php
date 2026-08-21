@@ -396,4 +396,25 @@ class BantuanModuleController extends BaseController {
         $data[8] = chr(ord($data[8]) & 0x3f | 0x80);
         return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
     }
+
+    /**
+     * API: GET daftar kategori tiket bantuan (untuk dropdown filter async).
+     * Menggantikan pola server-side foreach ($categories) di view bantuan_admin & bantuan_user.
+     */
+    public function apiGetCategories(): void {
+        $db = Database::getConnection();
+        try {
+            $list = $db->query("SELECT id, nama_kategori FROM core.ticket_categories ORDER BY id ASC")->fetchAll(\PDO::FETCH_ASSOC);
+            $this->jsonResponse(true, $list, 'Kategori berhasil dimuat.');
+        } catch (\Throwable $e) {
+            // Fallback: kategori default jika tabel belum ada
+            $this->jsonResponse(true, [
+                ['id' => 1, 'nama_kategori' => 'Teknis / Sistem'],
+                ['id' => 2, 'nama_kategori' => 'Akun & Akses'],
+                ['id' => 3, 'nama_kategori' => 'Keuangan & SPP'],
+                ['id' => 4, 'nama_kategori' => 'Pertanyaan Umum'],
+            ]);
+        }
+    }
 }
+
