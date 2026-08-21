@@ -2,9 +2,9 @@
 /**
  * View: Kelola Akses (Child View)
  * Bagian ini dimuat secara dinamis oleh views/layout/master.php di area #main-content.
+ * Zero Data Leakage: Daftar tenant dimuat async via Axios — tidak tercetak di View Source.
  */
 $isSuperAdmin = ($data['user_role'] ?? '') === 'super_admin';
-$tenants      = $data['tenants'] ?? [];
 ?>
 <!-- Page Header -->
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-2 pb-2 mb-4 border-bottom">
@@ -47,12 +47,7 @@ $tenants      = $data['tenants'] ?? [];
             <div class="d-flex gap-2">
                 <select id="tenantSelectorAkses" class="form-select rounded-3 py-2">
                     <option value="">— Global Default (Berlaku untuk semua sekolah yang belum dikustomisasi) —</option>
-                    <?php foreach ($tenants as $tenant): ?>
-                        <option value="<?= htmlspecialchars($tenant['id']) ?>">
-                            <?= htmlspecialchars($tenant['nama_sekolah']) ?>
-                            <?= !empty($tenant['npsn']) ? '(NPSN: ' . htmlspecialchars($tenant['npsn']) . ')' : '' ?>
-                        </option>
-                    <?php endforeach; ?>
+                    <!-- Opsi tenant diisi secara asinkron oleh JavaScript di bawah (Zero Data Leakage) -->
                 </select>
                 <button type="button" id="btnTerapkanFilterAkses" class="btn btn-primary rounded-3 text-nowrap px-3">
                     <i class="bi bi-funnel me-1"></i> Terapkan Filter
@@ -74,6 +69,34 @@ $tenants      = $data['tenants'] ?? [];
         </div>
     </div>
 </div>
+<?php endif; ?>
+
+<?php if ($isSuperAdmin): ?>
+<script>
+// Zero Data Leakage: Isi dropdown tenant secara asinkron — data tidak tercetak di HTML awal
+(function() {
+    const select = document.getElementById('tenantSelectorAkses');
+    if (!select) return;
+
+    const baseUrl = '<?= $this->getBaseUrl() ?>';
+
+    // Fetch daftar tenant dari API yang sudah terproteksi session
+    axios.get(baseUrl + '/api/v1/super-admin/tenants')
+        .then(function(res) {
+            if (res.data && res.data.success && Array.isArray(res.data.data)) {
+                res.data.data.forEach(function(t) {
+                    const opt = document.createElement('option');
+                    opt.value = t.id;
+                    opt.textContent = t.nama_sekolah + (t.npsn ? ' (NPSN: ' + t.npsn + ')' : '');
+                    select.appendChild(opt);
+                });
+            }
+        })
+        .catch(function(err) {
+            console.error('Gagal memuat daftar tenant:', err);
+        });
+})();
+</script>
 <?php endif; ?>
 
 <!-- Access Control Matrix Table (Card Wrap) -->

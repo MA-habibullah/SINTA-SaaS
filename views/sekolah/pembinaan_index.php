@@ -108,15 +108,6 @@
             </h5>
         </div>
         
-        <?php if (empty($kasusAktif)): ?>
-            <div class="text-center py-12">
-                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 mb-4">
-                    <i class="bi bi-emoji-smile text-3xl text-emerald-400"></i>
-                </div>
-                <h6 class="font-bold text-slate-500 m-0">Luar Biasa!</h6>
-                <p class="text-sm text-slate-400 mt-1 mb-0">Tidak ada kasus peringatan aktif saat ini. Kinerja sekolah stabil.</p>
-            </div>
-        <?php else: ?>
         <div class="table-responsive">
             <table id="table-kasus-aktif" class="table w-100 align-middle">
                 <thead>
@@ -128,81 +119,17 @@
                         <th class="text-center pb-3 w-40 border-0 border-t border-b border-slate-200">Aksi Pembinaan</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
-                        <?php foreach ($kasusAktif as $kasus): ?>
-                            <tr class="hover:bg-slate-50 transition-colors group">
-                                <td class="py-4">
-                                    <div class="font-bold text-slate-700 text-sm"><?= htmlspecialchars($kasus['nama_guru']) ?></div>
-                                    <div class="text-xs text-slate-500 mt-1"><i class="bi bi-clock-history"></i> Sejak <?= date('d M Y', strtotime($kasus['created_at'])) ?></div>
-                                </td>
-                                <td class="py-4">
-                                    <?php 
-                                        $dotColor = match($kasus['kategori_masalah']) {
-                                            'Kedisiplinan' => 'bg-purple-500',
-                                            'Akademik' => 'bg-blue-500',
-                                            'Personal' => 'bg-orange-500',
-                                            default => 'bg-slate-500'
-                                        };
-                                    ?>
-                                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700">
-                                        <span class="w-2 h-2 rounded-full <?= $dotColor ?>"></span>
-                                        <?= htmlspecialchars($kasus['kategori_masalah']) ?>
-                                    </div>
-                                </td>
-                                <td class="py-4">
-                                    <div class="text-sm font-semibold text-slate-800 line-clamp-2"><?= htmlspecialchars($kasus['deskripsi_kasus']) ?></div>
-                                    <div class="text-xs font-medium text-slate-500 mt-1 flex items-center gap-1">
-                                        <i class="bi bi-person-fill text-slate-400"></i> <?= htmlspecialchars($kasus['sumber_deteksi']) ?>
-                                    </div>
-                                    <?php if (!empty($kasus['lampiran_bukti'])): ?>
-                                        <a href="<?= $this->getBaseUrl() ?>/<?= htmlspecialchars($kasus['lampiran_bukti']) ?>" target="_blank" class="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 px-2 py-1 rounded-md transition-colors">
-                                            <i class="bi bi-paperclip"></i> Lampiran File
-                                        </a>
-                                    <?php endif; ?>
-                                </td>
-                                <td class="py-4 text-center">
-                                    <?php if ($kasus['status_kasus'] === 'Merah'): ?>
-                                        <div class="inline-flex flex-col items-center">
-                                            <span class="badge bg-red-100 text-red-700 px-3 py-1.5 rounded-full border border-red-200"><i class="bi bi-exclamation-octagon-fill me-1"></i> Perlu Pembinaan</span>
-                                            <?php if (!empty($kasus['sesi_id'])): ?>
-                                                <span class="text-xs text-blue-600 font-semibold mt-1"><i class="bi bi-calendar-check"></i> Sesi Terjadwal</span>
-                                            <?php endif; ?>
-                                        </div>
-                                    <?php elseif ($kasus['status_kasus'] === 'Kuning'): ?>
-                                        <span class="badge bg-yellow-100 text-yellow-700 px-3 py-1.5 rounded-full border border-yellow-200"><i class="bi bi-hourglass-split me-1"></i> Sedang Dipantau</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td class="py-4 text-center">
-                                    <div class="flex items-center justify-center gap-2">
-                                        <?php if ($kasus['status_kasus'] === 'Merah'): ?>
-                                            <?php if (!empty($kasus['sesi_id'])): ?>
-                                                <?php
-                                                $sesiUrl = '<?= $this->getBaseUrl() ?>/pembinaan/sesi?id=' . urlencode($kasus['sesi_id']);
-                                                if (isset($_GET['tenant_id'])) {
-                                                    $sesiUrl .= '&tenant_id=' . urlencode($_GET['tenant_id']);
-                                                }
-                                                ?>
-                                                <a href="<?= $sesiUrl ?>" class="btn btn-sm bg-white border border-slate-200 text-blue-600 hover:bg-slate-50 rounded-lg p-2 w-9 h-9 flex items-center justify-center transition-colors" title="Mulai Sesi">
-                                                    <i class="bi bi-play-circle text-base"></i>
-                                                </a>
-                                            <?php else: ?>
-                                                <button type="button" class="btn btn-sm bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg p-2 w-9 h-9 flex items-center justify-center transition-colors" title="Jadwalkan Sesi" onclick="openJadwalModal('<?= $kasus['id'] ?>', '<?= htmlspecialchars($kasus['nama_guru'], ENT_QUOTES) ?>')">
-                                                    <i class="bi bi-calendar-plus text-base"></i>
-                                                </button>
-                                            <?php endif; ?>
-                                        <?php else: ?>
-                                            <button type="button" class="btn btn-sm bg-white border border-slate-200 text-green-600 hover:bg-slate-50 rounded-lg p-2 w-9 h-9 flex items-center justify-center transition-colors" title="Form Evaluasi" onclick="openEvaluasiModal('<?= $kasus['id'] ?>', '<?= $kasus['sesi_id'] ?>', '<?= htmlspecialchars($kasus['nama_guru'], ENT_QUOTES) ?>')">
-                                                <i class="bi bi-clipboard2-check text-base"></i>
-                                            </button>
-                                        <?php endif; ?>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
+                <tbody id="tbody-kasus-aktif">
+                    <!-- Diisi oleh JavaScript (Zero Data Leakage) -->
+                    <tr id="row-loading-kasus">
+                        <td colspan="5" class="text-center py-4">
+                            <div class="spinner-border spinner-border-sm text-primary"></div>
+                            <span class="ms-2 text-muted">Memuat data kasus...</span>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
-        <?php endif; ?>
     </div>
     
     <!-- Riwayat Kasus Selesai (Hijau) -->
@@ -214,7 +141,7 @@
             </div>
         </div>
 
-        <?php if (empty($riwayatKasus)): ?>
+        <?php if (empty($riwayatKasus ?? [])): ?>
             <div class="text-center py-10">
                 <div class="w-16 h-16 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3">
                     <i class="bi bi-inbox text-2xl"></i>
@@ -233,55 +160,14 @@
                             <th class="py-3 border-0 border-t border-b border-slate-200 text-center">Laporan Akreditasi</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <?php foreach ($riwayatKasus as $kasus): ?>
+                    <tbody id="tbody-riwayat">
+                        <!-- Diisi oleh JavaScript (Zero Data Leakage) -->
                         <tr>
-                            <td class="py-4 px-4">
-                                <div class="font-bold text-slate-800 text-sm"><?= htmlspecialchars($kasus['nama_guru']) ?></div>
-                                <div class="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                                    <i class="bi bi-clock text-slate-400"></i> Tgl: <?= date('d M Y', strtotime($kasus['updated_at'])) ?>
-                                </div>
-                            </td>
-                            <td class="py-4 text-sm text-slate-800 font-semibold">
-                                <?php 
-                                    $dotColor = match($kasus['kategori_masalah']) {
-                                        'Kedisiplinan' => 'bg-purple-500',
-                                        'Akademik' => 'bg-blue-500',
-                                        'Personal' => 'bg-orange-500',
-                                        default => 'bg-slate-500'
-                                    };
-                                ?>
-                                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700">
-                                    <span class="w-2 h-2 rounded-full <?= $dotColor ?>"></span>
-                                    <?= htmlspecialchars($kasus['kategori_masalah']) ?>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <div class="text-sm font-semibold text-slate-800 line-clamp-2"><?= htmlspecialchars($kasus['deskripsi_kasus']) ?></div>
-                                <div class="text-xs font-medium text-slate-500 mt-1 flex items-center gap-1">
-                                    <i class="bi bi-person-fill text-slate-400"></i> <?= htmlspecialchars($kasus['sumber_deteksi']) ?>
-                                </div>
-                                <?php if (!empty($kasus['lampiran_bukti'])): ?>
-                                    <a href="<?= $this->getBaseUrl() ?>/<?= htmlspecialchars($kasus['lampiran_bukti']) ?>" target="_blank" class="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 px-2 py-1 rounded-md transition-colors">
-                                        <i class="bi bi-paperclip"></i> Lihat Lampiran
-                                    </a>
-                                <?php endif; ?>
-                            </td>
-                            <td class="py-4 text-center">
-                                <?php
-                                $cetakUrl = '<?= $this->getBaseUrl() ?>/pembinaan/cetak?id=' . urlencode($kasus['id']);
-                                if (isset($_GET['tenant_id'])) {
-                                    $cetakUrl .= '&tenant_id=' . urlencode($_GET['tenant_id']);
-                                }
-                                ?>
-                                <div class="flex justify-center">
-                                    <a href="<?= $cetakUrl ?>" target="_blank" class="btn btn-sm bg-white border border-slate-200 text-red-500 hover:bg-slate-50 hover:text-red-600 rounded-lg p-2 w-9 h-9 flex items-center justify-center transition-colors" title="Cetak Akreditasi PDF">
-                                        <i class="bi bi-file-earmark-pdf text-base"></i>
-                                    </a>
-                                </div>
+                            <td colspan="4" class="text-center py-4">
+                                <div class="spinner-border spinner-border-sm text-secondary"></div>
+                                <span class="ms-2 text-muted">Memuat riwayat...</span>
                             </td>
                         </tr>
-                        <?php endforeach; ?>
                     </tbody>
                 </table>
             </div>
@@ -306,9 +192,7 @@
                         <label class="form-label text-sm font-semibold text-slate-700">Pilih Guru</label>
                         <select name="guru_id" class="form-select border-slate-200 rounded-xl focus:border-blue-500 focus:ring-blue-500" required>
                             <option value="">-- Pilih Guru Bermasalah --</option>
-                            <?php foreach ($guruList as $guru): ?>
-                                <option value="<?= htmlspecialchars($guru['id']) ?>"><?= htmlspecialchars($guru['nama_lengkap']) ?></option>
-                            <?php endforeach; ?>
+                            <!-- Diisi async oleh JavaScript (Zero Data Leakage) -->
                         </select>
                     </div>
                     
