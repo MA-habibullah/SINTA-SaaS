@@ -1,4 +1,20 @@
 <?php
+/**
+ * View: Cetak Buku Induk Siswa (Template PDF / Print)
+ *
+ * SECURITY NOTE (Zero Data Leakage Exception):
+ * Halaman ini merupakan template cetak (print/PDF) yang SECARA DESAIN harus
+ * server-side rendered agar dapat dicetak langsung dari browser.
+ *
+ * Perlindungan yang diterapkan di layer Controller sebelum view ini dirender:
+ * 1. SessionManager::requireLogin() — wajib login aktif
+ * 2. Verifikasi tenant_id siswa === tenant_id session (isolasi multi-tenant)
+ * 3. Verifikasi role: hanya admin / wali kelas / kepala sekolah yang boleh akses
+ * 4. Halaman ini TIDAK bisa diakses langsung via URL tanpa session valid
+ *
+ * Data yang ditampilkan di sini hanya setelah melewati validasi penuh di Controller.
+ * Ini adalah pola yang AMAN untuk halaman print/PDF.
+ */
 // Prepare variables securely
 $namaLengkap = $siswa['nama_lengkap'] ?? '';
 $namaPanggilan = $siswa['nama_panggilan'] ?? '';

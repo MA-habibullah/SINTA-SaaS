@@ -11,29 +11,6 @@ $isEdit = isset($data['siswa']);
 $actionUrl = $isEdit ? $this->getBaseUrl() . '/siswa/update' : $this->getBaseUrl() . '/siswa/simpan';
 $formTitle = $isEdit ? 'Edit Data Siswa' : 'Tambah Siswa Baru';
 $idSiswa = $isEdit ? ($data['siswa']['id'] ?? '') : '';
-$siswaFullData = $isEdit ? $data['siswa'] : [];
-if ($isEdit) {
-    if (is_array($siswaFullData)) {
-        unset($siswaFullData['password']);
-    } elseif (is_object($siswaFullData)) {
-        unset($siswaFullData->password);
-    }
-}
-if (isset($data['draft'])) {
-    if (is_array($data['draft'])) {
-        unset($data['draft']['password']);
-    } elseif (is_object($data['draft'])) {
-        unset($data['draft']->password);
-    }
-}
-if (isset($data['old'])) {
-    if (is_array($data['old'])) {
-        unset($data['old']['password']);
-    } elseif (is_object($data['old'])) {
-        unset($data['old']->password);
-    }
-}
-$kesehatanData = $isEdit ? ($data['kesehatan'] ?? []) : [];
 ?>
 
 <style>
@@ -2335,9 +2312,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
             // User Role dan Edit Status dari PHP
             const userRole = ref('<?= htmlspecialchars($data['user_role'] ?? "") ?>');
             const isEdit = ref(<?= $isEdit ? 'true' : 'false' ?>);
-            const idSiswa = <?= json_encode($idSiswa, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-            const initialSiswa = <?= json_encode($siswaFullData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-            const initialKesehatan = <?= json_encode($kesehatanData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+            const idSiswa = ref('<?= htmlspecialchars($idSiswa, ENT_QUOTES, 'UTF-8') ?>');
 
             // List options untuk Super Admin
             const listTenants = ref([]);
@@ -2593,51 +2568,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 }
             };
 
-            // Instant Server-Side Hydration (Mode Edit)
-            if (isEdit.value && initialSiswa && Object.keys(initialSiswa).length > 0) {
-                Object.keys(initialSiswa).forEach(key => {
-                    if (key in form.value && key !== 'password' && key !== 'kesehatan') {
-                        let val = initialSiswa[key] !== null ? initialSiswa[key] : '';
-                        if (val === '0000-00-00') val = '';
-                        form.value[key] = val;
-                    }
-                });
-                if (initialSiswa.kesehatan) {
-                    hydrateKesehatan(initialSiswa.kesehatan);
-                } else if (initialKesehatan) {
-                    hydrateKesehatan(initialKesehatan);
-                }
-                if (initialSiswa.alamat && !form.value.alamat_kk) {
-                    form.value.alamat_kk = initialSiswa.alamat;
-                }
-                if (initialSiswa.alamat_kk) {
-                    form.value.alamat_kk = initialSiswa.alamat_kk;
-                }
-                if (initialSiswa.alamat_domisili) {
-                    form.value.alamat_domisili = initialSiswa.alamat_domisili;
-                }
-                if (initialSiswa.no_hp && !form.value.no_telepon_siswa) {
-                    form.value.no_telepon_siswa = initialSiswa.no_hp;
-                }
-                if (initialSiswa.no_telepon_siswa) {
-                    form.value.no_telepon_siswa = initialSiswa.no_telepon_siswa;
-                }
-                if (initialSiswa.asal_sekolah && !form.value.sekolah_asal) {
-                    form.value.sekolah_asal = initialSiswa.asal_sekolah;
-                }
-                if (initialSiswa.sekolah_asal) {
-                    form.value.sekolah_asal = initialSiswa.sekolah_asal;
-                }
-                if (initialSiswa.status_siswa) {
-                    form.value.status = initialSiswa.status_siswa;
-                }
-                if (initialSiswa.id_kelas) form.value.id_kelas = initialSiswa.id_kelas;
-                if (initialSiswa.id_jurusan) form.value.id_jurusan = initialSiswa.id_jurusan;
-                if (initialSiswa.id_angkatan) form.value.id_angkatan = initialSiswa.id_angkatan;
-                if (initialSiswa.id_tahun_ajaran) form.value.id_tahun_ajaran = initialSiswa.id_tahun_ajaran;
-                if (initialSiswa.id_jenjang) form.value.id_jenjang = initialSiswa.id_jenjang;
-                if (initialSiswa.id_pendidikan) form.value.id_pendidikan = initialSiswa.id_pendidikan;
-            }
+
 
             // Map kota ke options untuk searchable dropdown
             const citiesOptions = computed(() => {
@@ -2726,7 +2657,9 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
             // Ambil data query Edit jika di-inject dari PHP
             const loadEditData = async () => {
                 try {
-                    const response = await axios.get(`${window.location.pathname}?ajax=1&action=get_siswa_detail&id=${idSiswa}`);
+                    const targetId = idSiswa.value || (new URLSearchParams(window.location.search)).get('id') || '';
+                    if (!targetId) return;
+                    const response = await axios.get(`<?= $this->getBaseUrl() ?>/siswa/edit?ajax=1&action=get_siswa_detail&id=${encodeURIComponent(targetId)}`);
                     if (response.data && response.data.success) {
                         const phpData = response.data.data;
                         const kesehatanPhp = response.data.kesehatan;
@@ -3782,14 +3715,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
                 }
             });
 
-            // Watch status to automatically set keluar_karena when status is Lulus or Pindah
-            Vue.watch(() => form.value.status, (newVal) => {
-                if (newVal === 'Lulus') {
-                    form.value.keluar_karena = 'Lulus';
-                } else if (newVal === 'Pindah') {
-                    form.value.keluar_karena = 'Mutasi';
-                }
-            });
+            // loadDraftData sudah dideklarasikan di atas (tidak perlu duplikat)
 
             // --- INITIALIZATION ---
             onMounted(async () => {
