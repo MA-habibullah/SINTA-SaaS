@@ -171,10 +171,7 @@
     </div>
 </div>
 
-<!-- Data Injection -->
-<script id="data-komponen" type="application/json">
-    <?php echo json_encode($list_komponen, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>
-</script>
+<!-- User Session Context -->
 <script id="user-session" type="application/json">
     <?php echo json_encode([
         'is_super_admin' => (($_SESSION['role_name'] ?? '') === 'super_admin'),
@@ -238,7 +235,6 @@ window.VueAppRegistry.register('#keuangan-keringanan-app', {
         const selectedTenantId = Vue.ref(session.tenant_id || '');
 
         const komponenList = Vue.ref([]);
-        const initialKomponen = JSON.parse(document.getElementById('data-komponen').textContent || '[]');
 
         const keringananList = Vue.ref([]);
         const loading = Vue.ref(false);

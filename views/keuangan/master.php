@@ -915,19 +915,7 @@
     </div>
 </div>
 
-<!-- Data Injections with Anti-XSS Flag -->
-<script id="data-kelas" type="application/json">
-    <?php echo json_encode($list_kelas, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>
-</script>
-<script id="data-jenjang" type="application/json">
-    <?php echo json_encode($list_jenjang, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>
-</script>
-<script id="data-ta" type="application/json">
-    <?php echo json_encode($list_ta, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>
-</script>
-<script id="data-komponen" type="application/json">
-    <?php echo json_encode($list_komponen, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>
-</script>
+<!-- User Session Context -->
 <script id="user-session" type="application/json">
     <?php echo json_encode([
         'is_super_admin' => (($_SESSION['role_name'] ?? '') === 'super_admin'),
@@ -1050,8 +1038,6 @@ window.VueAppRegistry.register('#keuangan-master-app', {
         const listTa = Vue.ref([]);
         const komponenList = Vue.ref([]);
 
-        // Cache initial list from DOM injection
-        const initialKomponen = JSON.parse(document.getElementById('data-komponen').textContent || '[]');
 
         // Global Alert helper
         const flashMessage = (msg, isError = false) => {
