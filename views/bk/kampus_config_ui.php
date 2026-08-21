@@ -8,14 +8,14 @@
 <template v-else>
     <!-- TAB: MASTER KAMPUS -->
     <div v-show="activeTab === 'master_kampus'">
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex flex-wrap items-center justify-between gap-4 mb-4">
+        <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-4 flex flex-wrap items-center justify-between gap-4 mb-4">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+                <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
                     <i class="bi bi-building-lock text-lg"></i>
                 </div>
                 <div>
-                    <h4 class="font-bold text-sm text-slate-800">Master Data Kampus</h4>
-                    <p class="text-xs text-slate-500">Kelola daftar kampus beserta fakultas dan program studi.</p>
+                    <h4 class="font-bold text-sm text-slate-800 mb-0.5">Master Data Kampus</h4>
+                    <p class="text-xs text-slate-500 mb-0">Kelola daftar kampus beserta fakultas dan program studi.</p>
                 </div>
             </div>
             <div v-if="canWrite" class="flex gap-2">
@@ -28,11 +28,11 @@
             </div>
         </div>
 
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead>
-                        <tr class="bg-slate-50 border-b border-slate-100 text-xs text-slate-400 font-semibold uppercase">
+                        <tr class="bg-slate-50 border-b border-slate-200/80 text-xs text-slate-500 font-semibold uppercase">
                             <th class="ps-6 py-3">Nama Kampus</th>
                             <th class="py-3 text-center">Jenis</th>
                             <th class="py-3">Kota</th>
@@ -70,14 +70,14 @@
 
     <!-- TAB: MASTER JALUR MASUK -->
     <div v-show="activeTab === 'master_jalur'">
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex flex-wrap items-center justify-between gap-4 mb-4">
+        <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-4 flex flex-wrap items-center justify-between gap-4 mb-4">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
                     <i class="bi bi-signpost-split-fill text-lg"></i>
                 </div>
                 <div>
-                    <h4 class="font-bold text-sm text-slate-800">Master Jalur Masuk</h4>
-                    <p class="text-xs text-slate-500">Kelola daftar jalur masuk universitas secara dinamis.</p>
+                    <h4 class="font-bold text-sm text-slate-800 mb-0.5">Master Jalur Masuk</h4>
+                    <p class="text-xs text-slate-500 mb-0">Kelola daftar jalur masuk universitas secara dinamis.</p>
                 </div>
             </div>
             <div v-if="canWrite">
@@ -87,11 +87,11 @@
             </div>
         </div>
 
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead>
-                        <tr class="bg-slate-50 border-b border-slate-100 text-xs text-slate-400 font-semibold uppercase">
+                        <tr class="bg-slate-50 border-b border-slate-200/80 text-xs text-slate-500 font-semibold uppercase">
                             <th class="ps-6 py-3">Nama Jalur</th>
                             <th class="py-3">Kategori</th>
                             <th class="py-3 text-end pe-6">Aksi</th>

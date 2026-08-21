@@ -131,14 +131,19 @@ class PdssDetailModuleController extends BaseController {
                     s.nisn, 
                     s.nis, 
                     COALESCE(j_by_k.nama_jurusan, j.nama_jurusan, s.jurusan, 'Umum') AS nama_jurusan,
-                    COALESCE(k_ak.nama_kelas, k_rkk.nama_kelas, rkk.dari_kelas, k_curr.nama_kelas, 'XII') AS nama_kelas,
+                    COALESCE(
+                        CASE WHEN (k_ak.nama_kelas ILIKE '%12%' OR k_ak.nama_kelas ILIKE '%XII%') THEN k_ak.nama_kelas ELSE NULL END,
+                        CASE WHEN (k_rkk.nama_kelas ILIKE '%12%' OR k_rkk.nama_kelas ILIKE '%XII%') THEN k_rkk.nama_kelas ELSE NULL END,
+                        CASE WHEN (rkk.dari_kelas ILIKE '%12%' OR rkk.dari_kelas ILIKE '%XII%') THEN rkk.dari_kelas ELSE NULL END,
+                        'XII'
+                    ) AS nama_kelas,
                     s.jurusan AS kode_jurusan,
                     COALESCE(k_ak.id_jurusan, k_rkk.id_jurusan, k_curr.id_jurusan, j.id::varchar, s.jurusan) AS id_jurusan
                 FROM siswa.siswa s
                 LEFT JOIN siswa.anggota_kelas ak ON s.id = ak.siswa_id AND ak.tenant_id = :tenant_id AND ak.tahun_ajaran = :ta_name
                 LEFT JOIN akademik.kelas k_ak ON (ak.kelas_id = k_ak.id OR ak.kelas_id::varchar = k_ak.nama_kelas) AND k_ak.tenant_id = :tenant_id
                 LEFT JOIN siswa.riwayat_kenaikan_kelas rkk ON s.id = rkk.siswa_id AND rkk.tenant_id = :tenant_id AND rkk.tahun_ajaran = :ta_name
-                LEFT JOIN akademik.kelas k_rkk ON (rkk.dari_kelas = k_rkk.nama_kelas OR rkk.ke_kelas = k_rkk.nama_kelas OR rkk.dari_kelas = k_rkk.id::varchar) AND k_rkk.tenant_id = :tenant_id
+                LEFT JOIN akademik.kelas k_rkk ON (rkk.dari_kelas = k_rkk.nama_kelas OR rkk.dari_kelas = k_rkk.id::varchar) AND k_rkk.tenant_id = :tenant_id
                 LEFT JOIN akademik.kelas k_curr ON (s.kelas_saat_ini = k_curr.nama_kelas OR s.kelas_saat_ini = k_curr.id::varchar) AND k_curr.tenant_id = :tenant_id
                 LEFT JOIN akademik.jurusan j ON (s.jurusan = j.nama_jurusan OR s.jurusan = j.id::varchar) AND j.tenant_id = :tenant_id
                 LEFT JOIN akademik.jurusan j_by_k ON (COALESCE(k_ak.id_jurusan, k_rkk.id_jurusan, k_curr.id_jurusan) = j_by_k.id::varchar) AND j_by_k.tenant_id = :tenant_id
@@ -146,7 +151,7 @@ class PdssDetailModuleController extends BaseController {
                   AND s.status_siswa = 'Aktif'
                   AND (
                       (ak.tahun_ajaran = :ta_name AND (k_ak.nama_kelas ILIKE '%12%' OR k_ak.nama_kelas ILIKE '%XII%'))
-                      OR (rkk.tahun_ajaran = :ta_name AND (k_rkk.nama_kelas ILIKE '%12%' OR k_rkk.nama_kelas ILIKE '%XII%' OR rkk.dari_kelas ILIKE '%12%' OR rkk.dari_kelas ILIKE '%XII%' OR rkk.ke_kelas ILIKE '%12%' OR rkk.ke_kelas ILIKE '%XII%'))
+                      OR (rkk.tahun_ajaran = :ta_name AND (k_rkk.nama_kelas ILIKE '%12%' OR k_rkk.nama_kelas ILIKE '%XII%' OR rkk.dari_kelas ILIKE '%12%' OR rkk.dari_kelas ILIKE '%XII%'))
                   )
                 ORDER BY s.id, s.nama_lengkap ASC
             ";

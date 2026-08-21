@@ -153,13 +153,13 @@ class BkDetailModuleController extends BaseController {
 
         $this->render($viewName, [
             'title'             => $pageTitle,
+            'active_group'      => $activeGroup,
             'user_role'         => $role,
             'can_write'         => in_array($role, ['guru_bk', 'operator_sekolah', 'super_admin']),
             'user_nama'         => $userNama,
             'tenant_id'         => $tenantId,
             'tenant_list'       => $tenantList,
             'tahun_ajaran_list' => $tahunAjaranList,
-            'active_group'      => $activeGroup,
         ]);
     }
 

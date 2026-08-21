@@ -132,17 +132,19 @@ foreach ($userRoles as $r) {
                                 <td class="px-3 py-3 text-center text-slate-300 text-[10px]">-</td>
                             </template>
                         </template>
-                        <td v-if="canWrite" class="px-3 py-3 text-center border-l border-slate-100">
-                            <div class="d-flex flex-column gap-1 align-items-center justify-content-center">
-                                <button v-if="row.prodi_id" class="btn btn-xs btn-primary font-semibold px-2 py-1 rounded-lg text-[10px] w-100 shadow-2xs" @click="openEditProdiModal(row)">
-                                    <i class="bi bi-pencil-square"></i> Edit & Kuota
+                        <td v-if="canWrite" class="px-2.5 py-2.5 text-center border-l border-slate-100 align-middle" style="min-width: 125px;">
+                            <div class="flex flex-col gap-1 items-center justify-center">
+                                <button v-if="row.prodi_id" class="btn btn-xs btn-primary font-bold px-2.5 py-1 rounded-lg text-[10px] shadow-2xs w-full flex items-center justify-center gap-1" @click="openEditProdiModal(row)">
+                                    <i class="bi bi-pencil-square"></i> Edit &amp; Kuota
                                 </button>
-                                <button v-if="row.prodi_id" class="btn btn-xs btn-light border text-rose-600 font-semibold px-2 py-1 rounded-lg text-[10px] w-100" @click="deleteProdi(row.prodi_id, row.program_studi)">
-                                    <i class="bi bi-trash"></i> Hapus Prodi
-                                </button>
-                                <button class="btn btn-xs btn-light border text-slate-600 font-semibold px-2 py-1 rounded-lg text-[10px] w-100" @click="deleteKampus(row.kampus_id, row.nama_kampus)">
-                                    <i class="bi bi-building-x"></i> Hapus Kampus
-                                </button>
+                                <div class="flex items-center gap-1 w-full">
+                                    <button v-if="row.prodi_id" class="btn btn-xs btn-light border border-slate-200 text-rose-600 hover:bg-rose-50 font-semibold px-1.5 py-0.5 rounded-lg text-[9px] flex-1 flex items-center justify-center gap-0.5" title="Hapus Program Studi" @click="deleteProdi(row.prodi_id, row.program_studi)">
+                                        <i class="bi bi-trash"></i> Prodi
+                                    </button>
+                                    <button class="btn btn-xs btn-light border border-slate-200 text-slate-500 hover:bg-slate-100 font-semibold px-1.5 py-0.5 rounded-lg text-[9px] flex-1 flex items-center justify-center gap-0.5" title="Hapus Kampus" @click="deleteKampus(row.kampus_id, row.nama_kampus)">
+                                        <i class="bi bi-building-x"></i> Kampus
+                                    </button>
+                                </div>
                             </div>
                         </td>
                     </tr>
@@ -859,6 +861,18 @@ if (window.VueAppRegistry.register) {
         }
     },
     mounted() {
+        const pane = document.getElementById('master-kampus');
+        if (pane && !pane.classList.contains('active')) {
+            const tabBtn = document.getElementById('master-kampus-tab');
+            if (tabBtn) {
+                tabBtn.addEventListener('shown.bs.tab', () => {
+                    if (!this.kampusList || this.kampusList.length === 0) {
+                        this.loadData();
+                    }
+                }, { once: true });
+                return;
+            }
+        }
         this.loadData();
     }
 });

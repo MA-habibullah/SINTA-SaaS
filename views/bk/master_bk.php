@@ -47,6 +47,10 @@ if (str_starts_with($defaultMainTab, 'p_')) {
 ?>
 
 <style>
+    [v-cloak] {
+        display: none !important;
+    }
+
     /* ─── Design Tokens ─────────────────────────────── */
     :root {
         --bk-primary:   #7c3aed;   /* Violet — identitas BK */
@@ -56,6 +60,8 @@ if (str_starts_with($defaultMainTab, 'p_')) {
         --bk-red:       #ef4444;
         --bk-blue:      #2563eb;
         --bk-border:    #e2e8f0;
+    }
+
     /* ─── Modal & Backdrop Stacking Fix ───────────── */
     .modal {
         z-index: 1060 !important;
@@ -331,99 +337,106 @@ if (str_starts_with($defaultMainTab, 'p_')) {
     }
     /* Navigation Tabs Styling */
     .scrollable-nav-tabs {
-        padding-bottom: 5px;
-        border-bottom: none;
+        overflow-x: auto;
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e1 transparent;
+        padding-bottom: 2px;
     }
     .scrollable-nav-tabs::-webkit-scrollbar {
         height: 4px;
     }
     .scrollable-nav-tabs::-webkit-scrollbar-thumb {
         background-color: #cbd5e1;
-        border-radius: 4px;
+        border-radius: 9999px;
     }
     .nav-tabs-wrapper .nav-link {
-        font-size: 14px;
+        font-size: 13px;
         color: #475569;
         background-color: transparent;
-        border: none;
-        border-bottom: 2px solid transparent;
-        border-radius: 0;
-        font-weight: 600;
-        padding: 10px 16px;
+        border: 1px solid transparent;
+        border-radius: 0.75rem;
+        font-weight: 700;
+        padding: 8px 16px;
         transition: all 0.2s ease-in-out;
     }
     .nav-tabs-wrapper .nav-link:hover {
         color: #2563eb;
+        background-color: #f1f5f9;
     }
     .nav-tabs-wrapper .nav-link.active {
-        color: #2563eb !important;
-        background-color: transparent !important;
-        border-bottom: 2px solid #2563eb !important;
+        color: #ffffff !important;
+        background: linear-gradient(135deg, #1e40af, #2563eb) !important;
+        border-color: transparent !important;
+        box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);
     }
 </style>
 
 <?php if(empty($is_sub_module)): ?>
-<!-- Page Header -->
-<div class="d-flex justify-content-between flex-wrap align-items-center pt-2 pb-3 mb-4 border-bottom">
-    <div>
-        <h2 class="fw-bold text-dark mb-1">
-            <i class="bi <?= htmlspecialchars($pageIcon) ?> me-2" style="color:var(--bk-primary);"></i>
-            <?= htmlspecialchars($pageTitle) ?>
-        </h2>
-        <p class="text-muted fs-7 mb-0">
-            <?= htmlspecialchars($pageSubtitle) ?>
-            <span class="badge ms-1 rounded-pill" style="background:var(--bk-p-light);color:var(--bk-primary);">
-                <?= htmlspecialchars(strtoupper($userRole)) ?>
-            </span>
-        </p>
-    </div>
-</div>
+<!-- ═══════════════════════════════════════════════════════════════════════
+     1. HERO BANNER & SUPER ADMIN TENANT SELECTOR
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div class="row g-3 g-md-4 mb-4">
+    <div class="col-12">
+        <div class="p-4 p-md-4.5 rounded-2xl text-white shadow-xs position-relative overflow-hidden" 
+             style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #0d9488 100%);">
+            <!-- Ambient Glow Circles -->
+            <div class="position-absolute rounded-circle" style="width: 280px; height: 280px; background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 70%); top: -90px; right: -40px; pointer-events: none;"></div>
+            <div class="position-absolute rounded-circle" style="width: 200px; height: 200px; background: radial-gradient(circle, rgba(20,184,166,0.2) 0%, rgba(255,255,255,0) 70%); bottom: -70px; left: 10%; pointer-events: none;"></div>
 
-<!-- Super Admin: Pilih Sekolah Terlebih Dahulu -->
-<?php if ($userRole === 'super_admin'): ?>
-<div class="alert border-0 rounded-4 p-3 mb-4 d-flex align-items-center gap-3"
-     style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);">
-    <i class="bi bi-funnel-fill fs-4" style="color:var(--bk-primary);"></i>
-    <div class="d-flex align-items-center gap-2 flex-wrap w-100">
-        <label for="sa-tenant-select" class="fw-semibold text-dark mb-0" style="white-space:nowrap;">
-            Filter Sekolah (Super Admin):
-        </label>
-        <select id="sa-tenant-select" name="sa-tenant-select" class="form-select form-select-sm rounded-3" style="max-width:320px;" onchange="applySuperAdminTenantFilter(this.value)">
-            <option value="">— Semua Sekolah —</option>
-            <?php foreach ($tenantList as $t): ?>
-            <option value="<?= htmlspecialchars($t['id']) ?>"
-                <?= ($t['id'] === $tenantId ? 'selected' : '') ?>>
-                <?= htmlspecialchars($t['nama_sekolah']) ?> (NPSN: <?= htmlspecialchars($t['npsn'] ?? '-') ?>)
-            </option>
-            <?php endforeach; ?>
-        </select>
-        <button class="btn btn-sm btn-primary rounded-3" id="btn-apply-tenant" onclick="applySuperAdminTenantFilter(document.getElementById('sa-tenant-select').value)">
-            <i class="bi bi-funnel me-1"></i> Terapkan Filter
-        </button>
+            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 position-relative" style="z-index: 2;">
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                        <span class="badge px-3 py-1.5 rounded-pill text-xs font-semibold d-inline-flex align-items-center gap-1.5" style="background: rgba(255,255,255,0.18); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.25);">
+                            <i class="bi <?= htmlspecialchars($pageIcon) ?> text-amber-300"></i>
+                            <?= ($activeGroup === 'kedisiplinan') ? 'Manajemen Tata Tertib & Kedisiplinan Siswa' : 'Pusat Bimbingan & Konseling Siswa' ?>
+                        </span>
+                    </div>
+                    <h2 class="h3 font-bold text-white mb-1 tracking-tight"><?= htmlspecialchars($pageTitle) ?></h2>
+                    <p class="text-white/85 text-xs mb-0" style="max-width: 680px; line-height: 1.6;">
+                        <?= htmlspecialchars($pageSubtitle) ?>
+                    </p>
+                </div>
+
+                <!-- Right Controls: Super Admin Tenant Filter -->
+                <?php if ($userRole === 'super_admin' && !empty($tenantList)): ?>
+                <div class="d-flex align-items-center gap-2 flex-wrap flex-shrink-0">
+                    <div class="d-flex align-items-center gap-2 bg-white/15 p-2 rounded-xl border border-white/25 shadow-xs" style="backdrop-filter: blur(6px);">
+                        <i class="bi bi-buildings text-white fs-6 ms-1.5"></i>
+                        <select id="sa-tenant-select" name="sa-tenant-select" onchange="applySuperAdminTenantFilter(this.value)" class="form-select form-select-sm border-0 text-xs font-semibold bg-white text-slate-800 rounded-lg shadow-2xs cursor-pointer" style="min-width: 240px;">
+                            <option value="">Semua Sekolah / Tenant</option>
+                            <?php foreach ($tenantList as $t): ?>
+                            <option value="<?= htmlspecialchars($t['id']) ?>" <?= ($t['id'] === $tenantId ? 'selected' : '') ?>>
+                                <?= htmlspecialchars($t['nama_sekolah']) ?> (<?= htmlspecialchars($t['npsn'] ?? '-') ?>)
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                <script>
+                function applySuperAdminTenantFilter(tenantId) {
+                    const currentUrl = new URL(window.location.href);
+                    if (tenantId) {
+                        currentUrl.searchParams.set('tenant_id', tenantId);
+                    } else {
+                        currentUrl.searchParams.delete('tenant_id');
+                    }
+                    window.location.href = currentUrl.toString();
+                }
+                </script>
+                <?php endif; ?>
+            </div>
+        </div>
     </div>
 </div>
-<script>
-function applySuperAdminTenantFilter(tenantId) {
-    const currentUrl = new URL(window.location.href);
-    if (tenantId) {
-        currentUrl.searchParams.set('tenant_id', tenantId);
-    } else {
-        currentUrl.searchParams.delete('tenant_id');
-    }
-    window.location.href = currentUrl.toString();
-}
-</script>
-<?php endif; ?>
 <?php endif; ?>
 
 <!-- ─── Vue App Mount ────────────────────────────────────────── -->
-<div id="bkApp" v-cloak>
+<div id="bkApp" v-cloak class="font-sans">
 
     <!-- ═══ HORIZONTAL TAB NAVIGATION ═══════════════════════════ -->
-    <div class="card border-0 shadow-sm rounded-4 mb-4" <?php if(!empty($is_sub_module)) echo 'style="display:none;"'; ?>>
-        <div class="card-body p-2 bg-white rounded-4">
-            <div class="nav-tabs-wrapper">
-                <ul class="nav nav-tabs border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-3 px-2">
+    <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-2 mb-4" <?php if(!empty($is_sub_module)) echo 'style="display:none;"'; ?>>
+        <div class="nav-tabs-wrapper">
+            <ul class="nav nav-pills border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-1.5 px-1">
                     <?php if(!isset($allowed_bk_tabs) || in_array('dashboard', $allowed_bk_tabs)): ?>
                     <li class="nav-item">
                         <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'dashboard'}"
@@ -573,12 +586,12 @@ function applySuperAdminTenantFilter(tenantId) {
                 </ul>
             </div>
         </div>
-    </div>
 
     <!-- ═══════════════════════════════════════════════════════════
          TAB 1: DASHBOARD MONITORING
     ════════════════════════════════════════════════════════════ -->
-    <div v-show="activeTab === 'dashboard'">
+    <?php if(empty($allowed_bk_tabs) || in_array('dashboard', $allowed_bk_tabs)): ?>
+<div v-show="activeTab === 'dashboard'">
         <!-- Loading State -->
         <div v-if="loadingDashboard" class="text-center py-5">
             <div class="spinner-border text-primary"></div>
@@ -663,11 +676,13 @@ function applySuperAdminTenantFilter(tenantId) {
             </div>
         </div>
     </div>
+<?php endif; ?>
 
     <!-- ═══════════════════════════════════════════════════════════
          TAB 2: PENJURUSAN MANDIRI
     ════════════════════════════════════════════════════════════ -->
-    <div v-show="activeTab === 'penjurusan'">
+    <?php if(!empty($allowed_bk_tabs) && in_array('penjurusan', $allowed_bk_tabs)): ?>
+<div v-show="activeTab === 'penjurusan'">
 
         <!-- Alert -->
         <div v-if="alertPenjurusan.msg" :class="'alert alert-' + alertPenjurusan.type + ' border-0 rounded-4 mb-3'" role="alert">
@@ -908,11 +923,13 @@ function applySuperAdminTenantFilter(tenantId) {
             </div>
         </div>
     </div>
+<?php endif; ?>
 
     <!-- ═══════════════════════════════════════════════════════════
          TAB 3: TRACER STUDY
     ════════════════════════════════════════════════════════════ -->
-    <div v-show="activeTab === 'tracer'">
+    <?php if(!empty($allowed_bk_tabs) && in_array('tracer', $allowed_bk_tabs)): ?>
+<div v-show="activeTab === 'tracer'">
         <div class="bk-card p-4">
             <div class="d-flex align-items-center gap-3 mb-4">
                 <div class="kpi-icon" style="background:#ecfdf5;color:#10b981;">
@@ -985,13 +1002,15 @@ function applySuperAdminTenantFilter(tenantId) {
             </div>
         </div>
     </div>
+<?php endif; ?>
 
 
 
     <!-- ═══════════════════════════════════════════════════════════
          TAB 5: REKAM KASUS & JURNAL BK
     ════════════════════════════════════════════════════════════ -->
-    <div v-show="activeTab === 'jurnal'">
+    <?php if(!empty($allowed_bk_tabs) && (in_array('jurnal', $allowed_bk_tabs) || in_array('p_dashboard', $allowed_bk_tabs))): ?>
+<div v-show="activeTab === 'jurnal'">
 
         <!-- Alert Feedback -->
         <div v-if="alertJurnal.msg" :class="'alert alert-' + alertJurnal.type + ' border-0 rounded-4 mb-3'" role="alert">
@@ -1410,11 +1429,13 @@ function applySuperAdminTenantFilter(tenantId) {
             </div>
         </div>
     </div>
+<?php endif; ?>
 
     <!-- ═══════════════════════════════════════════════════════════
          TAB 6: PRESTASI SISWA
     ════════════════════════════════════════════════════════════ -->
-    <div v-show="activeTab === 'prestasi'">
+    <?php if(empty($allowed_bk_tabs) || in_array('prestasi', $allowed_bk_tabs)): ?>
+<div v-show="activeTab === 'prestasi'">
         <!-- Warning untuk Super Admin jika belum memilih sekolah -->
         <div v-if="userRole === 'super_admin' && !currentTenantId" class="text-center py-5">
             <div class="card border-0 shadow-sm rounded-4 p-5 mx-auto animate-fade-in" style="max-width: 500px; background: #fff;">
@@ -1859,11 +1880,13 @@ function applySuperAdminTenantFilter(tenantId) {
             </div>
         </div>
     </div>
+<?php endif; ?>
 
     <!-- ═══════════════════════════════════════════════════════════
          TAB 6: KEHADIRAN SISWA SEMESTERAN
     ════════════════════════════════════════════════════════════ -->
-    <div v-show="activeTab === 'kehadiran'" class="animate-fade-in">
+    <?php if(empty($allowed_bk_tabs) || in_array('kehadiran', $allowed_bk_tabs)): ?>
+<div v-show="activeTab === 'kehadiran'" class="animate-fade-in">
         <!-- Filter Card -->
         <div class="bk-card p-4 mb-4">
             <div class="row g-3 align-items-end">
@@ -2051,11 +2074,13 @@ function applySuperAdminTenantFilter(tenantId) {
             <p class="fs-7">Silakan pilih Tahun Ajaran, Semester, dan Kelas di atas untuk menampilkan grid input.</p>
         </div>
     </div>
+<?php endif; ?>
 
     <!-- ═══════════════════════════════════════════════════════════
          TAB 7: TATA TERTIB & POIN PELANGGARAN
     ════════════════════════════════════════════════════════════ -->
-    <div v-show="activeTab === 'pelanggaran'" class="animate-fade-in">
+    <?php if(!empty($allowed_bk_tabs) && (in_array('p_dashboard', $allowed_bk_tabs) || in_array('pelanggaran', $allowed_bk_tabs))): ?>
+<div v-show="activeTab === 'pelanggaran'" class="animate-fade-in">
         <?php if ($activeGroup !== 'kedisiplinan'): ?>
         <!-- Sub navigation segment control -->
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2 border-bottom pb-2">
@@ -2786,6 +2811,7 @@ function applySuperAdminTenantFilter(tenantId) {
             </div>
         </div>
     </div>
+<?php endif; ?>
 
     <!-- SANKSI & COUNSELING DETAIL MODAL (REACTIVE MODAL) -->
     <div v-if="sanksiDetailModal.show" class="modal-backdrop-custom d-flex align-items-center justify-content-center" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); z-index:1050;">
@@ -3006,7 +3032,8 @@ function applySuperAdminTenantFilter(tenantId) {
     <!-- ═══════════════════════════════════════════════════════════
          TAB 8: BEASISWA SISWA
     ════════════════════════════════════════════════════════════ -->
-    <div v-show="activeTab === 'beasiswa'">
+    <?php if(empty($allowed_bk_tabs) || in_array('beasiswa', $allowed_bk_tabs)): ?>
+<div v-show="activeTab === 'beasiswa'">
         <!-- Warning untuk Super Admin jika belum memilih sekolah -->
         <div v-if="userRole === 'super_admin' && !currentTenantId" class="text-center py-5">
             <div class="card border-0 shadow-sm rounded-4 p-5 mx-auto animate-fade-in" style="max-width: 500px; background: #fff;">
@@ -3179,6 +3206,7 @@ function applySuperAdminTenantFilter(tenantId) {
             </div>
         </div>
     </div>
+<?php endif; ?>
 
     <!-- ═══════════════════════════════════════════════════════════
          TAB: KESIAPAN & ELIGIBILITAS SISWA (PDSS)
@@ -3186,7 +3214,8 @@ function applySuperAdminTenantFilter(tenantId) {
     <!-- ═══════════════════════════════════════════════════════════
          TAB: KESIAPAN & ELIGIBILITAS SISWA (PDSS)
     ════════════════════════════════════════════════════════════ -->
-    <div v-show="activeTab === 'kesiapan'">
+    <?php if(!empty($allowed_bk_tabs) && in_array('kesiapan', $allowed_bk_tabs)): ?>
+<div v-show="activeTab === 'kesiapan'">
         <!-- Premium Header Banner -->
         <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);">
             <div class="card-body p-4 text-white">
@@ -3445,6 +3474,7 @@ function applySuperAdminTenantFilter(tenantId) {
             </div>
         </div>
     </div>
+<?php endif; ?>
 
     <!-- Modal Konfigurasi Kuota Akreditasi -->
     <div class="modal fade" id="modalConfigKuotaPDSS" tabindex="-1" aria-hidden="true">
@@ -3562,7 +3592,8 @@ function applySuperAdminTenantFilter(tenantId) {
     <!-- ═══════════════════════════════════════════════════════════
          TAB: SIMULASI PILIHAN KAMPUS (PDSS)
     ════════════════════════════════════════════════════════════ -->
-    <div v-show="activeTab === 'simulasi'">
+    <?php if(!empty($allowed_bk_tabs) && in_array('simulasi', $allowed_bk_tabs)): ?>
+<div v-show="activeTab === 'simulasi'">
         <div class="card border-0 shadow-sm rounded-4 mb-4">
             <div class="card-header bg-white border-0 rounded-top-4 p-4 pb-3">
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
@@ -3650,11 +3681,13 @@ function applySuperAdminTenantFilter(tenantId) {
             </div>
         </div>
     </div>
+<?php endif; ?>
 
     <!-- ═══════════════════════════════════════════════════════════
          TAB: MASTER KAMPUS & PRODI
     ════════════════════════════════════════════════════════════ -->
-    <div v-show="activeTab === 'master_kampus'">
+    <?php if(!empty($allowed_bk_tabs) && in_array('master_kampus', $allowed_bk_tabs)): ?>
+<div v-show="activeTab === 'master_kampus'">
         <div class="card border-0 shadow-sm rounded-4 mb-4">
             <div class="card-header bg-white border-0 rounded-top-4 p-4 pb-3">
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
@@ -3736,11 +3769,13 @@ function applySuperAdminTenantFilter(tenantId) {
             </div>
         </div>
     </div>
+<?php endif; ?>
 
     <!-- ═══════════════════════════════════════════════════════════
          TAB: MASTER JALUR MASUK
     ════════════════════════════════════════════════════════════ -->
-    <div v-show="activeTab === 'master_jalur'">
+    <?php if(!empty($allowed_bk_tabs) && in_array('master_jalur', $allowed_bk_tabs)): ?>
+<div v-show="activeTab === 'master_jalur'">
         <div class="card border-0 shadow-sm rounded-4 mb-4">
             <div class="card-header bg-white border-0 rounded-top-4 p-4 pb-3">
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
@@ -3807,11 +3842,13 @@ function applySuperAdminTenantFilter(tenantId) {
             </div>
         </div>
     </div>
+<?php endif; ?>
 
     <!-- ═══════════════════════════════════════════════════════════
          TAB: TRACKING DATA ALUMNI
     ════════════════════════════════════════════════════════════ -->
-    <div v-show="activeTab === 'tracking'">
+    <?php if(!empty($allowed_bk_tabs) && in_array('tracking', $allowed_bk_tabs)): ?>
+<div v-show="activeTab === 'tracking'">
         <div class="card border-0 shadow-sm rounded-4 mb-4">
             <div class="card-header bg-white border-0 rounded-top-4 p-4 pb-3">
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
@@ -3904,11 +3941,13 @@ function applySuperAdminTenantFilter(tenantId) {
             </div>
         </div>
     </div>
+<?php endif; ?>
 
     <!-- ═══════════════════════════════════════════════════════════
          TAB: RIWAYAT KULIAH
     ════════════════════════════════════════════════════════════ -->
-    <div v-show="activeTab === 'riwayat_kuliah'">
+    <?php if(!empty($allowed_bk_tabs) && in_array('riwayat_kuliah', $allowed_bk_tabs)): ?>
+<div v-show="activeTab === 'riwayat_kuliah'">
         <div class="card border-0 shadow-sm rounded-4 mb-4">
             <div class="card-header bg-white border-0 rounded-top-4 p-4 pb-3">
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
@@ -3971,11 +4010,13 @@ function applySuperAdminTenantFilter(tenantId) {
             </div>
         </div>
     </div>
+<?php endif; ?>
 
     <!-- ═══════════════════════════════════════════════════════════
          TAB: RIWAYAT PEKERJAAN
     ════════════════════════════════════════════════════════════ -->
-    <div v-show="activeTab === 'riwayat_pekerjaan'">
+    <?php if(!empty($allowed_bk_tabs) && in_array('riwayat_pekerjaan', $allowed_bk_tabs)): ?>
+<div v-show="activeTab === 'riwayat_pekerjaan'">
         <div class="card border-0 shadow-sm rounded-4 mb-4">
             <div class="card-header bg-white border-0 rounded-top-4 p-4 pb-3">
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
@@ -4036,6 +4077,7 @@ function applySuperAdminTenantFilter(tenantId) {
             </div>
         </div>
     </div>
+<?php endif; ?>
 
 </div><!-- End #bkApp -->
 
@@ -6892,7 +6934,6 @@ window.VueAppRegistry.register('#bkApp', {
 
         // ─── Init ────────────────────────────────────────────
         onMounted(() => {
-            loadDashboard();
             switchTab(activeTab.value);
         });
 

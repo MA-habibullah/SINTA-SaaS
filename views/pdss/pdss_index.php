@@ -213,8 +213,8 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
         </div>
         <template v-else>
             <!-- GLOBAL TAHUN AJARAN SELECTOR BAR (BK MANUAL CONTROL) -->
-            <div class="card border-0 shadow-sm rounded-2xl mb-4 bg-white border border-slate-100">
-                <div class="card-body p-4 flex flex-wrap items-center justify-between gap-4">
+            <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-3 px-4 mb-4">
+                <div class="flex flex-wrap items-center justify-between gap-3">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
                             <i class="bi bi-calendar-event text-lg"></i>
@@ -241,114 +241,114 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
             </div>
 
             <!-- STATUS LOCK DATA KESIAPAN (4 LANGKAH BERTAHAP) -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
                 <!-- Lock Langkah 1 -->
-                <div class="bg-white rounded-2xl shadow-sm border p-4 flex flex-col justify-between gap-3 transition"
-                     :class="locks[1]?.is_locked ? 'border-amber-200 bg-amber-50/10' : 'border-slate-100'">
+                <div class="bg-white rounded-2xl shadow-xs border p-4 flex flex-col justify-between gap-3 transition hover:shadow-sm h-full"
+                     :class="locks[1]?.is_locked ? 'border-amber-200 bg-amber-50/20' : 'border-slate-200/80'">
                     <div class="flex items-start gap-3">
-                        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
-                             :class="locks[1]?.is_locked ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'">
+                        <div class="w-9 h-9 rounded-xl flex items-center justify-center text-sm flex-shrink-0"
+                             :class="locks[1]?.is_locked ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'">
                             <i class="bi" :class="locks[1]?.is_locked ? 'bi-lock-fill' : 'bi-unlock-fill'"></i>
                         </div>
                         <div>
-                            <h4 class="font-bold text-xs text-slate-800 uppercase tracking-wider mb-0.5">1. Mapel PDSS</h4>
-                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded" :class="locks[1]?.is_locked ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'">
+                            <h4 class="font-bold text-xs text-slate-800 uppercase tracking-wider mb-1">1. Mapel PDSS</h4>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-md inline-block" :class="locks[1]?.is_locked ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'">
                                 {{ locks[1]?.is_locked ? 'TERKUNCI' : 'TERBUKA' }}
                             </span>
                             <p class="text-[10px] text-slate-500 mt-1 mb-0" v-if="locks[1]?.is_locked">
-                                Dikunci oleh {{ locks[1]?.locked_by }}
+                                Dikunci: {{ locks[1]?.locked_by }}
                             </p>
                         </div>
                     </div>
-                    <div v-if="canWrite" class="text-end">
-                        <button class="btn btn-xs btn-outline-secondary text-[10px] px-2.5 py-1 rounded-lg"
-                                :class="locks[1]?.is_locked ? 'border-amber-500 text-amber-600 hover:bg-amber-50' : 'border-slate-200'"
+                    <div v-if="canWrite" class="text-end pt-1">
+                        <button class="btn btn-xs font-semibold text-[10px] px-2.5 py-1 rounded-lg transition"
+                                :class="locks[1]?.is_locked ? 'btn-outline-warning text-amber-800 hover:bg-amber-50' : 'btn-light border text-slate-700 hover:bg-slate-100'"
                                 @click="togglePdssLock(1)">
-                            <i class="bi" :class="locks[1]?.is_locked ? 'bi-unlock-fill' : 'bi-lock-fill'"></i>
+                            <i class="bi me-1" :class="locks[1]?.is_locked ? 'bi-unlock-fill' : 'bi-lock-fill'"></i>
                             {{ locks[1]?.is_locked ? 'Buka Kunci' : 'Kunci Step 1' }}
                         </button>
                     </div>
                 </div>
 
                 <!-- Lock Langkah 2 -->
-                <div class="bg-white rounded-2xl shadow-sm border p-4 flex flex-col justify-between gap-3 transition"
-                     :class="locks[2]?.is_locked ? 'border-amber-200 bg-amber-50/10' : 'border-slate-100'">
+                <div class="bg-white rounded-2xl shadow-xs border p-4 flex flex-col justify-between gap-3 transition hover:shadow-sm h-full"
+                     :class="locks[2]?.is_locked ? 'border-amber-200 bg-amber-50/20' : 'border-slate-200/80'">
                     <div class="flex items-start gap-3">
-                        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
-                             :class="locks[2]?.is_locked ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'">
+                        <div class="w-9 h-9 rounded-xl flex items-center justify-center text-sm flex-shrink-0"
+                             :class="locks[2]?.is_locked ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'">
                             <i class="bi" :class="locks[2]?.is_locked ? 'bi-lock-fill' : 'bi-unlock-fill'"></i>
                         </div>
                         <div>
-                            <h4 class="font-bold text-xs text-slate-800 uppercase tracking-wider mb-0.5">2. Nilai Rapor</h4>
-                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded" :class="locks[2]?.is_locked ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'">
+                            <h4 class="font-bold text-xs text-slate-800 uppercase tracking-wider mb-1">2. Nilai Rapor</h4>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-md inline-block" :class="locks[2]?.is_locked ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'">
                                 {{ locks[2]?.is_locked ? 'TERKUNCI' : 'TERBUKA' }}
                             </span>
                             <p class="text-[10px] text-slate-500 mt-1 mb-0" v-if="locks[2]?.is_locked">
-                                Dikunci oleh {{ locks[2]?.locked_by }}
+                                Dikunci: {{ locks[2]?.locked_by }}
                             </p>
                         </div>
                     </div>
-                    <div v-if="canWrite" class="text-end">
-                        <button class="btn btn-xs btn-outline-secondary text-[10px] px-2.5 py-1 rounded-lg"
-                                :class="locks[2]?.is_locked ? 'border-amber-500 text-amber-600 hover:bg-amber-50' : 'border-slate-200'"
+                    <div v-if="canWrite" class="text-end pt-1">
+                        <button class="btn btn-xs font-semibold text-[10px] px-2.5 py-1 rounded-lg transition"
+                                :class="locks[2]?.is_locked ? 'btn-outline-warning text-amber-800 hover:bg-amber-50' : 'btn-light border text-slate-700 hover:bg-slate-100'"
                                 @click="togglePdssLock(2)">
-                            <i class="bi" :class="locks[2]?.is_locked ? 'bi-unlock-fill' : 'bi-lock-fill'"></i>
+                            <i class="bi me-1" :class="locks[2]?.is_locked ? 'bi-unlock-fill' : 'bi-lock-fill'"></i>
                             {{ locks[2]?.is_locked ? 'Buka Kunci' : 'Kunci Step 2' }}
                         </button>
                     </div>
                 </div>
 
                 <!-- Lock Langkah 3 -->
-                <div class="bg-white rounded-2xl shadow-sm border p-4 flex flex-col justify-between gap-3 transition"
-                     :class="locks[3]?.is_locked ? 'border-amber-200 bg-amber-50/10' : 'border-slate-100'">
+                <div class="bg-white rounded-2xl shadow-xs border p-4 flex flex-col justify-between gap-3 transition hover:shadow-sm h-full"
+                     :class="locks[3]?.is_locked ? 'border-amber-200 bg-amber-50/20' : 'border-slate-200/80'">
                     <div class="flex items-start gap-3">
-                        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
-                             :class="locks[3]?.is_locked ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'">
+                        <div class="w-9 h-9 rounded-xl flex items-center justify-center text-sm flex-shrink-0"
+                             :class="locks[3]?.is_locked ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'">
                             <i class="bi" :class="locks[3]?.is_locked ? 'bi-lock-fill' : 'bi-unlock-fill'"></i>
                         </div>
                         <div>
-                            <h4 class="font-bold text-xs text-slate-800 uppercase tracking-wider mb-0.5">3. Ranking & Kuota</h4>
-                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded" :class="locks[3]?.is_locked ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'">
+                            <h4 class="font-bold text-xs text-slate-800 uppercase tracking-wider mb-1">3. Ranking & Kuota</h4>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-md inline-block" :class="locks[3]?.is_locked ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'">
                                 {{ locks[3]?.is_locked ? 'TERKUNCI' : 'TERBUKA' }}
                             </span>
                             <p class="text-[10px] text-slate-500 mt-1 mb-0" v-if="locks[3]?.is_locked">
-                                Dikunci oleh {{ locks[3]?.locked_by }}
+                                Dikunci: {{ locks[3]?.locked_by }}
                             </p>
                         </div>
                     </div>
-                    <div v-if="canWrite" class="text-end">
-                        <button class="btn btn-xs btn-outline-secondary text-[10px] px-2.5 py-1 rounded-lg"
-                                :class="locks[3]?.is_locked ? 'border-amber-500 text-amber-600 hover:bg-amber-50' : 'border-slate-200'"
+                    <div v-if="canWrite" class="text-end pt-1">
+                        <button class="btn btn-xs font-semibold text-[10px] px-2.5 py-1 rounded-lg transition"
+                                :class="locks[3]?.is_locked ? 'btn-outline-warning text-amber-800 hover:bg-amber-50' : 'btn-light border text-slate-700 hover:bg-slate-100'"
                                 @click="togglePdssLock(3)">
-                            <i class="bi" :class="locks[3]?.is_locked ? 'bi-unlock-fill' : 'bi-lock-fill'"></i>
+                            <i class="bi me-1" :class="locks[3]?.is_locked ? 'bi-unlock-fill' : 'bi-lock-fill'"></i>
                             {{ locks[3]?.is_locked ? 'Buka Kunci' : 'Kunci Step 3' }}
                         </button>
                     </div>
                 </div>
 
                 <!-- Lock Langkah 4 -->
-                <div class="bg-white rounded-2xl shadow-sm border p-4 flex flex-col justify-between gap-3 transition"
-                     :class="locks[4]?.is_locked ? 'border-amber-200 bg-amber-50/10' : 'border-slate-100'">
+                <div class="bg-white rounded-2xl shadow-xs border p-4 flex flex-col justify-between gap-3 transition hover:shadow-sm h-full"
+                     :class="locks[4]?.is_locked ? 'border-amber-200 bg-amber-50/20' : 'border-slate-200/80'">
                     <div class="flex items-start gap-3">
-                        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
-                             :class="locks[4]?.is_locked ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'">
+                        <div class="w-9 h-9 rounded-xl flex items-center justify-center text-sm flex-shrink-0"
+                             :class="locks[4]?.is_locked ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'">
                             <i class="bi" :class="locks[4]?.is_locked ? 'bi-lock-fill' : 'bi-unlock-fill'"></i>
                         </div>
                         <div>
-                            <h4 class="font-bold text-xs text-slate-800 uppercase tracking-wider mb-0.5">4. Final Eligible</h4>
-                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded" :class="locks[4]?.is_locked ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'">
+                            <h4 class="font-bold text-xs text-slate-800 uppercase tracking-wider mb-1">4. Final Eligible</h4>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-md inline-block" :class="locks[4]?.is_locked ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'">
                                 {{ locks[4]?.is_locked ? 'TERKUNCI' : 'TERBUKA' }}
                             </span>
                             <p class="text-[10px] text-slate-500 mt-1 mb-0" v-if="locks[4]?.is_locked">
-                                Dikunci oleh {{ locks[4]?.locked_by }}
+                                Dikunci: {{ locks[4]?.locked_by }}
                             </p>
                         </div>
                     </div>
-                    <div v-if="canWrite" class="text-end">
-                        <button class="btn btn-xs btn-outline-secondary text-[10px] px-2.5 py-1 rounded-lg"
-                                :class="locks[4]?.is_locked ? 'border-amber-500 text-amber-600 hover:bg-amber-50' : 'border-slate-200'"
+                    <div v-if="canWrite" class="text-end pt-1">
+                        <button class="btn btn-xs font-semibold text-[10px] px-2.5 py-1 rounded-lg transition"
+                                :class="locks[4]?.is_locked ? 'btn-outline-warning text-amber-800 hover:bg-amber-50' : 'btn-light border text-slate-700 hover:bg-slate-100'"
                                 @click="togglePdssLock(4)">
-                            <i class="bi" :class="locks[4]?.is_locked ? 'bi-unlock-fill' : 'bi-lock-fill'"></i>
+                            <i class="bi me-1" :class="locks[4]?.is_locked ? 'bi-unlock-fill' : 'bi-lock-fill'"></i>
                             {{ locks[4]?.is_locked ? 'Buka Kunci' : 'Kunci Final' }}
                         </button>
                     </div>
@@ -356,52 +356,52 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
             </div>
 
             <!-- KPI Row -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex items-center justify-between">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-4 flex items-center justify-between transition hover:shadow-sm">
                     <div>
                         <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Siswa Kelas 12</span>
                         <span class="text-2xl font-bold text-slate-800 mt-1 block">{{ stats.totalStudents }}</span>
                         <span class="text-xs text-slate-500 mt-1 block">Aktif dalam database</span>
                     </div>
-                    <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-2xs border border-blue-100">
                         <i class="bi bi-people-fill text-xl"></i>
                     </div>
                 </div>
                 
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex items-center justify-between">
+                <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-4 flex items-center justify-between transition hover:shadow-sm">
                     <div>
                         <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Kelengkapan Rapor</span>
                         <span class="text-2xl font-bold text-slate-800 mt-1 block">{{ stats.completenessRate }}%</span>
                         <span class="text-xs text-slate-500 mt-1 block">{{ stats.studentsWithGrades }} siswa terisi nilai</span>
                     </div>
-                    <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-2xs border border-emerald-100">
                         <i class="bi bi-file-earmark-check-fill text-xl"></i>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex items-center justify-between">
+                <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-4 flex items-center justify-between transition hover:shadow-sm">
                     <div>
                         <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Siswa Eligible SNBP</span>
                         <span class="text-2xl font-bold text-slate-800 mt-1 block">{{ stats.eligibleCount }}</span>
                         <span class="text-xs text-slate-500 mt-1 block">Berdasarkan simulasi kuota {{ quotaPercent }}%</span>
                     </div>
-                    <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-2xs border border-amber-100">
                         <i class="bi bi-award-fill text-xl"></i>
                     </div>
                 </div>
             </div>
 
             <!-- ALUR KERJA 4 LANGKAH BK (Workflow Accordion / Cards) -->
-            <div class="grid grid-cols-1 gap-6">
+            <div class="grid grid-cols-1 gap-4">
                 
                 <!-- LANGKAH 1: KONFIGURASI MATA PELAJARAN PDSS -->
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                    <div class="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between cursor-pointer" @click="showMapelConfig = !showMapelConfig">
+                <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden">
+                    <div class="px-5 py-4 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between cursor-pointer hover:bg-slate-100/60 transition" @click="showMapelConfig = !showMapelConfig">
                         <div class="flex items-center gap-3">
                             <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm">1</div>
                             <div>
-                                <h4 class="font-bold text-sm text-slate-800">Langkah 1: Tentukan Mata Pelajaran untuk PDSS</h4>
-                                <p class="text-xs text-slate-500">Pilih mata pelajaran dari kurikulum yang akan dihitung nilainya selama semester 1 s.d. 5/6.</p>
+                                <h4 class="font-bold text-sm text-slate-800 mb-0.5">Langkah 1: Tentukan Mata Pelajaran untuk PDSS</h4>
+                                <p class="text-xs text-slate-500 mb-0">Pilih mata pelajaran dari kurikulum yang akan dihitung nilainya selama semester 1 s.d. 5/6.</p>
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
@@ -412,7 +412,7 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
                         </div>
                     </div>
                     
-                    <div v-show="showMapelConfig" class="p-6 border-t border-slate-100 animate-fade-in">
+                    <div v-show="showMapelConfig" class="p-5 border-t border-slate-100 animate-fade-in">
                         <div v-if="loadingMapels" class="text-center py-4 text-slate-400 text-xs">
                             <div class="spinner-border spinner-border-sm text-primary me-2"></div>
                             Memuat daftar mata pelajaran...
@@ -422,7 +422,7 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
                         </div>
                         <div v-else>
                             <!-- Action Presets & Filter Toolbar (Kurikulum Merdeka - Clean Ergonomic Layout) -->
-                            <div class="mb-4 bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                            <div class="mb-4 bg-slate-50/80 p-3.5 px-4 rounded-2xl border border-slate-200/80 space-y-3">
                                 <!-- Baris 1: Filter Kategori, Pencarian, & Tombol Sakti Deteksi Otomatis -->
                                 <div class="flex flex-wrap items-center justify-between gap-3">
                                     <div class="flex items-center gap-3 flex-wrap">
@@ -431,7 +431,7 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
                                             <span class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 whitespace-nowrap">
                                                 <i class="bi bi-funnel-fill text-blue-600"></i> Kategori:
                                             </span>
-                                            <select v-model="filterMapelCategory" class="form-select form-select-sm text-xs rounded-xl border-slate-300 py-1.5 px-3 font-medium bg-white" style="min-width: 170px;">
+                                            <select v-model="filterMapelCategory" class="form-select form-select-sm text-xs rounded-xl border-slate-300 py-1.5 px-3 font-semibold bg-white shadow-2xs" style="min-width: 170px;">
                                                 <option value="">— Semua Kategori —</option>
                                                 <option v-for="cat in mapelCategories" :key="cat" :value="cat">
                                                     {{ cat }}
@@ -441,14 +441,14 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
 
                                         <!-- Pencarian Mapel -->
                                         <div class="relative flex items-center">
-                                            <i class="bi bi-search absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
-                                            <input type="text" v-model="searchMapelConfig" placeholder="Cari nama mapel..." class="rounded-xl border border-slate-300 bg-white py-1.5 pr-3 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 w-48 shadow-2xs" style="padding-left: 2rem !important;">
+                                            <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                                            <input type="text" v-model="searchMapelConfig" placeholder="Cari nama mapel..." class="rounded-xl border border-slate-300 bg-white py-1.5 pr-3 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 w-52 shadow-2xs" style="padding-left: 2.25rem !important;">
                                         </div>
                                     </div>
 
                                     <!-- Tombol Utama Deteksi Otomatis (High Contrast & Sharp) -->
                                     <button type="button" 
-                                            class="btn btn-sm text-white font-bold rounded-xl px-3.5 py-1.5 flex items-center gap-1.5 shadow-sm transition-all hover:opacity-95"
+                                            class="btn btn-sm text-white font-bold rounded-xl px-4 py-2 flex items-center gap-2 shadow-sm transition-all hover:opacity-95"
                                             style="background-color: #059669; border-color: #047857; color: #ffffff !important;"
                                             :disabled="locks[1]?.is_locked" 
                                             @click="autoDetectMapelsFromGrades">
@@ -458,31 +458,31 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
                                 </div>
 
                                 <!-- Baris 2: Preset Pilihan Cepat & Status -->
-                                <div class="flex flex-wrap items-center justify-between gap-2.5 pt-2.5 mt-2.5 border-t border-slate-200">
+                                <div class="flex flex-wrap items-center justify-between gap-3 pt-2.5 border-t border-slate-200/80">
                                     <div class="flex items-center gap-2 flex-wrap">
                                         <span class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 me-1 whitespace-nowrap">
                                             <i class="bi bi-sliders text-indigo-600"></i> Pilihan Cepat:
                                         </span>
-                                        <button type="button" class="btn btn-sm btn-primary rounded-xl text-xs font-semibold px-3 py-1 flex items-center gap-1 shadow-2xs" :disabled="locks[1]?.is_locked" @click="applySnbpPreset">
-                                            <i class="bi bi-stars text-amber-300"></i> 6 Mapel Wajib SNBP
+                                        <button type="button" class="btn btn-sm btn-primary rounded-xl text-xs font-semibold px-3 py-1.5 flex items-center gap-1.5 shadow-2xs" :disabled="locks[1]?.is_locked" @click="applySnbpPreset">
+                                            <i class="bi bi-award-fill text-amber-300"></i> 6 Mapel Wajib SNBP
                                         </button>
-                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-xl text-xs font-semibold px-3 py-1 flex items-center gap-1" :disabled="locks[1]?.is_locked" @click="selectAllMapels([1,2,3,4,5])">
+                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-xl text-xs font-semibold px-3 py-1.5 flex items-center gap-1.5" :disabled="locks[1]?.is_locked" @click="selectAllMapels([1,2,3,4,5])">
                                             <i class="bi bi-check-all"></i> Pilih Semua (Sem 1-5)
                                         </button>
-                                        <button type="button" class="btn btn-sm btn-outline-danger rounded-xl text-xs font-semibold px-3 py-1 flex items-center gap-1" :disabled="locks[1]?.is_locked" @click="clearAllMapels">
+                                        <button type="button" class="btn btn-sm btn-outline-danger rounded-xl text-xs font-semibold px-3 py-1.5 flex items-center gap-1.5" :disabled="locks[1]?.is_locked" @click="clearAllMapels">
                                             <i class="bi bi-x-circle"></i> Kosongkan
                                         </button>
                                     </div>
 
-                                    <div class="text-[11px] text-slate-500 font-medium hidden sm:flex items-center gap-1">
-                                        <i class="bi bi-info-circle text-blue-500"></i>
-                                        <span>Dicentang: <strong class="text-slate-800">{{ totalConfiguredMapels }}</strong> mapel aktif</span>
+                                    <div class="badge bg-white text-slate-700 border border-slate-200 px-3 py-1.5 rounded-xl font-bold text-[11px] shadow-2xs flex items-center gap-1.5">
+                                        <i class="bi bi-check2-circle text-emerald-600"></i>
+                                        <span>Dicentang: <strong class="text-blue-700">{{ totalConfiguredMapels }}</strong> Mapel Aktif</span>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Table Grid Semester Mapel (Kurikulum Merdeka Enhanced - 100% Responsive) -->
-                            <div class="table-responsive mb-4 rounded-2xl border border-slate-200 shadow-sm bg-white overflow-x-auto">
+                            <div class="table-responsive mb-3 rounded-xl border border-slate-200/80 shadow-2xs bg-white overflow-x-auto">
                                 <table class="table table-bordered align-middle text-xs mb-0 w-full" style="min-width: 700px;">
                                     <thead class="bg-slate-50 text-center font-bold text-slate-700">
                                         <tr class="border-b border-slate-200">
@@ -502,7 +502,7 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr v-for="mapel in filteredPdssMapels" :key="mapel.id" class="transition-colors hover:bg-slate-50" :class="{'bg-blue-50/20 font-medium': mapel.sem_1 || mapel.sem_2 || mapel.sem_3 || mapel.sem_4 || mapel.sem_5}">
+                                        <tr v-for="mapel in filteredPdssMapels" :key="mapel.id" class="transition-colors hover:bg-slate-50/80" :class="{'bg-blue-50/20 font-medium': mapel.sem_1 || mapel.sem_2 || mapel.sem_3 || mapel.sem_4 || mapel.sem_5}">
                                             <td class="font-semibold text-slate-800 ps-3 py-2">
                                                 <div class="flex items-center gap-1.5 truncate">
                                                     <i class="bi bi-journal-text text-slate-400 text-xs"></i>
@@ -518,49 +518,49 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
                                             <!-- Sem 1 -->
                                             <td class="text-center py-1.5 border-l">
                                                 <input type="checkbox" v-model="mapel.sem_1" :disabled="locks[1]?.is_locked" class="rounded text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer">
-                                                <span v-if="mapel.has_sem_1" class="text-[9px] text-emerald-600 font-bold block leading-tight mt-0.5">✔ Ada</span>
-                                                <span v-else class="text-[8px] text-slate-300 block leading-tight mt-0.5">Kosong</span>
+                                                <span v-if="mapel.has_sem_1" class="text-[9px] text-emerald-600 font-semibold block leading-none mt-0.5">● Ada</span>
+                                                <span v-else class="text-[8px] text-slate-300 block leading-none mt-0.5">-</span>
                                             </td>
                                             <!-- Sem 2 -->
                                             <td class="text-center py-1.5">
                                                 <input type="checkbox" v-model="mapel.sem_2" :disabled="locks[1]?.is_locked" class="rounded text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer">
-                                                <span v-if="mapel.has_sem_2" class="text-[9px] text-emerald-600 font-bold block leading-tight mt-0.5">✔ Ada</span>
-                                                <span v-else class="text-[8px] text-slate-300 block leading-tight mt-0.5">Kosong</span>
+                                                <span v-if="mapel.has_sem_2" class="text-[9px] text-emerald-600 font-semibold block leading-none mt-0.5">● Ada</span>
+                                                <span v-else class="text-[8px] text-slate-300 block leading-none mt-0.5">-</span>
                                             </td>
                                             <!-- Sem 3 -->
                                             <td class="text-center py-1.5 border-l">
                                                 <input type="checkbox" v-model="mapel.sem_3" :disabled="locks[1]?.is_locked" class="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer">
-                                                <span v-if="mapel.has_sem_3" class="text-[9px] text-emerald-600 font-bold block leading-tight mt-0.5">✔ Ada</span>
-                                                <span v-else class="text-[8px] text-slate-300 block leading-tight mt-0.5">Kosong</span>
+                                                <span v-if="mapel.has_sem_3" class="text-[9px] text-emerald-600 font-semibold block leading-none mt-0.5">● Ada</span>
+                                                <span v-else class="text-[8px] text-slate-300 block leading-none mt-0.5">-</span>
                                             </td>
                                             <!-- Sem 4 -->
                                             <td class="text-center py-1.5">
                                                 <input type="checkbox" v-model="mapel.sem_4" :disabled="locks[1]?.is_locked" class="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer">
-                                                <span v-if="mapel.has_sem_4" class="text-[9px] text-emerald-600 font-bold block leading-tight mt-0.5">✔ Ada</span>
-                                                <span v-else class="text-[8px] text-slate-300 block leading-tight mt-0.5">Kosong</span>
+                                                <span v-if="mapel.has_sem_4" class="text-[9px] text-emerald-600 font-semibold block leading-none mt-0.5">● Ada</span>
+                                                <span v-else class="text-[8px] text-slate-300 block leading-none mt-0.5">-</span>
                                             </td>
                                             <!-- Sem 5 -->
                                             <td class="text-center py-1.5 border-l">
                                                 <input type="checkbox" v-model="mapel.sem_5" :disabled="locks[1]?.is_locked" class="rounded text-purple-600 focus:ring-purple-500 w-3.5 h-3.5 cursor-pointer">
-                                                <span v-if="mapel.has_sem_5" class="text-[9px] text-emerald-600 font-bold block leading-tight mt-0.5">✔ Ada</span>
-                                                <span v-else class="text-[8px] text-slate-300 block leading-tight mt-0.5">Kosong</span>
+                                                <span v-if="mapel.has_sem_5" class="text-[9px] text-emerald-600 font-semibold block leading-none mt-0.5">● Ada</span>
+                                                <span v-else class="text-[8px] text-slate-300 block leading-none mt-0.5">-</span>
                                             </td>
                                             <!-- Sem 6 -->
                                             <td class="text-center py-1.5">
                                                 <input type="checkbox" v-model="mapel.sem_6" :disabled="locks[1]?.is_locked" class="rounded text-purple-600 focus:ring-purple-500 w-3.5 h-3.5 cursor-pointer">
-                                                <span v-if="mapel.has_sem_6" class="text-[9px] text-emerald-600 font-bold block leading-tight mt-0.5">✔ Ada</span>
-                                                <span v-else class="text-[8px] text-slate-300 block leading-tight mt-0.5">Kosong</span>
+                                                <span v-if="mapel.has_sem_6" class="text-[9px] text-emerald-600 font-semibold block leading-none mt-0.5">● Ada</span>
+                                                <span v-else class="text-[8px] text-slate-300 block leading-none mt-0.5">-</span>
                                             </td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
                             
-                            <div class="flex justify-end gap-2 border-t pt-4">
-                                <button class="btn btn-sm btn-light border font-semibold px-4 py-2 rounded-xl text-xs" @click="showMapelConfig = false">
+                            <div class="flex justify-end gap-2 border-t pt-3">
+                                <button class="btn btn-sm btn-light border font-semibold px-4 py-1.5 rounded-xl text-xs" @click="showMapelConfig = false">
                                     Tutup
                                 </button>
-                                <button class="btn btn-sm btn-primary font-semibold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm" :disabled="savingMapels || locks[1]?.is_locked" @click="savePdssMapels">
+                                <button class="btn btn-sm btn-primary font-semibold px-4 py-1.5 rounded-xl text-xs flex items-center gap-1.5 shadow-sm" :disabled="savingMapels || locks[1]?.is_locked" @click="savePdssMapels">
                                     <span v-if="savingMapels" class="spinner-border spinner-border-sm me-1"></span>
                                     <i class="bi bi-save"></i> Simpan Pilihan Mapel
                                 </button>
@@ -570,13 +570,13 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
                 </div>
 
                 <!-- LANGKAH 2: PENGECEKAN NILAI RAPOR DARI BUKU INDUK & LEGER -->
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                    <div class="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden">
+                    <div class="px-5 py-4 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between">
                         <div class="flex items-center gap-3">
                             <div class="w-8 h-8 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center font-bold text-sm">2</div>
                             <div>
-                                <h4 class="font-bold text-sm text-slate-800">Langkah 2: Pengecekan Nilai Rapor Siswa & Unduh Leger Nilai</h4>
-                                <p class="text-xs text-slate-500">Nilai diambil otomatis dari Buku Induk siswa kelas 12 aktif. Periksa kelengkapan nilai sebelum mengunci.</p>
+                                <h4 class="font-bold text-sm text-slate-800 mb-0.5">Langkah 2: Pengecekan Nilai Rapor Siswa &amp; Unduh Leger Nilai</h4>
+                                <p class="text-xs text-slate-500 mb-0">Nilai diambil otomatis dari Buku Induk siswa kelas 12 aktif. Periksa kelengkapan nilai sebelum mengunci.</p>
                             </div>
                         </div>
                         <span v-if="locks[2]?.is_locked" class="bg-amber-100 text-amber-800 text-[10px] font-bold py-1 px-2 rounded-lg flex items-center gap-1 select-none">
@@ -584,20 +584,25 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
                         </span>
                     </div>
                     
-                    <div class="p-6 border-t border-slate-100 space-y-4">
-                        <div class="flex flex-wrap items-center justify-between gap-4">
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs text-slate-500">Status Kelengkapan:</span>
-                                <span class="badge" :class="stats.completenessRate >= 100 ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'">
-                                    {{ stats.completenessRate }}% Lengkap ({{ stats.studentsWithGrades }}/{{ stats.totalStudents }} Siswa)
-                                </span>
+                    <div class="p-4 px-5 border-t border-slate-100">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                                    <i class="bi bi-file-earmark-check-fill text-base"></i>
+                                </div>
+                                <div>
+                                    <span class="text-xs text-slate-500 font-medium block">Status Kelengkapan Nilai Siswa:</span>
+                                    <span class="badge font-bold text-xs" :class="stats.completenessRate >= 100 ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-amber-100 text-amber-800 border border-amber-200'">
+                                        {{ stats.completenessRate }}% Lengkap ({{ stats.studentsWithGrades }} dari {{ stats.totalStudents }} Siswa)
+                                    </span>
+                                </div>
                             </div>
 
                             <div class="flex items-center gap-2 flex-wrap">
                                 <!-- Download Leger by Semester -->
-                                <div class="flex items-center gap-1 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs">
-                                    <span class="text-slate-500 font-medium select-none">Unduh Leger:</span>
-                                    <select v-model="downloadSemester" class="border-0 bg-transparent py-0 px-1 text-xs text-slate-700 font-semibold focus:ring-0 focus:outline-none cursor-pointer">
+                                <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs">
+                                    <span class="text-slate-600 font-semibold select-none">Unduh Leger:</span>
+                                    <select v-model="downloadSemester" class="border-0 bg-transparent py-0 px-1 text-xs text-slate-700 font-bold focus:ring-0 focus:outline-none cursor-pointer">
                                         <option :value="1">Semester 1 (Kelas X)</option>
                                         <option :value="2">Semester 2 (Kelas X)</option>
                                         <option :value="3">Semester 3 (Kelas XI)</option>
@@ -607,9 +612,9 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
                                     </select>
                                     <a v-if="!mapelNotConfigured && students.length > 0 && filterAcademicYear" 
                                        :href="baseUrl + '/api/v1/pdss/download-leger?semester=' + downloadSemester + '&tahun_ajaran_id=' + filterAcademicYear + (currentTenantId ? '&tenant_id=' + currentTenantId : '')" 
-                                       class="btn btn-sm btn-primary rounded-lg px-2.5 py-1 text-xs font-semibold flex items-center gap-1.5 transition ms-2"
+                                       class="btn btn-sm btn-primary rounded-lg px-3 py-1 text-xs font-semibold flex items-center gap-1.5 transition ms-1"
                                        target="_blank">
-                                        <i class="bi bi-file-earmark-excel-fill text-xs text-emerald-400"></i> Unduh Excel
+                                        <i class="bi bi-file-earmark-excel-fill text-xs text-emerald-300"></i> Unduh Excel
                                     </a>
                                 </div>
                             </div>
@@ -618,13 +623,13 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
                 </div>
 
                 <!-- LANGKAH 3: ATUR KUOTA & HITUNG RANKING PARALEL -->
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                    <div class="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden">
+                    <div class="px-5 py-4 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between">
                         <div class="flex items-center gap-3">
                             <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-sm">3</div>
                             <div>
-                                <h4 class="font-bold text-sm text-slate-800">Langkah 3: Atur Kuota Eligible & Hitung Ranking Paralel Jurusan</h4>
-                                <p class="text-xs text-slate-500">Sesuaikan persentase kuota berdasarkan akreditasi sekolah (+5% e-Rapor) dan simpan ranking paralel.</p>
+                                <h4 class="font-bold text-sm text-slate-800 mb-0.5">Langkah 3: Atur Kuota Eligible &amp; Hitung Ranking Paralel Jurusan</h4>
+                                <p class="text-xs text-slate-500 mb-0">Sesuaikan persentase kuota berdasarkan akreditasi sekolah (+5% e-Rapor) dan simpan ranking paralel.</p>
                             </div>
                         </div>
                         <span v-if="locks[3]?.is_locked" class="bg-amber-100 text-amber-800 text-[10px] font-bold py-1 px-2 rounded-lg flex items-center gap-1 select-none">
@@ -632,12 +637,12 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
                         </span>
                     </div>
                     
-                    <div class="p-6 border-t border-slate-100 space-y-4">
-                        <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div class="p-4 px-5 border-t border-slate-100 space-y-3.5">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
                             <!-- Accreditation Info -->
-                            <div class="bg-slate-50 rounded-xl px-4 py-2 border border-slate-200 flex items-center gap-3">
+                            <div class="bg-slate-50 rounded-xl px-3.5 py-1.5 border border-slate-200 flex items-center gap-2.5">
                                 <span class="text-xs text-slate-500">Akreditasi Sekolah:</span>
-                                <span class="badge bg-blue-600 text-white font-bold py-1 px-2.5 rounded-lg text-xs">{{ accreditation }}</span>
+                                <span class="badge bg-blue-600 text-white font-bold py-1 px-2 rounded-lg text-xs">{{ accreditation }}</span>
                                 <span class="text-xs text-slate-400 border-l pl-2 font-medium" v-if="accreditation.includes('A')">Rekomendasi: 40%</span>
                                 <span class="text-xs text-slate-400 border-l pl-2 font-medium" v-else-if="accreditation.includes('B')">Rekomendasi: 25%</span>
                                 <span class="text-xs text-slate-400 border-l pl-2 font-medium" v-else>Rekomendasi: 5%</span>
@@ -666,7 +671,7 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
                         </div>
 
                         <!-- Live Filters & Action Buttons -->
-                        <div class="bg-slate-50/50 p-4 rounded-xl border border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                        <div class="bg-slate-50/70 p-3 rounded-xl border border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
                             <div class="flex flex-wrap gap-2 items-center">
                                 <div class="position-relative">
                                     <i class="bi bi-search position-absolute text-slate-400 text-xs" style="left: 12px; top: 50%; transform: translateY(-50%);"></i>
@@ -690,12 +695,12 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
                                         title="Kembalikan status seluruh siswa eligible ke kalkulasi otomatis kuota & nilai rapor" 
                                         @click="resetAllEligible">
                                     <i class="bi bi-arrow-counterclockwise"></i>
-                                    <span>Reset Siswa Eligible</span>
+                                    <span>Reset Eligible</span>
                                 </button>
 
                                 <button type="button" class="btn btn-sm btn-primary rounded-xl text-xs font-semibold px-3 py-1.5 flex items-center gap-1.5 shadow-sm" :disabled="recalculating || locks[3]?.is_locked" @click="recalculateRanking">
                                     <i class="bi bi-arrow-repeat" :class="{'animate-spin': recalculating}"></i>
-                                    <span>Hitung Ulang & Simpan Ranking</span>
+                                    <span>Hitung Ulang &amp; Simpan</span>
                                 </button>
                                 <a v-if="filterAcademicYear && students.length > 0" 
                                    :href="baseUrl + '/api/v1/pdss/export-snbp?tahun_ajaran_id=' + filterAcademicYear + (currentTenantId ? '&tenant_id=' + currentTenantId : '')" 
@@ -711,13 +716,13 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
                 </div>
 
                 <!-- LANGKAH 4: FINALISASI SISWA ELIGIBLE & PENGUNDURAN DIRI -->
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                    <div class="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden">
+                    <div class="px-5 py-4 bg-slate-50/80 border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
                         <div class="flex items-center gap-3">
                             <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm">4</div>
                             <div>
-                                <h4 class="font-bold text-sm text-slate-800">Langkah 4: Tinjau Kelayakan, Pengunduran Diri & Finalisasi Eligible</h4>
-                                <p class="text-xs text-slate-500">Siswa eligible yang mengundurkan diri wajib mengunggah Surat Pernyataan. Kuota otomatis dilimpahkan ke ranking bawahnya.</p>
+                                <h4 class="font-bold text-sm text-slate-800 mb-0.5">Langkah 4: Tinjau Kelayakan, Pengunduran Diri &amp; Finalisasi Eligible</h4>
+                                <p class="text-xs text-slate-500 mb-0">Siswa eligible yang mengundurkan diri wajib mengunggah Surat Pernyataan. Kuota otomatis dilimpahkan ke ranking bawahnya.</p>
                             </div>
                         </div>
                         <span v-if="locks[4]?.is_locked" class="bg-amber-100 text-amber-800 text-[10px] font-bold py-1.5 px-2.5 rounded-lg flex items-center gap-1 select-none">
@@ -729,16 +734,16 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
                             <thead>
-                                <tr class="bg-slate-50 border-b border-slate-100 text-xs text-slate-400 font-semibold uppercase">
-                                    <th class="ps-6 py-3 text-center">Rank</th>
-                                    <th class="py-3">Nama Lengkap</th>
-                                    <th class="py-3">NISN</th>
-                                    <th class="py-3">Kelas</th>
-                                    <th class="py-3">Jurusan</th>
-                                    <th class="py-3 text-center">Rata-rata Nilai</th>
-                                    <th class="py-3 text-center">Kelengkapan</th>
-                                    <th class="py-3 text-center">Status Kelayakan</th>
-                                    <th class="py-3 text-center pe-6">Aksi BK / Pengunduran Diri</th>
+                                <tr class="bg-slate-50/80 border-b border-slate-200/80 text-xs text-slate-600 font-bold uppercase tracking-wider">
+                                    <th class="ps-5 py-3 text-center" style="width: 70px;">Rank</th>
+                                    <th class="py-3" style="min-width: 220px;">Nama Lengkap</th>
+                                    <th class="py-3" style="width: 120px;">NISN</th>
+                                    <th class="py-3" style="width: 100px;">Kelas</th>
+                                    <th class="py-3" style="width: 120px;">Jurusan</th>
+                                    <th class="py-3 text-center" style="width: 110px;">Rata-rata</th>
+                                    <th class="py-3 text-center" style="width: 110px;">Kelengkapan</th>
+                                    <th class="py-3 text-center" style="width: 160px;">Status Kelayakan</th>
+                                    <th class="py-3 text-center pe-5" style="width: 190px;">Aksi BK / Pengunduran Diri</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -753,52 +758,59 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
                                          Tidak ada data siswa kelas 12 yang terdeteksi dengan kriteria ini.
                                     </td>
                                 </tr>
-                                <tr v-else v-for="stu in filteredStudents" :key="stu.id" class="text-sm border-b border-slate-100 hover:bg-slate-50" :class="{'bg-rose-50/30': stu.is_resigned, 'bg-blue-50/20': stu.is_eligible}">
-                                    <td class="text-center font-bold ps-6 py-2.5">
-                                        <span :class="{'text-blue-600': stu.is_eligible, 'text-rose-500 line-through': stu.is_resigned, 'text-slate-400': !stu.is_eligible && !stu.is_resigned}">
+                                <tr v-else v-for="stu in filteredStudents" :key="stu.id" class="text-xs border-b border-slate-100 transition-colors hover:bg-slate-50/80" :class="{'bg-rose-50/30': stu.is_resigned, 'bg-blue-50/20': stu.is_eligible}">
+                                    <td class="text-center ps-5 py-2.5">
+                                        <span class="inline-flex items-center justify-center w-7 h-7 rounded-full font-bold text-xs"
+                                              :class="{
+                                                  'bg-blue-100 text-blue-700 shadow-2xs': stu.is_eligible,
+                                                  'bg-rose-100 text-rose-600 line-through': stu.is_resigned,
+                                                  'bg-slate-100 text-slate-500': !stu.is_eligible && !stu.is_resigned
+                                              }">
                                             #{{ stu.majorRank }}
                                         </span>
                                     </td>
                                     <td>
                                         <div class="flex items-center gap-2">
-                                            <button class="btn btn-link p-0 text-slate-400 hover:text-indigo-600" title="Audit Detail Nilai Rapor" @click="showAuditModal(stu.id)">
-                                                <i class="bi bi-eye-fill fs-6"></i>
+                                            <button class="btn btn-sm btn-light border p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition" title="Audit Detail Nilai Rapor" @click="showAuditModal(stu.id)">
+                                                <i class="bi bi-eye-fill text-xs"></i>
                                             </button>
                                             <div>
-                                                <span class="font-semibold text-slate-800" :class="{'line-through text-slate-400': stu.is_resigned}">{{ stu.nama_lengkap }}</span>
-                                                <span v-if="stu.is_resigned" class="badge bg-rose-100 text-rose-700 text-[9px] ms-1">Mundur</span>
-                                                <span v-else-if="stu.is_replacement" class="badge bg-indigo-100 text-indigo-700 text-[9px] ms-1">Pelimpahan</span>
-                                                <span v-if="stu.is_retained" class="badge bg-purple-100 text-purple-700 text-[9px] ms-1" title="Siswa memiliki riwayat mengulang semester (menggunakan nilai kelulusan terbaru)"><i class="bi bi-arrow-repeat"></i> Mengulang</span>
+                                                <span class="font-bold text-slate-800 block text-xs" :class="{'line-through text-slate-400': stu.is_resigned}">{{ stu.nama_lengkap }}</span>
+                                                <div class="flex items-center gap-1 mt-0.5">
+                                                    <span v-if="stu.is_resigned" class="badge bg-rose-100 text-rose-700 text-[9px] px-1.5 py-0.2 rounded font-semibold">Mundur</span>
+                                                    <span v-else-if="stu.is_replacement" class="badge bg-indigo-100 text-indigo-700 text-[9px] px-1.5 py-0.2 rounded font-semibold">Pelimpahan</span>
+                                                    <span v-if="stu.is_retained" class="badge bg-purple-100 text-purple-700 text-[9px] px-1.5 py-0.2 rounded font-semibold" title="Siswa memiliki riwayat mengulang semester"><i class="bi bi-arrow-repeat"></i> Mengulang</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="font-monospace text-xs text-slate-500">{{ stu.nisn || '—' }}</td>
-                                    <td class="text-slate-600">{{ stu.nama_kelas || '—' }}</td>
-                                    <td class="text-slate-600">{{ stu.nama_jurusan || '—' }}</td>
+                                    <td class="font-mono text-xs text-slate-500">{{ stu.nisn || '—' }}</td>
+                                    <td class="text-slate-600 font-medium">{{ stu.nama_kelas || '—' }}</td>
+                                    <td class="text-slate-600 font-medium">{{ stu.nama_jurusan || '—' }}</td>
                                     <td class="text-center font-bold" :class="{'text-slate-800': stu.rata_rata > 0, 'text-slate-300': stu.rata_rata === 0}">
                                         {{ stu.rata_rata > 0 ? stu.rata_rata.toFixed(2) : '—' }}
                                     </td>
                                     <td class="text-center">
-                                        <span class="text-xs px-2.5 py-1 rounded-full font-semibold"
-                                              :class="stu.jumlah_nilai >= (stu.expected_nilai || totalConfiguredSemesters) ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-amber-50 text-amber-700 border border-amber-100'">
+                                        <span class="text-xs px-2.5 py-0.5 rounded-md font-semibold"
+                                              :class="stu.jumlah_nilai >= (stu.expected_nilai || totalConfiguredSemesters) ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60' : 'bg-amber-50 text-amber-700 border border-amber-200/60'">
                                             {{ stu.jumlah_nilai }} / {{ stu.expected_nilai || totalConfiguredSemesters }}
                                         </span>
                                     </td>
                                     <td class="text-center">
-                                        <span v-if="stu.is_resigned" class="badge bg-rose-100 text-rose-800 text-[10px] px-2.5 py-1 rounded-xl font-bold uppercase block w-100">
+                                        <span v-if="stu.is_resigned" class="badge bg-slate-200 text-slate-700 border border-slate-300 text-[10px] px-2.5 py-1 rounded-lg font-bold uppercase block w-100">
                                             MENGUNDURKAN DIRI
                                         </span>
-                                        <span v-else class="text-[10px] px-2.5 py-1 rounded-xl font-bold uppercase block w-100 text-center"
-                                              :class="stu.is_eligible ? 'badge-eligible' : 'badge-not-eligible'">
+                                        <span v-else class="text-[10px] px-2.5 py-1 rounded-lg font-bold uppercase block w-100 text-center"
+                                              :class="stu.is_eligible ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-rose-50 text-rose-700 border border-rose-200'">
                                             {{ stu.is_eligible ? (stu.is_replacement ? 'ELIGIBLE (PELIMPAHAN)' : 'ELIGIBLE') : 'TIDAK ELIGIBLE' }}
                                             <span v-if="stu.status_eligible !== 'auto'" class="text-[9px] text-slate-400 block font-normal">(BK Manual)</span>
                                         </span>
                                     </td>
-                                    <td class="text-center pe-6">
+                                    <td class="text-center pe-5">
                                         <div class="flex items-center justify-center gap-1.5 flex-wrap">
                                             <!-- Resigned actions -->
                                             <template v-if="stu.is_resigned">
-                                                <button class="btn btn-xs btn-outline-danger px-2 py-1 rounded-lg text-[10px] font-semibold flex items-center gap-1"
+                                                <button class="btn btn-xs btn-outline-danger px-2.5 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1"
                                                         @click="viewSuratPengunduranDiri(stu)">
                                                     <i class="bi bi-file-earmark-pdf-fill"></i> Surat
                                                 </button>
@@ -810,19 +822,19 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
                                             
                                             <!-- Eligible actions (Pengunduran Diri & Manual Non-Eligible) -->
                                             <template v-else-if="stu.is_eligible">
-                                                <button v-if="!locks[4]?.is_locked && canWrite" class="btn btn-xs btn-outline-danger px-2 py-1 rounded-lg text-[10px] font-semibold flex items-center gap-1 shadow-2xs"
+                                                <button v-if="!locks[4]?.is_locked && canWrite" class="btn btn-xs btn-outline-danger px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-2xs"
                                                         title="Catat Pengunduran Diri Resmi & Pelimpahan Kuota"
                                                         @click="openModalPengunduranDiri(stu)">
-                                                    <i class="bi bi-person-x-fill"></i> Pengunduran Diri
+                                                    <i class="bi bi-person-x-fill"></i> Mundur
                                                 </button>
                                                 <span v-else class="text-[10px] text-emerald-600 font-bold"><i class="bi bi-check2-circle"></i> Siap SNBP</span>
                                             </template>
 
                                             <!-- Manual BK overrides -->
-                                            <div v-if="!locks[4]?.is_locked && canWrite && !stu.is_resigned" class="flex gap-1 ms-1">
+                                            <div v-if="!locks[4]?.is_locked && canWrite && !stu.is_resigned" class="flex gap-1 ms-0.5">
                                                 <!-- Jika Siswa Eligible: Berikan tombol ubah ke Tidak Eligible secara manual -->
                                                 <button v-if="stu.is_eligible && stu.status_eligible !== 'tidak_eligible'" 
-                                                        class="btn btn-xs btn-danger py-0.5 px-2 rounded-lg text-[9px] font-bold uppercase border-0 text-white shadow-2xs hover:bg-rose-700 transition-all" 
+                                                        class="btn btn-xs btn-danger py-1 px-2 rounded-lg text-[9px] font-bold uppercase border-0 text-white shadow-2xs hover:bg-rose-700 transition-all" 
                                                         title="Ubah manual status kelayakan menjadi Tidak Eligible" 
                                                         @click="saveManualEligible(stu.id, 'tidak_eligible')">
                                                     Non-Elig
@@ -830,7 +842,7 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
 
                                                 <!-- Jika Siswa Tidak Eligible: Berikan tombol ubah ke Eligible secara manual -->
                                                 <button v-if="!stu.is_eligible && stu.status_eligible !== 'eligible'" 
-                                                        class="btn btn-xs btn-success py-0.5 px-2 rounded-lg text-[9px] font-bold uppercase border-0 text-white shadow-2xs hover:bg-emerald-700 transition-all" 
+                                                        class="btn btn-xs btn-success py-1 px-2 rounded-lg text-[9px] font-bold uppercase border-0 text-white shadow-2xs hover:bg-emerald-700 transition-all" 
                                                         title="Paksa status siswa menjadi Eligible (BK Manual)" 
                                                         @click="saveManualEligible(stu.id, 'eligible')">
                                                     + Elig
@@ -838,7 +850,7 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
 
                                                 <!-- Tombol Reset ke Auto jika pernah di-override manual -->
                                                 <button v-if="stu.status_eligible !== 'auto'" 
-                                                        class="btn btn-xs btn-secondary py-0.5 px-2 rounded-lg text-[9px] font-bold uppercase border-0 text-white shadow-2xs hover:bg-slate-600 transition-all" 
+                                                        class="btn btn-xs btn-secondary py-1 px-2 rounded-lg text-[9px] font-bold uppercase border-0 text-white shadow-2xs hover:bg-slate-600 transition-all" 
                                                         title="Kembalikan status siswa ke kalkulasi otomatis kuota & nilai" 
                                                         @click="saveManualEligible(stu.id, 'auto')">
                                                     Reset
@@ -867,23 +879,23 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
         </div>
         <template v-else>
             <!-- Filter Toolbar -->
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+        <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-4 mb-4">
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div class="flex flex-wrap gap-2 items-center">
                     <!-- Search Input -->
                     <div class="position-relative">
                         <i class="bi bi-search position-absolute text-slate-400 text-xs" style="left: 12px; top: 50%; transform: translateY(-50%);"></i>
-                        <input type="text" v-model="filterAlumni.search" placeholder="Cari nama alumni..." class="rounded-xl border border-slate-200 pl-8 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 w-48">
+                        <input type="text" v-model="filterAlumni.search" placeholder="Cari nama alumni..." class="rounded-xl border border-slate-300 pl-8 pr-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 w-48 shadow-2xs">
                     </div>
                     <!-- Type Filter -->
-                    <select v-model="filterAlumni.type" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select v-model="filterAlumni.type" class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs">
                         <option value="">Semua Jenis Kampus</option>
                         <option value="Negeri">Negeri (PTN)</option>
                         <option value="Swasta">Swasta (PTS)</option>
                         <option value="Kedinasan">Kedinasan (PTK)</option>
                     </select>
                     <!-- Track Filter -->
-                    <select v-model="filterAlumni.track" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select v-model="filterAlumni.track" class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs">
                         <option value="">Semua Jalur Masuk</option>
                         <option value="SNBP">SNBP</option>
                         <option value="SNBT">SNBT</option>
@@ -894,16 +906,16 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
                         <option value="Lainnya">Lainnya</option>
                     </select>
                     <!-- Year Filter -->
-                    <select v-model="filterAlumni.year" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select v-model="filterAlumni.year" class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs">
                         <option value="">Semua Tahun Masuk</option>
                         <option v-for="yr in uniqueAlumniYears" :key="yr" :value="yr">{{ yr }}</option>
                     </select>
                 </div>
 
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-3 flex-wrap">
                     <!-- Privacy Toggle -->
-                    <div class="flex items-center gap-2 bg-slate-50 border rounded-xl px-3 py-1.5">
-                        <label for="privacy-mask" class="text-xs font-semibold text-slate-500 cursor-pointer flex items-center gap-1.5 m-0 select-none">
+                    <div class="flex items-center gap-2 bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-1.5 shadow-2xs">
+                        <label for="privacy-mask" class="text-xs font-bold text-slate-600 cursor-pointer flex items-center gap-1.5 m-0 select-none">
                             <i class="bi bi-shield-shaded text-indigo-500"></i>
                             Sensor Nama Alumni
                         </label>
@@ -911,7 +923,7 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
                     </div>
 
                     <!-- Add Alumni Button -->
-                    <button v-if="canWrite" class="btn btn-primary rounded-xl px-4 py-2 text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+                    <button v-if="canWrite" class="btn btn-primary rounded-xl px-4 py-2 text-xs font-bold flex items-center gap-1.5 shadow-sm"
                             @click="openAlumniModal()">
                         <i class="bi bi-plus-lg"></i>
                         Tambah Alumni
@@ -921,11 +933,11 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
         </div>
 
         <!-- Grid Data Grid Table -->
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead>
-                        <tr class="bg-slate-50 border-b border-slate-100 text-xs text-slate-400 font-semibold uppercase">
+                        <tr class="bg-slate-50/80 border-b border-slate-200/80 text-[10px] text-slate-600 font-bold uppercase tracking-wider">
                             <th class="ps-6 py-3">Tahun Lulus/Masuk</th>
                             <th class="py-3">Nama Alumni</th>
                             <th class="py-3">Jenis Kampus</th>
@@ -1202,7 +1214,7 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
                                         class="transition-colors">
                                         <td class="py-2" :class="g.is_ma_sub ? 'ps-8' : 'ps-4'">
                                             <div class="flex items-center gap-1.5" v-if="g.is_ma_aggregated">
-                                                <i class="bi bi-stars text-amber-500 text-sm"></i>
+                                                <i class="bi bi-layers-fill text-indigo-600 text-sm"></i>
                                                 <span class="font-extrabold text-indigo-950">{{ g.nama_mapel }}</span>
                                             </div>
                                             <div class="flex items-center gap-1.5" v-else-if="g.is_ma_sub">
@@ -1832,15 +1844,24 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
                 this.activeTab = window.targetPendingTab;
                 window.targetPendingTab = null;
             }
-            this.refreshAll();
             // Siswa secara paksa tidak bisa mematikan masking
             if (this.isStudent) {
                 this.privacyMask = true;
             }
-            if (this.activeTab === 'master_kampus') {
+            if (this.activeTab === 'tracking') {
+                this.fetchAlumni();
+                this.fetchCampuses();
+            } else if (this.activeTab === 'kesiapan') {
+                this.fetchKesiapan();
+                this.fetchPdssMapels();
+            } else if (this.activeTab === 'master_kampus') {
                 this.fetchKampus();
             } else if (this.activeTab === 'master_jalur') {
                 this.fetchJalur();
+            } else if (this.activeTab === 'simulasi') {
+                this.fetchSimulasiSettings();
+                this.fetchSimulasi();
+                if (this.listKampusFlat.length === 0) this.fetchKampusFlatList();
             }
         },
 

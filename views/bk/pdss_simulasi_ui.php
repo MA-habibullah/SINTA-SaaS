@@ -15,8 +15,8 @@
     </div>
 
     <!-- SELECTOR TAHUN AJARAN & KONTROL FASE SIMULASI -->
-    <div class="card border-0 shadow-sm rounded-2xl bg-white border border-slate-200/80 mb-4">
-        <div class="card-body p-4 flex flex-wrap items-center justify-between gap-4">
+    <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-3.5 px-4 mb-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
             <!-- Left Info -->
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0 shadow-2xs border border-indigo-100">
@@ -33,7 +33,7 @@
                 <select v-model="filterAcademicYear" class="form-select text-xs rounded-xl border-slate-300 bg-white py-2 px-3.5 text-slate-700 font-bold focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-2xs" style="min-width: 200px;" @change="fetchSimulasi(); fetchSimulasiSettings();">
                     <option value="" disabled>— Pilih Tahun Ajaran —</option>
                     <option v-for="yr in academicYears" :key="yr.id" :value="yr.id">
-                        {{ yr.tahun_ajaran }} <span v-if="parseInt(yr.is_active) === 1">(Aktif)</span>
+                        {{ yr.tahun_ajaran }} {{ (parseInt(yr.is_active) === 1 || yr.is_active === true || yr.is_active === 't') ? '(Aktif)' : '' }}
                     </option>
                 </select>
             </div>
@@ -192,7 +192,7 @@
     </div>
 
     <!-- FILTER & SEARCH BAR -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-4 mb-4">
+    <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-3.5 px-4 mb-4">
         <div class="row g-3">
             <!-- Search -->
             <div class="col-12 col-md-3">
@@ -246,23 +246,23 @@
     </div>
 
     <!-- MAIN DATA TABLE -->
-    <div class="card border-0 shadow-sm rounded-2xl bg-white border border-slate-100 overflow-hidden">
+    <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden mb-4">
         <div v-if="loadingSimulasi" class="p-8 text-center">
             <div class="spinner-border text-indigo-600 spinner-border-sm" role="status"></div>
             <p class="text-xs text-slate-400 mt-2 mb-0">Memuat data simulasi...</p>
         </div>
         <div v-else class="table-responsive">
             <table class="table table-hover align-middle mb-0 text-slate-700">
-                <thead class="bg-slate-50/80 text-slate-500 text-[10px] font-bold uppercase tracking-wider border-b border-slate-200/80">
+                <thead class="bg-slate-50/80 text-slate-600 text-[10px] font-bold uppercase tracking-wider border-b border-slate-200/80">
                     <tr>
-                        <th class="pl-5 py-3.5 text-center" style="width: 70px;">Peringkat</th>
-                        <th class="py-3.5">Nama & NISN Siswa</th>
+                        <th class="ps-5 py-3.5 text-center" style="width: 70px;">Peringkat</th>
+                        <th class="py-3.5" style="min-width: 200px;">Nama & NISN Siswa</th>
                         <th class="py-3.5" style="width: 140px;">Kelas & Jurusan</th>
                         <th class="py-3.5 text-center" style="width: 100px;">Nilai Rerata</th>
                         <th class="py-3.5" style="min-width: 220px;">Pilihan 1 (Utama)</th>
                         <th class="py-3.5" style="min-width: 200px;">Pilihan 2</th>
                         <th v-if="activeNoSimulasi === 3" class="py-3.5" style="width: 140px;">Bukti Upload</th>
-                        <th class="py-3.5 text-right pr-5" style="width: 100px;">Aksi</th>
+                        <th class="py-3.5 text-right pe-5" style="width: 120px;">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="text-xs divide-y divide-slate-100">
@@ -275,37 +275,37 @@
                         if (filterSimulasi.sudah_isi === 'sudah' && !item.sudah_isi) return false;
                         if (filterSimulasi.sudah_isi === 'belum' && item.sudah_isi) return false;
                         return true;
-                    })" :key="s.siswa_id" class="hover:bg-slate-50/60 transition-colors">
+                    })" :key="s.siswa_id" class="hover:bg-slate-50/80 transition-colors">
                         
                         <!-- Peringkat Eligible -->
-                        <td class="pl-5 text-center font-bold">
-                            <span v-if="s.rank_eligible === 1" class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 text-white font-black text-xs shadow-xs" title="Peringkat 1 Jurusan">
-                                🥇 1
+                        <td class="ps-5 text-center font-bold">
+                            <span v-if="s.rank_eligible === 1" class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-amber-500 text-white font-black text-xs shadow-2xs" title="Peringkat 1 Jurusan">
+                                🥇
                             </span>
-                            <span v-else-if="s.rank_eligible === 2" class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-gradient-to-br from-slate-400 to-slate-500 text-white font-black text-xs shadow-xs" title="Peringkat 2 Jurusan">
-                                🥈 2
+                            <span v-else-if="s.rank_eligible === 2" class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-slate-400 to-slate-500 text-white font-black text-xs shadow-2xs" title="Peringkat 2 Jurusan">
+                                🥈
                             </span>
-                            <span v-else-if="s.rank_eligible === 3" class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-gradient-to-br from-amber-600 to-amber-700 text-white font-black text-xs shadow-xs" title="Peringkat 3 Jurusan">
-                                🥉 3
+                            <span v-else-if="s.rank_eligible === 3" class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-amber-600 to-amber-700 text-white font-black text-xs shadow-2xs" title="Peringkat 3 Jurusan">
+                                🥉
                             </span>
-                            <span v-else class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-100 font-bold text-xs shadow-2xs">
+                            <span v-else class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 font-bold text-xs shadow-2xs">
                                 #{{ s.rank_eligible }}
                             </span>
                         </td>
 
                         <!-- Profil Siswa -->
                         <td>
-                            <div class="font-bold text-slate-800 text-sm mb-0.5">{{ s.nama_lengkap }}</div>
+                            <div class="font-bold text-slate-800 text-xs mb-0.5">{{ s.nama_lengkap }}</div>
                             <div class="flex items-center gap-1.5 text-[10px] text-slate-500 font-mono">
-                                <span class="bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 font-semibold">NISN: {{ s.nisn }}</span>
+                                <span class="bg-slate-100 px-1.5 py-0.2 rounded text-slate-600 font-medium">NISN: {{ s.nisn }}</span>
                                 <span v-if="s.nis" class="text-slate-400">NIS: {{ s.nis }}</span>
                             </div>
                         </td>
 
                         <!-- Kelas & Jurusan -->
                         <td>
-                            <div class="font-bold text-slate-700 text-xs mb-1">{{ s.nama_kelas }}</div>
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold"
+                            <div class="font-bold text-slate-700 text-xs mb-0.5">{{ s.nama_kelas }}</div>
+                            <span class="inline-flex items-center px-2 py-0.2 rounded-md text-[10px] font-bold"
                                   :class="s.nama_jurusan?.toLowerCase().includes('ipa') ? 'bg-blue-50 text-blue-700 border border-blue-100' : (s.nama_jurusan?.toLowerCase().includes('ips') ? 'bg-purple-50 text-purple-700 border border-purple-100' : 'bg-slate-100 text-slate-700')">
                                 {{ s.nama_jurusan }}
                             </span>
@@ -314,10 +314,10 @@
                         <!-- Nilai Rerata -->
                         <td class="text-center">
                             <button type="button" 
-                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-black shadow-2xs hover:bg-emerald-100 hover:border-emerald-300 hover:scale-105 transition-all cursor-pointer"
+                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-black shadow-2xs hover:bg-emerald-100 hover:border-emerald-300 transition-all cursor-pointer"
                                     title="Klik untuk melihat rincian transkrip nilai rapor semester 1-5"
                                     @click="showAuditModal(s.siswa_id)">
-                                <i class="bi bi-file-earmark-spreadsheet-fill text-emerald-600"></i>
+                                <i class="bi bi-file-earmark-spreadsheet-fill text-emerald-600 text-xs"></i>
                                 <span>{{ s.rata_rata }}</span>
                             </button>
                         </td>
@@ -328,26 +328,27 @@
                                 <div class="font-bold text-indigo-700 text-xs flex items-center gap-1">
                                     <i class="bi bi-building text-indigo-500"></i> {{ s.kampus_nama_1 }}
                                 </div>
-                                <div class="text-slate-700 font-medium text-[11px]">{{ s.prodi_nama_1 }}</div>
+                                <div class="text-slate-700 font-semibold text-[11px]">{{ s.prodi_nama_1 }}</div>
                                 
                                 <!-- Conflict Warning Alert (Interactive) -->
                                 <div v-if="s.is_konflik_1">
                                     <button type="button" 
-                                            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-[10px] text-rose-700 border border-rose-200 font-bold shadow-2xs transition-all hover:scale-105 cursor-pointer"
+                                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-[10px] text-rose-700 border border-rose-200 font-bold shadow-2xs transition-all hover:scale-105 cursor-pointer"
                                             title="Klik untuk melihat detail & analisis persaingan internal prodi ini"
                                             @click="openModalDetailKonflik(s, 1)">
                                         <i class="bi bi-exclamation-triangle-fill text-rose-600 animate-pulse"></i> 
                                         <span>Konflik Pilihan</span>
-                                        <span class="bg-rose-200 text-rose-800 text-[9px] px-1 py-0.2 rounded-full font-extrabold">{{ (s.konflik_detail_1 || []).length || 2 }}</span>
+                                        <span class="bg-rose-200 text-rose-800 text-[9px] px-1 py-0.2 rounded-full font-black">{{ (s.konflik_detail_1 || []).length || 2 }}</span>
+                                        <i class="bi bi-chevron-right text-[8px]"></i>
                                     </button>
                                 </div>
                                 <div v-else>
-                                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 text-[9px] text-emerald-700 border border-emerald-100 font-semibold">
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-[9px] text-emerald-700 border border-emerald-100 font-semibold">
                                         <i class="bi bi-check-circle-fill"></i> Pilihan Utama
                                     </span>
                                 </div>
                             </div>
-                            <div v-else class="text-slate-400 italic text-xs flex items-center gap-1 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-dashed border-slate-200 w-fit">
+                            <div v-else class="text-slate-400 italic text-xs flex items-center gap-1 bg-slate-50 px-2.5 py-1 rounded-xl border border-dashed border-slate-200 w-fit">
                                 <i class="bi bi-dash-circle text-slate-300"></i> Belum mengisi
                             </div>
                         </td>
@@ -363,16 +364,17 @@
                                 <!-- Conflict Warning Alert (Interactive) -->
                                 <div v-if="s.is_konflik_2">
                                     <button type="button" 
-                                            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-[10px] text-rose-700 border border-rose-200 font-bold shadow-2xs transition-all hover:scale-105 cursor-pointer"
+                                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-[10px] text-rose-700 border border-rose-200 font-bold shadow-2xs transition-all hover:scale-105 cursor-pointer"
                                             title="Klik untuk melihat detail & analisis persaingan internal prodi ini"
                                             @click="openModalDetailKonflik(s, 2)">
                                         <i class="bi bi-exclamation-triangle-fill text-rose-600 animate-pulse"></i> 
                                         <span>Konflik Pilihan</span>
-                                        <span class="bg-rose-200 text-rose-800 text-[9px] px-1 py-0.2 rounded-full font-extrabold">{{ (s.konflik_detail_2 || []).length || 2 }}</span>
+                                        <span class="bg-rose-200 text-rose-800 text-[9px] px-1 py-0.2 rounded-full font-black">{{ (s.konflik_detail_2 || []).length || 2 }}</span>
+                                        <i class="bi bi-chevron-right text-[8px]"></i>
                                     </button>
                                 </div>
                                 <div v-else>
-                                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-50 text-[9px] text-slate-600 border border-slate-200 font-medium">
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-50 text-[9px] text-slate-600 border border-slate-200 font-medium">
                                         <i class="bi bi-check2"></i> Pilihan 2
                                     </span>
                                 </div>
@@ -385,7 +387,7 @@
                         <!-- Bukti Upload (Sim 3 Only) -->
                         <td v-if="activeNoSimulasi === 3">
                             <div v-if="s.bukti_file">
-                                <a :href="'<?= $this->getBaseUrl() ?>/' + s.bukti_file" target="_blank" class="inline-flex items-center gap-1.5 text-indigo-600 font-bold hover:underline">
+                                <a :href="'<?= (isset($this) && method_exists($this, 'getBaseUrl')) ? $this->getBaseUrl() : (rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\')) ?>/' + s.bukti_file" target="_blank" class="inline-flex items-center gap-1.5 text-indigo-600 font-bold hover:underline">
                                     <i class="bi bi-file-earmark-pdf"></i> Lihat Bukti
                                 </a>
                                 <div class="text-[9px] text-slate-400 truncate max-w-[120px]" :title="s.bukti_filename">{{ s.bukti_filename }}</div>
@@ -394,11 +396,11 @@
                         </td>
 
                         <!-- Aksi -->
-                        <td class="text-right pr-5">
+                        <td class="text-right pe-5">
                             <div class="flex items-center justify-end gap-1.5">
                                 <!-- View Nilai / Rapor Button -->
                                 <button type="button"
-                                        class="btn btn-sm btn-light border border-slate-200 rounded-xl px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 flex items-center gap-1 shadow-2xs transition-all"
+                                        class="btn btn-xs btn-light border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 flex items-center gap-1 shadow-2xs transition-all"
                                         title="Lihat Rincian Transkrip Nilai Rapor Siswa"
                                         @click="showAuditModal(s.siswa_id)">
                                     <i class="bi bi-eye-fill text-emerald-600"></i>
@@ -407,7 +409,7 @@
 
                                 <!-- Isi/Edit Button — hanya untuk siswa eligible -->
                                 <button v-if="!simulasiSettings[activeNoSimulasi]?.is_locked"
-                                        class="btn btn-sm btn-light border border-slate-200 rounded-xl px-2.5 py-1 text-xs font-semibold text-slate-700 hover:text-indigo-600 hover:border-indigo-300 flex items-center gap-1 shadow-2xs transition-all"
+                                        class="btn btn-xs btn-light border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-semibold text-slate-700 hover:text-indigo-600 hover:border-indigo-300 flex items-center gap-1 shadow-2xs transition-all"
                                         title="Isi / Ubah Pilihan Siswa"
                                         @click="openModalSimulasi(s)">
                                     <i class="bi bi-pencil-square text-indigo-500"></i>
@@ -416,7 +418,7 @@
 
                                 <!-- Upload Bukti (Only Simulasi 3 & Open & Submitted & Eligible) -->
                                 <button v-if="activeNoSimulasi === 3 && !simulasiSettings[activeNoSimulasi]?.is_locked && s.sudah_isi"
-                                        class="btn btn-sm btn-light border border-slate-200 rounded-xl px-2 py-1 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 shadow-2xs"
+                                        class="btn btn-xs btn-light border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-semibold text-emerald-600 hover:bg-emerald-50 shadow-2xs"
                                         title="Upload Bukti Pendaftaran"
                                         @click="openModalUploadBukti(s)">
                                     <i class="bi bi-cloud-arrow-up-fill"></i>
@@ -424,7 +426,7 @@
 
                                 <!-- Delete Pilihan — jika sudah isi -->
                                 <button v-if="s.sudah_isi && !simulasiSettings[activeNoSimulasi]?.is_locked"
-                                        class="btn btn-sm btn-light border border-slate-200 rounded-xl px-2 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50 shadow-2xs"
+                                        class="btn btn-xs btn-light border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-semibold text-rose-600 hover:bg-rose-50 shadow-2xs"
                                         title="Kosongkan Pilihan"
                                         @click="deleteSimulasi(s.siswa_id)">
                                     <i class="bi bi-trash"></i>
@@ -654,8 +656,7 @@
                 <div class="modal-footer border-t border-slate-100 px-6 py-4 flex items-center justify-end gap-2 bg-slate-50">
                     <button type="button" class="btn btn-sm btn-light rounded-xl font-bold px-4" @click="modalUploadBukti.show = false">Batal</button>
                     <button type="button" class="btn btn-sm btn-success rounded-xl font-bold px-4 flex items-center gap-1.5" :disabled="modalUploadBukti.uploading" @click="submitUploadBukti">
-                        <span v-if="modalUploadBukti.uploading" class="spinner-border spinner-border-sm" role="status"></span>
-                        Mulai Upload
+                        <i class="bi bi-upload"></i> {{ modalUploadBukti.uploading ? 'Mengunggah...' : 'Upload File' }}
                     </button>
                 </div>
             </div>
@@ -667,20 +668,20 @@
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 rounded-3xl shadow-2xl bg-white overflow-hidden">
                 <!-- Header -->
-                <div class="modal-header border-b border-rose-100 px-6 py-4 flex items-center justify-between bg-gradient-to-r from-rose-50 via-white to-orange-50">
+                <div class="modal-header border-b border-slate-100 px-6 py-4 flex items-center justify-between bg-white">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0 shadow-2xs border border-rose-200">
+                        <div class="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center flex-shrink-0 shadow-2xs border border-rose-100">
                             <i class="bi bi-shield-exclamation text-xl"></i>
                         </div>
                         <div>
-                            <h5 class="modal-title font-black text-slate-800 text-sm md:text-base flex items-center gap-2">
-                                Detail & Analisis Konflik Pilihan SNBP
-                                <span class="badge bg-rose-100 text-rose-700 text-[10px] font-bold px-2 py-0.5 rounded-lg border border-rose-200 uppercase">
+                            <h5 class="modal-title font-black text-slate-800 text-sm md:text-base flex items-center gap-2 mb-0.5">
+                                Detail &amp; Analisis Konflik Pilihan SNBP
+                                <span class="badge bg-rose-50 text-rose-700 text-[10px] font-bold px-2.5 py-0.5 rounded-lg border border-rose-200 uppercase">
                                     {{ (modalDetailKonflik.conflicts || []).length }} Siswa Bersaing
                                 </span>
                             </h5>
-                            <p class="text-[11px] text-slate-500 mb-0">
-                                Evaluasi persaingan internal sekolah pada universitas & program studi tujuan
+                            <p class="text-xs text-slate-500 mb-0">
+                                Evaluasi persaingan internal sekolah pada universitas &amp; program studi tujuan
                             </p>
                         </div>
                     </div>
@@ -690,9 +691,9 @@
                 <!-- Body -->
                 <div class="modal-body px-6 py-5 space-y-4 text-xs">
                     <!-- Target Prodi Info Box -->
-                    <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
+                    <div class="bg-white rounded-2xl p-4 border border-slate-200/80 flex flex-wrap items-center justify-between gap-3 shadow-xs">
                         <div class="space-y-1">
-                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Kampus & Program Studi Bentrok:</span>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Kampus &amp; Program Studi Bentrok:</span>
                             <div class="font-black text-indigo-700 text-sm flex items-center gap-1.5">
                                 <i class="bi bi-building"></i> {{ modalDetailKonflik.kampusNama }}
                             </div>
@@ -701,22 +702,24 @@
                             </div>
                         </div>
                         <div class="text-right">
-                            <span class="text-[10px] font-semibold text-slate-500 block">Slot Pemilihan Siswa Terpilih:</span>
-                            <span class="badge bg-indigo-50 text-indigo-700 font-bold px-2.5 py-1 rounded-xl border border-indigo-100 text-xs mt-0.5">
+                            <span class="text-[10px] font-semibold text-slate-400 block mb-1">Slot Pemilihan Siswa Terpilih:</span>
+                            <span class="badge bg-blue-50 text-blue-700 font-bold px-3 py-1 rounded-xl border border-blue-200 text-xs">
                                 Pilihan {{ modalDetailKonflik.slot }}
                             </span>
                         </div>
                     </div>
 
                     <!-- Explanatory Alert Banner -->
-                    <div class="bg-indigo-50/80 border border-indigo-200 text-indigo-900 rounded-2xl p-3.5 flex items-start gap-3">
-                        <i class="bi bi-info-circle-fill text-indigo-600 text-lg flex-shrink-0 mt-0.5"></i>
-                        <div class="text-[11px] leading-relaxed">
-                            <strong class="font-bold text-indigo-950">Aturan Prioritas Seleksi SNBP:</strong>
-                            <p class="mb-1 text-indigo-900">
+                    <div class="bg-blue-50/70 border border-blue-200/80 text-slate-800 rounded-2xl p-4 flex items-start gap-3 shadow-2xs">
+                        <div class="w-6 h-6 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <i class="bi bi-info-circle-fill text-xs"></i>
+                        </div>
+                        <div class="text-[11px] leading-relaxed text-slate-700">
+                            <strong class="font-bold text-slate-900 block mb-1">Aturan Prioritas Seleksi SNBP:</strong>
+                            <p class="mb-1">
                                 1. <strong>Pilihan 1 adalah Prioritas Utama PTN</strong>: Universitas memproses seluruh pendaftar yang memilih program studi pada <strong>Pilihan 1</strong> terlebih dahulu.
                             </p>
-                            <p class="mb-0 text-indigo-800">
+                            <p class="mb-0">
                                 2. <strong>Pilihan 2 sebagai Cadangan</strong>: Pendaftar Pilihan 2 hanya dipertimbangkan jika kuota seleksi Pilihan 1 masih tersisa. Di antara sesama pilihan, siswa dengan <strong>nilai rapor tertinggi</strong> memiliki prioritas penerimaan.
                             </p>
                         </div>
@@ -728,92 +731,93 @@
                             <span class="font-bold text-slate-700 text-xs uppercase tracking-wider">
                                 Urutan Prioritas Siswa Bersaing di Sekolah Ini:
                             </span>
-                            <span class="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">
+                            <span class="text-[10px] text-indigo-700 font-bold bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100">
                                 Disortir: Pilihan 1 &gt; Pilihan 2, lalu Rerata Tertinggi
                             </span>
                         </div>
 
-                        <div class="table-responsive rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
+                        <div class="table-responsive rounded-2xl border border-slate-200/80 overflow-hidden shadow-2xs bg-white">
                             <table class="table table-hover align-middle mb-0 text-slate-700">
-                                <thead class="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-wider border-b border-slate-200">
+                                <thead class="bg-slate-50/80 text-slate-600 text-[10px] font-bold uppercase tracking-wider border-b border-slate-200/80">
                                     <tr>
-                                        <th class="py-2.5 px-3 text-center" style="width: 50px;">Prioritas</th>
-                                        <th class="py-2.5">Nama Siswa & NISN</th>
-                                        <th class="py-2.5" style="width: 120px;">Kelas & Jurusan</th>
-                                        <th class="py-2.5 text-center" style="width: 90px;">Rerata Rapor</th>
-                                        <th class="py-2.5 text-center" style="width: 95px;">Pilihan Ke</th>
-                                        <th class="py-2.5 text-center" style="width: 170px;">Status Peluang SNBP</th>
+                                        <th class="py-3 px-3 text-center" style="width: 70px;">Prioritas</th>
+                                        <th class="py-3" style="min-width: 180px;">Nama Siswa &amp; NISN</th>
+                                        <th class="py-3" style="width: 130px;">Kelas &amp; Jurusan</th>
+                                        <th class="py-3 text-center" style="width: 100px;">Rerata Rapor</th>
+                                        <th class="py-3 text-center" style="width: 100px;">Pilihan Ke</th>
+                                        <th class="py-3 text-center" style="width: 180px;">Status Peluang SNBP</th>
                                     </tr>
                                 </thead>
                                 <tbody class="text-xs divide-y divide-slate-100">
                                     <tr v-for="(cs, cidx) in (modalDetailKonflik.conflicts || [])" :key="cs.siswa_id"
-                                        :class="cs.siswa_id === modalDetailKonflik.siswa?.siswa_id ? 'bg-indigo-50/50 font-semibold' : ''">
+                                        :class="cs.siswa_id === modalDetailKonflik.siswa?.siswa_id ? 'bg-indigo-50/40 font-semibold' : ''">
                                         
                                         <!-- Urutan Prioritas -->
-                                        <td class="py-2.5 px-3 text-center font-bold">
-                                            <span v-if="cidx === 0" class="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-emerald-600 text-white font-black text-xs shadow-2xs" title="Prioritas #1">
-                                                🥇 1
+                                        <td class="py-3 px-3 text-center font-bold">
+                                            <span v-if="cidx === 0" class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-amber-500 text-white font-black text-xs shadow-2xs" title="Prioritas #1">
+                                                🥇
                                             </span>
-                                            <span v-else-if="cidx === 1" class="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-slate-400 text-white font-black text-xs shadow-2xs" title="Prioritas #2">
-                                                🥈 2
+                                            <span v-else-if="cidx === 1" class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-slate-400 to-slate-500 text-white font-black text-xs shadow-2xs" title="Prioritas #2">
+                                                🥈
                                             </span>
-                                            <span v-else-if="cidx === 2" class="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-amber-600 text-white font-black text-xs shadow-2xs" title="Prioritas #3">
-                                                🥉 3
+                                            <span v-else-if="cidx === 2" class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-amber-600 to-amber-700 text-white font-black text-xs shadow-2xs" title="Prioritas #3">
+                                                🥉
                                             </span>
-                                            <span v-else class="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-slate-200 text-slate-700 font-bold text-xs">
-                                                {{ cidx + 1 }}
+                                            <span v-else class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-100 text-slate-700 font-bold text-xs">
+                                                #{{ cidx + 1 }}
                                             </span>
                                         </td>
 
                                         <!-- Profil Siswa -->
-                                        <td class="py-2.5">
+                                        <td class="py-3">
                                             <div class="font-bold text-slate-800 text-xs flex items-center gap-1.5">
                                                 {{ cs.nama_lengkap }}
-                                                <span v-if="cs.siswa_id === modalDetailKonflik.siswa?.siswa_id" class="badge bg-indigo-600 text-white text-[9px] px-1.5 py-0.2 rounded font-bold">
+                                                <span v-if="cs.siswa_id === modalDetailKonflik.siswa?.siswa_id" class="badge bg-blue-600 text-white text-[9px] px-2 py-0.5 rounded-full font-bold shadow-2xs">
                                                     Siswa Ini
                                                 </span>
                                             </div>
-                                            <div class="text-[10px] text-slate-400 font-mono">NISN: {{ cs.nisn }}</div>
+                                            <div class="text-[10px] text-slate-400 font-mono mt-0.5">NISN: {{ cs.nisn }}</div>
                                         </td>
 
                                         <!-- Kelas & Jurusan -->
-                                        <td class="py-2.5">
-                                            <div class="text-xs font-semibold text-slate-700">{{ cs.nama_kelas }}</div>
-                                            <div class="text-[10px] text-slate-500">{{ cs.nama_jurusan }}</div>
+                                        <td class="py-3">
+                                            <div class="text-xs font-bold text-slate-700 mb-0.5">{{ cs.nama_kelas }}</div>
+                                            <div class="text-[10px] text-slate-500 font-medium">{{ cs.nama_jurusan }}</div>
                                         </td>
 
                                         <!-- Rerata Rapor -->
-                                        <td class="py-2.5 text-center">
-                                            <span class="inline-block font-mono font-black text-xs px-2 py-0.5 rounded-lg"
-                                                  :class="cidx === 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'">
+                                        <td class="py-3 text-center">
+                                            <span class="badge font-mono font-extrabold text-xs px-2.5 py-1 rounded-lg"
+                                                  :class="cidx === 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-700 border border-slate-200'">
                                                 {{ cs.rata_rata }}
                                             </span>
                                         </td>
 
                                         <!-- Pilihan Ke -->
-                                        <td class="py-2.5 text-center">
-                                            <span class="badge rounded-lg font-bold text-[10px]"
-                                                  :class="cs.no_pilihan === 1 ? 'bg-indigo-100 text-indigo-800 border border-indigo-200 font-black' : 'bg-slate-100 text-slate-600 border border-slate-200'">
-                                                {{ cs.no_pilihan === 1 ? '⭐ Pilihan 1' : 'Pilihan 2' }}
+                                        <td class="py-3 text-center">
+                                            <span class="badge rounded-lg font-bold text-[10px] px-2.5 py-1 inline-flex items-center gap-1"
+                                                  :class="cs.no_pilihan === 1 ? 'bg-amber-50 text-amber-700 border border-amber-200 font-black' : 'bg-slate-100 text-slate-600 border border-slate-200'">
+                                                <i v-if="cs.no_pilihan === 1" class="bi bi-star-fill text-amber-500"></i>
+                                                {{ cs.no_pilihan === 1 ? 'Pilihan 1' : 'Pilihan 2' }}
                                             </span>
                                         </td>
 
                                         <!-- Status Peluang -->
-                                        <td class="py-2.5 text-center">
+                                        <td class="py-3 text-center">
                                             <!-- Pilihan 1 & Rank 1 -->
-                                            <span v-if="cidx === 0 && cs.no_pilihan === 1" class="badge bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-1 rounded-xl flex items-center justify-center gap-1">
+                                            <span v-if="cidx === 0 && cs.no_pilihan === 1" class="badge bg-emerald-50 text-emerald-700 border border-emerald-200/90 text-[10px] font-bold px-2.5 py-1 rounded-lg inline-flex items-center justify-center gap-1.5 w-full shadow-2xs">
                                                 <i class="bi bi-trophy-fill text-emerald-600"></i> Prioritas Utama (Pil 1)
                                             </span>
                                             <!-- Pilihan 1 tapi kalah nilai dari siswa Pilihan 1 lainnya -->
-                                            <span v-else-if="cs.no_pilihan === 1" class="badge bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold px-2 py-1 rounded-xl flex items-center justify-center gap-1">
+                                            <span v-else-if="cs.no_pilihan === 1" class="badge bg-rose-50 text-rose-700 border border-rose-200/90 text-[10px] font-bold px-2.5 py-1 rounded-lg inline-flex items-center justify-center gap-1.5 w-full shadow-2xs">
                                                 <i class="bi bi-shield-x text-rose-600"></i> Kalah Nilai (Pil 1)
                                             </span>
                                             <!-- Pilihan 2 tapi rank 1 prodi (karena tidak ada yang memilih Pilihan 1) -->
-                                            <span v-else-if="cidx === 0" class="badge bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-1 rounded-xl flex items-center justify-center gap-1">
+                                            <span v-else-if="cidx === 0" class="badge bg-emerald-50 text-emerald-700 border border-emerald-200/90 text-[10px] font-bold px-2.5 py-1 rounded-lg inline-flex items-center justify-center gap-1.5 w-full shadow-2xs">
                                                 <i class="bi bi-check-circle-fill text-emerald-600"></i> Prioritas (Pil 2)
                                             </span>
                                             <!-- Pilihan 2 umum -->
-                                            <span v-else class="badge bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold px-2 py-1 rounded-xl flex items-center justify-center gap-1">
+                                            <span v-else class="badge bg-amber-50 text-amber-800 border border-amber-200/90 text-[10px] font-bold px-2.5 py-1 rounded-lg inline-flex items-center justify-center gap-1.5 w-full shadow-2xs">
                                                 <i class="bi bi-hourglass-split text-amber-600"></i> Cadangan (Pil 2)
                                             </span>
                                         </td>
@@ -824,11 +828,11 @@
                     </div>
 
                     <!-- Strategic Advice Box for BK -->
-                    <div class="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-4 text-indigo-950 space-y-1.5 shadow-2xs">
-                        <div class="font-black text-xs text-indigo-950 flex items-center gap-1.5">
+                    <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 text-slate-800 shadow-2xs">
+                        <div class="font-extrabold text-xs text-indigo-900 flex items-center gap-1.5 mb-2">
                             <i class="bi bi-lightbulb-fill text-indigo-600"></i> Rekomendasi Strategis Guru BK:
                         </div>
-                        <ul class="text-[11px] text-indigo-800 list-disc list-inside space-y-1 mb-0">
+                        <ul class="text-[11px] text-slate-700 list-disc list-inside space-y-1.5 mb-0 leading-relaxed">
                             <li>
                                 <strong>Siswa Prioritas #1 ({{ (modalDetailKonflik.conflicts || [])[0]?.nama_lengkap }}):</strong> Memilih prodi ini pada <strong>Pilihan {{ (modalDetailKonflik.conflicts || [])[0]?.no_pilihan }}</strong> dengan nilai rerata ({{ (modalDetailKonflik.conflicts || [])[0]?.rata_rata }}). Direkomendasikan mempertahankan pilihan ini.
                             </li>
@@ -840,11 +844,11 @@
                 </div>
 
                 <!-- Footer -->
-                <div class="modal-footer border-t border-slate-100 px-6 py-4 flex items-center justify-between bg-slate-50">
-                    <div class="text-[11px] text-slate-400">
-                        <i class="bi bi-info-circle"></i> Gunakan tombol "Pilih" di tabel untuk mengubah prodi alternatif siswa.
+                <div class="modal-footer border-t border-slate-200/80 px-6 py-4 flex items-center justify-between bg-slate-50">
+                    <div class="text-[11px] text-slate-500 font-medium">
+                        <i class="bi bi-info-circle text-blue-500 me-1"></i> Gunakan tombol "Pilih" di tabel untuk mengubah prodi alternatif siswa.
                     </div>
-                    <button type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-4" @click="modalDetailKonflik.show = false">
+                    <button type="button" class="btn btn-primary rounded-xl font-bold px-5 py-2 text-xs shadow-sm" @click="modalDetailKonflik.show = false">
                         Tutup Analisis
                     </button>
                 </div>
