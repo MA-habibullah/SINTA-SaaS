@@ -4,22 +4,19 @@ namespace App\Modules\Core\Controllers;
 
 use App\Core\BaseController;
 use App\Core\SessionManager;
-use App\Modules\Core\Models\PengumumanModel;
-use App\Modules\Core\Models\KategoriPengumumanModel;
+use App\Modules\Core\Models\AgendaModel;
 use App\Config\Database;
 use Exception;
 use PDO;
 
-class PengumumanModuleController extends BaseController {
-    private PengumumanModel $model;
-    private KategoriPengumumanModel $kategoriModel;
+class AgendaModuleController extends BaseController {
+    private AgendaModel $model;
 
     public function __construct() {
         parent::__construct();
         SessionManager::requireLogin();
         $tenantId = $this->getSecureTenantId();
-        $this->model = new PengumumanModel($tenantId);
-        $this->kategoriModel = new KategoriPengumumanModel($tenantId);
+        $this->model = new AgendaModel($tenantId);
     }
 
     protected function isUserSuperAdmin(): bool {
@@ -62,18 +59,18 @@ class PengumumanModuleController extends BaseController {
         }
 
         $data = [
-            "title" => "Manajemen Pengumuman & Informasi Sekolah",
+            "title" => "Agenda & Timeline Kegiatan Sekolah",
             "isSuperAdmin" => $isSuperAdmin,
             "tenants" => $tenants,
             "selectedTenantId" => $tenantId,
             "currentRole" => $roleName
         ];
         
-        $this->render("humas/pengumuman", $data);
+        $this->render("humas/agenda", $data);
     }
 
     /* ═══════════════════════════════════════════════════════════════════════
-       API: OPTIONS & STATS SUMMARY
+       API: OPTIONS & SUMMARY
        ═══════════════════════════════════════════════════════════════════════ */
 
     public function apiGetOptions(): void {
@@ -81,9 +78,9 @@ class PengumumanModuleController extends BaseController {
             $tenantId = $this->getSecureTenantId();
             $db = Database::getConnection();
 
-            $kategoriList = $this->kategoriModel->getAll(['tenant_id' => $tenantId]);
+            $kategoriList = $this->model->getKategoriList($tenantId);
 
-            // Fetch available roles for target audience selection
+            // Fetch available roles
             $stmtRoles = $db->query("SELECT id, nama_role FROM core.roles ORDER BY nama_role ASC");
             $rolesList = $stmtRoles->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
@@ -121,25 +118,25 @@ class PengumumanModuleController extends BaseController {
     }
 
     /* ═══════════════════════════════════════════════════════════════════════
-       API: PENGUMUMAN CRUD
+       API: AGENDA CRUD
        ═══════════════════════════════════════════════════════════════════════ */
 
-    public function apiGetPengumuman(): void {
+    public function apiGetAgenda(): void {
         try {
             $tenantId = $this->getSecureTenantId();
             $filters = [
                 'search' => $_GET['search'] ?? '',
-                'kategori_id' => $_GET['kategori_id'] ?? '',
+                'kategori' => $_GET['kategori'] ?? '',
                 'visibilitas' => $_GET['visibilitas'] ?? '',
+                'month' => $_GET['month'] ?? '',
                 'is_active' => $_GET['is_active'] ?? '',
-                'tanggal' => $_GET['tanggal'] ?? '',
                 'tenant_id' => $_GET['tenant_id'] ?? $tenantId
             ];
 
-            $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 100;
+            $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 200;
             $offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
 
-            $model = new PengumumanModel($tenantId);
+            $model = new AgendaModel($tenantId);
             $data = $model->getAll($filters, $limit, $offset);
             $total = $model->countAll($filters);
 
@@ -153,33 +150,44 @@ class PengumumanModuleController extends BaseController {
         }
     }
 
-    public function apiSavePengumuman(): void {
+    public function apiSaveAgenda(): void {
         try {
             $tenantId = $this->getSecureTenantId();
             $input = $this->getJsonInput();
 
-            $judul = trim($input['judul'] ?? '');
-            $deskripsi = trim($input['deskripsi'] ?? ($input['isi_pengumuman'] ?? ''));
-            $kategoriId = !empty($input['kategori_id']) ? trim($input['kategori_id']) : null;
+            $judul = trim($input['nama_agenda_sekolah'] ?? ($input['judul'] ?? ''));
+            $kategori = trim($input['kategori'] ?? 'Akademik');
+            $deskripsi = trim($input['deskripsi'] ?? ($input['isi'] ?? ''));
+            $tglMulai = !empty($input['tanggal_mulai']) ? trim($input['tanggal_mulai']) : date('Y-m-d');
+            $tglSelesai = !empty($input['tanggal_selesai']) ? trim($input['tanggal_selesai']) : $tglMulai;
+            $waktuMulai = !empty($input['waktu_mulai']) ? trim($input['waktu_mulai']) : '07:30';
+            $waktuSelesai = !empty($input['waktu_selesai']) ? trim($input['waktu_selesai']) : '15:00';
+            $lokasi = !empty($input['lokasi']) ? trim($input['lokasi']) : 'Kampus Sekolah';
+            $pj = !empty($input['penanggung_jawab']) ? trim($input['penanggung_jawab']) : 'Panitia Acara';
             $visibilitas = !empty($input['visibilitas']) ? trim($input['visibilitas']) : 'public';
-            $targetRoles = !empty($input['target_roles']) ? $input['target_roles'] : null;
+            $targetRoles = !empty($input['target_roles']) ? $input['target_roles'] : [];
             $isActive = isset($input['is_active']) ? (bool)$input['is_active'] : true;
             $id = !empty($input['id']) ? trim($input['id']) : null;
 
             if (empty($judul)) {
-                $this->jsonResponse(['success' => false, 'error' => 'Judul pengumuman wajib diisi.'], 422);
+                $this->jsonResponse(['success' => false, 'error' => 'Nama kegiatan agenda wajib diisi.'], 422);
                 return;
             }
 
-            $currentUserId = $_SESSION['user']['id'] ?? null;
-            $model = new PengumumanModel($tenantId);
+            $model = new AgendaModel($tenantId);
 
             $payload = [
                 'tenant_id' => array_key_exists('tenant_id', $input) ? ($input['tenant_id'] === 'global' ? null : $input['tenant_id']) : $tenantId,
-                'kategori_id' => $kategoriId,
-                'created_by' => $currentUserId,
+                'nama_agenda_sekolah' => $judul,
                 'judul' => $judul,
+                'kategori' => $kategori,
                 'deskripsi' => $deskripsi,
+                'tanggal_mulai' => $tglMulai,
+                'tanggal_selesai' => $tglSelesai,
+                'waktu_mulai' => $waktuMulai,
+                'waktu_selesai' => $waktuSelesai,
+                'lokasi' => $lokasi,
+                'penanggung_jawab' => $pj,
                 'visibilitas' => $visibilitas,
                 'target_roles' => $targetRoles,
                 'is_active' => $isActive
@@ -189,13 +197,13 @@ class PengumumanModuleController extends BaseController {
                 $success = $model->update($id, $payload);
                 $this->jsonResponse([
                     'success' => $success,
-                    'message' => $success ? 'Pengumuman berhasil diperbarui.' : 'Gagal memperbarui pengumuman.'
+                    'message' => $success ? 'Agenda kegiatan berhasil diperbarui.' : 'Gagal memperbarui agenda.'
                 ], $success ? 200 : 400);
             } else {
                 $newId = $model->create($payload);
                 $this->jsonResponse([
                     'success' => true,
-                    'message' => 'Pengumuman baru berhasil diterbitkan.',
+                    'message' => 'Agenda baru berhasil dijadwalkan.',
                     'id' => $newId
                 ], 200);
             }
@@ -211,16 +219,16 @@ class PengumumanModuleController extends BaseController {
             $id = $input['id'] ?? '';
 
             if (empty($id)) {
-                $this->jsonResponse(['success' => false, 'error' => 'ID pengumuman tidak valid.'], 422);
+                $this->jsonResponse(['success' => false, 'error' => 'ID agenda tidak valid.'], 422);
                 return;
             }
 
-            $model = new PengumumanModel($tenantId);
+            $model = new AgendaModel($tenantId);
             $newStatus = $model->toggleActive($id);
 
             $this->jsonResponse([
                 'success' => true,
-                'message' => $newStatus ? 'Pengumuman diaktifkan.' : 'Pengumuman dinonaktifkan.',
+                'message' => $newStatus ? 'Agenda diaktifkan.' : 'Agenda dinonaktifkan.',
                 'is_active' => $newStatus
             ], 200);
         } catch (Exception $e) {
@@ -228,133 +236,26 @@ class PengumumanModuleController extends BaseController {
         }
     }
 
-    public function apiDeletePengumuman(): void {
+    public function apiDeleteAgenda(): void {
         try {
             $tenantId = $this->getSecureTenantId();
             $input = $this->getJsonInput();
             $id = $input['id'] ?? ($_GET['id'] ?? '');
 
             if (empty($id)) {
-                $this->jsonResponse(['success' => false, 'error' => 'ID pengumuman tidak valid.'], 422);
+                $this->jsonResponse(['success' => false, 'error' => 'ID agenda tidak valid.'], 422);
                 return;
             }
 
-            $model = new PengumumanModel($tenantId);
+            $model = new AgendaModel($tenantId);
             $deleted = $model->delete($id);
 
             $this->jsonResponse([
                 'success' => $deleted,
-                'message' => $deleted ? 'Pengumuman berhasil dihapus.' : 'Gagal menghapus pengumuman.'
+                'message' => $deleted ? 'Agenda kegiatan berhasil dihapus.' : 'Gagal menghapus agenda.'
             ], $deleted ? 200 : 400);
         } catch (Exception $e) {
             $this->jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
         }
-    }
-
-    /* ═══════════════════════════════════════════════════════════════════════
-       API: KATEGORI PENGUMUMAN
-       ═══════════════════════════════════════════════════════════════════════ */
-
-    public function apiGetKategori(): void {
-        try {
-            $tenantId = $this->getSecureTenantId();
-            $filters = [
-                'search' => $_GET['search'] ?? '',
-                'tenant_id' => $_GET['tenant_id'] ?? $tenantId
-            ];
-            $kategoriModel = new KategoriPengumumanModel($tenantId);
-            $data = $kategoriModel->getAll($filters);
-
-            $this->jsonResponse(['success' => true, 'data' => $data], 200);
-        } catch (Exception $e) {
-            $this->jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
-        }
-    }
-
-    public function apiSaveKategori(): void {
-        try {
-            $tenantId = $this->getSecureTenantId();
-            $input = $this->getJsonInput();
-
-            $namaKategori = trim($input['nama_kategori'] ?? '');
-            $id = !empty($input['id']) ? trim($input['id']) : null;
-
-            if (empty($namaKategori)) {
-                $this->jsonResponse(['success' => false, 'error' => 'Nama kategori pengumuman wajib diisi.'], 422);
-                return;
-            }
-
-            $kategoriModel = new KategoriPengumumanModel($tenantId);
-            if ($id) {
-                $success = $kategoriModel->update($id, $namaKategori);
-                $this->jsonResponse([
-                    'success' => $success,
-                    'message' => $success ? 'Kategori berhasil diperbarui.' : 'Gagal memperbarui kategori.'
-                ], $success ? 200 : 400);
-            } else {
-                $newId = $kategoriModel->create([
-                    'tenant_id' => array_key_exists('tenant_id', $input) ? ($input['tenant_id'] === 'global' ? null : $input['tenant_id']) : $tenantId,
-                    'nama_kategori' => $namaKategori
-                ]);
-                $this->jsonResponse([
-                    'success' => true,
-                    'message' => 'Kategori baru berhasil ditambahkan.',
-                    'id' => $newId
-                ], 200);
-            }
-        } catch (Exception $e) {
-            $this->jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
-        }
-    }
-
-    public function apiDeleteKategori(): void {
-        try {
-            $tenantId = $this->getSecureTenantId();
-            $input = $this->getJsonInput();
-            $id = $input['id'] ?? ($_GET['id'] ?? '');
-
-            if (empty($id)) {
-                $this->jsonResponse(['success' => false, 'error' => 'ID kategori tidak valid.'], 422);
-                return;
-            }
-
-            $kategoriModel = new KategoriPengumumanModel($tenantId);
-            $deleted = $kategoriModel->delete($id);
-
-            $this->jsonResponse([
-                'success' => $deleted,
-                'message' => $deleted ? 'Kategori berhasil dihapus.' : 'Gagal menghapus kategori.'
-            ], $deleted ? 200 : 400);
-        } catch (Exception $e) {
-            $this->jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
-        }
-    }
-
-    /* ═══════════════════════════════════════════════════════════════════════
-       BACKWARD COMPATIBILITY HTTP FORM HANDLERS
-       ═══════════════════════════════════════════════════════════════════════ */
-
-    public function store(): void {
-        $this->apiSavePengumuman();
-    }
-
-    public function update(): void {
-        $this->apiSavePengumuman();
-    }
-
-    public function delete(): void {
-        $this->apiDeletePengumuman();
-    }
-
-    public function storeKategori(): void {
-        $this->apiSaveKategori();
-    }
-
-    public function updateKategori(): void {
-        $this->apiSaveKategori();
-    }
-
-    public function deleteKategori(): void {
-        $this->apiDeleteKategori();
     }
 }
