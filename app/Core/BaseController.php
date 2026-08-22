@@ -184,4 +184,65 @@ class BaseController {
         $str = htmlspecialchars($str, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         return trim($str);
     }
+
+    /**
+     * Catat Throwable (Exception/Error) yang tertangkap oleh catch-block ke DB error-monitor.
+     *
+     * PENTING: `catch (Throwable $e)` di controller "menelan" error sebelum ErrorTracker
+     * sempat menangkapnya via set_exception_handler. Method ini menjadi jembatan agar
+     * error tetap tercatat di tabel sistem.system_errors dan tampil di halaman
+     * /super-admin/error-monitor.
+     *
+     * Cara pakai di controller:
+     *   } catch (Throwable $e) {
+     *       $this->logApiException($e);
+     *       $this->jsonResponse(false, null, 'Pesan user-friendly.', 500);
+     *   }
+     *
+     * @param \Throwable $e         Exception atau Error yang tertangkap
+     * @param string     $context   Nama method/fitur untuk memudahkan pencarian di monitor
+     */
+    protected function logApiException(\Throwable $e, string $context = ''): void
+    {
+        try {
+            \App\Helpers\ErrorTracker::logToDatabase(
+                level:   ($context ? "[{$context}] " : '') . get_class($e),
+                message: $e->getMessage(),
+                file:    $e->getFile(),
+                line:    $e->getLine(),
+                trace:   $e->getTrace()
+            );
+        } catch (\Throwable $logErr) {
+            // Fallback agar logging tidak menyebabkan error tambahan
+            error_log('[BaseController::logApiException] Gagal catat ke DB: ' . $logErr->getMessage());
+            error_log('[BaseController::logApiException] Error Asli: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+        }
+    }
+
+    /**
+     * Cek apakah request ini adalah JSON/API request.
+     * Digunakan untuk menentukan format response (JSON vs HTML).
+     */
+    protected function isJsonRequest(): bool
+    {
+        return (
+            str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') ||
+            str_contains($_SERVER['CONTENT_TYPE'] ?? '', 'application/json') ||
+            str_contains($_SERVER['REQUEST_URI'] ?? '', '/api/') ||
+            strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'xmlhttprequest'
+        );
+    }
+
+    /**
+     * Dapatkan Tenant ID yang aman dari session (dengan validasi).
+     */
+    protected function getSecureTenantId(): string
+    {
+        $tenantId = $this->tenantId ?: ($_SESSION['tenant_id'] ?? '');
+        if (empty($tenantId)) {
+            throw new \RuntimeException('Tenant ID tidak terdeteksi. Pastikan sesi login aktif.');
+        }
+        return (string) $tenantId;
+    }
 }
+

@@ -89,6 +89,7 @@ class PersuratanModuleController extends BaseController
             $stats = $this->model->getDashboardStats($tenantId);
             $this->jsonResponse(true, $stats, 'Statistik persuratan berhasil dimuat.');
         } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
             $this->jsonResponse(false, null, 'Gagal memuat statistik: ' . $e->getMessage(), 500);
         }
     }
@@ -107,6 +108,7 @@ class PersuratanModuleController extends BaseController
             $data = $this->model->getSuratMasuk($tenantId, $filters);
             $this->jsonResponse(true, $data);
         } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
             $this->jsonResponse(false, null, 'Gagal memuat surat masuk: ' . $e->getMessage(), 500);
         }
     }
@@ -155,6 +157,7 @@ class PersuratanModuleController extends BaseController
 
             $this->jsonResponse(true, ['id' => $saveId], 'Surat masuk berhasil disimpan.');
         } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
             $this->jsonResponse(false, null, 'Gagal menyimpan surat masuk: ' . $e->getMessage(), 400);
         }
     }
@@ -175,6 +178,7 @@ class PersuratanModuleController extends BaseController
             $this->model->deleteSuratMasuk($tenantId, $id);
             $this->jsonResponse(true, null, 'Surat masuk berhasil dihapus.');
         } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
             $this->jsonResponse(false, null, 'Gagal menghapus surat masuk: ' . $e->getMessage(), 500);
         }
     }
@@ -192,6 +196,7 @@ class PersuratanModuleController extends BaseController
             $data = $this->model->getDisposisi($tenantId, $idSm);
             $this->jsonResponse(true, $data);
         } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
             $this->jsonResponse(false, null, 'Gagal memuat disposisi: ' . $e->getMessage(), 500);
         }
     }
@@ -217,6 +222,7 @@ class PersuratanModuleController extends BaseController
 
             $this->jsonResponse(true, ['id' => $idDisp], 'Lembar disposisi berhasil diterbitkan.');
         } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
             $this->jsonResponse(false, null, 'Gagal menyimpan disposisi: ' . $e->getMessage(), 400);
         }
     }
@@ -233,6 +239,7 @@ class PersuratanModuleController extends BaseController
             $data = $this->model->getSuratKeluar($tenantId, $filters);
             $this->jsonResponse(true, $data);
         } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
             $this->jsonResponse(false, null, 'Gagal memuat surat keluar: ' . $e->getMessage(), 500);
         }
     }
@@ -248,6 +255,7 @@ class PersuratanModuleController extends BaseController
             $nomorData = $this->model->generateNomorSurat($tenantId, $idKlas, $tglSurat);
             $this->jsonResponse(true, $nomorData);
         } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
             $this->jsonResponse(false, null, 'Gagal menghasilkan nomor surat: ' . $e->getMessage(), 500);
         }
     }
@@ -291,6 +299,7 @@ class PersuratanModuleController extends BaseController
 
             $this->jsonResponse(true, ['id' => $saveId], 'Surat keluar berhasil didaftarkan.');
         } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
             $this->jsonResponse(false, null, 'Gagal mendaftarkan surat keluar: ' . $e->getMessage(), 400);
         }
     }
@@ -311,6 +320,7 @@ class PersuratanModuleController extends BaseController
             $this->model->deleteSuratKeluar($tenantId, $id);
             $this->jsonResponse(true, null, 'Surat keluar berhasil dihapus.');
         } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
             $this->jsonResponse(false, null, 'Gagal menghapus surat keluar: ' . $e->getMessage(), 500);
         }
     }
@@ -334,6 +344,7 @@ class PersuratanModuleController extends BaseController
 
             $this->jsonResponse(true, $data);
         } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
             $this->jsonResponse(false, null, 'Gagal memuat dokumen cetak: ' . $e->getMessage(), 500);
         }
     }
@@ -350,6 +361,7 @@ class PersuratanModuleController extends BaseController
             $data = $this->model->getPengajuanBk($tenantId, $filters);
             $this->jsonResponse(true, $data);
         } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
             $this->jsonResponse(false, null, 'Gagal memuat antrean notifikasi BK: ' . $e->getMessage(), 500);
         }
     }
@@ -370,6 +382,7 @@ class PersuratanModuleController extends BaseController
             $result = $this->model->prosesTerbitPengajuanBk($tenantId, $idPengajuan, $input);
             $this->jsonResponse(true, $result, $result['message']);
         } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
             $this->jsonResponse(false, null, 'Gagal menerbitkan surat pemanggilan: ' . $e->getMessage(), 400);
         }
     }
@@ -382,6 +395,7 @@ class PersuratanModuleController extends BaseController
             $data = $this->model->getTemplates($tenantId);
             $this->jsonResponse(true, $data);
         } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
             $this->jsonResponse(false, null, 'Gagal memuat template: ' . $e->getMessage(), 500);
         }
     }
@@ -395,6 +409,7 @@ class PersuratanModuleController extends BaseController
             $id = $this->model->saveTemplate($tenantId, $input);
             $this->jsonResponse(true, ['id' => $id], 'Template surat berhasil disimpan.');
         } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
             $this->jsonResponse(false, null, 'Gagal menyimpan template: ' . $e->getMessage(), 400);
         }
     }
@@ -407,6 +422,7 @@ class PersuratanModuleController extends BaseController
             $data = $this->model->getKlasifikasi($tenantId);
             $this->jsonResponse(true, $data);
         } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
             $this->jsonResponse(false, null, 'Gagal memuat kode klasifikasi: ' . $e->getMessage(), 500);
         }
     }
@@ -420,6 +436,7 @@ class PersuratanModuleController extends BaseController
             $id = $this->model->saveKlasifikasi($tenantId, $input);
             $this->jsonResponse(true, ['id' => $id], 'Kode klasifikasi berhasil disimpan.');
         } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
             $this->jsonResponse(false, null, 'Gagal menyimpan kode klasifikasi: ' . $e->getMessage(), 400);
         }
     }
@@ -432,6 +449,7 @@ class PersuratanModuleController extends BaseController
             $kop = $this->model->getKopSurat($tenantId);
             $this->jsonResponse(true, $kop);
         } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
             $this->jsonResponse(false, null, 'Gagal memuat kop surat: ' . $e->getMessage(), 500);
         }
     }
@@ -445,6 +463,7 @@ class PersuratanModuleController extends BaseController
             $id = $this->model->saveKopSurat($tenantId, $input);
             $this->jsonResponse(true, ['id' => $id], 'Kop surat sekolah berhasil diperbarui.');
         } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
             $this->jsonResponse(false, null, 'Gagal memperbarui kop surat: ' . $e->getMessage(), 400);
         }
     }
@@ -467,6 +486,7 @@ class PersuratanModuleController extends BaseController
 
             $this->jsonResponse(true, $doc, 'Dokumen terverifikasi 100% Asli.');
         } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
             $this->jsonResponse(false, null, 'Terjadi gangguan saat memverifikasi dokumen: ' . $e->getMessage(), 500);
         }
     }
