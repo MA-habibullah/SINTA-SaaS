@@ -160,19 +160,38 @@ $menuList = [
 }
 </style>
 
-<div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-2 mb-4">
-    <div class="d-flex align-items-center justify-content-between">
-        <div class="nav-tabs-wrapper w-100 overflow-hidden">
-            <ul class="nav nav-pills border-0 flex-nowrap overflow-x-auto text-nowrap persuratan-nav-tabs gap-2 px-1 py-0.5" role="tablist">
+<div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-2 mb-4 position-relative">
+    <div class="d-flex align-items-center position-relative">
+        <!-- 1 Tombol Panah Kiri -->
+        <button type="button" 
+                class="btn btn-sm btn-light border border-slate-200/80 rounded-xl shadow-2xs me-1.5 d-none d-md-flex align-items-center justify-content-center flex-shrink-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition" 
+                style="width: 34px; height: 34px; z-index: 5;" 
+                onclick="document.getElementById('persuratanGlobalNavTabs')?.scrollBy({ left: -220, behavior: 'smooth' })"
+                title="Geser ke Kiri">
+            <i class="bi bi-chevron-left"></i>
+        </button>
+
+        <!-- Container Deretan Tab -->
+        <div class="nav-tabs-wrapper flex-grow-1 overflow-hidden position-relative">
+            <ul class="nav nav-pills border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-1.5 px-1 user-select-none" id="persuratanGlobalNavTabs" role="tablist">
                 <?php foreach ($menuList as $m): ?>
                 <li class="nav-item" role="presentation">
                     <a href="<?= htmlspecialchars($m['url']) ?>" 
-                       class="nav-link persuratan-tab-btn d-inline-flex align-items-center text-decoration-none <?= ($m['id'] === $activeMenu) ? 'active' : '' ?>">
+                       class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition d-inline-flex align-items-center text-decoration-none <?= ($m['id'] === $activeMenu) ? 'active' : '' ?>">
                         <i class="bi <?= htmlspecialchars($m['icon']) ?> me-2 fs-6 <?= ($m['id'] === $activeMenu) ? 'text-white' : 'text-primary' ?>"></i> <?= htmlspecialchars($m['title']) ?>
                     </a>
                 </li>
                 <?php endforeach; ?>
             </ul>
         </div>
+
+        <!-- 1 Tombol Panah Kanan -->
+        <button type="button" 
+                class="btn btn-sm btn-light border border-slate-200/80 rounded-xl shadow-2xs ms-1.5 d-none d-md-flex align-items-center justify-content-center flex-shrink-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition" 
+                style="width: 34px; height: 34px; z-index: 5;" 
+                onclick="document.getElementById('persuratanGlobalNavTabs')?.scrollBy({ left: 220, behavior: 'smooth' })"
+                title="Geser ke Kanan">
+            <i class="bi bi-chevron-right"></i>
+        </button>
     </div>
 </div>

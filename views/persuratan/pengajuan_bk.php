@@ -18,30 +18,55 @@ $pageIcon = 'bi-person-lines-fill';
     include __DIR__ . '/_hero_header.php'; 
     ?>
 
-    <!-- Navtab Lokal Khusus Internal Halaman Pengajuan BK -->
-    <div class="card border-0 shadow-xs rounded-2xl mb-4 bg-white" style="border: 1px solid #e2e8f0;">
-        <div class="card-body p-2">
-            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                <ul class="nav nav-pills gap-1.5 border-0" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link persuratan-tab-btn d-inline-flex align-items-center" 
-                                :class="{ 'active': activeTab === 'antrean' }" 
-                                @click="activeTab = 'antrean'" type="button">
-                            <i class="bi bi-bell-fill me-1.5 text-rose-500"></i> 1. Antrean Permohonan BK
-                            <span v-if="countPending > 0" class="badge bg-rose-600 text-white rounded-pill ms-1.5 px-2 py-0.5 text-[10px] font-bold">{{ countPending }}</span>
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         NAVIGASI TAB STANDAR SINTA SAAS (AGENTS.MD)
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-2 mb-4 position-relative">
+        <div class="d-flex align-items-center position-relative">
+            <!-- 1 Tombol Panah Kiri -->
+            <button type="button" 
+                    class="btn btn-sm btn-light border border-slate-200/80 rounded-xl shadow-2xs me-1.5 d-none d-md-flex align-items-center justify-content-center flex-shrink-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition" 
+                    style="width: 34px; height: 34px; z-index: 5;" 
+                    onclick="document.getElementById('pengajuanBkNavTabs')?.scrollBy({ left: -220, behavior: 'smooth' })"
+                    title="Geser ke Kiri">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+
+            <!-- Container Deretan Tab -->
+            <div class="nav-tabs-wrapper flex-grow-1 overflow-hidden position-relative">
+                <ul class="nav nav-pills border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-1.5 px-1 user-select-none" id="pengajuanBkNavTabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition d-inline-flex align-items-center" 
+                                :class="{'active': activeTab === 'antrean'}" 
+                                @click="activeTab = 'antrean'">
+                            <i class="bi bi-bell-fill me-2 fs-6 text-rose-500"></i> 1. Antrean Permohonan BK
+                            <span v-if="countPending > 0" class="badge bg-rose-600 text-white rounded-pill ms-2 px-2 py-0.5 text-[10px] font-bold">{{ countPending }}</span>
                         </button>
                     </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link persuratan-tab-btn d-inline-flex align-items-center" 
-                                :class="{ 'active': activeTab === 'terbit' }" 
-                                @click="activeTab = 'terbit'" type="button">
-                            <i class="bi bi-check-circle-fill me-1.5 text-emerald-500"></i> 2. Riwayat Surat Panggilan Terbit
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition d-inline-flex align-items-center" 
+                                :class="{'active': activeTab === 'terbit'}" 
+                                @click="activeTab = 'terbit'">
+                            <i class="bi bi-check-circle-fill me-2 fs-6 text-emerald-600"></i> 2. Riwayat Surat Panggilan Terbit
                         </button>
                     </li>
                 </ul>
+            </div>
 
-                <button @click="fetchPengajuanBk" class="btn btn-light btn-sm text-secondary rounded-xl px-3 py-1.5 border border-slate-200 shadow-2xs d-inline-flex align-items-center gap-1.5">
-                    <i class="bi bi-arrow-repeat" :class="{'spin': loading}"></i> <span class="fs-8 fw-semibold">Segarkan</span>
+            <!-- 1 Tombol Panah Kanan -->
+            <button type="button" 
+                    class="btn btn-sm btn-light border border-slate-200/80 rounded-xl shadow-2xs ms-1.5 d-none d-md-flex align-items-center justify-content-center flex-shrink-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition" 
+                    style="width: 34px; height: 34px; z-index: 5;" 
+                    onclick="document.getElementById('pengajuanBkNavTabs')?.scrollBy({ left: 220, behavior: 'smooth' })"
+                    title="Geser ke Kanan">
+                <i class="bi bi-chevron-right"></i>
+            </button>
+
+            <!-- Tombol Aksi Tambahan / Segarkan Data -->
+            <div class="d-none d-md-flex align-items-center ps-2 pe-1 border-s border-slate-200/80 ms-2">
+                <button type="button" class="btn btn-sm btn-light border border-slate-200 text-slate-600 hover:bg-slate-100 rounded-xl px-3 py-2 text-xs font-bold shadow-2xs d-flex align-items-center gap-1.5" @click="fetchPengajuanBk" title="Segarkan Data">
+                    <i class="bi bi-arrow-repeat" :class="{'spin': loading}"></i>
+                    <span>Segarkan</span>
                 </button>
             </div>
         </div>

@@ -341,6 +341,26 @@ try {
             $controller->apiSaveKlasifikasi();
             break;
 
+        case '/api/v1/persuratan/klasifikasi/toggle-status':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->apiToggleStatusKlasifikasi();
+            break;
+
+        case '/api/v1/persuratan/klasifikasi/toggle-tahun':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->apiToggleStatusByTahun();
+            break;
+
+        case '/api/v1/persuratan/klasifikasi/import':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->apiImportKlasifikasi();
+            break;
+
+        case '/api/v1/persuratan/klasifikasi/sync-nasional':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->apiSyncKatalogNasional2025();
+            break;
+
         case '/api/v1/persuratan/klasifikasi/delete':
             $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
             $controller->apiDeleteKlasifikasi();
