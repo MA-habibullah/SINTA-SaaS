@@ -50,7 +50,7 @@ class SiswaModel extends BaseModel {
                 LEFT JOIN akademik.jurusan j ON (s.tenant_id = j.tenant_id AND (s.jurusan = j.id::text OR s.jurusan = j.nama_jurusan))
                 WHERE (s.id::text = :id OR s.id IN (SELECT siswa_id FROM siswa.registrasi WHERE id::text = :id))";
 
-        $hasTenantFilter = (!empty($this->tenantId) && $this->tenantId !== '00000000-0000-0000-0000-000000000000');
+        $hasTenantFilter = (!empty($this->tenantId) && $this->tenantId !== 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12');
         if ($hasTenantFilter) {
             $sql .= " AND s.tenant_id = :tenant_id";
         }
@@ -254,7 +254,7 @@ class SiswaModel extends BaseModel {
     public function isNisUnique(string $nis, ?string $excludeId = null): bool {
         $sql    = "SELECT COUNT(*) FROM siswa.siswa WHERE nis = :nis AND is_active = true";
         $params = [':nis' => $nis];
-        $isSuperAdmin = (empty($this->tenantId) || $this->tenantId === '00000000-0000-0000-0000-000000000000');
+        $isSuperAdmin = (empty($this->tenantId) || $this->tenantId === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12');
         if (!$isSuperAdmin) {
             $sql              .= " AND tenant_id = :tenant_id";
             $params[':tenant_id'] = $this->tenantId;
@@ -413,7 +413,7 @@ class SiswaModel extends BaseModel {
             $setParts = [];
             $params   = ['id' => $id];
 
-            $isSuperAdmin = (empty($this->tenantId) || $this->tenantId === '00000000-0000-0000-0000-000000000000');
+            $isSuperAdmin = (empty($this->tenantId) || $this->tenantId === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12');
             if (!$isSuperAdmin) {
                 $params['tenant_id'] = $this->tenantId;
             }

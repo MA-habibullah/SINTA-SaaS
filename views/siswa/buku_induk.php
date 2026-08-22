@@ -93,7 +93,7 @@
             <!-- Table Action Filters -->
             <div class="row g-3 mb-4">
                 <!-- Search Box -->
-                <div class="col-12 col-md-4">
+                <div class="col-12 col-md-3">
                     <div class="input-group input-group-sm">
                         <span class="input-group-text bg-light border-end-0 rounded-start-3"><i class="bi bi-search text-muted"></i></span>
                         <input id="global_search_input" name="search" type="text" class="form-control bg-light border-start-0 rounded-end-3" placeholder="Cari Nama, NISN atau NIS..." v-model="search" @input="debounceSearch">
@@ -101,7 +101,7 @@
                 </div>
 
                 <!-- Filter Jenjang / Bentuk Pendidikan -->
-                <div class="col-6 col-md-3">
+                <div class="col-6 col-md-2">
                     <select class="form-select form-select-sm rounded-3" v-model="filterJenjang" @change="onJenjangFilterChange">
                         <option value="">🎓 Semua Jenjang</option>
                         <option v-for="j in jenjangOptions" :value="j.id" :key="j.id">{{ j.nama || j.nama_jenjang || j.kode_jenjang }}</option>
@@ -119,17 +119,27 @@
                 <!-- Filter Status -->
                 <div class="col-6 col-md-2">
                     <select class="form-select form-select-sm rounded-3" v-model="filterStatus" @change="fetchData(1)">
-                        <option value="">📋 Semua Status Siswa</option>
+                        <option value="">📋 Semua Status</option>
                         <option value="Aktif">✅ Aktif</option>
                         <option value="Lulus">🎓 Lulus (Alumni)</option>
-                        <option value="Pindah">🔀 Pindah Sekolah</option>
-                        <option value="Keluar">❌ Keluar / Drop Out</option>
+                        <option value="Pindah">🔀 Pindah</option>
+                        <option value="Keluar">❌ Keluar / DO</option>
+                    </select>
+                </div>
+
+                <!-- Filter KIP / PIP / Afirmasi Bantuan -->
+                <div class="col-6 col-md-2">
+                    <select class="form-select form-select-sm rounded-3" v-model="filterBantuan" @change="fetchData(1)">
+                        <option value="">🎁 Semua Bantuan</option>
+                        <option value="kip">🏷️ Penerima KIP</option>
+                        <option value="pip">💳 Penerima PIP/KPS</option>
+                        <option value="non_bantuan">👤 Non-Bantuan</option>
                     </select>
                 </div>
 
                 <!-- Per Page -->
-                <div class="col-6 col-md-1 d-flex align-items-center justify-content-md-end gap-1">
-                    <select id="per_page_select" name="per_page" class="form-select form-select-sm rounded-3 px-1" v-model="perPage" @change="fetchData(1)" style="width: 65px;" title="Jumlah baris per halaman">
+                <div class="col-12 col-md-1 d-flex align-items-center justify-content-md-end gap-1">
+                    <select id="per_page_select" name="per_page" class="form-select form-select-sm rounded-3 px-1 w-100" v-model="perPage" @change="fetchData(1)" title="Jumlah baris per halaman">
                         <option value="10">10</option>
                         <option value="25">25</option>
                         <option value="50">50</option>
@@ -507,21 +517,46 @@
                             </div>
 
                             <!-- List of Assigned Subjects in this Group -->
-                            <div class="border rounded-3 p-2 bg-white mb-3 shadow-sm" style="min-height: 140px; max-height: 260px; overflow-y: auto;">
+                            <div class="border rounded-3 p-2 bg-white mb-3 shadow-sm" style="min-height: 140px; max-height: 320px; overflow-y: auto;">
                                 <div v-if="getGroupMapelObjects(group).length > 0" class="list-group list-group-flush">
                                     <div v-for="m in getGroupMapelObjects(group)" :key="m.id"
-                                         class="list-group-item d-flex align-items-center justify-content-between border-0 px-2.5 py-2 rounded-3 mb-1 bg-light transition">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <i class="bi bi-check-circle-fill text-success fs-7"></i>
-                                            <span class="fs-8 fw-semibold text-dark">{{ m.nama_mapel }}</span>
+                                         class="list-group-item d-flex flex-column border-0 px-2.5 py-2 rounded-3 mb-2 bg-light transition gap-1.5 shadow-xs">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i class="bi bi-check-circle-fill text-success fs-7"></i>
+                                                <span class="fs-8 fw-bold text-dark">{{ m.nama_mapel }}</span>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-1">
+                                                <span class="badge bg-secondary-subtle text-secondary font-monospace fs-9">{{ m.kode_mapel }}</span>
+                                                <button class="btn btn-sm btn-link text-danger p-0 border-0 ms-1" 
+                                                        @click="removeMapelFromGroup(group, m.id)" 
+                                                        title="Keluarkan mapel dari kelompok ini">
+                                                    <i class="bi bi-x-circle-fill fs-7"></i>
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <span class="badge bg-secondary-subtle text-secondary font-monospace fs-9">{{ m.kode_mapel }}</span>
-                                            <button class="btn btn-sm btn-link text-danger p-0 border-0 ms-1" 
-                                                    @click="removeMapelFromGroup(group, m.id)" 
-                                                    title="Keluarkan mapel dari kelompok ini">
-                                                <i class="bi bi-x-circle-fill fs-7"></i>
-                                            </button>
+                                        <!-- Pengaturan Guru Pengampu, KKM / KKTP, dan Jam Pelajaran -->
+                                        <div class="d-flex align-items-center gap-2 pt-1 border-top border-secondary-subtle">
+                                            <div class="flex-grow-1">
+                                                <select class="form-select form-select-sm fs-9 py-0.5 rounded-2 bg-white shadow-none" v-model="getMapelConfig(group, m.id).guru_id">
+                                                    <option value="">👤 Guru Pengampu (Belum Disetel)</option>
+                                                    <option v-for="g in (masterKurikulum.guru || [])" :key="g.id" :value="g.id">
+                                                        {{ g.nama_lengkap }} {{ g.nip ? '(' + g.nip + ')' : '' }}
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div style="width: 80px;">
+                                                <div class="input-group input-group-sm">
+                                                    <span class="input-group-text py-0 px-1 fs-9 bg-white text-muted">KKM</span>
+                                                    <input type="number" class="form-control form-control-sm fs-9 py-0.5 px-1 bg-white text-center shadow-none" placeholder="75" v-model="getMapelConfig(group, m.id).kkm" min="0" max="100">
+                                                </div>
+                                            </div>
+                                            <div style="width: 72px;">
+                                                <div class="input-group input-group-sm">
+                                                    <span class="input-group-text py-0 px-1 fs-9 bg-white text-muted">Jam</span>
+                                                    <input type="number" class="form-control form-control-sm fs-9 py-0.5 px-1 bg-white text-center shadow-none" placeholder="2" v-model="getMapelConfig(group, m.id).jam_pelajaran" min="1" max="10">
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1618,36 +1653,36 @@
 
                         <!-- Info Tabs Content -->
                         <div class="col-12 col-lg-9 p-4">
-                            <!-- Tabs Navigation -->
+                            <!-- Tabs Navigation (Standar Buku Induk Kemendikbud Lembar 1 s.d. 4) -->
                             <ul class="nav nav-tabs nav-fill mb-4 border-bottom-0 bg-white p-1 rounded-3 border gap-1 fs-8 fw-semibold shadow-sm">
                                 <li class="nav-item">
-                                    <button class="nav-link py-2 px-3 border-0 rounded-3 text-dark transition" :class="{active: activeDetailTab === 'identitas'}" @click="activeDetailTab = 'identitas'">
-                                        <i class="bi bi-person-badge me-1"></i>Identitas & Profil
+                                    <button class="nav-link py-2 px-2 border-0 rounded-3 text-dark transition" :class="{active: activeDetailTab === 'identitas'}" @click="activeDetailTab = 'identitas'">
+                                        <i class="bi bi-file-earmark-person me-1 text-primary"></i>Lembar 1: Diri
                                     </button>
                                 </li>
                                 <li class="nav-item">
-                                    <button class="nav-link py-2 px-3 border-0 rounded-3 text-dark transition" :class="{active: activeDetailTab === 'keluarga'}" @click="activeDetailTab = 'keluarga'">
-                                        <i class="bi bi-people me-1"></i>Keluarga & Wali
+                                    <button class="nav-link py-2 px-2 border-0 rounded-3 text-dark transition" :class="{active: activeDetailTab === 'keluarga'}" @click="activeDetailTab = 'keluarga'">
+                                        <i class="bi bi-people me-1 text-success"></i>Lembar 2: Ortu & Wali
                                     </button>
                                 </li>
                                 <li class="nav-item">
-                                    <button class="nav-link py-2 px-3 border-0 rounded-3 text-dark transition" :class="{active: activeDetailTab === 'akademik'}" @click="activeDetailTab = 'akademik'">
-                                        <i class="bi bi-mortarboard me-1"></i>Riwayat & Nilai
+                                    <button class="nav-link py-2 px-2 border-0 rounded-3 text-dark transition" :class="{active: activeDetailTab === 'akademik'}" @click="activeDetailTab = 'akademik'">
+                                        <i class="bi bi-mortarboard me-1 text-info"></i>Lembar 3: Nilai Rapor
                                     </button>
                                 </li>
                                 <li class="nav-item">
-                                    <button class="nav-link py-2 px-3 border-0 rounded-3 text-dark transition" :class="{active: activeDetailTab === 'prestasi'}" @click="activeDetailTab = 'prestasi'">
-                                        <i class="bi bi-trophy me-1"></i>Prestasi & Catatan
+                                    <button class="nav-link py-2 px-2 border-0 rounded-3 text-dark transition" :class="{active: activeDetailTab === 'prestasi'}" @click="activeDetailTab = 'prestasi'">
+                                        <i class="bi bi-trophy me-1 text-warning"></i>Lembar 4: Prestasi
                                     </button>
                                 </li>
                                 <li class="nav-item">
-                                    <button class="nav-link py-2 px-3 border-0 rounded-3 text-dark transition" :class="{active: activeDetailTab === 'registrasi'}" @click="activeDetailTab = 'registrasi'">
-                                        <i class="bi bi-arrow-left-right me-1"></i>Registrasi & Mutasi
+                                    <button class="nav-link py-2 px-2 border-0 rounded-3 text-dark transition" :class="{active: activeDetailTab === 'registrasi'}" @click="activeDetailTab = 'registrasi'">
+                                        <i class="bi bi-arrow-left-right me-1 text-secondary"></i>Mutasi & Keluar
                                     </button>
                                 </li>
                                 <li class="nav-item">
-                                    <button class="nav-link py-2 px-3 border-0 rounded-3 text-dark transition" :class="{active: activeDetailTab === 'beasiswa'}" @click="activeDetailTab = 'beasiswa'; fetchBeasiswa(selectedSiswa.id)">
-                                        <i class="bi bi-gift me-1"></i>Beasiswa
+                                    <button class="nav-link py-2 px-2 border-0 rounded-3 text-dark transition" :class="{active: activeDetailTab === 'beasiswa'}" @click="activeDetailTab = 'beasiswa'; fetchBeasiswa(selectedSiswa.id)">
+                                        <i class="bi bi-gift me-1 text-danger"></i>Beasiswa/PIP
                                     </button>
                                 </li>
                             </ul>
@@ -2725,6 +2760,7 @@
                 kelasOptions: [],
                 filterKelas: '',
                 filterStatus: '',
+                filterBantuan: '',
                 filterTahunAjaranCetak: '',
                 listData: [],
                 currentPage: 1,
@@ -2751,7 +2787,8 @@
                 masterKurikulum: {
                     tahun_ajaran: [],
                     kelas: [],
-                    bank_mapel: []
+                    bank_mapel: [],
+                    guru: []
                 },
                 // Form inline untuk buat mapel baru per group card (indexed by gIdx)
                 newMapelForms: {},
@@ -3991,6 +4028,7 @@
                         this.masterKurikulum.tahun_ajaran = payload.tahun_ajaran || [];
                         this.masterKurikulum.kelas = payload.kelas || [];
                         this.masterKurikulum.bank_mapel = payload.bank_mapel || [];
+                        this.masterKurikulum.guru = payload.guru_list || [];
                         if (payload.jenjang && Array.isArray(payload.jenjang) && payload.jenjang.length > 0) {
                             this.jenjangOptions = payload.jenjang;
                         }
@@ -4032,6 +4070,20 @@
                         this.toast.fire({ icon: 'error', title: 'Gagal memuat master data kurikulum.' });
                     });
             },
+            getMapelConfig(group, mapelId) {
+                if (!group.mapel_configs) {
+                    this.$set ? this.$set(group, 'mapel_configs', {}) : (group.mapel_configs = {});
+                }
+                const idStr = String(mapelId);
+                if (!group.mapel_configs[idStr]) {
+                    group.mapel_configs[idStr] = {
+                        guru_id: '',
+                        kkm: 75,
+                        jam_pelajaran: 2
+                    };
+                }
+                return group.mapel_configs[idStr];
+            },
             loadKurikulumMapping() {
                 if (this.userRole === 'super_admin' && !this.filterTenantId) {
                     this.kurikulum.groups = [];
@@ -4065,8 +4117,12 @@
                         if (payload.kurikulum_list && Array.isArray(payload.kurikulum_list) && payload.kurikulum_list.length > 0) {
                             this.kurikulumList = payload.kurikulum_list;
                         }
+                        if (payload.guru_list && Array.isArray(payload.guru_list)) {
+                            this.masterKurikulum.guru = payload.guru_list;
+                        }
                         
                         const groupsMap = {};
+                        const configMap = {};
                         
                         mapping.forEach(row => {
                             const groupName = row.kelompok_id;
@@ -4075,6 +4131,15 @@
                                 groupsMap[groupName] = [];
                             }
                             groupsMap[groupName].push(mapelId);
+
+                            if (!configMap[groupName]) {
+                                configMap[groupName] = {};
+                            }
+                            configMap[groupName][mapelId] = {
+                                guru_id: row.guru_id || '',
+                                kkm: row.kkm !== undefined ? row.kkm : 75,
+                                jam_pelajaran: row.jam_pelajaran !== undefined ? row.jam_pelajaran : 2
+                            };
                         });
                         
                         const loadedGroups = [];
@@ -4082,15 +4147,17 @@
                             loadedGroups.push({
                                 kelompok_id: groupName,
                                 mapel_ids: groupsMap[groupName],
+                                mapel_configs: configMap[groupName] || {},
                                 searchQuery: ''
                             });
                         });
                         
                         if (loadedGroups.length === 0) {
                             loadedGroups.push({
-                                        kelompok_id: 'Kelompok A (Umum)',
-                                        mapel_ids: [],
-                                        searchQuery: ''
+                                kelompok_id: 'Kelompok A (Umum)',
+                                mapel_ids: [],
+                                mapel_configs: {},
+                                searchQuery: ''
                             });
                         }
                         
@@ -4443,9 +4510,20 @@
                     const gName = (group.kelompok_id || '').trim();
                     if (!gName) continue;
                     if (!group.mapel_ids || group.mapel_ids.length === 0) continue;
+
+                    const mapelPayload = group.mapel_ids.map(mId => {
+                        const conf = this.getMapelConfig(group, mId);
+                        return {
+                            mapel_id: String(mId),
+                            guru_id: conf.guru_id || null,
+                            kkm: conf.kkm !== undefined && conf.kkm !== '' ? parseFloat(conf.kkm) : 75,
+                            jam_pelajaran: conf.jam_pelajaran !== undefined && conf.jam_pelajaran !== '' ? parseInt(conf.jam_pelajaran) : 2
+                        };
+                    });
+
                     cleanMappings.push({
                         kelompok_id: gName,
-                        mapel_ids: group.mapel_ids
+                        mapel_ids: mapelPayload
                     });
                 }
 
@@ -4552,7 +4630,8 @@
                     search:     this.search,
                     jenjang_id: this.filterJenjang,
                     kelas_id:   this.filterKelas,
-                    status:     this.filterStatus
+                    status:     this.filterStatus,
+                    bantuan:    this.filterBantuan
                 };
 
                 if (this.filterTenantId) {
