@@ -46,7 +46,7 @@ class KesiswaanModuleController extends BaseController {
                 $tid = $body['tenant_id'] ?? null;
             }
 
-            if (!empty($tid) && $tid !== '00000000-0000-0000-0000-000000000000') {
+            if (!empty($tid) && $tid !== 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
                 try {
                     $db = \App\Config\Database::getConnection();
                     $stmt = $db->prepare("SELECT id FROM core.tenants WHERE id = ? LIMIT 1");
@@ -58,16 +58,16 @@ class KesiswaanModuleController extends BaseController {
 
             try {
                 $db = \App\Config\Database::getConnection();
-                $stmtDefault = $db->query("SELECT id FROM core.tenants WHERE id != '00000000-0000-0000-0000-000000000000' AND status = 'active' ORDER BY nama_sekolah ASC LIMIT 1");
+                $stmtDefault = $db->query("SELECT id FROM core.tenants WHERE id != 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' AND status = 'active' ORDER BY nama_sekolah ASC LIMIT 1");
                 $firstId = $stmtDefault->fetchColumn();
                 if ($firstId) return $firstId;
             } catch (\Throwable $e) {}
         }
 
-        if (empty($tenantId) || $tenantId === '00000000-0000-0000-0000-000000000000') {
+        if (empty($tenantId) || $tenantId === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
             try {
                 $db = \App\Config\Database::getConnection();
-                $stmtDefault = $db->query("SELECT id FROM core.tenants WHERE id != '00000000-0000-0000-0000-000000000000' AND status = 'active' ORDER BY nama_sekolah ASC LIMIT 1");
+                $stmtDefault = $db->query("SELECT id FROM core.tenants WHERE id != 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' AND status = 'active' ORDER BY nama_sekolah ASC LIMIT 1");
                 $tenantId = $stmtDefault->fetchColumn() ?: null;
             } catch (\Throwable $e) {}
         }
@@ -94,7 +94,7 @@ class KesiswaanModuleController extends BaseController {
         if ($isSuperAdmin) {
             try {
                 $db = \App\Config\Database::getConnection();
-                $stmt = $db->query("SELECT id, nama_sekolah, npsn FROM core.tenants WHERE id != '00000000-0000-0000-0000-000000000000' AND status = 'active' ORDER BY nama_sekolah ASC");
+                $stmt = $db->query("SELECT id, nama_sekolah, npsn FROM core.tenants WHERE id != 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' AND status = 'active' ORDER BY nama_sekolah ASC");
                 $tenants = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
             } catch (\Throwable $e) {}
         }
@@ -439,8 +439,8 @@ class KesiswaanModuleController extends BaseController {
 
             $params = [
                 ':tenant_id' => $tenantId,
-                ':ekskul_id' => $ekskulId ?: '00000000-0000-0000-0000-000000000000',
-                ':ta_id' => $tahunAjaranId ?: '00000000-0000-0000-0000-000000000000',
+                ':ekskul_id' => $ekskulId ?: 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12',
+                ':ta_id' => $tahunAjaranId ?: 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12',
                 ':semester' => $semester
             ];
 
