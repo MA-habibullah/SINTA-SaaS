@@ -60,37 +60,57 @@ if ($userRole === 'super_admin' && empty($tenantId) && !empty($tenantList)) {
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════════════════
-         2. MODERN TAB NAVIGATION BAR
+         2. MODERN TAB NAVIGATION BAR DENGAN ARROW & MOUSE SCROLL
          ═══════════════════════════════════════════════════════════════════════ -->
-    <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-2 mb-4">
-        <div class="nav-tabs-wrapper">
-            <ul class="nav nav-pills border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-1.5 px-1" id="unifiedAkademikTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition active" id="penjurusan-tab" data-bs-toggle="tab" data-bs-target="#penjurusan" type="button" role="tab">
-                        <i class="bi bi-diagram-3 me-2 fs-6"></i> Penjurusan Mandiri
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" id="kesiapan-tab" data-bs-toggle="tab" data-bs-target="#pdss" type="button" role="tab" onclick="switchVueTab('kesiapan')">
-                        <i class="bi bi-award-fill me-2 fs-6"></i> Kesiapan &amp; Eligibilitas Siswa
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" id="simulasi-tab" data-bs-toggle="tab" data-bs-target="#pdss" type="button" role="tab" onclick="switchVueTab('simulasi')">
-                        <i class="bi bi-journal-check me-2 fs-6"></i> Simulasi Pilihan Kampus
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" id="master-kampus-tab" data-bs-toggle="tab" data-bs-target="#master-kampus" type="button" role="tab">
-                        <i class="bi bi-building me-2 fs-6"></i> Master Kampus &amp; Prodi
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" id="master-jalur-tab" data-bs-toggle="tab" data-bs-target="#pdss" type="button" role="tab" onclick="switchVueTab('master_jalur')">
-                        <i class="bi bi-signpost-split-fill me-2 fs-6"></i> Master Jalur Masuk
-                    </button>
-                </li>
-            </ul>
+    <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-2 mb-4 position-relative">
+        <div class="d-flex align-items-center position-relative">
+            <!-- Left Scroll Arrow Button -->
+            <button type="button" 
+                    class="btn btn-sm btn-light border border-slate-200/80 rounded-xl shadow-2xs me-1.5 d-none d-md-flex align-items-center justify-content-center flex-shrink-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition" 
+                    style="width: 34px; height: 34px; z-index: 5;" 
+                    onclick="scrollNavTabsHorizontal('unifiedAkademikTabs', -220)"
+                    title="Geser ke Kiri">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+
+            <div class="nav-tabs-wrapper flex-grow-1 overflow-hidden position-relative">
+                <ul class="nav nav-pills border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-1.5 px-1 user-select-none" id="unifiedAkademikTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition active" id="penjurusan-tab" data-bs-toggle="tab" data-bs-target="#penjurusan" type="button" role="tab">
+                            <i class="bi bi-diagram-3 me-2 fs-6"></i> Penjurusan Mandiri
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" id="kesiapan-tab" data-bs-toggle="tab" data-bs-target="#pdss" type="button" role="tab" onclick="switchVueTab('kesiapan')">
+                            <i class="bi bi-award-fill me-2 fs-6"></i> Kesiapan &amp; Eligibilitas Siswa
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" id="simulasi-tab" data-bs-toggle="tab" data-bs-target="#pdss" type="button" role="tab" onclick="switchVueTab('simulasi')">
+                            <i class="bi bi-journal-check me-2 fs-6"></i> Simulasi Pilihan Kampus
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" id="master-kampus-tab" data-bs-toggle="tab" data-bs-target="#master-kampus" type="button" role="tab">
+                            <i class="bi bi-building me-2 fs-6"></i> Master Kampus &amp; Prodi
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" id="master-jalur-tab" data-bs-toggle="tab" data-bs-target="#pdss" type="button" role="tab" onclick="switchVueTab('master_jalur')">
+                            <i class="bi bi-signpost-split-fill me-2 fs-6"></i> Master Jalur Masuk
+                        </button>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Right Scroll Arrow Button -->
+            <button type="button" 
+                    class="btn btn-sm btn-light border border-slate-200/80 rounded-xl shadow-2xs ms-1.5 d-none d-md-flex align-items-center justify-content-center flex-shrink-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition" 
+                    style="width: 34px; height: 34px; z-index: 5;" 
+                    onclick="scrollNavTabsHorizontal('unifiedAkademikTabs', 220)"
+                    title="Geser ke Kanan">
+                <i class="bi bi-chevron-right"></i>
+            </button>
         </div>
     </div>
 
@@ -165,6 +185,15 @@ function switchVueTab(tabName) {
     }
 }
 
+// Function to scroll nav tabs with buttons
+function scrollNavTabsHorizontal(elementId, distance) {
+    const container = document.getElementById(elementId);
+    if (container) {
+        container.scrollBy({ left: distance, behavior: 'smooth' });
+    }
+}
+
+// Enable Mouse Wheel & Drag-to-Scroll on all scrollable-nav-tabs
 document.addEventListener('DOMContentLoaded', function() {
     const triggerElements = ['kesiapan-tab', 'master-jalur-tab', 'simulasi-tab', 'master-kampus-tab'];
     triggerElements.forEach(id => {
@@ -174,6 +203,48 @@ document.addEventListener('DOMContentLoaded', function() {
                 window.dispatchEvent(new Event('resize'));
             });
         }
+    });
+
+    // Auto-attach wheel and drag handlers
+    const scrollContainers = document.querySelectorAll('.scrollable-nav-tabs');
+    scrollContainers.forEach(container => {
+        // 1. Mouse Wheel to Horizontal Scroll
+        container.addEventListener('wheel', function(e) {
+            if (e.deltaY !== 0) {
+                e.preventDefault();
+                container.scrollLeft += e.deltaY;
+            }
+        }, { passive: false });
+
+        // 2. Mouse Drag to Scroll (Touch-like behavior on PC)
+        let isDown = false;
+        let startX = 0;
+        let scrollLeftPos = 0;
+
+        container.addEventListener('mousedown', function(e) {
+            isDown = true;
+            container.style.cursor = 'grabbing';
+            startX = e.pageX - container.offsetLeft;
+            scrollLeftPos = container.scrollLeft;
+        });
+
+        container.addEventListener('mouseleave', function() {
+            isDown = false;
+            container.style.cursor = '';
+        });
+
+        container.addEventListener('mouseup', function() {
+            isDown = false;
+            container.style.cursor = '';
+        });
+
+        container.addEventListener('mousemove', function(e) {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - container.offsetLeft;
+            const walk = (x - startX) * 1.5;
+            container.scrollLeft = scrollLeftPos - walk;
+        });
     });
 });
 </script>
@@ -216,12 +287,14 @@ document.addEventListener('DOMContentLoaded', function() {
     color: #ffffff !important;
 }
 
-/* Hide ugly horizontal scrollbars across all browsers */
+/* Hide ugly horizontal scrollbars across all browsers with smooth scrolling */
 .scrollable-nav-tabs {
     overflow-x: auto;
+    scroll-behavior: smooth;
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
     padding-bottom: 0px !important;
+    cursor: grab;
 }
 .scrollable-nav-tabs::-webkit-scrollbar {
     display: none !important;

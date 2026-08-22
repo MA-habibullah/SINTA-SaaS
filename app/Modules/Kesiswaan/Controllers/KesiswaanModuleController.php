@@ -35,7 +35,7 @@ class KesiswaanModuleController extends BaseController {
     /**
      * Helper: Mendapatkan Tenant ID yang aman (Super Admin support)
      */
-    private function getSecureTenantId(): ?string {
+    protected function getSecureTenantId(): ?string {
         $roles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
         $tenantId = SessionManager::getTenantId();
 

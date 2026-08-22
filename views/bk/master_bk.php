@@ -434,9 +434,18 @@ if (str_starts_with($defaultMainTab, 'p_')) {
 <div id="bkApp" v-cloak class="font-sans">
 
     <!-- ═══ HORIZONTAL TAB NAVIGATION ═══════════════════════════ -->
-    <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-2 mb-4" <?php if(!empty($is_sub_module)) echo 'style="display:none;"'; ?>>
-        <div class="nav-tabs-wrapper">
-            <ul class="nav nav-pills border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-1.5 px-1">
+    <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-2 mb-4 position-relative" <?php if(!empty($is_sub_module)) echo 'style="display:none;"'; ?>>
+        <div class="d-flex align-items-center position-relative">
+            <button type="button" 
+                    class="btn btn-sm btn-light border border-slate-200/80 rounded-xl shadow-2xs me-1.5 d-none d-md-flex align-items-center justify-content-center flex-shrink-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition" 
+                    style="width: 34px; height: 34px; z-index: 5;" 
+                    onclick="document.getElementById('bkMasterNavTabs')?.scrollBy({ left: -220, behavior: 'smooth' })"
+                    title="Geser ke Kiri">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+
+            <div class="nav-tabs-wrapper flex-grow-1 overflow-hidden position-relative">
+                <ul class="nav nav-pills border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-1.5 px-1 user-select-none" id="bkMasterNavTabs" role="tablist">
                     <?php if(!isset($allowed_bk_tabs) || in_array('dashboard', $allowed_bk_tabs)): ?>
                     <li class="nav-item">
                         <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" :class="{'active': activeTab === 'dashboard'}"
@@ -585,7 +594,16 @@ if (str_starts_with($defaultMainTab, 'p_')) {
                     <?php endif; ?>
                 </ul>
             </div>
+
+            <button type="button" 
+                    class="btn btn-sm btn-light border border-slate-200/80 rounded-xl shadow-2xs ms-1.5 d-none d-md-flex align-items-center justify-content-center flex-shrink-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition" 
+                    style="width: 34px; height: 34px; z-index: 5;" 
+                    onclick="document.getElementById('bkMasterNavTabs')?.scrollBy({ left: 220, behavior: 'smooth' })"
+                    title="Geser ke Kanan">
+                <i class="bi bi-chevron-right"></i>
+            </button>
         </div>
+    </div>
 
     <!-- ═══════════════════════════════════════════════════════════
          TAB 1: DASHBOARD MONITORING
@@ -1624,256 +1642,287 @@ if (str_starts_with($defaultMainTab, 'p_')) {
             </div>
         </div>
 
-        <!-- Modal Popup Form Input/Edit Prestasi Siswa -->
+        <!-- Modal Popup Form Input/Edit Prestasi Siswa (Lebih Luas & Modern) -->
         <div class="modal fade" id="modalFormPrestasi" tabindex="-1" aria-labelledby="modalFormPrestasiLabel" aria-hidden="true" data-bs-backdrop="static">
-            <div class="modal-dialog modal-lg modal-dialog-centered">
-                <div class="modal-content rounded-4 border-0 shadow">
-                    <div class="modal-header border-bottom py-3 bg-light">
-                        <h6 class="modal-title fw-bold text-dark d-flex align-items-center" id="modalFormPrestasiLabel">
-                            <i class="bi bi-trophy-fill me-2" style="color:var(--bk-primary);"></i>
-                            {{ formPrestasi.id ? 'Edit Data Prestasi Siswa' : 'Tambah Data Prestasi Siswa' }}
-                        </h6>
+            <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 1120px;">
+                <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+                    <div class="modal-header border-bottom py-3 px-4 bg-light d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-600 d-flex align-items-center justify-content-center fs-5">
+                                <i class="bi bi-trophy-fill"></i>
+                            </div>
+                            <div>
+                                <h6 class="modal-title fw-bold text-dark mb-0" id="modalFormPrestasiLabel">
+                                    {{ formPrestasi.id ? 'Edit Data Prestasi Siswa' : 'Tambah Data Prestasi Siswa' }}
+                                </h6>
+                                <small class="text-muted fs-9">Form pencatatan riwayat penghargaan &amp; sertifikat prestasi siswa</small>
+                            </div>
+                        </div>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" @click="closePrestasiModal"></button>
                     </div>
-                    <div class="modal-body p-4" style="min-height: 380px;">
+                    <div class="modal-body p-4 bg-white">
                         <!-- Alert Info / Warning Form -->
                         <div v-if="alertPrestasi.msg" :class="'alert alert-' + alertPrestasi.type + ' border-0 rounded-3 py-2 px-3 mb-3 fs-7 animate-fade-in'">
                             {{ alertPrestasi.msg }}
                         </div>
 
                         <form @submit.prevent="submitPrestasi" id="form-prestasi-modal" enctype="multipart/form-data">
-                            <!-- Siswa Selection -->
-                            <div class="mb-3">
-                                <label for="input-prestasi-cari-siswa" class="form-label fw-bold fs-7 mb-1 text-dark">
-                                    Pilih Siswa <span class="text-danger">*</span>
-                                </label>
-                                
-                                <!-- Jika Mode Edit: Tampilkan Badge Siswa Terkunci -->
-                                <div v-if="formPrestasi.id" class="p-2 px-3 border rounded-3 bg-light d-flex align-items-center justify-content-between">
-                                    <span class="fs-8 text-muted fw-semibold d-flex align-items-center gap-1">
-                                        <i class="bi bi-lock-fill text-warning"></i>
-                                        Siswa Otomatis Terkunci (Mode Edit Data)
-                                    </span>
-                                    <span class="badge bg-secondary rounded-pill px-2 py-1 fs-9">Terkunci</span>
-                                </div>
-                                
-                                <!-- Jika Mode Tambah: Tampilkan Input Search Autocomplete -->
-                                <div v-else class="position-relative">
-                                    <div class="input-group input-group-sm">
-                                        <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
-                                        <input type="text" 
-                                               id="input-prestasi-cari-siswa"
-                                               name="prestasi_cari_siswa"
-                                               class="form-control form-control-sm border-start-0 ps-1 rounded-end-3" 
-                                               placeholder="Ketik Nama, NISN, atau NIK Siswa..."
-                                               v-model="prestasiSearchSiswa"
-                                               @input="searchSiswaPrestasiDebounce"
-                                               @focus="showPrestasiSiswaDropdown = true"
-                                               @blur="hidePrestasiDropdownDelay" />
-                                    </div>
-                                    
-                                    <!-- Dropdown Pencarian Siswa -->
-                                    <div v-if="showPrestasiSiswaDropdown && prestasiSiswaOptions?.length > 0" 
-                                         class="position-absolute w-100 bg-white border rounded-3 shadow-lg p-1 mt-1 z-3"
-                                         style="max-height: 250px; overflow-y: auto;">
-                                        <div v-for="s in prestasiSiswaOptions" 
-                                             :key="s.id" 
-                                             @mousedown.prevent="selectSiswaPrestasi(s)"
-                                             class="p-2 rounded-2 hover-bg-slate cursor-pointer fs-7 d-flex justify-content-between align-items-center">
-                                            <div>
-                                                <div class="fw-bold text-dark">{{ s.nama_lengkap }}</div>
-                                                <div class="text-muted fs-8">NISN: {{ s.nisn }} | Kelas: {{ s.nama_kelas || '-' }}</div>
+                            <div class="row g-4">
+                                <!-- KOLOM KIRI: Identitas Siswa & Informasi Lomba -->
+                                <div class="col-12 col-lg-6">
+                                    <div class="p-0 bg-white border-0 h-100">
+                                        <h6 class="fw-bold text-primary fs-7 mb-3 d-flex align-items-center gap-1.5">
+                                            <i class="bi bi-person-badge-fill"></i> 1. Identitas Siswa &amp; Lomba
+                                        </h6>
+
+                                        <!-- Siswa Selection -->
+                                        <div class="mb-3">
+                                            <label for="input-prestasi-cari-siswa" class="form-label fw-bold fs-7 mb-1 text-dark">
+                                                Pilih Siswa <span class="text-danger">*</span>
+                                            </label>
+                                            
+                                            <!-- Jika Mode Edit: Tampilkan Badge Siswa Terkunci -->
+                                            <div v-if="formPrestasi.id" class="p-2 px-3 border rounded-3 bg-light d-flex align-items-center justify-content-between">
+                                                <span class="fs-8 text-muted fw-semibold d-flex align-items-center gap-1">
+                                                    <i class="bi bi-lock-fill text-warning"></i>
+                                                    Siswa Otomatis Terkunci (Mode Edit Data)
+                                                </span>
+                                                <span class="badge bg-secondary rounded-pill px-2 py-1 fs-9">Terkunci</span>
                                             </div>
-                                            <i class="bi bi-plus-circle-fill text-primary fs-6"></i>
+                                            
+                                            <!-- Jika Mode Tambah: Tampilkan Input Search Autocomplete -->
+                                            <div v-else class="position-relative">
+                                                <div class="input-group input-group-sm">
+                                                    <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                                                    <input type="text" 
+                                                           id="input-prestasi-cari-siswa"
+                                                           name="prestasi_cari_siswa"
+                                                           class="form-control form-control-sm border-start-0 ps-1 rounded-end-3" 
+                                                           placeholder="Ketik Nama, NISN, atau NIK Siswa..."
+                                                           v-model="prestasiSearchSiswa"
+                                                           @input="searchSiswaPrestasiDebounce"
+                                                           @focus="showPrestasiSiswaDropdown = true"
+                                                           @blur="hidePrestasiDropdownDelay" />
+                                                </div>
+                                                
+                                                <!-- Dropdown Pencarian Siswa -->
+                                                <div v-if="showPrestasiSiswaDropdown && prestasiSiswaOptions?.length > 0" 
+                                                     class="position-absolute w-100 bg-white border rounded-3 shadow-lg p-1 mt-1 z-3"
+                                                     style="max-height: 220px; overflow-y: auto;">
+                                                    <div v-for="s in prestasiSiswaOptions" 
+                                                         :key="s.id" 
+                                                         @mousedown.prevent="selectSiswaPrestasi(s)"
+                                                         class="p-2 rounded-2 hover-bg-slate cursor-pointer fs-7 d-flex justify-content-between align-items-center">
+                                                        <div>
+                                                            <div class="fw-bold text-dark">{{ s.nama_lengkap }}</div>
+                                                            <div class="text-muted fs-8">NISN: {{ s.nisn }} | Kelas: {{ s.nama_kelas || '-' }}</div>
+                                                        </div>
+                                                        <i class="bi bi-plus-circle-fill text-primary fs-6"></i>
+                                                    </div>
+                                                </div>
+                                                <div v-else-if="showPrestasiSiswaDropdown && loadingSearchPrestasiSiswa" 
+                                                     class="position-absolute w-100 bg-white border rounded-3 shadow-lg p-3 text-center mt-1 z-3">
+                                                    <div class="spinner-border spinner-border-sm text-primary"></div>
+                                                    <span class="fs-7 text-muted ms-2">Mencari...</span>
+                                                </div>
+                                            </div>
+
+                                            <!-- List Siswa Terpilih -->
+                                            <div v-if="selectedPrestasiSiswa?.length > 0" class="mt-2 d-flex flex-wrap gap-2">
+                                                <div v-for="s in selectedPrestasiSiswa" :key="s.id" 
+                                                     class="badge d-inline-flex align-items-center gap-2 p-2 rounded-3 text-dark" 
+                                                     style="background: var(--bk-p-light); color: var(--bk-primary); border: 1px solid #ddd;">
+                                                    <span class="fw-semibold">{{ s.nama_lengkap }} ({{ s.nama_kelas || '-' }})</span>
+                                                    <button v-if="!formPrestasi.id" type="button" class="btn-close" style="font-size: 0.6rem; margin-left: 5px;" @click="removeSiswaPrestasi(s.id)" title="Hapus dari daftar"></button>
+                                                    <i v-else class="bi bi-lock-fill text-muted ms-1" style="font-size:0.75rem;" title="Siswa terkunci saat edit data"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Kategori & Tahun Ajaran -->
+                                        <div class="row g-2 mb-3">
+                                            <div class="col-6">
+                                                <label for="select-prestasi-kategori" class="form-label fw-bold fs-7 mb-1 text-dark">Kategori <span class="text-danger">*</span></label>
+                                                <select id="select-prestasi-kategori" name="kategori" v-model="formPrestasi.kategori" class="form-select form-select-sm rounded-3">
+                                                    <option value="Personal">Personal (Individu)</option>
+                                                    <option value="Regu">Regu (Kelompok)</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-6">
+                                                <label for="select-prestasi-tahun-ajaran" class="form-label fw-bold fs-7 mb-1 text-dark">Tahun Ajaran <span class="text-danger">*</span></label>
+                                                <select id="select-prestasi-tahun-ajaran" name="tahun_ajaran_id" v-model="formPrestasi.tahun_ajaran_id" class="form-select form-select-sm rounded-3">
+                                                    <option value="">— Pilih Tahun —</option>
+                                                    <option v-for="y in activeYearsList" :key="y.id" :value="y.id">
+                                                        {{ y.tahun_ajaran }}
+                                                    </option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <!-- Semester & Tingkat Kejuaraan -->
+                                        <div class="row g-2 mb-3">
+                                            <div class="col-6">
+                                                <label for="select-prestasi-semester" class="form-label fw-bold fs-7 mb-1 text-dark">Semester <span class="text-danger">*</span></label>
+                                                <select id="select-prestasi-semester" name="semester" v-model="formPrestasi.semester" class="form-select form-select-sm rounded-3">
+                                                    <option value="Ganjil">Ganjil</option>
+                                                    <option value="Genap">Genap</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-6">
+                                                <label for="select-prestasi-tingkat" class="form-label fw-bold fs-7 mb-1 text-dark">Tingkat Kejuaraan <span class="text-danger">*</span></label>
+                                                <select id="select-prestasi-tingkat" name="tingkat_kejuaraan" v-model="formPrestasi.tingkat_kejuaraan" @change="autoCalculatePrestasiPoint" class="form-select form-select-sm rounded-3">
+                                                    <option value="">— Pilih Tingkat —</option>
+                                                    <option value="Kabupaten/Kota">Kabupaten/Kota</option>
+                                                    <option value="Provinsi">Provinsi</option>
+                                                    <option value="Nasional">Nasional</option>
+                                                    <option value="Internasional">Internasional</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <!-- Bidang Lomba & Nama Lomba -->
+                                        <div class="mb-3">
+                                            <label for="input-prestasi-bidang" class="form-label fw-bold fs-7 mb-1 text-dark">Bidang Lomba / Prestasi <span class="text-danger">*</span></label>
+                                            <input type="text" id="input-prestasi-bidang" name="bidang_lomba" v-model="formPrestasi.bidang_lomba" class="form-control form-control-sm rounded-3" placeholder="Contoh: Sains/OSN, Olahraga/O2SN, Seni, Robotik, dll." />
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="input-prestasi-nama-lomba" class="form-label fw-bold fs-7 mb-1 text-dark">Nama Perlombaan / Kegiatan <span class="text-danger">*</span></label>
+                                            <input type="text" id="input-prestasi-nama-lomba" name="nama_lomba" v-model="formPrestasi.nama_lomba" class="form-control form-control-sm rounded-3" placeholder="Contoh: Olimpiade Matematika Nasional 2026" />
+                                        </div>
+
+                                        <!-- Peringkat Juara & Nomor Sertifikat -->
+                                        <div class="row g-2 mb-0">
+                                            <div class="col-6">
+                                                <label for="select-prestasi-juara" class="form-label fw-bold fs-7 mb-1 text-dark">Peringkat Juara <span class="text-danger">*</span></label>
+                                                <select id="select-prestasi-juara" name="juara" v-model="formPrestasi.juara" @change="autoCalculatePrestasiPoint" class="form-select form-select-sm rounded-3">
+                                                    <option value="">— Pilih Juara —</option>
+                                                    <option value="Juara 1">Juara 1</option>
+                                                    <option value="Juara 2">Juara 2</option>
+                                                    <option value="Juara 3">Juara 3</option>
+                                                    <option value="Harapan 1">Juara Harapan 1</option>
+                                                    <option value="Harapan 2">Juara Harapan 2</option>
+                                                    <option value="Harapan 3">Juara Harapan 3</option>
+                                                    <option value="Lainnya">Lainnya (Tulis Keterangan)</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-6" v-if="formPrestasi.juara === 'Lainnya'">
+                                                <label for="input-prestasi-juara-lainnya" class="form-label fw-bold fs-7 mb-1 text-dark">Keterangan Juara <span class="text-danger">*</span></label>
+                                                <input type="text" id="input-prestasi-juara-lainnya" name="juara_lainnya" v-model="formPrestasi.juara_lainnya" class="form-control form-control-sm rounded-3" placeholder="Contoh: Gold Medal / Favorit" />
+                                            </div>
+                                            <div class="col-6" v-else>
+                                                <label for="input-prestasi-sertifikat" class="form-label fw-bold fs-7 mb-1 text-dark">Nomor Sertifikat / Piagam</label>
+                                                <input type="text" id="input-prestasi-sertifikat" name="nomor_sertifikat" v-model="formPrestasi.nomor_sertifikat" class="form-control form-control-sm rounded-3" placeholder="No. Sertifikat jika ada" />
+                                            </div>
+                                        </div>
+
+                                        <div class="mt-2" v-if="formPrestasi.juara === 'Lainnya'">
+                                            <label for="input-prestasi-sertifikat-lainnya" class="form-label fw-bold fs-7 mb-1 text-dark">Nomor Sertifikat / Piagam</label>
+                                            <input type="text" id="input-prestasi-sertifikat-lainnya" name="nomor_sertifikat" v-model="formPrestasi.nomor_sertifikat" class="form-control form-control-sm rounded-3" placeholder="No. Sertifikat jika ada" />
                                         </div>
                                     </div>
-                                    <div v-else-if="showPrestasiSiswaDropdown && loadingSearchPrestasiSiswa" 
-                                         class="position-absolute w-100 bg-white border rounded-3 shadow-lg p-3 text-center mt-1 z-3">
-                                        <div class="spinner-border spinner-border-sm text-primary"></div>
-                                        <span class="fs-7 text-muted ms-2">Mencari...</span>
-                                    </div>
                                 </div>
 
-                                <!-- List Siswa Terpilih -->
-                                <div v-if="selectedPrestasiSiswa?.length > 0" class="mt-2 d-flex flex-wrap gap-2">
-                                    <div v-for="s in selectedPrestasiSiswa" :key="s.id" 
-                                         class="badge d-inline-flex align-items-center gap-2 p-2 rounded-3 text-dark" 
-                                         style="background: var(--bk-p-light); color: var(--bk-primary); border: 1px solid #ddd;">
-                                        <span class="fw-semibold">{{ s.nama_lengkap }} ({{ s.nama_kelas || '-' }})</span>
-                                        <button v-if="!formPrestasi.id" type="button" class="btn-close" style="font-size: 0.6rem; margin-left: 5px;" @click="removeSiswaPrestasi(s.id)" title="Hapus dari daftar"></button>
-                                        <i v-else class="bi bi-lock-fill text-muted ms-1" style="font-size:0.75rem;" title="Siswa terkunci saat edit data"></i>
-                                    </div>
-                                </div>
-                            </div>
+                                <!-- KOLOM KANAN: Detail Pelaksanaan & Berkas Unggahan -->
+                                <div class="col-12 col-lg-6">
+                                    <div class="p-0 bg-white border-0 h-100 d-flex flex-column justify-content-between">
+                                        <div>
+                                            <h6 class="fw-bold text-primary fs-7 mb-3 d-flex align-items-center gap-1.5">
+                                                <i class="bi bi-geo-alt-fill"></i> 2. Detail Pelaksanaan &amp; Berkas
+                                            </h6>
 
-                            <!-- Kategori & Tahun Ajaran & Semester -->
-                            <div class="row g-2 mb-3">
-                                <div class="col-md-6">
-                                    <label for="select-prestasi-kategori" class="form-label fw-bold fs-7 mb-1 text-dark">Kategori Kepesertaan <span class="text-danger">*</span></label>
-                                    <select id="select-prestasi-kategori" name="kategori" v-model="formPrestasi.kategori" class="form-select form-select-sm rounded-3">
-                                        <option value="Personal">Personal (Individu)</option>
-                                        <option value="Regu">Regu (Kelompok)</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="select-prestasi-tahun-ajaran" class="form-label fw-bold fs-7 mb-1 text-dark">Tahun Ajaran <span class="text-danger">*</span></label>
-                                    <select id="select-prestasi-tahun-ajaran" name="tahun_ajaran_id" v-model="formPrestasi.tahun_ajaran_id" class="form-select form-select-sm rounded-3">
-                                        <option value="">— Pilih Tahun —</option>
-                                        <option v-for="y in activeYearsList" :key="y.id" :value="y.id">
-                                            {{ y.tahun_ajaran }}
-                                        </option>
-                                    </select>
-                                </div>
-                            </div>
+                                            <!-- Jenis Pelaksanaan & Tanggal -->
+                                            <div class="row g-2 mb-3">
+                                                <div class="col-6">
+                                                    <label for="select-prestasi-jenis" class="form-label fw-bold fs-7 mb-1 text-dark">Jenis Pelaksanaan <span class="text-danger">*</span></label>
+                                                    <select id="select-prestasi-jenis" name="jenis_lomba" v-model="formPrestasi.jenis_lomba" class="form-select form-select-sm rounded-3">
+                                                        <option value="Offline">Offline (Luring)</option>
+                                                        <option value="Online">Online (Daring)</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label for="input-prestasi-tanggal" class="form-label fw-bold fs-7 mb-1 text-dark">Tanggal Kegiatan <span class="text-danger">*</span></label>
+                                                    <input type="date" id="input-prestasi-tanggal" name="tanggal_lomba" v-model="formPrestasi.tanggal_lomba" class="form-control form-control-sm rounded-3" />
+                                                </div>
+                                            </div>
 
-                            <div class="row g-2 mb-3">
-                                <div class="col-md-6">
-                                    <label for="select-prestasi-semester" class="form-label fw-bold fs-7 mb-1 text-dark">Semester <span class="text-danger">*</span></label>
-                                    <select id="select-prestasi-semester" name="semester" v-model="formPrestasi.semester" class="form-select form-select-sm rounded-3">
-                                        <option value="Ganjil">Ganjil</option>
-                                        <option value="Genap">Genap</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="select-prestasi-tingkat" class="form-label fw-bold fs-7 mb-1 text-dark">Tingkat Kejuaraan <span class="text-danger">*</span></label>
-                                    <select id="select-prestasi-tingkat" name="tingkat_kejuaraan" v-model="formPrestasi.tingkat_kejuaraan" @change="autoCalculatePrestasiPoint" class="form-select form-select-sm rounded-3">
-                                        <option value="">— Pilih Tingkat —</option>
-                                        <option value="Kabupaten/Kota">Kabupaten/Kota</option>
-                                        <option value="Provinsi">Provinsi</option>
-                                        <option value="Nasional">Nasional</option>
-                                        <option value="Internasional">Internasional</option>
-                                    </select>
-                                </div>
-                            </div>
+                                            <!-- Tempat & Penyelenggara -->
+                                            <div class="row g-2 mb-3">
+                                                <div class="col-6">
+                                                    <label for="input-prestasi-tempat" class="form-label fw-bold fs-7 mb-1 text-dark">Tempat / Kota <span class="text-danger">*</span></label>
+                                                    <input type="text" id="input-prestasi-tempat" name="tempat_lomba" v-model="formPrestasi.tempat_lomba" class="form-control form-control-sm rounded-3" placeholder="Contoh: Jakarta" />
+                                                </div>
+                                                <div class="col-6">
+                                                    <label for="input-prestasi-penyelenggara" class="form-label fw-bold fs-7 mb-1 text-dark">Penyelenggara <span class="text-danger">*</span></label>
+                                                    <input type="text" id="input-prestasi-penyelenggara" name="penyelenggara" v-model="formPrestasi.penyelenggara" class="form-control form-control-sm rounded-3" placeholder="Contoh: Puspresnas / Kemendikbud" />
+                                                </div>
+                                            </div>
 
-                            <!-- Bidang Lomba & Nama Lomba -->
-                            <div class="mb-3">
-                                <label for="input-prestasi-bidang" class="form-label fw-bold fs-7 mb-1 text-dark">Bidang Lomba / Prestasi <span class="text-danger">*</span></label>
-                                <input type="text" id="input-prestasi-bidang" name="bidang_lomba" v-model="formPrestasi.bidang_lomba" class="form-control form-control-sm rounded-3" placeholder="Contoh: Sains/OSN, Olahraga/O2SN, Seni, dll." />
-                            </div>
+                                            <!-- Guru Pendamping & Poin Prestasi -->
+                                            <div class="row g-2 mb-3">
+                                                <div class="col-8">
+                                                    <label for="input-prestasi-guru" class="form-label fw-bold fs-7 mb-1 text-dark">Guru Pendamping</label>
+                                                    <input type="text" id="input-prestasi-guru" name="guru_pendamping" v-model="formPrestasi.guru_pendamping" class="form-control form-control-sm rounded-3" placeholder="Nama Guru Pendamping (Opsional)" />
+                                                </div>
+                                                <div class="col-4">
+                                                    <label for="input-prestasi-poin" class="form-label fw-bold fs-7 mb-1 text-dark">Poin Prestasi <span class="text-danger">*</span></label>
+                                                    <input type="number" id="input-prestasi-poin" name="poin_prestasi" v-model.number="formPrestasi.poin_prestasi" class="form-control form-control-sm rounded-3 fw-bold text-success" min="0" max="1000" placeholder="Poin" />
+                                                </div>
+                                            </div>
 
-                            <div class="mb-3">
-                                <label for="input-prestasi-nama-lomba" class="form-label fw-bold fs-7 mb-1 text-dark">Nama Perlombaan / Kegiatan <span class="text-danger">*</span></label>
-                                <input type="text" id="input-prestasi-nama-lomba" name="nama_lomba" v-model="formPrestasi.nama_lomba" class="form-control form-control-sm rounded-3" placeholder="Contoh: Olimpiade Matematika Nasional 2026" />
-                            </div>
+                                            <!-- Files Upload Grid 2x2 -->
+                                            <div class="border-0 rounded-3 p-3 bg-light mb-0">
+                                                <div class="fw-bold fs-8 text-dark mb-2 d-flex align-items-center justify-content-between">
+                                                    <span><i class="bi bi-file-earmark-arrow-up me-1 text-primary"></i>Berkas Pendukung (Maks. 1 MB per file)</span>
+                                                </div>
+                                                
+                                                <div class="row g-2">
+                                                    <div class="col-12 col-sm-6">
+                                                        <label for="input-file-bukti" class="form-label fs-9 fw-semibold mb-1 text-muted">1. Foto Bukti Sertifikat (.jpg/.png)</label>
+                                                        <input type="file" id="input-file-bukti" name="foto_bukti_prestasi" class="form-control form-control-sm prestasi-file-input text-xs" accept="image/*" @change="handleFileUpload($event, 'foto_bukti_prestasi')" />
+                                                        <div v-if="formPrestasi.existing_foto_bukti" class="fs-9 mt-1 text-success">
+                                                            <i class="bi bi-check-circle-fill"></i> <a :href="getFileUrl(formPrestasi.existing_foto_bukti)" target="_blank" class="fw-bold text-success">Lihat File</a>
+                                                        </div>
+                                                    </div>
 
-                            <!-- Kategori Juara & Nomor Sertifikat -->
-                            <div class="row g-2 mb-3">
-                                <div class="col-md-6">
-                                    <label for="select-prestasi-juara" class="form-label fw-bold fs-7 mb-1 text-dark">Peringkat Juara <span class="text-danger">*</span></label>
-                                    <select id="select-prestasi-juara" name="juara" v-model="formPrestasi.juara" @change="autoCalculatePrestasiPoint" class="form-select form-select-sm rounded-3">
-                                        <option value="">— Pilih Juara —</option>
-                                        <option value="Juara 1">Juara 1</option>
-                                        <option value="Juara 2">Juara 2</option>
-                                        <option value="Juara 3">Juara 3</option>
-                                        <option value="Harapan 1">Juara Harapan 1</option>
-                                        <option value="Harapan 2">Juara Harapan 2</option>
-                                        <option value="Harapan 3">Juara Harapan 3</option>
-                                        <option value="Lainnya">Lainnya (Tulis Keterangan)</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6" v-if="formPrestasi.juara === 'Lainnya'">
-                                    <label for="input-prestasi-juara-lainnya" class="form-label fw-bold fs-7 mb-1 text-dark">Keterangan Juara <span class="text-danger">*</span></label>
-                                    <input type="text" id="input-prestasi-juara-lainnya" name="juara_lainnya" v-model="formPrestasi.juara_lainnya" class="form-control form-control-sm rounded-3" placeholder="Contoh: Gold Medal / Juara Favorit" />
-                                </div>
-                                <div class="col-md-6" v-else>
-                                    <label for="input-prestasi-sertifikat" class="form-label fw-bold fs-7 mb-1 text-dark">Nomor Sertifikat / Piagam</label>
-                                    <input type="text" id="input-prestasi-sertifikat" name="nomor_sertifikat" v-model="formPrestasi.nomor_sertifikat" class="form-control form-control-sm rounded-3" placeholder="No. Sertifikat jika ada" />
-                                </div>
-                            </div>
+                                                    <div class="col-12 col-sm-6">
+                                                        <label for="input-file-siswa" class="form-label fs-9 fw-semibold mb-1 text-muted">2. Foto Penghargaan/Siswa (.jpg/.png)</label>
+                                                        <input type="file" id="input-file-siswa" name="foto_siswa_prestasi" class="form-control form-control-sm prestasi-file-input text-xs" accept="image/*" @change="handleFileUpload($event, 'foto_siswa_prestasi')" />
+                                                        <div v-if="formPrestasi.existing_foto_siswa" class="fs-9 mt-1 text-success">
+                                                            <i class="bi bi-check-circle-fill"></i> <a :href="getFileUrl(formPrestasi.existing_foto_siswa)" target="_blank" class="fw-bold text-success">Lihat File</a>
+                                                        </div>
+                                                    </div>
 
-                            <div class="mb-3" v-if="formPrestasi.juara === 'Lainnya'">
-                                <label for="input-prestasi-sertifikat-lainnya" class="form-label fw-bold fs-7 mb-1 text-dark">Nomor Sertifikat / Piagam</label>
-                                <input type="text" id="input-prestasi-sertifikat-lainnya" name="nomor_sertifikat" v-model="formPrestasi.nomor_sertifikat" class="form-control form-control-sm rounded-3" placeholder="No. Sertifikat jika ada" />
-                            </div>
+                                                    <div class="col-12 col-sm-6">
+                                                        <label for="input-file-kegiatan" class="form-label fs-9 fw-semibold mb-1 text-muted">3. Dokumentasi Kegiatan (.jpg/.png)</label>
+                                                        <input type="file" id="input-file-kegiatan" name="foto_kegiatan_lomba" class="form-control form-control-sm prestasi-file-input text-xs" accept="image/*" @change="handleFileUpload($event, 'foto_kegiatan_lomba')" />
+                                                        <div v-if="formPrestasi.existing_foto_kegiatan" class="fs-9 mt-1 text-success">
+                                                            <i class="bi bi-check-circle-fill"></i> <a :href="getFileUrl(formPrestasi.existing_foto_kegiatan)" target="_blank" class="fw-bold text-success">Lihat File</a>
+                                                        </div>
+                                                    </div>
 
-                            <!-- Detail Pelaksanaan -->
-                            <div class="row g-2 mb-3">
-                                <div class="col-md-6">
-                                    <label for="select-prestasi-jenis" class="form-label fw-bold fs-7 mb-1 text-dark">Jenis Pelaksanaan <span class="text-danger">*</span></label>
-                                    <select id="select-prestasi-jenis" name="jenis_lomba" v-model="formPrestasi.jenis_lomba" class="form-select form-select-sm rounded-3">
-                                        <option value="Offline">Offline (Luring)</option>
-                                        <option value="Online">Online (Daring)</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="input-prestasi-tanggal" class="form-label fw-bold fs-7 mb-1 text-dark">Tanggal Kegiatan <span class="text-danger">*</span></label>
-                                    <input type="date" id="input-prestasi-tanggal" name="tanggal_lomba" v-model="formPrestasi.tanggal_lomba" class="form-control form-control-sm rounded-3" />
-                                </div>
-                            </div>
-
-                            <div class="row g-2 mb-3">
-                                <div class="col-md-6">
-                                    <label for="input-prestasi-tempat" class="form-label fw-bold fs-7 mb-1 text-dark">Tempat / Kota <span class="text-danger">*</span></label>
-                                    <input type="text" id="input-prestasi-tempat" name="tempat_lomba" v-model="formPrestasi.tempat_lomba" class="form-control form-control-sm rounded-3" placeholder="Contoh: Jakarta" />
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="input-prestasi-penyelenggara" class="form-label fw-bold fs-7 mb-1 text-dark">Penyelenggara <span class="text-danger">*</span></label>
-                                    <input type="text" id="input-prestasi-penyelenggara" name="penyelenggara" v-model="formPrestasi.penyelenggara" class="form-control form-control-sm rounded-3" placeholder="Contoh: Puspresnas / Kemendikbud" />
-                                </div>
-                            </div>
-
-                            <!-- Guru Pendamping & Poin Prestasi -->
-                            <div class="row g-2 mb-3">
-                                <div class="col-md-8">
-                                    <label for="input-prestasi-guru" class="form-label fw-bold fs-7 mb-1 text-dark">Guru Pendamping</label>
-                                    <input type="text" id="input-prestasi-guru" name="guru_pendamping" v-model="formPrestasi.guru_pendamping" class="form-control form-control-sm rounded-3" placeholder="Tulis nama Guru Pendamping jika ada (Opsional)" />
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="input-prestasi-poin" class="form-label fw-bold fs-7 mb-1 text-dark">Poin Prestasi <span class="text-danger">*</span></label>
-                                    <input type="number" id="input-prestasi-poin" name="poin_prestasi" v-model.number="formPrestasi.poin_prestasi" class="form-control form-control-sm rounded-3 fw-bold text-success" min="0" max="1000" placeholder="Poin" />
-                                </div>
-                            </div>
-
-                            <!-- Files Upload -->
-                            <div class="border rounded-3 p-3 bg-light mb-2">
-                                <div class="fw-bold fs-7 text-dark mb-2"><i class="bi bi-file-earmark-arrow-up me-1"></i>Berkas Pendukung (Masing-masing maks. 1 MB)</div>
-                                
-                                <div class="mb-2">
-                                    <label for="input-file-bukti" class="form-label fs-8 fw-semibold mb-1 text-muted">Foto Bukti Sertifikat (.jpg, .jpeg, .png)</label>
-                                    <input type="file" id="input-file-bukti" name="foto_bukti_prestasi" class="form-control form-control-sm prestasi-file-input" accept="image/*" @change="handleFileUpload($event, 'foto_bukti_prestasi')" />
-                                    <div v-if="formPrestasi.existing_foto_bukti" class="fs-8 mt-1 text-success">
-                                        <i class="bi bi-check-circle-fill"></i> Sudah ada file terunggah:
-                                        <a :href="getFileUrl(formPrestasi.existing_foto_bukti)" target="_blank" class="fw-bold">Lihat Foto</a>
-                                    </div>
-                                </div>
-
-                                <div class="mb-2">
-                                    <label for="input-file-siswa" class="form-label fs-8 fw-semibold mb-1 text-muted">Foto Penerimaan Penghargaan / Siswa (.jpg, .jpeg, .png)</label>
-                                    <input type="file" id="input-file-siswa" name="foto_siswa_prestasi" class="form-control form-control-sm prestasi-file-input" accept="image/*" @change="handleFileUpload($event, 'foto_siswa_prestasi')" />
-                                    <div v-if="formPrestasi.existing_foto_siswa" class="fs-8 mt-1 text-success">
-                                        <i class="bi bi-check-circle-fill"></i> Sudah ada file terunggah:
-                                        <a :href="getFileUrl(formPrestasi.existing_foto_siswa)" target="_blank" class="fw-bold">Lihat Foto</a>
-                                    </div>
-                                </div>
-
-                                <div class="mb-2">
-                                    <label for="input-file-kegiatan" class="form-label fs-8 fw-semibold mb-1 text-muted">Foto Dokumentasi Kegiatan (.jpg, .jpeg, .png)</label>
-                                    <input type="file" id="input-file-kegiatan" name="foto_kegiatan_lomba" class="form-control form-control-sm prestasi-file-input" accept="image/*" @change="handleFileUpload($event, 'foto_kegiatan_lomba')" />
-                                    <div v-if="formPrestasi.existing_foto_kegiatan" class="fs-8 mt-1 text-success">
-                                        <i class="bi bi-check-circle-fill"></i> Sudah ada file terunggah:
-                                        <a :href="getFileUrl(formPrestasi.existing_foto_kegiatan)" target="_blank" class="fw-bold">Lihat Foto</a>
-                                    </div>
-                                </div>
-
-                                <div class="mb-0">
-                                    <label for="input-file-surat-tugas" class="form-label fs-8 fw-semibold mb-1 text-muted">Surat Tugas PDF/Gambar (.pdf, .jpg, .jpeg, .png)</label>
-                                    <input type="file" id="input-file-surat-tugas" name="surat_tugas_pdf" class="form-control form-control-sm prestasi-file-input" accept=".pdf,image/*" @change="handleFileUpload($event, 'surat_tugas_pdf')" />
-                                    <div v-if="formPrestasi.existing_surat_tugas" class="fs-8 mt-1 text-success">
-                                        <i class="bi bi-check-circle-fill"></i> Sudah ada file terunggah:
-                                        <a :href="getFileUrl(formPrestasi.existing_surat_tugas)" target="_blank" class="fw-bold">Lihat Berkas</a>
+                                                    <div class="col-12 col-sm-6">
+                                                        <label for="input-file-surat-tugas" class="form-label fs-9 fw-semibold mb-1 text-muted">4. Surat Tugas (.pdf/.jpg/.png)</label>
+                                                        <input type="file" id="input-file-surat-tugas" name="surat_tugas_pdf" class="form-control form-control-sm prestasi-file-input text-xs" accept=".pdf,image/*" @change="handleFileUpload($event, 'surat_tugas_pdf')" />
+                                                        <div v-if="formPrestasi.existing_surat_tugas" class="fs-9 mt-1 text-success">
+                                                            <i class="bi bi-check-circle-fill"></i> <a :href="getFileUrl(formPrestasi.existing_surat_tugas)" target="_blank" class="fw-bold text-success">Lihat Berkas</a>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </form>
                     </div>
-                    <div class="modal-footer border-top bg-light py-2 px-4 d-flex justify-content-end gap-2">
-                        <button type="button" @click="closePrestasiModal" class="btn btn-sm btn-outline-secondary rounded-3 px-4" data-bs-dismiss="modal">
+                    <div class="modal-footer border-top bg-light py-2.5 px-4 d-flex justify-content-end gap-2">
+                        <button type="button" @click="closePrestasiModal" class="btn btn-sm btn-outline-secondary rounded-3 px-4 font-semibold fs-7" data-bs-dismiss="modal">
                             Batal
                         </button>
-                        <button type="submit" form="form-prestasi-modal" class="btn btn-sm btn-primary rounded-3 px-4 fw-bold" :disabled="loadingPrestasi">
+                        <button type="submit" form="form-prestasi-modal" class="btn btn-sm btn-primary rounded-3 px-4 fw-bold fs-7 shadow-xs" :disabled="loadingPrestasi">
                             <span v-if="loadingPrestasi" class="spinner-border spinner-border-sm me-1"></span>
-                            <i v-else class="bi bi-save me-1"></i> Simpan Prestasi
+                            <i v-else class="bi bi-check2-circle me-1"></i> Simpan Prestasi Siswa
                         </button>
                     </div>
                 </div>
@@ -7322,62 +7371,6 @@ window.VueAppRegistry.register('#bkApp', {
             } finally {
                 modalBeasiswa.value.saving = false;
             }
-        }
-
-        function loadAllBeasiswa() {
-            if (_userRole === 'super_admin' && !currentTenantId.value) return;
-            loadingBeasiswaList.value = true;
-            const params = new URLSearchParams();
-            if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
-            if (filterBeasiswaTahunAjaran.value) params.set('tahun_ajaran_id', filterBeasiswaTahunAjaran.value);
-
-            axios.get(`${_baseUrl}/api/v1/bk/beasiswa/list?${params.toString()}`)
-                .then(res => {
-                    allBeasiswaList.value = res.data.data || [];
-                })
-                .catch(() => {
-                    allBeasiswaList.value = [];
-                    toast.fire({ icon: 'error', title: 'Gagal memuat daftar beasiswa.' });
-                })
-                .finally(() => {
-                    loadingBeasiswaList.value = false;
-                });
-        }
-
-        function exportBeasiswaExcel() {
-            if (_userRole === 'super_admin' && !currentTenantId.value) {
-                Swal.fire('Perhatian', 'Pilih sekolah terlebih dahulu.', 'warning');
-                return;
-            }
-            const params = new URLSearchParams();
-            if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
-            if (filterBeasiswaTahunAjaran.value) params.set('tahun_ajaran_id', filterBeasiswaTahunAjaran.value);
-
-            window.open(`${_baseUrl}/api/v1/bk/beasiswa/export?${params.toString()}`, '_blank');
-        }
-
-        function hapusBeasiswa(id) {
-            Swal.fire({
-                title: 'Hapus data beasiswa?',
-                text: "Tindakan ini tidak dapat dibatalkan!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#ef4444',
-                cancelButtonColor: '#64748b',
-                confirmButtonText: 'Ya, Hapus!',
-                cancelButtonText: 'Batal'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    axios.delete(`${_baseUrl}/api/v1/buku-induk/beasiswa`, { params: { id: id } })
-                        .then(() => {
-                            toast.fire({ icon: 'success', title: 'Data beasiswa berhasil dihapus.' });
-                            loadAllBeasiswa();
-                        })
-                        .catch(err => {
-                            Swal.fire('Gagal!', (err.response && err.response.data && err.response.data.error) || 'Gagal menghapus data beasiswa.', 'error');
-                        });
-                }
-            });
         }
 
         // ─── PDSS & ALUMNI API METHODS ─────────────────────

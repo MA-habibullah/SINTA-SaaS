@@ -22,7 +22,7 @@
                     <div>
                         <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
                             <span class="badge px-3 py-1.5 rounded-pill text-xs font-semibold d-inline-flex align-items-center gap-1.5" style="background: rgba(255,255,255,0.18); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.25);">
-                                <i class="bi bi-trophy-fill text-amber-300"></i> Modul Kesiswaan & Bakat Minat
+                                <i class="bi bi-trophy-fill text-amber-300"></i> Modul Kesiswaan &amp; Bakat Minat
                             </span>
                             <span v-if="selectedTaName" class="badge px-3 py-1.5 rounded-pill text-xs font-semibold d-inline-flex align-items-center gap-1.5" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);">
                                 <i class="bi bi-calendar3"></i> TA: {{ selectedTaName }} (Semester {{ filterSemester }})
@@ -34,12 +34,14 @@
                         </p>
                     </div>
 
-                    <!-- Super Admin Tenant Filter -->
-                    <div v-if="isSuperAdmin && tenants.length > 0" class="d-flex align-items-center gap-2 bg-white/15 p-2 rounded-xl border border-white/25 shadow-xs" style="backdrop-filter: blur(6px);">
-                        <i class="bi bi-building text-white fs-6 ms-1.5"></i>
-                        <select v-model="currentTenantId" @change="onTenantChange()" class="form-select form-select-sm border-0 text-xs font-semibold bg-white text-slate-800 rounded-lg shadow-2xs" style="min-width: 220px;">
-                            <option v-for="t in tenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
-                        </select>
+                    <!-- Right Controls: Super Admin Tenant Filter (Persis Desain Acuan Gambar 1) -->
+                    <div v-if="isSuperAdmin && tenants.length > 0" class="d-flex align-items-center gap-2 flex-wrap flex-shrink-0">
+                        <div class="d-flex align-items-center gap-2 bg-white/15 p-2 rounded-xl border border-white/25 shadow-xs" style="backdrop-filter: blur(6px); width: fit-content;">
+                            <i class="bi bi-buildings text-white fs-6 ms-1.5"></i>
+                            <select v-model="currentTenantId" @change="onTenantChange()" class="form-select form-select-sm border-0 text-xs font-semibold bg-white text-slate-800 rounded-lg shadow-2xs cursor-pointer" style="min-width: 240px; max-width: 280px; width: auto !important; background-color: #ffffff !important; color: #0f172a !important;">
+                                <option v-for="t in tenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}{{ t.npsn ? ' (' + t.npsn + ')' : '' }}</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -110,49 +112,67 @@
     <!-- ═══════════════════════════════════════════════════════════════════════
          2. LAYOUT & HEADER NAVIGASI (STANDAR BK KEDISIPLINAN - PURE SAAS PILLS)
          ═══════════════════════════════════════════════════════════════════════ -->
-    <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-2 mb-4">
-        <div class="nav-tabs-wrapper d-flex align-items-center justify-content-between">
-            <!-- 5 Nav Tabs in Clean Row with Horizontal Scroll on Mobile -->
-            <ul class="nav nav-pills border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-1.5 px-1 mb-0">
-                <li class="nav-item">
-                    <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition d-inline-flex align-items-center" 
-                            :class="{'active': activeTab === 'master'}"
-                            @click="switchTab('master')">
-                        <i class="bi bi-diagram-3 me-2 fs-6"></i> Master Ekskul
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition d-inline-flex align-items-center" 
-                            :class="{'active': activeTab === 'pembina'}"
-                            @click="switchTab('pembina')">
-                        <i class="bi bi-person-badge me-2 fs-6"></i> Pembina Ekskul
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition d-inline-flex align-items-center" 
-                            :class="{'active': activeTab === 'anggota'}"
-                            @click="switchTab('anggota')">
-                        <i class="bi bi-people me-2 fs-6"></i> Kelola Anggota
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition d-inline-flex align-items-center" 
-                            :class="{'active': activeTab === 'jurnal'}"
-                            @click="switchTab('jurnal')">
-                        <i class="bi bi-journal-text me-2 fs-6"></i> Jurnal Kegiatan
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition d-inline-flex align-items-center" 
-                            :class="{'active': activeTab === 'nilai'}"
-                            @click="switchTab('nilai')">
-                        <i class="bi bi-award me-2 fs-6"></i> Penilaian e-Rapor
-                    </button>
-                </li>
-            </ul>
+    <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-2 mb-4 position-relative">
+        <div class="d-flex align-items-center position-relative">
+            <button type="button" 
+                    class="btn btn-sm btn-light border border-slate-200/80 rounded-xl shadow-2xs me-1.5 d-none d-md-flex align-items-center justify-content-center flex-shrink-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition" 
+                    style="width: 34px; height: 34px; z-index: 5;" 
+                    onclick="document.getElementById('kesiswaanEkskulNavTabs')?.scrollBy({ left: -220, behavior: 'smooth' })"
+                    title="Geser ke Kiri">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+
+            <div class="nav-tabs-wrapper flex-grow-1 overflow-hidden position-relative">
+                <!-- 5 Nav Tabs in Clean Row with Horizontal Scroll on Mobile -->
+                <ul class="nav nav-pills border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-1.5 px-1 mb-0 user-select-none" id="kesiswaanEkskulNavTabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition d-inline-flex align-items-center" 
+                                :class="{'active': activeTab === 'master'}"
+                                @click="switchTab('master')">
+                            <i class="bi bi-diagram-3 me-2 fs-6"></i> Master Ekskul
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition d-inline-flex align-items-center" 
+                                :class="{'active': activeTab === 'pembina'}"
+                                @click="switchTab('pembina')">
+                            <i class="bi bi-person-badge me-2 fs-6"></i> Pembina Ekskul
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition d-inline-flex align-items-center" 
+                                :class="{'active': activeTab === 'anggota'}"
+                                @click="switchTab('anggota')">
+                            <i class="bi bi-people me-2 fs-6"></i> Kelola Anggota
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition d-inline-flex align-items-center" 
+                                :class="{'active': activeTab === 'jurnal'}"
+                                @click="switchTab('jurnal')">
+                            <i class="bi bi-journal-text me-2 fs-6"></i> Jurnal Kegiatan
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition d-inline-flex align-items-center" 
+                                :class="{'active': activeTab === 'nilai'}"
+                                @click="switchTab('nilai')">
+                            <i class="bi bi-award me-2 fs-6"></i> Penilaian e-Rapor
+                        </button>
+                    </li>
+                </ul>
+            </div>
+
+            <button type="button" 
+                    class="btn btn-sm btn-light border border-slate-200/80 rounded-xl shadow-2xs ms-1.5 d-none d-md-flex align-items-center justify-content-center flex-shrink-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition" 
+                    style="width: 34px; height: 34px; z-index: 5;" 
+                    onclick="document.getElementById('kesiswaanEkskulNavTabs')?.scrollBy({ left: 220, behavior: 'smooth' })"
+                    title="Geser ke Kanan">
+                <i class="bi bi-chevron-right"></i>
+            </button>
 
             <!-- Segarkan Data Button -->
-            <div class="d-none d-md-flex align-items-center pe-1">
+            <div class="d-none d-md-flex align-items-center ps-2 pe-1 border-s border-slate-200/80 ms-2">
                 <button type="button" class="btn btn-sm btn-light border border-slate-200 text-slate-600 hover:bg-slate-100 rounded-xl px-3 py-2 text-xs font-bold shadow-2xs d-flex align-items-center gap-1.5" @click="refreshAll()" title="Segarkan Data">
                     <i class="bi bi-arrow-clockwise" :class="{'spin': loading}"></i>
                     <span>Segarkan</span>

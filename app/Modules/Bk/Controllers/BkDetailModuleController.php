@@ -41,7 +41,7 @@ class BkDetailModuleController extends BaseController {
         }
     }
 
-    private function getSecureTenantId(): ?string {
+    protected function getSecureTenantId(): ?string {
         $roles    = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
         $tenantId = SessionManager::getTenantId();
 
@@ -1176,6 +1176,7 @@ class BkDetailModuleController extends BaseController {
                     ) AS siswa_list_json
                 FROM kesiswaan.prestasi_siswa ps
                 WHERE ps.tenant_id = ?
+                  AND ps.deleted_at IS NULL
                 ORDER BY ps.created_at DESC
             ");
             $stmt->execute([$tenantId]);
@@ -1246,6 +1247,7 @@ class BkDetailModuleController extends BaseController {
                 LEFT JOIN kesiswaan.prestasi_siswa_anggota psa ON psa.id_prestasi = ps.id
                 LEFT JOIN siswa.siswa s ON psa.id_siswa = s.id
                 WHERE ps.tenant_id = :tenant_id
+                  AND ps.deleted_at IS NULL
             ";
 
             $params = ['tenant_id' => $tenantId];
@@ -1863,7 +1865,7 @@ class BkDetailModuleController extends BaseController {
     // =========================================================================
     // PRIVATE HELPERS
     // =========================================================================
-    private function sanitize(mixed $val): string {
+    protected function sanitize(mixed $val): string {
         if (!is_string($val)) return '';
         return htmlspecialchars(strip_tags(trim($val)), ENT_QUOTES, 'UTF-8');
     }
@@ -2023,25 +2025,30 @@ class BkDetailModuleController extends BaseController {
 
             $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-            // Check if any record for this class, year, and semester is locked
-            $stmtLock = $db->prepare("
-                SELECT (COALESCE(is_locked, FALSE) OR COALESCE(dikunci, FALSE)) AS is_locked
-                FROM siswa.absensi_semester 
-                WHERE tenant_id::text = :tenant_id
-                  AND (tahun_ajaran_id = :tahun_ajaran_id OR tahun_ajaran = :tahun_ajaran_str)
-                  AND (semester = :semester_int OR semester::text = :semester_str OR semester::text = :semester_val)
-                  AND (is_locked = TRUE OR dikunci = TRUE)
-                LIMIT 1
-            ");
-            $stmtLock->execute([
-                'tenant_id' => $tenantId,
-                'tahun_ajaran_id' => $tahunAjaranId,
-                'tahun_ajaran_str' => $tahunAjaranStr,
-                'semester_int' => $semesterInt,
-                'semester_str' => $semesterStr,
-                'semester_val' => (string)$semesterInt
-            ]);
-            $isLocked = (bool)$stmtLock->fetchColumn();
+            // Check if record for this class, year, and semester is locked
+            $isLocked = false;
+            if (!empty($data)) {
+                $siswaIds = array_column($data, 'siswa_id');
+                if (!empty($siswaIds)) {
+                    $placeholders = implode(',', array_fill(0, count($siswaIds), '?'));
+                    $stmtLock = $db->prepare("
+                        SELECT (COALESCE(is_locked, FALSE) OR COALESCE(dikunci, FALSE)) AS is_locked
+                        FROM siswa.absensi_semester 
+                        WHERE tenant_id::text = ?
+                          AND (tahun_ajaran_id = ? OR tahun_ajaran = ?)
+                          AND (semester = ? OR semester::text = ? OR semester::text = ?)
+                          AND (is_locked = TRUE OR dikunci = TRUE)
+                          AND siswa_id IN ($placeholders)
+                        LIMIT 1
+                    ");
+                    $lockParams = array_merge(
+                        [$tenantId, $tahunAjaranId, $tahunAjaranStr, $semesterInt, $semesterStr, (string)$semesterInt],
+                        $siswaIds
+                    );
+                    $stmtLock->execute($lockParams);
+                    $isLocked = (bool)$stmtLock->fetchColumn();
+                }
+            }
 
             $this->jsonResponse(['success' => true, 'data' => $data, 'is_locked' => $isLocked]);
         } catch (\Throwable $e) {
@@ -2093,39 +2100,33 @@ class BkDetailModuleController extends BaseController {
             $stmtTa->execute([$tahunAjaranId, $tahunAjaranId, $tenantId]);
             $tahunAjaranStr = $stmtTa->fetchColumn() ?: $tahunAjaranId;
 
-            // Check if class attendance is locked
-            $stmtLockCheck = $db->prepare("
-                SELECT (COALESCE(is_locked, FALSE) OR COALESCE(dikunci, FALSE)) 
-                FROM siswa.absensi_semester 
-                WHERE tenant_id::text = :tenant_id 
-                  AND (tahun_ajaran_id = :tahun_ajaran_id OR tahun_ajaran = :tahun_ajaran_str)
-                  AND (semester = :semester_int OR semester::text = :semester_str OR semester::text = :semester_val)
-                  AND (is_locked = TRUE OR dikunci = TRUE)
-                LIMIT 1
-            ");
-            $stmtLockCheck->execute([
-                'tenant_id' => $tenantId,
-                'tahun_ajaran_id' => $tahunAjaranId,
-                'tahun_ajaran_str' => $tahunAjaranStr,
-                'semester_int' => $semesterInt,
-                'semester_str' => $semesterStr,
-                'semester_val' => (string)$semesterInt
-            ]);
-            $alreadyLocked = (bool)$stmtLockCheck->fetchColumn();
-
-            $userRoles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ($_SESSION['role'] ?? '')];
-            if (is_string($userRoles)) $userRoles = [$userRoles];
-            $bypassLockRoles = ['admin', 'super_admin', 'kurikulum', 'kepala_sekolah', 'operator_sekolah'];
-            $canBypassLock = false;
-            foreach ($userRoles as $r) {
-                if (in_array(strtolower(trim($r)), $bypassLockRoles, true)) {
-                    $canBypassLock = true;
-                    break;
+            // Check if class attendance is locked for these students
+            $alreadyLocked = false;
+            if (!empty($attendance)) {
+                $siswaIds = array_filter(array_column($attendance, 'siswa_id'));
+                if (!empty($siswaIds)) {
+                    $placeholders = implode(',', array_fill(0, count($siswaIds), '?'));
+                    $stmtLockCheck = $db->prepare("
+                        SELECT (COALESCE(is_locked, FALSE) OR COALESCE(dikunci, FALSE)) 
+                        FROM siswa.absensi_semester 
+                        WHERE tenant_id::text = ? 
+                          AND (tahun_ajaran_id = ? OR tahun_ajaran = ?)
+                          AND (semester = ? OR semester::text = ? OR semester::text = ?)
+                          AND (is_locked = TRUE OR dikunci = TRUE)
+                          AND siswa_id IN ($placeholders)
+                        LIMIT 1
+                    ");
+                    $lockParams = array_merge(
+                        [$tenantId, $tahunAjaranId, $tahunAjaranStr, $semesterInt, $semesterStr, (string)$semesterInt],
+                        $siswaIds
+                    );
+                    $stmtLockCheck->execute($lockParams);
+                    $alreadyLocked = (bool)$stmtLockCheck->fetchColumn();
                 }
             }
 
-            if ($alreadyLocked && !$canBypassLock) {
-                $this->jsonResponse(['error' => 'Data kehadiran kelas ini telah dikunci oleh Kurikulum/Admin dan tidak dapat diubah.'], 403);
+            if ($alreadyLocked) {
+                $this->jsonResponse(['error' => 'Data kehadiran kelas ini sedang DIKUNCI. Silakan klik tombol "Buka Kunci Data" terlebih dahulu jika ingin melakukan perubahan.'], 403);
                 return;
             }
 
@@ -2536,6 +2537,8 @@ class BkDetailModuleController extends BaseController {
             if (isset($db) && $db->inTransaction()) {
                 $db->rollBack();
             }
+            error_log('[BKController::apiToggleLockAbsensiSemester] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal mengubah status kunci kehadiran: ' . $e->getMessage()], 500);
         }
     }
 

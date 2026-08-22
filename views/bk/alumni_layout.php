@@ -62,25 +62,45 @@ if ($userRole === 'super_admin' && empty($tenantId) && !empty($tenantList)) {
     <!-- ═══════════════════════════════════════════════════════════════════════
          2. MODERN TAB NAVIGATION BAR
          ═══════════════════════════════════════════════════════════════════════ -->
-    <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-2 mb-4">
-        <div class="nav-tabs-wrapper">
-            <ul class="nav nav-pills border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-1.5 px-1" id="unifiedAlumniTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition active" id="tracking-tab" data-bs-toggle="tab" data-bs-target="#tracking" type="button" role="tab">
-                        <i class="bi bi-search me-2 fs-6"></i> Tracking Data Alumni
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" id="riwayat-kuliah-tab" data-bs-toggle="tab" data-bs-target="#riwayat-kuliah" type="button" role="tab">
-                        <i class="bi bi-mortarboard me-2 fs-6"></i> Riwayat Kuliah / PTN / PTS
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" id="riwayat-pekerjaan-tab" data-bs-toggle="tab" data-bs-target="#riwayat-pekerjaan" type="button" role="tab">
-                        <i class="bi bi-briefcase me-2 fs-6"></i> Riwayat Karir &amp; Pekerjaan
-                    </button>
-                </li>
-            </ul>
+    <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-2 mb-4 position-relative">
+        <div class="d-flex align-items-center position-relative">
+            <!-- Left Scroll Arrow Button -->
+            <button type="button" 
+                    class="btn btn-sm btn-light border border-slate-200/80 rounded-xl shadow-2xs me-1.5 d-none d-md-flex align-items-center justify-content-center flex-shrink-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition" 
+                    style="width: 34px; height: 34px; z-index: 5;" 
+                    onclick="scrollNavTabsHorizontal('unifiedAlumniTabs', -220)"
+                    title="Geser ke Kiri">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+
+            <div class="nav-tabs-wrapper flex-grow-1 overflow-hidden position-relative">
+                <ul class="nav nav-pills border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-1.5 px-1 user-select-none" id="unifiedAlumniTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition active" id="tracking-tab" data-bs-toggle="tab" data-bs-target="#tracking" type="button" role="tab">
+                            <i class="bi bi-search me-2 fs-6"></i> Tracking Data Alumni
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" id="riwayat-kuliah-tab" data-bs-toggle="tab" data-bs-target="#riwayat-kuliah" type="button" role="tab">
+                            <i class="bi bi-mortarboard me-2 fs-6"></i> Riwayat Kuliah / PTN / PTS
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" id="riwayat-pekerjaan-tab" data-bs-toggle="tab" data-bs-target="#riwayat-pekerjaan" type="button" role="tab">
+                            <i class="bi bi-briefcase me-2 fs-6"></i> Riwayat Karir &amp; Pekerjaan
+                        </button>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Right Scroll Arrow Button -->
+            <button type="button" 
+                    class="btn btn-sm btn-light border border-slate-200/80 rounded-xl shadow-2xs ms-1.5 d-none d-md-flex align-items-center justify-content-center flex-shrink-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition" 
+                    style="width: 34px; height: 34px; z-index: 5;" 
+                    onclick="scrollNavTabsHorizontal('unifiedAlumniTabs', 220)"
+                    title="Geser ke Kanan">
+                <i class="bi bi-chevron-right"></i>
+            </button>
         </div>
     </div>
 
@@ -134,6 +154,54 @@ function applyUnifiedFilter(tenantId) {
     }
     window.location.href = url.toString();
 }
+
+function scrollNavTabsHorizontal(elementId, distance) {
+    const container = document.getElementById(elementId);
+    if (container) {
+        container.scrollBy({ left: distance, behavior: 'smooth' });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const scrollContainers = document.querySelectorAll('.scrollable-nav-tabs');
+    scrollContainers.forEach(container => {
+        container.addEventListener('wheel', function(e) {
+            if (e.deltaY !== 0) {
+                e.preventDefault();
+                container.scrollLeft += e.deltaY;
+            }
+        }, { passive: false });
+
+        let isDown = false;
+        let startX = 0;
+        let scrollLeftPos = 0;
+
+        container.addEventListener('mousedown', function(e) {
+            isDown = true;
+            container.style.cursor = 'grabbing';
+            startX = e.pageX - container.offsetLeft;
+            scrollLeftPos = container.scrollLeft;
+        });
+
+        container.addEventListener('mouseleave', function() {
+            isDown = false;
+            container.style.cursor = '';
+        });
+
+        container.addEventListener('mouseup', function() {
+            isDown = false;
+            container.style.cursor = '';
+        });
+
+        container.addEventListener('mousemove', function(e) {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - container.offsetLeft;
+            const walk = (x - startX) * 1.5;
+            container.scrollLeft = scrollLeftPos - walk;
+        });
+    });
+});
 </script>
 
 <style>
@@ -174,12 +242,14 @@ function applyUnifiedFilter(tenantId) {
     color: #ffffff !important;
 }
 
-/* Hide ugly horizontal scrollbars across all browsers */
+/* Hide ugly horizontal scrollbars across all browsers with smooth scrolling */
 .scrollable-nav-tabs {
     overflow-x: auto;
+    scroll-behavior: smooth;
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
     padding-bottom: 0px !important;
+    cursor: grab;
 }
 .scrollable-nav-tabs::-webkit-scrollbar {
     display: none !important;
