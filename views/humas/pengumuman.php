@@ -36,20 +36,16 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
                         </p>
                     </div>
 
-                    <!-- Right Controls: Super Admin Tenant Filter & Action Button -->
-                    <div class="d-flex align-items-center gap-2 flex-wrap flex-shrink-0">
-                        <div v-if="isSuperAdmin && tenants.length > 0" class="d-flex align-items-center gap-2 bg-white/15 p-2 rounded-xl border border-white/25 shadow-xs" style="backdrop-filter: blur(6px);">
-                            <i class="bi bi-building text-white fs-6 ms-1.5"></i>
-                            <select v-model="filterTenantId" @change="onTenantChange()" class="form-select form-select-sm border-0 text-xs font-semibold bg-white text-slate-800 rounded-lg shadow-2xs cursor-pointer" style="min-width: 220px;">
+                    <!-- Right Controls: Super Admin Tenant Filter (Persis Desain Acuan Gambar 1) -->
+                    <div v-if="isSuperAdmin && tenants.length > 0" class="d-flex align-items-center gap-2 flex-shrink-0">
+                        <div class="d-flex align-items-center gap-2 bg-white/15 p-2 ps-3 pe-2 rounded-2xl border border-white/30 shadow-xs" style="backdrop-filter: blur(8px);">
+                            <i class="bi bi-buildings text-white fs-6"></i>
+                            <select v-model="filterTenantId" @change="onTenantChange()" class="form-select form-select-sm border-0 text-xs font-bold rounded-xl shadow-2xs cursor-pointer py-2 px-3" style="min-width: 260px; background-color: #ffffff !important; color: #0f172a !important; -webkit-text-fill-color: #0f172a !important;">
                                 <option value="">Semua Sekolah / Tenant</option>
                                 <option value="global">🌐 Pengumuman Global (Pusat)</option>
-                                <option v-for="t in tenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
+                                <option v-for="t in tenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}{{ t.npsn ? ' (' + t.npsn + ')' : '' }}</option>
                             </select>
                         </div>
-                        <button type="button" class="btn btn-light rounded-xl px-3.5 py-2 text-xs md:text-sm font-bold text-blue-700 shadow-sm d-flex align-items-center gap-2 hover:bg-slate-50 transition" @click="openModalPengumuman()">
-                            <i class="bi bi-plus-circle-fill text-blue-600"></i>
-                            <span>Buat Pengumuman</span>
-                        </button>
                     </div>
                 </div>
             </div>
@@ -141,8 +137,17 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
                 </ul>
             </div>
 
-            <!-- Right: Refresh Button -->
+            <!-- Right: Action Button & Refresh (Dinamis Sesuai Tab Aktif) -->
             <div class="d-flex align-items-center gap-2 flex-shrink-0 pe-1">
+                <button v-if="activeTab === 'pengumuman'" type="button" class="btn btn-sm btn-primary rounded-xl px-3.5 py-2 text-xs font-bold shadow-sm d-flex align-items-center gap-1.5 hover:shadow transition" @click="openModalPengumuman()">
+                    <i class="bi bi-plus-circle-fill"></i>
+                    <span>Buat Pengumuman</span>
+                </button>
+                <button v-else-if="activeTab === 'kategori'" type="button" class="btn btn-sm btn-primary rounded-xl px-3.5 py-2 text-xs font-bold shadow-sm d-flex align-items-center gap-1.5 hover:shadow transition" @click="openModalKategori()">
+                    <i class="bi bi-plus-circle-fill"></i>
+                    <span>Tambah Kategori</span>
+                </button>
+
                 <button type="button" class="btn btn-sm btn-light border border-slate-200/80 text-slate-600 hover:bg-slate-100 rounded-xl px-3 py-2 text-xs font-semibold shadow-2xs d-flex align-items-center gap-1.5" @click="refreshAll()" title="Segarkan Data">
                     <i class="bi bi-arrow-clockwise" :class="{'spin': loading}"></i>
                     <span class="d-none d-sm-inline">Segarkan</span>
@@ -953,7 +958,14 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
             const loadingKategori = ref(false);
 
             // Filters & Searches
-            const filterTenantId = ref(currentTenantId.value || '');
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlTenantId = urlParams.get('tenant_id');
+            const initialTenant = (urlTenantId !== null && urlTenantId !== '')
+                ? urlTenantId
+                : (currentTenantId.value && currentTenantId.value !== 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' ? currentTenantId.value : '');
+
+            const validTenant = (initialTenant === 'global' || tenants.value.some(t => t.id === initialTenant)) ? initialTenant : '';
+            const filterTenantId = ref(validTenant);
             const searchQuery = ref('');
             const filterKategoriId = ref('');
             const filterVisibilitas = ref('');
@@ -1115,6 +1127,13 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
             };
 
             const onTenantChange = async () => {
+                const url = new URL(window.location.href);
+                if (filterTenantId.value) {
+                    url.searchParams.set('tenant_id', filterTenantId.value);
+                } else {
+                    url.searchParams.delete('tenant_id');
+                }
+                window.history.replaceState({}, '', url.toString());
                 await refreshAll();
             };
 

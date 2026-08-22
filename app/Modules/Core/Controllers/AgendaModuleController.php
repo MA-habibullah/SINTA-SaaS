@@ -54,8 +54,11 @@ class AgendaModuleController extends BaseController {
         $db = Database::getConnection();
         $tenants = [];
         if ($isSuperAdmin) {
-            $stmt = $db->query("SELECT id, nama_sekolah, subdomain FROM core.tenants WHERE status = 'active' OR status IS NULL ORDER BY nama_sekolah ASC");
+            $stmt = $db->query("SELECT id, nama_sekolah, npsn, subdomain FROM core.tenants WHERE (subdomain != 'admin' AND nama_sekolah NOT ILIKE '%pusat kendali%') AND (status = 'active' OR status IS NULL) ORDER BY nama_sekolah ASC");
             $tenants = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            if ($tenantId === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' && empty($_GET['tenant_id'])) {
+                $tenantId = '';
+            }
         }
 
         $data = [

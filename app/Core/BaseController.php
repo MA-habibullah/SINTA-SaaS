@@ -102,8 +102,9 @@ class BaseController {
             } else if (array_key_exists('success', $payload) && array_key_exists('data', $payload)) {
                 $success = (bool)$payload['success'];
                 $error = $payload['error'] ?? null;
-                // If payload has extra top-level metadata (e.g. locks, years, accreditation, stats)
-                if (count($payload) > 3) {
+                // If payload has extra top-level metadata (e.g. is_locked, total, stats, etc.)
+                $extraKeys = array_diff(array_keys($payload), ['success', 'data', 'error']);
+                if (!empty($extraKeys)) {
                     $responseArr = $payload;
                     $responseArr['success'] = $success;
                     $responseArr['error'] = $error;
@@ -234,15 +235,12 @@ class BaseController {
     }
 
     /**
-     * Dapatkan Tenant ID yang aman dari session (dengan validasi).
+     * Dapatkan Tenant ID yang aman dari session (dengan fallback).
      */
-    protected function getSecureTenantId(): string
+    protected function getSecureTenantId(): ?string
     {
-        $tenantId = $this->tenantId ?: ($_SESSION['tenant_id'] ?? '');
-        if (empty($tenantId)) {
-            throw new \RuntimeException('Tenant ID tidak terdeteksi. Pastikan sesi login aktif.');
-        }
-        return (string) $tenantId;
+        $tenantId = $this->tenantId ?: ($_SESSION['tenant_id'] ?? null);
+        return $tenantId ? (string)$tenantId : null;
     }
 }
 

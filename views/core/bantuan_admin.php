@@ -44,6 +44,10 @@
                             <option value="">Semua Kategori</option>
                             <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.nama_kategori }}</option>
                         </select>
+                        <button type="button" class="btn btn-sm btn-light border rounded-2 px-2.5 py-1 text-slate-600 hover:bg-slate-100 d-flex align-items-center gap-1" @click="refreshAll" title="Segarkan Data Tiket">
+                            <i class="bi bi-arrow-clockwise" :class="{'spin': loadingList}"></i>
+                            <span class="fs-8">Segarkan</span>
+                        </button>
                     </div>
                 </div>
                 <div class="card-body p-0">
@@ -302,8 +306,7 @@ window.VueAppRegistry.register('#bantuan-admin-app', {
             loadingReply: false,
             
             // Instances Modals
-            detailModal: null,
-            pollInterval: null
+            detailModal: null
         };
     },
     mounted() {
@@ -311,18 +314,12 @@ window.VueAppRegistry.register('#bantuan-admin-app', {
         this.fetchUnreadCount();
         this.fetchCannedResponses();
         this.fetchCategories();
-
-        // Polling unread count every 30 seconds
-        this.pollInterval = setInterval(() => {
-            this.fetchUnreadCount();
-        }, 30000);
-    },
-    beforeUnmount() {
-        if (this.pollInterval) {
-            clearInterval(this.pollInterval);
-        }
     },
     methods: {
+        refreshAll() {
+            this.fetchTickets();
+            this.fetchUnreadCount();
+        },
         getDetailModal() {
             const el = document.getElementById('ticketDetailModal');
             return (el && typeof bootstrap !== 'undefined' && bootstrap.Modal) ? bootstrap.Modal.getOrCreateInstance(el) : null;

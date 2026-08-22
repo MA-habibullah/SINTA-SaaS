@@ -68,42 +68,8 @@ return [
                 created_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP
             );
-
-            CREATE TABLE IF NOT EXISTS sistem.ticket_faqs (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                tenant_id UUID NULL,
-                pertanyaan VARCHAR(255) NULL,
-                kategori VARCHAR(100) NULL,
-                deskripsi TEXT NULL,
-                is_active BOOLEAN NOT NULL DEFAULT true,
-                created_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS sistem.ticket_replies (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                tenant_id UUID NULL,
-                reply_text VARCHAR(255) NULL,
-                kategori VARCHAR(100) NULL,
-                deskripsi TEXT NULL,
-                is_active BOOLEAN NOT NULL DEFAULT true,
-                created_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS sistem.tickets (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                tenant_id UUID NULL,
-                judul VARCHAR(255) NULL,
-                kategori VARCHAR(100) NULL,
-                deskripsi TEXT NULL,
-                is_active BOOLEAN NOT NULL DEFAULT true,
-                created_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP
-            );
-
         ");
-        echo "- Schema SISTEM (8 Tabel) Berhasil Dibuat.\n";
+        echo "- Schema SISTEM (5 Tabel) Berhasil Dibuat.\n";
     },
 
     'down' => function (PDO $pdo): void {

@@ -165,8 +165,89 @@ return [
                 is_verified BOOLEAN NOT NULL DEFAULT false,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
+
+            /* =========================================================
+               CORE TICKETING & PUSAT BANTUAN SAAS
+               ========================================================= */
+            CREATE TABLE IF NOT EXISTS core.ticket_categories (
+                id SERIAL PRIMARY KEY,
+                nama_kategori VARCHAR(100) NOT NULL,
+                deskripsi TEXT NULL,
+                sla_hours INT NOT NULL DEFAULT 48,
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS core.tickets (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                tenant_id UUID NULL REFERENCES core.tenants(id) ON DELETE CASCADE,
+                user_id UUID NULL REFERENCES core.users(id) ON DELETE SET NULL,
+                category_id INT NOT NULL,
+                nomor_tiket VARCHAR(50) NULL,
+                judul VARCHAR(255) NOT NULL,
+                deskripsi TEXT NOT NULL,
+                urgensi VARCHAR(50) NOT NULL DEFAULT 'Sedang',
+                status VARCHAR(50) NOT NULL DEFAULT 'Menunggu',
+                lampiran TEXT NULL,
+                user_agent TEXT NULL,
+                last_url TEXT NULL,
+                sla_deadline TIMESTAMP WITH TIME ZONE NULL,
+                user_unread BOOLEAN NOT NULL DEFAULT FALSE,
+                admin_unread BOOLEAN NOT NULL DEFAULT TRUE,
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_tickets_tenant ON core.tickets (tenant_id);
+            CREATE INDEX IF NOT EXISTS idx_tickets_user ON core.tickets (user_id);
+            CREATE INDEX IF NOT EXISTS idx_tickets_status ON core.tickets (status);
+
+            CREATE TABLE IF NOT EXISTS core.ticket_replies (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                ticket_id UUID NOT NULL REFERENCES core.tickets(id) ON DELETE CASCADE,
+                user_id UUID NULL REFERENCES core.users(id) ON DELETE SET NULL,
+                is_superadmin BOOLEAN NOT NULL DEFAULT FALSE,
+                pesan TEXT NOT NULL,
+                lampiran TEXT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_ticket_replies_ticket ON core.ticket_replies (ticket_id);
+
+            CREATE TABLE IF NOT EXISTS core.ticket_canned_responses (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                judul VARCHAR(200) NOT NULL,
+                konten TEXT NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS core.ticket_faqs (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                category_id INT NULL,
+                pertanyaan VARCHAR(255) NOT NULL,
+                jawaban TEXT NOT NULL,
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
         ");
-        echo "- Schema CORE (17 Tabel) Berhasil Dibuat.\n";
+
+        // Seed default categories if empty
+        $stmtCheck = $pdo->query("SELECT COUNT(*) FROM core.ticket_categories");
+        if ((int)$stmtCheck->fetchColumn() === 0) {
+            $pdo->exec("
+                INSERT INTO core.ticket_categories (nama_kategori, deskripsi, sla_hours) VALUES
+                ('Teknis / Sistem', 'Kendala teknis, error aplikasi, bug, atau gangguan performa sistem.', 24),
+                ('Akun & Akses', 'Permintaan reset password, penyesuaian hak akses RBAC, atau akun terkunci.', 12),
+                ('Keuangan & SPP', 'Permasalahan integrasi pembayaran, pos tarif tagihan, atau jurnal kas.', 24),
+                ('Pertanyaan Umum', 'Panduan penggunaan modul, pertanyaan fitur, dan konsultasi administrasi.', 48);
+            ");
+        }
+
+        echo "- Schema CORE (22 Tabel) Berhasil Dibuat.\n";
     },
 
     'down' => function (PDO $pdo): void {
