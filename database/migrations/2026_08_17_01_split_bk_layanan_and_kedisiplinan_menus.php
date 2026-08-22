@@ -31,7 +31,7 @@ return [
         // 4. Grant access in core.tenant_menu_access for ALL tenants
         $stmtTenants = $pdo->query("SELECT id FROM core.tenants");
         $tenants = $stmtTenants->fetchAll(\PDO::FETCH_COLUMN);
-        $tenants[] = '00000000-0000-0000-0000-000000000000';
+        $tenants[] = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12';
 
         $stmtTma = $pdo->prepare("
             INSERT INTO core.tenant_menu_access (id, tenant_id, menu_id)
@@ -49,7 +49,7 @@ return [
 
         $stmtRma = $pdo->prepare("
             INSERT INTO core.role_menu_access (tenant_id, role_id, menu_id)
-            VALUES ('00000000-0000-0000-0000-000000000000', ?, ?)
+            VALUES ('e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12', ?, ?)
             ON CONFLICT DO NOTHING
         ");
 

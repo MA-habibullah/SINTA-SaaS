@@ -2,7 +2,7 @@
 
 return [
     'up' => function (PDO $pdo): void {
-        $globalTenantId = '00000000-0000-0000-0000-000000000000';
+        $globalTenantId = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12';
 
         // 1. Bersihkan data matriks default lama yang terlalu terbuka (semua role centang semua menu)
         $pdo->exec("DELETE FROM core.role_menu_access WHERE tenant_id = '{$globalTenantId}'::uuid OR tenant_id IS NULL");

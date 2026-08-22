@@ -41,7 +41,7 @@ return [
             
             DROP INDEX IF EXISTS pdss.idx_pdss_config_mapel_unique;
             CREATE UNIQUE INDEX IF NOT EXISTS idx_pdss_config_mapel_unique 
-            ON pdss.pdss_config_mapel (tenant_id, COALESCE(tahun_ajaran_id, '00000000-0000-0000-0000-000000000000'), COALESCE(kelas_id, '00000000-0000-0000-0000-000000000000'), mapel_id);
+            ON pdss.pdss_config_mapel (tenant_id, COALESCE(tahun_ajaran_id, 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12'), COALESCE(kelas_id, 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12'), mapel_id);
         ");
 
         // 2. pdss.pdss_lock
@@ -65,7 +65,7 @@ return [
 
             DROP INDEX IF EXISTS pdss.idx_pdss_lock_unique;
             CREATE UNIQUE INDEX IF NOT EXISTS idx_pdss_lock_unique 
-            ON pdss.pdss_lock (tenant_id, step, COALESCE(tahun_ajaran_id, '00000000-0000-0000-0000-000000000000'));
+            ON pdss.pdss_lock (tenant_id, step, COALESCE(tahun_ajaran_id, 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12'));
         ");
 
         // 3. pdss.pdss_manual_eligible

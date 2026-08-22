@@ -135,7 +135,7 @@ return [
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
             CREATE UNIQUE INDEX IF NOT EXISTS idx_kesiapan_tenant_siswa_ta 
-            ON pdss.kesiapan_siswa (tenant_id, siswa_id, COALESCE(tahun_ajaran_id, '00000000-0000-0000-0000-000000000000'));
+            ON pdss.kesiapan_siswa (tenant_id, siswa_id, COALESCE(tahun_ajaran_id, 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12'));
 
             CREATE TABLE IF NOT EXISTS pdss.simulasi_setting (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -147,7 +147,7 @@ return [
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
             CREATE UNIQUE INDEX IF NOT EXISTS idx_simulasi_setting_tenant_ta_sim 
-            ON pdss.simulasi_setting (tenant_id, COALESCE(tahun_ajaran_id, '00000000-0000-0000-0000-000000000000'), no_simulasi);
+            ON pdss.simulasi_setting (tenant_id, COALESCE(tahun_ajaran_id, 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12'), no_simulasi);
 
             CREATE TABLE IF NOT EXISTS pdss.pilihan_kampus (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

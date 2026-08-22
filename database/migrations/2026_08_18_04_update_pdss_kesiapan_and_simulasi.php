@@ -62,7 +62,7 @@ return [
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
             CREATE UNIQUE INDEX IF NOT EXISTS idx_pdss_ranking_unique 
-            ON pdss.pdss_ranking (tenant_id, siswa_id, COALESCE(tahun_ajaran_id, '00000000-0000-0000-0000-000000000000'));
+            ON pdss.pdss_ranking (tenant_id, siswa_id, COALESCE(tahun_ajaran_id, 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12'));
         ");
 
         echo "- PDSS tables (kesiapan, simulasi_setting, bukti_simulasi, ranking) berhasil diperbarui.\n";
