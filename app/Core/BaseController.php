@@ -163,4 +163,25 @@ class BaseController {
         $data = json_decode($raw, true);
         return is_array($data) ? $data : $_POST;
     }
+
+    /**
+     * Sanitasi input string untuk mencegah XSS.
+     * Digunakan oleh seluruh controller turunan untuk membersihkan
+     * nilai dari $_GET, $_POST, atau array input sebelum diproses.
+     *
+     * @param mixed $value Nilai input yang akan disanitasi
+     * @return string      Nilai yang sudah bersih dari tag HTML dan karakter berbahaya
+     */
+    protected function sanitize(mixed $value): string
+    {
+        if ($value === null || $value === false) {
+            return '';
+        }
+        $str = (string) $value;
+        // Hapus tag HTML/script terlebih dahulu
+        $str = strip_tags($str);
+        // Encode karakter spesial HTML untuk mencegah XSS residual
+        $str = htmlspecialchars($str, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        return trim($str);
+    }
 }
