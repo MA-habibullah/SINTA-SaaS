@@ -20,7 +20,7 @@ class PerpustakaanModel {
 
     public function getDefaultTenantId(): string {
         try {
-            $stmt = $this->db->query("SELECT id FROM core.tenants WHERE id != '00000000-0000-0000-0000-000000000000' AND status = 'active' ORDER BY nama_sekolah ASC LIMIT 1");
+            $stmt = $this->db->query("SELECT id FROM core.tenants WHERE id != 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' AND status = 'active' ORDER BY nama_sekolah ASC LIMIT 1");
             return (string)($stmt->fetchColumn() ?: '');
         } catch (\Throwable $e) {
             return '';
@@ -28,7 +28,7 @@ class PerpustakaanModel {
     }
 
     public function resolveTenantId(?string $tenantId): string {
-        if (!empty($tenantId) && $this->isValidUuid($tenantId) && $tenantId !== '00000000-0000-0000-0000-000000000000') {
+        if (!empty($tenantId) && $this->isValidUuid($tenantId) && $tenantId !== 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
             return (string)$tenantId;
         }
         return $this->getDefaultTenantId();
@@ -865,19 +865,19 @@ class PerpustakaanModel {
             $tglHariIni = date('Y-m-d');
             $tglAwalBulan = date('Y-m-01');
 
-            $stmtHari = $this->db->prepare("SELECT COUNT(*) FROM perpustakaan.perpus_buku_tamu WHERE tenant_id = :tenant_id AND created_at::date = :tgl");
+            $stmtHari = $this->db->prepare("SELECT COUNT(*) FROM perpustakaan.perpus_buku_tamu WHERE tenant_id = :tenant_id AND (is_active = true OR is_active IS NULL) AND created_at::date = :tgl");
             $stmtHari->execute(['tenant_id' => $tenantId, 'tgl' => $tglHariIni]);
             $totalHariIni = (int)$stmtHari->fetchColumn();
 
-            $stmtBulan = $this->db->prepare("SELECT COUNT(*) FROM perpustakaan.perpus_buku_tamu WHERE tenant_id = :tenant_id AND created_at::date >= :tgl");
+            $stmtBulan = $this->db->prepare("SELECT COUNT(*) FROM perpustakaan.perpus_buku_tamu WHERE tenant_id = :tenant_id AND (is_active = true OR is_active IS NULL) AND created_at::date >= :tgl");
             $stmtBulan->execute(['tenant_id' => $tenantId, 'tgl' => $tglAwalBulan]);
             $totalBulanIni = (int)$stmtBulan->fetchColumn();
 
-            $stmtSiswa = $this->db->prepare("SELECT COUNT(*) FROM perpustakaan.perpus_buku_tamu WHERE tenant_id = :tenant_id AND (kategori = 'Siswa' OR deskripsi::json->>'tipe' = 'Siswa')");
+            $stmtSiswa = $this->db->prepare("SELECT COUNT(*) FROM perpustakaan.perpus_buku_tamu WHERE tenant_id = :tenant_id AND (is_active = true OR is_active IS NULL) AND (LOWER(kategori) = 'siswa' OR deskripsi ILIKE '%\"tipe\":\"Siswa\"%')");
             $stmtSiswa->execute(['tenant_id' => $tenantId]);
             $totalSiswa = (int)$stmtSiswa->fetchColumn();
 
-            $stmtGuru = $this->db->prepare("SELECT COUNT(*) FROM perpustakaan.perpus_buku_tamu WHERE tenant_id = :tenant_id AND (kategori IN ('Guru', 'Tendik', 'PTK') OR deskripsi::json->>'tipe' IN ('Guru', 'Tendik', 'PTK'))");
+            $stmtGuru = $this->db->prepare("SELECT COUNT(*) FROM perpustakaan.perpus_buku_tamu WHERE tenant_id = :tenant_id AND (is_active = true OR is_active IS NULL) AND (LOWER(kategori) IN ('guru', 'tendik', 'ptk', 'staf') OR deskripsi ILIKE '%\"tipe\":\"Guru\"%' OR deskripsi ILIKE '%\"tipe\":\"Tendik\"%')");
             $stmtGuru->execute(['tenant_id' => $tenantId]);
             $totalGuru = (int)$stmtGuru->fetchColumn();
 

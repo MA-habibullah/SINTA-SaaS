@@ -5,21 +5,29 @@
  */
 use App\Config\Database;
 
-$thisTenant = isset($this) ? ($this->tenantId ?? null) : null;
-$activeTenantId = $data['active_tenant_id'] ?? ($_GET['tenant_id'] ?? ($thisTenant ?? ($_SESSION['tenant_id'] ?? null)));
-$tenantsList = $data['tenants'] ?? [];
+$userRole = $_SESSION['user_role'] ?? ($data['user_role'] ?? '');
+$roles = $_SESSION['roles'] ?? [];
+$isSuperAdmin = ($userRole === 'super_admin') || in_array('super_admin', $roles, true);
 
+$sessionTenantId = $_SESSION['tenant_id'] ?? null;
+if ($isSuperAdmin) {
+    $activeTenantId = $data['active_tenant_id'] ?? ($_GET['tenant_id'] ?? ($sessionTenantId ?? null));
+} else {
+    $activeTenantId = $sessionTenantId;
+}
+
+$tenantsList = $data['tenants'] ?? [];
 $namaSekolahAktif = 'Sekolah Belum Dipilih';
 $npsnAktif = '-';
 
 try {
     $db = Database::getConnection();
-    if (empty($tenantsList)) {
-        $stmtAll = $db->query("SELECT id, nama_sekolah, npsn FROM core.tenants WHERE id != '00000000-0000-0000-0000-000000000000' AND (status = 'active' OR status IS NULL) ORDER BY nama_sekolah ASC");
+    if ($isSuperAdmin && empty($tenantsList)) {
+        $stmtAll = $db->query("SELECT id, nama_sekolah, npsn FROM core.tenants WHERE id != 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' AND (status = 'active' OR status IS NULL) ORDER BY nama_sekolah ASC");
         $tenantsList = $stmtAll->fetchAll(\PDO::FETCH_ASSOC) ?: [];
     }
 
-    if (empty($activeTenantId) && !empty($tenantsList)) {
+    if ($isSuperAdmin && empty($activeTenantId) && !empty($tenantsList)) {
         $activeTenantId = $tenantsList[0]['id'];
     }
 
@@ -59,7 +67,8 @@ $heroDesc = $heroDesc ?? 'Sistem Manajemen Perpustakaan Terintegrasi (ILS) Akred
         </div>
 
         <div class="d-flex align-items-center gap-2 flex-wrap flex-shrink-0">
-            <!-- Active School / Tenant Filter Selector Dropdown -->
+            <!-- Active School / Tenant Filter Selector Dropdown (HANYA UNTUK SUPER ADMIN) -->
+            <?php if ($isSuperAdmin && !empty($tenantsList)): ?>
             <div class="d-flex align-items-center gap-2 bg-white/15 p-2 rounded-xl border border-white/25 shadow-xs" style="backdrop-filter: blur(6px);">
                 <i class="bi bi-building text-white fs-6 ms-1.5"></i>
                 <label for="selectFilterTenant" class="visually-hidden">Pilih Sekolah</label>
@@ -74,6 +83,7 @@ $heroDesc = $heroDesc ?? 'Sistem Manajemen Perpustakaan Terintegrasi (ILS) Akred
                     <?php endforeach; ?>
                 </select>
             </div>
+            <?php endif; ?>
 
             <?php if (!empty($heroButtons)): ?>
                 <?= $heroButtons ?>
@@ -82,6 +92,7 @@ $heroDesc = $heroDesc ?? 'Sistem Manajemen Perpustakaan Terintegrasi (ILS) Akred
     </div>
 </div>
 
+<?php if ($isSuperAdmin): ?>
 <script>
 function switchSuperAdminTenant(tenantId) {
     if (!tenantId) return;
@@ -90,3 +101,4 @@ function switchSuperAdminTenant(tenantId) {
     window.location.href = url.toString();
 }
 </script>
+<?php endif; ?>
