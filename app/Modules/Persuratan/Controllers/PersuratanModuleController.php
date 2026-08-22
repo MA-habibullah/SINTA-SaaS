@@ -230,6 +230,10 @@ class PersuratanModuleController extends BaseController
                     'lampiran',
                     'default'
                 );
+            } elseif (!empty($_POST['file_lampiran']) && is_string($_POST['file_lampiran'])) {
+                $fileLampiran = trim($_POST['file_lampiran']);
+            } elseif (!empty($input['file_lampiran']) && is_string($input['file_lampiran'])) {
+                $fileLampiran = trim($input['file_lampiran']);
             }
 
             $saveId = $this->model->saveSuratMasuk($tenantId, [
@@ -245,7 +249,7 @@ class PersuratanModuleController extends BaseController
                 'tingkat_keamanan' => $keamanan
             ]);
 
-            $this->jsonResponse(true, ['id' => $saveId], 'Surat masuk berhasil disimpan.');
+            $this->jsonResponse(true, ['id' => $saveId, 'file_lampiran' => $fileLampiran], 'Surat masuk berhasil disimpan.');
         } catch (Throwable $e) {
             $this->logApiException($e, __METHOD__);
             $this->jsonResponse(false, null, 'Gagal menyimpan surat masuk: ' . $e->getMessage(), 400);
@@ -530,7 +534,13 @@ class PersuratanModuleController extends BaseController
     {
         try {
             $tenantId = $this->getEffectiveTenantId();
-            $data = $this->model->getKlasifikasi($tenantId);
+            $filters = [
+                'tahun' => !empty($_GET['tahun']) ? (int)$_GET['tahun'] : null,
+                'versi_regulasi' => !empty($_GET['versi_regulasi']) ? $this->sanitize($_GET['versi_regulasi']) : null,
+                'search' => !empty($_GET['search']) ? $this->sanitize($_GET['search']) : null,
+                'status_aktif' => !empty($_GET['status_aktif']) ? $this->sanitize($_GET['status_aktif']) : 'semua'
+            ];
+            $data = $this->model->getKlasifikasi($tenantId, $filters);
             $this->jsonResponse(true, $data);
         } catch (Throwable $e) {
             $this->logApiException($e, __METHOD__);
@@ -549,6 +559,95 @@ class PersuratanModuleController extends BaseController
         } catch (Throwable $e) {
             $this->logApiException($e, __METHOD__);
             $this->jsonResponse(false, null, 'Gagal menyimpan kode klasifikasi: ' . $e->getMessage(), 400);
+        }
+    }
+
+    /** POST /api/v1/persuratan/klasifikasi/toggle-status */
+    public function apiToggleStatusKlasifikasi(): void
+    {
+        try {
+            $tenantId = $this->getEffectiveTenantId();
+            $input = $this->getJsonInput();
+            $id = $input['id'] ?? '';
+            $isActive = isset($input['is_active']) ? (bool)$input['is_active'] : true;
+
+            if (empty($id)) {
+                $this->jsonResponse(false, null, 'ID klasifikasi tidak valid.', 400);
+                return;
+            }
+
+            $this->model->toggleStatusKlasifikasi($tenantId, $id, $isActive);
+            $this->jsonResponse(true, null, 'Status kode klasifikasi berhasil diubah.');
+        } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
+            $this->jsonResponse(false, null, 'Gagal mengubah status: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /** POST /api/v1/persuratan/klasifikasi/toggle-tahun */
+    public function apiToggleStatusByTahun(): void
+    {
+        try {
+            $tenantId = $this->getEffectiveTenantId();
+            $input = $this->getJsonInput();
+            $tahun = (int)($input['tahun'] ?? 2025);
+            $isActive = isset($input['is_active']) ? (bool)$input['is_active'] : true;
+
+            $updatedCount = $this->model->toggleStatusByTahun($tenantId, $tahun, $isActive);
+            $msg = $isActive ? "Sebanyak {$updatedCount} kode klasifikasi tahun {$tahun} telah diaktifkan." : "Sebanyak {$updatedCount} kode klasifikasi tahun {$tahun} telah dinonaktifkan.";
+            $this->jsonResponse(true, ['updated_count' => $updatedCount], $msg);
+        } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
+            $this->jsonResponse(false, null, 'Gagal mengubah status tahun: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /** POST /api/v1/persuratan/klasifikasi/import */
+    public function apiImportKlasifikasi(): void
+    {
+        try {
+            $tenantId = $this->getEffectiveTenantId();
+            $input = $this->getJsonInput();
+            $items = $input['items'] ?? [];
+            $versi = $input['versi_regulasi'] ?? 'Permendagri/Disdik 2025';
+            $tahun = (int)($input['tahun_berlaku_mulai'] ?? 2025);
+
+            if (empty($items) || !is_array($items)) {
+                $this->jsonResponse(false, null, 'Data klasifikasi untuk diimpor tidak boleh kosong.', 400);
+                return;
+            }
+
+            $res = $this->model->importKlasifikasiBulk($tenantId, $items, $versi, $tahun);
+            $this->jsonResponse(true, $res, "Berhasil mengimpor {$res['total']} kode klasifikasi.");
+        } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
+            $this->jsonResponse(false, null, 'Gagal mengimpor klasifikasi: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /** POST /api/v1/persuratan/klasifikasi/sync-nasional */
+    public function apiSyncKatalogNasional2025(): void
+    {
+        try {
+            $tenantId = $this->getEffectiveTenantId();
+            $seedFile = dirname(__DIR__, 4) . '/database/seeds/kode_klasifikasi_surat.json';
+            if (!file_exists($seedFile)) {
+                $this->jsonResponse(false, null, 'Berkas seed klasifikasi nasional tidak ditemukan.', 404);
+                return;
+            }
+
+            $jsonContent = file_get_contents($seedFile);
+            $items = json_decode($jsonContent, true);
+            if (!is_array($items)) {
+                $this->jsonResponse(false, null, 'Format berkas seed JSON tidak valid.', 400);
+                return;
+            }
+
+            $res = $this->model->importKlasifikasiBulk($tenantId, $items, 'Permendagri/Disdik 2025', 2025);
+            $this->jsonResponse(true, $res, "Sinkronisasi selesai. Sebanyak {$res['total']} kode klasifikasi nasional berhasil dimutakhirkan.");
+        } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
+            $this->jsonResponse(false, null, 'Gagal sinkronisasi katalog nasional: ' . $e->getMessage(), 500);
         }
     }
 

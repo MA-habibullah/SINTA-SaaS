@@ -843,17 +843,87 @@ class PersuratanModel
     }
 
     /**
-     * Mengambil Master Kode Klasifikasi Surat
+     * Mengambil Master Kode Klasifikasi Surat dengan filter tahun berlaku, status aktif, & pencarian
      */
-    public function getKlasifikasi(string $tenantId): array
+    public function getKlasifikasi(string $tenantId, array $filters = []): array
     {
+        $globalTenant = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12';
+        $params = [':tid' => $tenantId, ':gtid' => $globalTenant];
+        $where = ["(tenant_id = :tid OR tenant_id = :gtid OR tenant_id IS NULL)"];
+
+        // Filter status aktif
+        $statusAktif = $filters['status_aktif'] ?? 'aktif';
+        if ($statusAktif === 'aktif') {
+            $where[] = "is_active = TRUE";
+        } elseif ($statusAktif === 'nonaktif') {
+            $where[] = "is_active = FALSE";
+        }
+        // jika 'semua', tidak memfilter is_active
+
+        if (!empty($filters['tahun'])) {
+            $tahun = (int)$filters['tahun'];
+            $where[] = "(tahun_berlaku_mulai <= :tahun AND (tahun_berlaku_selesai IS NULL OR tahun_berlaku_selesai >= :tahun))";
+            $params[':tahun'] = $tahun;
+        }
+
+        if (!empty($filters['versi_regulasi'])) {
+            $where[] = "versi_regulasi = :versi";
+            $params[':versi'] = $filters['versi_regulasi'];
+        }
+
+        if (!empty($filters['search'])) {
+            $where[] = "(kode_klasifikasi ILIKE :search OR nama_klasifikasi ILIKE :search OR kategori_utama ILIKE :search OR deskripsi ILIKE :search)";
+            $params[':search'] = '%' . $filters['search'] . '%';
+        }
+
+        $whereClause = implode(' AND ', $where);
         $stmt = $this->db->prepare("
-            SELECT * FROM persuratan.kode_klasifikasi_surat 
-            WHERE (tenant_id = :tid OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') AND is_active = TRUE
+            SELECT id, tenant_id, kode_klasifikasi, nama_klasifikasi, parent_kode,
+                   level_klasifikasi, kategori_utama, deskripsi, retensi_aktif_tahun,
+                   retensi_inaktif_tahun, retensi_tahun, tahun_berlaku_mulai,
+                   tahun_berlaku_selesai, versi_regulasi, is_active, created_at
+            FROM persuratan.kode_klasifikasi_surat 
+            WHERE {$whereClause}
             ORDER BY kode_klasifikasi ASC
         ");
-        $stmt->execute([':tid' => $tenantId]);
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    /**
+     * Toggle Aktif / Nonaktif Kode Klasifikasi
+     */
+    public function toggleStatusKlasifikasi(string $tenantId, string $id, bool $isActive): bool
+    {
+        $stmt = $this->db->prepare("
+            UPDATE persuratan.kode_klasifikasi_surat 
+            SET is_active = :status, updated_at = NOW() 
+            WHERE id = :id AND (tenant_id = :tid OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' OR tenant_id IS NULL)
+        ");
+        return $stmt->execute([
+            ':status' => $isActive ? 1 : 0,
+            ':id' => $id,
+            ':tid' => $tenantId
+        ]);
+    }
+
+    /**
+     * Toggle Aktif / Nonaktif Massal Berdasarkan Tahun Regulasi
+     */
+    public function toggleStatusByTahun(string $tenantId, int $tahun, bool $isActive): int
+    {
+        $stmt = $this->db->prepare("
+            UPDATE persuratan.kode_klasifikasi_surat 
+            SET is_active = :status, updated_at = NOW() 
+            WHERE (tahun_berlaku_mulai <= :tahun AND (tahun_berlaku_selesai IS NULL OR tahun_berlaku_selesai >= :tahun))
+              AND (tenant_id = :tid OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' OR tenant_id IS NULL)
+        ");
+        $stmt->execute([
+            ':status' => $isActive ? 1 : 0,
+            ':tahun' => $tahun,
+            ':tid' => $tenantId
+        ]);
+        return $stmt->rowCount();
     }
 
     /**
@@ -866,6 +936,10 @@ class PersuratanModel
         $nama = trim($data['nama_klasifikasi'] ?? '');
         $deskripsi = trim($data['deskripsi'] ?? '');
         $retensi = (int)($data['retensi_tahun'] ?? 5);
+        $tahunMulai = (int)($data['tahun_berlaku_mulai'] ?? 2025);
+        $tahunSelesai = !empty($data['tahun_berlaku_selesai']) ? (int)$data['tahun_berlaku_selesai'] : null;
+        $versi = trim($data['versi_regulasi'] ?? 'Permendagri/Disdik 2025');
+        $isActive = isset($data['is_active']) ? (bool)$data['is_active'] : true;
 
         if (empty($kode) || empty($nama)) {
             throw new Exception('Kode dan nama klasifikasi surat wajib diisi.');
@@ -874,9 +948,11 @@ class PersuratanModel
         if (empty($id)) {
             $stmt = $this->db->prepare("
                 INSERT INTO persuratan.kode_klasifikasi_surat (
-                    id, tenant_id, kode_klasifikasi, nama_klasifikasi, deskripsi, retensi_tahun, is_active, created_at, updated_at
+                    id, tenant_id, kode_klasifikasi, nama_klasifikasi, deskripsi, retensi_tahun,
+                    tahun_berlaku_mulai, tahun_berlaku_selesai, versi_regulasi, is_active, created_at, updated_at
                 ) VALUES (
-                    gen_random_uuid(), :tid, :kode, :nama, :deskripsi, :retensi, TRUE, NOW(), NOW()
+                    gen_random_uuid(), :tid, :kode, :nama, :deskripsi, :retensi,
+                    :tmulai, :tselesai, :versi, :is_active, NOW(), NOW()
                 ) RETURNING id
             ");
             $stmt->execute([
@@ -884,7 +960,11 @@ class PersuratanModel
                 ':kode' => $kode,
                 ':nama' => $nama,
                 ':deskripsi' => $deskripsi,
-                ':retensi' => $retensi
+                ':retensi' => $retensi,
+                ':tmulai' => $tahunMulai,
+                ':tselesai' => $tahunSelesai,
+                ':versi' => $versi,
+                ':is_active' => $isActive ? 1 : 0
             ]);
             return (string)$stmt->fetchColumn();
         } else {
@@ -894,8 +974,12 @@ class PersuratanModel
                     nama_klasifikasi = :nama,
                     deskripsi = :deskripsi,
                     retensi_tahun = :retensi,
+                    tahun_berlaku_mulai = :tmulai,
+                    tahun_berlaku_selesai = :tselesai,
+                    versi_regulasi = :versi,
+                    is_active = :is_active,
                     updated_at = NOW()
-                WHERE id = :id AND (tenant_id = :tid OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')
+                WHERE id = :id AND (tenant_id = :tid OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' OR tenant_id IS NULL)
             ");
             $stmt->execute([
                 ':id' => $id,
@@ -903,21 +987,124 @@ class PersuratanModel
                 ':kode' => $kode,
                 ':nama' => $nama,
                 ':deskripsi' => $deskripsi,
-                ':retensi' => $retensi
+                ':retensi' => $retensi,
+                ':tmulai' => $tahunMulai,
+                ':tselesai' => $tahunSelesai,
+                ':versi' => $versi,
+                ':is_active' => $isActive ? 1 : 0
             ]);
             return $id;
         }
     }
 
     /**
-     * Hapus Kode Klasifikasi (Soft Delete)
+     * Import / Sinkronisasi Massal Kode Klasifikasi
+     */
+    public function importKlasifikasiBulk(string $tenantId, array $items, string $versiRegulasi = 'Permendagri/Disdik 2025', int $tahunMulai = 2025): array
+    {
+        $inserted = 0;
+        $updated = 0;
+
+        $this->db->beginTransaction();
+        try {
+            $stmtCheck = $this->db->prepare("
+                SELECT id FROM persuratan.kode_klasifikasi_surat 
+                WHERE kode_klasifikasi = :kode AND (tenant_id = :tid OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' OR tenant_id IS NULL)
+                LIMIT 1
+            ");
+
+            $stmtInsert = $this->db->prepare("
+                INSERT INTO persuratan.kode_klasifikasi_surat (
+                    id, tenant_id, kode_klasifikasi, nama_klasifikasi, parent_kode,
+                    level_klasifikasi, kategori_utama, retensi_aktif_tahun, retensi_inaktif_tahun,
+                    retensi_tahun, tahun_berlaku_mulai, versi_regulasi, is_active, created_at, updated_at
+                ) VALUES (
+                    gen_random_uuid(), :tid, :kode, :nama, :parent,
+                    :level, :kat, :ret_aktif, :ret_inaktif,
+                    :ret_aktif, :tahun, :versi, TRUE, NOW(), NOW()
+                )
+            ");
+
+            $stmtUpdate = $this->db->prepare("
+                UPDATE persuratan.kode_klasifikasi_surat SET
+                    nama_klasifikasi = :nama,
+                    parent_kode = :parent,
+                    level_klasifikasi = :level,
+                    kategori_utama = :kat,
+                    retensi_aktif_tahun = :ret_aktif,
+                    retensi_inaktif_tahun = :ret_inaktif,
+                    tahun_berlaku_mulai = :tahun,
+                    versi_regulasi = :versi,
+                    is_active = TRUE,
+                    updated_at = NOW()
+                WHERE id = :id
+            ");
+
+            foreach ($items as $item) {
+                $kode = trim($item['kode_klasifikasi'] ?? '');
+                $nama = trim($item['nama_klasifikasi'] ?? '');
+                if (empty($kode) || empty($nama)) continue;
+
+                $parent = !empty($item['parent_kode']) ? trim($item['parent_kode']) : null;
+                $level = !empty($item['level_klasifikasi']) ? (int)$item['level_klasifikasi'] : 1;
+                $kat = !empty($item['kategori_utama']) ? trim($item['kategori_utama']) : 'Umum/Organisasi';
+                $retAktif = !empty($item['retensi_aktif_tahun']) ? (int)$item['retensi_aktif_tahun'] : 5;
+                $retInaktif = !empty($item['retensi_inaktif_tahun']) ? (int)$item['retensi_inaktif_tahun'] : 5;
+
+                $stmtCheck->execute([':kode' => $kode, ':tid' => $tenantId]);
+                $existingId = $stmtCheck->fetchColumn();
+
+                if ($existingId) {
+                    $stmtUpdate->execute([
+                        ':id' => $existingId,
+                        ':nama' => $nama,
+                        ':parent' => $parent,
+                        ':level' => $level,
+                        ':kat' => $kat,
+                        ':ret_aktif' => $retAktif,
+                        ':ret_inaktif' => $retInaktif,
+                        ':tahun' => $tahunMulai,
+                        ':versi' => $versiRegulasi
+                    ]);
+                    $updated++;
+                } else {
+                    $stmtInsert->execute([
+                        ':tid' => $tenantId,
+                        ':kode' => $kode,
+                        ':nama' => $nama,
+                        ':parent' => $parent,
+                        ':level' => $level,
+                        ':kat' => $kat,
+                        ':ret_aktif' => $retAktif,
+                        ':ret_inaktif' => $retInaktif,
+                        ':tahun' => $tahunMulai,
+                        ':versi' => $versiRegulasi
+                    ]);
+                    $inserted++;
+                }
+            }
+
+            $this->db->commit();
+            return [
+                'success' => true,
+                'inserted' => $inserted,
+                'updated' => $updated,
+                'total' => $inserted + $updated
+            ];
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Hapus Kode Klasifikasi (Soft Delete / Hapus)
      */
     public function deleteKlasifikasi(string $tenantId, string $id): bool
     {
         $stmt = $this->db->prepare("
-            UPDATE persuratan.kode_klasifikasi_surat 
-            SET is_active = FALSE, updated_at = NOW() 
-            WHERE id = :id AND (tenant_id = :tid OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')
+            DELETE FROM persuratan.kode_klasifikasi_surat 
+            WHERE id = :id AND (tenant_id = :tid OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' OR tenant_id IS NULL)
         ");
         return $stmt->execute([':id' => $id, ':tid' => $tenantId]);
     }
