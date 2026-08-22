@@ -221,7 +221,7 @@ if (typeof Vue !== 'undefined') {
 
     const riwayatSayaAppConfig = {
         setup() {
-            const listRiwayat = ref(<?= $sirkulasiListJson ?> || []);
+            const listRiwayat = ref([]);
             const loading = ref(false);
             const searchQuery = ref('');
             const filterStatus = ref('');
@@ -229,7 +229,7 @@ if (typeof Vue !== 'undefined') {
             const perPage = ref(15);
 
             const urlParams = new URLSearchParams(window.location.search);
-            const currentTenantId = urlParams.get('tenant_id') || '<?= htmlspecialchars($data['active_tenant_id'] ?? ($activeTenantId ?? '')) ?>';
+            const currentTenantId = urlParams.get('tenant_id') || '<?= htmlspecialchars($data['active_tenant_id'] ?? ($activeTenantId ?? ''), ENT_QUOTES, 'UTF-8') ?>';
             const getTenantParam = (prefix = '?') => {
                 return currentTenantId ? `${prefix}tenant_id=${encodeURIComponent(currentTenantId)}` : '';
             };
@@ -312,9 +312,7 @@ if (typeof Vue !== 'undefined') {
             };
 
             onMounted(() => {
-                if (listRiwayat.value.length === 0) {
-                    fetchRiwayat();
-                }
+                fetchRiwayat();
             });
 
             return {

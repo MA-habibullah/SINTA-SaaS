@@ -75,7 +75,7 @@ class PdssDetailModuleController extends BaseController {
     /**
      * Helper: Mendapatkan Tenant ID yang aman
      */
-    private function getSecureTenantId(): ?string {
+    protected function getSecureTenantId(): ?string {
         $roles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
         $tenantId = SessionManager::getTenantId();
 
@@ -2669,7 +2669,7 @@ class PdssDetailModuleController extends BaseController {
     /**
      * Helper sanitasi string
      */
-    private function sanitize(mixed $val): string {
+    protected function sanitize(mixed $val): string {
         if (is_null($val) || is_array($val) || is_object($val)) {
             return '';
         }

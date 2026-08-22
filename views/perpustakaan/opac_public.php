@@ -1,297 +1,326 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($data['title'] ?? 'OPAC Publik — Katalog Perpustakaan Digital') ?></title>
-    <!-- Google Fonts: Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <!-- Vue 3 & Axios -->
-    <script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.prod.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<?php
+/**
+ * View: OPAC (Online Public Access Catalog) Perpustakaan Digital
+ * SINTA SaaS Platform — Modern Vue 3 Architecture & Dynamic PostgreSQL Multi-Schema
+ */
+?>
+<div id="opacPublicApp" v-cloak class="container-fluid px-0">
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         HERO BANNER & MULTI-TENANT SAAS SWITCHER (STANDAR GAMBAR 1)
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <?php
+    $heroIcon = 'bi-search';
+    $heroBadge = 'Katalog Publik Terbuka (OPAC)';
+    $heroTitle = 'Pencarian Koleksi Perpustakaan Digital';
+    $heroDesc = 'Telusuri koleksi buku teks pelajaran, fiksi, non-fiksi, karya ilmiah, modul ajar, dan e-book digital sekolah.';
+    $heroButtons = '
+        <a href="' . $this->getBaseUrl() . '/perpustakaan/katalog" class="btn btn-sm rounded-xl px-3 py-2 text-xs font-semibold text-white bg-white/20 hover:bg-white/30 border border-white/25 shadow-2xs transition-all text-decoration-none d-inline-flex align-items-center">
+            <i class="bi bi-journal-album me-1.5"></i> Kelola Katalog
+        </a>
+        <a href="' . $this->getBaseUrl() . '/perpustakaan/riwayat-saya" class="btn btn-sm rounded-xl px-3 py-2 text-xs font-semibold text-white bg-white/15 hover:bg-white/25 border border-white/20 shadow-2xs transition-all text-decoration-none d-inline-flex align-items-center">
+            <i class="bi bi-clock-history me-1.5"></i> Riwayat Pinjaman Saya
+        </a>
+    ';
+    include __DIR__ . '/_tenant_filter.php';
+    ?>
 
-    <style>
-        :root {
-            --primary-gradient: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%);
-            --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
-            --card-hover-shadow: 0 20px 30px -10px rgba(37, 99, 235, 0.2);
-        }
-
-        body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background-color: #f8fafc;
-            color: #0f172a;
-        }
-
-        .hero-banner {
-            background: var(--primary-gradient);
-            color: white;
-            padding: 4.5rem 1rem 5.5rem 1rem;
-            border-radius: 0 0 2.5rem 2.5rem;
-            position: relative;
-            box-shadow: 0 15px 35px rgba(15, 23, 42, 0.25);
-        }
-
-        .search-card-container {
-            margin-top: -3.5rem;
-            z-index: 10;
-            position: relative;
-        }
-
-        .book-card {
-            border: 1px solid rgba(226, 232, 240, 0.8);
-            border-radius: 1.25rem;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: var(--card-shadow);
-            background: #ffffff;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .book-card:hover {
-            transform: translateY(-6px);
-            box-shadow: var(--card-hover-shadow);
-            border-color: #93c5fd;
-        }
-
-        .book-cover-wrap {
-            height: 180px;
-            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-            border-radius: 1rem 1rem 0 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #2563eb;
-            font-size: 3.5rem;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .custom-filter-pill {
-            border-radius: 9999px;
-            padding: 5px 14px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            transition: all 0.2s ease;
-            border: 1px solid #e2e8f0;
-            background: #ffffff;
-            color: #475569;
-            cursor: pointer;
-            text-decoration: none;
-        }
-
-        .custom-filter-pill:hover, .custom-filter-pill.active {
-            background-color: #2563eb;
-            color: #ffffff;
-            border-color: #2563eb;
-            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
-        }
-
-        [v-cloak] { display: none !important; }
-    </style>
-</head>
-<body>
-
-<div id="opacApp" v-cloak>
-    <!-- Top Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-slate-900 py-3">
-        <div class="container">
-            <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="<?= $this->getBaseUrl() ?>/perpustakaan/opac">
-                <i class="bi bi-journal-bookmark-fill text-primary fs-3"></i>
-                <span class="text-white">SINTA OPAC <span class="badge bg-primary fs-9 rounded-pill ms-1">Publik</span></span>
-            </a>
-            <div class="d-flex gap-2">
-                <a href="<?= $this->getBaseUrl() ?>/login" class="btn btn-outline-light btn-sm rounded-pill px-3.5 py-1.5 fs-7 font-semibold">
-                    <i class="bi bi-box-arrow-in-right me-1"></i> Login Anggota
-                </a>
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         FLOATING SEARCH CARD & QUICK DDC FILTER PILLS
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="card border-0 shadow-2xs rounded-2xl bg-white p-3.5 p-md-4 mb-4">
+        <!-- Main Search Bar -->
+        <div class="row g-2.5 align-items-center mb-3">
+            <div class="col-12 col-md-9 col-lg-10 position-relative">
+                <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3.5 text-slate-400 fs-6 pointer-events-none"></i>
+                <input type="text" v-model="searchQuery" @input="debounceSearch()"
+                       class="form-control form-control-lg ps-5 pe-4 rounded-xl border border-slate-200 text-sm font-medium bg-slate-50/70 focus:bg-white focus:border-blue-500 shadow-2xs transition"
+                       placeholder="Cari judul buku, barcode, nama pengarang, penerbit, atau nomor panggil DDC..."
+                       aria-label="Cari buku perpustakaan" autofocus>
+                <button v-if="searchQuery" type="button" class="btn btn-xs position-absolute top-50 end-0 translate-middle-y me-3 text-slate-400 hover:text-slate-600 p-0" @click="searchQuery = ''; fetchBooks()" aria-label="Reset pencarian">
+                    <i class="bi bi-x-circle-fill fs-6"></i>
+                </button>
+            </div>
+            <div class="col-12 col-md-3 col-lg-2">
+                <button type="button" class="btn btn-primary btn-lg w-100 rounded-xl font-bold text-xs d-flex align-items-center justify-content-center gap-1.5 shadow-2xs py-2.5" @click="fetchBooks()">
+                    <i class="bi bi-search"></i>
+                    <span>Cari Koleksi</span>
+                </button>
             </div>
         </div>
-    </nav>
 
-    <!-- Hero Search Section -->
-    <header class="hero-banner text-center">
-        <div class="container" style="max-width: 800px;">
-            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1 rounded-pill fs-8 fw-bold mb-3 shadow-2xs">
-                <i class="bi bi-search me-1"></i> Online Public Access Catalog
+        <!-- DDC Quick Categories Filter -->
+        <div class="d-flex align-items-center gap-2 pt-2.5 border-t border-slate-100 flex-wrap">
+            <span class="text-slate-500 text-xs font-bold me-1 flex-shrink-0 d-inline-flex align-items-center gap-1">
+                <i class="bi bi-tags-fill text-blue-600"></i> Klasifikasi DDC:
             </span>
-            <h1 class="fw-extrabold display-6 text-white mb-2">Pencarian Koleksi Perpustakaan</h1>
-            <p class="text-slate-300 fs-6 mb-0">Temukan buku teks pelajaran, novel fiksi, publikasi karya ilmiah, modul pembelajaran, dan e-book digital.</p>
+            <div class="d-flex flex-wrap gap-1.5 align-items-center">
+                <button type="button" class="badge rounded-pill text-xs font-semibold px-3 py-1.5 border transition cursor-pointer"
+                        :class="activeDdc === '' ? 'bg-blue-600 text-white border-blue-600 shadow-2xs' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'"
+                        @click="setDdcFilter('')">
+                    Semua Koleksi
+                </button>
+                <button type="button" class="badge rounded-pill text-xs font-semibold px-3 py-1.5 border transition cursor-pointer"
+                        :class="activeDdc === '000' ? 'bg-blue-600 text-white border-blue-600 shadow-2xs' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'"
+                        @click="setDdcFilter('000')">
+                    000 Umum &amp; Komputer
+                </button>
+                <button type="button" class="badge rounded-pill text-xs font-semibold px-3 py-1.5 border transition cursor-pointer"
+                        :class="activeDdc === '100' ? 'bg-blue-600 text-white border-blue-600 shadow-2xs' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'"
+                        @click="setDdcFilter('100')">
+                    100 Filsafat
+                </button>
+                <button type="button" class="badge rounded-pill text-xs font-semibold px-3 py-1.5 border transition cursor-pointer"
+                        :class="activeDdc === '200' ? 'bg-blue-600 text-white border-blue-600 shadow-2xs' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'"
+                        @click="setDdcFilter('200')">
+                    200 Agama &amp; Budi Pekerti
+                </button>
+                <button type="button" class="badge rounded-pill text-xs font-semibold px-3 py-1.5 border transition cursor-pointer"
+                        :class="activeDdc === '300' ? 'bg-blue-600 text-white border-blue-600 shadow-2xs' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'"
+                        @click="setDdcFilter('300')">
+                    300 Ilmu Sosial
+                </button>
+                <button type="button" class="badge rounded-pill text-xs font-semibold px-3 py-1.5 border transition cursor-pointer"
+                        :class="activeDdc === '400' ? 'bg-blue-600 text-white border-blue-600 shadow-2xs' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'"
+                        @click="setDdcFilter('400')">
+                    400 Bahasa &amp; Sastra
+                </button>
+                <button type="button" class="badge rounded-pill text-xs font-semibold px-3 py-1.5 border transition cursor-pointer"
+                        :class="activeDdc === '500' ? 'bg-blue-600 text-white border-blue-600 shadow-2xs' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'"
+                        @click="setDdcFilter('500')">
+                    500 Sains &amp; Matematika
+                </button>
+                <button type="button" class="badge rounded-pill text-xs font-semibold px-3 py-1.5 border transition cursor-pointer"
+                        :class="activeDdc === '600' ? 'bg-blue-600 text-white border-blue-600 shadow-2xs' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'"
+                        @click="setDdcFilter('600')">
+                    600 Teknologi &amp; Terapan
+                </button>
+                <button type="button" class="badge rounded-pill text-xs font-semibold px-3 py-1.5 border transition cursor-pointer"
+                        :class="activeDdc === '700' ? 'bg-blue-600 text-white border-blue-600 shadow-2xs' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'"
+                        @click="setDdcFilter('700')">
+                    700 Kesenian &amp; Olahraga
+                </button>
+                <button type="button" class="badge rounded-pill text-xs font-semibold px-3 py-1.5 border transition cursor-pointer"
+                        :class="activeDdc === '800' ? 'bg-blue-600 text-white border-blue-600 shadow-2xs' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'"
+                        @click="setDdcFilter('800')">
+                    800 Karya Sastra &amp; Fiksi
+                </button>
+                <button type="button" class="badge rounded-pill text-xs font-semibold px-3 py-1.5 border transition cursor-pointer"
+                        :class="activeDdc === '900' ? 'bg-blue-600 text-white border-blue-600 shadow-2xs' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'"
+                        @click="setDdcFilter('900')">
+                    900 Sejarah &amp; Geografi
+                </button>
+            </div>
         </div>
-    </header>
+    </div>
 
-    <!-- Main Container -->
-    <main class="container mb-5">
-        <!-- Floating Search Box Card -->
-        <div class="row justify-content-center search-card-container mb-5">
-            <div class="col-12 col-lg-10">
-                <div class="card border-0 shadow-lg rounded-3xl p-4 bg-white">
-                    <div class="row g-2 align-items-center">
-                        <div class="col-12 col-md-9 position-relative">
-                            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-slate-400 fs-5"></i>
-                            <input type="text" v-model="searchQuery" @input="filterBooks"
-                                   class="form-control form-control-lg ps-5 rounded-2xl border-slate-200 bg-slate-50 fs-6 font-medium"
-                                   placeholder="Ketik judul buku, pengarang, penerbit, atau kode DDC..." autofocus>
-                        </div>
-                        <div class="col-12 col-md-3">
-                            <button @click="filterBooks" class="btn btn-primary btn-lg w-100 rounded-2xl fw-bold fs-6 shadow-2xs">
-                                <i class="bi bi-search me-1"></i> Cari Buku
-                            </button>
-                        </div>
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         RESULTS SUMMARY TOOLBAR & VIEW TOGGLE
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2">
+            <h5 class="fw-bold text-slate-800 fs-6 mb-0">Daftar Koleksi Tersedia</h5>
+            <span class="badge bg-blue-50 text-blue-700 border border-blue-200 font-bold px-2.5 py-1 rounded-pill text-xs">
+                {{ filteredBooks.length }} Judul Buku
+            </span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button v-if="searchQuery || activeDdc" type="button" class="btn btn-sm btn-outline-secondary rounded-xl px-3 py-1.5 text-xs font-semibold shadow-2xs bg-white" @click="resetSearch()">
+                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filter
+            </button>
+            <button type="button" class="btn btn-sm btn-light border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-semibold shadow-2xs bg-white text-slate-700" @click="fetchBooks()">
+                <i class="bi bi-arrow-repeat" :class="{'spin': loading}"></i> Segarkan
+            </button>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         MAIN BOOK GRID / SKELETON LOADING / EMPTY STATE
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Loading State -->
+    <div v-if="loading" class="card border-0 shadow-2xs rounded-2xl bg-white p-5 text-center my-3">
+        <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+        <span class="text-slate-500 text-xs font-semibold">Menghubungkan ke katalog perpustakaan digital...</span>
+    </div>
+
+    <!-- Empty State -->
+    <div v-else-if="filteredBooks.length === 0" class="card border-0 shadow-2xs rounded-2xl bg-white p-5 text-center my-3">
+        <div class="w-16 h-16 rounded-full bg-slate-100 text-slate-400 d-inline-flex align-items-center justify-content-center fs-2 mb-3 shadow-2xs">
+            <i class="bi bi-journal-x"></i>
+        </div>
+        <h6 class="fw-bold text-slate-800 text-base mb-1">Koleksi Buku Tidak Ditemukan</h6>
+        <p class="text-slate-400 text-xs mb-3 mx-auto" style="max-width: 440px;">
+            Tidak ditemukan judul buku atau pengarang yang sesuai dengan kata kunci "{{ searchQuery || activeDdc }}".
+        </p>
+        <div>
+            <button type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-4 py-2 text-xs shadow-2xs" @click="resetSearch()">
+                <i class="bi bi-arrow-counterclockwise me-1.5"></i> Tampilkan Semua Koleksi
+            </button>
+        </div>
+    </div>
+
+    <!-- Book Grid Cards -->
+    <div v-else class="row g-3 mb-5">
+        <div v-for="b in paginatedBooks" :key="b.id" class="col-12 col-sm-6 col-md-4 col-xl-3">
+            <div class="card border-0 shadow-2xs rounded-2xl bg-white h-100 overflow-hidden transition hover:-translate-y-1 hover:shadow-xs d-flex flex-column">
+                <!-- Cover Thumbnail Area -->
+                <div class="position-relative d-flex align-items-center justify-content-center overflow-hidden"
+                     style="height: 180px; background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%);">
+                    <img v-if="b.cover" :src="b.cover" class="w-100 h-100 object-fit-cover" alt="Cover Buku">
+                    <div v-else class="text-center text-white/90 p-3">
+                        <i class="bi bi-book fs-1 mb-1 d-block text-white/80"></i>
+                        <span class="font-bold text-xs d-block text-white/90 text-truncate px-2">{{ b.judul }}</span>
                     </div>
 
-                    <!-- DDC Quick Categories Filter -->
-                    <div class="d-flex flex-wrap gap-1.5 mt-3 pt-3 border-top border-slate-100 align-items-center">
-                        <small class="fw-bold text-slate-500 me-2 fs-8"><i class="bi bi-tags me-1"></i> Klasifikasi DDC:</small>
-                        <button class="custom-filter-pill" :class="{'active': activeDdc === ''}" @click="setDdcFilter('')">Semua</button>
-                        <button class="custom-filter-pill" :class="{'active': activeDdc === '000'}" @click="setDdcFilter('000')">000 Karya Umum</button>
-                        <button class="custom-filter-pill" :class="{'active': activeDdc === '300'}" @click="setDdcFilter('300')">300 Ilmu Sosial</button>
-                        <button class="custom-filter-pill" :class="{'active': activeDdc === '500'}" @click="setDdcFilter('500')">500 Sains & Matematika</button>
-                        <button class="custom-filter-pill" :class="{'active': activeDdc === '600'}" @click="setDdcFilter('600')">600 Teknologi</button>
-                        <button class="custom-filter-pill" :class="{'active': activeDdc === '800'}" @click="setDdcFilter('800')">800 Sastra</button>
-                    </div>
+                    <!-- E-Book Badge -->
+                    <span v-if="b.is_ebook" class="badge bg-purple-600 text-white position-absolute top-0 end-0 m-2.5 rounded-pill px-2 py-0.5 text-[10px] font-bold shadow-2xs">
+                        <i class="bi bi-file-earmark-pdf me-0.5"></i> E-Book
+                    </span>
+                    <!-- DDC Badge -->
+                    <span class="badge bg-slate-900/80 text-white backdrop-blur position-absolute bottom-0 start-0 m-2.5 rounded-lg px-2 py-1 text-[10px] font-mono font-bold shadow-2xs">
+                        DDC {{ b.klasifikasi_ddc || '000' }}
+                    </span>
                 </div>
-            </div>
-        </div>
 
-        <!-- Results Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h4 class="fw-bold text-slate-900 mb-0">Daftar Koleksi Tersedia</h4>
-                <small class="text-muted fs-7">Menampilkan {{ filteredBooks.length }} judul buku katalog publik.</small>
-            </div>
-            <div v-if="searchQuery || activeDdc">
-                <button @click="resetSearch" class="btn btn-sm btn-outline-secondary rounded-xl px-3 py-1.5 text-xs font-semibold">
-                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Pencarian
-                </button>
-            </div>
-        </div>
-
-        <!-- Loading State -->
-        <div v-if="loading" class="p-5 text-center">
-            <div class="spinner-border text-primary spinner-border-sm mb-2" role="status"></div>
-            <p class="text-muted fs-7 mb-0">Memuat katalog buku...</p>
-        </div>
-
-        <!-- Seamless Empty State -->
-        <div v-else-if="filteredBooks.length === 0" class="card border-0 shadow-2xs rounded-3xl p-5 text-center bg-white">
-            <div class="d-inline-flex p-4 rounded-3xl bg-blue-50 text-blue-600 mb-3 mx-auto shadow-2xs">
-                <i class="bi bi-book fs-1"></i>
-            </div>
-            <h5 class="fw-bold text-slate-800 mb-1">Buku Tidak Ditemukan</h5>
-            <p class="text-muted fs-7 mx-auto mb-4" style="max-width: 420px;">
-                Koleksi buku dengan kata kunci "{{ searchQuery }}" tidak ditemukan di dalam sistem. Coba gunakan kata kunci lain atau pilih kategori klasifikasi DDC di atas.
-            </p>
-            <div>
-                <button @click="resetSearch" class="btn btn-primary btn-sm rounded-xl px-4 py-2 text-xs font-bold shadow-2xs">
-                    <i class="bi bi-arrow-counterclockwise me-1"></i> Tampilkan Semua Buku
-                </button>
-            </div>
-        </div>
-
-        <!-- Book Cards Grid -->
-        <div v-else class="row g-4">
-            <div v-for="b in filteredBooks" :key="b.id" class="col-12 col-sm-6 col-lg-3">
-                <div class="book-card">
-                    <div class="book-cover-wrap">
-                        <img v-if="b.cover" :src="b.cover" class="w-100 h-100 object-fit-cover" alt="Cover">
-                        <i v-else class="bi bi-journal-richtext"></i>
-                        <span v-if="b.is_ebook" class="badge bg-primary position-absolute top-0 end-0 m-2.5 rounded-pill px-2 py-0.5 fs-9 font-semibold">
-                            <i class="bi bi-file-earmark-pdf me-1"></i> E-Book
+                <!-- Card Content Details -->
+                <div class="p-3.5 d-flex flex-column flex-grow-1">
+                    <div class="d-flex align-items-center justify-content-between gap-1 mb-1.5">
+                        <span class="badge bg-slate-100 text-slate-700 rounded-md px-2 py-0.5 text-[10px] font-semibold text-truncate" style="max-width: 140px;">
+                            {{ b.kategori || b.jenis_buku || 'Koleksi Umum' }}
+                        </span>
+                        <span v-if="(parseInt(b.total_tersedia) || parseInt(b.total_eksemplar) || 1) > 0" class="badge bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-pill px-2 py-0.5 text-[10px] font-bold">
+                            <i class="bi bi-check-circle me-0.5"></i> Tersedia ({{ b.total_tersedia || b.total_eksemplar || 1 }})
+                        </span>
+                        <span v-else class="badge bg-amber-50 text-amber-700 border border-amber-200 rounded-pill px-2 py-0.5 text-[10px] font-bold">
+                            <i class="bi bi-clock-history me-0.5"></i> Dipinjam
                         </span>
                     </div>
 
-                    <div class="p-3 d-flex flex-column flex-grow-1">
-                        <div class="d-flex align-items-center gap-1.5 mb-1.5">
-                            <span class="badge bg-sky-50 text-sky-700 border border-sky-200/80 rounded-md px-1.5 py-0.5 fs-9 font-bold">
-                                DDC: {{ b.klasifikasi_ddc || '000' }}
-                            </span>
-                            <span class="badge bg-slate-100 text-slate-700 rounded-pill px-2 py-0.5 fs-9">
-                                {{ b.kategori || b.jenis_buku || 'Umum' }}
-                            </span>
-                        </div>
+                    <h6 class="fw-bold text-slate-900 fs-7 mb-1 leading-snug line-clamp-2" :title="b.judul" style="min-height: 2.3rem;">
+                        {{ b.judul }}
+                    </h6>
 
-                        <h6 class="fw-bold text-slate-900 mb-1 text-truncate-2 fs-7" :title="b.judul" style="min-height: 2.4rem;">
-                            {{ b.judul }}
-                        </h6>
+                    <div class="text-[11px] text-slate-500 mb-1 text-truncate">
+                        <i class="bi bi-person me-1 text-slate-400"></i>{{ b.penulis || b.pengarang || 'Penulis Anonim' }}
+                    </div>
 
-                        <small class="text-slate-600 mb-0.5 text-truncate fw-medium">
-                            <i class="bi bi-person me-1 text-muted"></i>{{ b.penulis || b.pengarang || '-' }}
-                        </small>
-                        <small class="text-muted mb-3 text-truncate fs-8">
-                            <i class="bi bi-building me-1"></i>{{ b.penerbit || '-' }} ({{ b.tahun_terbit || '-' }})
-                        </small>
+                    <div class="text-[11px] text-slate-400 mb-3 text-truncate">
+                        <i class="bi bi-building me-1"></i>{{ b.penerbit || '-' }} <span v-if="b.tahun_terbit">({{ b.tahun_terbit }})</span>
+                    </div>
 
-                        <div class="mt-auto pt-2 border-top border-slate-100 d-flex justify-content-between align-items-center">
-                            <span v-if="(b.total_tersedia || 1) > 0" class="badge bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-pill px-2 py-0.5 fs-9 font-semibold">
-                                <i class="bi bi-check-circle me-1"></i> Tersedia ({{ b.total_tersedia || b.total_eksemplar || 1 }})
-                            </span>
-                            <span v-else class="badge bg-amber-50 text-amber-700 border border-amber-200 rounded-pill px-2 py-0.5 fs-9 font-semibold">
-                                <i class="bi bi-hourglass-split me-1"></i> Dipinjam
-                            </span>
-
-                            <button @click="showDetail(b)" class="btn btn-outline-primary btn-sm rounded-lg px-2.5 py-1 text-xs font-semibold">
-                                Detail
-                            </button>
-                        </div>
+                    <div class="mt-auto pt-2.5 border-t border-slate-100 d-flex align-items-center justify-content-between gap-2">
+                        <span class="text-[11px] font-mono text-slate-400 font-semibold text-truncate">
+                            <i class="bi bi-upc-scan me-1"></i>{{ b.isbn || b.barcode || '-' }}
+                        </span>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-xl font-bold px-3 py-1 text-xs shadow-2xs" @click="showDetail(b)">
+                            Detail
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
-    </main>
+    </div>
 
-    <!-- Modal Detail Buku -->
+    <!-- Pagination Bar -->
+    <div v-if="filteredBooks.length > perPage" class="card border-0 shadow-2xs rounded-2xl bg-white p-3 mb-5 d-flex flex-wrap align-items-center justify-content-between gap-2 text-xs text-slate-500">
+        <span>Menampilkan {{ (currentPage - 1) * perPage + 1 }} s/d {{ Math.min(currentPage * perPage, filteredBooks.length) }} dari {{ filteredBooks.length }} buku</span>
+        <div class="d-flex align-items-center gap-1">
+            <button type="button" class="btn btn-xs btn-outline-secondary rounded-lg px-2.5 py-1" :disabled="currentPage === 1" @click="currentPage--">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+            <span class="px-2 font-bold">{{ currentPage }} / {{ totalPages }}</span>
+            <button type="button" class="btn btn-xs btn-outline-secondary rounded-lg px-2.5 py-1" :disabled="currentPage === totalPages" @click="currentPage++">
+                <i class="bi bi-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         MODAL DETAIL KOLEKSI BUKU
+         ═══════════════════════════════════════════════════════════════════════ -->
     <div class="modal fade" id="modalDetailBuku" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow-lg rounded-3xl overflow-hidden" v-if="selectedBook">
                 <div class="modal-header bg-slate-900 text-white p-4 border-0">
-                    <h5 class="modal-title fw-bold fs-6 d-flex align-items-center gap-2">
-                        <i class="bi bi-journal-text text-primary"></i>
-                        <span>Detail Koleksi Buku</span>
-                    </h5>
+                    <div class="d-flex align-items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 d-flex align-items-center justify-content-center fs-5">
+                            <i class="bi bi-journal-text"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title font-bold fs-6 mb-0">Detail Informasi Koleksi Pustaka</h5>
+                            <small class="text-slate-400 text-xs">Informasi lengkap bibliografi &amp; eksemplar buku</small>
+                        </div>
+                    </div>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4 bg-slate-50/50">
-                    <h5 class="fw-bold text-slate-900 mb-2">{{ selectedBook.judul }}</h5>
-                    <div class="d-flex flex-wrap gap-2 mb-3">
-                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fs-9 fw-semibold">
-                            DDC: {{ selectedBook.klasifikasi_ddc || '000' }}
-                        </span>
-                        <span class="badge bg-slate-100 text-slate-700 rounded-pill px-2.5 py-1 fs-9 fw-semibold">
-                            ISBN: {{ selectedBook.isbn || '-' }}
-                        </span>
-                    </div>
+                    <div class="row g-4">
+                        <!-- Left: Cover -->
+                        <div class="col-12 col-md-4 text-center">
+                            <div class="rounded-2xl overflow-hidden shadow-xs mb-3 mx-auto" style="max-width: 220px; height: 280px; background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);">
+                                <img v-if="selectedBook.cover" :src="selectedBook.cover" class="w-100 h-100 object-fit-cover" alt="Cover">
+                                <div v-else class="w-100 h-100 d-flex flex-column align-items-center justify-content-center text-white p-3">
+                                    <i class="bi bi-book fs-1 mb-2"></i>
+                                    <span class="font-bold text-xs text-white/90">{{ selectedBook.judul }}</span>
+                                </div>
+                            </div>
+                            <span v-if="selectedBook.is_ebook" class="badge bg-purple-100 text-purple-700 border border-purple-200 rounded-pill px-3 py-1 text-xs font-bold">
+                                <i class="bi bi-file-earmark-pdf me-1"></i> E-Book Tersedia
+                            </span>
+                        </div>
 
-                    <div class="p-3 rounded-2xl bg-white border border-slate-100 mb-3">
-                        <div class="row g-2 text-xs">
-                            <div class="col-4 text-slate-500 font-medium">Pengarang</div>
-                            <div class="col-8 fw-bold text-slate-800">{{ selectedBook.penulis || selectedBook.pengarang || '-' }}</div>
-
-                            <div class="col-4 text-slate-500 font-medium">Penerbit</div>
-                            <div class="col-8 text-slate-800">{{ selectedBook.penerbit || '-' }} ({{ selectedBook.tahun_terbit || '-' }})</div>
-
-                            <div class="col-4 text-slate-500 font-medium">Kategori</div>
-                            <div class="col-8 text-slate-800">{{ selectedBook.kategori || selectedBook.jenis_buku || 'Umum' }}</div>
-
-                            <div class="col-4 text-slate-500 font-medium">Status Fisik</div>
-                            <div class="col-8">
-                                <span v-if="(selectedBook.total_tersedia || 1) > 0" class="badge bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-pill px-2 py-0.5 fs-9">
-                                    Tersedia di Perpustakaan ({{ selectedBook.total_tersedia || 1 }} Eksemplar)
+                        <!-- Right: Details -->
+                        <div class="col-12 col-md-8">
+                            <h5 class="font-bold text-slate-900 fs-6 mb-1">{{ selectedBook.judul }}</h5>
+                            <div class="d-flex flex-wrap gap-1.5 mb-3">
+                                <span class="badge bg-blue-50 text-blue-700 border border-blue-200 rounded-pill px-2.5 py-1 text-[11px] font-bold">
+                                    DDC {{ selectedBook.klasifikasi_ddc || '000' }}
                                 </span>
-                                <span v-else class="badge bg-amber-50 text-amber-700 border border-amber-200 rounded-pill px-2 py-0.5 fs-9">
-                                    Sedang Dipinjam
+                                <span class="badge bg-slate-100 text-slate-700 rounded-pill px-2.5 py-1 text-[11px] font-semibold">
+                                    {{ selectedBook.kategori || selectedBook.jenis_buku || 'Umum' }}
                                 </span>
+                                <span class="badge bg-slate-100 text-slate-700 font-mono rounded-pill px-2.5 py-1 text-[11px]">
+                                    ISBN: {{ selectedBook.isbn || '-' }}
+                                </span>
+                            </div>
+
+                            <div class="bg-white rounded-2xl border border-slate-200/80 p-3.5 mb-3">
+                                <div class="row g-2 text-xs">
+                                    <div class="col-4 text-slate-400 font-medium">Pengarang / Penulis</div>
+                                    <div class="col-8 font-bold text-slate-800">{{ selectedBook.penulis || selectedBook.pengarang || '-' }}</div>
+
+                                    <div class="col-4 text-slate-400 font-medium">Penerbit &amp; Tahun</div>
+                                    <div class="col-8 text-slate-800">{{ selectedBook.penerbit || '-' }} ({{ selectedBook.tahun_terbit || '-' }})</div>
+
+                                    <div class="col-4 text-slate-400 font-medium">Tempat Terbit</div>
+                                    <div class="col-8 text-slate-800">{{ selectedBook.kota_terbit || '-' }}</div>
+
+                                    <div class="col-4 text-slate-400 font-medium">Jumlah Halaman</div>
+                                    <div class="col-8 text-slate-800">{{ selectedBook.jumlah_halaman ? selectedBook.jumlah_halaman + ' hlm' : '-' }}</div>
+
+                                    <div class="col-4 text-slate-400 font-medium">Lokasi Rak</div>
+                                    <div class="col-8 font-bold text-blue-700">{{ selectedBook.nama_rak || selectedBook.lokasi_rak || 'Rak Koleksi Umum' }}</div>
+
+                                    <div class="col-4 text-slate-400 font-medium">Ketersediaan Fisik</div>
+                                    <div class="col-8">
+                                        <span v-if="(parseInt(selectedBook.total_tersedia) || parseInt(selectedBook.total_eksemplar) || 1) > 0" class="badge bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-pill px-2.5 py-1 text-[11px] font-bold">
+                                            <i class="bi bi-check-circle me-1"></i> Tersedia di Perpustakaan ({{ selectedBook.total_tersedia || selectedBook.total_eksemplar || 1 }} Eksemplar)
+                                        </span>
+                                        <span v-else class="badge bg-amber-50 text-amber-700 border border-amber-200 rounded-pill px-2.5 py-1 text-[11px] font-bold">
+                                            <i class="bi bi-hourglass-split me-1"></i> Sedang Dipinjam
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div v-if="selectedBook.sinopsis || selectedBook.deskripsi" class="p-3 bg-white rounded-2xl border border-slate-200/80 text-xs">
+                                <span class="font-bold text-slate-700 d-block mb-1">Sinopsis &amp; Ringkasan:</span>
+                                <p class="text-slate-500 mb-0 leading-relaxed">{{ selectedBook.sinopsis || selectedBook.deskripsi }}</p>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer bg-white border-top border-slate-100 p-3 px-4">
+                <div class="modal-footer bg-white border-top border-slate-100 p-3 px-4 d-flex justify-content-between align-items-center">
+                    <span class="text-slate-400 text-xs">Silakan kunjungi perpustakaan sekolah untuk peminjaman fisik.</span>
                     <button type="button" class="btn btn-secondary btn-sm rounded-xl px-4 py-2 text-xs font-semibold" data-bs-dismiss="modal">Tutup</button>
                 </div>
             </div>
@@ -300,64 +329,105 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    const { createApp, ref, computed, onMounted } = Vue;
+if (typeof Vue !== 'undefined') {
+    const { ref, computed, onMounted } = Vue;
 
-    createApp({
+    const opacAppConfig = {
         setup() {
             const loading = ref(false);
             const books = ref([]);
             const searchQuery = ref('<?= htmlspecialchars($data['query'] ?? '', ENT_QUOTES, 'UTF-8') ?>');
             const activeDdc = ref('');
             const selectedBook = ref(null);
+            const currentPage = ref(1);
+            const perPage = ref(16);
             let detailModalInstance = null;
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentTenantId = urlParams.get('tenant_id') || '<?= htmlspecialchars($data['active_tenant_id'] ?? ($activeTenantId ?? ''), ENT_QUOTES, 'UTF-8') ?>';
+            const getTenantParam = (prefix = '?') => {
+                return currentTenantId ? `${prefix}tenant_id=${encodeURIComponent(currentTenantId)}` : '';
+            };
 
             const fetchBooks = async () => {
                 loading.value = true;
                 try {
-                    const res = await axios.get('<?= $this->getBaseUrl() ?>/api/v1/perpustakaan/katalog');
+                    let url = '<?= $this->getBaseUrl() ?>/api/v1/perpustakaan/katalog' + getTenantParam('?');
+                    if (searchQuery.value) {
+                        url += `&search=${encodeURIComponent(searchQuery.value)}`;
+                    }
+                    const res = await axios.get(url);
                     if (res.data && res.data.success) {
-                        books.value = res.data.data.list || [];
+                        if (Array.isArray(res.data.data)) {
+                            books.value = res.data.data;
+                        } else if (res.data.data && Array.isArray(res.data.data.list)) {
+                            books.value = res.data.data.list;
+                        } else {
+                            books.value = [];
+                        }
                     }
                 } catch (e) {
-                    console.error('Error load books:', e);
+                    console.error('Error load OPAC books:', e);
                 } finally {
                     loading.value = false;
                 }
             };
 
+            let searchTimeout = null;
+            const debounceSearch = () => {
+                currentPage.value = 1;
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    fetchBooks();
+                }, 350);
+            };
+
             const filteredBooks = computed(() => {
                 return books.value.filter(b => {
-                    const q = searchQuery.value.toLowerCase();
+                    const q = searchQuery.value.toLowerCase().trim();
                     const matchQ = !q ||
                         (b.judul && b.judul.toLowerCase().includes(q)) ||
                         (b.penulis && b.penulis.toLowerCase().includes(q)) ||
+                        (b.pengarang && b.pengarang.toLowerCase().includes(q)) ||
                         (b.penerbit && b.penerbit.toLowerCase().includes(q)) ||
                         (b.isbn && b.isbn.toLowerCase().includes(q)) ||
                         (b.klasifikasi_ddc && b.klasifikasi_ddc.toLowerCase().includes(q));
 
-                    const matchDdc = !activeDdc.value || (b.klasifikasi_ddc && b.klasifikasi_ddc.startsWith(activeDdc.value.substring(0, 1)));
+                    const ddcCode = (b.klasifikasi_ddc || '').toString().trim();
+                    const matchDdc = !activeDdc.value || (ddcCode && ddcCode.startsWith(activeDdc.value.substring(0, 1)));
 
-                    return matchQ && matchDdc && (b.status_opac !== 0);
+                    return matchQ && matchDdc && (b.status_opac !== 0 && b.status_opac !== false);
                 });
+            });
+
+            const totalPages = computed(() => {
+                return Math.ceil(filteredBooks.value.length / perPage.value) || 1;
+            });
+
+            const paginatedBooks = computed(() => {
+                const start = (currentPage.value - 1) * perPage.value;
+                return filteredBooks.value.slice(start, start + perPage.value);
             });
 
             const setDdcFilter = (code) => {
                 activeDdc.value = code;
+                currentPage.value = 1;
             };
 
             const resetSearch = () => {
                 searchQuery.value = '';
                 activeDdc.value = '';
+                currentPage.value = 1;
+                fetchBooks();
             };
 
             const showDetail = (b) => {
                 selectedBook.value = b;
-                if (!detailModalInstance) {
-                    const el = document.getElementById('modalDetailBuku');
-                    if (el) detailModalInstance = new bootstrap.Modal(el);
+                const el = document.getElementById('modalDetailBuku');
+                if (el && typeof bootstrap !== 'undefined') {
+                    detailModalInstance = bootstrap.Modal.getOrCreateInstance(el);
+                    detailModalInstance.show();
                 }
-                if (detailModalInstance) detailModalInstance.show();
             };
 
             onMounted(() => {
@@ -370,16 +440,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 searchQuery,
                 activeDdc,
                 selectedBook,
+                currentPage,
+                perPage,
+                totalPages,
                 filteredBooks,
+                paginatedBooks,
                 setDdcFilter,
                 resetSearch,
-                showDetail
+                debounceSearch,
+                showDetail,
+                fetchBooks
             };
         }
-    }).mount('#opacApp');
-});
+    };
+
+    if (window.VueAppRegistry && typeof window.VueAppRegistry.register === 'function') {
+        window.VueAppRegistry.register('#opacPublicApp', opacAppConfig);
+        if (typeof window.VueAppRegistry.mountAll === 'function') {
+            window.VueAppRegistry.mountAll();
+        }
+    } else {
+        document.addEventListener('DOMContentLoaded', () => {
+            Vue.createApp(opacAppConfig).mount('#opacPublicApp');
+        });
+    }
+}
 </script>
-<!-- Bootstrap 5 JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+
+<style>
+.spin {
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    100% { transform: rotate(360deg); }
+}
+[v-cloak] { display: none !important; }
+</style>

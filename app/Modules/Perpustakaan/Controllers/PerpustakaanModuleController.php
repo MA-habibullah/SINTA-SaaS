@@ -131,6 +131,7 @@ class PerpustakaanModuleController extends BaseController {
     }
 
     public function opacPublic(): void {
+        $tenantId = $this->getResolvedTenantId();
         $q = trim($_GET['q'] ?? '');
         $kategori = trim($_GET['kategori'] ?? '');
         $list = $this->model->searchOpacPublic($q, $kategori, 50);
@@ -140,7 +141,9 @@ class PerpustakaanModuleController extends BaseController {
             'query' => $q,
             'kategori' => $kategori,
             'list' => $list,
-            'ddc_categories' => $this->model->getKategoriDdcList()
+            'ddc_categories' => $this->model->getKategoriDdcList(),
+            'active_tenant_id' => $tenantId,
+            'is_super_admin' => $this->isSuperAdmin()
         ];
         $this->render('perpustakaan/opac_public', $data);
     }

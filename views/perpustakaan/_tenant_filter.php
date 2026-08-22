@@ -69,16 +69,16 @@ $heroDesc = $heroDesc ?? 'Sistem Manajemen Perpustakaan Terintegrasi (ILS) Akred
         <div class="d-flex align-items-center gap-2 flex-wrap flex-shrink-0">
             <!-- Active School / Tenant Filter Selector Dropdown (HANYA UNTUK SUPER ADMIN) -->
             <?php if ($isSuperAdmin && !empty($tenantsList)): ?>
-            <div class="d-flex align-items-center gap-2 bg-white/15 p-2 rounded-xl border border-white/25 shadow-xs" style="backdrop-filter: blur(6px);">
+            <div class="d-flex align-items-center gap-2 bg-white/15 p-2 rounded-xl border border-white/25 shadow-xs" style="backdrop-filter: blur(6px); width: fit-content;">
                 <i class="bi bi-building text-white fs-6 ms-1.5"></i>
                 <label for="selectFilterTenant" class="visually-hidden">Pilih Sekolah</label>
-                <select id="selectFilterTenant" name="tenant_id_filter" class="form-select form-select-sm border-0 text-xs font-semibold bg-white text-slate-800 rounded-lg shadow-2xs cursor-pointer" style="min-width: 220px;" onchange="switchSuperAdminTenant(this.value)" aria-label="Pilih Sekolah">
+                <select id="selectFilterTenant" name="tenant_id_filter" class="form-select form-select-sm border-0 text-xs font-semibold bg-white text-slate-800 rounded-lg shadow-2xs cursor-pointer" style="min-width: 240px; max-width: 280px; width: auto !important;" onchange="switchSuperAdminTenant(this.value)" aria-label="Pilih Sekolah">
                     <?php if (empty($activeTenantId)): ?>
                         <option value="" selected disabled>— PILIH SEKOLAH / TENANT —</option>
                     <?php endif; ?>
                     <?php foreach ($tenantsList as $t): ?>
                         <option value="<?= htmlspecialchars($t['id']) ?>" <?= ($t['id'] === $activeTenantId) ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($t['nama_sekolah']) ?>
+                            <?= htmlspecialchars($t['nama_sekolah']) ?><?= !empty($t['npsn']) ? ' (' . htmlspecialchars($t['npsn']) . ')' : '' ?>
                         </option>
                     <?php endforeach; ?>
                 </select>

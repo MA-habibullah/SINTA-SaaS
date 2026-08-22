@@ -303,13 +303,21 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
 
     <!-- TAB NAVIGATION (Hanya jika bukan sub-module) -->
     <?php if (empty($is_sub_module)): ?>
-    <div class="card border-0 shadow-sm rounded-4 mb-4">
-        <div class="card-body p-2 bg-white rounded-4">
-            <div class="nav-tabs-wrapper">
-                <ul class="nav nav-tabs border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-3 px-2">
+    <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-2 mb-4 position-relative">
+        <div class="d-flex align-items-center position-relative">
+            <button type="button" 
+                    class="btn btn-sm btn-light border border-slate-200/80 rounded-xl shadow-2xs me-1.5 d-none d-md-flex align-items-center justify-content-center flex-shrink-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition" 
+                    style="width: 34px; height: 34px; z-index: 5;" 
+                    onclick="document.getElementById('tracerStudyNavTabs')?.scrollBy({ left: -220, behavior: 'smooth' })"
+                    title="Geser ke Kiri">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+
+            <div class="nav-tabs-wrapper flex-grow-1 overflow-hidden position-relative">
+                <ul class="nav nav-pills border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-1.5 px-1 user-select-none" id="tracerStudyNavTabs" role="tablist">
                     <li class="nav-item">
                         <button class="nav-link border-0 fw-bold px-3.5 py-2.5 fs-7 transition" 
-                                :class="{active: activeTab === 'kuliah'}"
+                                :class="{active: activeTab === 'kuliah'}" 
                                 @click="activeTab = 'kuliah'">
                             <i class="bi bi-mortarboard me-2 fs-6"></i> Riwayat Kuliah
                             <span class="badge bg-primary ms-1.5 rounded-pill">{{ riwayatKuliah.length }}</span>
@@ -317,7 +325,7 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
                     </li>
                     <li class="nav-item">
                         <button class="nav-link border-0 fw-bold px-3.5 py-2.5 fs-7 transition" 
-                                :class="{active: activeTab === 'pekerjaan'}"
+                                :class="{active: activeTab === 'pekerjaan'}" 
                                 @click="activeTab = 'pekerjaan'">
                             <i class="bi bi-briefcase me-2 fs-6"></i> Riwayat Pekerjaan
                             <span class="badge bg-success ms-1.5 rounded-pill">{{ riwayatPekerjaan.length }}</span>
@@ -325,6 +333,14 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
                     </li>
                 </ul>
             </div>
+
+            <button type="button" 
+                    class="btn btn-sm btn-light border border-slate-200/80 rounded-xl shadow-2xs ms-1.5 d-none d-md-flex align-items-center justify-content-center flex-shrink-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition" 
+                    style="width: 34px; height: 34px; z-index: 5;" 
+                    onclick="document.getElementById('tracerStudyNavTabs')?.scrollBy({ left: 220, behavior: 'smooth' })"
+                    title="Geser ke Kanan">
+                <i class="bi bi-chevron-right"></i>
+            </button>
         </div>
     </div>
     <?php endif; ?>
