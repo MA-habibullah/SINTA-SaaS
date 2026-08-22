@@ -45,8 +45,43 @@ class PersuratanModuleController extends BaseController
         }
     }
 
+    protected function isUserSuperAdmin(): bool
+    {
+        $role = $_SESSION['user']['role'] ?? $_SESSION['role_name'] ?? '';
+        if (in_array(strtolower($role), ['super_admin', 'super admin', 'superadmin', 'admin platform'])) {
+            return true;
+        }
+        $roles = $_SESSION['roles'] ?? [];
+        foreach ($roles as $r) {
+            if (in_array(strtolower($r), ['super_admin', 'super admin', 'superadmin', 'admin platform'])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private function getEffectiveTenantId(): string
     {
+        $isSuperAdmin = $this->isUserSuperAdmin();
+
+        // 1. Cek parameter GET / POST / JSON jika super admin
+        if ($isSuperAdmin) {
+            $reqTenant = $_GET['tenant_id'] ?? ($_POST['tenant_id'] ?? null);
+            if (!$reqTenant) {
+                $raw = file_get_contents('php://input');
+                if (!empty($raw)) {
+                    $json = json_decode($raw, true);
+                    if (is_array($json) && !empty($json['tenant_id'])) {
+                        $reqTenant = $json['tenant_id'];
+                    }
+                }
+            }
+            if (!empty($reqTenant) && $reqTenant !== 'all' && $reqTenant !== 'global') {
+                return (string)$reqTenant;
+            }
+        }
+
+        // 2. Cek session / tenant terdeteksi
         $tenantId = $this->tenantId ?: ($_SESSION['tenant_id'] ?? null);
         if (empty($tenantId) || $tenantId === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
             try {
@@ -63,18 +98,73 @@ class PersuratanModuleController extends BaseController
     /**
      * View Utama: Modul Persuratan & Tata Usaha SPA (Vue 3)
      */
-    public function indexView(): void
+    private function renderPersuratanView(string $viewName, string $title): void
     {
         $tenantId = $this->getEffectiveTenantId();
         $roles    = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
         $userNama = $_SESSION['nama_lengkap'] ?? ($_SESSION['username'] ?? 'Petugas TU');
+        $isSuperAdmin = $this->isUserSuperAdmin();
 
-        $this->render('persuratan/persuratan_index', [
-            'title'     => 'Persuratan & Tata Usaha',
-            'user_role' => is_array($roles) ? ($roles[0] ?? '') : $roles,
-            'user_nama' => $userNama,
-            'tenant_id' => $tenantId,
+        $tenants = [];
+        if ($isSuperAdmin) {
+            try {
+                $db = \App\Config\Database::getConnection();
+                $stmt = $db->query("SELECT id, nama_sekolah, npsn, subdomain FROM core.tenants WHERE (subdomain != 'admin' AND nama_sekolah NOT ILIKE '%pusat kendali%') AND (status = 'active' OR status IS NULL) ORDER BY nama_sekolah ASC");
+                $tenants = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+            } catch (Throwable $e) {
+                $tenants = [];
+            }
+        }
+
+        $this->render($viewName, [
+            'title'              => $title,
+            'user_role'          => is_array($roles) ? ($roles[0] ?? '') : $roles,
+            'user_nama'          => $userNama,
+            'tenant_id'          => $tenantId,
+            'is_super_admin'     => $isSuperAdmin,
+            'tenants'            => $tenants,
+            'selected_tenant_id' => $tenantId,
         ]);
+    }
+
+    public function indexView(): void
+    {
+        $this->dashboardView();
+    }
+
+    public function dashboardView(): void
+    {
+        $this->renderPersuratanView('persuratan/dashboard', 'Dashboard E-Arsip & Persuratan');
+    }
+
+    public function suratMasukView(): void
+    {
+        $this->renderPersuratanView('persuratan/surat_masuk', 'Buku Agenda Surat Masuk & Disposisi');
+    }
+
+    public function suratKeluarView(): void
+    {
+        $this->renderPersuratanView('persuratan/surat_keluar', 'Buku Register Surat Keluar & Cetak Naskah');
+    }
+
+    public function pengajuanBkView(): void
+    {
+        $this->renderPersuratanView('persuratan/pengajuan_bk', 'Pengajuan & Verifikasi Surat BK');
+    }
+
+    public function templateView(): void
+    {
+        $this->renderPersuratanView('persuratan/template', 'Master Template Naskah Dinas Sekolah');
+    }
+
+    public function masterView(): void
+    {
+        $this->renderPersuratanView('persuratan/master', 'Master Kop Surat & Klasifikasi Kearsipan');
+    }
+
+    public function verifikasiView(): void
+    {
+        $this->renderPersuratanView('persuratan/verifikasi', 'Verifikasi Keabsahan TTE & QR Code Naskah');
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -414,6 +504,27 @@ class PersuratanModuleController extends BaseController
         }
     }
 
+    /** POST /api/v1/persuratan/template/delete */
+    public function apiDeleteTemplate(): void
+    {
+        try {
+            $tenantId = $this->getEffectiveTenantId();
+            $input = $this->getJsonInput();
+            $id = $input['id'] ?? ($_POST['id'] ?? '');
+
+            if (empty($id)) {
+                $this->jsonResponse(false, null, 'ID template tidak valid.', 400);
+                return;
+            }
+
+            $this->model->deleteTemplate($tenantId, $id);
+            $this->jsonResponse(true, null, 'Template berhasil dihapus.');
+        } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
+            $this->jsonResponse(false, null, 'Gagal menghapus template: ' . $e->getMessage(), 500);
+        }
+    }
+
     /** GET /api/v1/persuratan/klasifikasi */
     public function apiGetKlasifikasi(): void
     {
@@ -438,6 +549,27 @@ class PersuratanModuleController extends BaseController
         } catch (Throwable $e) {
             $this->logApiException($e, __METHOD__);
             $this->jsonResponse(false, null, 'Gagal menyimpan kode klasifikasi: ' . $e->getMessage(), 400);
+        }
+    }
+
+    /** POST /api/v1/persuratan/klasifikasi/delete */
+    public function apiDeleteKlasifikasi(): void
+    {
+        try {
+            $tenantId = $this->getEffectiveTenantId();
+            $input = $this->getJsonInput();
+            $id = $input['id'] ?? ($_POST['id'] ?? '');
+
+            if (empty($id)) {
+                $this->jsonResponse(false, null, 'ID klasifikasi tidak valid.', 400);
+                return;
+            }
+
+            $this->model->deleteKlasifikasi($tenantId, $id);
+            $this->jsonResponse(true, null, 'Kode klasifikasi berhasil dihapus.');
+        } catch (Throwable $e) {
+            $this->logApiException($e, __METHOD__);
+            $this->jsonResponse(false, null, 'Gagal menghapus kode klasifikasi: ' . $e->getMessage(), 500);
         }
     }
 
@@ -468,11 +600,12 @@ class PersuratanModuleController extends BaseController
         }
     }
 
-    /** GET /api/v1/persuratan/verify/:token - Validator Publik */
+    /** GET / POST /api/v1/persuratan/verify - Validator Publik */
     public function apiVerifyTteToken(): void
     {
         try {
-            $token = $this->sanitize($_GET['token'] ?? '');
+            $input = $this->getJsonInput();
+            $token = $this->sanitize($input['token'] ?? ($_POST['token'] ?? ($_GET['token'] ?? '')));
             if (empty($token)) {
                 $this->jsonResponse(false, null, 'Token verifikasi dokumen tidak valid.', 400);
                 return;

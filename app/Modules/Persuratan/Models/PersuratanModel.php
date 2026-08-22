@@ -830,6 +830,19 @@ class PersuratanModel
     }
 
     /**
+     * Hapus Template Surat (Soft Delete)
+     */
+    public function deleteTemplate(string $tenantId, string $id): bool
+    {
+        $stmt = $this->db->prepare("
+            UPDATE persuratan.template_surat 
+            SET is_active = FALSE, updated_at = NOW() 
+            WHERE id = :id AND (tenant_id = :tid OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')
+        ");
+        return $stmt->execute([':id' => $id, ':tid' => $tenantId]);
+    }
+
+    /**
      * Mengambil Master Kode Klasifikasi Surat
      */
     public function getKlasifikasi(string $tenantId): array
@@ -894,6 +907,19 @@ class PersuratanModel
             ]);
             return $id;
         }
+    }
+
+    /**
+     * Hapus Kode Klasifikasi (Soft Delete)
+     */
+    public function deleteKlasifikasi(string $tenantId, string $id): bool
+    {
+        $stmt = $this->db->prepare("
+            UPDATE persuratan.kode_klasifikasi_surat 
+            SET is_active = FALSE, updated_at = NOW() 
+            WHERE id = :id AND (tenant_id = :tid OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')
+        ");
+        return $stmt->execute([':id' => $id, ':tid' => $tenantId]);
     }
 
     /**

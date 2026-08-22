@@ -7,11 +7,11 @@ $title = $title ?? 'Persuratan & Tata Usaha';
 $userRole = $user_role ?? ($_SESSION['role_name'] ?? '');
 $userNama = $user_nama ?? ($_SESSION['nama_lengkap'] ?? 'Petugas Tata Usaha');
 $tenantId = $tenant_id ?? ($_SESSION['tenant_id'] ?? '');
+$isSuperAdmin = $is_super_admin ?? false;
+$tenants = $tenants ?? [];
+$selectedTenantId = $selected_tenant_id ?? $tenantId;
 $baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
 ?>
-
-<?php require_once __DIR__ . '/../layout/header.php'; ?>
-<?php require_once __DIR__ . '/../layout/sidebar.php'; ?>
 
 <style>
 [v-cloak] { display: none !important; }
@@ -118,7 +118,15 @@ $baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
             <h3 class="fw-bold mb-1">Sistem Manajemen Persuratan & E-Arsip Sekolah</h3>
             <p class="mb-0 text-white-50 fs-7">Registrasi surat masuk, penomoran naskah dinas resmi, disposisi pimpinan, dan penerbitan surat panggilan terpadu.</p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <!-- Filter Tenant Khusus Super Admin -->
+            <div v-if="isSuperAdmin && tenants.length > 0" class="d-flex align-items-center gap-2 bg-white bg-opacity-20 p-1.5 px-2.5 rounded-3 border border-white border-opacity-25 shadow-sm" style="backdrop-filter: blur(8px);">
+                <i class="bi bi-building text-white fs-6"></i>
+                <select v-model="filterTenantId" @change="onTenantChange()" class="form-select form-select-sm border-0 text-xs font-semibold bg-white text-dark rounded-2 shadow-sm cursor-pointer" style="min-width: 220px;">
+                    <option value="">Semua Sekolah / Tenant</option>
+                    <option v-for="t in tenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
+                </select>
+            </div>
             <button class="btn btn-light btn-sm text-teal fw-semibold rounded-3 shadow-sm" @click="openModalSuratMasuk()">
                 <i class="bi bi-plus-circle-fill me-1"></i>Input Surat Masuk
             </button>
@@ -130,26 +138,26 @@ $baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
 
     <!-- Navigation Tabs -->
     <div class="tu-nav-tabs mb-4">
-        <button class="tu-tab-btn" :class="{ active: activeTab === 'dashboard' }" @click="activeTab = 'dashboard'">
+        <button class="tu-tab-btn" :class="{ active: activeTab === 'dashboard' }" @click="switchTab('dashboard')">
             <i class="bi bi-speedometer2"></i> Dashboard E-Arsip
         </button>
-        <button class="tu-tab-btn" :class="{ active: activeTab === 'surat_masuk' }" @click="activeTab = 'surat_masuk'">
+        <button class="tu-tab-btn" :class="{ active: activeTab === 'surat_masuk' }" @click="switchTab('surat_masuk')">
             <i class="bi bi-inbox-fill"></i> Surat Masuk & Disposisi
         </button>
-        <button class="tu-tab-btn" :class="{ active: activeTab === 'surat_keluar' }" @click="activeTab = 'surat_keluar'">
+        <button class="tu-tab-btn" :class="{ active: activeTab === 'surat_keluar' }" @click="switchTab('surat_keluar')">
             <i class="bi bi-send-fill"></i> Surat Keluar & Register
         </button>
-        <button class="tu-tab-btn position-relative" :class="{ active: activeTab === 'pengajuan_bk' }" @click="activeTab = 'pengajuan_bk'">
+        <button class="tu-tab-btn position-relative" :class="{ active: activeTab === 'pengajuan_bk' }" @click="switchTab('pengajuan_bk')">
             <i class="bi bi-bell-fill text-warning"></i> Pengajuan & Notifikasi BK
             <span class="badge bg-danger rounded-pill fs-9 ms-1" v-if="pengajuanBkPendingCount > 0">{{ pengajuanBkPendingCount }}</span>
         </button>
-        <button class="tu-tab-btn" :class="{ active: activeTab === 'template' }" @click="activeTab = 'template'">
+        <button class="tu-tab-btn" :class="{ active: activeTab === 'template' }" @click="switchTab('template')">
             <i class="bi bi-file-earmark-richtext"></i> Template Naskah Dinas
         </button>
-        <button class="tu-tab-btn" :class="{ active: activeTab === 'master' }" @click="activeTab = 'master'">
+        <button class="tu-tab-btn" :class="{ active: activeTab === 'master' }" @click="switchTab('master')">
             <i class="bi bi-gear-fill"></i> Klasifikasi & Kop Surat
         </button>
-        <button class="tu-tab-btn" :class="{ active: activeTab === 'verifikasi' }" @click="activeTab = 'verifikasi'">
+        <button class="tu-tab-btn" :class="{ active: activeTab === 'verifikasi' }" @click="switchTab('verifikasi')">
             <i class="bi bi-qr-code-scan"></i> Verifikasi TTE QR
         </button>
     </div>
@@ -937,8 +945,6 @@ $baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
     </div>
 </div>
 
-<?php require_once __DIR__ . '/../layout/footer.php'; ?>
-
 <script>
 (() => {
     const { createApp, ref, computed, onMounted } = Vue;
@@ -946,8 +952,52 @@ $baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
     const appConfig = {
         setup() {
             const baseUrl = '<?= $baseUrl ?>';
-            const activeTab = ref('dashboard');
+            const isSuperAdmin = ref(<?= json_encode($isSuperAdmin, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
+            const tenants = ref(<?= json_encode($tenants, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
+            const currentTenantId = ref(<?= json_encode($selectedTenantId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
+            const filterTenantId = ref(currentTenantId.value || '');
+
+            // ─── URL-to-Tab Synchronization Resolver ───
+            const resolveTabFromUrl = () => {
+                const path = window.location.pathname.toLowerCase();
+                if (path.includes('/persuratan/surat-masuk')) return 'surat_masuk';
+                if (path.includes('/persuratan/surat-keluar')) return 'surat_keluar';
+                if (path.includes('/persuratan/pengajuan-bk')) return 'pengajuan_bk';
+                if (path.includes('/persuratan/template')) return 'template';
+                if (path.includes('/persuratan/master')) return 'master';
+                if (path.includes('/persuratan/verifikasi') || path.includes('/validasi/surat')) return 'verifikasi';
+                return 'dashboard';
+            };
+
+            const activeTab = ref(resolveTabFromUrl());
             const loadingGlobal = ref(false);
+
+            const tabUrlMap = {
+                'dashboard': `${baseUrl}/persuratan/dashboard`,
+                'surat_masuk': `${baseUrl}/persuratan/surat-masuk`,
+                'surat_keluar': `${baseUrl}/persuratan/surat-keluar`,
+                'pengajuan_bk': `${baseUrl}/persuratan/pengajuan-bk`,
+                'template': `${baseUrl}/persuratan/template`,
+                'master': `${baseUrl}/persuratan/master`,
+                'verifikasi': `${baseUrl}/persuratan/verifikasi`,
+            };
+
+            const switchTab = (tabKey) => {
+                activeTab.value = tabKey;
+                const targetUrl = tabUrlMap[tabKey] || `${baseUrl}/persuratan/dashboard`;
+                if (window.location.pathname !== targetUrl) {
+                    window.history.pushState({ tab: tabKey }, '', targetUrl);
+                }
+            };
+
+            // Tangani tombol Back / Forward browser
+            window.addEventListener('popstate', (e) => {
+                if (e.state && e.state.tab) {
+                    activeTab.value = e.state.tab;
+                } else {
+                    activeTab.value = resolveTabFromUrl();
+                }
+            });
 
             const stats = ref({});
             const listSuratMasuk = ref([]);
@@ -987,65 +1037,97 @@ $baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
             // ─── API Fetchers ───
             const fetchStats = async () => {
                 try {
-                    const res = await axios.get(`${baseUrl}/api/v1/persuratan/dashboard/stats`);
+                    let url = `${baseUrl}/api/v1/persuratan/dashboard/stats`;
+                    if (filterTenantId.value) url += `?tenant_id=${encodeURIComponent(filterTenantId.value)}`;
+                    const res = await axios.get(url);
                     if (res.data?.success) stats.value = res.data.data || {};
                 } catch (e) { console.error('fetchStats error', e); }
             };
 
             const fetchSuratMasuk = async () => {
                 try {
-                    const params = new URLSearchParams(filterSuratMasuk.value).toString();
-                    const res = await axios.get(`${baseUrl}/api/v1/persuratan/surat-masuk?${params}`);
+                    const params = new URLSearchParams(filterSuratMasuk.value);
+                    if (filterTenantId.value) params.append('tenant_id', filterTenantId.value);
+                    const res = await axios.get(`${baseUrl}/api/v1/persuratan/surat-masuk?${params.toString()}`);
                     if (res.data?.success) listSuratMasuk.value = res.data.data || [];
                 } catch (e) { console.error('fetchSuratMasuk error', e); }
             };
 
             const fetchSuratKeluar = async () => {
                 try {
-                    const params = new URLSearchParams(filterSuratKeluar.value).toString();
-                    const res = await axios.get(`${baseUrl}/api/v1/persuratan/surat-keluar?${params}`);
+                    const params = new URLSearchParams(filterSuratKeluar.value);
+                    if (filterTenantId.value) params.append('tenant_id', filterTenantId.value);
+                    const res = await axios.get(`${baseUrl}/api/v1/persuratan/surat-keluar?${params.toString()}`);
                     if (res.data?.success) listSuratKeluar.value = res.data.data || [];
                 } catch (e) { console.error('fetchSuratKeluar error', e); }
             };
 
             const fetchPengajuanBk = async () => {
                 try {
-                    const res = await axios.get(`${baseUrl}/api/v1/persuratan/pengajuan-bk`);
+                    let url = `${baseUrl}/api/v1/persuratan/pengajuan-bk`;
+                    if (filterTenantId.value) url += `?tenant_id=${encodeURIComponent(filterTenantId.value)}`;
+                    const res = await axios.get(url);
                     if (res.data?.success) listPengajuanBk.value = res.data.data || [];
                 } catch (e) { console.error('fetchPengajuanBk error', e); }
             };
 
             const fetchTemplates = async () => {
                 try {
-                    const res = await axios.get(`${baseUrl}/api/v1/persuratan/template`);
+                    let url = `${baseUrl}/api/v1/persuratan/template`;
+                    if (filterTenantId.value) url += `?tenant_id=${encodeURIComponent(filterTenantId.value)}`;
+                    const res = await axios.get(url);
                     if (res.data?.success) listTemplates.value = res.data.data || [];
                 } catch (e) { console.error('fetchTemplates error', e); }
             };
 
             const fetchKlasifikasi = async () => {
                 try {
-                    const res = await axios.get(`${baseUrl}/api/v1/persuratan/klasifikasi`);
+                    let url = `${baseUrl}/api/v1/persuratan/klasifikasi`;
+                    if (filterTenantId.value) url += `?tenant_id=${encodeURIComponent(filterTenantId.value)}`;
+                    const res = await axios.get(url);
                     if (res.data?.success) listKlasifikasi.value = res.data.data || [];
                 } catch (e) { console.error('fetchKlasifikasi error', e); }
             };
 
             const fetchKopSurat = async () => {
                 try {
-                    const res = await axios.get(`${baseUrl}/api/v1/persuratan/kop-surat`);
+                    let url = `${baseUrl}/api/v1/persuratan/kop-surat`;
+                    if (filterTenantId.value) url += `?tenant_id=${encodeURIComponent(filterTenantId.value)}`;
+                    const res = await axios.get(url);
                     if (res.data?.success) formKop.value = res.data.data || {};
                 } catch (e) { console.error('fetchKopSurat error', e); }
             };
 
+            const refreshAllData = async () => {
+                loadingGlobal.value = true;
+                await Promise.all([
+                    fetchStats(),
+                    fetchSuratMasuk(),
+                    fetchSuratKeluar(),
+                    fetchPengajuanBk(),
+                    fetchTemplates(),
+                    fetchKlasifikasi(),
+                    fetchKopSurat()
+                ]);
+                loadingGlobal.value = false;
+            };
+
+            const onTenantChange = async () => {
+                await refreshAllData();
+            };
+
             // ─── Actions ───
             const openModalSuratMasuk = () => {
-                formSuratMasuk.value = { no_surat: '', pengirim: '', perihal: '', tgl_surat: new Date().toISOString().split('T')[0], tgl_terima: new Date().toISOString().split('T')[0], ringkasan_isi: '' };
+                formSuratMasuk.value = { no_surat: '', pengirim: '', perihal: '', tgl_surat: new Date().toISOString().split('T')[0], tgl_terima: new Date().toISOString().split('T')[0], ringkasan_isi: '', tenant_id: filterTenantId.value || currentTenantId.value };
                 new bootstrap.Modal(document.getElementById('modalSuratMasuk')).show();
             };
 
             const submitSuratMasuk = async () => {
                 submittingSuratMasuk.value = true;
                 try {
-                    const res = await axios.post(`${baseUrl}/api/v1/persuratan/surat-masuk/save`, formSuratMasuk.value);
+                    const payload = { ...formSuratMasuk.value };
+                    if (filterTenantId.value) payload.tenant_id = filterTenantId.value;
+                    const res = await axios.post(`${baseUrl}/api/v1/persuratan/surat-masuk/save`, payload);
                     if (res.data?.success) {
                         Swal.fire({ icon: 'success', title: 'Sukses', text: res.data.message, timer: 1500, showConfirmButton: false });
                         bootstrap.Modal.getInstance(document.getElementById('modalSuratMasuk'))?.hide();
@@ -1063,7 +1145,7 @@ $baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
                 const conf = await Swal.fire({ title: 'Hapus Surat Masuk?', text: 'Data arsip surat masuk akan dihapus.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, Hapus' });
                 if (!conf.isConfirmed) return;
                 try {
-                    const res = await axios.post(`${baseUrl}/api/v1/persuratan/surat-masuk/delete`, { id });
+                    const res = await axios.post(`${baseUrl}/api/v1/persuratan/surat-masuk/delete`, { id, tenant_id: filterTenantId.value });
                     if (res.data?.success) {
                         Swal.fire({ icon: 'success', title: 'Terhapus', text: res.data.message, timer: 1500, showConfirmButton: false });
                         fetchSuratMasuk();
@@ -1079,7 +1161,8 @@ $baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
                     tujuan: '',
                     perihal: '',
                     tgl_surat: new Date().toISOString().split('T')[0],
-                    ringkasan_isi: ''
+                    ringkasan_isi: '',
+                    tenant_id: filterTenantId.value || currentTenantId.value
                 };
                 await generateNomorSuratKeluar();
                 new bootstrap.Modal(document.getElementById('modalSuratKeluar')).show();
@@ -1088,7 +1171,9 @@ $baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
             const generateNomorSuratKeluar = async () => {
                 try {
                     const idKlas = formSuratKeluar.value.id_kode_klasifikasi || '';
-                    const res = await axios.get(`${baseUrl}/api/v1/persuratan/surat-keluar/generate-nomor?id_kode_klasifikasi=${idKlas}`);
+                    let url = `${baseUrl}/api/v1/persuratan/surat-keluar/generate-nomor?id_kode_klasifikasi=${idKlas}`;
+                    if (filterTenantId.value) url += `&tenant_id=${encodeURIComponent(filterTenantId.value)}`;
+                    const res = await axios.get(url);
                     if (res.data?.success) {
                         formSuratKeluar.value.nomor_surat = res.data.data.nomor_surat;
                     }
@@ -1098,7 +1183,9 @@ $baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
             const submitSuratKeluar = async () => {
                 submittingSuratKeluar.value = true;
                 try {
-                    const res = await axios.post(`${baseUrl}/api/v1/persuratan/surat-keluar/save`, formSuratKeluar.value);
+                    const payload = { ...formSuratKeluar.value };
+                    if (filterTenantId.value) payload.tenant_id = filterTenantId.value;
+                    const res = await axios.post(`${baseUrl}/api/v1/persuratan/surat-keluar/save`, payload);
                     if (res.data?.success) {
                         Swal.fire({ icon: 'success', title: 'Sukses', text: res.data.message, timer: 1500, showConfirmButton: false });
                         bootstrap.Modal.getInstance(document.getElementById('modalSuratKeluar'))?.hide();
@@ -1116,7 +1203,7 @@ $baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
                 const conf = await Swal.fire({ title: 'Hapus Surat Keluar?', text: 'Data register nomor surat keluar akan dihapus.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, Hapus' });
                 if (!conf.isConfirmed) return;
                 try {
-                    const res = await axios.post(`${baseUrl}/api/v1/persuratan/surat-keluar/delete`, { id });
+                    const res = await axios.post(`${baseUrl}/api/v1/persuratan/surat-keluar/delete`, { id, tenant_id: filterTenantId.value });
                     if (res.data?.success) {
                         Swal.fire({ icon: 'success', title: 'Terhapus', text: res.data.message, timer: 1500, showConfirmButton: false });
                         fetchSuratKeluar();
@@ -1135,7 +1222,8 @@ $baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
                     perihal: `Surat Pemanggilan Orang Tua / Wali Siswa (${pengajuan.jenis_panggilan})`,
                     nama_penandatangan: 'Kepala Sekolah',
                     jabatan_penandatangan: 'Kepala Sekolah',
-                    catatan_tu: 'Surat resmi telah diterbitkan oleh Tata Usaha.'
+                    catatan_tu: 'Surat resmi telah diterbitkan oleh Tata Usaha.',
+                    tenant_id: filterTenantId.value || currentTenantId.value
                 };
                 await regenerateNomorBk();
                 new bootstrap.Modal(document.getElementById('modalProsesTerbitBk')).show();
@@ -1143,7 +1231,9 @@ $baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
 
             const regenerateNomorBk = async () => {
                 try {
-                    const res = await axios.get(`${baseUrl}/api/v1/persuratan/surat-keluar/generate-nomor`);
+                    let url = `${baseUrl}/api/v1/persuratan/surat-keluar/generate-nomor`;
+                    if (filterTenantId.value) url += `?tenant_id=${encodeURIComponent(filterTenantId.value)}`;
+                    const res = await axios.get(url);
                     if (res.data?.success) {
                         formTerbitBk.value.nomor_surat = res.data.data.nomor_surat;
                     }
@@ -1153,7 +1243,9 @@ $baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
             const submitProsesTerbitBk = async () => {
                 submittingTerbitBk.value = true;
                 try {
-                    const res = await axios.post(`${baseUrl}/api/v1/persuratan/pengajuan-bk/proses-terbit`, formTerbitBk.value);
+                    const payload = { ...formTerbitBk.value };
+                    if (filterTenantId.value) payload.tenant_id = filterTenantId.value;
+                    const res = await axios.post(`${baseUrl}/api/v1/persuratan/pengajuan-bk/proses-terbit`, payload);
                     if (res.data?.success) {
                         Swal.fire({ icon: 'success', title: 'Surat Resmi Terbit!', text: res.data.message, timer: 2000, showConfirmButton: false });
                         bootstrap.Modal.getInstance(document.getElementById('modalProsesTerbitBk'))?.hide();
@@ -1174,7 +1266,9 @@ $baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
                     return;
                 }
                 try {
-                    const res = await axios.get(`${baseUrl}/api/v1/persuratan/surat-keluar/detail-cetak?id=${idSuratKeluar}`);
+                    let url = `${baseUrl}/api/v1/persuratan/surat-keluar/detail-cetak?id=${idSuratKeluar}`;
+                    if (filterTenantId.value) url += `&tenant_id=${encodeURIComponent(filterTenantId.value)}`;
+                    const res = await axios.get(url);
                     if (res.data?.success) {
                         docCetak.value = res.data.data;
                         new bootstrap.Modal(document.getElementById('modalCetakResmi')).show();
@@ -1187,7 +1281,9 @@ $baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
             const saveKopSurat = async () => {
                 savingKop.value = true;
                 try {
-                    const res = await axios.post(`${baseUrl}/api/v1/persuratan/kop-surat/save`, formKop.value);
+                    const payload = { ...formKop.value };
+                    if (filterTenantId.value) payload.tenant_id = filterTenantId.value;
+                    const res = await axios.post(`${baseUrl}/api/v1/persuratan/kop-surat/save`, payload);
                     if (res.data?.success) {
                         Swal.fire({ icon: 'success', title: 'Sukses', text: res.data.message, timer: 1500, showConfirmButton: false });
                         fetchKopSurat();
@@ -1213,21 +1309,12 @@ $baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
             };
 
             onMounted(async () => {
-                loadingGlobal.value = true;
-                await Promise.all([
-                    fetchStats(),
-                    fetchSuratMasuk(),
-                    fetchSuratKeluar(),
-                    fetchPengajuanBk(),
-                    fetchTemplates(),
-                    fetchKlasifikasi(),
-                    fetchKopSurat()
-                ]);
-                loadingGlobal.value = false;
+                await refreshAllData();
             });
 
             return {
-                activeTab, loadingGlobal, stats, listSuratMasuk, listSuratKeluar, listPengajuanBk,
+                isSuperAdmin, tenants, filterTenantId, onTenantChange,
+                activeTab, switchTab, loadingGlobal, stats, listSuratMasuk, listSuratKeluar, listPengajuanBk,
                 listTemplates, listKlasifikasi, formKop, savingKop, filterSuratMasuk, filterSuratKeluar,
                 formSuratMasuk, submittingSuratMasuk, formSuratKeluar, submittingSuratKeluar,
                 selectedPengajuanBk, formTerbitBk, submittingTerbitBk, docCetak, verifyTokenInput,
