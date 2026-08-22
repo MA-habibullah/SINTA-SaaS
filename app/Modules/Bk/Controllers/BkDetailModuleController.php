@@ -52,7 +52,7 @@ class BkDetailModuleController extends BaseController {
                 $tid  = $body['tenant_id'] ?? null;
             }
 
-            if (!empty($tid) && $tid !== '00000000-0000-0000-0000-000000000000') {
+            if (!empty($tid) && $tid !== 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
                 try {
                     $db   = \App\Config\Database::getConnection();
                     $stmt = $db->prepare("SELECT id FROM core.tenants WHERE id = ? LIMIT 1");
@@ -65,17 +65,17 @@ class BkDetailModuleController extends BaseController {
 
             try {
                 $db   = \App\Config\Database::getConnection();
-                $stmt = $db->query("SELECT id FROM core.tenants WHERE id != '00000000-0000-0000-0000-000000000000' AND status = 'active' ORDER BY nama_sekolah ASC LIMIT 1");
+                $stmt = $db->query("SELECT id FROM core.tenants WHERE id != 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' AND status = 'active' ORDER BY nama_sekolah ASC LIMIT 1");
                 $firstId = $stmt->fetchColumn();
                 if ($firstId) return $firstId;
             } catch (\Throwable) {
             }
         }
 
-        if (empty($tenantId) || $tenantId === '00000000-0000-0000-0000-000000000000') {
+        if (empty($tenantId) || $tenantId === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
             try {
                 $db   = \App\Config\Database::getConnection();
-                $stmt = $db->query("SELECT id FROM core.tenants WHERE id != '00000000-0000-0000-0000-000000000000' AND status = 'active' ORDER BY nama_sekolah ASC LIMIT 1");
+                $stmt = $db->query("SELECT id FROM core.tenants WHERE id != 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' AND status = 'active' ORDER BY nama_sekolah ASC LIMIT 1");
                 $tenantId = $stmt->fetchColumn() ?: null;
             } catch (\Throwable) {
             }
@@ -117,7 +117,7 @@ class BkDetailModuleController extends BaseController {
         if ($role === 'super_admin') {
             try {
                 $db         = \App\Config\Database::getConnection();
-                $tenantList = $db->query("SELECT id, nama_sekolah, npsn FROM core.tenants WHERE id != '00000000-0000-0000-0000-000000000000' AND status = 'active' ORDER BY nama_sekolah ASC")
+                $tenantList = $db->query("SELECT id, nama_sekolah, npsn FROM core.tenants WHERE id != 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' AND status = 'active' ORDER BY nama_sekolah ASC")
                                  ->fetchAll(\PDO::FETCH_ASSOC);
             } catch (\Throwable $e) {}
         }
@@ -1535,9 +1535,16 @@ class BkDetailModuleController extends BaseController {
             $siswaIdsJson = $_POST['siswa_ids'] ?? '[]';
             $siswaIds     = json_decode($siswaIdsJson, true);
             if (!is_array($siswaIds) || empty($siswaIds)) {
-                $this->jsonResponse(['error' => 'Minimal pilih satu siswa.'], 422);
-                return;
+                // Fallback: keep relasi anggota yang sudah ada (mode edit siswa terkunci)
+                $stmtExistingAnggota = $db->prepare("SELECT id_siswa FROM kesiswaan.prestasi_siswa_anggota WHERE id_prestasi = ?");
+                $stmtExistingAnggota->execute([$idPrestasi]);
+                $siswaIds = array_column($stmtExistingAnggota->fetchAll(\PDO::FETCH_ASSOC), 'id_siswa');
+                if (empty($siswaIds)) {
+                    $this->jsonResponse(['error' => 'Minimal pilih satu siswa.'], 422);
+                    return;
+                }
             }
+
 
             if (empty($guruPendamping)) {
                 $guruPendamping = null;
@@ -1903,10 +1910,12 @@ class BkDetailModuleController extends BaseController {
         try {
             $db = \App\Config\Database::getConnection();
 
-            // Resolve nama_kelas from $kelasId
-            $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE (id::text = ? OR nama_kelas = ?) AND tenant_id::text = ? LIMIT 1");
+            // Resolve class UUID and name
+            $stmtKelas = $db->prepare("SELECT id, nama_kelas FROM akademik.kelas WHERE (id::text = ? OR nama_kelas = ?) AND tenant_id::text = ? LIMIT 1");
             $stmtKelas->execute([$kelasId, $kelasId, $tenantId]);
-            $namaKelas = $stmtKelas->fetchColumn() ?: $kelasId;
+            $rowKelas = $stmtKelas->fetch(\PDO::FETCH_ASSOC);
+            $namaKelas = $rowKelas['nama_kelas'] ?? $kelasId;
+            $kelasUuid = $rowKelas['id'] ?? $kelasId;
 
             // Resolve tahun_ajaran_str from $tahunAjaranId
             $stmtTa = $db->prepare("SELECT COALESCE(nama_tahun_ajaran, '') FROM akademik.tahun_ajaran WHERE (id::text = ? OR nama_tahun_ajaran = ?) AND tenant_id::text = ? LIMIT 1");
@@ -1916,43 +1925,98 @@ class BkDetailModuleController extends BaseController {
             $semesterInt = (strtolower(trim($semester)) === 'ganjil' || trim($semester) === '1') ? 1 : 2;
             $semesterStr = ($semesterInt === 1) ? 'Ganjil' : 'Genap';
 
-            $whereConditions = [
-                "(s.status_siswa = 'Aktif' OR s.status_siswa IS NULL OR s.is_active = TRUE)",
-                "s.tenant_id = :tenant_id_siswa"
-            ];
-            $params = [
-                'tahun_ajaran_id' => $tahunAjaranId,
+            // 1. Cek apakah ada di anggota_kelas untuk Tahun Ajaran ini
+            $stmtCheckAk = $db->prepare("
+                SELECT COUNT(*) FROM siswa.anggota_kelas ak 
+                WHERE ak.tenant_id = :tenant_id 
+                  AND (ak.kelas_id::text = :kelas_id OR ak.kelas_id::text = :kelas_uuid)
+                  AND (ak.tahun_ajaran = :tahun_ajaran_str OR ak.tahun_ajaran = :tahun_ajaran_id)
+            ");
+            $stmtCheckAk->execute([
+                'tenant_id' => $tenantId,
+                'kelas_id' => $kelasId,
+                'kelas_uuid' => $kelasUuid,
                 'tahun_ajaran_str' => $tahunAjaranStr,
-                'semester_int' => $semesterInt,
-                'semester_str' => $semesterStr,
-                'semester_val' => (string)$semesterInt,
-                'tenant_id_absensi' => $tenantId,
-                'tenant_id_siswa' => $tenantId
-            ];
+                'tahun_ajaran_id' => $tahunAjaranId
+            ]);
+            $hasAnggotaKelas = (int)$stmtCheckAk->fetchColumn() > 0;
 
-            if (!empty($namaKelas)) {
-                $whereConditions[] = "(s.kelas_saat_ini = :nama_kelas OR s.kelas_saat_ini = :kelas_id)";
-                $params['nama_kelas'] = $namaKelas;
-                $params['kelas_id'] = $kelasId;
-            }
-
-            $sql = "SELECT 
+            if ($hasAnggotaKelas) {
+                $sql = "
+                    SELECT 
                         s.id AS siswa_id,
                         s.nama_lengkap,
                         s.nisn,
                         s.nis,
                         s.jenis_kelamin,
-                        COALESCE(a.sakit, 0) AS sakit,
-                        COALESCE(a.izin, 0) AS izin,
-                        COALESCE(a.alfa, a.alpha, 0) AS alfa,
-                        a.id AS absensi_id
+                        :nama_kelas AS nama_kelas,
+                        :tahun_ajaran_str AS tahun_ajaran,
+                        :semester_str AS semester,
+                        COALESCE(MAX(a.sakit), 0) AS sakit,
+                        COALESCE(MAX(a.izin), 0) AS izin,
+                        COALESCE(MAX(COALESCE(a.alfa, a.alpha)), 0) AS alfa,
+                        MAX(a.id::text) AS absensi_id
+                    FROM siswa.anggota_kelas ak
+                    JOIN siswa.siswa s ON ak.siswa_id = s.id
+                    LEFT JOIN siswa.absensi_semester a ON s.id = a.siswa_id 
+                        AND (a.tahun_ajaran_id = :tahun_ajaran_id OR a.tahun_ajaran = :tahun_ajaran_str)
+                        AND (a.semester = :semester_int OR a.semester::text = :semester_str OR a.semester::text = :semester_val)
+                        AND a.tenant_id = :tenant_id
+                    WHERE ak.tenant_id = :tenant_id
+                      AND (ak.kelas_id::text = :kelas_id OR ak.kelas_id::text = :kelas_uuid)
+                      AND (ak.tahun_ajaran = :tahun_ajaran_str OR ak.tahun_ajaran = :tahun_ajaran_id)
+                      AND (s.status_siswa = 'Aktif' OR s.status_siswa IS NULL OR s.is_active = TRUE)
+                    GROUP BY s.id, s.nama_lengkap, s.nisn, s.nis, s.jenis_kelamin
+                    ORDER BY s.nama_lengkap ASC
+                ";
+                $params = [
+                    'tenant_id' => $tenantId,
+                    'tahun_ajaran_id' => $tahunAjaranId,
+                    'tahun_ajaran_str' => $tahunAjaranStr,
+                    'semester_int' => $semesterInt,
+                    'semester_str' => $semesterStr,
+                    'semester_val' => (string)$semesterInt,
+                    'nama_kelas' => $namaKelas,
+                    'kelas_id' => $kelasId,
+                    'kelas_uuid' => $kelasUuid
+                ];
+            } else {
+                $sql = "
+                    SELECT 
+                        s.id AS siswa_id,
+                        s.nama_lengkap,
+                        s.nisn,
+                        s.nis,
+                        s.jenis_kelamin,
+                        :nama_kelas AS nama_kelas,
+                        :tahun_ajaran_str AS tahun_ajaran,
+                        :semester_str AS semester,
+                        COALESCE(MAX(a.sakit), 0) AS sakit,
+                        COALESCE(MAX(a.izin), 0) AS izin,
+                        COALESCE(MAX(COALESCE(a.alfa, a.alpha)), 0) AS alfa,
+                        MAX(a.id::text) AS absensi_id
                     FROM siswa.siswa s
                     LEFT JOIN siswa.absensi_semester a ON s.id = a.siswa_id 
-                        AND (a.tahun_ajaran_id = :tahun_ajaran_id OR a.tahun_ajaran = :tahun_ajaran_str OR a.tahun_ajaran_id = :tahun_ajaran_str OR a.tahun_ajaran = :tahun_ajaran_id)
+                        AND (a.tahun_ajaran_id = :tahun_ajaran_id OR a.tahun_ajaran = :tahun_ajaran_str)
                         AND (a.semester = :semester_int OR a.semester::text = :semester_str OR a.semester::text = :semester_val)
-                        AND a.tenant_id = :tenant_id_absensi
-                    WHERE " . implode(' AND ', $whereConditions) . "
-                    ORDER BY s.nama_lengkap ASC";
+                        AND a.tenant_id = :tenant_id
+                    WHERE s.tenant_id = :tenant_id
+                      AND (s.status_siswa = 'Aktif' OR s.status_siswa IS NULL OR s.is_active = TRUE)
+                      AND (s.kelas_saat_ini = :nama_kelas OR s.kelas_saat_ini = :kelas_id)
+                    GROUP BY s.id, s.nama_lengkap, s.nisn, s.nis, s.jenis_kelamin
+                    ORDER BY s.nama_lengkap ASC
+                ";
+                $params = [
+                    'tenant_id' => $tenantId,
+                    'tahun_ajaran_id' => $tahunAjaranId,
+                    'tahun_ajaran_str' => $tahunAjaranStr,
+                    'semester_int' => $semesterInt,
+                    'semester_str' => $semesterStr,
+                    'semester_val' => (string)$semesterInt,
+                    'nama_kelas' => $namaKelas,
+                    'kelas_id' => $kelasId
+                ];
+            }
             
             $stmt = $db->prepare($sql);
             $stmt->execute($params);
@@ -2049,8 +2113,18 @@ class BkDetailModuleController extends BaseController {
             ]);
             $alreadyLocked = (bool)$stmtLockCheck->fetchColumn();
 
-            $userRole = strtolower($_SESSION['role'] ?? '');
-            if ($alreadyLocked && !in_array($userRole, ['admin', 'super_admin', 'kurikulum'], true)) {
+            $userRoles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ($_SESSION['role'] ?? '')];
+            if (is_string($userRoles)) $userRoles = [$userRoles];
+            $bypassLockRoles = ['admin', 'super_admin', 'kurikulum', 'kepala_sekolah', 'operator_sekolah'];
+            $canBypassLock = false;
+            foreach ($userRoles as $r) {
+                if (in_array(strtolower(trim($r)), $bypassLockRoles, true)) {
+                    $canBypassLock = true;
+                    break;
+                }
+            }
+
+            if ($alreadyLocked && !$canBypassLock) {
                 $this->jsonResponse(['error' => 'Data kehadiran kelas ini telah dikunci oleh Kurikulum/Admin dan tidak dapat diubah.'], 403);
                 return;
             }
@@ -2137,7 +2211,7 @@ class BkDetailModuleController extends BaseController {
     }
 
     // =========================================================================
-    // API: Ekspor Excel Absensi Semester (.xls dengan mso-number-format)
+    // API: Ekspor Excel Absensi Semester (.xlsx dengan SimpleXLSXGen)
     // GET /api/v1/bk/absensi-semester/export?tahun_ajaran_id=X&semester=Y&kelas_id=Z
     // =========================================================================
     public function apiExportAbsensiSemester(): void {
@@ -2165,9 +2239,11 @@ class BkDetailModuleController extends BaseController {
             $stmtTenant->execute([$tenantId]);
             $namaSekolah = $stmtTenant->fetchColumn() ?: "Sekolah";
 
-            $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE (id::text = ? OR nama_kelas = ?) AND tenant_id::text = ? LIMIT 1");
+            $stmtKelas = $db->prepare("SELECT id, nama_kelas FROM akademik.kelas WHERE (id::text = ? OR nama_kelas = ?) AND tenant_id::text = ? LIMIT 1");
             $stmtKelas->execute([$kelasId, $kelasId, $tenantId]);
-            $namaKelas = $stmtKelas->fetchColumn() ?: $kelasId;
+            $rowKelas = $stmtKelas->fetch(\PDO::FETCH_ASSOC);
+            $namaKelas = $rowKelas['nama_kelas'] ?? $kelasId;
+            $kelasUuid = $rowKelas['id'] ?? $kelasId;
 
             $stmtTa = $db->prepare("SELECT COALESCE(nama_tahun_ajaran, '') FROM akademik.tahun_ajaran WHERE (id::text = ? OR nama_tahun_ajaran = ?) AND tenant_id::text = ? LIMIT 1");
             $stmtTa->execute([$tahunAjaranId, $tahunAjaranId, $tenantId]);
@@ -2175,44 +2251,91 @@ class BkDetailModuleController extends BaseController {
 
             $filename = "Absensi_" . str_replace(' ', '_', $namaKelas) . "_" . str_replace('/', '-', $tahunAjaranStr) . "_" . $semesterStr . "_" . date('Ymd_His') . ".xlsx";
 
-            // Query data siswa + absensi
-            $whereConditions = [
-                "(s.status_siswa = 'Aktif' OR s.status_siswa IS NULL OR s.is_active = TRUE)",
-                "s.tenant_id = :tenant_id_siswa"
-            ];
-            $params = [
-                'tahun_ajaran_id' => $tahunAjaranId,
+            // 1. Cek apakah ada di anggota_kelas untuk Tahun Ajaran ini
+            $stmtCheckAk = $db->prepare("
+                SELECT COUNT(*) FROM siswa.anggota_kelas ak 
+                WHERE ak.tenant_id = :tenant_id 
+                  AND (ak.kelas_id::text = :kelas_id OR ak.kelas_id::text = :kelas_uuid)
+                  AND (ak.tahun_ajaran = :tahun_ajaran_str OR ak.tahun_ajaran = :tahun_ajaran_id)
+            ");
+            $stmtCheckAk->execute([
+                'tenant_id' => $tenantId,
+                'kelas_id' => $kelasId,
+                'kelas_uuid' => $kelasUuid,
                 'tahun_ajaran_str' => $tahunAjaranStr,
-                'semester_int' => $semesterInt,
-                'semester_str' => $semesterStr,
-                'semester_val' => (string)$semesterInt,
-                'tenant_id_absensi' => $tenantId,
-                'tenant_id_siswa' => $tenantId
-            ];
+                'tahun_ajaran_id' => $tahunAjaranId
+            ]);
+            $hasAnggotaKelas = (int)$stmtCheckAk->fetchColumn() > 0;
 
-            if (!empty($namaKelas)) {
-                $whereConditions[] = "(s.kelas_saat_ini = :nama_kelas OR s.kelas_saat_ini = :kelas_id)";
-                $params['nama_kelas'] = $namaKelas;
-                $params['kelas_id'] = $kelasId;
-            }
-
-            $sql = "SELECT 
+            if ($hasAnggotaKelas) {
+                $sql = "
+                    SELECT 
                         s.nama_lengkap,
                         s.nisn,
                         s.nis,
                         s.jenis_kelamin,
                         s.agama,
                         s.tenant_id,
-                        COALESCE(a.sakit, 0) AS sakit,
-                        COALESCE(a.izin, 0) AS izin,
-                        COALESCE(a.alfa, a.alpha, 0) AS alfa
+                        COALESCE(MAX(a.sakit), 0) AS sakit,
+                        COALESCE(MAX(a.izin), 0) AS izin,
+                        COALESCE(MAX(COALESCE(a.alfa, a.alpha)), 0) AS alfa
+                    FROM siswa.anggota_kelas ak
+                    JOIN siswa.siswa s ON ak.siswa_id = s.id
+                    LEFT JOIN siswa.absensi_semester a ON s.id = a.siswa_id 
+                        AND (a.tahun_ajaran_id = :tahun_ajaran_id OR a.tahun_ajaran = :tahun_ajaran_str)
+                        AND (a.semester = :semester_int OR a.semester::text = :semester_str OR a.semester::text = :semester_val)
+                        AND a.tenant_id = :tenant_id
+                    WHERE ak.tenant_id = :tenant_id
+                      AND (ak.kelas_id::text = :kelas_id OR ak.kelas_id::text = :kelas_uuid)
+                      AND (ak.tahun_ajaran = :tahun_ajaran_str OR ak.tahun_ajaran = :tahun_ajaran_id)
+                      AND (s.status_siswa = 'Aktif' OR s.status_siswa IS NULL OR s.is_active = TRUE)
+                    GROUP BY s.id, s.nama_lengkap, s.nisn, s.nis, s.jenis_kelamin, s.agama, s.tenant_id
+                    ORDER BY s.nama_lengkap ASC
+                ";
+                $params = [
+                    'tenant_id' => $tenantId,
+                    'tahun_ajaran_id' => $tahunAjaranId,
+                    'tahun_ajaran_str' => $tahunAjaranStr,
+                    'semester_int' => $semesterInt,
+                    'semester_str' => $semesterStr,
+                    'semester_val' => (string)$semesterInt,
+                    'kelas_id' => $kelasId,
+                    'kelas_uuid' => $kelasUuid
+                ];
+            } else {
+                $sql = "
+                    SELECT 
+                        s.nama_lengkap,
+                        s.nisn,
+                        s.nis,
+                        s.jenis_kelamin,
+                        s.agama,
+                        s.tenant_id,
+                        COALESCE(MAX(a.sakit), 0) AS sakit,
+                        COALESCE(MAX(a.izin), 0) AS izin,
+                        COALESCE(MAX(COALESCE(a.alfa, a.alpha)), 0) AS alfa
                     FROM siswa.siswa s
                     LEFT JOIN siswa.absensi_semester a ON s.id = a.siswa_id 
-                        AND (a.tahun_ajaran_id = :tahun_ajaran_id OR a.tahun_ajaran = :tahun_ajaran_str OR a.tahun_ajaran_id = :tahun_ajaran_str OR a.tahun_ajaran = :tahun_ajaran_id)
+                        AND (a.tahun_ajaran_id = :tahun_ajaran_id OR a.tahun_ajaran = :tahun_ajaran_str)
                         AND (a.semester = :semester_int OR a.semester::text = :semester_str OR a.semester::text = :semester_val)
-                        AND a.tenant_id = :tenant_id_absensi
-                    WHERE " . implode(' AND ', $whereConditions) . "
-                    ORDER BY s.nama_lengkap ASC";
+                        AND a.tenant_id = :tenant_id
+                    WHERE s.tenant_id = :tenant_id
+                      AND (s.status_siswa = 'Aktif' OR s.status_siswa IS NULL OR s.is_active = TRUE)
+                      AND (s.kelas_saat_ini = :nama_kelas OR s.kelas_saat_ini = :kelas_id)
+                    GROUP BY s.id, s.nama_lengkap, s.nisn, s.nis, s.jenis_kelamin, s.agama, s.tenant_id
+                    ORDER BY s.nama_lengkap ASC
+                ";
+                $params = [
+                    'tenant_id' => $tenantId,
+                    'tahun_ajaran_id' => $tahunAjaranId,
+                    'tahun_ajaran_str' => $tahunAjaranStr,
+                    'semester_int' => $semesterInt,
+                    'semester_str' => $semesterStr,
+                    'semester_val' => (string)$semesterInt,
+                    'nama_kelas' => $namaKelas,
+                    'kelas_id' => $kelasId
+                ];
+            }
             
             $stmt = $db->prepare($sql);
             $stmt->execute($params);
@@ -2243,7 +2366,6 @@ class BkDetailModuleController extends BaseController {
                 $excelData[] = [
                     (string)($row['tenant_id'] ?? ''),
                     (string)($row['nama_lengkap'] ?? ''),
-                    // SimpleXLSXGen will automatically treat numeric strings as text if type-hinted or simple string, keeping leading zeros
                     (string)($row['nisn'] ?? ''),
                     (string)($row['nis'] ?? ''),
                     (string)($row['jenis_kelamin'] ?? ''),
@@ -2278,8 +2400,18 @@ class BkDetailModuleController extends BaseController {
             return;
         }
 
-        $userRole = strtolower($_SESSION['role'] ?? '');
-        if (!in_array($userRole, ['admin', 'super_admin', 'kurikulum', 'petugas_bk', 'guru'], true)) {
+        $userRoles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ($_SESSION['role'] ?? '')];
+        if (is_string($userRoles)) $userRoles = [$userRoles];
+        $allowedRoles = ['admin', 'super_admin', 'operator_sekolah', 'guru_bk', 'petugas_bk', 'guru', 'wali_kelas', 'kepala_sekolah', 'kurikulum'];
+        $hasAccess = false;
+        foreach ($userRoles as $r) {
+            if (in_array(strtolower(trim($r)), $allowedRoles, true)) {
+                $hasAccess = true;
+                break;
+            }
+        }
+
+        if (!$hasAccess) {
             $this->jsonResponse(['error' => 'Anda tidak memiliki hak akses untuk mengunci/membuka kunci data kehadiran.'], 403);
             return;
         }
@@ -2306,13 +2438,33 @@ class BkDetailModuleController extends BaseController {
             $tahunAjaranStr = $stmtTa->fetchColumn() ?: $tahunAjaranId;
 
             // Resolve nama_kelas and get all siswa_id for this class
-            $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE (id::text = ? OR nama_kelas = ?) AND tenant_id::text = ? LIMIT 1");
+            $stmtKelas = $db->prepare("SELECT id, nama_kelas FROM akademik.kelas WHERE (id::text = ? OR nama_kelas = ?) AND tenant_id::text = ? LIMIT 1");
             $stmtKelas->execute([$kelasId, $kelasId, $tenantId]);
-            $namaKelas = $stmtKelas->fetchColumn() ?: $kelasId;
+            $rowKelas = $stmtKelas->fetch(\PDO::FETCH_ASSOC);
+            $namaKelas = $rowKelas['nama_kelas'] ?? $kelasId;
+            $kelasUuid = $rowKelas['id'] ?? $kelasId;
 
-            $stmtSiswa = $db->prepare("SELECT id FROM siswa.siswa WHERE tenant_id::text = ? AND (kelas_saat_ini = ? OR kelas_saat_ini = ?)");
-            $stmtSiswa->execute([$tenantId, $namaKelas, $kelasId]);
-            $siswaList = $stmtSiswa->fetchAll(\PDO::FETCH_COLUMN);
+            // Check if students are in anggota_kelas for this year
+            $stmtCheckAk = $db->prepare("
+                SELECT ak.siswa_id FROM siswa.anggota_kelas ak 
+                WHERE ak.tenant_id = :tenant_id 
+                  AND (ak.kelas_id::text = :kelas_id OR ak.kelas_id::text = :kelas_uuid)
+                  AND (ak.tahun_ajaran = :tahun_ajaran_str OR ak.tahun_ajaran = :tahun_ajaran_id)
+            ");
+            $stmtCheckAk->execute([
+                'tenant_id' => $tenantId,
+                'kelas_id' => $kelasId,
+                'kelas_uuid' => $kelasUuid,
+                'tahun_ajaran_str' => $tahunAjaranStr,
+                'tahun_ajaran_id' => $tahunAjaranId
+            ]);
+            $siswaList = $stmtCheckAk->fetchAll(\PDO::FETCH_COLUMN);
+
+            if (empty($siswaList)) {
+                $stmtSiswa = $db->prepare("SELECT id FROM siswa.siswa WHERE tenant_id::text = ? AND (kelas_saat_ini = ? OR kelas_saat_ini = ?)");
+                $stmtSiswa->execute([$tenantId, $namaKelas, $kelasId]);
+                $siswaList = $stmtSiswa->fetchAll(\PDO::FETCH_COLUMN);
+            }
 
             if (empty($siswaList)) {
                 $this->jsonResponse(['error' => 'Tidak ada siswa pada kelas ini.'], 400);
@@ -2384,8 +2536,6 @@ class BkDetailModuleController extends BaseController {
             if (isset($db) && $db->inTransaction()) {
                 $db->rollBack();
             }
-            error_log('[BKController::apiToggleLockAbsensiSemester] ' . $e->getMessage());
-            $this->jsonResponse(['error' => 'Gagal mengubah status kunci kehadiran: ' . $e->getMessage()], 500);
         }
     }
 
@@ -2512,7 +2662,6 @@ class BkDetailModuleController extends BaseController {
 
         try {
             $db = \App\Config\Database::getConnection();
-            $db->beginTransaction();
 
             $semesterInt = (strtolower(trim($semester)) === 'ganjil' || trim($semester) === '1') ? 1 : 2;
             $semesterStr = ($semesterInt === 1) ? 'Ganjil' : 'Genap';
@@ -2521,6 +2670,45 @@ class BkDetailModuleController extends BaseController {
             $stmtTa = $db->prepare("SELECT COALESCE(nama_tahun_ajaran, '') FROM akademik.tahun_ajaran WHERE (id::text = ? OR nama_tahun_ajaran = ?) AND tenant_id::text = ? LIMIT 1");
             $stmtTa->execute([$tahunAjaranId, $tahunAjaranId, $tenantId]);
             $tahunAjaranStr = $stmtTa->fetchColumn() ?: $tahunAjaranId;
+
+            // ─── LOCK CHECK (wajib dilakukan sebelum beginTransaction) ───
+            $stmtLockCheck = $db->prepare("
+                SELECT (COALESCE(is_locked, FALSE) OR COALESCE(dikunci, FALSE))
+                FROM siswa.absensi_semester
+                WHERE tenant_id::text = :tenant_id
+                  AND (tahun_ajaran_id = :tahun_ajaran_id OR tahun_ajaran = :tahun_ajaran_str)
+                  AND (semester = :semester_int OR semester::text = :semester_str OR semester::text = :semester_val)
+                  AND (is_locked = TRUE OR dikunci = TRUE)
+                LIMIT 1
+            ");
+            $stmtLockCheck->execute([
+                'tenant_id'       => $tenantId,
+                'tahun_ajaran_id' => $tahunAjaranId,
+                'tahun_ajaran_str'=> $tahunAjaranStr,
+                'semester_int'    => $semesterInt,
+                'semester_str'    => $semesterStr,
+                'semester_val'    => (string)$semesterInt
+            ]);
+            $alreadyLocked = (bool)$stmtLockCheck->fetchColumn();
+
+            $userRoles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ($_SESSION['role'] ?? '')];
+            if (is_string($userRoles)) $userRoles = [$userRoles];
+            $bypassLockRoles = ['admin', 'super_admin', 'kurikulum', 'kepala_sekolah', 'operator_sekolah'];
+            $canBypassLock = false;
+            foreach ($userRoles as $r) {
+                if (in_array(strtolower(trim($r)), $bypassLockRoles, true)) {
+                    $canBypassLock = true;
+                    break;
+                }
+            }
+
+            if ($alreadyLocked && !$canBypassLock) {
+                $this->jsonResponse(['error' => 'Data kehadiran kelas ini telah dikunci oleh Kurikulum/Admin. Impor Excel tidak dapat dilakukan selama data terkunci.'], 403);
+                return;
+            }
+            // ─── END LOCK CHECK ───
+
+            $db->beginTransaction();
 
             $rowCount = $headerRowNumber;
             $successCount = 0;
@@ -2965,7 +3153,7 @@ class BkDetailModuleController extends BaseController {
                 $stmtS = $db->prepare("
                     SELECT id, nama_lengkap, nisn, kelas_saat_ini AS nama_kelas
                     FROM siswa.siswa
-                    WHERE (tenant_id::text = ? OR tenant_id::text = '00000000-0000-0000-0000-000000000000')
+                    WHERE (tenant_id::text = ? OR tenant_id::text = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')
                       AND (
                           LOWER(nama_lengkap) = LOWER(?) OR
                           nama_lengkap ILIKE ? OR
@@ -2988,7 +3176,7 @@ class BkDetailModuleController extends BaseController {
                 $stmtM = $db->prepare("
                     SELECT mp.id, mp.nama_pelanggaran, mp.kategori, mp.bobot_poin
                     FROM bk.master_pelanggaran mp
-                    WHERE (mp.tenant_id::text = ? OR mp.tenant_id::text = '00000000-0000-0000-0000-000000000000')
+                    WHERE (mp.tenant_id::text = ? OR mp.tenant_id::text = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')
                       AND mp.deleted_at IS NULL
                       AND (
                           ? ILIKE '%' || mp.nama_pelanggaran || '%' OR 
@@ -3108,7 +3296,7 @@ class BkDetailModuleController extends BaseController {
                     ps.deskripsi,
                     COALESCE(
                         (SELECT mp.bobot_poin FROM bk.master_pelanggaran mp 
-                         WHERE (mp.tenant_id = ps.tenant_id OR mp.tenant_id = '00000000-0000-0000-0000-000000000000')
+                         WHERE (mp.tenant_id = ps.tenant_id OR mp.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')
                            AND mp.deleted_at IS NULL
                            AND (
                                ps.deskripsi ILIKE '%' || mp.nama_pelanggaran || '%' OR 
@@ -3134,7 +3322,7 @@ class BkDetailModuleController extends BaseController {
             $stmtSList = $db->prepare("
                 SELECT id, nama_lengkap, nisn, kelas_saat_ini AS nama_kelas
                 FROM siswa.siswa
-                WHERE (tenant_id::text = ? OR tenant_id::text = '00000000-0000-0000-0000-000000000000')
+                WHERE (tenant_id::text = ? OR tenant_id::text = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')
                 ORDER BY created_at ASC
             ");
             $stmtSList->execute([$tenantId]);
@@ -3459,7 +3647,7 @@ class BkDetailModuleController extends BaseController {
                     ps.created_at AS tanggal_kejadian,
                     COALESCE(
                         (SELECT mp.bobot_poin FROM bk.master_pelanggaran mp 
-                         WHERE (mp.tenant_id = ps.tenant_id OR mp.tenant_id = '00000000-0000-0000-0000-000000000000')
+                         WHERE (mp.tenant_id = ps.tenant_id OR mp.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')
                            AND mp.deleted_at IS NULL
                            AND (
                                ps.deskripsi ILIKE '%' || mp.nama_pelanggaran || '%' OR 
@@ -3504,7 +3692,7 @@ class BkDetailModuleController extends BaseController {
                     foto_bukti,
                     COALESCE(nama_guru, 'Guru BK / Petugas') AS nama_guru
                 FROM bk.pembinaan_monitoring 
-                WHERE kategori = ? AND (tenant_id::text = ? OR tenant_id::text = '00000000-0000-0000-0000-000000000000') AND is_active = TRUE
+                WHERE kategori = ? AND (tenant_id::text = ? OR tenant_id::text = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') AND is_active = TRUE
                 ORDER BY created_at DESC
             ");
             $stmtFU->execute([$siswaId, $tenantId]);
@@ -3609,6 +3797,171 @@ class BkDetailModuleController extends BaseController {
         }
     }
 
+    /**
+     * POST /api/v1/bk/pelanggaran/notifikasi-panggilan/kirim
+     * Guru BK mengirimkan notifikasi dan pengajuan pemanggilan orang tua ke Tata Usaha (TU)
+     */
+    public function apiKirimNotifikasiPanggilanTu(): void {
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
+            return;
+        }
+        $db = \App\Config\Database::getConnection();
+
+        $input = $this->getJsonInput();
+        $siswaId = $this->sanitize($input['siswa_id'] ?? ($_POST['siswa_id'] ?? ''));
+        $jenisPanggilan = $this->sanitize($input['jenis_panggilan'] ?? ($_POST['jenis_panggilan'] ?? 'Surat Pemanggilan Orang Tua I'));
+        $alasan = $this->sanitize($input['alasan_pemanggilan'] ?? ($_POST['alasan_pemanggilan'] ?? 'Akumulasi Poin Pelanggaran Kedisiplinan'));
+        $tglMenghadap = $this->sanitize($input['rencana_tanggal_menghadap'] ?? ($_POST['rencana_tanggal_menghadap'] ?? date('Y-m-d', strtotime('+3 days'))));
+        $jamMenghadap = $this->sanitize($input['rencana_jam_menghadap'] ?? ($_POST['rencana_jam_menghadap'] ?? '09:00'));
+        $ruangan = $this->sanitize($input['ruangan'] ?? ($_POST['ruangan'] ?? 'Ruang Bimbingan Konseling (BK)'));
+
+        if (empty($siswaId)) {
+            $this->jsonResponse(['error' => 'Siswa ID wajib dipilih.'], 400);
+            return;
+        }
+
+        try {
+            // Ambil info siswa
+            $stmtS = $db->prepare("SELECT id, nama_lengkap, nisn, kelas_saat_ini AS nama_kelas FROM siswa.siswa WHERE id::text = ? LIMIT 1");
+            $stmtS->execute([$siswaId]);
+            $student = $stmtS->fetch(\PDO::FETCH_ASSOC);
+
+            if (!$student) {
+                $stmtFB = $db->prepare("SELECT id, nama_pelanggaran_siswa AS nama_lengkap, 'N/A' AS nisn, 'Siswa' AS nama_kelas FROM bk.pelanggaran_siswa WHERE id::text = ? LIMIT 1");
+                $stmtFB->execute([$siswaId]);
+                $student = $stmtFB->fetch(\PDO::FETCH_ASSOC);
+            }
+
+            $namaSiswa = $student['nama_lengkap'] ?? 'Siswa';
+            $nisn = $student['nisn'] ?? '-';
+            $kelas = $student['nama_kelas'] ?? '-';
+
+            // Hitung total poin
+            $stmtPts = $db->prepare("
+                SELECT COALESCE(SUM(
+                    COALESCE(
+                        (SELECT mp.bobot_poin FROM bk.master_pelanggaran mp 
+                         WHERE (mp.tenant_id = ps.tenant_id OR mp.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')
+                           AND mp.deleted_at IS NULL
+                           AND (ps.deskripsi ILIKE '%' || mp.nama_pelanggaran || '%' OR ps.nama_pelanggaran_siswa ILIKE '%' || mp.nama_pelanggaran || '%' OR ps.kategori = mp.kategori)
+                         ORDER BY mp.created_at DESC LIMIT 1),
+                        CASE ps.kategori 
+                            WHEN 'Khusus' THEN 100
+                            WHEN 'Berat' THEN 50
+                            WHEN 'Sedang' THEN 25
+                            ELSE 10 
+                        END
+                    )
+                ), 0) AS total
+                FROM bk.pelanggaran_siswa ps
+                WHERE ps.tenant_id::text = ? AND ps.is_active = TRUE
+                  AND (ps.id::text = ? OR ps.nama_pelanggaran_siswa ILIKE ? OR ps.nama_pelanggaran_siswa ILIKE '%' || ? || '%')
+            ");
+            $cleanNama = preg_match('/\(([^)]+)\)/', $namaSiswa, $m) ? trim($m[1]) : $namaSiswa;
+            $stmtPts->execute([$tenantId, $siswaId, $namaSiswa, $cleanNama]);
+            $totalPoin = (int)$stmtPts->fetchColumn();
+
+            $guruBkNama = $_SESSION['nama_lengkap'] ?? ($_SESSION['username'] ?? 'Guru BK');
+            $guruBkId = $_SESSION['user_id'] ?? null;
+
+            // Simpan ke persuratan.pengajuan_surat_bk
+            $stmtIns = $db->prepare("
+                INSERT INTO persuratan.pengajuan_surat_bk (
+                    id, tenant_id, id_siswa, nama_siswa, nisn, kelas, total_poin,
+                    jenis_panggilan, alasan_pemanggilan, rencana_tanggal_menghadap,
+                    rencana_jam_menghadap, ruangan, guru_bk_pengaju, id_guru_bk,
+                    status_pengajuan, is_active, created_at, updated_at
+                ) VALUES (
+                    gen_random_uuid(), :tid, :siswa_id, :nama_siswa, :nisn, :kelas, :poin,
+                    :jenis, :alasan, :tgl, :jam, :ruang, :guru_nama, :guru_id,
+                    'Menunggu Penerbitan TU', TRUE, NOW(), NOW()
+                ) RETURNING id
+            ");
+            $stmtIns->execute([
+                ':tid' => $tenantId,
+                ':siswa_id' => $siswaId,
+                ':nama_siswa' => $namaSiswa,
+                ':nisn' => $nisn,
+                ':kelas' => $kelas,
+                ':poin' => $totalPoin,
+                ':jenis' => $jenisPanggilan,
+                ':alasan' => $alasan,
+                ':tgl' => $tglMenghadap,
+                ':jam' => $jamMenghadap,
+                ':ruang' => $ruangan,
+                ':guru_nama' => $guruBkNama,
+                ':guru_id' => $guruBkId
+            ]);
+            $pengajuanId = (string)$stmtIns->fetchColumn();
+
+            // Catat log pembinaan di bk.pembinaan_monitoring
+            $stmtLog = $db->prepare("
+                INSERT INTO bk.pembinaan_monitoring (
+                    id, tenant_id, nama_pembinaan_monitoring, kategori, deskripsi, is_active,
+                    id_pengajuan_surat, status_surat, tanggal_menghadap, ruangan_menghadap, id_user, nama_guru, created_at, updated_at
+                ) VALUES (
+                    gen_random_uuid(), :tid, :jenis, :siswa_id, :desc, TRUE,
+                    :p_id, 'Menunggu Penerbitan TU', :tgl, :ruang, :u_id, :u_nama, NOW(), NOW()
+                )
+            ");
+            $stmtLog->execute([
+                ':tid' => $tenantId,
+                ':jenis' => $jenisPanggilan,
+                ':siswa_id' => $siswaId,
+                ':desc' => "Pengajuan notifikasi surat panggilan dikirim ke Tata Usaha oleh {$guruBkNama}. Alasan: {$alasan}",
+                ':p_id' => $pengajuanId,
+                ':tgl' => $tglMenghadap . ' ' . $jamMenghadap . ':00',
+                ':ruang' => $ruangan,
+                ':u_id' => $guruBkId,
+                ':u_nama' => $guruBkNama
+            ]);
+
+            $this->jsonResponse([
+                'success' => true,
+                'pengajuan_id' => $pengajuanId,
+                'message' => "Notifikasi pengajuan pemanggilan orang tua siswa an. {$namaSiswa} berhasil dikirimkan ke bagian Tata Usaha (TU)."
+            ]);
+        } catch (\Throwable $e) {
+            error_log('[BKController::apiKirimNotifikasiPanggilanTu] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal mengirim notifikasi ke TU: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * GET /api/v1/bk/pelanggaran/notifikasi-panggilan/status
+     */
+    public function apiGetNotifikasiPanggilanStatus(): void {
+        $tenantId = $this->getSecureTenantId();
+        $siswaId = $this->sanitize($_GET['siswa_id'] ?? '');
+
+        if (!$tenantId || empty($siswaId)) {
+            $this->jsonResponse(['success' => true, 'data' => []]);
+            return;
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+            $stmt = $db->prepare("
+                SELECT pb.*, sk.nomor_surat, sk.tgl_surat
+                FROM persuratan.pengajuan_surat_bk pb
+                LEFT JOIN persuratan.surat_keluar sk ON pb.id_surat_keluar = sk.id
+                WHERE (pb.tenant_id::text = ? OR pb.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')
+                  AND pb.id_siswa::text = ? AND pb.is_active = TRUE
+                ORDER BY pb.created_at DESC
+            ");
+            $stmt->execute([$tenantId, $siswaId]);
+            $list = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+
+            $this->jsonResponse(['success' => true, 'data' => $list]);
+        } catch (\Throwable $e) {
+            $this->jsonResponse(['error' => 'Gagal mengambil status pengajuan: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // =========================================================================
+    // API: Mendapatkan daftar beasiswa (Tab Beasiswa Siswa)
     // =========================================================================
     // API: Mendapatkan daftar beasiswa (Tab Beasiswa Siswa)
     // GET /api/v1/bk/beasiswa/list
@@ -3616,31 +3969,179 @@ class BkDetailModuleController extends BaseController {
     public function apiBeasiswaList(): void {
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
-            $this->jsonResponse(['success' => true, 'data' => []]);
+            $this->jsonResponse(['success' => true, 'data' => [], 'tahun_options' => []]);
             return;
         }
 
         try {
             $db = \App\Config\Database::getConnection();
+            $search = $this->sanitize($_GET['search'] ?? ($_GET['q'] ?? ''));
+            $tahun = $this->sanitize($_GET['tahun'] ?? ($_GET['tahun_ajaran'] ?? ($_GET['tahun_ajaran_id'] ?? '')));
+
+            // Ambil daftar tahun penerima yang ada di database untuk tenant ini
+            $stmtYears = $db->prepare("
+                SELECT DISTINCT tahun_mulai 
+                FROM siswa.riwayat_beasiswa 
+                WHERE tenant_id = :tenant_id AND tahun_mulai IS NOT NULL 
+                ORDER BY tahun_mulai DESC
+            ");
+            $stmtYears->execute(['tenant_id' => $tenantId]);
+            $tahunOptions = array_map('intval', $stmtYears->fetchAll(\PDO::FETCH_COLUMN) ?: []);
+
+            $where = ["rb.tenant_id = :tenant_id"];
+            $params = ['tenant_id' => $tenantId];
+
+            if (!empty($search)) {
+                $where[] = "(s.nama_lengkap ILIKE :search OR s.nisn ILIKE :search OR rb.nama_beasiswa ILIKE :search OR rb.penyelenggara ILIKE :search OR s.kelas_saat_ini ILIKE :search)";
+                $params['search'] = "%{$search}%";
+            }
+
+            if (!empty($tahun) && $tahun !== 'Semua' && $tahun !== 'all') {
+                $where[] = "(rb.tahun_mulai::text = :thn OR rb.tahun_mulai::text = SUBSTRING(:thn, 1, 4) OR rb.keterangan ILIKE :thn_like)";
+                $params['thn'] = (string)$tahun;
+                $params['thn_like'] = "%{$tahun}%";
+            }
+
+            $whereClause = implode(' AND ', $where);
             $sql = "
                 SELECT rb.id, 
+                       rb.siswa_id,
                        rb.nama_beasiswa AS jenis_beasiswa, 
                        rb.penyelenggara AS sumber, 
                        rb.tahun_mulai AS tahun_menerima, 
                        rb.nominal,
-                       s.nama_lengkap, s.nisn, s.kelas_saat_ini AS nama_kelas
+                       rb.keterangan,
+                       s.nama_lengkap, 
+                       s.nisn, 
+                       COALESCE(s.kelas_saat_ini, '-') AS nama_kelas
                 FROM siswa.riwayat_beasiswa rb
                 JOIN siswa.siswa s ON rb.siswa_id = s.id
-                WHERE rb.tenant_id = :tenant_id
+                WHERE {$whereClause}
                 ORDER BY rb.created_at DESC, s.nama_lengkap ASC
             ";
             $stmt = $db->prepare($sql);
-            $stmt->execute(['tenant_id' => $tenantId]);
+            $stmt->execute($params);
             $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-            $this->jsonResponse(['success' => true, 'data' => $data]);
+            $this->jsonResponse(['success' => true, 'data' => $data, 'tahun_options' => $tahunOptions]);
         } catch (\Throwable $e) {
             error_log('[BKController::apiBeasiswaList] ' . $e->getMessage());
             $this->jsonResponse(['success' => false, 'error' => 'Gagal mengambil data beasiswa: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // =========================================================================
+    // API: Simpan (Tambah / Edit) data beasiswa
+    // POST /api/v1/bk/beasiswa/save
+    // =========================================================================
+    public function apiSaveBeasiswa(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->jsonResponse(['error' => 'Method not allowed.'], 405);
+            return;
+        }
+
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Pilih sekolah terlebih dahulu.'], 400);
+            return;
+        }
+
+        $body = $this->getJsonInput();
+        $id = $this->sanitize($body['id'] ?? '');
+        $siswaId = $this->sanitize($body['siswa_id'] ?? '');
+        $jenisBeasiswa = $this->sanitize($body['jenis_beasiswa'] ?? ($body['nama_beasiswa'] ?? ''));
+        $sumber = $this->sanitize($body['sumber'] ?? ($body['penyelenggara'] ?? ''));
+        $tahunMenerima = (int)($body['tahun_menerima'] ?? ($body['tahun_mulai'] ?? date('Y')));
+        $nominal = !empty($body['nominal']) ? (int)preg_replace('/[^0-9]/', '', (string)$body['nominal']) : 0;
+        $keterangan = $this->sanitize($body['keterangan'] ?? '');
+
+        if (empty($siswaId) || empty($jenisBeasiswa)) {
+            $this->jsonResponse(['error' => 'Siswa dan Jenis Beasiswa wajib diisi.'], 422);
+            return;
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+
+            if (!empty($id)) {
+                $stmt = $db->prepare("
+                    UPDATE siswa.riwayat_beasiswa SET
+                        siswa_id = :siswa_id,
+                        nama_beasiswa = :jenis_beasiswa,
+                        penyelenggara = :sumber,
+                        tahun_mulai = :tahun_menerima,
+                        nominal = :nominal,
+                        keterangan = :keterangan,
+                        updated_at = NOW()
+                    WHERE id = :id AND tenant_id = :tenant_id
+                ");
+                $stmt->execute([
+                    'id' => $id,
+                    'tenant_id' => $tenantId,
+                    'siswa_id' => $siswaId,
+                    'jenis_beasiswa' => $jenisBeasiswa,
+                    'sumber' => $sumber,
+                    'tahun_menerima' => $tahunMenerima,
+                    'nominal' => $nominal,
+                    'keterangan' => $keterangan
+                ]);
+                $this->jsonResponse(['success' => true, 'message' => 'Data beasiswa berhasil diperbarui.']);
+            } else {
+                $stmt = $db->prepare("
+                    INSERT INTO siswa.riwayat_beasiswa (
+                        id, tenant_id, siswa_id, nama_beasiswa, penyelenggara, tahun_mulai, nominal, keterangan, created_at, updated_at
+                    ) VALUES (
+                        gen_random_uuid(), :tenant_id, :siswa_id, :jenis_beasiswa, :sumber, :tahun_menerima, :nominal, :keterangan, NOW(), NOW()
+                    )
+                ");
+                $stmt->execute([
+                    'tenant_id' => $tenantId,
+                    'siswa_id' => $siswaId,
+                    'jenis_beasiswa' => $jenisBeasiswa,
+                    'sumber' => $sumber,
+                    'tahun_menerima' => $tahunMenerima,
+                    'nominal' => $nominal,
+                    'keterangan' => $keterangan
+                ]);
+                $this->jsonResponse(['success' => true, 'message' => 'Data beasiswa berhasil ditambahkan.']);
+            }
+        } catch (\Throwable $e) {
+            error_log('[BKController::apiSaveBeasiswa] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal menyimpan data beasiswa: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // =========================================================================
+    // API: Hapus data beasiswa
+    // POST /api/v1/bk/beasiswa/delete
+    // =========================================================================
+    public function apiDeleteBeasiswa(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->jsonResponse(['error' => 'Method not allowed.'], 405);
+            return;
+        }
+
+        $tenantId = $this->getSecureTenantId();
+        if (!$tenantId) {
+            $this->jsonResponse(['error' => 'Pilih sekolah terlebih dahulu.'], 400);
+            return;
+        }
+
+        $body = $this->getJsonInput();
+        $id = $this->sanitize($body['id'] ?? ($_GET['id'] ?? ''));
+
+        if (empty($id)) {
+            $this->jsonResponse(['error' => 'ID Beasiswa tidak valid.'], 422);
+            return;
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+            $stmt = $db->prepare("DELETE FROM siswa.riwayat_beasiswa WHERE id = :id AND tenant_id = :tenant_id");
+            $stmt->execute(['id' => $id, 'tenant_id' => $tenantId]);
+            $this->jsonResponse(['success' => true, 'message' => 'Data beasiswa berhasil dihapus.']);
+        } catch (\Throwable $e) {
+            error_log('[BKController::apiDeleteBeasiswa] ' . $e->getMessage());
+            $this->jsonResponse(['error' => 'Gagal menghapus data beasiswa: ' . $e->getMessage()], 500);
         }
     }
 
@@ -3654,7 +4155,7 @@ class BkDetailModuleController extends BaseController {
             exit('Pilih sekolah terlebih dahulu.');
         }
 
-        $tahunAjaranId = $this->sanitize($_GET['tahun_ajaran_id'] ?? '');
+        $tahun = $this->sanitize($_GET['tahun'] ?? ($_GET['tahun_ajaran'] ?? ($_GET['tahun_ajaran_id'] ?? '')));
 
         try {
             $db = \App\Config\Database::getConnection();
@@ -3664,42 +4165,47 @@ class BkDetailModuleController extends BaseController {
             $stmtTenant->execute([$tenantId]);
             $namaSekolah = $stmtTenant->fetchColumn() ?: 'Sekolah';
 
-            $tahunAjaranStr = 'Semua Tahun Ajaran';
-            if (!empty($tahunAjaranId)) {
-                $stmtTA = $db->prepare("SELECT nama_tahun_ajaran FROM akademik.tahun_ajaran WHERE id = ?");
-                $stmtTA->execute([$tahunAjaranId]);
-                $tahunAjaranStr = $stmtTA->fetchColumn() ?: 'Semua Tahun Ajaran';
+            $tahunStr = 'Semua Tahun';
+            if (!empty($tahun) && $tahun !== 'Semua' && $tahun !== 'all') {
+                $tahunStr = 'Tahun ' . $tahun;
             }
 
-            $whereClause = "WHERE rb.tenant_id = :tenant_id";
+            $where = ["rb.tenant_id = :tenant_id"];
             $params = ['tenant_id' => $tenantId];
 
-            if (!empty($tahunAjaranId)) {
-                $whereClause .= " AND rb.tahun_menerima::text = :tahun_ajaran";
-                $params['tahun_ajaran'] = $tahunAjaranId;
+            if (!empty($tahun) && $tahun !== 'Semua' && $tahun !== 'all') {
+                $where[] = "(rb.tahun_mulai::text = :thn OR rb.tahun_mulai::text = SUBSTRING(:thn, 1, 4) OR rb.keterangan ILIKE :thn_like)";
+                $params['thn'] = (string)$tahun;
+                $params['thn_like'] = "%{$tahun}%";
             }
 
+            $whereClause = implode(' AND ', $where);
+
             $sql = "
-                SELECT COALESCE(rb.jenis_beasiswa, rb.nama_beasiswa) AS jenis_beasiswa, 
-                       COALESCE(rb.sumber, rb.penyelenggara) AS sumber, 
-                       COALESCE(rb.tahun_menerima, rb.tahun_mulai) AS tahun_menerima, 
+                SELECT rb.id,
+                       rb.nama_beasiswa AS jenis_beasiswa, 
+                       rb.penyelenggara AS sumber, 
+                       rb.tahun_mulai AS tahun_menerima, 
                        rb.nominal,
-                       s.nama_lengkap, s.nisn, s.kelas_saat_ini AS nama_kelas
+                       rb.keterangan,
+                       s.nama_lengkap, 
+                       s.nisn, 
+                       COALESCE(s.kelas_saat_ini, '-') AS nama_kelas
                 FROM siswa.riwayat_beasiswa rb
                 JOIN siswa.siswa s ON rb.siswa_id = s.id
-                $whereClause
+                WHERE {$whereClause}
                 ORDER BY rb.created_at DESC, s.nama_lengkap ASC
             ";
             $stmt = $db->prepare($sql);
             $stmt->execute($params);
             $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-            $filename = "Rekap_Beasiswa_" . str_replace(' ', '_', $namaSekolah) . "_" . str_replace('/', '-', $tahunAjaranStr) . "_" . date('Ymd_His') . ".xlsx";
+            $filename = "Rekap_Beasiswa_" . str_replace(' ', '_', $namaSekolah) . "_" . str_replace(['/', ' '], '-', $tahunStr) . "_" . date('Ymd_His') . ".xlsx";
 
             $excelData = [];
             $excelData[] = ['REKAPITULASI PENERIMA BEASISWA SISWA'];
             $excelData[] = ['Sekolah:', $namaSekolah];
-            $excelData[] = ['Tahun Ajaran Filter:', $tahunAjaranStr];
+            $excelData[] = ['Filter Periode:', $tahunStr];
             $excelData[] = []; // Baris pemisah
 
             $excelData[] = [
@@ -3707,11 +4213,11 @@ class BkDetailModuleController extends BaseController {
                 'Nama Lengkap',
                 'NISN',
                 'Kelas',
-                'Tahun Ajaran Masuk',
                 'Jenis Beasiswa',
-                'Sumber Beasiswa',
+                'Penyelenggara / Sumber',
                 'Tahun Menerima',
-                'Nominal (Rp)'
+                'Nominal (Rp)',
+                'Keterangan'
             ];
 
             $no = 1;
@@ -3720,19 +4226,19 @@ class BkDetailModuleController extends BaseController {
                     $no++,
                     $r['nama_lengkap'],
                     $r['nisn'] ? ' ' . $r['nisn'] : '-',
-                    $r['nama_kelas'] ?: 'Belum Masuk Kelas',
-                    $r['tahun_ajaran'] ?: '-',
-                    $r['jenis_beasiswa'],
+                    $r['nama_kelas'] ?: '-',
+                    $r['jenis_beasiswa'] ?: '-',
                     $r['sumber'] ?: '-',
-                    $r['tahun_menerima'],
-                    $r['nominal'] ? (float)$r['nominal'] : 0
+                    $r['tahun_menerima'] ?: '-',
+                    $r['nominal'] ? (float)$r['nominal'] : 0,
+                    $r['keterangan'] ?: '-'
                 ];
             }
 
             \Shuchkin\SimpleXLSXGen::fromArray($excelData)->downloadAs($filename);
         } catch (\Throwable $e) {
             error_log('[BKController::apiExportBeasiswa] ' . $e->getMessage());
-            exit('Gagal mengekspor data.');
+            exit('Gagal mengekspor data: ' . $e->getMessage());
         }
     }
 

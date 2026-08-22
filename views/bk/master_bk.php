@@ -1887,8 +1887,32 @@ if (str_starts_with($defaultMainTab, 'p_')) {
     ════════════════════════════════════════════════════════════ -->
     <?php if(empty($allowed_bk_tabs) || in_array('kehadiran', $allowed_bk_tabs)): ?>
 <div v-show="activeTab === 'kehadiran'" class="animate-fade-in">
-        <!-- Filter Card -->
+        <!-- Filter Card & Toolbar -->
         <div class="bk-card p-4 mb-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 pb-3 border-bottom">
+                <div>
+                    <h5 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
+                        <i class="bi bi-calendar-check-fill text-primary"></i>
+                        Rekapitulasi & Input Kehadiran Siswa Semesteran
+                    </h5>
+                    <p class="text-muted fs-8 mb-0">Kelola angka akumulasi absensi (Sakit, Izin, Alfa) per kelas untuk keperluan rapor, pembinaan BK, dan evaluasi siswa.</p>
+                </div>
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <!-- Tombol Impor Excel (Popup Modal) -->
+                    <button class="btn btn-sm btn-outline-success rounded-3 d-inline-flex align-items-center gap-1 fw-semibold fs-8 px-3 shadow-sm" @click="openModalImportKehadiran" :disabled="isKehadiranLocked">
+                        <i class="bi bi-file-earmark-arrow-up-fill text-success"></i>
+                        Impor Excel
+                    </button>
+
+                    <!-- Tombol Ekspor Excel (Popup Modal) -->
+                    <button class="btn btn-sm btn-outline-primary rounded-3 d-inline-flex align-items-center gap-1 fw-semibold fs-8 px-3 shadow-sm" @click="openModalExportKehadiran">
+                        <i class="bi bi-file-earmark-arrow-down-fill text-primary"></i>
+                        Ekspor Excel
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter Controls -->
             <div class="row g-3 align-items-end">
                 <div class="col-md-3">
                     <label for="select-ta-kehadiran" class="form-label fw-semibold fs-8 mb-1">Tahun Ajaran</label>
@@ -1924,10 +1948,9 @@ if (str_starts_with($defaultMainTab, 'p_')) {
             </div>
         </div>
 
-        <!-- Main Workspace -->
+        <!-- Main Workspace (Full Width Grid Table) -->
         <div class="row g-4" v-if="kehadiranData?.length > 0">
-            <!-- Grid Table (Left) -->
-            <div class="col-lg-8">
+            <div class="col-12">
                 <div class="bk-card p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                         <div>
@@ -1961,60 +1984,80 @@ if (str_starts_with($defaultMainTab, 'p_')) {
                         <table class="table table-hover align-middle mb-0" id="tbl-kehadiran-grid">
                             <thead class="table-light">
                                 <tr>
+                                    <th class="text-center" style="width: 40px;">No</th>
                                     <th>Siswa</th>
                                     <th>NIS / NISN</th>
-                                    <th class="text-center">L/P</th>
+                                    <th class="text-center" style="width: 100px;">Jenis Kelamin</th>
                                     <th>Kelas</th>
-                                    <th class="text-center" style="width: 80px;">Sakit (S)</th>
-                                    <th class="text-center" style="width: 80px;">Izin (I)</th>
-                                    <th class="text-center" style="width: 80px;">Alfa (A)</th>
-                                    <th class="text-center" style="width: 140px;">Status Peringatan</th>
+                                    <th>Tahun Ajaran</th>
+                                    <th class="text-center">Semester</th>
+                                    <th class="text-center" style="width: 100px;">Sakit (S)</th>
+                                    <th class="text-center" style="width: 100px;">Izin (I)</th>
+                                    <th class="text-center" style="width: 100px;">Alfa (A)</th>
+                                    <th class="text-center" style="width: 150px;">Status Peringatan</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-for="(s, idx) in kehadiranData" :key="s.siswa_id" :class="{'dirty-row': isRowDirty(s.siswa_id)}">
+                                    <td class="text-center text-muted fw-semibold">{{ idx + 1 }}</td>
                                     <td>
                                         <div class="fw-bold text-dark">{{ s.nama_lengkap }}</div>
                                     </td>
                                     <td>
-                                        <span class="text-dark">{{ s.nis || '-' }}</span> / <span class="text-muted">{{ s.nisn || '-' }}</span>
+                                        <span class="text-dark font-monospace">{{ s.nis || '-' }}</span> / <span class="text-muted font-monospace">{{ s.nisn || '-' }}</span>
                                     </td>
                                     <td class="text-center">
-                                        <span class="text-secondary fw-semibold">{{ s.jenis_kelamin === 'Laki-Laki' ? 'L' : (s.jenis_kelamin === 'Perempuan' ? 'P' : '-') }}</span>
+                                        <span v-if="s.jenis_kelamin === 'L' || s.jenis_kelamin === 'Laki-Laki' || s.jenis_kelamin === 'Laki-laki'" 
+                                              class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 text-xs fw-semibold">
+                                            <i class="bi bi-gender-male me-1"></i>L (Laki-laki)
+                                        </span>
+                                        <span v-else-if="s.jenis_kelamin === 'P' || s.jenis_kelamin === 'Perempuan' || s.jenis_kelamin === 'perempuan'" 
+                                              class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1 text-xs fw-semibold">
+                                            <i class="bi bi-gender-female me-1"></i>P (Perempuan)
+                                        </span>
+                                        <span v-else class="badge bg-light text-secondary rounded-pill px-2 py-1 text-xs">
+                                            {{ s.jenis_kelamin || '-' }}
+                                        </span>
                                     </td>
                                     <td>
-                                        <span class="badge bg-light text-primary border rounded-3">{{ s.nama_kelas || '-' }}</span>
+                                        <span class="badge bg-light text-primary border rounded-3 fw-semibold">{{ s.nama_kelas || getNamaKelas(filterKehadiran.kelas_id) }}</span>
                                         <span v-if="isRowDirty(s.siswa_id)" class="badge bg-primary text-white ms-1" style="font-size:0.65rem;">Belum Disimpan</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border rounded-3 fw-semibold">{{ s.tahun_ajaran || getNamaTahunAjaran(filterKehadiran.tahun_ajaran_id) }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle rounded-3 fw-semibold">{{ s.semester || filterKehadiran.semester }}</span>
                                     </td>
                                     <!-- Sakit input -->
                                     <td class="text-center" :class="{'dirty-cell': isCellDirty(s.siswa_id, 'sakit')}">
                                         <div class="d-flex align-items-center justify-content-center gap-1">
-                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:20px;height:20px;line-height:0.5;" :disabled="isKehadiranLocked" @click="decrementAbsen(s.siswa_id, 'sakit')">-</button>
+                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:22px;height:22px;line-height:0.5;" :disabled="isKehadiranLocked" @click="decrementAbsen(s.siswa_id, 'sakit')">-</button>
                                             <label :for="'sakit-' + s.siswa_id" class="visually-hidden">Sakit {{ s.nama_lengkap }}</label>
-                                            <input type="number" :id="'sakit-' + s.siswa_id" :name="'sakit_' + s.siswa_id" class="form-control form-control-sm grid-input-number rounded-2 p-1" 
+                                            <input type="number" :id="'sakit-' + s.siswa_id" :name="'sakit_' + s.siswa_id" class="form-control form-control-sm grid-input-number rounded-2 p-1 text-center font-monospace" 
                                                    v-model.number="s.sakit" min="0" :disabled="isKehadiranLocked" @keydown="handleGridKeydown($event, idx, 'sakit')">
-                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:20px;height:20px;line-height:0.5;" :disabled="isKehadiranLocked" @click="incrementAbsen(s.siswa_id, 'sakit')">+</button>
+                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:22px;height:22px;line-height:0.5;" :disabled="isKehadiranLocked" @click="incrementAbsen(s.siswa_id, 'sakit')">+</button>
                                         </div>
                                     </td>
                                     <!-- Izin input -->
                                     <td class="text-center" :class="{'dirty-cell': isCellDirty(s.siswa_id, 'izin')}">
                                         <div class="d-flex align-items-center justify-content-center gap-1">
-                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:20px;height:20px;line-height:0.5;" :disabled="isKehadiranLocked" @click="decrementAbsen(s.siswa_id, 'izin')">-</button>
+                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:22px;height:22px;line-height:0.5;" :disabled="isKehadiranLocked" @click="decrementAbsen(s.siswa_id, 'izin')">-</button>
                                             <label :for="'izin-' + s.siswa_id" class="visually-hidden">Izin {{ s.nama_lengkap }}</label>
-                                            <input type="number" :id="'izin-' + s.siswa_id" :name="'izin_' + s.siswa_id" class="form-control form-control-sm grid-input-number rounded-2 p-1" 
+                                            <input type="number" :id="'izin-' + s.siswa_id" :name="'izin_' + s.siswa_id" class="form-control form-control-sm grid-input-number rounded-2 p-1 text-center font-monospace" 
                                                    v-model.number="s.izin" min="0" :disabled="isKehadiranLocked" @keydown="handleGridKeydown($event, idx, 'izin')">
-                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:20px;height:20px;line-height:0.5;" :disabled="isKehadiranLocked" @click="incrementAbsen(s.siswa_id, 'izin')">+</button>
+                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:22px;height:22px;line-height:0.5;" :disabled="isKehadiranLocked" @click="incrementAbsen(s.siswa_id, 'izin')">+</button>
                                         </div>
                                     </td>
                                     <!-- Alfa input -->
                                     <td class="text-center" :class="{'dirty-cell': isCellDirty(s.siswa_id, 'alfa')}" 
                                         :class="s.alfa > 5 ? 'cell-warning' : ((s.sakit + s.izin + s.alfa) > 7 ? 'cell-caution' : '')">
                                         <div class="d-flex align-items-center justify-content-center gap-1">
-                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:20px;height:20px;line-height:0.5;" :disabled="isKehadiranLocked" @click="decrementAbsen(s.siswa_id, 'alfa')">-</button>
+                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:22px;height:22px;line-height:0.5;" :disabled="isKehadiranLocked" @click="decrementAbsen(s.siswa_id, 'alfa')">-</button>
                                             <label :for="'alfa-' + s.siswa_id" class="visually-hidden">Alfa {{ s.nama_lengkap }}</label>
-                                            <input type="number" :id="'alfa-' + s.siswa_id" :name="'alfa_' + s.siswa_id" class="form-control form-control-sm grid-input-number rounded-2 p-1" 
+                                            <input type="number" :id="'alfa-' + s.siswa_id" :name="'alfa_' + s.siswa_id" class="form-control form-control-sm grid-input-number rounded-2 p-1 text-center font-monospace" 
                                                    v-model.number="s.alfa" min="0" :disabled="isKehadiranLocked" @keydown="handleGridKeydown($event, idx, 'alfa')">
-                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:20px;height:20px;line-height:0.5;" :disabled="isKehadiranLocked" @click="incrementAbsen(s.siswa_id, 'alfa')">+</button>
+                                            <button class="btn btn-xs btn-light border p-1 rounded-circle" style="width:22px;height:22px;line-height:0.5;" :disabled="isKehadiranLocked" @click="incrementAbsen(s.siswa_id, 'alfa')">+</button>
                                         </div>
                                     </td>
                                     <!-- Status -->
@@ -2029,50 +2072,50 @@ if (str_starts_with($defaultMainTab, 'p_')) {
                     </div>
 
                     <div class="d-flex justify-content-end gap-2 mt-4">
-                        <button class="btn btn-primary rounded-3 px-4 fw-bold" @click="saveKehadiran" :disabled="savingKehadiran || isKehadiranLocked" id="btn-simpan-kehadiran">
+                        <button class="btn btn-primary rounded-3 px-4 fw-bold shadow-sm" @click="saveKehadiran" :disabled="savingKehadiran || isKehadiranLocked" id="btn-simpan-kehadiran">
                             <span v-if="savingKehadiran" class="spinner-border spinner-border-sm me-1"></span>
                             <i v-else class="bi bi-floppy-fill me-1"></i> Simpan Absensi Kelas
                         </button>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Import/Export Tools (Right) -->
-            <div class="col-lg-4">
-                <div class="row g-3">
-                    <div class="col-md-12">
-                        <div class="card border-0 shadow-sm rounded-3 p-3 bg-light h-100">
-                            <div class="fw-bold fs-7 text-dark mb-1"><i class="bi bi-file-earmark-arrow-down me-2"></i>📤 Ekspor Kehadiran ke Excel</div>
-                            <p class="fs-8 text-muted mb-3">Unduh template data kehadiran kelas terpilih untuk diisi offline melalui Excel.</p>
-                            <button class="btn btn-sm btn-outline-primary rounded-3 fw-semibold" @click="exportKehadiran" id="btn-ekspor-kehadiran">
-                                <i class="bi bi-download"></i> Unduh Berkas Excel
-                            </button>
-                        </div>
-                    </div>
-                    <div class="col-md-12">
-                        <div class="card border-0 shadow-sm rounded-3 p-3 bg-light h-100">
-                            <div class="fw-bold fs-7 text-dark mb-1"><i class="bi bi-file-earmark-arrow-up me-2"></i>📥 Impor Kehadiran dari Excel (.xlsx)</div>
-                            <p class="fs-8 text-muted mb-2">Unggah berkas template Excel (.xlsx) yang sudah diedit. Pastikan kolom **UUID Sekolah, NISN, Sakit, Izin, Tanpa Keterangan (Alfa)** tetap ada.</p>
-                            <div class="d-flex gap-2 align-items-center">
-                                <label for="file-import-kehadiran" class="visually-hidden">Unggah template kehadiran</label>
-                                <input type="file" id="file-import-kehadiran" name="file_import_kehadiran" @change="handleFileImportChange" class="form-control form-control-sm" accept=".xlsx" :disabled="isKehadiranLocked">
-                                <button class="btn btn-sm btn-success rounded-3 fw-semibold" @click="importKehadiran" :disabled="importingKehadiran || isKehadiranLocked" id="btn-proses-impor-kehadiran">
-                                    <span v-if="importingKehadiran" class="spinner-border spinner-border-sm me-1"></span>
-                                    <i v-else class="bi bi-upload"></i> Impor
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+        <!-- Loader State -->
+        <div v-else-if="loadingKehadiran" class="d-flex flex-column align-items-center justify-content-center py-5 text-muted">
+            <div class="spinner-border text-primary mb-2"></div>
+            <span class="fs-7 fw-semibold">Memuat data absensi kehadiran siswa...</span>
+        </div>
+
+        <!-- Empty state with specific filter information -->
+        <div v-else-if="filterKehadiran.tahun_ajaran_id && filterKehadiran.semester && filterKehadiran.kelas_id && (!kehadiranData || kehadiranData.length === 0)" class="animate-fade-in">
+            <div class="bk-card p-5 text-center my-3 border border-dashed rounded-4">
+                <div class="d-inline-flex align-items-center justify-content-center bg-warning-subtle text-warning rounded-circle mb-3" style="width: 64px; height: 64px;">
+                    <i class="bi bi-person-x-fill fs-2"></i>
+                </div>
+                <h5 class="fw-bold text-dark mb-2">Tidak Ada Data Siswa Ditemukan</h5>
+                <p class="text-muted fs-8 mb-3" style="max-width: 540px; margin: 0 auto; line-height: 1.6;">
+                    Tidak ditemukan data siswa aktif untuk kelas <strong class="text-dark">{{ getNamaKelas(filterKehadiran.kelas_id) }}</strong> pada Tahun Ajaran <strong class="text-dark">{{ getNamaTahunAjaran(filterKehadiran.tahun_ajaran_id) }}</strong> Semester <strong class="text-dark">{{ filterKehadiran.semester }}</strong>.
+                </p>
+                <div class="d-flex flex-wrap justify-content-center gap-2 mt-2">
+                    <button class="btn btn-sm btn-outline-primary rounded-3 px-3 fs-8" @click="loadKehadiran">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Muat Ulang
+                    </button>
+                    <button class="btn btn-sm btn-outline-success rounded-3 px-3 fs-8" @click="openModalImportKehadiran" :disabled="isKehadiranLocked">
+                        <i class="bi bi-file-earmark-arrow-up-fill me-1"></i> Impor Data Excel Kelas Ini
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Empty state -->
+        <!-- Initial unselected state -->
         <div v-else class="text-center py-5 text-muted">
-            <i class="bi bi-calendar-x fs-1 d-block mb-2"></i>
-            <h6 class="fw-bold">Belum Ada Data Yang Ditampilkan</h6>
-            <p class="fs-7">Silakan pilih Tahun Ajaran, Semester, dan Kelas di atas untuk menampilkan grid input.</p>
+            <i class="bi bi-calendar-x fs-1 d-block mb-2 text-muted opacity-50"></i>
+            <h6 class="fw-bold text-dark mb-1">Belum Ada Data Yang Ditampilkan</h6>
+            <p class="fs-8 text-muted mb-0">Silakan pilih Tahun Ajaran, Semester, dan Kelas di atas untuk menampilkan grid absensi.</p>
         </div>
+
+
     </div>
 <?php endif; ?>
 
@@ -2886,6 +2929,43 @@ if (str_starts_with($defaultMainTab, 'p_')) {
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Banner Notifikasi Pemanggilan ke Tata Usaha (TU) jika Poin >= 50 -->
+                        <div v-if="sanksiDetailModal.total_poin >= 50" class="mt-3 p-3 rounded-3 border border-warning bg-warning bg-opacity-10 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-bell-fill text-danger fs-4"></i>
+                                <div>
+                                    <strong class="text-dark">Peringatan: Akumulasi Poin Siswa Membutuhkan Pemanggilan Orang Tua</strong>
+                                    <div class="text-muted fs-8">Guru BK berhak mengirimkan notifikasi pengajuan penerbitan surat resmi ke bagian Tata Usaha (TU).</div>
+                                </div>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-sm btn-danger rounded-pill px-3 py-1.5 fw-semibold shadow-sm text-white" @click="openModalPengajuanTu(sanksiDetailModal)">
+                                    <i class="bi bi-send-fill me-1"></i>Kirim Notifikasi ke TU
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Status Notifikasi Surat Keluar dari TU -->
+                        <div v-if="statusPengajuanTuList && statusPengajuanTuList.length > 0" class="mt-2 p-2.5 rounded-3 bg-light border">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="fw-bold fs-8 text-teal"><i class="bi bi-envelope-check-fill me-1"></i>Status Persuratan Tata Usaha (TU):</span>
+                            </div>
+                            <div v-for="st in statusPengajuanTuList" :key="st.id" class="d-flex justify-content-between align-items-center py-1 border-bottom fs-8">
+                                <div>
+                                    <span class="fw-semibold text-dark">{{ st.jenis_panggilan }}</span>
+                                    <span class="text-muted ms-1">({{ st.rencana_tanggal_menghadap || '-' }})</span>
+                                </div>
+                                <div>
+                                    <span class="badge" :class="st.status_pengajuan === 'Surat Resmi Telah Terbit' ? 'bg-success text-white' : 'bg-warning text-dark'">
+                                        {{ st.status_pengajuan }}
+                                    </span>
+                                    <span v-if="st.nomor_surat" class="font-monospace fw-bold text-teal ms-1">
+                                        No: {{ st.nomor_surat }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Split Panels: Timeline (Left) & Pembinaan Log (Right) -->
@@ -3019,6 +3099,70 @@ if (str_starts_with($defaultMainTab, 'p_')) {
         </div>
     </div>
 
+    <!-- MODAL PENGAJUAN NOTIFIKASI PEMANGGILAN ORANG TUA KE TATA USAHA (TU) -->
+    <div v-if="modalPengajuanTu.show" class="modal-backdrop-custom d-flex align-items-center justify-content-center" style="position:fixed; top:0; left:0; right:0; bottom:0; width:100vw; height:100vh; background:rgba(15,23,42,0.7); z-index:99999; overflow-y:auto;">
+        <div class="modal-dialog modal-dialog-centered modal-lg my-auto animate-fade-in" style="width: 90%; max-width: 700px;">
+            <div class="modal-content border-0 rounded-4 shadow-lg bg-white overflow-hidden">
+                <div class="modal-header bg-danger text-white px-4 py-3 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-send-fill fs-5"></i>
+                        <h6 class="modal-title fw-bold mb-0">Pengajuan Notifikasi Pemanggilan ke Tata Usaha (TU)</h6>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" @click="modalPengajuanTu.show = false"></button>
+                </div>
+                <form @submit.prevent="submitNotifikasiPengajuanTu">
+                    <div class="modal-body p-4 fs-8">
+                        <div class="alert alert-warning py-2 px-3 mb-3 d-flex align-items-center gap-2 fs-8 rounded-3">
+                            <i class="bi bi-info-circle-fill fs-5 text-warning"></i>
+                            <div>
+                                Guru BK mengirim usulan pemanggilan orang tua untuk siswa <strong>{{ modalPengajuanTu.siswa_nama }}</strong> ({{ modalPengajuanTu.siswa_kelas }}) dengan akumulasi <strong>{{ modalPengajuanTu.total_poin }} Poin</strong>. Surat dinas resmi akan diterbitkan oleh Tata Usaha.
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold mb-1">Jenis Surat Pemanggilan <span class="text-danger">*</span></label>
+                                <select class="form-select form-select-sm rounded-3" v-model="modalPengajuanTu.form.jenis_panggilan" required>
+                                    <option value="Surat Panggilan Orang Tua I">Surat Panggilan Orang Tua I</option>
+                                    <option value="Surat Panggilan Orang Tua II">Surat Panggilan Orang Tua II</option>
+                                    <option value="Surat Panggilan Orang Tua III">Surat Panggilan Orang Tua III</option>
+                                    <option value="Panggilan Khusus / Darurat">Panggilan Khusus / Darurat</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold mb-1">Usulan Ruangan <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm rounded-3" v-model="modalPengajuanTu.form.ruangan" required placeholder="Contoh: Ruang Konseling BK / Ruang Kepala Sekolah">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold mb-1">Usulan Tanggal Menghadap <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control form-control-sm rounded-3" v-model="modalPengajuanTu.form.rencana_tanggal_menghadap" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold mb-1">Usulan Jam Menghadap <span class="text-danger">*</span></label>
+                                <input type="time" class="form-control form-control-sm rounded-3" v-model="modalPengajuanTu.form.rencana_jam_menghadap" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold mb-1">Alasan / Catatan Pendukung untuk Tata Usaha <span class="text-danger">*</span></label>
+                            <textarea class="form-control form-control-sm rounded-3" rows="3" v-model="modalPengajuanTu.form.alasan_pemanggilan" required placeholder="Jelaskan ringkasan pelanggaran dan urgensi pemanggilan wali murid..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light p-3">
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-3 px-3" @click="modalPengajuanTu.show = false">Batal</button>
+                        <button type="submit" class="btn btn-sm btn-danger text-white fw-bold rounded-3 px-4" :disabled="modalPengajuanTu.submitting">
+                            <span v-if="modalPengajuanTu.submitting" class="spinner-border spinner-border-sm me-1"></span>
+                            <i v-else class="bi bi-send-fill me-1"></i> Kirim Notifikasi ke TU
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- PROOF IMAGE LIGHTBOX MODAL -->
     <div v-if="fotoModal.show" class="modal-backdrop-custom d-flex align-items-center justify-content-center" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.85); z-index:99999;" @click="fotoModal.show = false">
         <div class="position-relative p-2" style="max-width:90%; max-height:90%; z-index:100000;" @click.stop>
@@ -3045,164 +3189,257 @@ if (str_starts_with($defaultMainTab, 'p_')) {
             </div>
         </div>
 
-        <div v-else class="row g-4 animate-fade-in">
-            <!-- Panel Kiri: Pilih Siswa & Input Beasiswa -->
-            <div class="col-lg-5">
-                <div class="bk-card p-4">
-                    <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
-                        <h6 class="fw-bold mb-0">
-                            <i class="bi bi-gift-fill me-2 text-success"></i>
-                            Input Riwayat Beasiswa
-                        </h6>
-                        <button v-if="activeBeasiswaSiswa" @click="clearSiswaBeasiswa" class="btn btn-xs btn-outline-secondary rounded-3 py-1 px-2 fw-semibold" style="font-size: 0.72rem;">
-                            <i class="bi bi-arrow-counterclockwise me-1"></i> Ganti Siswa
+        <div v-else class="animate-fade-in">
+            <!-- Full Width Card: Daftar Seluruh Beasiswa & Search/Filter/Add/Ekspor -->
+            <div class="bk-card p-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 pb-3 border-bottom">
+                    <div>
+                        <h5 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
+                            <i class="bi bi-gift-fill text-success"></i>
+                            Manajemen Data Beasiswa Siswa
+                        </h5>
+                        <p class="text-muted fs-8 mb-0">Kelola riwayat penerima beasiswa prestasi, bantuan sosial (PIP/KIP), yayasan, dan beasiswa kedinasan.</p>
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <!-- Filter Tahun Penerimaan Beasiswa (Dinamis Sesuai Database Tenant) -->
+                        <select class="form-select form-select-sm rounded-3 shadow-none" style="width: 145px; font-size: 0.8rem;" v-model="filterBeasiswaTahun" @change="loadAllBeasiswa">
+                            <option value="">Semua Tahun</option>
+                            <option v-for="thn in beasiswaTahunList" :key="thn" :value="thn">Tahun {{ thn }}</option>
+                        </select>
+                        
+                        <!-- Download Excel Button -->
+                        <button class="btn btn-sm btn-outline-secondary rounded-3 d-inline-flex align-items-center gap-1 fw-semibold fs-8" @click="exportBeasiswaExcel">
+                            <i class="bi bi-file-earmark-spreadsheet text-success"></i>
+                            Ekspor Excel
+                        </button>
+
+                        <!-- Tombol Tambah Beasiswa (Popup Modal) -->
+                        <button class="btn btn-sm btn-success text-white rounded-3 d-inline-flex align-items-center gap-1 fw-bold fs-8 px-3 shadow-sm" @click="openModalTambahBeasiswa">
+                            <i class="bi bi-plus-circle-fill me-1"></i>
+                            Tambah Beasiswa
                         </button>
                     </div>
+                </div>
 
-                    <!-- Search Siswa Dropdown -->
-                    <div class="mb-3">
-                        <label for="input-beasiswa-cari-siswa" class="form-label fw-bold fs-7 mb-1 text-dark">Pilih Siswa <span class="text-danger">*</span></label>
+                <!-- Live Search Bar Filter -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6 col-lg-5">
                         <div class="position-relative">
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
-                                <input type="text" 
-                                       id="input-beasiswa-cari-siswa"
-                                       name="beasiswa_cari_siswa"
-                                       class="form-control form-control-sm border-start-0 ps-1 rounded-end-3" 
-                                       placeholder="Ketik Nama, NISN, atau NIK Siswa..."
-                                       v-model="beasiswaSearchSiswa"
-                                       @input="searchSiswaBeasiswaDebounce"
-                                       @focus="showBeasiswaSiswaDropdown = true"
-                                       @blur="hideBeasiswaDropdownDelay" />
-                            </div>
-                            
-                            <!-- Dropdown Pencarian Siswa -->
-                            <div v-if="showBeasiswaSiswaDropdown && beasiswaSiswaOptions?.length > 0" 
-                                 class="position-absolute w-100 bg-white border rounded-3 shadow-lg p-1 mt-1 z-3"
-                                 style="max-height: 250px; overflow-y: auto;">
-                                <div v-for="s in beasiswaSiswaOptions" 
-                                     :key="s.id" 
-                                     @mousedown.prevent="selectSiswaBeasiswa(s)"
-                                     class="p-2 rounded-2 hover-bg-slate cursor-pointer fs-7 d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <div class="fw-bold text-dark">{{ s.nama_lengkap }}</div>
-                                        <div class="text-muted fs-8">NISN: {{ s.nisn }} | Kelas: {{ s.nama_kelas || '-' }}</div>
-                                    </div>
-                                    <span class="badge bg-primary-subtle text-primary rounded-pill px-2 py-1 fs-9">Pilih</span>
-                                </div>
-                            </div>
+                            <i class="bi bi-search position-absolute text-muted" style="top: 9px; left: 14px;"></i>
+                            <input type="text" 
+                                   class="form-control form-control-sm rounded-3 ps-5 fs-8" 
+                                   placeholder="Cari Nama Siswa, NISN, Kelas, Jenis Beasiswa..." 
+                                   v-model="filterBeasiswaSearch">
                         </div>
                     </div>
-
-                    <hr v-if="activeBeasiswaSiswa" class="my-3">
-
-                    <!-- Form Input Beasiswa (Hanya jika siswa sudah terpilih) -->
-                    <div v-if="activeBeasiswaSiswa">
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold fs-7 mb-1">Jenis Beasiswa <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-sm rounded-3" v-model="formBeasiswa.jenis_beasiswa" placeholder="Contoh: PIP, Beasiswa Prestasi, Pemda, Yayasan" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold fs-7 mb-1">Sumber Beasiswa</label>
-                            <input type="text" class="form-control form-control-sm rounded-3" v-model="formBeasiswa.sumber" placeholder="Contoh: Kemenag, CSR Bank Mandiri, Pemprov">
-                        </div>
-                        <div class="row g-2 mb-3">
-                            <div class="col-6">
-                                <label class="form-label fw-semibold fs-7 mb-1">Tahun Menerima <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control form-control-sm rounded-3" v-model.number="formBeasiswa.tahun_menerima" required>
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label fw-semibold fs-7 mb-1">Nominal (Opsional)</label>
-                                <input type="number" class="form-control form-control-sm rounded-3" v-model.number="formBeasiswa.nominal" placeholder="Contoh: 1000000">
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-end gap-2 mt-4">
-                            <button class="btn btn-sm btn-outline-secondary rounded-3 px-3" @click="resetFormBeasiswa">Reset</button>
-                            <button class="btn btn-sm btn-success rounded-3 px-4 d-inline-flex align-items-center gap-1" @click="simpanBeasiswa" :disabled="loadingSimpanBeasiswa">
-                                <span v-if="loadingSimpanBeasiswa" class="spinner-border spinner-border-sm"></span>
-                                <i v-else class="bi bi-floppy"></i>
-                                Simpan Beasiswa
-                            </button>
-                        </div>
+                    <div class="col-md-6 col-lg-7 d-flex align-items-center justify-content-md-end text-muted fs-8">
+                        Menampilkan <strong class="mx-1 text-dark">{{ filteredBeasiswaList.length }}</strong> dari {{ allBeasiswaList.length }} penerima beasiswa
                     </div>
                 </div>
-            </div>
 
-            <!-- Panel Kanan: Daftar Seluruh Beasiswa & Filter/Ekspor -->
-            <div class="col-lg-7">
-                <div class="bk-card p-4 h-100 d-flex flex-column">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 pb-2 border-bottom">
-                        <h6 class="fw-bold mb-0">
-                            <i class="bi bi-clock-history me-2 text-warning"></i>
-                            Daftar Penerima Beasiswa
-                        </h6>
-                        <div class="d-flex align-items-center gap-2">
-                            <!-- Filter Tahun Ajaran -->
-                            <select class="form-select form-select-sm rounded-3" style="width: 155px; font-size: 0.78rem;" v-model="filterBeasiswaTahunAjaran" @change="loadAllBeasiswa">
-                                <option value="">Semua Thn Ajaran</option>
-                                <option v-for="ta in tahunAjaranList" :key="ta.id" :value="ta.id">{{ ta.tahun_ajaran }}</option>
-                            </select>
-                            
-                            <!-- Download Excel Button -->
-                            <button class="btn btn-sm btn-outline-primary rounded-3 d-inline-flex align-items-center gap-1 fw-semibold" style="font-size: 0.78rem;" @click="exportBeasiswaExcel">
-                                <i class="bi bi-file-earmark-spreadsheet"></i>
-                                Excel
-                            </button>
-                        </div>
-                    </div>
+                <!-- Loader -->
+                <div v-if="loadingBeasiswaList" class="d-flex flex-column align-items-center justify-content-center py-5 text-muted">
+                    <div class="spinner-border text-success spinner-border-sm mb-2"></div>
+                    <span class="fs-7">Memuat data beasiswa...</span>
+                </div>
 
-                    <!-- Loader -->
-                    <div v-if="loadingBeasiswaList" class="flex-grow-1 d-flex flex-column align-items-center justify-content-center py-5 text-muted">
-                        <div class="spinner-border text-primary spinner-border-sm mb-2"></div>
-                        <span class="fs-7">Memuat data beasiswa...</span>
-                    </div>
-
-                    <div v-else class="flex-grow-1 table-responsive">
-                        <table class="table table-hover align-middle fs-8">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width: 5%">No.</th>
-                                    <th>Nama Siswa</th>
-                                    <th>Kelas</th>
-                                    <th>Jenis Beasiswa</th>
-                                    <th>Sumber</th>
-                                    <th>Tahun</th>
-                                    <th>Nominal</th>
-                                    <th class="text-center" style="width: 10%">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="(b, bIdx) in allBeasiswaList" :key="b.id">
-                                    <td>{{ bIdx + 1 }}</td>
-                                    <td>
-                                        <div class="fw-bold text-dark text-start">{{ b.nama_lengkap }}</div>
-                                        <div class="text-muted text-start fs-9" style="font-family: monospace;">NISN: {{ b.nisn || '-' }}</div>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-light text-dark border px-2 py-1 fs-9">
-                                            {{ b.nama_kelas || '-' }}
-                                        </span>
-                                    </td>
-                                    <td class="fw-bold text-success text-start">{{ b.jenis_beasiswa }}</td>
-                                    <td class="text-start">{{ b.sumber || '-' }}</td>
-                                    <td class="font-monospace fw-bold">{{ b.tahun_menerima }}</td>
-                                    <td>{{ b.nominal ? 'Rp ' + Number(b.nominal).toLocaleString('id-ID') : '-' }}</td>
-                                    <td class="text-center">
-                                        <button class="btn btn-sm btn-outline-danger rounded-2 px-2 py-1" @click="hapusBeasiswa(b.id)" title="Hapus riwayat beasiswa">
+                <!-- Tabel Data Beasiswa -->
+                <div v-else class="table-responsive rounded-3 border">
+                    <table class="table table-hover align-middle fs-8 mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 4%" class="text-center">No.</th>
+                                <th style="width: 25%">Nama Siswa & NISN</th>
+                                <th style="width: 10%">Kelas</th>
+                                <th style="width: 18%">Jenis Beasiswa</th>
+                                <th style="width: 15%">Penyelenggara / Sumber</th>
+                                <th style="width: 8%" class="text-center">Tahun</th>
+                                <th style="width: 12%" class="text-end">Nominal</th>
+                                <th style="width: 8%" class="text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(b, bIdx) in filteredBeasiswaList" :key="b.id">
+                                <td class="text-center text-muted fw-semibold">{{ bIdx + 1 }}</td>
+                                <td>
+                                    <div class="fw-bold text-dark">{{ b.nama_lengkap }}</div>
+                                    <div class="text-muted fs-9" style="font-family: monospace;">NISN: {{ b.nisn || '-' }}</div>
+                                    <div v-if="b.keterangan" class="text-muted fs-9 fst-italic mt-1"><i class="bi bi-info-circle me-1"></i>{{ b.keterangan }}</div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border px-2 py-1 fs-9">
+                                        {{ b.nama_kelas || '-' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 fs-8 fw-semibold">
+                                        {{ b.jenis_beasiswa }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="text-dark">{{ b.sumber || '-' }}</span>
+                                </td>
+                                <td class="text-center font-monospace fw-bold text-dark">
+                                    {{ b.tahun_menerima }}
+                                </td>
+                                <td class="text-end fw-semibold text-success">
+                                    {{ b.nominal ? 'Rp ' + Number(b.nominal).toLocaleString('id-ID') : '-' }}
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary btn-xs rounded-2 px-2 py-1 me-1" @click="openModalEditBeasiswa(b)" title="Edit Beasiswa">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-xs rounded-2 px-2 py-1" @click="hapusBeasiswa(b.id)" title="Hapus Data">
                                             <i class="bi bi-trash"></i>
                                         </button>
-                                    </td>
-                                </tr>
-                                <tr v-if="!allBeasiswaList || allBeasiswaList?.length === 0">
-                                    <td colspan="8" class="text-center py-4 text-muted">
-                                        Tidak ada data beasiswa yang tercatat.
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr v-if="!filteredBeasiswaList || filteredBeasiswaList.length === 0">
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <i class="bi bi-inbox fs-2 text-muted d-block mb-2"></i>
+                                    Tidak ada data beasiswa yang sesuai dengan kriteria pencarian.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL POPUP TAMBAH / EDIT BEASISWA -->
+    <div v-if="modalBeasiswa.show" class="modal-backdrop-custom d-flex align-items-center justify-content-center" style="position:fixed; top:0; left:0; right:0; bottom:0; width:100vw; height:100vh; background:rgba(15,23,42,0.7); z-index:99999; overflow-y:auto;">
+        <div class="modal-dialog modal-dialog-centered modal-lg my-auto animate-fade-in" style="width: 92%; max-width: 680px;">
+            <div class="modal-content border-0 rounded-4 shadow-lg bg-white overflow-hidden">
+                <div class="modal-header bg-success text-white px-4 py-3 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-gift-fill fs-5"></i>
+                        <h6 class="modal-title fw-bold mb-0">
+                            {{ modalBeasiswa.isEdit ? 'Edit Data Beasiswa Siswa' : 'Tambah Data Beasiswa Siswa' }}
+                        </h6>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" @click="modalBeasiswa.show = false"></button>
+                </div>
+                <form @submit.prevent="simpanBeasiswaModal">
+                    <div class="modal-body p-4 fs-8">
+                        <!-- Mode Tambah: Input Siswa dengan Autocomplete -->
+                        <div v-if="!modalBeasiswa.isEdit" class="mb-3">
+                            <label class="form-label fw-bold mb-1 text-dark">Pilih Siswa <span class="text-danger">*</span></label>
+                            
+                            <!-- Siswa Belum Terpilih: Tampilkan Search Bar -->
+                            <div v-if="!modalBeasiswa.selectedSiswa" class="position-relative">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-light text-muted border-end-0"><i class="bi bi-search"></i></span>
+                                    <input type="text" 
+                                           class="form-control form-control-sm border-start-0 rounded-end-3" 
+                                           placeholder="Ketik Nama, NISN, atau NIK Siswa..."
+                                           v-model="modalBeasiswa.searchSiswa"
+                                           @input="searchSiswaModalDebounce"
+                                           @focus="modalBeasiswa.showDropdown = true"
+                                           @blur="hideModalDropdownDelay"
+                                           required />
+                                </div>
+                                
+                                <!-- Dropdown Pencarian Siswa -->
+                                <div v-if="modalBeasiswa.showDropdown && modalBeasiswa.siswaOptions?.length > 0" 
+                                     class="position-absolute w-100 bg-white border rounded-3 shadow-lg p-1 mt-1 z-3"
+                                     style="max-height: 220px; overflow-y: auto;">
+                                    <div v-for="s in modalBeasiswa.siswaOptions" 
+                                         :key="s.id" 
+                                         @mousedown.prevent="selectSiswaModal(s)"
+                                         class="p-2 rounded-2 hover-bg-slate cursor-pointer fs-8 d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <div class="fw-bold text-dark">{{ s.nama_lengkap }}</div>
+                                            <div class="text-muted fs-9">NISN: {{ s.nisn || '-' }} | Kelas: {{ s.nama_kelas || '-' }}</div>
+                                        </div>
+                                        <span class="badge bg-success-subtle text-success rounded-pill px-2 py-1 fs-9">Pilih</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Siswa Sudah Terpilih: Tampilkan Info Ringkas -->
+                            <div v-else class="p-3 bg-light border rounded-3 d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 40px; height: 40px;">
+                                        {{ modalBeasiswa.selectedSiswa.nama_lengkap.charAt(0) }}
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-dark">{{ modalBeasiswa.selectedSiswa.nama_lengkap }}</div>
+                                        <div class="text-muted fs-9">NISN: {{ modalBeasiswa.selectedSiswa.nisn || '-' }} | Kelas: {{ modalBeasiswa.selectedSiswa.nama_kelas || '-' }}</div>
+                                    </div>
+                                </div>
+                                <button type="button" @click="clearSiswaModal" class="btn btn-xs btn-outline-secondary rounded-3 py-1 px-2 fw-semibold fs-9">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i> Ganti
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Mode Edit: Tampilkan Info Siswa yang Diedit -->
+                        <div v-else class="mb-3 p-3 bg-light border rounded-3 d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 40px; height: 40px;">
+                                    {{ modalBeasiswa.selectedSiswa?.nama_lengkap?.charAt(0) || 'S' }}
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-dark">{{ modalBeasiswa.selectedSiswa?.nama_lengkap }}</div>
+                                    <div class="text-muted fs-9">NISN: {{ modalBeasiswa.selectedSiswa?.nisn || '-' }} | Kelas: {{ modalBeasiswa.selectedSiswa?.nama_kelas || '-' }}</div>
+                                </div>
+                            </div>
+                            <span class="badge bg-primary-subtle text-primary rounded-pill px-2 py-1 fs-9">Siswa Terpilih</span>
+                        </div>
+
+                        <!-- Shortcut Pilihan Beasiswa Populer -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold mb-1 text-dark">Pilihan Jenis Beasiswa Cepat:</label>
+                            <div class="d-flex flex-wrap gap-1">
+                                <button type="button" 
+                                        v-for="tag in ['PIP (Program Indonesia Pintar)', 'KIP-Kuliah', 'Beasiswa Prestasi Akademik', 'Beasiswa Non-Akademik', 'Beasiswa Pemda', 'Beasiswa Yayasan', 'Baznas', 'CSR Perusahaan']" 
+                                        :key="tag" 
+                                        @click="modalBeasiswa.form.jenis_beasiswa = tag"
+                                        class="btn btn-xs btn-outline-success rounded-pill px-2 py-1 fs-9">
+                                    + {{ tag }}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold mb-1 text-dark">Jenis / Nama Beasiswa <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm rounded-3" v-model="modalBeasiswa.form.jenis_beasiswa" required placeholder="Contoh: PIP, Beasiswa Prestasi, Pemda">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold mb-1 text-dark">Penyelenggara / Sumber Beasiswa</label>
+                                <input type="text" class="form-control form-control-sm rounded-3" v-model="modalBeasiswa.form.sumber" placeholder="Contoh: Kemenag, Kemendikbud, CSR Bank">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold mb-1 text-dark">Tahun Menerima <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control form-control-sm rounded-3 font-monospace" v-model.number="modalBeasiswa.form.tahun_menerima" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold mb-1 text-dark">Nominal Bantuan (Rp) (Opsional)</label>
+                                <input type="number" class="form-control form-control-sm rounded-3 font-monospace" v-model.number="modalBeasiswa.form.nominal" placeholder="Contoh: 1000000">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold mb-1 text-dark">Keterangan Tambahan / Catatan</label>
+                            <textarea class="form-control form-control-sm rounded-3" rows="2" v-model="modalBeasiswa.form.keterangan" placeholder="Contoh: Bantuan semester genap, pencairan tahap 1..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light p-3">
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-3 px-3" @click="modalBeasiswa.show = false">Batal</button>
+                        <button type="submit" class="btn btn-sm btn-success text-white fw-bold rounded-3 px-4" :disabled="modalBeasiswa.saving">
+                            <span v-if="modalBeasiswa.saving" class="spinner-border spinner-border-sm me-1"></span>
+                            <i v-else class="bi bi-check-circle-fill me-1"></i>
+                            {{ modalBeasiswa.isEdit ? 'Simpan Perubahan' : 'Simpan Beasiswa' }}
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -4079,6 +4316,133 @@ if (str_starts_with($defaultMainTab, 'p_')) {
     </div>
 <?php endif; ?>
 
+    <!-- ═══════════════════════════════════════════════════════════
+         ROOT MODALS: IMPOR & EKSPOR KEHADIRAN SISWA
+    ════════════════════════════════════════════════════════════ -->
+    <!-- POPUP MODAL 1: IMPOR KEHADIRAN EXCEL -->
+    <div v-if="modalImportKehadiran.show" class="modal-backdrop-custom d-flex align-items-center justify-content-center" style="position:fixed; top:0; left:0; right:0; bottom:0; width:100vw; height:100vh; background:rgba(15,23,42,0.7); z-index:99999; overflow-y:auto;">
+        <div class="modal-dialog modal-dialog-centered modal-lg my-auto" style="width: 92%; max-width: 620px;">
+            <div class="modal-content border-0 rounded-4 shadow-lg bg-white overflow-hidden">
+                <div class="modal-header bg-success text-white px-4 py-3 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-file-earmark-arrow-up-fill fs-5"></i>
+                        <h6 class="modal-title fw-bold mb-0">Impor Data Kehadiran Siswa (.xlsx)</h6>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" @click="closeModalImportKehadiran"></button>
+                </div>
+                <div class="modal-body p-4 fs-8">
+                    <!-- Guidance Alert -->
+                    <div class="alert alert-info border-0 rounded-3 mb-3 d-flex gap-3 align-items-start">
+                        <i class="bi bi-info-circle-fill fs-5 text-info mt-1"></i>
+                        <div>
+                            <div class="fw-bold mb-1">Panduan Impor Kehadiran:</div>
+                            <div class="text-muted fs-8">
+                                Unggah berkas Excel (.xlsx) yang sesuai dengan format template resmi. Pastikan kolom <strong>UUID Sekolah, NISN, Sakit, Izin, dan Alfa</strong> tidak diubah judul kolomnya.
+                            </div>
+                            <button type="button" @click="unduhTemplateKehadiran" class="btn btn-xs btn-outline-primary rounded-pill mt-2 px-3 py-1 fw-bold">
+                                <i class="bi bi-download me-1"></i> Unduh Template Kelas Terpilih
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Target Target Filter Info -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold mb-1 text-dark">Tahun Ajaran <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm rounded-3" v-model="modalImportKehadiran.tahun_ajaran_id">
+                                <option value="">-- Pilih TA --</option>
+                                <option v-for="ta in tahunAjaranList" :key="ta.id" :value="ta.id">{{ ta.tahun_ajaran }}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold mb-1 text-dark">Semester <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm rounded-3" v-model="modalImportKehadiran.semester">
+                                <option value="Ganjil">Ganjil</option>
+                                <option value="Genap">Genap</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold mb-1 text-dark">Kelas Target <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm rounded-3" v-model="modalImportKehadiran.kelas_id">
+                                <option value="">-- Pilih Kelas --</option>
+                                <option v-for="k in listKelasKehadiran" :key="k.id" :value="k.id">{{ k.nama_kelas }}</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- File Input -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold mb-1 text-dark">Pilih Berkas Excel (.xlsx) <span class="text-danger">*</span></label>
+                        <input type="file" 
+                               id="modal-file-import-kehadiran" 
+                               @change="handleModalFileImportChange" 
+                               class="form-control form-control-sm rounded-3" 
+                               accept=".xlsx">
+                        <div v-if="modalImportKehadiran.file" class="mt-2 text-success fw-semibold fs-9 d-flex align-items-center gap-1">
+                            <i class="bi bi-file-earmark-check-fill"></i>
+                            Berkas terpilih: {{ modalImportKehadiran.file.name }} ({{ (modalImportKehadiran.file.size / 1024).toFixed(1) }} KB)
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light p-3">
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-3 px-3" @click="closeModalImportKehadiran">Batal</button>
+                    <button type="button" class="btn btn-sm btn-success text-white fw-bold rounded-3 px-4 shadow-sm" @click="submitModalImportKehadiran" :disabled="modalImportKehadiran.loading">
+                        <span v-if="modalImportKehadiran.loading" class="spinner-border spinner-border-sm me-1"></span>
+                        <i v-else class="bi bi-upload me-1"></i> Mulai Impor Kehadiran
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- POPUP MODAL 2: EKSPOR KEHADIRAN EXCEL -->
+    <div v-if="modalExportKehadiran.show" class="modal-backdrop-custom d-flex align-items-center justify-content-center" style="position:fixed; top:0; left:0; right:0; bottom:0; width:100vw; height:100vh; background:rgba(15,23,42,0.7); z-index:99999; overflow-y:auto;">
+        <div class="modal-dialog modal-dialog-centered modal-md my-auto" style="width: 92%; max-width: 540px;">
+            <div class="modal-content border-0 rounded-4 shadow-lg bg-white overflow-hidden">
+                <div class="modal-header bg-primary text-white px-4 py-3 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-file-earmark-arrow-down-fill fs-5"></i>
+                        <h6 class="modal-title fw-bold mb-0">Ekspor Data Kehadiran (.xlsx)</h6>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" @click="closeModalExportKehadiran"></button>
+                </div>
+                <div class="modal-body p-4 fs-8">
+                    <p class="text-muted mb-3">Pilih kriteria data kehadiran yang ingin diekspor ke format berkas Excel (.xlsx). Berkas yang diunduh dapat diedit dan diimpor kembali.</p>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold mb-1 text-dark">Tahun Ajaran <span class="text-danger">*</span></label>
+                        <select class="form-select form-select-sm rounded-3" v-model="modalExportKehadiran.tahun_ajaran_id">
+                            <option value="">-- Pilih Tahun Ajaran --</option>
+                            <option v-for="ta in tahunAjaranList" :key="ta.id" :value="ta.id">{{ ta.tahun_ajaran }}</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold mb-1 text-dark">Semester <span class="text-danger">*</span></label>
+                        <select class="form-select form-select-sm rounded-3" v-model="modalExportKehadiran.semester">
+                            <option value="Ganjil">Ganjil</option>
+                            <option value="Genap">Genap</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold mb-1 text-dark">Kelas <span class="text-danger">*</span></label>
+                        <select class="form-select form-select-sm rounded-3" v-model="modalExportKehadiran.kelas_id">
+                            <option value="">-- Pilih Kelas --</option>
+                            <option v-for="k in listKelasKehadiran" :key="k.id" :value="k.id">{{ k.nama_kelas }}</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light p-3">
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-3 px-3" @click="closeModalExportKehadiran">Batal</button>
+                    <button type="button" class="btn btn-sm btn-primary text-white fw-bold rounded-3 px-4 shadow-sm" @click="submitModalExportKehadiran">
+                        <i class="bi bi-download me-1"></i> Unduh Berkas Excel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div><!-- End #bkApp -->
 
 <script>
@@ -4126,6 +4490,22 @@ window.VueAppRegistry.register('#bkApp', {
         const fileImportKehadiran = ref(null);
         const tahunAjaranList = ref(_tahunAjaranList || []);
         const isKehadiranLocked = ref(false);
+
+        const modalImportKehadiran = ref({
+            show: false,
+            loading: false,
+            file: null,
+            tahun_ajaran_id: '',
+            semester: 'Ganjil',
+            kelas_id: ''
+        });
+
+        const modalExportKehadiran = ref({
+            show: false,
+            tahun_ajaran_id: '',
+            semester: 'Ganjil',
+            kelas_id: ''
+        });
 
         // ─── Pelanggaran & Poin State ────────────────────────
         const loadingPelanggaranDashboard = ref(false);
@@ -4175,6 +4555,22 @@ window.VueAppRegistry.register('#bkApp', {
             total_poin: 0,
             violations: [],
             followUps: []
+        });
+        const statusPengajuanTuList = ref([]);
+        const modalPengajuanTu = ref({
+            show: false,
+            siswa_nama: '',
+            siswa_kelas: '',
+            total_poin: 0,
+            submitting: false,
+            form: {
+                id_siswa: '',
+                jenis_panggilan: 'Surat Panggilan Orang Tua I',
+                alasan_pemanggilan: '',
+                rencana_tanggal_menghadap: new Date().toISOString().split('T')[0],
+                rencana_jam_menghadap: '09:00',
+                ruangan: 'Ruang Konseling BK'
+            }
         });
         const formTindakLanjut = ref({
             tanggal_tindakan: new Date().toISOString().split('T')[0],
@@ -5194,7 +5590,8 @@ window.VueAppRegistry.register('#bkApp', {
             if (!formPrestasi.value.tempat_lomba) { alertPrestasi.value = { msg: 'Tempat Lomba wajib diisi.', type: 'danger' }; return; }
             if (!formPrestasi.value.tanggal_lomba) { alertPrestasi.value = { msg: 'Tanggal Lomba wajib diisi.', type: 'danger' }; return; }
             if (!formPrestasi.value.penyelenggara) { alertPrestasi.value = { msg: 'Penyelenggara wajib diisi.', type: 'danger' }; return; }
-            if (selectedPrestasiSiswa.value.length === 0) { alertPrestasi.value = { msg: 'Minimal pilih satu siswa peraih prestasi.', type: 'danger' }; return; }
+            // Mode Edit: siswa terkunci di backend, bypass validasi client-side
+            if (!formPrestasi.value.id && selectedPrestasiSiswa.value.length === 0) { alertPrestasi.value = { msg: 'Minimal pilih satu siswa peraih prestasi.', type: 'danger' }; return; }
 
             loadingPrestasi.value = true;
             try {
@@ -5217,6 +5614,7 @@ window.VueAppRegistry.register('#bkApp', {
                 formData.append('guru_pendamping', formPrestasi.value.guru_pendamping);
                 formData.append('poin_prestasi', formPrestasi.value.poin_prestasi || 0);
 
+                // Mode Edit: kirim siswa_ids hanya jika ada (jika kosong, backend akan keep existing)
                 const siswaIds = selectedPrestasiSiswa.value.map(s => s.id);
                 formData.append('siswa_ids', JSON.stringify(siswaIds));
 
@@ -5317,12 +5715,26 @@ window.VueAppRegistry.register('#bkApp', {
             formPrestasi.value.existing_foto_kegiatan = p.foto_kegiatan_lomba;
             formPrestasi.value.existing_surat_tugas = p.surat_tugas_pdf;
 
-            selectedPrestasiSiswa.value = (p.siswa_list || []).map(s => ({
-                id: s.id,
-                nama_lengkap: s.nama_lengkap,
-                nisn: s.nisn,
-                nama_kelas: s.nama_kelas
-            }));
+            // Populasi selectedPrestasiSiswa dari siswa_list (join pivot)
+            // Fallback: jika siswa_list kosong (data lama), gunakan field top-level
+            if (p.siswa_list && p.siswa_list.length > 0) {
+                selectedPrestasiSiswa.value = p.siswa_list.map(s => ({
+                    id: s.id,
+                    nama_lengkap: s.nama_lengkap || s.nama || '-',
+                    nisn: s.nisn || '-',
+                    nama_kelas: s.nama_kelas || s.kelas_saat_ini || '-'
+                }));
+            } else if (p.nama_siswa && p.nama_siswa !== '—') {
+                // Fallback dari field agregasi top-level (data lama tanpa relasi pivot)
+                selectedPrestasiSiswa.value = [{
+                    id: p.siswa_id || 'legacy-' + p.id,
+                    nama_lengkap: p.nama_siswa,
+                    nisn: p.nisn || '-',
+                    nama_kelas: p.nama_kelas || '-'
+                }];
+            } else {
+                selectedPrestasiSiswa.value = [];
+            }
         }
 
         async function deletePrestasi(id) {
@@ -5442,6 +5854,8 @@ window.VueAppRegistry.register('#bkApp', {
                 return;
             }
             loadingKehadiran.value = true;
+            kehadiranData.value = [];
+            originalKehadiranData.value = [];
             try {
                 const params = new URLSearchParams();
                 params.set('tahun_ajaran_id', filterKehadiran.value.tahun_ajaran_id);
@@ -5593,52 +6007,88 @@ window.VueAppRegistry.register('#bkApp', {
             }
         }
 
-        function exportKehadiran() {
-            if (!filterKehadiran.value.tahun_ajaran_id || !filterKehadiran.value.semester || !filterKehadiran.value.kelas_id) {
-                Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Pilih filter Tahun Ajaran, Semester, dan Kelas terlebih dahulu.' });
+        function openModalImportKehadiran() {
+            // Guard: blokir aksi jika data sudah dikunci
+            if (isKehadiranLocked.value) {
+                Swal.fire('Data Terkunci', 'Data kehadiran kelas ini sedang dikunci. Buka kunci terlebih dahulu untuk mengimpor data.', 'warning');
                 return;
             }
+            modalImportKehadiran.value.show = true;
+            modalImportKehadiran.value.loading = false;
+            modalImportKehadiran.value.file = null;
+            modalImportKehadiran.value.tahun_ajaran_id = filterKehadiran.value.tahun_ajaran_id || (tahunAjaranList.value[0]?.id || '');
+            modalImportKehadiran.value.semester = filterKehadiran.value.semester || 'Ganjil';
+            modalImportKehadiran.value.kelas_id = filterKehadiran.value.kelas_id || (listKelasKehadiran.value[0]?.id || '');
+            
+            const fileInput = document.getElementById('modal-file-import-kehadiran');
+            if (fileInput) fileInput.value = '';
+        }
+
+        function closeModalImportKehadiran() {
+            modalImportKehadiran.value.show = false;
+            modalImportKehadiran.value.loading = false;
+            modalImportKehadiran.value.file = null;
+        }
+
+        function handleModalFileImportChange(event) {
+            modalImportKehadiran.value.file = event.target.files[0] || null;
+        }
+
+        function unduhTemplateKehadiran() {
+            const ta = modalImportKehadiran.value.tahun_ajaran_id || filterKehadiran.value.tahun_ajaran_id;
+            const sm = modalImportKehadiran.value.semester || filterKehadiran.value.semester;
+            const kl = modalImportKehadiran.value.kelas_id || filterKehadiran.value.kelas_id;
+
+            if (!ta || !sm || !kl) {
+                Swal.fire('Perhatian', 'Pilih Tahun Ajaran, Semester, dan Kelas target terlebih dahulu.', 'warning');
+                return;
+            }
+
             const params = new URLSearchParams();
-            params.set('tahun_ajaran_id', filterKehadiran.value.tahun_ajaran_id);
-            params.set('semester', filterKehadiran.value.semester);
-            params.set('kelas_id', filterKehadiran.value.kelas_id);
+            params.set('tahun_ajaran_id', ta);
+            params.set('semester', sm);
+            params.set('kelas_id', kl);
             if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
             window.open(`${_baseUrl}/api/v1/bk/absensi-semester/export?${params.toString()}`, '_blank');
         }
 
-        function handleFileImportChange(event) {
-            fileImportKehadiran.value = event.target.files[0];
-        }
+        async function submitModalImportKehadiran() {
+            // Guard: blokir submit jika data sudah dikunci (double-check keamanan)
+            if (isKehadiranLocked.value) {
+                Swal.fire('Data Terkunci', 'Data kehadiran kelas ini sedang dikunci. Buka kunci terlebih dahulu sebelum mengimpor data.', 'warning');
+                return;
+            }
+            if (!modalImportKehadiran.value.file) {
+                Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Pilih berkas template Excel (.xlsx) yang ingin diimpor terlebih dahulu.' });
+                return;
+            }
+            if (!modalImportKehadiran.value.tahun_ajaran_id || !modalImportKehadiran.value.semester || !modalImportKehadiran.value.kelas_id) {
+                Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Pastikan Tahun Ajaran, Semester, dan Kelas target sudah dipilih.' });
+                return;
+            }
 
-        async function importKehadiran() {
-            if (!fileImportKehadiran.value) {
-                Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Pilih file yang ingin diimpor terlebih dahulu.' });
-                return;
-            }
-            if (!filterKehadiran.value.tahun_ajaran_id || !filterKehadiran.value.semester || !filterKehadiran.value.kelas_id) {
-                Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Pilih filter Tahun Ajaran, Semester, dan Kelas terlebih dahulu.' });
-                return;
-            }
-            importingKehadiran.value = true;
+            modalImportKehadiran.value.loading = true;
             try {
                 const formData = new FormData();
-                formData.append('file', fileImportKehadiran.value);
-                formData.append('tahun_ajaran_id', filterKehadiran.value.tahun_ajaran_id);
-                formData.append('semester', filterKehadiran.value.semester);
-                formData.append('kelas_id', filterKehadiran.value.kelas_id);
+                formData.append('file', modalImportKehadiran.value.file);
+                formData.append('tahun_ajaran_id', modalImportKehadiran.value.tahun_ajaran_id);
+                formData.append('semester', modalImportKehadiran.value.semester);
+                formData.append('kelas_id', modalImportKehadiran.value.kelas_id);
                 if (currentTenantId.value) formData.append('tenant_id', currentTenantId.value);
                 
                 const res = await axios.post(`${_baseUrl}/api/v1/bk/absensi-semester/import`, formData, {
                     headers: { 'Content-Type': 'multipart/form-data', 'X-Requested-With': 'XMLHttpRequest' }
                 });
                 if (res.data.success) {
-                    Swal.fire({ icon: 'success', title: 'Sukses', text: res.data.message });
-                    fileImportKehadiran.value = null;
-                    const fileInput = document.getElementById('file-import-kehadiran');
-                    if (fileInput) fileInput.value = '';
+                    Swal.fire({ icon: 'success', title: 'Sukses', text: res.data.message || 'Data kehadiran berhasil diimpor.' });
+                    closeModalImportKehadiran();
+                    // Sinkronkan filter utama ke kelas yang baru diimpor
+                    filterKehadiran.value.tahun_ajaran_id = modalImportKehadiran.value.tahun_ajaran_id;
+                    filterKehadiran.value.semester = modalImportKehadiran.value.semester;
+                    filterKehadiran.value.kelas_id = modalImportKehadiran.value.kelas_id;
                     await loadKehadiran();
                 } else {
-                    Swal.fire({ icon: 'error', title: 'Gagal', text: res.data.error || 'Gagal mengimpor data.' });
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: res.data.error || 'Gagal mengimpor data kehadiran.' });
                 }
             } catch (e) {
                 console.error(e);
@@ -5668,8 +6118,49 @@ window.VueAppRegistry.register('#bkApp', {
                     });
                 }
             } finally {
-                importingKehadiran.value = false;
+                modalImportKehadiran.value.loading = false;
             }
+        }
+
+        function openModalExportKehadiran() {
+            modalExportKehadiran.value.tahun_ajaran_id = filterKehadiran.value.tahun_ajaran_id || (tahunAjaranList.value[0]?.id || '');
+            modalExportKehadiran.value.semester = filterKehadiran.value.semester || 'Ganjil';
+            modalExportKehadiran.value.kelas_id = filterKehadiran.value.kelas_id || (listKelasKehadiran.value[0]?.id || '');
+            modalExportKehadiran.value.show = true;
+        }
+
+        function closeModalExportKehadiran() {
+            modalExportKehadiran.value.show = false;
+        }
+
+        function submitModalExportKehadiran() {
+            if (!modalExportKehadiran.value.tahun_ajaran_id || !modalExportKehadiran.value.semester || !modalExportKehadiran.value.kelas_id) {
+                Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Pilih filter Tahun Ajaran, Semester, dan Kelas terlebih dahulu.' });
+                return;
+            }
+            const params = new URLSearchParams();
+            params.set('tahun_ajaran_id', modalExportKehadiran.value.tahun_ajaran_id);
+            params.set('semester', modalExportKehadiran.value.semester);
+            params.set('kelas_id', modalExportKehadiran.value.kelas_id);
+            if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
+            window.open(`${_baseUrl}/api/v1/bk/absensi-semester/export?${params.toString()}`, '_blank');
+            closeModalExportKehadiran();
+        }
+
+        function exportKehadiran() {
+            openModalExportKehadiran();
+        }
+
+        function getNamaKelas(id) {
+            if (!id) return '-';
+            const k = (listKelasKehadiran.value || []).find(item => item.id === id || item.nama_kelas === id);
+            return k ? k.nama_kelas : id;
+        }
+
+        function getNamaTahunAjaran(id) {
+            if (!id) return '-';
+            const ta = (tahunAjaranList.value || []).find(item => item.id === id || item.tahun_ajaran === id);
+            return ta ? ta.tahun_ajaran : id;
         }
 
         function handleGridKeydown(event, rowIndex, colName) {
@@ -6237,9 +6728,67 @@ window.VueAppRegistry.register('#bkApp', {
                     sanksiDetailModal.value.violations = payloadData.violations || [];
                     sanksiDetailModal.value.followUps = payloadData.follow_ups || [];
                 }
+                await loadStatusPengajuanTu(siswaId);
             } catch (e) {
                 console.error('openSanksiDetail error', e);
                 Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal mengambil detail sanksi siswa.' });
+            }
+        }
+
+        async function loadStatusPengajuanTu(siswaId) {
+            try {
+                let url = `${_baseUrl}/api/v1/bk/pelanggaran/notifikasi-panggilan/status?siswa_id=${siswaId}`;
+                if (currentTenantId.value) url += `&tenant_id=${currentTenantId.value}`;
+                const res = await axios.get(url);
+                if (res.data?.success) {
+                    statusPengajuanTuList.value = res.data.data || [];
+                }
+            } catch (e) {
+                console.error('loadStatusPengajuanTu error', e);
+            }
+        }
+
+        function openModalPengajuanTu(detailModal) {
+            modalPengajuanTu.value.siswa_nama = detailModal.student?.nama_lengkap || 'Siswa';
+            modalPengajuanTu.value.siswa_kelas = detailModal.student?.nama_kelas || '-';
+            modalPengajuanTu.value.total_poin = detailModal.total_poin || 0;
+            modalPengajuanTu.value.form.id_siswa = detailModal.student?.id || '';
+            modalPengajuanTu.value.form.jenis_panggilan = detailModal.total_poin >= 100 ? 'Surat Panggilan Orang Tua III' : (detailModal.total_poin >= 75 ? 'Surat Panggilan Orang Tua II' : 'Surat Panggilan Orang Tua I');
+            modalPengajuanTu.value.form.alasan_pemanggilan = `Akumulasi pelanggaran kedisiplinan siswa telah mencapai ${detailModal.total_poin} poin. Diperlukan kehadiran orang tua/wali murid untuk klarifikasi dan pembinaan lanjutan.`;
+            modalPengajuanTu.value.form.rencana_tanggal_menghadap = new Date().toISOString().split('T')[0];
+            modalPengajuanTu.value.form.rencana_jam_menghadap = '09:00';
+            modalPengajuanTu.value.form.ruangan = 'Ruang Konseling BK';
+            modalPengajuanTu.value.show = true;
+        }
+
+        async function submitNotifikasiPengajuanTu() {
+            modalPengajuanTu.value.submitting = true;
+            try {
+                const payload = {
+                    id_siswa: modalPengajuanTu.value.form.id_siswa,
+                    jenis_panggilan: modalPengajuanTu.value.form.jenis_panggilan,
+                    alasan_pemanggilan: modalPengajuanTu.value.form.alasan_pemanggilan,
+                    rencana_tanggal_menghadap: modalPengajuanTu.value.form.rencana_tanggal_menghadap,
+                    rencana_jam_menghadap: modalPengajuanTu.value.form.rencana_jam_menghadap,
+                    ruangan: modalPengajuanTu.value.form.ruangan
+                };
+                if (currentTenantId.value) payload.tenant_id = currentTenantId.value;
+
+                const res = await axios.post(`${_baseUrl}/api/v1/bk/pelanggaran/notifikasi-panggilan/kirim`, payload, {
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (res.data?.success) {
+                    Swal.fire({ icon: 'success', title: 'Terkirim!', text: res.data.message || 'Notifikasi pemanggilan berhasil dikirim ke Tata Usaha.', timer: 2000, showConfirmButton: false });
+                    modalPengajuanTu.value.show = false;
+                    await loadStatusPengajuanTu(modalPengajuanTu.value.form.id_siswa);
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: res.data?.error || 'Gagal mengirim notifikasi.' });
+                }
+            } catch (e) {
+                console.error('submitNotifikasiPengajuanTu error', e);
+                Swal.fire({ icon: 'error', title: 'Gagal', text: e.response?.data?.error || 'Terjadi kesalahan sistem.' });
+            } finally {
+                modalPengajuanTu.value.submitting = false;
             }
         }
 
@@ -6359,19 +6908,237 @@ window.VueAppRegistry.register('#bkApp', {
         }
 
         // --- BEASISWA STATE & METHODS ---
-        const activeBeasiswaSiswa = ref(null);
-        const beasiswaSearchSiswa = ref('');
-        const beasiswaSiswaOptions = ref([]);
-        const showBeasiswaSiswaDropdown = ref(false);
-        const loadingSearchBeasiswaSiswa = ref(false);
-        const riwayatBeasiswaList = ref([]);
-        const formBeasiswa = ref({
-            jenis_beasiswa: '',
-            sumber: '',
-            tahun_menerima: new Date().getFullYear(),
-            nominal: ''
+        const allBeasiswaList = ref([]);
+        const beasiswaTahunOptions = ref([]);
+        const filterBeasiswaSearch = ref('');
+        const filterBeasiswaTahun = ref('');
+        const loadingBeasiswaList = ref(false);
+
+        const beasiswaTahunList = computed(() => {
+            const set = new Set(beasiswaTahunOptions.value || []);
+            (allBeasiswaList.value || []).forEach(b => {
+                if (b.tahun_menerima) set.add(Number(b.tahun_menerima));
+            });
+            return Array.from(set).filter(Boolean).sort((a, b) => b - a);
         });
-        const loadingSimpanBeasiswa = ref(false);
+
+        const filteredBeasiswaList = computed(() => {
+            let list = allBeasiswaList.value || [];
+            if (filterBeasiswaTahun.value) {
+                list = list.filter(b => String(b.tahun_menerima) === String(filterBeasiswaTahun.value));
+            }
+            if (!filterBeasiswaSearch.value.trim()) return list;
+            const q = filterBeasiswaSearch.value.toLowerCase().trim();
+            return list.filter(b => {
+                const nama = (b.nama_lengkap || '').toLowerCase();
+                const nisn = (b.nisn || '').toLowerCase();
+                const jenis = (b.jenis_beasiswa || '').toLowerCase();
+                const sumber = (b.sumber || '').toLowerCase();
+                const kelas = (b.nama_kelas || '').toLowerCase();
+                const ket = (b.keterangan || '').toLowerCase();
+                return nama.includes(q) || nisn.includes(q) || jenis.includes(q) || sumber.includes(q) || kelas.includes(q) || ket.includes(q);
+            });
+        });
+
+        const modalBeasiswa = ref({
+            show: false,
+            isEdit: false,
+            saving: false,
+            selectedSiswa: null,
+            searchSiswa: '',
+            siswaOptions: [],
+            loadingSearchSiswa: false,
+            showDropdown: false,
+            form: {
+                id: '',
+                siswa_id: '',
+                jenis_beasiswa: '',
+                sumber: '',
+                tahun_menerima: new Date().getFullYear(),
+                nominal: '',
+                keterangan: ''
+            }
+        });
+
+        async function loadAllBeasiswa() {
+            if (_userRole === 'super_admin' && !currentTenantId.value) return;
+            loadingBeasiswaList.value = true;
+            try {
+                const params = new URLSearchParams();
+                if (filterBeasiswaTahun.value) params.set('tahun', filterBeasiswaTahun.value);
+                if (filterBeasiswaSearch.value) params.set('search', filterBeasiswaSearch.value);
+                if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
+                const res = await axios.get(`${_baseUrl}/api/v1/bk/beasiswa/list?${params.toString()}`);
+                if (res.data && res.data.success) {
+                    allBeasiswaList.value = res.data.data || [];
+                    if (res.data.tahun_options) {
+                        beasiswaTahunOptions.value = res.data.tahun_options;
+                    }
+                }
+            } catch (e) {
+                console.error('loadAllBeasiswa error', e);
+            } finally {
+                loadingBeasiswaList.value = false;
+            }
+        }
+
+        function exportBeasiswaExcel() {
+            const params = new URLSearchParams();
+            if (filterBeasiswaTahun.value) params.set('tahun', filterBeasiswaTahun.value);
+            if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
+            window.open(`${_baseUrl}/api/v1/bk/beasiswa/export?${params.toString()}`, '_blank');
+        }
+
+        function openModalTambahBeasiswa() {
+            modalBeasiswa.value.show = true;
+            modalBeasiswa.value.isEdit = false;
+            modalBeasiswa.value.saving = false;
+            modalBeasiswa.value.selectedSiswa = null;
+            modalBeasiswa.value.searchSiswa = '';
+            modalBeasiswa.value.siswaOptions = [];
+            modalBeasiswa.value.showDropdown = false;
+            modalBeasiswa.value.form = {
+                id: '',
+                siswa_id: '',
+                jenis_beasiswa: '',
+                sumber: '',
+                tahun_menerima: new Date().getFullYear(),
+                nominal: '',
+                keterangan: ''
+            };
+        }
+
+        function openModalEditBeasiswa(b) {
+            modalBeasiswa.value.show = true;
+            modalBeasiswa.value.isEdit = true;
+            modalBeasiswa.value.saving = false;
+            modalBeasiswa.value.selectedSiswa = {
+                id: b.siswa_id,
+                nama_lengkap: b.nama_lengkap,
+                nisn: b.nisn,
+                nama_kelas: b.nama_kelas
+            };
+            modalBeasiswa.value.form = {
+                id: b.id,
+                siswa_id: b.siswa_id,
+                jenis_beasiswa: b.jenis_beasiswa,
+                sumber: b.sumber,
+                tahun_menerima: b.tahun_menerima || new Date().getFullYear(),
+                nominal: b.nominal || '',
+                keterangan: b.keterangan || ''
+            };
+        }
+
+        let searchSiswaModalTimer = null;
+        function searchSiswaModalDebounce() {
+            clearTimeout(searchSiswaModalTimer);
+            const q = modalBeasiswa.value.searchSiswa?.trim();
+            if (!q || q.length < 1) {
+                modalBeasiswa.value.siswaOptions = [];
+                return;
+            }
+            searchSiswaModalTimer = setTimeout(async () => {
+                modalBeasiswa.value.loadingSearchSiswa = true;
+                try {
+                    const params = new URLSearchParams({ q, limit: '15' });
+                    if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
+                    const res = await axios.get(`${_baseUrl}/api/v1/bk/siswa?${params.toString()}`);
+                    if (res.data && res.data.success) {
+                        modalBeasiswa.value.siswaOptions = res.data.data || [];
+                    }
+                } catch (e) {
+                    console.error('searchSiswaModalDebounce error', e);
+                } finally {
+                    modalBeasiswa.value.loadingSearchSiswa = false;
+                }
+            }, 250);
+        }
+
+        function hideModalDropdownDelay() {
+            setTimeout(() => {
+                modalBeasiswa.value.showDropdown = false;
+            }, 200);
+        }
+
+        function selectSiswaModal(s) {
+            modalBeasiswa.value.selectedSiswa = s;
+            modalBeasiswa.value.form.siswa_id = s.id;
+            modalBeasiswa.value.showDropdown = false;
+        }
+
+        function clearSiswaModal() {
+            modalBeasiswa.value.selectedSiswa = null;
+            modalBeasiswa.value.form.siswa_id = '';
+            modalBeasiswa.value.searchSiswa = '';
+        }
+
+        async function simpanBeasiswaModal() {
+            if (!modalBeasiswa.value.form.siswa_id) {
+                Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Pilih siswa terlebih dahulu.' });
+                return;
+            }
+            if (!modalBeasiswa.value.form.jenis_beasiswa) {
+                Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Jenis beasiswa wajib diisi.' });
+                return;
+            }
+
+            modalBeasiswa.value.saving = true;
+            try {
+                const payload = {
+                    ...modalBeasiswa.value.form
+                };
+                if (currentTenantId.value) payload.tenant_id = currentTenantId.value;
+
+                const res = await axios.post(`${_baseUrl}/api/v1/bk/beasiswa/save`, payload, {
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+
+                if (res.data && res.data.success) {
+                    Swal.fire({ icon: 'success', title: 'Berhasil', text: res.data.message || 'Data beasiswa berhasil disimpan.', timer: 1500, showConfirmButton: false });
+                    modalBeasiswa.value.show = false;
+                    loadAllBeasiswa();
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: res.data.error || 'Gagal menyimpan beasiswa.' });
+                }
+            } catch (e) {
+                console.error('simpanBeasiswaModal error', e);
+                Swal.fire({ icon: 'error', title: 'Gagal', text: (e.response && e.response.data && e.response.data.error) || 'Terjadi kesalahan sistem.' });
+            } finally {
+                modalBeasiswa.value.saving = false;
+            }
+        }
+
+        async function hapusBeasiswa(id) {
+            const confirmResult = await Swal.fire({
+                title: 'Konfirmasi Hapus',
+                text: 'Apakah Anda yakin ingin menghapus data beasiswa ini?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: 'var(--bk-red)',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Hapus',
+                cancelButtonText: 'Batal'
+            });
+
+            if (confirmResult.isConfirmed) {
+                try {
+                    const payload = { id };
+                    if (currentTenantId.value) payload.tenant_id = currentTenantId.value;
+                    const res = await axios.post(`${_baseUrl}/api/v1/bk/beasiswa/delete`, payload, {
+                        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    if (res.data && res.data.success) {
+                        Swal.fire({ icon: 'success', title: 'Berhasil', text: res.data.message || 'Data beasiswa berhasil dihapus.', timer: 1500, showConfirmButton: false });
+                        loadAllBeasiswa();
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Gagal', text: res.data.error || 'Gagal menghapus beasiswa.' });
+                    }
+                } catch (e) {
+                    console.error('hapusBeasiswa error', e);
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: (e.response && e.response.data && e.response.data.error) || 'Terjadi kesalahan sistem.' });
+                }
+            }
+        }
 
         // ─── KESIAPAN & ELIGIBILITAS (PDSS) STATE ────────────────
         const loadingKesiapan = ref(false);
@@ -6427,16 +7194,59 @@ window.VueAppRegistry.register('#bkApp', {
         const riwayatPekerjaanList = ref([]);
 
 
-        let searchBeasiswaTimeout = null;
-        function searchSiswaBeasiswaDebounce() {
-            clearTimeout(searchBeasiswaTimeout);
-            searchBeasiswaTimeout = setTimeout(() => {
-                const q = beasiswaSearchSiswa.value.trim();
+        function openModalTambahBeasiswa() {
+            modalBeasiswa.value.isEdit = false;
+            modalBeasiswa.value.saving = false;
+            modalBeasiswa.value.selectedSiswa = null;
+            modalBeasiswa.value.searchSiswa = '';
+            modalBeasiswa.value.siswaOptions = [];
+            modalBeasiswa.value.showDropdown = false;
+            modalBeasiswa.value.form = {
+                id: '',
+                siswa_id: '',
+                jenis_beasiswa: '',
+                sumber: '',
+                tahun_menerima: new Date().getFullYear(),
+                nominal: '',
+                keterangan: ''
+            };
+            modalBeasiswa.value.show = true;
+        }
+
+        function openModalEditBeasiswa(b) {
+            modalBeasiswa.value.isEdit = true;
+            modalBeasiswa.value.saving = false;
+            modalBeasiswa.value.selectedSiswa = {
+                id: b.siswa_id,
+                nama_lengkap: b.nama_lengkap,
+                nisn: b.nisn,
+                nama_kelas: b.nama_kelas
+            };
+            modalBeasiswa.value.searchSiswa = b.nama_lengkap;
+            modalBeasiswa.value.siswaOptions = [];
+            modalBeasiswa.value.showDropdown = false;
+            modalBeasiswa.value.form = {
+                id: b.id,
+                siswa_id: b.siswa_id,
+                jenis_beasiswa: b.jenis_beasiswa,
+                sumber: b.sumber || '',
+                tahun_menerima: b.tahun_menerima || new Date().getFullYear(),
+                nominal: b.nominal || '',
+                keterangan: b.keterangan || ''
+            };
+            modalBeasiswa.value.show = true;
+        }
+
+        let modalSearchSiswaTimeout = null;
+        function searchSiswaModalDebounce() {
+            clearTimeout(modalSearchSiswaTimeout);
+            modalSearchSiswaTimeout = setTimeout(() => {
+                const q = (modalBeasiswa.value.searchSiswa || '').trim();
                 if (q.length < 2) {
-                    beasiswaSiswaOptions.value = [];
+                    modalBeasiswa.value.siswaOptions = [];
                     return;
                 }
-                loadingSearchBeasiswaSiswa.value = true;
+                modalBeasiswa.value.loadingSearchSiswa = true;
                 const params = new URLSearchParams();
                 params.set('q', q);
                 if (currentTenantId.value) params.set('tenant_id', currentTenantId.value);
@@ -6444,52 +7254,75 @@ window.VueAppRegistry.register('#bkApp', {
 
                 axios.get(`${_baseUrl}/api/v1/bk/siswa?${params.toString()}`)
                     .then(res => {
-                        beasiswaSiswaOptions.value = res.data.data || [];
+                        modalBeasiswa.value.siswaOptions = res.data.data || [];
                     })
                     .catch(() => {
-                        beasiswaSiswaOptions.value = [];
+                        modalBeasiswa.value.siswaOptions = [];
                     })
                     .finally(() => {
-                        loadingSearchBeasiswaSiswa.value = false;
+                        modalBeasiswa.value.loadingSearchSiswa = false;
                     });
             }, 280);
         }
 
-        function selectSiswaBeasiswa(s) {
-            activeBeasiswaSiswa.value = s;
-            beasiswaSearchSiswa.value = s.nama_lengkap;
-            beasiswaSiswaOptions.value = [];
-            showBeasiswaSiswaDropdown.value = false;
-            fetchBeasiswa(s.id);
+        function selectSiswaModal(s) {
+            modalBeasiswa.value.selectedSiswa = s;
+            modalBeasiswa.value.form.siswa_id = s.id;
+            modalBeasiswa.value.searchSiswa = s.nama_lengkap;
+            modalBeasiswa.value.siswaOptions = [];
+            modalBeasiswa.value.showDropdown = false;
         }
 
-        function clearSiswaBeasiswa() {
-            activeBeasiswaSiswa.value = null;
-            beasiswaSearchSiswa.value = '';
-            beasiswaSiswaOptions.value = [];
-            riwayatBeasiswaList.value = [];
+        function clearSiswaModal() {
+            modalBeasiswa.value.selectedSiswa = null;
+            modalBeasiswa.value.form.siswa_id = '';
+            modalBeasiswa.value.searchSiswa = '';
+            modalBeasiswa.value.siswaOptions = [];
         }
 
-        function hideBeasiswaDropdownDelay() {
+        function hideModalDropdownDelay() {
             setTimeout(() => {
-                showBeasiswaSiswaDropdown.value = false;
+                modalBeasiswa.value.showDropdown = false;
             }, 250);
         }
 
-        function fetchBeasiswa(siswaId) {
-            axios.get(`${_baseUrl}/api/v1/buku-induk/beasiswa`, { params: { siswa_id: siswaId } })
-                .then(res => {
-                    riwayatBeasiswaList.value = res.data.data || [];
-                })
-                .catch(() => {
-                    toast.fire({ icon: 'error', title: 'Gagal memuat riwayat beasiswa.' });
-                });
-        }
+        async function simpanBeasiswaModal() {
+            if (!modalBeasiswa.value.form.siswa_id) {
+                Swal.fire('Perhatian', 'Pilih siswa terlebih dahulu.', 'warning');
+                return;
+            }
+            if (!modalBeasiswa.value.form.jenis_beasiswa) {
+                Swal.fire('Perhatian', 'Jenis Beasiswa wajib diisi.', 'warning');
+                return;
+            }
 
-        // --- ALL BEASISWA LIST STATE & METHODS ---
-        const allBeasiswaList = ref([]);
-        const filterBeasiswaTahunAjaran = ref('');
-        const loadingBeasiswaList = ref(false);
+            modalBeasiswa.value.saving = true;
+            const payload = {
+                id: modalBeasiswa.value.isEdit ? modalBeasiswa.value.form.id : undefined,
+                siswa_id: modalBeasiswa.value.form.siswa_id,
+                jenis_beasiswa: modalBeasiswa.value.form.jenis_beasiswa,
+                sumber: modalBeasiswa.value.form.sumber,
+                tahun_menerima: parseInt(modalBeasiswa.value.form.tahun_menerima) || new Date().getFullYear(),
+                nominal: modalBeasiswa.value.form.nominal !== '' ? parseFloat(modalBeasiswa.value.form.nominal) : null,
+                keterangan: modalBeasiswa.value.form.keterangan || ''
+            };
+
+            try {
+                const res = await axios.post(`${_baseUrl}/api/v1/buku-induk/beasiswa`, payload);
+                if (res.data && res.data.success) {
+                    toast.fire({ icon: 'success', title: res.data.message || 'Data beasiswa berhasil disimpan.' });
+                    modalBeasiswa.value.show = false;
+                    loadAllBeasiswa();
+                } else {
+                    Swal.fire('Gagal!', res.data?.error || 'Gagal menyimpan data beasiswa.', 'error');
+                }
+            } catch (err) {
+                console.error('simpanBeasiswaModal error:', err);
+                Swal.fire('Gagal!', (err.response && err.response.data && err.response.data.error) || 'Terjadi kesalahan sistem.', 'error');
+            } finally {
+                modalBeasiswa.value.saving = false;
+            }
+        }
 
         function loadAllBeasiswa() {
             if (_userRole === 'super_admin' && !currentTenantId.value) return;
@@ -6523,37 +7356,6 @@ window.VueAppRegistry.register('#bkApp', {
             window.open(`${_baseUrl}/api/v1/bk/beasiswa/export?${params.toString()}`, '_blank');
         }
 
-        function simpanBeasiswa() {
-            if (!activeBeasiswaSiswa.value) {
-                Swal.fire('Gagal!', 'Pilih siswa terlebih dahulu.', 'error');
-                return;
-            }
-            if (!formBeasiswa.value.jenis_beasiswa || !formBeasiswa.value.tahun_menerima) {
-                Swal.fire('Gagal!', 'Jenis Beasiswa dan Tahun Menerima wajib diisi.', 'error');
-                return;
-            }
-            loadingSimpanBeasiswa.value = true;
-            const payload = {
-                siswa_id: activeBeasiswaSiswa.value.id,
-                jenis_beasiswa: formBeasiswa.value.jenis_beasiswa,
-                sumber: formBeasiswa.value.sumber,
-                tahun_menerima: formBeasiswa.value.tahun_menerima,
-                nominal: formBeasiswa.value.nominal
-            };
-            axios.post(`${_baseUrl}/api/v1/buku-induk/beasiswa`, payload)
-                .then(() => {
-                    toast.fire({ icon: 'success', title: 'Data beasiswa berhasil disimpan.' });
-                    resetFormBeasiswa();
-                    loadAllBeasiswa(); // Refresh daftar utama
-                })
-                .catch(err => {
-                    Swal.fire('Gagal!', (err.response && err.response.data && err.response.data.error) || 'Terjadi kesalahan.', 'error');
-                })
-                .finally(() => {
-                    loadingSimpanBeasiswa.value = false;
-                });
-        }
-
         function hapusBeasiswa(id) {
             Swal.fire({
                 title: 'Hapus data beasiswa?',
@@ -6569,19 +7371,13 @@ window.VueAppRegistry.register('#bkApp', {
                     axios.delete(`${_baseUrl}/api/v1/buku-induk/beasiswa`, { params: { id: id } })
                         .then(() => {
                             toast.fire({ icon: 'success', title: 'Data beasiswa berhasil dihapus.' });
-                            loadAllBeasiswa(); // Refresh daftar utama
+                            loadAllBeasiswa();
+                        })
+                        .catch(err => {
+                            Swal.fire('Gagal!', (err.response && err.response.data && err.response.data.error) || 'Gagal menghapus data beasiswa.', 'error');
                         });
                 }
             });
-        }
-
-        function resetFormBeasiswa() {
-            formBeasiswa.value = {
-                jenis_beasiswa: '',
-                sumber: '',
-                tahun_menerima: new Date().getFullYear(),
-                nominal: ''
-            };
         }
 
         // ─── PDSS & ALUMNI API METHODS ─────────────────────
@@ -6968,10 +7764,14 @@ window.VueAppRegistry.register('#bkApp', {
             editPrestasi, deletePrestasi, clearFormPrestasi, openTambahPrestasiModal, openEditPrestasiModal, closePrestasiModal, userRole, baseUrl, currentTenantId,
             // Kehadiran
             loadingKehadiran, savingKehadiran, importingKehadiran, filterKehadiran, tahunAjaranList,
-            kehadiranData, listKelasKehadiran, fileImportKehadiran, isKehadiranLocked,
+            kehadiranData, listKelasKehadiran, isKehadiranLocked,
+            modalImportKehadiran, modalExportKehadiran,
+            openModalImportKehadiran, closeModalImportKehadiran, handleModalFileImportChange, unduhTemplateKehadiran, submitModalImportKehadiran,
+            openModalExportKehadiran, closeModalExportKehadiran, submitModalExportKehadiran,
+            getNamaKelas, getNamaTahunAjaran,
             loadKehadiran, loadKelasKehadiran, isCellDirty, isRowDirty, setAllEmptyToZero,
             incrementAbsen, decrementAbsen, saveKehadiran, exportKehadiran, toggleLockKehadiran,
-            handleFileImportChange, importKehadiran, handleGridKeydown,
+            handleGridKeydown,
             // Pelanggaran & Poin
             activeSubTab, switchSubTab,
             loadingPelanggaranDashboard, pelanggaranKpi, pelanggaranTopStudents,
@@ -6992,15 +7792,13 @@ window.VueAppRegistry.register('#bkApp', {
             currentPagePrestasi, perPagePrestasi, totalPrestasiPages, paginatedPrestasiList,
             loadPelanggaranCatatan, loadPelanggaranSanksi, showFotoModal, getKategoriBadge, secureFileUrl,
             getPoinBadgeClass, formatTanggalIndo, sanksiSearch, sanksiStatus, sanksiDetailModal,
+            statusPengajuanTuList, modalPengajuanTu, loadStatusPengajuanTu, openModalPengajuanTu, submitNotifikasiPengajuanTu,
             formTindakLanjut, submittingTindakLanjut, openSanksiDetail, submitTindakLanjut,
             handleSuratPanggilanUpload, handleFotoPembinaanUpload,
             // Beasiswa
-            toast, activeBeasiswaSiswa, beasiswaSearchSiswa, beasiswaSiswaOptions, showBeasiswaSiswaDropdown,
-            loadingSearchBeasiswaSiswa, riwayatBeasiswaList, formBeasiswa, loadingSimpanBeasiswa,
-            searchSiswaBeasiswaDebounce, selectSiswaBeasiswa, clearSiswaBeasiswa, hideBeasiswaDropdownDelay,
-            fetchBeasiswa, simpanBeasiswa, hapusBeasiswa, resetFormBeasiswa,
-            // Daftar Semua Beasiswa
-            allBeasiswaList, filterBeasiswaTahunAjaran, loadingBeasiswaList, loadAllBeasiswa, exportBeasiswaExcel,
+            toast, allBeasiswaList, filterBeasiswaSearch, filterBeasiswaTahun, beasiswaTahunList, beasiswaTahunOptions, loadingBeasiswaList, filteredBeasiswaList,
+            modalBeasiswa, openModalTambahBeasiswa, openModalEditBeasiswa, searchSiswaModalDebounce, selectSiswaModal, clearSiswaModal,
+            hideModalDropdownDelay, simpanBeasiswaModal, loadAllBeasiswa, exportBeasiswaExcel, hapusBeasiswa,
             // PDSS & Akademik
             loadingKesiapan, autoCalculatingKesiapan, kesiapanList, kesiapanSummary, kesiapanFilter, selectedKuotaPct, detailNilaiModal,
             loadKesiapan, autoCalculateKesiapan, openDetailNilaiSiswa, toggleEligible, exportKesiapanExcel,
