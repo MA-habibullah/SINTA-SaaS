@@ -1001,6 +1001,66 @@ class PenggunaModuleController extends BaseController {
     }
 
     /**
+     * API: Ambil opsi role & tugas tambahan untuk form pengguna
+     * GET /api/v1/pengguna/role-options
+     */
+    public function getRoleOptionsApi(): void {
+        try {
+            $db = \App\Config\Database::getConnection();
+            $stmt = $db->query("SELECT id, nama_role, deskripsi FROM core.roles WHERE nama_role NOT IN ('super_admin', 'siswa') ORDER BY nama_role ASC");
+            $roles = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+            
+            $gtkTypes = [
+                'Guru Mata Pelajaran',
+                'Guru Bimbingan Konseling (BK)',
+                'Guru Kelas',
+                'Guru Pendamping Khusus',
+                'Tenaga Kependidikan',
+                'Tata Usaha / Administrasi',
+                'Laboran',
+                'Pustakawan'
+            ];
+
+            $kepegawaianStatus = [
+                'PNS',
+                'PPPK',
+                'GTY (Guru Tetap Yayasan)',
+                'PTY (Pegawai Tetap Yayasan)',
+                'GTT (Guru Tidak Tetap)',
+                'PTT (Pegawai Tidak Tetap)',
+                'Honorer Sekolah'
+            ];
+
+            $jabatanStruktural = [
+                'Kepala Sekolah',
+                'Wakil Kepala Sekolah (Waka)',
+                'Waka Kurikulum',
+                'Waka Kesiswaan',
+                'Waka Sarana Prasarana',
+                'Waka Hubungan Masyarakat',
+                'Kepala Program Keahlian / Jurusan',
+                'Kepala Laboratorium',
+                'Kepala Perpustakaan',
+                'Bendahara Sekolah',
+                'Koordinator BK',
+                'Pembina OSIS / Ekstrakurikuler'
+            ];
+
+            $this->jsonResponse([
+                'success' => true,
+                'data' => [
+                    'roles' => $roles,
+                    'gtk_types' => $gtkTypes,
+                    'kepegawaian_status' => $kepegawaianStatus,
+                    'jabatan_struktural' => $jabatanStruktural
+                ]
+            ]);
+        } catch (\Throwable $e) {
+            $this->jsonResponse(['error' => 'Gagal memuat opsi peran: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Helper to generate UUID v4
      */
     private function generateUuidV4(): string {

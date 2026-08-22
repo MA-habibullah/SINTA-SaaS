@@ -218,10 +218,11 @@
                         <tr v-else>
                             <th style="width: 50px;">No</th>
                             <th v-if="userRole === 'super_admin'">Sekolah</th>
-                            <th>Nama Lengkap</th>
-                            <th>Email</th>
-                            <th>Peran / Role</th>
-                            <th class="text-center" style="width: 120px;">Status Akun</th>
+                            <th>Nama Lengkap & NIP</th>
+                            <th>Email & Kontak</th>
+                            <th>Jenis GTK & Jabatan</th>
+                            <th>Peran & Tugas Tambahan</th>
+                            <th class="text-center" style="width: 110px;">Status</th>
                             <th class="text-center" style="width: 180px;">Aksi</th>
                         </tr>
                     </thead>
@@ -388,24 +389,36 @@
                                         <div class="avatar-circle me-2 bg-light-primary fw-bold">
                                             {{ getInitials(item.nama_lengkap) }}
                                         </div>
-                                        <span class="fw-semibold text-dark">{{ item.nama_lengkap }}</span>
+                                        <div>
+                                            <span class="fw-semibold text-dark d-block">{{ item.nama_lengkap }}</span>
+                                            <small v-if="item.nip" class="text-muted font-monospace fs-9">NIP: {{ item.nip }}</small>
+                                            <small v-else-if="item.nuptk" class="text-muted font-monospace fs-9">NUPTK: {{ item.nuptk }}</small>
+                                        </div>
                                     </div>
                                 </td>
-                                <td class="font-monospace"><a :href="'mailto:'+item.email" class="text-decoration-none">{{ item.email }}</a></td>
                                 <td>
-                                    <span class="badge bg-light text-secondary border text-capitalize px-2.5 py-1.5 fs-8">
-                                        <span v-if="activeTab === 'guru'">
-                                            {{ item.nama_role === 'guru' ? ('Guru' + (item.is_bk == 1 || item.is_bk === true ? ', Guru BK' : '') + (item.is_kesiswaan == 1 || item.is_kesiswaan === true ? ', Kesiswaan' : '') + (item.is_humas == 1 || item.is_humas === true ? ', Waka HUMAS' : '') + (item.is_kurikulum == 1 || item.is_kurikulum === true ? ', Waka Kurikulum' : '') + (item.is_sarpras == 1 || item.is_sarpras === true ? ', Waka Sarpras' : '')) : (item.nama_role === 'operator_sekolah' ? 'Operator Sekolah' : (item.nama_role === 'guru_bk' ? 'Guru BK' : (item.nama_role === 'kesiswaan' ? 'Kesiswaan' : item.nama_role))) }}
+                                    <div><a :href="'mailto:'+item.email" class="text-decoration-none font-monospace fs-8">{{ item.email }}</a></div>
+                                    <small v-if="item.no_hp" class="text-muted fs-9"><i class="bi bi-telephone me-1"></i>{{ item.no_hp }}</small>
+                                </td>
+                                <td>
+                                    <div><span class="badge bg-light text-dark border">{{ item.jenis_gtk || (activeTab === 'guru' ? 'Guru' : 'Tenaga Kependidikan') }}</span></div>
+                                    <small v-if="item.jabatan_struktural" class="text-primary fw-medium d-block mt-0.5 fs-9">{{ item.jabatan_struktural }}</small>
+                                    <small v-if="item.status_kepegawaian" class="badge bg-secondary-subtle text-secondary border mt-0.5 fs-9">{{ item.status_kepegawaian }}</small>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle text-capitalize px-2 py-1 fs-9">
+                                            {{ item.nama_role === 'operator_sekolah' ? 'Operator' : item.nama_role }}
                                         </span>
-                                        <span v-else>
-                                            {{ item.nama_role }}
+                                        <span v-for="sec in (item.secondary_roles || [])" :key="sec.id" class="badge bg-info-subtle text-info-emphasis border border-info-subtle text-capitalize px-2 py-1 fs-9">
+                                            {{ sec.deskripsi || sec.nama_role }}
                                         </span>
-                                    </span>
+                                    </div>
                                 </td>
                                 <td class="text-center">
                                     <div class="form-check form-switch d-inline-block" v-if="!trashMode">
                                         <input :id="'status_switch_' + item.id" :name="'status_switch_' + item.id" aria-label="Ubah status aktif pengguna" class="form-check-input" type="checkbox" role="switch" 
-                                               :checked="item.status === 'active'" @change="toggleStatus(item.id)">
+                                               :checked="item.is_active" @change="toggleStatus(item.id)">
                                     </div>
                                     <span v-else class="badge bg-danger rounded-pill px-2 py-1 fs-9">Terhapus</span>
                                 </td>
@@ -639,13 +652,25 @@
                             <!-- Form inputs khusus kategori STAFF (Guru, Karyawan, Operator) -->
                             <template v-else>
                                 <div class="col-12">
-                                    <label for="form_staff_nama_lengkap" class="form-label fw-semibold fs-8 text-muted mb-1">Nama Lengkap <span class="text-danger">*</span></label>
-                                    <input id="form_staff_nama_lengkap" name="nama_lengkap" type="text" class="form-control rounded-3" :class="{'is-invalid': errors.nama_lengkap}" v-model="form.nama_lengkap" placeholder="Nama lengkap beserta gelar" required>
+                                    <label for="form_staff_nama_lengkap" class="form-label fw-semibold fs-8 text-muted mb-1">Nama Lengkap & Gelar <span class="text-danger">*</span></label>
+                                    <input id="form_staff_nama_lengkap" name="nama_lengkap" type="text" class="form-control rounded-3" :class="{'is-invalid': errors.nama_lengkap}" v-model="form.nama_lengkap" placeholder="Contoh: Drs. H. Ahmad Dahlan, M.Pd" required>
                                     <div class="invalid-feedback">{{ getError('nama_lengkap') }}</div>
                                 </div>
 
                                 <div class="col-12 col-md-6">
-                                    <label for="form_staff_email" class="form-label fw-semibold fs-8 text-muted mb-1">Email <span class="text-danger">*</span></label>
+                                    <label for="form_staff_nip" class="form-label fw-semibold fs-8 text-muted mb-1">NIP <small class="text-muted">(Nomor Induk Pegawai)</small></label>
+                                    <input id="form_staff_nip" name="nip" type="text" class="form-control rounded-3 font-monospace" :class="{'is-invalid': errors.nip}" v-model="form.nip" placeholder="Contoh: 198503152010011005">
+                                    <div class="invalid-feedback">{{ getError('nip') }}</div>
+                                </div>
+
+                                <div class="col-12 col-md-6">
+                                    <label for="form_staff_nuptk" class="form-label fw-semibold fs-8 text-muted mb-1">NUPTK <small class="text-muted">(16 Digit)</small></label>
+                                    <input id="form_staff_nuptk" name="nuptk" type="text" class="form-control rounded-3 font-monospace" :class="{'is-invalid': errors.nuptk}" v-model="form.nuptk" placeholder="Contoh: 1234567890123456" maxlength="16">
+                                    <div class="invalid-feedback">{{ getError('nuptk') }}</div>
+                                </div>
+
+                                <div class="col-12 col-md-6">
+                                    <label for="form_staff_email" class="form-label fw-semibold fs-8 text-muted mb-1">Email Login <span class="text-danger">*</span></label>
                                     <input id="form_staff_email" name="email" type="email" class="form-control rounded-3 font-monospace" :class="{'is-invalid': errors.email}" v-model="form.email" placeholder="nama@sekolah.sch.id" required autocomplete="email">
                                     <div class="invalid-feedback">{{ getError('email') }}</div>
                                 </div>
@@ -656,50 +681,186 @@
                                     <div class="invalid-feedback">{{ getError('password') }}</div>
                                 </div>
 
-                                <!-- Checkbox Role Tambahan (hanya muncul saat activeTab === 'guru') -->
-                                <div class="col-12 mt-3" v-if="activeTab === 'guru'">
-                                    <div class="border rounded-3 p-3 bg-light-secondary">
-                                        <h6 class="fw-bold fs-7 text-dark mb-3"><i class="bi bi-person-badge me-2"></i>Peran Tambahan (Opsional)</h6>
-                                        <p class="text-muted fs-8 mb-3">Centang peran di bawah ini jika guru tersebut merangkap jabatan lain.</p>
-                                        
-                                        <div class="form-check mb-3">
-                                            <input id="isBkCheckbox" name="is_bk" class="form-check-input border-slate-300" type="checkbox" v-model="form.is_bk">
-                                            <label class="form-check-label fw-semibold fs-8 text-slate-700" for="isBkCheckbox">
-                                                Guru BK (Bimbingan Konseling)
-                                            </label>
-                                            <p class="text-muted fs-9 mb-0 mt-1">Dapat mengakses modul Bimbingan Konseling.</p>
+                                <div class="col-12 col-md-6">
+                                    <label for="form_staff_jk" class="form-label fw-semibold fs-8 text-muted mb-1">Jenis Kelamin</label>
+                                    <select id="form_staff_jk" name="jenis_kelamin" class="form-select rounded-3" v-model="form.jenis_kelamin">
+                                        <option value="">-- Pilih Jenis Kelamin --</option>
+                                        <option value="L">Laki-laki (L)</option>
+                                        <option value="P">Perempuan (P)</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12 col-md-6">
+                                    <label for="form_staff_nohp" class="form-label fw-semibold fs-8 text-muted mb-1">Nomor WhatsApp / HP</label>
+                                    <input id="form_staff_nohp" name="no_hp" type="text" class="form-control rounded-3 font-monospace" v-model="form.no_hp" placeholder="Contoh: 081234567890">
+                                </div>
+
+                                <div class="col-12 col-md-6">
+                                    <label for="form_staff_jenis_gtk" class="form-label fw-semibold fs-8 text-muted mb-1">Jenis GTK / Kategori</label>
+                                    <select id="form_staff_jenis_gtk" name="jenis_gtk" class="form-select rounded-3" v-model="form.jenis_gtk">
+                                        <option value="Guru Mata Pelajaran">Guru Mata Pelajaran</option>
+                                        <option value="Guru Bimbingan Konseling (BK)">Guru Bimbingan Konseling (BK)</option>
+                                        <option value="Guru Kelas">Guru Kelas</option>
+                                        <option value="Guru Pendamping Khusus">Guru Pendamping Khusus</option>
+                                        <option value="Tenaga Kependidikan">Tenaga Kependidikan</option>
+                                        <option value="Tata Usaha / Administrasi">Tata Usaha / Administrasi</option>
+                                        <option value="Laboran">Laboran</option>
+                                        <option value="Pustakawan">Pustakawan</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12 col-md-6">
+                                    <label for="form_staff_kepegawaian" class="form-label fw-semibold fs-8 text-muted mb-1">Status Kepegawaian</label>
+                                    <select id="form_staff_kepegawaian" name="status_kepegawaian" class="form-select rounded-3" v-model="form.status_kepegawaian">
+                                        <option value="PNS">PNS (Pegawai Negeri Sipil)</option>
+                                        <option value="PPPK">PPPK (P3K)</option>
+                                        <option value="GTY/PTY">GTY / PTY (Tetap Yayasan)</option>
+                                        <option value="GTT">GTT (Guru Tidak Tetap)</option>
+                                        <option value="PTT">PTT (Pegawai Tidak Tetap)</option>
+                                        <option value="Honorer Sekolah">Honorer Sekolah</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12 col-md-6">
+                                    <label for="form_staff_jabatan" class="form-label fw-semibold fs-8 text-muted mb-1">Jabatan Struktural Utama</label>
+                                    <input id="form_staff_jabatan" name="jabatan_struktural" type="text" class="form-control rounded-3" v-model="form.jabatan_struktural" placeholder="Contoh: Kepala Lab / Waka Kurikulum">
+                                </div>
+
+                                <div class="col-6 col-md-3">
+                                    <label for="form_staff_jam" class="form-label fw-semibold fs-8 text-muted mb-1">Jam Ajar / Minggu</label>
+                                    <input id="form_staff_jam" name="jam_mengajar" type="number" min="0" max="60" class="form-control rounded-3 text-center" v-model="form.jam_mengajar" placeholder="0">
+                                </div>
+
+                                <div class="col-6 col-md-3">
+                                    <label class="form-label fw-semibold fs-8 text-muted mb-1">Sertifikasi GTK</label>
+                                    <div class="form-check form-switch pt-1">
+                                        <input id="form_staff_sertifikasi" name="status_sertifikasi" class="form-check-input" type="checkbox" role="switch" v-model="form.status_sertifikasi">
+                                        <label class="form-check-label fs-8 text-dark" for="form_staff_sertifikasi">{{ form.status_sertifikasi ? 'Sudah Sertifikasi' : 'Belum' }}</label>
+                                    </div>
+                                </div>
+
+                                <div class="col-12">
+                                    <label for="form_staff_alamat" class="form-label fw-semibold fs-8 text-muted mb-1">Alamat Tinggal Pegawai</label>
+                                    <textarea id="form_staff_alamat" name="alamat" class="form-control rounded-3" v-model="form.alamat" rows="2" placeholder="Alamat lengkap tempat tinggal"></textarea>
+                                </div>
+
+                                <!-- Checkbox Role & Multi-Jabatan Penugasan Tambahan -->
+                                <div class="col-12 mt-3">
+                                    <div class="border rounded-3 p-3 bg-light">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <h6 class="fw-bold fs-7 text-dark mb-0"><i class="bi bi-person-badge-fill text-primary me-2"></i>Penugasan Peran & Tugas Tambahan (Multi-Role)</h6>
+                                            <span class="badge bg-primary-subtle text-primary border fs-9">Otomatisasi Akses Fitur</span>
                                         </div>
+                                        <p class="text-muted fs-8 mb-3">Centang peran tambahan di bawah ini agar pengguna mendapatkan akses ke menu dan fitur terkait tanpa mengubah peran utamanya.</p>
                                         
-                                        <div class="form-check mb-3">
-                                            <input id="isKesiswaanCheckbox" name="is_kesiswaan" class="form-check-input border-slate-300" type="checkbox" v-model="form.is_kesiswaan">
-                                            <label class="form-check-label fw-semibold fs-8 text-slate-700" for="isKesiswaanCheckbox">
-                                                Staf/Guru Kesiswaan
-                                            </label>
-                                            <p class="text-muted fs-9 mb-0 mt-1">Dapat mengakses dan mengunci modul Ekstrakurikuler.</p>
-                                        </div>
-                                        
-                                        <div class="form-check mb-3">
-                                            <input id="isHumasCheckbox" name="is_humas" class="form-check-input border-slate-300" type="checkbox" v-model="form.is_humas">
-                                            <label class="form-check-label fw-semibold fs-8 text-slate-700" for="isHumasCheckbox">
-                                                Waka HUMAS
-                                            </label>
-                                            <p class="text-muted fs-9 mb-0 mt-1">Dapat mengelola informasi publik dan relasi masyarakat.</p>
-                                        </div>
-                                        
-                                        <div class="form-check mb-3">
-                                            <input id="isKurikulumCheckbox" name="is_kurikulum" class="form-check-input border-slate-300" type="checkbox" v-model="form.is_kurikulum">
-                                            <label class="form-check-label fw-semibold fs-8 text-slate-700" for="isKurikulumCheckbox">
-                                                Waka Kurikulum
-                                            </label>
-                                            <p class="text-muted fs-9 mb-0 mt-1">Dapat mengelola jadwal dan kurikulum sekolah.</p>
-                                        </div>
-                                        
-                                        <div class="form-check mb-0">
-                                            <input id="isSarprasCheckbox" name="is_sarpras" class="form-check-input border-slate-300" type="checkbox" v-model="form.is_sarpras">
-                                            <label class="form-check-label fw-semibold fs-8 text-slate-700" for="isSarprasCheckbox">
-                                                Waka Sarpras
-                                            </label>
-                                            <p class="text-muted fs-9 mb-0 mt-1">Dapat mengelola pendataan sarana dan prasarana sekolah.</p>
+                                        <div class="row g-2">
+                                            <div class="col-12 col-md-6">
+                                                <div class="p-2 border rounded-3 bg-white">
+                                                    <div class="form-check">
+                                                        <input id="isWaliKelasCheckbox" name="is_wali_kelas" class="form-check-input" type="checkbox" v-model="form.is_wali_kelas">
+                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isWaliKelasCheckbox">
+                                                            Wali Kelas
+                                                        </label>
+                                                        <p class="text-muted fs-9 mb-0">Akses monitoring rekap absensi, rapor, dan bina siswa binaan.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <div class="p-2 border rounded-3 bg-white">
+                                                    <div class="form-check">
+                                                        <input id="isPembinaEkskulCheckbox" name="is_pembina_ekskul" class="form-check-input" type="checkbox" v-model="form.is_pembina_ekskul">
+                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isPembinaEkskulCheckbox">
+                                                            Pembina Ekstrakurikuler
+                                                        </label>
+                                                        <p class="text-muted fs-9 mb-0">Input nilai, absensi, dan jurnal kegiatan ekskul binaan.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <div class="p-2 border rounded-3 bg-white">
+                                                    <div class="form-check">
+                                                        <input id="isBkCheckbox" name="is_bk" class="form-check-input" type="checkbox" v-model="form.is_bk">
+                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isBkCheckbox">
+                                                            Guru / Tim BK (Bimbingan Konseling)
+                                                        </label>
+                                                        <p class="text-muted fs-9 mb-0">Akses modul Layanan BK, Kedisiplinan, & PDSS SNBP.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="col-12 col-md-6">
+                                                <div class="p-2 border rounded-3 bg-white">
+                                                    <div class="form-check">
+                                                        <input id="isKesiswaanCheckbox" name="is_kesiswaan" class="form-check-input" type="checkbox" v-model="form.is_kesiswaan">
+                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isKesiswaanCheckbox">
+                                                            Staf / Waka Kesiswaan
+                                                        </label>
+                                                        <p class="text-muted fs-9 mb-0">Kelola master ekskul, anggota, dan kunci penilaian.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="col-12 col-md-6">
+                                                <div class="p-2 border rounded-3 bg-white">
+                                                    <div class="form-check">
+                                                        <input id="isKurikulumCheckbox" name="is_kurikulum" class="form-check-input" type="checkbox" v-model="form.is_kurikulum">
+                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isKurikulumCheckbox">
+                                                            Staf / Waka Kurikulum
+                                                        </label>
+                                                        <p class="text-muted fs-9 mb-0">Kelola jadwal pelajaran, mapel, dan leger e-rapor.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="col-12 col-md-6">
+                                                <div class="p-2 border rounded-3 bg-white">
+                                                    <div class="form-check">
+                                                        <input id="isSarprasCheckbox" name="is_sarpras" class="form-check-input" type="checkbox" v-model="form.is_sarpras">
+                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isSarprasCheckbox">
+                                                            Staf / Waka Sarpras
+                                                        </label>
+                                                        <p class="text-muted fs-9 mb-0">Kelola pendataan sarana, ruang kelas, dan inventaris.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <div class="p-2 border rounded-3 bg-white">
+                                                    <div class="form-check">
+                                                        <input id="isHumasCheckbox" name="is_humas" class="form-check-input" type="checkbox" v-model="form.is_humas">
+                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isHumasCheckbox">
+                                                            Staf / Waka HUMAS
+                                                        </label>
+                                                        <p class="text-muted fs-9 mb-0">Kelola portal warta pengumuman publik dan agenda.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <div class="p-2 border rounded-3 bg-white">
+                                                    <div class="form-check">
+                                                        <input id="isKeuanganCheckbox" name="is_keuangan" class="form-check-input" type="checkbox" v-model="form.is_keuangan">
+                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isKeuanganCheckbox">
+                                                            Bendahara / Kasir Keuangan
+                                                        </label>
+                                                        <p class="text-muted fs-9 mb-0">Akses loket kasir pembayaran, pos tarif, dan laporan SPP.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <div class="p-2 border rounded-3 bg-white">
+                                                    <div class="form-check">
+                                                        <input id="isPerpustakaanCheckbox" name="is_perpustakaan" class="form-check-input" type="checkbox" v-model="form.is_perpustakaan">
+                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isPerpustakaanCheckbox">
+                                                            Pengelola Perpustakaan Digital
+                                                        </label>
+                                                        <p class="text-muted fs-9 mb-0">Sirkulasi peminjaman buku, katalog barcode, dan denda.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1978,11 +2139,25 @@
                         nama_lengkap: '', 
                         email: '', 
                         password: '',
+                        nip: '',
+                        nuptk: '',
+                        jenis_gtk: this.activeTab === 'guru' ? 'Guru Mata Pelajaran' : 'Tenaga Kependidikan',
+                        jabatan_struktural: '',
+                        status_kepegawaian: 'GTY/PTY',
+                        jam_mengajar: 0,
+                        status_sertifikasi: false,
+                        no_hp: '',
+                        alamat: '',
+                        jenis_kelamin: 'L',
+                        is_wali_kelas: false,
+                        is_pembina_ekskul: false,
                         is_bk: false,
                         is_kesiswaan: false,
                         is_humas: false,
                         is_kurikulum: false,
-                        is_sarpras: false
+                        is_sarpras: false,
+                        is_keuangan: false,
+                        is_perpustakaan: false
                     };
                 }
                 if (this.userRole === 'super_admin') {
@@ -2016,15 +2191,30 @@
                         kontak_wali: item.kontak_wali || ''
                     };
                 } else {
+                    const assigned = Array.isArray(item.assigned_roles) ? item.assigned_roles : [];
                     this.form = {
-                        nama_lengkap: item.nama_lengkap,
-                        email: item.email,
+                        nama_lengkap: item.nama_lengkap || '',
+                        email: item.email || '',
                         password: '',
-                        is_bk: item.is_bk == 1 || item.is_bk === true,
-                        is_kesiswaan: item.is_kesiswaan == 1 || item.is_kesiswaan === true,
-                        is_humas: item.is_humas == 1 || item.is_humas === true,
-                        is_kurikulum: item.is_kurikulum == 1 || item.is_kurikulum === true,
-                        is_sarpras: item.is_sarpras == 1 || item.is_sarpras === true
+                        nip: item.nip || '',
+                        nuptk: item.nuptk || '',
+                        jenis_gtk: item.jenis_gtk || (this.activeTab === 'guru' ? 'Guru Mata Pelajaran' : 'Tenaga Kependidikan'),
+                        jabatan_struktural: item.jabatan_struktural || '',
+                        status_kepegawaian: item.status_kepegawaian || 'GTY/PTY',
+                        jam_mengajar: item.jam_mengajar || 0,
+                        status_sertifikasi: item.status_sertifikasi === true || item.status_sertifikasi === 'true' || item.status_sertifikasi == 1,
+                        no_hp: item.no_hp || '',
+                        alamat: item.alamat || '',
+                        jenis_kelamin: item.jenis_kelamin || 'L',
+                        is_wali_kelas: item.is_wali_kelas == 1 || item.is_wali_kelas === true || assigned.includes('wali_kelas'),
+                        is_pembina_ekskul: item.is_pembina_ekskul == 1 || item.is_pembina_ekskul === true || assigned.includes('pembina_ekskul'),
+                        is_bk: item.is_bk == 1 || item.is_bk === true || assigned.includes('bk') || assigned.includes('guru_bk'),
+                        is_kesiswaan: item.is_kesiswaan == 1 || item.is_kesiswaan === true || assigned.includes('kesiswaan'),
+                        is_humas: item.is_humas == 1 || item.is_humas === true || assigned.includes('humas'),
+                        is_kurikulum: item.is_kurikulum == 1 || item.is_kurikulum === true || assigned.includes('kurikulum'),
+                        is_sarpras: item.is_sarpras == 1 || item.is_sarpras === true || assigned.includes('sarpras'),
+                        is_keuangan: item.is_keuangan == 1 || item.is_keuangan === true || assigned.includes('keuangan') || assigned.includes('bendahara'),
+                        is_perpustakaan: item.is_perpustakaan == 1 || item.is_perpustakaan === true || assigned.includes('perpustakaan')
                     };
                 }
                 

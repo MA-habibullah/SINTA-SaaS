@@ -20,7 +20,7 @@ class AksesModuleController extends BaseController {
     private function loadAccessMap(PDO $db, string $targetTenantId): array {
         $accessMap = [];
         $isCustom = false;
-        $globalTenantId = '00000000-0000-0000-0000-000000000000';
+        $globalTenantId = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12';
 
         // Check if there are custom role_menu_access entries for this targetTenantId
         if (!empty($targetTenantId) && $targetTenantId !== $globalTenantId) {
@@ -136,7 +136,7 @@ class AksesModuleController extends BaseController {
         }
 
         if (empty($targetTenantId)) {
-            $targetTenantId = '00000000-0000-0000-0000-000000000000';
+            $targetTenantId = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12';
         }
 
         $access = $_POST['access'] ?? [];

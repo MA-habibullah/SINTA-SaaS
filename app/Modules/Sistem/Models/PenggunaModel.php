@@ -170,32 +170,60 @@ class PenggunaModel extends Model {
             // Query untuk staff (Guru, Karyawan, Operator) dari tabel users
             $roleName = $this->roleMap[$tab] ?? '';
             $selectSql = "SELECT u.id, u.nama_lengkap, u.email, u.is_active,
-                           u.created_at, u.updated_at, r.nama_role,
-                           EXISTS(
-                               SELECT 1 FROM core.user_roles ur 
-                               INNER JOIN core.roles sub_r ON ur.role_id = sub_r.id
-                               WHERE ur.user_id = u.id AND sub_r.nama_role = 'bk'
-                           ) AS is_bk,
-                           EXISTS(
-                               SELECT 1 FROM core.user_roles ur 
-                               INNER JOIN core.roles sub_r ON ur.role_id = sub_r.id
-                               WHERE ur.user_id = u.id AND sub_r.nama_role = 'kesiswaan'
-                           ) AS is_kesiswaan,
-                           EXISTS(
-                               SELECT 1 FROM core.user_roles ur 
-                               INNER JOIN core.roles sub_r ON ur.role_id = sub_r.id
-                               WHERE ur.user_id = u.id AND sub_r.nama_role = 'humas'
-                           ) AS is_humas,
-                           EXISTS(
-                               SELECT 1 FROM core.user_roles ur 
-                               INNER JOIN core.roles sub_r ON ur.role_id = sub_r.id
-                               WHERE ur.user_id = u.id AND sub_r.nama_role = 'kurikulum'
-                           ) AS is_kurikulum,
-                           EXISTS(
-                               SELECT 1 FROM core.user_roles ur 
-                               INNER JOIN core.roles sub_r ON ur.role_id = sub_r.id
-                               WHERE ur.user_id = u.id AND sub_r.nama_role = 'sarpras'
-                           ) AS is_sarpras";
+                            u.created_at, u.updated_at, r.nama_role,
+                            u.nip, u.nuptk, u.jenis_gtk, u.jabatan_struktural, u.status_kepegawaian,
+                            u.jam_mengajar, u.status_sertifikasi, u.no_hp, u.alamat, u.jenis_kelamin,
+                            (
+                                SELECT COALESCE(json_agg(json_build_object('id', sub_r.id, 'nama_role', sub_r.nama_role, 'deskripsi', sub_r.deskripsi)), '[]'::json)
+                                FROM core.user_roles ur
+                                JOIN core.roles sub_r ON ur.role_id = sub_r.id
+                                WHERE ur.user_id = u.id AND sub_r.id != u.role_id
+                            ) AS secondary_roles,
+                            EXISTS(
+                                SELECT 1 FROM core.user_roles ur 
+                                INNER JOIN core.roles sub_r ON ur.role_id = sub_r.id
+                                WHERE ur.user_id = u.id AND (sub_r.nama_role = 'bk' OR sub_r.nama_role = 'guru_bk')
+                            ) AS is_bk,
+                            EXISTS(
+                                SELECT 1 FROM core.user_roles ur 
+                                INNER JOIN core.roles sub_r ON ur.role_id = sub_r.id
+                                WHERE ur.user_id = u.id AND sub_r.nama_role = 'kesiswaan'
+                            ) AS is_kesiswaan,
+                            EXISTS(
+                                SELECT 1 FROM core.user_roles ur 
+                                INNER JOIN core.roles sub_r ON ur.role_id = sub_r.id
+                                WHERE ur.user_id = u.id AND sub_r.nama_role = 'humas'
+                            ) AS is_humas,
+                            EXISTS(
+                                SELECT 1 FROM core.user_roles ur 
+                                INNER JOIN core.roles sub_r ON ur.role_id = sub_r.id
+                                WHERE ur.user_id = u.id AND sub_r.nama_role = 'kurikulum'
+                            ) AS is_kurikulum,
+                            EXISTS(
+                                SELECT 1 FROM core.user_roles ur 
+                                INNER JOIN core.roles sub_r ON ur.role_id = sub_r.id
+                                WHERE ur.user_id = u.id AND sub_r.nama_role = 'sarpras'
+                            ) AS is_sarpras,
+                            EXISTS(
+                                SELECT 1 FROM core.user_roles ur 
+                                INNER JOIN core.roles sub_r ON ur.role_id = sub_r.id
+                                WHERE ur.user_id = u.id AND sub_r.nama_role = 'wali_kelas'
+                            ) AS is_wali_kelas,
+                            EXISTS(
+                                SELECT 1 FROM core.user_roles ur 
+                                INNER JOIN core.roles sub_r ON ur.role_id = sub_r.id
+                                WHERE ur.user_id = u.id AND sub_r.nama_role = 'pembina_ekskul'
+                            ) AS is_pembina_ekskul,
+                            EXISTS(
+                                SELECT 1 FROM core.user_roles ur 
+                                INNER JOIN core.roles sub_r ON ur.role_id = sub_r.id
+                                WHERE ur.user_id = u.id AND (sub_r.nama_role = 'keuangan' OR sub_r.nama_role = 'bendahara')
+                            ) AS is_keuangan,
+                            EXISTS(
+                                SELECT 1 FROM core.user_roles ur 
+                                INNER JOIN core.roles sub_r ON ur.role_id = sub_r.id
+                                WHERE ur.user_id = u.id AND sub_r.nama_role = 'perpustakaan'
+                            ) AS is_perpustakaan";
             
             if ($isSuperAdmin) {
                 $selectSql .= ", (SELECT nama_sekolah FROM core.tenants t WHERE t.id = u.tenant_id LIMIT 1) AS nama_sekolah";
@@ -212,6 +240,16 @@ class PenggunaModel extends Model {
                 $params['filter_tenant_id'] = $filters['tenant_id'];
             }
 
+            if (!empty($filters['jenis_gtk'])) {
+                $whereClause .= " AND u.jenis_gtk = :jenis_gtk";
+                $params['jenis_gtk'] = $filters['jenis_gtk'];
+            }
+
+            if (!empty($filters['status_kepegawaian'])) {
+                $whereClause .= " AND u.status_kepegawaian = :status_kepegawaian";
+                $params['status_kepegawaian'] = $filters['status_kepegawaian'];
+            }
+
             if ($trashMode) {
                 $whereClause .= " AND u.is_active = false";
             } else {
@@ -219,9 +257,11 @@ class PenggunaModel extends Model {
             }
 
             if ($search !== '') {
-                $whereClause .= " AND (u.nama_lengkap ILIKE :search_nama OR u.email ILIKE :search_email)";
+                $whereClause .= " AND (u.nama_lengkap ILIKE :search_nama OR u.email ILIKE :search_email OR u.nip ILIKE :search_nip OR u.nuptk ILIKE :search_nuptk)";
                 $params['search_nama'] = "%" . $search . "%";
                 $params['search_email'] = "%" . $search . "%";
+                $params['search_nip'] = "%" . $search . "%";
+                $params['search_nuptk'] = "%" . $search . "%";
             }
 
             $orderBy = " ORDER BY u.nama_lengkap ASC";
@@ -267,6 +307,12 @@ class PenggunaModel extends Model {
                 }
                 $row['persentase_kelengkapan'] = round(($filled / $totalFields) * 100);
             }
+        } else {
+            foreach ($list as &$row) {
+                if (isset($row['secondary_roles']) && is_string($row['secondary_roles'])) {
+                    $row['secondary_roles'] = json_decode($row['secondary_roles'], true) ?: [];
+                }
+            }
         }
 
         $totalPages = ceil($total / $perPage);
@@ -299,10 +345,22 @@ class PenggunaModel extends Model {
             }
         } else {
             $sql = "SELECT u.*, r.nama_role,
+                           (
+                               SELECT COALESCE(json_agg(json_build_object('id', sub_r.id, 'nama_role', sub_r.nama_role, 'deskripsi', sub_r.deskripsi)), '[]'::json)
+                               FROM core.user_roles ur
+                               JOIN core.roles sub_r ON ur.role_id = sub_r.id
+                               WHERE ur.user_id = u.id AND sub_r.id != u.role_id
+                           ) AS secondary_roles,
+                           (
+                               SELECT COALESCE(json_agg(sub_r.nama_role), '[]'::json)
+                               FROM core.user_roles ur
+                               JOIN core.roles sub_r ON ur.role_id = sub_r.id
+                               WHERE ur.user_id = u.id
+                           ) AS assigned_roles,
                            EXISTS(
                                SELECT 1 FROM core.user_roles ur 
                                INNER JOIN core.roles sub_r ON ur.role_id = sub_r.id
-                               WHERE ur.user_id = u.id AND sub_r.nama_role = 'bk'
+                               WHERE ur.user_id = u.id AND (sub_r.nama_role = 'bk' OR sub_r.nama_role = 'guru_bk')
                            ) AS is_bk,
                            EXISTS(
                                SELECT 1 FROM core.user_roles ur 
@@ -323,7 +381,27 @@ class PenggunaModel extends Model {
                                SELECT 1 FROM core.user_roles ur 
                                INNER JOIN core.roles sub_r ON ur.role_id = sub_r.id
                                WHERE ur.user_id = u.id AND sub_r.nama_role = 'sarpras'
-                           ) AS is_sarpras
+                           ) AS is_sarpras,
+                           EXISTS(
+                               SELECT 1 FROM core.user_roles ur 
+                               INNER JOIN core.roles sub_r ON ur.role_id = sub_r.id
+                               WHERE ur.user_id = u.id AND sub_r.nama_role = 'wali_kelas'
+                           ) AS is_wali_kelas,
+                           EXISTS(
+                               SELECT 1 FROM core.user_roles ur 
+                               INNER JOIN core.roles sub_r ON ur.role_id = sub_r.id
+                               WHERE ur.user_id = u.id AND sub_r.nama_role = 'pembina_ekskul'
+                           ) AS is_pembina_ekskul,
+                           EXISTS(
+                               SELECT 1 FROM core.user_roles ur 
+                               INNER JOIN core.roles sub_r ON ur.role_id = sub_r.id
+                               WHERE ur.user_id = u.id AND (sub_r.nama_role = 'keuangan' OR sub_r.nama_role = 'bendahara')
+                           ) AS is_keuangan,
+                           EXISTS(
+                               SELECT 1 FROM core.user_roles ur 
+                               INNER JOIN core.roles sub_r ON ur.role_id = sub_r.id
+                               WHERE ur.user_id = u.id AND sub_r.nama_role = 'perpustakaan'
+                           ) AS is_perpustakaan
                     FROM core.users u
                     JOIN core.roles r ON u.role_id = r.id
                     WHERE u.id::text = :id";
@@ -340,7 +418,14 @@ class PenggunaModel extends Model {
         }
 
         $stmt->execute($params);
-        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        $result = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        if ($result && isset($result['secondary_roles']) && is_string($result['secondary_roles'])) {
+            $result['secondary_roles'] = json_decode($result['secondary_roles'], true) ?: [];
+        }
+        if ($result && isset($result['assigned_roles']) && is_string($result['assigned_roles'])) {
+            $result['assigned_roles'] = json_decode($result['assigned_roles'], true) ?: [];
+        }
+        return $result;
     }
 
     /**
@@ -517,16 +602,33 @@ class PenggunaModel extends Model {
         try {
             $this->db->beginTransaction();
             
-            $sql = "INSERT INTO core.users (id, tenant_id, role_id, nama_lengkap, email, password_hash, is_active) 
-                    VALUES (:id, :tenant_id, :role_id, :nama_lengkap, :email, :password_hash, true)";
+            $sql = "INSERT INTO core.users (
+                        id, tenant_id, role_id, nama_lengkap, email, password_hash, is_active,
+                        nip, nuptk, jenis_gtk, jabatan_struktural, status_kepegawaian, jam_mengajar,
+                        status_sertifikasi, no_hp, alamat, jenis_kelamin
+                    ) VALUES (
+                        :id, :tenant_id, :role_id, :nama_lengkap, :email, :password_hash, true,
+                        :nip, :nuptk, :jenis_gtk, :jabatan_struktural, :status_kepegawaian, :jam_mengajar,
+                        :status_sertifikasi, :no_hp, :alamat, :jenis_kelamin
+                    )";
             $stmt = $this->db->prepare($sql);
             $stmt->execute([
                 'id' => $userId,
                 'tenant_id' => $this->tenantId,
                 'role_id' => $roleId,
-                'nama_lengkap' => strip_tags(trim($data['nama_lengkap'])),
-                'email' => strtolower(trim($data['email'])),
-                'password_hash' => $hashedPassword
+                'nama_lengkap' => strip_tags(trim($data['nama_lengkap'] ?? '')),
+                'email' => strtolower(trim($data['email'] ?? '')),
+                'password_hash' => $hashedPassword,
+                'nip' => !empty($data['nip']) ? trim($data['nip']) : null,
+                'nuptk' => !empty($data['nuptk']) ? trim($data['nuptk']) : null,
+                'jenis_gtk' => !empty($data['jenis_gtk']) ? trim($data['jenis_gtk']) : ($tab === 'guru' ? 'Guru' : 'Tenaga Kependidikan'),
+                'jabatan_struktural' => !empty($data['jabatan_struktural']) ? trim($data['jabatan_struktural']) : null,
+                'status_kepegawaian' => !empty($data['status_kepegawaian']) ? trim($data['status_kepegawaian']) : 'GTY/PTY',
+                'jam_mengajar' => isset($data['jam_mengajar']) ? (int)$data['jam_mengajar'] : 0,
+                'status_sertifikasi' => (!empty($data['status_sertifikasi']) && $data['status_sertifikasi'] !== 'false') ? 'true' : 'false',
+                'no_hp' => !empty($data['no_hp']) ? trim($data['no_hp']) : null,
+                'alamat' => !empty($data['alamat']) ? trim($data['alamat']) : null,
+                'jenis_kelamin' => !empty($data['jenis_kelamin']) ? trim($data['jenis_kelamin']) : null
             ]);
 
             // Tulis role utama ke user_roles
@@ -537,33 +639,7 @@ class PenggunaModel extends Model {
                 'role_id' => $roleId
             ]);
 
-            $getRoleIdByName = function(string $roleName): ?string {
-                $st = $this->db->prepare("SELECT id::text FROM core.roles WHERE nama_role = ? OR nama_role ILIKE ? LIMIT 1");
-                $st->execute([$roleName, "%$roleName%"]);
-                return $st->fetchColumn() ?: null;
-            };
-
-            $syncUserRole = function(string $uId, string $roleName, bool $enable) use ($getRoleIdByName) {
-                $rId = $getRoleIdByName($roleName);
-                if ($rId) {
-                    if ($enable) {
-                        $st = $this->db->prepare("INSERT INTO core.user_roles (user_id, role_id) VALUES (:user_id::uuid, :role_id::uuid) ON CONFLICT DO NOTHING");
-                        $st->execute(['user_id' => $uId, 'role_id' => $rId]);
-                    } else {
-                        $st = $this->db->prepare("DELETE FROM core.user_roles WHERE user_id::text = :user_id AND role_id::text = :role_id");
-                        $st->execute(['user_id' => $uId, 'role_id' => $rId]);
-                    }
-                }
-            };
-
-            // Jika kategori guru dan dicentang role tambahan (BK, Kesiswaan, Humas, Kurikulum, Sarpras)
-            if ($tab === 'guru') {
-                $syncUserRole($userId, 'bk', !empty($data['is_bk']));
-                $syncUserRole($userId, 'kesiswaan', !empty($data['is_kesiswaan']));
-                $syncUserRole($userId, 'humas', !empty($data['is_humas']));
-                $syncUserRole($userId, 'kurikulum', !empty($data['is_kurikulum']));
-                $syncUserRole($userId, 'sarpras', !empty($data['is_sarpras']));
-            }
+            $this->syncStaffRoles($userId, $data, $tab);
 
             $this->db->commit();
             return $userId;
@@ -579,14 +655,37 @@ class PenggunaModel extends Model {
     public function updateStaff(string $tab, string $id, array $data): bool {
         $params = [
             'id' => $id,
-            'nama_lengkap' => strip_tags(trim($data['nama_lengkap'])),
-            'email' => strtolower(trim($data['email']))
+            'nama_lengkap' => strip_tags(trim($data['nama_lengkap'] ?? '')),
+            'email' => strtolower(trim($data['email'] ?? '')),
+            'nip' => !empty($data['nip']) ? trim($data['nip']) : null,
+            'nuptk' => !empty($data['nuptk']) ? trim($data['nuptk']) : null,
+            'jenis_gtk' => !empty($data['jenis_gtk']) ? trim($data['jenis_gtk']) : ($tab === 'guru' ? 'Guru' : 'Tenaga Kependidikan'),
+            'jabatan_struktural' => !empty($data['jabatan_struktural']) ? trim($data['jabatan_struktural']) : null,
+            'status_kepegawaian' => !empty($data['status_kepegawaian']) ? trim($data['status_kepegawaian']) : 'GTY/PTY',
+            'jam_mengajar' => isset($data['jam_mengajar']) ? (int)$data['jam_mengajar'] : 0,
+            'status_sertifikasi' => (!empty($data['status_sertifikasi']) && $data['status_sertifikasi'] !== 'false') ? 'true' : 'false',
+            'no_hp' => !empty($data['no_hp']) ? trim($data['no_hp']) : null,
+            'alamat' => !empty($data['alamat']) ? trim($data['alamat']) : null,
+            'jenis_kelamin' => !empty($data['jenis_kelamin']) ? trim($data['jenis_kelamin']) : null
         ];
         if ($this->tenantId !== null) {
             $params['tenant_id'] = $this->tenantId;
         }
 
-        $sql = "UPDATE core.users SET nama_lengkap = :nama_lengkap, email = :email";
+        $sql = "UPDATE core.users SET 
+                    nama_lengkap = :nama_lengkap, 
+                    email = :email,
+                    nip = :nip,
+                    nuptk = :nuptk,
+                    jenis_gtk = :jenis_gtk,
+                    jabatan_struktural = :jabatan_struktural,
+                    status_kepegawaian = :status_kepegawaian,
+                    jam_mengajar = :jam_mengajar,
+                    status_sertifikasi = :status_sertifikasi,
+                    no_hp = :no_hp,
+                    alamat = :alamat,
+                    jenis_kelamin = :jenis_kelamin";
+
         if (!empty($data['password'])) {
             $sql .= ", password_hash = :password_hash";
             $params['password_hash'] = password_hash($data['password'], PASSWORD_ARGON2ID);
@@ -616,39 +715,57 @@ class PenggunaModel extends Model {
                 ]);
             }
 
-            // Kelola role Guru BK, Kesiswaan, Humas, Kurikulum, Sarpras kustom jika tab adalah Guru
-            if ($tab === 'guru') {
-                $getRoleIdByName = function(string $rName): ?string {
-                    $st = $this->db->prepare("SELECT id::text FROM core.roles WHERE nama_role = ? OR nama_role ILIKE ? LIMIT 1");
-                    $st->execute([$rName, "%$rName%"]);
-                    return $st->fetchColumn() ?: null;
-                };
-
-                $syncUserRole = function(string $uId, string $rName, bool $enable) use ($getRoleIdByName) {
-                    $rId = $getRoleIdByName($rName);
-                    if ($rId) {
-                        if ($enable) {
-                            $st = $this->db->prepare("INSERT INTO core.user_roles (user_id, role_id) VALUES (:user_id::uuid, :role_id::uuid) ON CONFLICT DO NOTHING");
-                            $st->execute(['user_id' => $uId, 'role_id' => $rId]);
-                        } else {
-                            $st = $this->db->prepare("DELETE FROM core.user_roles WHERE user_id::text = :user_id AND role_id::text = :role_id");
-                            $st->execute(['user_id' => $uId, 'role_id' => $rId]);
-                        }
-                    }
-                };
-
-                $syncUserRole($id, 'bk', !empty($data['is_bk']));
-                $syncUserRole($id, 'kesiswaan', !empty($data['is_kesiswaan']));
-                $syncUserRole($id, 'humas', !empty($data['is_humas']));
-                $syncUserRole($id, 'kurikulum', !empty($data['is_kurikulum']));
-                $syncUserRole($id, 'sarpras', !empty($data['is_sarpras']));
-            }
+            $this->syncStaffRoles($id, $data, $tab);
 
             $this->db->commit();
             return $success;
         } catch (\Throwable $e) {
             $this->db->rollBack();
             throw $e;
+        }
+    }
+
+    /**
+     * Helper sinkronisasi multi-role / tugas tambahan staff ke core.user_roles
+     */
+    private function syncStaffRoles(string $userId, array $data, string $tab): void {
+        $getRoleIdByName = function(string $rName): ?string {
+            $st = $this->db->prepare("SELECT id::text FROM core.roles WHERE nama_role = ? OR nama_role ILIKE ? LIMIT 1");
+            $st->execute([$rName, "%$rName%"]);
+            return $st->fetchColumn() ?: null;
+        };
+
+        $syncUserRole = function(string $uId, string $rName, bool $enable) use ($getRoleIdByName) {
+            $rId = $getRoleIdByName($rName);
+            if ($rId) {
+                if ($enable) {
+                    $st = $this->db->prepare("INSERT INTO core.user_roles (user_id, role_id) VALUES (:user_id::uuid, :role_id::uuid) ON CONFLICT DO NOTHING");
+                    $st->execute(['user_id' => $uId, 'role_id' => $rId]);
+                } else {
+                    $st = $this->db->prepare("DELETE FROM core.user_roles WHERE user_id::text = :user_id AND role_id::text = :role_id");
+                    $st->execute(['user_id' => $uId, 'role_id' => $rId]);
+                }
+            }
+        };
+
+        // Multi-role array explicit jika dikirim
+        if (isset($data['assigned_roles']) && is_array($data['assigned_roles'])) {
+            $roleList = $data['assigned_roles'];
+            $allRoles = ['bk', 'guru_bk', 'kesiswaan', 'humas', 'kurikulum', 'sarpras', 'wali_kelas', 'pembina_ekskul', 'keuangan', 'perpustakaan'];
+            foreach ($allRoles as $r) {
+                $syncUserRole($userId, $r, in_array($r, $roleList));
+            }
+        } else {
+            // Sinkronisasi berbasis flag individual
+            $syncUserRole($userId, 'bk', !empty($data['is_bk']));
+            $syncUserRole($userId, 'kesiswaan', !empty($data['is_kesiswaan']));
+            $syncUserRole($userId, 'humas', !empty($data['is_humas']));
+            $syncUserRole($userId, 'kurikulum', !empty($data['is_kurikulum']));
+            $syncUserRole($userId, 'sarpras', !empty($data['is_sarpras']));
+            $syncUserRole($userId, 'wali_kelas', !empty($data['is_wali_kelas']));
+            $syncUserRole($userId, 'pembina_ekskul', !empty($data['is_pembina_ekskul']));
+            $syncUserRole($userId, 'keuangan', !empty($data['is_keuangan']));
+            $syncUserRole($userId, 'perpustakaan', !empty($data['is_perpustakaan']));
         }
     }
 

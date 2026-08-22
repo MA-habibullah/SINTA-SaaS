@@ -677,7 +677,7 @@
                 if (!item) return false;
                 return !item.tenant_id || 
                        item.tenant_id === '11111111-1111-1111-1111-111111111111' || 
-                       item.tenant_id === '00000000-0000-0000-0000-000000000000' || 
+                       item.tenant_id === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' || 
                        item.is_system === true || 
                        item.is_system === 1;
             },

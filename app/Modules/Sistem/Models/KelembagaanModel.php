@@ -249,7 +249,7 @@ class KelembagaanModel extends Model {
             $extraCols = ", kode_jenjang";
         }
 
-        if (!empty($this->tenantId) && $this->tenantId !== '00000000-0000-0000-0000-000000000000') {
+        if (!empty($this->tenantId) && $this->tenantId !== 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
             $sql = "SELECT id, {$nameCol} AS nama {$extraCols} 
                     FROM {$fullTable} 
                     WHERE (tenant_id::text = :tenant_id OR tenant_id IS NULL) AND is_active = true 
@@ -336,7 +336,7 @@ class KelembagaanModel extends Model {
             ? $this->tenantId 
             : (!empty($data['tenant_id']) ? $data['tenant_id'] : SessionManager::getTenantId());
 
-        if (empty($targetTenantId) || $targetTenantId === '00000000-0000-0000-0000-000000000000') {
+        if (empty($targetTenantId) || $targetTenantId === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
             throw new \InvalidArgumentException("Pilih instansi sekolah terlebih dahulu.");
         }
 
@@ -576,11 +576,11 @@ class KelembagaanModel extends Model {
     }
 
     private function isSuperAdminContext(): bool {
-        return empty($this->tenantId) || $this->tenantId === '00000000-0000-0000-0000-000000000000';
+        return empty($this->tenantId) || $this->tenantId === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12';
     }
 
     public function getTenants(): array {
-        $stmt = $this->db->query("SELECT id, nama_sekolah, npsn FROM core.tenants WHERE status = 'active' AND id != '00000000-0000-0000-0000-000000000000' ORDER BY nama_sekolah ASC");
+        $stmt = $this->db->query("SELECT id, nama_sekolah, npsn FROM core.tenants WHERE status = 'active' AND id != 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' ORDER BY nama_sekolah ASC");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }

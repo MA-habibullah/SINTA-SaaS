@@ -213,7 +213,7 @@ class ServerMonitorModuleController extends BaseController
                 (SELECT COUNT(*) FROM siswa.siswa s WHERE s.tenant_id = t.id AND s.is_active = true) AS total_siswa,
                 (SELECT COUNT(DISTINCT s.user_id) FROM sistem.active_sessions s WHERE s.tenant_id = t.id AND s.last_activity >= CURRENT_TIMESTAMP - INTERVAL '15 minutes') AS active_sessions
             FROM core.tenants t
-            WHERE t.id != '00000000-0000-0000-0000-000000000000'
+            WHERE t.id != 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12'
             ORDER BY t.nama_sekolah ASC
         ");
 
