@@ -276,6 +276,66 @@ Ketika pengguna meminta verifikasi, agen wajib secara otomatis menjalankan 2 lan
    php scratch/tests/test_security_audit.php
    ```
 
+## Standardisasi Desain UI/UX Horizontal NavTabs & Scroller Engine (WAJIB)
+Saat membuat halaman baru atau merombak tata letak bilah navigasi tab (navtab / navpills) di seluruh modul SINTA SaaS, agen **WAJIB** menerapkan standar desain modern pill layout dan interaksi 3-way horizontal scroller berikut:
+
+**1. Struktur Markup HTML Standar (Single-Row Modern Pill NavTab):**
+```html
+<div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-2 mb-4 position-relative">
+    <div class="d-flex align-items-center position-relative">
+        <!-- 1 Tombol Panah Kiri -->
+        <button type="button" 
+                class="btn btn-sm btn-light border border-slate-200/80 rounded-xl shadow-2xs me-1.5 d-none d-md-flex align-items-center justify-content-center flex-shrink-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition" 
+                style="width: 34px; height: 34px; z-index: 5;" 
+                onclick="document.getElementById('[idNavTabs]')?.scrollBy({ left: -220, behavior: 'smooth' })"
+                title="Geser ke Kiri">
+            <i class="bi bi-chevron-left"></i>
+        </button>
+
+        <!-- Container Deretan Tab -->
+        <div class="nav-tabs-wrapper flex-grow-1 overflow-hidden position-relative">
+            <ul class="nav nav-pills border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-1.5 px-1 user-select-none" id="[idNavTabs]" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" 
+                            :class="{'active': activeTab === 'tab1'}" 
+                            @click="switchTab('tab1')">
+                        <i class="bi bi-grid me-2 fs-6"></i> Tab Pertama
+                    </button>
+                </li>
+                <!-- Tambahkan nav-item lainnya di sini -->
+            </ul>
+        </div>
+
+        <!-- 1 Tombol Panah Kanan -->
+        <button type="button" 
+                class="btn btn-sm btn-light border border-slate-200/80 rounded-xl shadow-2xs ms-1.5 d-none d-md-flex align-items-center justify-content-center flex-shrink-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition" 
+                style="width: 34px; height: 34px; z-index: 5;" 
+                onclick="document.getElementById('[idNavTabs]')?.scrollBy({ left: 220, behavior: 'smooth' })"
+                title="Geser ke Kanan">
+            <i class="bi bi-chevron-right"></i>
+        </button>
+
+        <!-- Tombol Aksi Tambahan / Segarkan Data (Opsional) -->
+        <div class="d-none d-md-flex align-items-center ps-2 pe-1 border-s border-slate-200/80 ms-2">
+            <button type="button" class="btn btn-sm btn-light border border-slate-200 text-slate-600 hover:bg-slate-100 rounded-xl px-3 py-2 text-xs font-bold shadow-2xs d-flex align-items-center gap-1.5" @click="refreshAll()" title="Segarkan Data">
+                <i class="bi bi-arrow-clockwise" :class="{'spin': loading}"></i>
+                <span>Segarkan</span>
+            </button>
+        </div>
+    </div>
+</div>
+```
+
+**2. Ketentuan Interaktivitas NavTab:**
+- **3-Way Interaction**: Deretan tab wajib mendukung:
+  1. *Mouse Wheel to Horizontal Scroll*: Roda scroll mouse vertikal otomatis menggeser baris tab ke kiri/kanan.
+  2. *Mouse Drag-to-Scroll (Swipe)*: Klik tahan dan seret dengan mouse untuk menggeser tab di desktop.
+  3. *Tombol Panah Presisi*: Tombol chevron kiri dan kanan untuk menggeser sejauh $\pm 220\text{px}$.
+- **Larangan Duplikasi Elemen (Anti-Double Buttons)**:
+  - Tombol panah `<` dan `>` didefinisikan secara deklaratif tepat 1 pasang di markup HTML view.
+  - Skrip JavaScript global di `views/layout/master.php` HANYA menangani event listener scroll wheel dan drag, dan **DILARANG** melakukan injeksi DOM `createElement` tambahan yang dapat memicu tombol dobel.
+
+
 ## Strict Prohibition on Folder Deletion in Scratch (PERMANENT RULE)
 DILARANG KERAS menghapus atau mengosongkan folder-folder berikut beserta seluruh isi berkas dan sub-foldernya dalam kondisi apa pun:
 1. `C:\laragon\www\sinta\scratch\docs`
@@ -283,3 +343,4 @@ DILARANG KERAS menghapus atau mengosongkan folder-folder berikut beserta seluruh
 3. `C:\laragon\www\sinta\scratch\tests`
 
 Setiap kali pembersihan berkas dilakukan, ketiga direktori di atas WAJIB tetap aman, utuh, dan terlindungi dari segala bentuk perintah penghapusan.
+

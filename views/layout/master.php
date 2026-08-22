@@ -955,7 +955,183 @@
 
             resetIdleTimers();
         })();
+
+        // =========================================================================
+        // GLOBAL SCROLLABLE TABS & HORIZONTAL MOUSE WHEEL / DRAG ENGINE
+        // =========================================================================
+        window.scrollNavTabsHorizontal = function(idOrEl, offset) {
+            const el = typeof idOrEl === 'string' ? document.getElementById(idOrEl) : idOrEl;
+            if (el) {
+                el.scrollBy({ left: offset, behavior: 'smooth' });
+            }
+        };
+
+        function initGlobalNavTabsScroller() {
+            const selector = '.scrollable-nav-tabs, .scrollable-nav-pills, .persuratan-nav-tabs, .custom-modern-pills, .nav-tabs.overflow-x-auto, .nav-pills.overflow-x-auto, .nav-tabs-wrapper ul.nav';
+            const containers = document.querySelectorAll(selector);
+
+            containers.forEach(container => {
+                if (container.dataset.scrollerInitialized === 'true') return;
+                container.dataset.scrollerInitialized = 'true';
+                container.classList.add('user-select-none');
+
+                // 1. Mouse Wheel to Horizontal Scroll
+                container.addEventListener('wheel', function(e) {
+                    if (e.deltaY !== 0) {
+                        e.preventDefault();
+                        container.scrollLeft += e.deltaY;
+                    }
+                }, { passive: false });
+
+                // 2. Mouse Drag to Scroll (Desktop Touch-like swipe)
+                let isDown = false;
+                let startX = 0;
+                let scrollLeftPos = 0;
+                let hasMoved = false;
+
+                container.addEventListener('mousedown', function(e) {
+                    isDown = true;
+                    hasMoved = false;
+                    container.style.cursor = 'grabbing';
+                    startX = e.pageX - container.offsetLeft;
+                    scrollLeftPos = container.scrollLeft;
+                });
+
+                container.addEventListener('mouseleave', function() {
+                    isDown = false;
+                    container.style.cursor = 'grab';
+                });
+
+                container.addEventListener('mouseup', function() {
+                    isDown = false;
+                    container.style.cursor = 'grab';
+                });
+
+                container.addEventListener('mousemove', function(e) {
+                    if (!isDown) return;
+                    e.preventDefault();
+                    hasMoved = true;
+                    const x = e.pageX - container.offsetLeft;
+                    const walk = (x - startX) * 1.5;
+                    container.scrollLeft = scrollLeftPos - walk;
+                });
+
+                // Cegah pemicu klik tab tidak sengaja jika mouse sedang ditarik/drag
+                container.addEventListener('click', function(e) {
+                    if (hasMoved) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        hasMoved = false;
+                    }
+                }, true);
+            });
+        }
+
+        // Jalankan saat DOM ready dan saat navigasi Turbo Drive
+        document.addEventListener('DOMContentLoaded', initGlobalNavTabsScroller);
+        document.addEventListener('turbo:load', initGlobalNavTabsScroller);
+        document.addEventListener('turbo:render', initGlobalNavTabsScroller);
+        window.addEventListener('resize', initGlobalNavTabsScroller);
     </script>
+
+    <style>
+    /* =========================================================================
+       GLOBAL SCROLLABLE TABS & MODERN PILLS UX STANDARD
+       ========================================================================= */
+    .nav-pills .nav-link,
+    .scrollable-nav-tabs .nav-link,
+    .scrollable-nav-pills .nav-link,
+    .custom-modern-pills .nav-link,
+    .persuratan-nav-tabs .nav-link {
+        color: #475569 !important;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0.75rem !important;
+        padding: 0.55rem 1.15rem !important;
+        font-size: 0.85rem !important;
+        font-weight: 600 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        white-space: nowrap !important;
+    }
+    .nav-pills .nav-link:hover,
+    .scrollable-nav-tabs .nav-link:hover,
+    .scrollable-nav-pills .nav-link:hover,
+    .custom-modern-pills .nav-link:hover,
+    .persuratan-nav-tabs .nav-link:hover {
+        color: #1d4ed8 !important;
+        background: #f1f5f9 !important;
+    }
+    .nav-pills .nav-link:hover i,
+    .scrollable-nav-tabs .nav-link:hover i,
+    .scrollable-nav-pills .nav-link:hover i,
+    .custom-modern-pills .nav-link:hover i,
+    .persuratan-nav-tabs .nav-link:hover i {
+        color: #1d4ed8 !important;
+    }
+    .nav-pills .nav-link.active,
+    .scrollable-nav-tabs .nav-link.active,
+    .scrollable-nav-pills .nav-link.active,
+    .custom-modern-pills .nav-link.active,
+    .persuratan-nav-tabs .nav-link.active {
+        color: #ffffff !important;
+        background: #2563eb !important;
+        box-shadow: 0 1px 3px rgba(37, 99, 235, 0.35) !important;
+    }
+    .nav-pills .nav-link.active i,
+    .scrollable-nav-tabs .nav-link.active i,
+    .scrollable-nav-pills .nav-link.active i,
+    .custom-modern-pills .nav-link.active i,
+    .persuratan-nav-tabs .nav-link.active i {
+        color: #ffffff !important;
+    }
+    .scrollable-nav-tabs,
+    .scrollable-nav-pills,
+    .persuratan-nav-tabs,
+    .custom-modern-pills,
+    .nav-tabs.overflow-x-auto,
+    .nav-pills.overflow-x-auto {
+        overflow-x: auto !important;
+        scroll-behavior: smooth !important;
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+        cursor: grab;
+    }
+    .scrollable-nav-tabs::-webkit-scrollbar,
+    .scrollable-nav-pills::-webkit-scrollbar,
+    .persuratan-nav-tabs::-webkit-scrollbar,
+    .custom-modern-pills::-webkit-scrollbar,
+    .nav-tabs.overflow-x-auto::-webkit-scrollbar,
+    .nav-pills.overflow-x-auto::-webkit-scrollbar {
+        display: none !important;
+        height: 0 !important;
+        width: 0 !important;
+    }
+    .sinta-nav-scroll-btn {
+        width: 34px !important;
+        height: 34px !important;
+        min-width: 34px !important;
+        border-radius: 0.75rem !important;
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        color: #475569 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+        z-index: 5 !important;
+        flex-shrink: 0 !important;
+    }
+    .sinta-nav-scroll-btn:hover {
+        background: #eff6ff !important;
+        color: #2563eb !important;
+        border-color: #bfdbfe !important;
+        transform: scale(1.05) !important;
+    }
+    </style>
 
 </body>
 </html>

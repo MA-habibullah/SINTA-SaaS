@@ -77,13 +77,21 @@
         </div>
     </div>
 
-    <!-- Navigation Tabs (Scrollable on Mobile) -->
-    <div class="card border-0 shadow-sm rounded-4 mb-4">
-        <div class="card-body p-2 bg-white rounded-4">
-            <div class="nav-tabs-wrapper">
-                <ul class="nav nav-pills nav-fill flex-nowrap overflow-x-auto text-nowrap scrollable-nav-pills gap-1">
+    <!-- Navigation Tabs Modern SINTA SaaS -->
+    <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-2 mb-4 position-relative">
+        <div class="d-flex align-items-center position-relative">
+            <button type="button" 
+                    class="btn btn-sm btn-light border border-slate-200/80 rounded-xl shadow-2xs me-1.5 d-none d-md-flex align-items-center justify-content-center flex-shrink-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition" 
+                    style="width: 34px; height: 34px; z-index: 5;" 
+                    onclick="document.getElementById('masterDataNavTabs')?.scrollBy({ left: -220, behavior: 'smooth' })"
+                    title="Geser ke Kiri">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+
+            <div class="nav-tabs-wrapper flex-grow-1 overflow-hidden position-relative">
+                <ul class="nav nav-pills border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-1.5 px-1 user-select-none" id="masterDataNavTabs" role="tablist">
                     <li class="nav-item" v-for="tab in tabs" :key="tab.id">
-                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-8 fs-md-7 rounded-3 transition" 
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition" 
                                 :class="{active: activeTab === tab.id}" 
                                 @click="switchTab(tab.id)">
                             <i :class="tab.icon" class="me-2 fs-6"></i>{{ tab.name }}
@@ -91,6 +99,14 @@
                     </li>
                 </ul>
             </div>
+
+            <button type="button" 
+                    class="btn btn-sm btn-light border border-slate-200/80 rounded-xl shadow-2xs ms-1.5 d-none d-md-flex align-items-center justify-content-center flex-shrink-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition" 
+                    style="width: 34px; height: 34px; z-index: 5;" 
+                    onclick="document.getElementById('masterDataNavTabs')?.scrollBy({ left: 220, behavior: 'smooth' })"
+                    title="Geser ke Kanan">
+                <i class="bi bi-chevron-right"></i>
+            </button>
         </div>
     </div>
 

@@ -196,15 +196,39 @@ try {
         // ─── Modul Persuratan & Tata Usaha (E-Arsip & Tata Naskah Dinas Sekolah) ───
         case '/persuratan':
         case '/persuratan/dashboard':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->dashboardView();
+            break;
+
         case '/persuratan/surat-masuk':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->suratMasukView();
+            break;
+
         case '/persuratan/surat-keluar':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->suratKeluarView();
+            break;
+
         case '/persuratan/pengajuan-bk':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->pengajuanBkView();
+            break;
+
         case '/persuratan/template':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->templateView();
+            break;
+
         case '/persuratan/master':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->masterView();
+            break;
+
         case '/persuratan/verifikasi':
         case '/validasi/surat':
             $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
-            $controller->indexView();
+            $controller->verifikasiView();
             break;
 
         case '/api/v1/persuratan/dashboard/stats':
@@ -298,6 +322,11 @@ try {
             $controller->apiSaveTemplate();
             break;
 
+        case '/api/v1/persuratan/template/delete':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->apiDeleteTemplate();
+            break;
+
         case '/api/v1/persuratan/klasifikasi':
             $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -310,6 +339,11 @@ try {
         case '/api/v1/persuratan/klasifikasi/save':
             $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
             $controller->apiSaveKlasifikasi();
+            break;
+
+        case '/api/v1/persuratan/klasifikasi/delete':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->apiDeleteKlasifikasi();
             break;
 
         case '/api/v1/persuratan/kop-surat':
@@ -327,6 +361,7 @@ try {
             break;
 
         case '/api/v1/persuratan/verify':
+        case '/api/v1/persuratan/verifikasi/cek':
             $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
             $controller->apiVerifyTteToken();
             break;
