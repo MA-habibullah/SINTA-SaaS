@@ -29,7 +29,7 @@ class KurikulumModuleController extends BaseController {
         $requestedTenant = $_GET['tenant_id'] ?? ($_GET['filter_tenant_id'] ?? null);
         $sessionTenant = SessionManager::getTenantId();
         $tenantId = (!empty($requestedTenant)) ? $requestedTenant : $sessionTenant;
-        if ($tenantId === '00000000-0000-0000-0000-000000000000') {
+        if ($tenantId === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
             $tenantId = null;
         }
 
@@ -69,6 +69,30 @@ class KurikulumModuleController extends BaseController {
         if ($tenantId) { $stmtMapel->execute(['tenant_id' => $tenantId]); } else { $stmtMapel->execute(); }
         $mapelList = $stmtMapel->fetchAll(PDO::FETCH_ASSOC);
 
+        // Ambil daftar Guru aktif untuk opsi Guru Pengampu
+        $sqlGuru = "SELECT u.id, u.nama_lengkap, u.nip, u.nuptk 
+                    FROM core.users u 
+                    JOIN core.roles r ON u.role_id = r.id 
+                    WHERE 1=1";
+        if ($tenantId) {
+            $sqlGuru .= " AND (u.tenant_id = :tenant_id OR u.tenant_id IS NULL)";
+        }
+        $sqlGuru .= " AND (u.is_active = true OR u.is_active IS NULL)
+                      AND (r.nama_role IN ('guru', 'guru_bk', 'admin', 'operator_sekolah') 
+                           OR EXISTS (
+                               SELECT 1 FROM core.user_roles ur 
+                               JOIN core.roles r2 ON ur.role_id = r2.id 
+                               WHERE ur.user_id = u.id AND r2.nama_role IN ('guru', 'guru_bk')
+                           ))
+                    ORDER BY u.nama_lengkap ASC";
+        $stmtGuru = $db->prepare($sqlGuru);
+        if ($tenantId) {
+            $stmtGuru->execute(['tenant_id' => $tenantId]);
+        } else {
+            $stmtGuru->execute();
+        }
+        $guruList = $stmtGuru->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
         $existingMapping = [];
         $kelasId = $_GET['kelas_id'] ?? '';
         $tahunAjaran = $_GET['tahun_ajaran'] ?? '';
@@ -76,23 +100,23 @@ class KurikulumModuleController extends BaseController {
         $activeKurikulumId = '';
 
         if (!empty($kelasId) && !empty($tahunAjaran) && !empty($semester)) {
-            $stmtExist = $db->prepare("SELECT kelompok_id, mapel_id FROM akademik.pemetaan_mapel WHERE kelas_id = :kelas_id AND tahun_ajaran = :tahun_ajaran AND semester = :semester AND (tenant_id = :tenant_id OR tenant_id IS NULL) AND is_active = true");
+            $stmtExist = $db->prepare("SELECT kelompok_id, mapel_id, guru_id, COALESCE(kkm, 75) as kkm, COALESCE(jam_pelajaran, 2) as jam_pelajaran FROM akademik.pemetaan_mapel WHERE (kelas_id = :kelas_id OR kelas_id::text = :kelas_id) AND tahun_ajaran = :tahun_ajaran AND semester = :semester AND (tenant_id::text = :tenant_id OR tenant_id IS NULL) AND (is_active = true OR is_active IS NULL)");
             $paramsExist = [
                 'kelas_id' => $kelasId,
                 'tahun_ajaran' => $tahunAjaran,
-                'semester' => $semester
+                'semester' => $semester,
+                'tenant_id' => $tenantId
             ];
-            if ($tenantId) { $paramsExist['tenant_id'] = $tenantId; }
             $stmtExist->execute($paramsExist);
-            $existingMapping = $stmtExist->fetchAll(PDO::FETCH_ASSOC);
+            $existingMapping = $stmtExist->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-            $sqlActive = "SELECT kurikulum_id FROM akademik.kelas_kurikulum WHERE kelas_id = :kelas_id AND tahun_ajaran = :tahun_ajaran";
+            $sqlActive = "SELECT kurikulum_id FROM akademik.kelas_kurikulum WHERE (kelas_id = :kelas_id OR kelas_id::text = :kelas_id) AND tahun_ajaran = :tahun_ajaran";
             $paramsActive = [
                 'kelas_id' => $kelasId,
                 'tahun_ajaran' => $tahunAjaran
             ];
             if ($tenantId) {
-                $sqlActive .= " AND tenant_id = :tenant_id";
+                $sqlActive .= " AND (tenant_id::text = :tenant_id OR tenant_id IS NULL)";
                 $paramsActive['tenant_id'] = $tenantId;
             }
             $sqlActive .= " LIMIT 1";
@@ -102,19 +126,20 @@ class KurikulumModuleController extends BaseController {
         }
 
         if ($tenantId) {
-            $stmtRef = $db->prepare("SELECT id, nama_ref_kurikulum AS nama_kurikulum, kategori AS tipe_penilaian FROM akademik.ref_kurikulum WHERE is_active = true AND (tenant_id = :tenant_id OR tenant_id IS NULL) ORDER BY nama_ref_kurikulum ASC");
+            $stmtRef = $db->prepare("SELECT id, nama_ref_kurikulum AS nama_kurikulum, kategori AS tipe_penilaian FROM akademik.ref_kurikulum WHERE is_active = true AND (tenant_id::text = :tenant_id OR tenant_id IS NULL) ORDER BY nama_ref_kurikulum ASC");
             $stmtRef->execute(['tenant_id' => $tenantId]);
         } else {
             $stmtRef = $db->prepare("SELECT id, nama_ref_kurikulum AS nama_kurikulum, kategori AS tipe_penilaian FROM akademik.ref_kurikulum WHERE is_active = true ORDER BY nama_ref_kurikulum ASC");
             $stmtRef->execute();
         }
-        $kurikulumList = $stmtRef->fetchAll(PDO::FETCH_ASSOC);
+        $kurikulumList = $stmtRef->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
         $this->jsonResponse(true, [
             'tahun_ajaran' => $tahunList,
             'kelas' => $kelasList,
             'jenjang' => $jenjangList,
             'bank_mapel' => $mapelList,
+            'guru_list' => $guruList,
             'existing_mapping' => $existingMapping,
             'kurikulum_list' => $kurikulumList,
             'active_kurikulum_id' => $activeKurikulumId
@@ -135,7 +160,7 @@ class KurikulumModuleController extends BaseController {
 
         $db = Database::getConnection();
         $tenantId = SessionManager::getTenantId();
-        if ((!$tenantId || $tenantId === '00000000-0000-0000-0000-000000000000') && !empty($input['tenant_id'])) {
+        if ((!$tenantId || $tenantId === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') && !empty($input['tenant_id'])) {
             $tenantId = $input['tenant_id'];
         }
         if (!$tenantId && $kelasId) {
@@ -154,8 +179,8 @@ class KurikulumModuleController extends BaseController {
             return;
         }
 
-        $stmtLock = $db->prepare("SELECT is_locked_kurikulum FROM akademik.kunci_akademik WHERE tenant_id = ? AND tahun_ajaran = ? AND semester = ?");
-        $stmtLock->execute([$tenantId, $tahunAjaran, $semester]);
+        $stmtLock = $db->prepare("SELECT is_locked_kurikulum FROM akademik.kunci_akademik WHERE (tenant_id::text = :tenant_id OR tenant_id IS NULL) AND tahun_ajaran = :ta AND semester = :sem AND is_active = true LIMIT 1");
+        $stmtLock->execute(['tenant_id' => $tenantId, 'ta' => $tahunAjaran, 'sem' => $semester]);
         if ($stmtLock->fetchColumn()) {
             $this->jsonResponse(false, null, 'Gagal menyimpan. Seting Kurikulum pada Tahun Ajaran & Semester ini telah dikunci oleh administrator.', 403);
             return;
@@ -163,7 +188,7 @@ class KurikulumModuleController extends BaseController {
 
         $db->beginTransaction();
         try {
-            $stmtDelete = $db->prepare("DELETE FROM akademik.pemetaan_mapel WHERE kelas_id = :kelas_id AND semester = :semester AND tahun_ajaran = :tahun_ajaran AND tenant_id = :tenant_id");
+            $stmtDelete = $db->prepare("DELETE FROM akademik.pemetaan_mapel WHERE (kelas_id = :kelas_id OR kelas_id::text = :kelas_id) AND semester = :semester AND tahun_ajaran = :tahun_ajaran AND (tenant_id::text = :tenant_id OR tenant_id IS NULL)");
             $stmtDelete->execute([
                 'kelas_id' => $kelasId,
                 'semester' => $semester,
@@ -171,27 +196,37 @@ class KurikulumModuleController extends BaseController {
                 'tenant_id' => $tenantId
             ]);
 
-            $stmtInsert = $db->prepare("INSERT INTO akademik.pemetaan_mapel (tenant_id, tahun_ajaran, semester, kelas_id, kelompok_id, mapel_id) VALUES (:tenant_id, :tahun_ajaran, :semester, :kelas_id, :kelompok_id, :mapel_id)");
+            $stmtInsert = $db->prepare("INSERT INTO akademik.pemetaan_mapel (tenant_id, tahun_ajaran, semester, kelas_id, kelompok_id, mapel_id, guru_id, kkm, jam_pelajaran) VALUES (:tenant_id, :tahun_ajaran, :semester, :kelas_id, :kelompok_id, :mapel_id, :guru_id, :kkm, :jam_pelajaran)");
             foreach ($mappings as $group) {
                 $kelompokId = trim($group['kelompok_id'] ?? '');
-                $mapelIds = $group['mapel_ids'] ?? [];
-                if (empty($kelompokId) || empty($mapelIds)) {
+                $mapelItems = $group['mapel_ids'] ?? [];
+                if (empty($kelompokId) || empty($mapelItems)) {
                     continue;
                 }
-                foreach ($mapelIds as $mapelId) {
+                foreach ($mapelItems as $item) {
+                    $mId = is_array($item) ? ($item['mapel_id'] ?? '') : $item;
+                    $gId = is_array($item) && !empty($item['guru_id']) ? $item['guru_id'] : null;
+                    $kkm = is_array($item) && isset($item['kkm']) ? (float)$item['kkm'] : 75;
+                    $jam = is_array($item) && isset($item['jam_pelajaran']) ? (int)$item['jam_pelajaran'] : 2;
+
+                    if (empty($mId)) continue;
+
                     $stmtInsert->execute([
                         'tenant_id' => $tenantId,
                         'tahun_ajaran' => $tahunAjaran,
                         'semester' => $semester,
                         'kelas_id' => $kelasId,
                         'kelompok_id' => $kelompokId,
-                        'mapel_id' => $mapelId
+                        'mapel_id' => $mId,
+                        'guru_id' => $gId,
+                        'kkm' => $kkm,
+                        'jam_pelajaran' => $jam
                     ]);
                 }
             }
 
             if (!empty($kurikulumId)) {
-                $stmtDelKur = $db->prepare("DELETE FROM akademik.kelas_kurikulum WHERE kelas_id = :kelas_id AND tahun_ajaran = :tahun_ajaran AND tenant_id = :tenant_id");
+                $stmtDelKur = $db->prepare("DELETE FROM akademik.kelas_kurikulum WHERE (kelas_id = :kelas_id OR kelas_id::text = :kelas_id) AND tahun_ajaran = :tahun_ajaran AND (tenant_id::text = :tenant_id OR tenant_id IS NULL)");
                 $stmtDelKur->execute([
                     'kelas_id' => $kelasId,
                     'tahun_ajaran' => $tahunAjaran,
@@ -236,7 +271,7 @@ class KurikulumModuleController extends BaseController {
 
         $db = Database::getConnection();
         $tenantId = SessionManager::getTenantId();
-        if ((!$tenantId || $tenantId === '00000000-0000-0000-0000-000000000000') && !empty($input['tenant_id'])) {
+        if ((!$tenantId || $tenantId === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') && !empty($input['tenant_id'])) {
             $tenantId = $input['tenant_id'];
         }
         if (!$tenantId && $targetKelasId) {
@@ -272,7 +307,7 @@ class KurikulumModuleController extends BaseController {
         $db->beginTransaction();
         try {
             // Ambil mapping dari sumber (semester & TA sumber)
-            $stmtSource = $db->prepare("SELECT kelompok_id, mapel_id FROM akademik.pemetaan_mapel WHERE (kelas_id = :source_kelas_id OR kelas_id::text = :source_kelas_id) AND semester = :semester AND tahun_ajaran = :tahun_ajaran AND (tenant_id::text = :tenant_id OR tenant_id IS NULL) AND (is_active = true OR is_active IS NULL)");
+            $stmtSource = $db->prepare("SELECT kelompok_id, mapel_id, guru_id, COALESCE(kkm, 75) as kkm, COALESCE(jam_pelajaran, 2) as jam_pelajaran FROM akademik.pemetaan_mapel WHERE (kelas_id = :source_kelas_id OR kelas_id::text = :source_kelas_id) AND semester = :semester AND tahun_ajaran = :tahun_ajaran AND (tenant_id::text = :tenant_id OR tenant_id IS NULL) AND (is_active = true OR is_active IS NULL)");
             $stmtSource->execute([
                 'source_kelas_id' => $sourceKelasId,
                 'semester'        => $semester,
@@ -297,15 +332,18 @@ class KurikulumModuleController extends BaseController {
             ]);
 
             // Insert ke tujuan dengan semester & TA tujuan
-            $stmtInsert = $db->prepare("INSERT INTO akademik.pemetaan_mapel (tenant_id, tahun_ajaran, semester, kelas_id, kelompok_id, mapel_id) VALUES (:tenant_id, :tahun_ajaran, :semester, :kelas_id, :kelompok_id, :mapel_id)");
+            $stmtInsert = $db->prepare("INSERT INTO akademik.pemetaan_mapel (tenant_id, tahun_ajaran, semester, kelas_id, kelompok_id, mapel_id, guru_id, kkm, jam_pelajaran) VALUES (:tenant_id, :tahun_ajaran, :semester, :kelas_id, :kelompok_id, :mapel_id, :guru_id, :kkm, :jam_pelajaran)");
             foreach ($sourceMappings as $row) {
                 $stmtInsert->execute([
-                    'tenant_id'    => $tenantId,
-                    'tahun_ajaran' => $targetTahunAjaran,
-                    'semester'     => $targetSemester,
-                    'kelas_id'     => $targetKelasId,
-                    'kelompok_id'  => $row['kelompok_id'],
-                    'mapel_id'     => $row['mapel_id']
+                    'tenant_id'     => $tenantId,
+                    'tahun_ajaran'  => $targetTahunAjaran,
+                    'semester'      => $targetSemester,
+                    'kelas_id'      => $targetKelasId,
+                    'kelompok_id'   => $row['kelompok_id'],
+                    'mapel_id'      => $row['mapel_id'],
+                    'guru_id'       => $row['guru_id'] ?? null,
+                    'kkm'           => $row['kkm'] ?? 75,
+                    'jam_pelajaran' => $row['jam_pelajaran'] ?? 2
                 ]);
             }
 
@@ -338,7 +376,7 @@ class KurikulumModuleController extends BaseController {
         $requestedTenant = $_GET['filter_tenant_id'] ?? $_GET['tenant_id'] ?? null;
         $sessionTenant = SessionManager::getTenantId();
         $tenantId = (!empty($requestedTenant)) ? $requestedTenant : $sessionTenant;
-        if ($tenantId === '00000000-0000-0000-0000-000000000000') {
+        if ($tenantId === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
             $tenantId = null;
         }
 
@@ -385,7 +423,7 @@ class KurikulumModuleController extends BaseController {
         $requestedTenant = $data['filter_tenant_id'] ?? $data['tenant_id'] ?? null;
         $sessionTenant = SessionManager::getTenantId();
         $tenantId = (!empty($requestedTenant)) ? $requestedTenant : $sessionTenant;
-        if ($tenantId === '00000000-0000-0000-0000-000000000000') {
+        if ($tenantId === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
             $tenantId = null;
         }
 
@@ -441,7 +479,7 @@ class KurikulumModuleController extends BaseController {
 
         $db = Database::getConnection();
         $tenantId = SessionManager::getTenantId();
-        if ((!$tenantId || $tenantId === '00000000-0000-0000-0000-000000000000') && !empty($input['tenant_id'])) {
+        if ((!$tenantId || $tenantId === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') && !empty($input['tenant_id'])) {
             $tenantId = $input['tenant_id'];
         }
         if (!$tenantId) {
@@ -495,7 +533,7 @@ class KurikulumModuleController extends BaseController {
 
         $db = Database::getConnection();
         $tenantId = SessionManager::getTenantId();
-        if ((!$tenantId || $tenantId === '00000000-0000-0000-0000-000000000000') && !empty($input['tenant_id'])) {
+        if ((!$tenantId || $tenantId === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') && !empty($input['tenant_id'])) {
             $tenantId = $input['tenant_id'];
         }
         if (!$tenantId) {

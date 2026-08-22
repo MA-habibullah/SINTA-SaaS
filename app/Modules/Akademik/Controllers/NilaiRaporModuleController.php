@@ -22,7 +22,7 @@ class NilaiRaporModuleController extends BaseController {
 
     private function resolveTenantId(PDO $db, string $kelasId = ''): ?string {
         $tenantId = SessionManager::getTenantId();
-        if (!$tenantId || $tenantId === '00000000-0000-0000-0000-000000000000') {
+        if (!$tenantId || $tenantId === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
             $tenantId = null;
         }
         if (!$tenantId && !empty($_GET['tenant_id']))        $tenantId = $_GET['tenant_id'];
@@ -176,9 +176,14 @@ class NilaiRaporModuleController extends BaseController {
         $stMapel = $db->prepare(
             "SELECT DISTINCT p.mapel_id,
                     m.id::text AS kode_mapel,
-                    COALESCE(m.nama_mata_pelajaran, m.id::text) AS nama_mapel
+                    COALESCE(m.nama_mata_pelajaran, m.id::text) AS nama_mapel,
+                    COALESCE(p.kkm, 75) AS kkm,
+                    COALESCE(p.jam_pelajaran, 2) AS jam_pelajaran,
+                    p.guru_id,
+                    u.nama_lengkap AS nama_guru
              FROM   akademik.pemetaan_mapel p
              JOIN   akademik.mata_pelajaran m ON (p.mapel_id = m.id::text OR p.mapel_id::text = m.id::text)
+             LEFT JOIN core.users u ON (p.guru_id = u.id OR p.guru_id::text = u.id::text)
              WHERE  (p.kelas_id = :kelas_id OR p.kelas_id::text = :kelas_id)
                AND  p.tahun_ajaran = :tahun_ajaran
                AND  (p.semester = :sem1 OR p.semester = :sem2)
@@ -205,8 +210,8 @@ class NilaiRaporModuleController extends BaseController {
         );
         $stActive->execute(['kelas_id' => $kelasId, 'tahun_ajaran' => $tahunAjaran, 'tenant_id' => $tenantId]);
         $activeKur = $stActive->fetch(PDO::FETCH_ASSOC) ?: [
-            'nama_kurikulum' => 'Kurikulum 2013 (K-13)',
-            'tipe_penilaian' => 'kompleks',
+            'nama_kurikulum' => 'Kurikulum Merdeka',
+            'tipe_penilaian' => 'sederhana',
             'is_locked'      => false,
         ];
 
@@ -215,13 +220,13 @@ class NilaiRaporModuleController extends BaseController {
         $isLocked = (bool)($stKunci->fetchColumn() ?: false);
 
         $stGrades = $db->prepare(
-            "SELECT siswa_id, mapel_id, nilai_akhir, capaian_kompetensi
+            "SELECT siswa_id, mapel_id, nilai_akhir, capaian_kompetensi, deskripsi_capaian, deskripsi_keterampilan, nilai_tp, nilai_sts, nilai_sas
              FROM   akademik.detail_nilai_rapor
              WHERE  (kelas_id = :kelas_id OR kelas_id::text = :kelas_id)
                AND  tahun_ajaran = :tahun_ajaran
                AND  (semester = :sem1 OR semester = :sem2)
                AND  (tenant_id::text = :tenant_id OR tenant_id IS NULL)
-               AND  is_active    = true"
+               AND  (is_active = true OR is_active IS NULL)"
         );
         $stGrades->execute(['kelas_id' => $kelasId, 'tahun_ajaran' => $tahunAjaran, 'sem1' => $semList[0], 'sem2' => $semList[1], 'tenant_id' => $tenantId]);
         $gradesList = $stGrades->fetchAll(PDO::FETCH_ASSOC);
@@ -232,8 +237,13 @@ class NilaiRaporModuleController extends BaseController {
             $mId = $row['mapel_id'];
             if (!isset($gradesMatrix[$sId])) $gradesMatrix[$sId] = [];
             $gradesMatrix[$sId][$mId] = [
-                'nilai_akhir'       => $row['nilai_akhir'] !== null ? (float)$row['nilai_akhir'] : null,
-                'capaian_kompetensi'=> $row['capaian_kompetensi'] ?? '',
+                'nilai_akhir'            => $row['nilai_akhir'] !== null ? (float)$row['nilai_akhir'] : null,
+                'capaian_kompetensi'     => $row['capaian_kompetensi'] ?? '',
+                'deskripsi_capaian'      => $row['deskripsi_capaian'] ?? '',
+                'deskripsi_keterampilan' => $row['deskripsi_keterampilan'] ?? '',
+                'nilai_tp'               => $row['nilai_tp'] !== null ? (float)$row['nilai_tp'] : null,
+                'nilai_sts'              => $row['nilai_sts'] !== null ? (float)$row['nilai_sts'] : null,
+                'nilai_sas'              => $row['nilai_sas'] !== null ? (float)$row['nilai_sas'] : null,
             ];
         }
 
@@ -310,22 +320,35 @@ class NilaiRaporModuleController extends BaseController {
             $stIns = $db->prepare(
                 "INSERT INTO akademik.detail_nilai_rapor
                      (tenant_id, siswa_id, kelas_id, tahun_ajaran, semester, mapel_id,
-                      nilai_akhir, capaian_kompetensi)
+                      nilai_akhir, capaian_kompetensi, deskripsi_capaian, deskripsi_keterampilan,
+                      nilai_tp, nilai_sts, nilai_sas)
                  VALUES
                      (:tenant_id, :siswa_id, :kelas_id, :tahun_ajaran, :semester, :mapel_id,
-                      :nilai_akhir, :capaian_kompetensi)"
+                      :nilai_akhir, :capaian_kompetensi, :deskripsi_capaian, :deskripsi_keterampilan,
+                      :nilai_tp, :nilai_sts, :nilai_sas)"
             );
 
             foreach ($grades as $entry) {
                 $sId  = $entry['siswa_id'] ?? '';
                 $mId  = $entry['mapel_id'] ?? '';
-                $val  = isset($entry['nilai_akhir']) && $entry['nilai_akhir'] !== '' ? $entry['nilai_akhir'] : null;
+                $val  = isset($entry['nilai_akhir']) && $entry['nilai_akhir'] !== '' ? (float)$entry['nilai_akhir'] : null;
                 $cap  = $entry['capaian_kompetensi'] ?? $entry['detail']['capaian_tertinggi'] ?? null;
+                $desk = $entry['deskripsi_capaian'] ?? $cap;
+                $deskKet = $entry['deskripsi_keterampilan'] ?? null;
+                $tp   = isset($entry['nilai_tp']) && $entry['nilai_tp'] !== '' ? (float)$entry['nilai_tp'] : null;
+                $sts  = isset($entry['nilai_sts']) && $entry['nilai_sts'] !== '' ? (float)$entry['nilai_sts'] : null;
+                $sas  = isset($entry['nilai_sas']) && $entry['nilai_sas'] !== '' ? (float)$entry['nilai_sas'] : null;
+
                 if (empty($sId) || empty($mId)) continue;
 
                 $studentReligion = $studentsMap[$sId] ?? null;
                 $mapelName       = $subjectsMap[$mId]  ?? '';
                 if ($this->isReligionSubjectMismatch($studentReligion, $mapelName)) continue;
+
+                // Auto-generate capaian jika belum terisi dan nilai akhir ada
+                if (empty($desk) && $val !== null) {
+                    $desk = $this->generateCapaianNarrative($mapelName, $val);
+                }
 
                 $stDel->execute([
                     'tenant_id'    => $tenantId, 'siswa_id' => $sId,
@@ -333,10 +356,19 @@ class NilaiRaporModuleController extends BaseController {
                     'sem1'         => $semList[0], 'sem2' => $semList[1],  'mapel_id' => $mId,
                 ]);
                 $stIns->execute([
-                    'tenant_id'         => $tenantId, 'siswa_id' => $sId,
-                    'kelas_id'          => $kelasId,  'tahun_ajaran' => $tahunAjaran,
-                    'semester'          => $semester,  'mapel_id' => $mId,
-                    'nilai_akhir'       => $val,       'capaian_kompetensi' => $cap,
+                    'tenant_id'              => $tenantId,
+                    'siswa_id'               => $sId,
+                    'kelas_id'               => $kelasId,
+                    'tahun_ajaran'           => $tahunAjaran,
+                    'semester'               => $semester,
+                    'mapel_id'               => $mId,
+                    'nilai_akhir'            => $val,
+                    'capaian_kompetensi'     => $cap ?: $desk,
+                    'deskripsi_capaian'      => $desk,
+                    'deskripsi_keterampilan' => $deskKet,
+                    'nilai_tp'               => $tp,
+                    'nilai_sts'              => $sts,
+                    'nilai_sas'              => $sas
                 ]);
             }
 
@@ -345,6 +377,21 @@ class NilaiRaporModuleController extends BaseController {
         } catch (\Throwable $e) {
             $db->rollBack();
             $this->jsonResponse(false, null, 'Gagal menyimpan nilai: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Helper Generator Narasi Capaian Pembelajaran (Standar Kemendikbudristek)
+     */
+    private function generateCapaianNarrative(string $mapelName, float $score): string {
+        if ($score >= 88) {
+            return "Menunjukkan penguasaan materi " . $mapelName . " yang sangat baik dan mampu menerapkannya secara mandiri.";
+        } elseif ($score >= 75) {
+            return "Menunjukkan pemahaman yang baik dan tuntas dalam capaian pembelajaran " . $mapelName . ".";
+        } elseif ($score >= 65) {
+            return "Cukup menguasai konsep dasar " . $mapelName . ", perlu latihan tambahan pada materi lanjutan.";
+        } else {
+            return "Perlu pendampingan dan bimbingan lebih intensif dalam menguasai materi pokok " . $mapelName . ".";
         }
     }
 

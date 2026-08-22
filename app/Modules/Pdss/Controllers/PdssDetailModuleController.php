@@ -86,7 +86,7 @@ class PdssDetailModuleController extends BaseController {
                 $tid = $body['tenant_id'] ?? null;
             }
 
-            if (!empty($tid) && $tid !== '00000000-0000-0000-0000-000000000000') {
+            if (!empty($tid) && $tid !== 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
                 try {
                     $db = \App\Config\Database::getConnection();
                     $stmt = $db->prepare("SELECT id FROM core.tenants WHERE id = ? LIMIT 1");
@@ -98,16 +98,16 @@ class PdssDetailModuleController extends BaseController {
 
             try {
                 $db = \App\Config\Database::getConnection();
-                $stmtDefault = $db->query("SELECT id FROM core.tenants WHERE id != '00000000-0000-0000-0000-000000000000' AND status = 'active' ORDER BY nama_sekolah ASC LIMIT 1");
+                $stmtDefault = $db->query("SELECT id FROM core.tenants WHERE id != 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' AND status = 'active' ORDER BY nama_sekolah ASC LIMIT 1");
                 $firstId = $stmtDefault->fetchColumn();
                 if ($firstId) return $firstId;
             } catch (\Throwable $e) {}
         }
 
-        if (empty($tenantId) || $tenantId === '00000000-0000-0000-0000-000000000000') {
+        if (empty($tenantId) || $tenantId === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
             try {
                 $db = \App\Config\Database::getConnection();
-                $stmtDefault = $db->query("SELECT id FROM core.tenants WHERE id != '00000000-0000-0000-0000-000000000000' AND status = 'active' ORDER BY nama_sekolah ASC LIMIT 1");
+                $stmtDefault = $db->query("SELECT id FROM core.tenants WHERE id != 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' AND status = 'active' ORDER BY nama_sekolah ASC LIMIT 1");
                 $tenantId = $stmtDefault->fetchColumn() ?: null;
             } catch (\Throwable $e) {}
         }
@@ -1028,7 +1028,7 @@ class PdssDetailModuleController extends BaseController {
             $stmtUpsertKesiapan = $db->prepare("
                 INSERT INTO pdss.kesiapan_siswa (id, tenant_id, siswa_id, tahun_ajaran_id, nilai_rata_rata, ranking_sekolah, ranking_jurusan, is_eligible)
                 VALUES (gen_random_uuid(), ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT (tenant_id, siswa_id, COALESCE(tahun_ajaran_id, '00000000-0000-0000-0000-000000000000'))
+                ON CONFLICT (tenant_id, siswa_id, COALESCE(tahun_ajaran_id, 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12'))
                 DO UPDATE SET 
                     nilai_rata_rata = EXCLUDED.nilai_rata_rata,
                     ranking_sekolah = EXCLUDED.ranking_sekolah,
@@ -1040,7 +1040,7 @@ class PdssDetailModuleController extends BaseController {
             $stmtUpsertRanking = $db->prepare("
                 INSERT INTO pdss.pdss_ranking (id, tenant_id, siswa_id, tahun_ajaran_id, nama_jurusan, nilai_rata_rata, ranking_jurusan, ranking_sekolah, is_eligible)
                 VALUES (gen_random_uuid(), ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT (tenant_id, siswa_id, COALESCE(tahun_ajaran_id, '00000000-0000-0000-0000-000000000000'))
+                ON CONFLICT (tenant_id, siswa_id, COALESCE(tahun_ajaran_id, 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12'))
                 DO UPDATE SET 
                     nama_jurusan = EXCLUDED.nama_jurusan,
                     nilai_rata_rata = EXCLUDED.nilai_rata_rata,
@@ -1538,7 +1538,7 @@ class PdssDetailModuleController extends BaseController {
             $stmt = $db->prepare("
                 INSERT INTO pdss.pdss_lock (id, tenant_id, step, tahun_ajaran_id, is_locked, locked_by, locked_at)
                 VALUES (gen_random_uuid(), ?, ?, ?, {$isLocked}, ?, ?)
-                ON CONFLICT (tenant_id, step, COALESCE(tahun_ajaran_id, '00000000-0000-0000-0000-000000000000')) 
+                ON CONFLICT (tenant_id, step, COALESCE(tahun_ajaran_id, 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')) 
                 DO UPDATE SET is_locked = {$isLocked}, locked_by = EXCLUDED.locked_by, locked_at = EXCLUDED.locked_at, updated_at = CURRENT_TIMESTAMP
             ");
             $stmt->execute([$tenantId, $step, $tahunAjaranId, $isLocked === 'TRUE' ? $userName : null, $isLocked === 'TRUE' ? $now : null]);
@@ -2146,7 +2146,7 @@ class PdssDetailModuleController extends BaseController {
             $db->prepare("
                 INSERT INTO pdss.simulasi_setting (id, tenant_id, tahun_ajaran_id, no_simulasi, is_open) 
                 VALUES (gen_random_uuid(), ?, ?, ?, {$isOpen}) 
-                ON CONFLICT (tenant_id, COALESCE(tahun_ajaran_id, '00000000-0000-0000-0000-000000000000'), no_simulasi) 
+                ON CONFLICT (tenant_id, COALESCE(tahun_ajaran_id, 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12'), no_simulasi) 
                 DO UPDATE SET is_open = {$isOpen}, updated_at = CURRENT_TIMESTAMP
             ")->execute([$tenantId, $tahunAjaranId, $noSimulasi]);
 

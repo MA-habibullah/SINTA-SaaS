@@ -27,20 +27,20 @@ class TracerModuleController extends BaseController {
 
     private function getTenantContext(): ?string {
         $tenantId = SessionManager::getTenantId();
-        if (empty($tenantId) || $tenantId === '00000000-0000-0000-0000-000000000000') {
-            if (!empty($_GET['tenant_id']) && $_GET['tenant_id'] !== '00000000-0000-0000-0000-000000000000') {
+        if (empty($tenantId) || $tenantId === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
+            if (!empty($_GET['tenant_id']) && $_GET['tenant_id'] !== 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
                 $tenantId = trim($_GET['tenant_id']);
-            } elseif (!empty($_POST['tenant_id']) && $_POST['tenant_id'] !== '00000000-0000-0000-0000-000000000000') {
+            } elseif (!empty($_POST['tenant_id']) && $_POST['tenant_id'] !== 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
                 $tenantId = trim($_POST['tenant_id']);
             } else {
                 $body = $this->getJsonInput();
-                if (!empty($body['tenant_id']) && $body['tenant_id'] !== '00000000-0000-0000-0000-000000000000') {
+                if (!empty($body['tenant_id']) && $body['tenant_id'] !== 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
                     $tenantId = trim($body['tenant_id']);
                 }
             }
         }
 
-        if (empty($tenantId) || $tenantId === '00000000-0000-0000-0000-000000000000') {
+        if (empty($tenantId) || $tenantId === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
             try {
                 $db = Database::getConnection();
                 $stmtDefault = $db->query("SELECT id FROM core.tenants WHERE status = 'active' ORDER BY created_at ASC LIMIT 1");
