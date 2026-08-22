@@ -22,7 +22,7 @@ class AuditLogger {
         try {
             $db = Database::getConnection();
 
-            $tid = $tenantId ?: ($_SESSION['tenant_id'] ?? '00000000-0000-0000-0000-000000000000');
+            $tid = $tenantId ?: ($_SESSION['tenant_id'] ?? 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12');
             $uid = $userId ?: ($_SESSION['user_id'] ?? '');
 
             if (empty($uid)) {

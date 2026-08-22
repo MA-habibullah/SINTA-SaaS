@@ -84,7 +84,7 @@ class RouteGuard {
             $stmtCheckCustom = $db->prepare("SELECT COUNT(*) FROM role_menu_access WHERE tenant_id = :tenant_id");
             $stmtCheckCustom->execute(['tenant_id' => $tenantId]);
             $hasCustomAccess = (int)$stmtCheckCustom->fetchColumn() > 0;
-            $accessTenantId = $hasCustomAccess ? $tenantId : '00000000-0000-0000-0000-000000000000';
+            $accessTenantId = $hasCustomAccess ? $tenantId : 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12';
 
             // Pengecekan multi-role menggunakan query IN
             $inClause = implode(',', array_fill(0, count($roleNames), '?'));

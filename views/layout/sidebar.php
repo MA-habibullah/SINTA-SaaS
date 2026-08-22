@@ -94,24 +94,24 @@ if (!empty($roles)) {
             $stmtCheckCustom = $db->prepare("SELECT COUNT(*) FROM core.role_menu_access WHERE tenant_id = :tenant_id");
             $stmtCheckCustom->execute(['tenant_id' => $tenantId]);
             $hasCustomAccess = (int)$stmtCheckCustom->fetchColumn() > 0;
-            $accessTenantId = $hasCustomAccess ? $tenantId : '00000000-0000-0000-0000-000000000000';
+            $accessTenantId = $hasCustomAccess ? $tenantId : 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12';
 
             $inClause = implode(',', array_fill(0, count($roles), '?'));
             $sql = "SELECT DISTINCT m.* 
                     FROM core.menus m
                     JOIN core.tenant_menu_access tma ON m.id = tma.menu_id
-                    WHERE (tma.tenant_id = ? OR tma.tenant_id = '00000000-0000-0000-0000-000000000000')
+                    WHERE (tma.tenant_id = ? OR tma.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')
                       AND (
                           m.id IN (
                               SELECT rma.menu_id 
                               FROM core.role_menu_access rma
                               JOIN core.roles r ON rma.role_id = r.id
-                              WHERE LOWER(r.nama_role) IN ($inClause) AND (rma.tenant_id = ? OR rma.tenant_id = '00000000-0000-0000-0000-000000000000')
+                              WHERE LOWER(r.nama_role) IN ($inClause) AND (rma.tenant_id = ? OR rma.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')
                           )
                           OR m.id IN (
                               SELECT uma.menu_id 
                               FROM core.user_menu_access uma 
-                              WHERE uma.user_id = ? AND (uma.tenant_id = ? OR uma.tenant_id = '00000000-0000-0000-0000-000000000000')
+                              WHERE uma.user_id = ? AND (uma.tenant_id = ? OR uma.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')
                           )
                       )
                     ORDER BY m.parent_id ASC, m.urutan ASC";
@@ -125,7 +125,7 @@ if (!empty($roles)) {
                     JOIN core.role_menu_access rma ON m.id = rma.menu_id
                     JOIN core.roles r ON rma.role_id = r.id
                     WHERE LOWER(r.nama_role) IN ($inClause)
-                      AND (rma.tenant_id = '00000000-0000-0000-0000-000000000000' OR rma.tenant_id IS NOT NULL)
+                      AND (rma.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' OR rma.tenant_id IS NOT NULL)
                     ORDER BY m.parent_id ASC, m.urutan ASC";
             $stmt = $db->prepare($sql);
             $stmt->execute($roles);

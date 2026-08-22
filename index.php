@@ -193,9 +193,152 @@ try {
             $controller->getInventarisApi();
             break;
 
+        // ─── Modul Persuratan & Tata Usaha (E-Arsip & Tata Naskah Dinas Sekolah) ───
+        case '/persuratan':
+        case '/persuratan/dashboard':
+        case '/persuratan/surat-masuk':
+        case '/persuratan/surat-keluar':
+        case '/persuratan/pengajuan-bk':
+        case '/persuratan/template':
+        case '/persuratan/master':
+        case '/persuratan/verifikasi':
+        case '/validasi/surat':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->indexView();
+            break;
+
+        case '/api/v1/persuratan/dashboard/stats':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->apiDashboardStats();
+            break;
+
         case '/api/v1/persuratan/surat-masuk':
             $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
-            $controller->getSuratMasukApi();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveSuratMasuk();
+            } else {
+                $controller->apiGetSuratMasuk();
+            }
+            break;
+
+        case '/api/v1/persuratan/surat-masuk/save':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->apiSaveSuratMasuk();
+            break;
+
+        case '/api/v1/persuratan/surat-masuk/delete':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->apiDeleteSuratMasuk();
+            break;
+
+        case '/api/v1/persuratan/disposisi':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveDisposisi();
+            } else {
+                $controller->apiGetDisposisi();
+            }
+            break;
+
+        case '/api/v1/persuratan/disposisi/save':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->apiSaveDisposisi();
+            break;
+
+        case '/api/v1/persuratan/surat-keluar':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveSuratKeluar();
+            } else {
+                $controller->apiGetSuratKeluar();
+            }
+            break;
+
+        case '/api/v1/persuratan/surat-keluar/generate-nomor':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->apiGenerateNomorSurat();
+            break;
+
+        case '/api/v1/persuratan/surat-keluar/save':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->apiSaveSuratKeluar();
+            break;
+
+        case '/api/v1/persuratan/surat-keluar/delete':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->apiDeleteSuratKeluar();
+            break;
+
+        case '/api/v1/persuratan/surat-keluar/detail-cetak':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->apiGetSuratKeluarDetailCetak();
+            break;
+
+        case '/api/v1/persuratan/pengajuan-bk':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->apiGetPengajuanBk();
+            break;
+
+        case '/api/v1/persuratan/pengajuan-bk/proses-terbit':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->apiProsesTerbitPengajuanBk();
+            break;
+
+        case '/api/v1/persuratan/template':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveTemplate();
+            } else {
+                $controller->apiGetTemplates();
+            }
+            break;
+
+        case '/api/v1/persuratan/template/save':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->apiSaveTemplate();
+            break;
+
+        case '/api/v1/persuratan/klasifikasi':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveKlasifikasi();
+            } else {
+                $controller->apiGetKlasifikasi();
+            }
+            break;
+
+        case '/api/v1/persuratan/klasifikasi/save':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->apiSaveKlasifikasi();
+            break;
+
+        case '/api/v1/persuratan/kop-surat':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->apiSaveKopSurat();
+            } else {
+                $controller->apiGetKopSurat();
+            }
+            break;
+
+        case '/api/v1/persuratan/kop-surat/save':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->apiSaveKopSurat();
+            break;
+
+        case '/api/v1/persuratan/verify':
+            $controller = new App\Modules\Persuratan\Controllers\PersuratanModuleController();
+            $controller->apiVerifyTteToken();
+            break;
+
+        case '/api/v1/bk/pelanggaran/notifikasi-panggilan/kirim':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiKirimNotifikasiPanggilanTu();
+            break;
+
+        case '/api/v1/bk/pelanggaran/notifikasi-panggilan/status':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiGetNotifikasiPanggilanStatus();
             break;
 
         case '/api/v1/sistem/audit-log':
@@ -716,6 +859,11 @@ try {
             } else {
                 $controller->apiGetKompetensi();
             }
+            break;
+
+        case '/api/v1/perpustakaan/visitor-stats':
+            $controller = new App\Modules\Perpustakaan\Controllers\PerpustakaanModuleController();
+            $controller->apiGetVisitorStats();
             break;
 
         case '/api/v1/perpustakaan/visitor-logs':
@@ -2046,6 +2194,16 @@ case '/api/v1/keuangan/dashboard-metrics':
             $controller->apiBeasiswaList();
             break;
 
+        case '/api/v1/bk/beasiswa/save':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiSaveBeasiswa();
+            break;
+
+        case '/api/v1/bk/beasiswa/delete':
+            $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
+            $controller->apiDeleteBeasiswa();
+            break;
+
         case '/api/v1/bk/beasiswa/export':
             $controller = new App\Modules\Bk\Controllers\BkDetailModuleController();
             $controller->apiExportBeasiswa();
@@ -2572,6 +2730,12 @@ case '/api/v1/keuangan/dashboard-metrics':
             // API: Ambil daftar tenant/sekolah untuk Super Admin
             $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
             $controller->getTenantsApi();
+            break;
+
+        case '/api/v1/pengguna/role-options':
+            // API: Ambil opsi role & atribut GTK
+            $controller = new App\Modules\Sistem\Controllers\PenggunaModuleController();
+            $controller->getRoleOptionsApi();
             break;
 
         case '/api/v1/pengguna/kelas':
