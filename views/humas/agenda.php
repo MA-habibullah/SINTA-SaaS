@@ -538,150 +538,273 @@ $pageTitle = $title ?? 'Agenda & Timeline Kegiatan Sekolah';
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════════════════
-         6. MODAL 1: TAMBAH / EDIT AGENDA
-         ═══════════════════════════════════════════════════════════════════════ -->
-    <div class="modal fade" :class="{'show d-block': modalAgenda.show}" tabindex="-1" style="background: rgba(15, 23, 42, 0.6);" v-if="modalAgenda.show">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content rounded-3xl border-0 shadow-2xl overflow-hidden">
-                <div class="modal-header px-6 py-4 border-b border-slate-100 d-flex align-items-center justify-content-between bg-slate-900 text-white">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-white/20 text-white d-flex align-items-center justify-content-center fs-5 shadow-xs">
-                            <i class="bi" :class="modalAgenda.isEdit ? 'bi-pencil-square' : 'bi-calendar-plus-fill'"></i>
+          6. MODAL 1: TAMBAH / EDIT AGENDA (MODERN EXECUTIVE POPUP)
+          ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="modal fade custom-modal-backdrop" :class="{'show d-flex': modalAgenda.show}" tabindex="-1" v-if="modalAgenda.show">
+        <div class="modal-dialog modal-dialog-centered modal-lg my-auto" style="width: 100%; max-width: 820px; max-height: 90vh;">
+            <div class="modal-content rounded-3xl border-0 shadow-2xl overflow-hidden modal-animate-in d-flex flex-column" style="max-height: 90vh;">
+                <!-- Header with Sleek Indigo-Blue Gradient & Ambient Glow -->
+                <div class="modal-header flex-shrink-0 px-4 px-md-5 py-3.5 border-0 d-flex align-items-center justify-content-between text-white position-relative overflow-hidden"
+                     style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #2563eb 100%);">
+                    <div class="position-absolute rounded-circle" style="width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%); top: -40px; right: -30px; pointer-events: none;"></div>
+                    
+                    <div class="d-flex align-items-center gap-3 position-relative" style="z-index: 2;">
+                        <div class="w-10 h-10 rounded-2xl bg-white/15 text-white border border-white/20 d-flex align-items-center justify-content-center fs-5 shadow-xs flex-shrink-0" style="backdrop-filter: blur(8px);">
+                            <i class="bi" :class="modalAgenda.isEdit ? 'bi-pencil-square text-amber-300' : 'bi-calendar-plus-fill text-blue-200'"></i>
                         </div>
                         <div>
-                            <h5 class="modal-title font-bold text-white text-base mb-0">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge px-2 py-0.5 rounded-pill text-[10px] font-bold text-white/90" style="background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.25);">
+                                    {{ modalAgenda.isEdit ? 'Pembaruan Jadwal' : 'Agenda Baru' }}
+                                </span>
+                            </div>
+                            <h5 class="modal-title font-black text-white text-base md:text-lg mb-0 tracking-tight mt-0.5">
                                 {{ modalAgenda.isEdit ? 'Edit Agenda Kegiatan' : 'Jadwalkan Agenda Kegiatan Baru' }}
                             </h5>
-                            <span class="text-white/80 text-xs">Atur jadwal kalender akademik dan timeline sekolah</span>
+                            <span class="text-white/75 text-xs font-normal">Atur jadwal kalender akademik dan timeline sekolah</span>
                         </div>
                     </div>
-                    <button type="button" class="btn-close btn-close-white" @click="modalAgenda.show = false"></button>
+                    <button type="button" class="btn btn-sm btn-icon rounded-xl text-white/80 hover:text-white hover:bg-white/10 p-2 border-0 transition" @click="modalAgenda.show = false" title="Tutup Modal">
+                        <i class="bi bi-x-lg fs-6"></i>
+                    </button>
                 </div>
 
-                <form @submit.prevent="submitAgenda()">
-                    <div class="modal-body p-6 text-slate-700 text-xs">
-                        <div class="row g-3">
+                <form @submit.prevent="submitAgenda()" class="d-flex flex-column flex-grow-1 overflow-hidden" style="min-height: 0;">
+                    <div class="modal-body p-4 p-md-5 text-slate-700 text-xs bg-slate-50/40 overflow-y-auto flex-grow-1 custom-scrollbar" style="max-height: calc(90vh - 140px);">
+                        <div class="row g-3 g-md-4">
                             
                             <!-- Nama Kegiatan -->
                             <div class="col-12">
-                                <label class="form-label font-bold text-slate-700 mb-1">
-                                    Nama Kegiatan / Agenda <span class="text-rose-500">*</span>
+                                <label class="form-label font-bold text-slate-800 mb-1.5 d-flex align-items-center justify-content-between">
+                                    <span>Nama Kegiatan / Agenda <span class="text-rose-500">*</span></span>
+                                    <span class="text-[11px] text-slate-400 font-normal">Buat nama agenda yang deskriptif</span>
                                 </label>
-                                <input type="text" v-model="modalAgenda.form.nama_agenda_sekolah" required placeholder="Contoh: Rapat Pleno Dewan Guru / Ujian Sumatif Akhir Semester" class="form-control text-xs rounded-xl border-slate-200 py-2.5 shadow-2xs font-semibold">
+                                <div class="position-relative">
+                                    <span class="position-absolute top-50 start-0 translate-middle-y ms-3 text-slate-400">
+                                        <i class="bi bi-calendar-event fs-6"></i>
+                                    </span>
+                                    <input type="text" v-model="modalAgenda.form.nama_agenda_sekolah" required 
+                                           placeholder="Contoh: Rapat Pleno Dewan Guru / Ujian Sumatif Akhir Semester" 
+                                           class="form-control text-xs font-semibold rounded-2xl ps-5 pe-3 py-2.5 border-slate-200 shadow-2xs bg-white focus:ring-2 focus:ring-blue-500 transition">
+                                </div>
                             </div>
 
-                            <!-- Kategori & Sasaran Audiens -->
-                            <div class="col-md-6">
-                                <label class="form-label font-bold text-slate-700 mb-1">
+                            <!-- Kategori Kegiatan -->
+                            <div class="col-12 col-md-6">
+                                <label class="form-label font-bold text-slate-800 mb-1.5">
                                     Kategori Kegiatan <span class="text-rose-500">*</span>
                                 </label>
-                                <select v-model="modalAgenda.form.kategori" required class="form-select text-xs rounded-xl border-slate-200 py-2.5 shadow-2xs font-semibold">
-                                    <option value="Akademik">Akademik</option>
-                                    <option value="Kesiswaan & Ekskul">Kesiswaan & Ekskul</option>
-                                    <option value="Kedinasan & Rapat">Kedinasan & Rapat</option>
-                                    <option value="Hari Libur & Peringatan">Hari Libur & Peringatan</option>
-                                    <option value="Ujian & Asesmen">Ujian & Asesmen</option>
-                                    <option value="Lainnya">Lainnya</option>
-                                </select>
+                                <div class="position-relative">
+                                    <span class="position-absolute top-50 start-0 translate-middle-y ms-3 text-slate-400">
+                                        <i class="bi bi-tags-fill text-indigo-500"></i>
+                                    </span>
+                                    <select v-model="modalAgenda.form.kategori" required 
+                                            class="form-select text-xs font-semibold rounded-2xl ps-5 pe-3 py-2.5 border-slate-200 shadow-2xs bg-white cursor-pointer focus:ring-2 focus:ring-blue-500 transition">
+                                        <option value="Akademik">Akademik</option>
+                                        <option value="Kesiswaan & Ekskul">Kesiswaan &amp; Ekskul</option>
+                                        <option value="Kedinasan & Rapat">Kedinasan &amp; Rapat</option>
+                                        <option value="Hari Libur & Peringatan">Hari Libur &amp; Peringatan</option>
+                                        <option value="Ujian & Asesmen">Ujian &amp; Asesmen</option>
+                                        <option value="Lainnya">Lainnya</option>
+                                    </select>
+                                </div>
                             </div>
 
-                            <div class="col-md-6">
-                                <label class="form-label font-bold text-slate-700 mb-1">
-                                    Sasaran Audiens <span class="text-rose-500">*</span>
+                            <!-- Superadmin Tenant Selector -->
+                            <div class="col-12 col-md-6" v-if="isSuperAdmin">
+                                <label class="form-label font-bold text-slate-800 mb-1.5">
+                                    Lingkup Sekolah / Tenant <span class="text-rose-500">*</span>
                                 </label>
-                                <select v-model="modalAgenda.form.visibilitas" class="form-select text-xs rounded-xl border-slate-200 py-2.5 shadow-2xs font-semibold">
-                                    <option value="public">🌐 Semua Warga Sekolah (Publik)</option>
-                                    <option value="guru">👨‍🏫 Khusus Dewan Guru & Tendik</option>
-                                    <option value="siswa">🎓 Khusus Siswa</option>
-                                    <option value="private">🔒 Spesifik Role</option>
-                                </select>
+                                <div class="position-relative">
+                                    <span class="position-absolute top-50 start-0 translate-middle-y ms-3 text-slate-400">
+                                        <i class="bi bi-building text-blue-500"></i>
+                                    </span>
+                                    <select v-model="modalAgenda.form.tenant_id" class="form-select text-xs font-semibold rounded-2xl ps-5 pe-3 py-2.5 border-slate-200 shadow-2xs bg-white cursor-pointer focus:ring-2 focus:ring-blue-500 transition">
+                                        <option value="global">🌐 Agenda Global (Seluruh Sekolah/Tenant)</option>
+                                        <option v-for="t in tenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Interactive Audience Selection Grid (Modern Visual Segmented Cards) -->
+                            <div class="col-12">
+                                <label class="form-label font-bold text-slate-800 mb-2 d-flex align-items-center justify-content-between">
+                                    <span>Sasaran Audiens (Target Peserta) <span class="text-rose-500">*</span></span>
+                                    <span class="badge bg-slate-100 text-slate-600 font-medium px-2 py-0.5 rounded-pill text-[10px]">
+                                        Hak Akses Kalender
+                                    </span>
+                                </label>
+                                
+                                <div class="row g-2.5">
+                                    <!-- Public -->
+                                    <div class="col-6 col-md-3">
+                                        <label class="audience-card d-flex flex-column align-items-center text-center p-3 rounded-2xl border cursor-pointer transition h-100 position-relative"
+                                               :class="modalAgenda.form.visibilitas === 'public' ? 'active bg-blue-50/80 border-blue-500 text-blue-700 shadow-xs' : 'bg-white border-slate-200/80 text-slate-600 hover:border-slate-300'">
+                                            <input type="radio" value="public" v-model="modalAgenda.form.visibilitas" class="d-none">
+                                            <div class="w-9 h-9 rounded-xl d-flex align-items-center justify-content-center mb-2 fs-5"
+                                                 :class="modalAgenda.form.visibilitas === 'public' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'">
+                                                <i class="bi bi-globe2"></i>
+                                            </div>
+                                            <span class="font-bold text-xs">Semua Warga</span>
+                                            <small class="text-[10px] text-slate-400 mt-0.5">Publik &amp; Tamu</small>
+                                            <i v-if="modalAgenda.form.visibilitas === 'public'" class="bi bi-check-circle-fill text-blue-600 position-absolute top-0 end-0 m-2 fs-7"></i>
+                                        </label>
+                                    </div>
+
+                                    <!-- Guru & Tendik -->
+                                    <div class="col-6 col-md-3">
+                                        <label class="audience-card d-flex flex-column align-items-center text-center p-3 rounded-2xl border cursor-pointer transition h-100 position-relative"
+                                               :class="modalAgenda.form.visibilitas === 'guru' ? 'active bg-emerald-50/80 border-emerald-500 text-emerald-700 shadow-xs' : 'bg-white border-slate-200/80 text-slate-600 hover:border-slate-300'">
+                                            <input type="radio" value="guru" v-model="modalAgenda.form.visibilitas" class="d-none">
+                                            <div class="w-9 h-9 rounded-xl d-flex align-items-center justify-content-center mb-2 fs-5"
+                                                 :class="modalAgenda.form.visibilitas === 'guru' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'">
+                                                <i class="bi bi-person-badge-fill"></i>
+                                            </div>
+                                            <span class="font-bold text-xs">Dewan Guru</span>
+                                            <small class="text-[10px] text-slate-400 mt-0.5">Guru &amp; Tendik</small>
+                                            <i v-if="modalAgenda.form.visibilitas === 'guru'" class="bi bi-check-circle-fill text-emerald-600 position-absolute top-0 end-0 m-2 fs-7"></i>
+                                        </label>
+                                    </div>
+
+                                    <!-- Siswa -->
+                                    <div class="col-6 col-md-3">
+                                        <label class="audience-card d-flex flex-column align-items-center text-center p-3 rounded-2xl border cursor-pointer transition h-100 position-relative"
+                                               :class="modalAgenda.form.visibilitas === 'siswa' ? 'active bg-purple-50/80 border-purple-500 text-purple-700 shadow-xs' : 'bg-white border-slate-200/80 text-slate-600 hover:border-slate-300'">
+                                            <input type="radio" value="siswa" v-model="modalAgenda.form.visibilitas" class="d-none">
+                                            <div class="w-9 h-9 rounded-xl d-flex align-items-center justify-content-center mb-2 fs-5"
+                                                 :class="modalAgenda.form.visibilitas === 'siswa' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-500'">
+                                                <i class="bi bi-mortarboard-fill"></i>
+                                            </div>
+                                            <span class="font-bold text-xs">Peserta Didik</span>
+                                            <small class="text-[10px] text-slate-400 mt-0.5">Khusus Siswa</small>
+                                            <i v-if="modalAgenda.form.visibilitas === 'siswa'" class="bi bi-check-circle-fill text-purple-600 position-absolute top-0 end-0 m-2 fs-7"></i>
+                                        </label>
+                                    </div>
+
+                                    <!-- Spesifik Role -->
+                                    <div class="col-6 col-md-3">
+                                        <label class="audience-card d-flex flex-column align-items-center text-center p-3 rounded-2xl border cursor-pointer transition h-100 position-relative"
+                                               :class="modalAgenda.form.visibilitas === 'private' ? 'active bg-rose-50/80 border-rose-500 text-rose-700 shadow-xs' : 'bg-white border-slate-200/80 text-slate-600 hover:border-slate-300'">
+                                            <input type="radio" value="private" v-model="modalAgenda.form.visibilitas" class="d-none">
+                                            <div class="w-9 h-9 rounded-xl d-flex align-items-center justify-content-center mb-2 fs-5"
+                                                 :class="modalAgenda.form.visibilitas === 'private' ? 'bg-rose-600 text-white' : 'bg-slate-100 text-slate-500'">
+                                                <i class="bi bi-lock-fill"></i>
+                                            </div>
+                                            <span class="font-bold text-xs">Role Spesifik</span>
+                                            <small class="text-[10px] text-slate-400 mt-0.5">Kustom Group</small>
+                                            <i v-if="modalAgenda.form.visibilitas === 'private'" class="bi bi-check-circle-fill text-rose-600 position-absolute top-0 end-0 m-2 fs-7"></i>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Target Roles Checkbox Group (Conditional if Private) -->
+                            <div class="col-12" v-if="modalAgenda.form.visibilitas === 'private'">
+                                <div class="p-3.5 bg-rose-50/50 border border-rose-200/80 rounded-2xl">
+                                    <div class="d-flex align-items-center gap-1.5 mb-2.5">
+                                        <i class="bi bi-shield-lock-fill text-rose-600"></i>
+                                        <span class="font-bold text-rose-900 text-xs">Pilih Role Khusus Penerima Agenda:</span>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <label v-for="r in rolesList" :key="r.id" class="d-inline-flex align-items-center gap-2 px-3 py-1.5 rounded-xl border bg-white cursor-pointer transition text-xs font-semibold"
+                                               :class="modalAgenda.form.target_roles.includes(r.nama_role) ? 'border-rose-500 text-rose-700 bg-rose-50/60 shadow-2xs' : 'border-slate-200 text-slate-600'">
+                                            <input class="form-check-input text-rose-600 cursor-pointer m-0" type="checkbox" :value="r.nama_role" v-model="modalAgenda.form.target_roles">
+                                            <span>{{ r.nama_role }}</span>
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Tanggal Mulai & Selesai -->
-                            <div class="col-md-6">
-                                <label class="form-label font-bold text-slate-700 mb-1">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label font-bold text-slate-800 mb-1.5">
                                     Tanggal Mulai <span class="text-rose-500">*</span>
                                 </label>
-                                <input type="date" v-model="modalAgenda.form.tanggal_mulai" @change="onStartDateChange()" required class="form-control text-xs rounded-xl border-slate-200 py-2.5 shadow-2xs font-semibold">
+                                <input type="date" v-model="modalAgenda.form.tanggal_mulai" @change="onStartDateChange()" required 
+                                       class="form-control text-xs font-semibold rounded-2xl py-2.5 border-slate-200 shadow-2xs bg-white focus:ring-2 focus:ring-blue-500 transition">
                             </div>
 
-                            <div class="col-md-6">
-                                <label class="form-label font-bold text-slate-700 mb-1">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label font-bold text-slate-800 mb-1.5">
                                     Tanggal Selesai <span class="text-rose-500">*</span>
                                 </label>
-                                <input type="date" v-model="modalAgenda.form.tanggal_selesai" required class="form-control text-xs rounded-xl border-slate-200 py-2.5 shadow-2xs font-semibold">
+                                <input type="date" v-model="modalAgenda.form.tanggal_selesai" required 
+                                       class="form-control text-xs font-semibold rounded-2xl py-2.5 border-slate-200 shadow-2xs bg-white focus:ring-2 focus:ring-blue-500 transition">
                             </div>
 
                             <!-- Waktu Mulai & Selesai -->
-                            <div class="col-md-6">
-                                <label class="form-label font-bold text-slate-700 mb-1">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label font-bold text-slate-800 mb-1.5">
                                     Waktu Mulai
                                 </label>
-                                <input type="time" v-model="modalAgenda.form.waktu_mulai" class="form-control text-xs rounded-xl border-slate-200 py-2.5 shadow-2xs font-semibold">
+                                <input type="time" v-model="modalAgenda.form.waktu_mulai" 
+                                       class="form-control text-xs font-semibold rounded-2xl py-2.5 border-slate-200 shadow-2xs bg-white focus:ring-2 focus:ring-blue-500 transition">
                             </div>
 
-                            <div class="col-md-6">
-                                <label class="form-label font-bold text-slate-700 mb-1">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label font-bold text-slate-800 mb-1.5">
                                     Waktu Selesai
                                 </label>
-                                <input type="time" v-model="modalAgenda.form.waktu_selesai" class="form-control text-xs rounded-xl border-slate-200 py-2.5 shadow-2xs font-semibold">
+                                <input type="time" v-model="modalAgenda.form.waktu_selesai" 
+                                       class="form-control text-xs font-semibold rounded-2xl py-2.5 border-slate-200 shadow-2xs bg-white focus:ring-2 focus:ring-blue-500 transition">
                             </div>
 
                             <!-- Lokasi & Quick Chips -->
-                            <div class="col-md-6">
-                                <label class="form-label font-bold text-slate-700 mb-1">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label font-bold text-slate-800 mb-1.5">
                                     Lokasi Pelaksanaan <span class="text-rose-500">*</span>
                                 </label>
-                                <input type="text" v-model="modalAgenda.form.lokasi" required placeholder="Contoh: Lapangan Utama / Aula" class="form-control text-xs rounded-xl border-slate-200 py-2.5 shadow-2xs font-semibold mb-1">
-                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                <input type="text" v-model="modalAgenda.form.lokasi" required placeholder="Contoh: Lapangan Utama / Aula" 
+                                       class="form-control text-xs font-semibold rounded-2xl py-2.5 border-slate-200 shadow-2xs bg-white focus:ring-2 focus:ring-blue-500 transition mb-1.5">
+                                <div class="d-flex flex-wrap gap-1">
                                     <span v-for="loc in ['Aula Utama', 'Lapangan Sekolah', 'Ruang Rapat', 'GOR Olahraga', 'Lab Komputer']" :key="loc"
                                           @click="modalAgenda.form.lokasi = loc" 
-                                          class="badge bg-slate-100 text-slate-600 border border-slate-200 rounded-pill px-2 py-0.5 cursor-pointer hover:bg-blue-50 hover:text-blue-600 transition">
+                                          class="badge bg-white text-slate-600 border border-slate-200 rounded-pill px-2 py-0.5 cursor-pointer hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition text-[10px]">
                                         {{ loc }}
                                     </span>
                                 </div>
                             </div>
 
                             <!-- Penanggung Jawab & Quick Chips -->
-                            <div class="col-md-6">
-                                <label class="form-label font-bold text-slate-700 mb-1">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label font-bold text-slate-800 mb-1.5">
                                     Penanggung Jawab / Panitia <span class="text-rose-500">*</span>
                                 </label>
-                                <input type="text" v-model="modalAgenda.form.penanggung_jawab" required placeholder="Contoh: Waka Kesiswaan / Panitia Ujian" class="form-control text-xs rounded-xl border-slate-200 py-2.5 shadow-2xs font-semibold mb-1">
-                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                <input type="text" v-model="modalAgenda.form.penanggung_jawab" required placeholder="Contoh: Waka Kesiswaan / Panitia Ujian" 
+                                       class="form-control text-xs font-semibold rounded-2xl py-2.5 border-slate-200 shadow-2xs bg-white focus:ring-2 focus:ring-blue-500 transition mb-1.5">
+                                <div class="d-flex flex-wrap gap-1">
                                     <span v-for="pj in ['Waka Kesiswaan', 'Waka Kurikulum', 'Waka Humas', 'Pengurus OSIS', 'Guru BK']" :key="pj"
                                           @click="modalAgenda.form.penanggung_jawab = pj" 
-                                          class="badge bg-slate-100 text-slate-600 border border-slate-200 rounded-pill px-2 py-0.5 cursor-pointer hover:bg-blue-50 hover:text-blue-600 transition">
+                                          class="badge bg-white text-slate-600 border border-slate-200 rounded-pill px-2 py-0.5 cursor-pointer hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition text-[10px]">
                                         {{ pj }}
                                     </span>
                                 </div>
                             </div>
 
-                            <!-- Superadmin Tenant Selector -->
-                            <div class="col-12" v-if="isSuperAdmin">
-                                <label class="form-label font-bold text-slate-700 mb-1">
-                                    Lingkup Sekolah / Tenant
-                                </label>
-                                <select v-model="modalAgenda.form.tenant_id" class="form-select text-xs rounded-xl border-slate-200 py-2.5 shadow-2xs font-semibold">
-                                    <option value="global">🌐 Agenda Global (Seluruh Sekolah/Tenant)</option>
-                                    <option v-for="t in tenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
-                                </select>
-                            </div>
-
                             <!-- Deskripsi -->
                             <div class="col-12">
-                                <label class="form-label font-bold text-slate-700 mb-1">
+                                <label class="form-label font-bold text-slate-800 mb-1.5">
                                     Deskripsi / Petunjuk Kegiatan
                                 </label>
-                                <textarea v-model="modalAgenda.form.deskripsi" rows="4" placeholder="Tuliskan keterangan detail pakaian, susunan acara, atau instruksi peserta..." class="form-control text-xs rounded-xl border-slate-200 p-3 shadow-2xs"></textarea>
+                                <textarea v-model="modalAgenda.form.deskripsi" rows="4" 
+                                          placeholder="Tuliskan keterangan detail pakaian, susunan acara, atau instruksi peserta di sini..." 
+                                          class="form-control text-xs rounded-2xl border-slate-200 p-3.5 shadow-2xs bg-white focus:ring-2 focus:ring-blue-500 font-normal leading-relaxed"></textarea>
                             </div>
 
-                            <!-- Toggle Status -->
+                            <!-- Toggle Status Penjadwalan -->
                             <div class="col-12">
-                                <div class="d-flex align-items-center justify-content-between p-3 bg-slate-50 rounded-2xl border border-slate-200">
-                                    <div>
-                                        <span class="font-bold text-slate-800 text-xs block">Status Penjadwalan</span>
-                                        <span class="text-slate-500 text-[11px]">Agenda aktif akan otomatis tampil pada kalender dan beranda portal warga sekolah.</span>
+                                <div class="d-flex align-items-center justify-content-between p-3.5 bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="w-9 h-9 rounded-xl d-flex align-items-center justify-content-center fs-5"
+                                             :class="modalAgenda.form.is_active ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-100 text-slate-400'">
+                                            <i class="bi" :class="modalAgenda.form.is_active ? 'bi-calendar-check-fill' : 'bi-pause-circle-fill'"></i>
+                                        </div>
+                                        <div>
+                                            <span class="font-bold text-slate-800 text-xs block">Status Penjadwalan</span>
+                                            <span class="text-slate-400 text-[11px]">
+                                                {{ modalAgenda.form.is_active ? 'Agenda aktif akan otomatis tampil pada kalender dan beranda portal warga sekolah.' : 'Agenda disimpan sebagai draft.' }}
+                                            </span>
+                                        </div>
                                     </div>
                                     <div class="form-check form-switch fs-5 mb-0">
                                         <input class="form-check-input cursor-pointer" type="checkbox" v-model="modalAgenda.form.is_active">
@@ -691,11 +814,15 @@ $pageTitle = $title ?? 'Agenda & Timeline Kegiatan Sekolah';
 
                         </div>
                     </div>
-                    <div class="modal-footer px-6 py-3.5 border-t border-slate-100 d-flex align-items-center justify-content-between bg-slate-50/50">
-                        <button type="button" class="btn btn-sm btn-light rounded-xl font-semibold px-4" @click="modalAgenda.show = false">Batal</button>
-                        <button type="submit" class="btn btn-sm btn-primary rounded-xl font-bold px-5 shadow-xs d-flex align-items-center gap-2" :disabled="modalAgenda.saving">
+
+                    <!-- Footer with Clean Action Buttons (Always Docked at Bottom) -->
+                    <div class="modal-footer flex-shrink-0 px-4 px-md-5 py-3.5 border-t border-slate-100 d-flex align-items-center justify-content-between bg-white">
+                        <button type="button" class="btn btn-sm btn-light border border-slate-200 text-slate-600 hover:bg-slate-100 rounded-xl font-bold px-4 py-2 text-xs shadow-2xs transition" @click="modalAgenda.show = false">
+                            Batal
+                        </button>
+                        <button type="submit" class="btn btn-sm btn-primary rounded-xl font-bold px-5 py-2 text-xs shadow-sm d-flex align-items-center gap-2 hover:shadow transition" :disabled="modalAgenda.saving">
                             <span v-if="modalAgenda.saving" class="spinner-border spinner-border-sm"></span>
-                            <i v-else class="bi bi-calendar-check"></i>
+                            <i v-else class="bi bi-calendar-check text-xs"></i>
                             <span>{{ modalAgenda.saving ? 'Menyimpan...' : (modalAgenda.isEdit ? 'Perbarui Agenda' : 'Jadwalkan Sekarang') }}</span>
                         </button>
                     </div>
@@ -705,39 +832,42 @@ $pageTitle = $title ?? 'Agenda & Timeline Kegiatan Sekolah';
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════════════════
-         7. MODAL 2: DETAIL / PRATINJAU AGENDA
-         ═══════════════════════════════════════════════════════════════════════ -->
-    <div class="modal fade" :class="{'show d-block': modalPreview.show}" tabindex="-1" style="background: rgba(15, 23, 42, 0.6);" v-if="modalPreview.show">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content rounded-3xl border-0 shadow-2xl overflow-hidden">
-                <div class="modal-header px-6 py-4 border-b border-slate-100 d-flex align-items-center justify-content-between bg-blue-600 text-white">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-white/20 text-white d-flex align-items-center justify-content-center fs-5 shadow-xs">
+          7. MODAL 2: DETAIL / PRATINJAU AGENDA (EXECUTIVE READER)
+          ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="modal fade custom-modal-backdrop" :class="{'show d-flex': modalPreview.show}" tabindex="-1" v-if="modalPreview.show">
+        <div class="modal-dialog modal-dialog-centered modal-lg my-auto" style="width: 100%; max-width: 820px; max-height: 90vh;">
+            <div class="modal-content rounded-3xl border-0 shadow-2xl overflow-hidden modal-animate-in d-flex flex-column" style="max-height: 90vh;">
+                <div class="modal-header flex-shrink-0 px-4 px-md-5 py-3.5 border-0 d-flex align-items-center justify-content-between text-white position-relative overflow-hidden"
+                     style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);">
+                    <div class="d-flex align-items-center gap-3 position-relative" style="z-index: 2;">
+                        <div class="w-10 h-10 rounded-2xl bg-white/20 text-white d-flex align-items-center justify-content-center fs-5 shadow-xs flex-shrink-0" style="backdrop-filter: blur(8px);">
                             <i class="bi bi-calendar2-week-fill"></i>
                         </div>
                         <div>
-                            <h5 class="modal-title font-bold text-white text-base mb-0">Rincian Agenda Kegiatan</h5>
-                            <span class="text-white/80 text-xs">Pratinjau jadwal terpadu sekolah</span>
+                            <h5 class="modal-title font-black text-white text-base md:text-lg mb-0 tracking-tight">Rincian Agenda Kegiatan</h5>
+                            <span class="text-white/80 text-xs">Pratinjau jadwal terpadu kalender sekolah</span>
                         </div>
                     </div>
-                    <button type="button" class="btn-close btn-close-white" @click="modalPreview.show = false"></button>
+                    <button type="button" class="btn btn-sm btn-icon rounded-xl text-white/80 hover:text-white hover:bg-white/10 p-2 border-0 transition" @click="modalPreview.show = false" title="Tutup">
+                        <i class="bi bi-x-lg fs-6"></i>
+                    </button>
                 </div>
 
-                <div class="modal-body p-6 text-slate-700 text-xs">
+                <div class="modal-body p-4 p-md-5 text-slate-700 text-xs bg-slate-50/50 overflow-y-auto flex-grow-1 custom-scrollbar" style="max-height: calc(90vh - 140px);">
                     <div v-if="modalPreview.item" class="d-flex flex-column gap-4">
                         
                         <!-- Header Details -->
                         <div>
                             <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
-                                <span class="badge px-2.5 py-1 rounded-lg text-xs font-bold border" :style="getEventBadgeStyle(modalPreview.item.kategori)">
-                                    <i class="bi bi-tag-fill me-1"></i> {{ modalPreview.item.kategori || 'Umum' }}
+                                <span class="badge px-3 py-1.5 rounded-xl text-xs font-bold border shadow-2xs d-inline-flex align-items-center gap-1.5" :style="getEventBadgeStyle(modalPreview.item.kategori)">
+                                    <i class="bi bi-tag-fill"></i> {{ modalPreview.item.kategori || 'Umum' }}
                                 </span>
-                                <span class="badge px-2.5 py-1 rounded-lg text-xs font-bold border" :class="getVisibilitasBadgeClass(modalPreview.item.visibilitas)">
-                                    <i class="bi me-1" :class="getVisibilitasIcon(modalPreview.item.visibilitas)"></i>
+                                <span class="badge px-3 py-1.5 rounded-xl text-xs font-bold border shadow-2xs d-inline-flex align-items-center gap-1.5" :class="getVisibilitasBadgeClass(modalPreview.item.visibilitas)">
+                                    <i class="bi" :class="getVisibilitasIcon(modalPreview.item.visibilitas)"></i>
                                     {{ getVisibilitasLabel(modalPreview.item.visibilitas) }}
                                 </span>
-                                <span v-if="modalPreview.item.is_active" class="badge bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold px-2.5 py-1 rounded-lg">
-                                    <i class="bi bi-check-circle-fill me-1"></i> Status Aktif
+                                <span v-if="modalPreview.item.is_active" class="badge bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold px-3 py-1.5 rounded-xl shadow-2xs d-inline-flex align-items-center gap-1">
+                                    <i class="bi bi-check-circle-fill text-emerald-600"></i> Aktif
                                 </span>
                             </div>
 
@@ -748,7 +878,7 @@ $pageTitle = $title ?? 'Agenda & Timeline Kegiatan Sekolah';
                             <!-- Key Metrics Grid -->
                             <div class="row g-2 mt-1">
                                 <div class="col-sm-6">
-                                    <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200/80">
+                                    <div class="p-3 bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
                                         <span class="text-slate-400 text-[11px] block font-semibold">Tanggal Pelaksanaan:</span>
                                         <span class="text-xs font-bold text-slate-800 d-inline-flex align-items-center gap-1.5 mt-0.5">
                                             <i class="bi bi-calendar-event text-blue-600"></i> {{ formatDateRange(modalPreview.item.tanggal_mulai, modalPreview.item.tanggal_selesai) }}
@@ -756,7 +886,7 @@ $pageTitle = $title ?? 'Agenda & Timeline Kegiatan Sekolah';
                                     </div>
                                 </div>
                                 <div class="col-sm-6">
-                                    <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200/80">
+                                    <div class="p-3 bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
                                         <span class="text-slate-400 text-[11px] block font-semibold">Waktu / Jam Acara:</span>
                                         <span class="text-xs font-bold text-slate-800 d-inline-flex align-items-center gap-1.5 mt-0.5">
                                             <i class="bi bi-clock-fill text-indigo-600"></i> {{ modalPreview.item.waktu_mulai }} - {{ modalPreview.item.waktu_selesai }} WIB
@@ -764,7 +894,7 @@ $pageTitle = $title ?? 'Agenda & Timeline Kegiatan Sekolah';
                                     </div>
                                 </div>
                                 <div class="col-sm-6">
-                                    <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200/80">
+                                    <div class="p-3 bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
                                         <span class="text-slate-400 text-[11px] block font-semibold">Lokasi / Tempat:</span>
                                         <span class="text-xs font-bold text-slate-800 d-inline-flex align-items-center gap-1.5 mt-0.5">
                                             <i class="bi bi-geo-alt-fill text-rose-500"></i> {{ modalPreview.item.lokasi }}
@@ -772,7 +902,7 @@ $pageTitle = $title ?? 'Agenda & Timeline Kegiatan Sekolah';
                                     </div>
                                 </div>
                                 <div class="col-sm-6">
-                                    <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200/80">
+                                    <div class="p-3 bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
                                         <span class="text-slate-400 text-[11px] block font-semibold">Penanggung Jawab / Panitia:</span>
                                         <span class="text-xs font-bold text-slate-800 d-inline-flex align-items-center gap-1.5 mt-0.5">
                                             <i class="bi bi-person-badge-fill text-amber-600"></i> {{ modalPreview.item.penanggung_jawab }}
@@ -784,8 +914,8 @@ $pageTitle = $title ?? 'Agenda & Timeline Kegiatan Sekolah';
 
                         <!-- Description Body -->
                         <div>
-                            <span class="text-slate-400 text-xs font-bold block mb-1">Rincian / Petunjuk Kegiatan:</span>
-                            <div class="bg-slate-50/80 p-4 rounded-2xl border border-slate-200 text-slate-800 text-xs md:text-sm font-normal" style="line-height: 1.7; white-space: pre-wrap;">
+                            <span class="text-slate-400 text-xs font-bold block mb-1.5">Rincian / Petunjuk Kegiatan:</span>
+                            <div class="bg-white p-4 p-md-5 rounded-3xl border border-slate-200/80 shadow-xs text-slate-800 text-xs md:text-sm font-normal" style="line-height: 1.8; white-space: pre-wrap;">
 {{ modalPreview.item.deskripsi || '— Tidak ada keterangan tambahan —' }}
                             </div>
                         </div>
@@ -793,13 +923,13 @@ $pageTitle = $title ?? 'Agenda & Timeline Kegiatan Sekolah';
                     </div>
                 </div>
 
-                <div class="modal-footer px-6 py-3.5 border-t border-slate-100 d-flex align-items-center justify-content-between bg-slate-50/50">
-                    <button type="button" class="btn btn-sm btn-light rounded-xl font-semibold px-4" @click="modalPreview.show = false">Tutup</button>
+                <div class="modal-footer flex-shrink-0 px-4 px-md-5 py-3.5 border-t border-slate-100 d-flex align-items-center justify-content-between bg-white">
+                    <button type="button" class="btn btn-sm btn-light border border-slate-200 text-slate-600 rounded-xl font-bold px-4 py-2 text-xs shadow-2xs" @click="modalPreview.show = false">Tutup</button>
                     <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-sm btn-outline-danger rounded-xl font-semibold px-3" @click="deleteAgenda(modalPreview.item); modalPreview.show = false">
+                        <button type="button" class="btn btn-sm btn-outline-danger rounded-xl font-bold px-3 py-2 text-xs shadow-2xs" @click="deleteAgenda(modalPreview.item); modalPreview.show = false">
                             <i class="bi bi-trash3 me-1"></i> Hapus
                         </button>
-                        <button type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-4 shadow-xs d-flex align-items-center gap-1.5" @click="modalPreview.show = false; editAgenda(modalPreview.item)">
+                        <button type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-4 py-2 text-xs shadow-sm d-flex align-items-center gap-1.5 hover:shadow transition" @click="modalPreview.show = false; editAgenda(modalPreview.item)">
                             <i class="bi bi-pencil-square"></i> Edit Agenda Ini
                         </button>
                     </div>
@@ -809,28 +939,31 @@ $pageTitle = $title ?? 'Agenda & Timeline Kegiatan Sekolah';
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════════════════
-         8. MODAL 3: DAFTAR KEGIATAN HARIAN (DAY EVENTS POPUP)
-         ═══════════════════════════════════════════════════════════════════════ -->
-    <div class="modal fade" :class="{'show d-block': modalDay.show}" tabindex="-1" style="background: rgba(15, 23, 42, 0.6);" v-if="modalDay.show">
-        <div class="modal-dialog modal-dialog-centered modal-md">
-            <div class="modal-content rounded-3xl border-0 shadow-2xl overflow-hidden">
-                <div class="modal-header px-6 py-4 border-b border-slate-100 d-flex align-items-center justify-content-between bg-slate-900 text-white">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-white/20 text-white d-flex align-items-center justify-content-center fs-5 shadow-xs">
+          8. MODAL 3: DAFTAR KEGIATAN HARIAN (DAY EVENTS POPUP)
+          ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="modal fade custom-modal-backdrop" :class="{'show d-flex': modalDay.show}" tabindex="-1" v-if="modalDay.show">
+        <div class="modal-dialog modal-dialog-centered modal-md my-auto" style="width: 100%; max-width: 540px; max-height: 90vh;">
+            <div class="modal-content rounded-3xl border-0 shadow-2xl overflow-hidden modal-animate-in d-flex flex-column" style="max-height: 90vh;">
+                <div class="modal-header flex-shrink-0 px-4 px-md-5 py-3.5 border-0 d-flex align-items-center justify-content-between text-white position-relative overflow-hidden"
+                     style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);">
+                    <div class="d-flex align-items-center gap-3 position-relative" style="z-index: 2;">
+                        <div class="w-10 h-10 rounded-2xl bg-white/20 text-white d-flex align-items-center justify-content-center fs-5 shadow-xs">
                             <i class="bi bi-calendar-date-fill"></i>
                         </div>
                         <div>
-                            <h5 class="modal-title font-bold text-white text-base mb-0">Agenda {{ modalDay.formattedDate }}</h5>
+                            <h5 class="modal-title font-black text-white text-base md:text-lg mb-0 tracking-tight">Agenda {{ modalDay.formattedDate }}</h5>
                             <span class="text-white/80 text-xs">{{ modalDay.events.length }} kegiatan terjadwal</span>
                         </div>
                     </div>
-                    <button type="button" class="btn-close btn-close-white" @click="modalDay.show = false"></button>
+                    <button type="button" class="btn btn-sm btn-icon rounded-xl text-white/80 hover:text-white hover:bg-white/10 p-2 border-0 transition" @click="modalDay.show = false" title="Tutup">
+                        <i class="bi bi-x-lg fs-6"></i>
+                    </button>
                 </div>
 
-                <div class="modal-body p-4 text-slate-700 text-xs">
-                    <div class="d-flex flex-column gap-2 max-h-[380px] overflow-y-auto custom-scrollbar pe-1">
+                <div class="modal-body p-4 p-md-5 text-slate-700 text-xs bg-slate-50/50 overflow-y-auto flex-grow-1 custom-scrollbar" style="max-height: calc(90vh - 140px);">
+                    <div class="d-flex flex-column gap-2.5">
                         <div v-for="ev in modalDay.events" :key="ev.id"
-                             class="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 transition hover:bg-slate-100 d-flex align-items-center justify-content-between gap-2">
+                             class="p-3.5 bg-white rounded-2xl border border-slate-200/80 shadow-2xs transition hover:bg-slate-50 d-flex align-items-center justify-content-between gap-2">
                             <div class="d-flex flex-column gap-0.5 overflow-hidden">
                                 <span class="font-bold text-slate-900 text-xs truncate">{{ ev.judul }}</span>
                                 <div class="d-flex align-items-center gap-2 text-[11px] text-slate-500">
@@ -839,11 +972,11 @@ $pageTitle = $title ?? 'Agenda & Timeline Kegiatan Sekolah';
                                     <span><i class="bi bi-geo-alt me-1"></i>{{ ev.lokasi }}</span>
                                 </div>
                             </div>
-                            <div class="d-flex align-items-center gap-1 flex-shrink-0">
-                                <button type="button" class="btn btn-sm btn-light border-slate-200 text-slate-700 rounded-lg p-1.5 shadow-2xs" @click="modalDay.show = false; previewAgenda(ev)" title="Pratinjau">
+                            <div class="d-flex align-items-center gap-1.5 flex-shrink-0">
+                                <button type="button" class="btn btn-sm btn-light border-slate-200 text-slate-700 rounded-xl p-2 shadow-2xs" @click="modalDay.show = false; previewAgenda(ev)" title="Pratinjau">
                                     <i class="bi bi-eye-fill"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-light border-slate-200 text-amber-600 rounded-lg p-1.5 shadow-2xs" @click="modalDay.show = false; editAgenda(ev)" title="Edit">
+                                <button type="button" class="btn btn-sm btn-light border-slate-200 text-amber-600 rounded-xl p-2 shadow-2xs" @click="modalDay.show = false; editAgenda(ev)" title="Edit">
                                     <i class="bi bi-pencil-square"></i>
                                 </button>
                             </div>
@@ -851,9 +984,9 @@ $pageTitle = $title ?? 'Agenda & Timeline Kegiatan Sekolah';
                     </div>
                 </div>
 
-                <div class="modal-footer px-6 py-3 border-t border-slate-100 d-flex align-items-center justify-content-between bg-slate-50/50">
-                    <button type="button" class="btn btn-sm btn-light rounded-xl font-semibold px-4" @click="modalDay.show = false">Tutup</button>
-                    <button type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-3.5 shadow-xs d-flex align-items-center gap-1" @click="modalDay.show = false; openModalAgendaWithDate(modalDay.dateStr)">
+                <div class="modal-footer flex-shrink-0 px-4 px-md-5 py-3.5 border-t border-slate-100 d-flex align-items-center justify-content-between bg-white">
+                    <button type="button" class="btn btn-sm btn-light border border-slate-200 text-slate-600 rounded-xl font-bold px-4 py-2 text-xs shadow-2xs" @click="modalDay.show = false">Tutup</button>
+                    <button type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-4 py-2 text-xs shadow-sm d-flex align-items-center gap-1.5 hover:shadow transition" @click="modalDay.show = false; openModalAgendaWithDate(modalDay.dateStr)">
                         <i class="bi bi-plus-lg"></i> Tambah di Hari Ini
                     </button>
                 </div>
@@ -923,6 +1056,7 @@ $pageTitle = $title ?? 'Agenda & Timeline Kegiatan Sekolah';
                     nama_agenda_sekolah: '',
                     kategori: 'Akademik',
                     visibilitas: 'public',
+                    target_roles: [],
                     tanggal_mulai: '',
                     tanggal_selesai: '',
                     waktu_mulai: '07:30',
@@ -1182,6 +1316,7 @@ $pageTitle = $title ?? 'Agenda & Timeline Kegiatan Sekolah';
                     nama_agenda_sekolah: '',
                     kategori: 'Akademik',
                     visibilitas: 'public',
+                    target_roles: [],
                     tanggal_mulai: todayStr,
                     tanggal_selesai: todayStr,
                     waktu_mulai: '07:30',
@@ -1202,12 +1337,21 @@ $pageTitle = $title ?? 'Agenda & Timeline Kegiatan Sekolah';
             };
 
             const editAgenda = (item) => {
+                let parsedRoles = [];
+                if (item.target_roles) {
+                    try {
+                        parsedRoles = typeof item.target_roles === 'string' ? JSON.parse(item.target_roles) : item.target_roles;
+                    } catch (e) {
+                        parsedRoles = [];
+                    }
+                }
                 modalAgenda.value.isEdit = true;
                 modalAgenda.value.form = {
                     id: item.id,
                     nama_agenda_sekolah: item.nama_agenda_sekolah || item.judul,
                     kategori: item.kategori || 'Akademik',
                     visibilitas: item.visibilitas || 'public',
+                    target_roles: Array.isArray(parsedRoles) ? parsedRoles : [],
                     tanggal_mulai: item.tanggal_mulai,
                     tanggal_selesai: item.tanggal_selesai || item.tanggal_mulai,
                     waktu_mulai: item.waktu_mulai || '07:30',
@@ -1548,6 +1692,39 @@ $pageTitle = $title ?? 'Agenda & Timeline Kegiatan Sekolah';
 .calendar-chip:hover {
     transform: scale(1.02) !important;
     filter: brightness(0.95) !important;
+}
+
+/* Modern Modal Backdrop & Animation */
+.custom-modal-backdrop {
+    background: rgba(15, 23, 42, 0.72) !important;
+    backdrop-filter: blur(6px) !important;
+    -webkit-backdrop-filter: blur(6px) !important;
+    z-index: 1060 !important;
+}
+
+.modal-animate-in {
+    animation: modalPopIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes modalPopIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.95) translateY(12px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.audience-card {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.audience-card:hover {
+    transform: translateY(-2px);
+}
+.audience-card.active {
+    box-shadow: 0 4px 14px -2px rgba(59, 130, 246, 0.2);
 }
 
 /* Scrollbars & Utilities */

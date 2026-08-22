@@ -38,11 +38,11 @@ class PengumumanModuleController extends BaseController {
 
     protected function getSecureTenantId(): ?string {
         if ($this->isUserSuperAdmin()) {
-            if (isset($_GET['tenant_id']) && !empty($_GET['tenant_id'])) {
-                return $_GET['tenant_id'] === 'global' ? null : $_GET['tenant_id'];
+            if (isset($_GET['tenant_id']) && $_GET['tenant_id'] !== '') {
+                return $_GET['tenant_id'];
             }
-            if (isset($_POST['tenant_id']) && !empty($_POST['tenant_id'])) {
-                return $_POST['tenant_id'] === 'global' ? null : $_POST['tenant_id'];
+            if (isset($_POST['tenant_id']) && $_POST['tenant_id'] !== '') {
+                return $_POST['tenant_id'];
             }
             return $_SESSION['tenant_id'] ?? $_SESSION['user']['tenant_id'] ?? null;
         }
@@ -57,7 +57,7 @@ class PengumumanModuleController extends BaseController {
         $db = Database::getConnection();
         $tenants = [];
         if ($isSuperAdmin) {
-            $stmt = $db->query("SELECT id, nama_sekolah, subdomain FROM core.tenants WHERE status = 'active' OR status IS NULL ORDER BY nama_sekolah ASC");
+            $stmt = $db->query("SELECT id, nama_sekolah, subdomain FROM core.tenants WHERE (subdomain != 'admin' AND nama_sekolah NOT ILIKE '%pusat kendali%') AND (status = 'active' OR status IS NULL) ORDER BY nama_sekolah ASC");
             $tenants = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         }
 
@@ -81,7 +81,9 @@ class PengumumanModuleController extends BaseController {
             $tenantId = $this->getSecureTenantId();
             $db = Database::getConnection();
 
-            $kategoriList = $this->kategoriModel->getAll(['tenant_id' => $tenantId]);
+            $kategoriModel = new KategoriPengumumanModel();
+            // Fetch all categories so frontend modals can filter options by target tenant
+            $kategoriList = $kategoriModel->getAll([]);
 
             // Fetch available roles for target audience selection
             $stmtRoles = $db->query("SELECT id, nama_role FROM core.roles ORDER BY nama_role ASC");
@@ -90,11 +92,12 @@ class PengumumanModuleController extends BaseController {
             $isSuperAdmin = $this->isUserSuperAdmin();
             $tenants = [];
             if ($isSuperAdmin) {
-                $stmtTenants = $db->query("SELECT id, nama_sekolah, subdomain FROM core.tenants WHERE status = 'active' OR status IS NULL ORDER BY nama_sekolah ASC");
+                $stmtTenants = $db->query("SELECT id, nama_sekolah, subdomain FROM core.tenants WHERE (subdomain != 'admin' AND nama_sekolah NOT ILIKE '%pusat kendali%') AND (status = 'active' OR status IS NULL) ORDER BY nama_sekolah ASC");
                 $tenants = $stmtTenants->fetchAll(PDO::FETCH_ASSOC) ?: [];
             }
 
-            $stats = $this->model->getStatsSummary($tenantId);
+            $model = new PengumumanModel($tenantId);
+            $stats = $model->getStatsSummary($tenantId);
 
             $this->jsonResponse([
                 'success' => true,
@@ -172,7 +175,9 @@ class PengumumanModuleController extends BaseController {
             }
 
             $currentUserId = $_SESSION['user']['id'] ?? null;
-            $model = new PengumumanModel($tenantId);
+            $isSuperAdmin = $this->isUserSuperAdmin();
+            $effectiveTenant = $isSuperAdmin ? null : $tenantId;
+            $model = new PengumumanModel($effectiveTenant);
 
             $payload = [
                 'tenant_id' => array_key_exists('tenant_id', $input) ? ($input['tenant_id'] === 'global' ? null : $input['tenant_id']) : $tenantId,
@@ -239,7 +244,9 @@ class PengumumanModuleController extends BaseController {
                 return;
             }
 
-            $model = new PengumumanModel($tenantId);
+            $isSuperAdmin = $this->isUserSuperAdmin();
+            $effectiveTenant = $isSuperAdmin ? null : $tenantId;
+            $model = new PengumumanModel($effectiveTenant);
             $deleted = $model->delete($id);
 
             $this->jsonResponse([

@@ -15,36 +15,42 @@ class PengumumanModel {
     public function getAll(array $filters = [], int $limit = 50, int $offset = 0): array {
         $db = Database::getConnection();
         
+        $params = [];
         $whereCondition = "1=1";
-        if ($this->tenantId !== null) {
-            $whereCondition = "(p.tenant_id = :tenant_id OR p.tenant_id IS NULL)";
+
+        // Tenant Filter Resolution
+        $targetTenant = !empty($filters['tenant_id']) ? $filters['tenant_id'] : $this->tenantId;
+        if (!empty($targetTenant)) {
+            if ($targetTenant === 'global' || $targetTenant === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
+                $whereCondition = "(p.tenant_id IS NULL OR p.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')";
+            } else {
+                $whereCondition = "(p.tenant_id = :tenant_id OR p.tenant_id IS NULL OR p.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')";
+                $params[':tenant_id'] = $targetTenant;
+            }
         }
 
         if (!empty($filters['search'])) {
             $whereCondition .= " AND (p.judul ILIKE :search OR p.deskripsi ILIKE :search)";
+            $params[':search'] = '%' . $filters['search'] . '%';
         }
         if (!empty($filters['kategori_id'])) {
             $whereCondition .= " AND p.kategori_id = :kategori_id";
+            $params[':kategori_id'] = $filters['kategori_id'];
         }
         if (!empty($filters['visibilitas'])) {
             $whereCondition .= " AND p.visibilitas = :visibilitas";
+            $params[':visibilitas'] = $filters['visibilitas'];
         }
         if (isset($filters['is_active']) && $filters['is_active'] !== '' && $filters['is_active'] !== 'all') {
             $whereCondition .= " AND p.is_active = :is_active";
+            $params[':is_active'] = filter_var($filters['is_active'], FILTER_VALIDATE_BOOLEAN) ? 'TRUE' : 'FALSE';
         }
         if (!empty($filters['tanggal'])) {
             $whereCondition .= " AND DATE(p.created_at) = :tanggal";
-        }
-        // Specific tenant filter from super admin
-        if (!empty($filters['tenant_id'])) {
-            if ($filters['tenant_id'] === 'global') {
-                $whereCondition .= " AND p.tenant_id IS NULL";
-            } else {
-                $whereCondition .= " AND p.tenant_id = :filter_tenant_id";
-            }
+            $params[':tanggal'] = $filters['tanggal'];
         }
         
-        $sql = "SELECT p.*, p.deskripsi as isi_pengumuman, COALESCE(u.nama_lengkap, 'Administrator') as nama_pembuat, COALESCE(r.nama_role, 'super_admin') as pembuat_role, t.nama_sekolah, COALESCE(k.nama_kategori, 'Umum') as nama_kategori 
+        $sql = "SELECT p.*, p.deskripsi as isi_pengumuman, COALESCE(u.nama_lengkap, 'Administrator') as nama_pembuat, COALESCE(r.nama_role, 'super_admin') as pembuat_role, COALESCE(t.nama_sekolah, 'Global / Pusat') as nama_sekolah, COALESCE(k.nama_kategori, 'Umum') as nama_kategori 
                 FROM sistem.pengumuman p 
                 LEFT JOIN core.users u ON p.created_by = u.id 
                 LEFT JOIN core.roles r ON u.role_id = r.id
@@ -56,28 +62,9 @@ class PengumumanModel {
                 
         $stmt = $db->prepare($sql);
         
-        if ($this->tenantId !== null) {
-            $stmt->bindValue(':tenant_id', $this->tenantId);
+        foreach ($params as $key => $val) {
+            $stmt->bindValue($key, $val);
         }
-        if (!empty($filters['search'])) {
-            $stmt->bindValue(':search', '%' . $filters['search'] . '%');
-        }
-        if (!empty($filters['kategori_id'])) {
-            $stmt->bindValue(':kategori_id', $filters['kategori_id']);
-        }
-        if (!empty($filters['visibilitas'])) {
-            $stmt->bindValue(':visibilitas', $filters['visibilitas']);
-        }
-        if (isset($filters['is_active']) && $filters['is_active'] !== '' && $filters['is_active'] !== 'all') {
-            $stmt->bindValue(':is_active', filter_var($filters['is_active'], FILTER_VALIDATE_BOOLEAN) ? 'TRUE' : 'FALSE', PDO::PARAM_BOOL);
-        }
-        if (!empty($filters['tanggal'])) {
-            $stmt->bindValue(':tanggal', $filters['tanggal']);
-        }
-        if (!empty($filters['tenant_id']) && $filters['tenant_id'] !== 'global') {
-            $stmt->bindValue(':filter_tenant_id', $filters['tenant_id']);
-        }
-        
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         
@@ -92,33 +79,39 @@ class PengumumanModel {
     public function countAll(array $filters = []): int {
         $db = Database::getConnection();
         
+        $params = [];
         $whereCondition = "1=1";
-        if ($this->tenantId !== null) {
-            $whereCondition = "(p.tenant_id = :tenant_id OR p.tenant_id IS NULL)";
+
+        // Tenant Filter Resolution
+        $targetTenant = !empty($filters['tenant_id']) ? $filters['tenant_id'] : $this->tenantId;
+        if (!empty($targetTenant)) {
+            if ($targetTenant === 'global' || $targetTenant === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
+                $whereCondition = "(p.tenant_id IS NULL OR p.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')";
+            } else {
+                $whereCondition = "(p.tenant_id = :tenant_id OR p.tenant_id IS NULL OR p.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')";
+                $params[':tenant_id'] = $targetTenant;
+            }
         }
 
         if (!empty($filters['search'])) {
             $whereCondition .= " AND (p.judul ILIKE :search OR p.deskripsi ILIKE :search)";
+            $params[':search'] = '%' . $filters['search'] . '%';
         }
         if (!empty($filters['kategori_id'])) {
             $whereCondition .= " AND p.kategori_id = :kategori_id";
+            $params[':kategori_id'] = $filters['kategori_id'];
         }
         if (!empty($filters['visibilitas'])) {
             $whereCondition .= " AND p.visibilitas = :visibilitas";
+            $params[':visibilitas'] = $filters['visibilitas'];
         }
         if (isset($filters['is_active']) && $filters['is_active'] !== '' && $filters['is_active'] !== 'all') {
             $whereCondition .= " AND p.is_active = :is_active";
+            $params[':is_active'] = filter_var($filters['is_active'], FILTER_VALIDATE_BOOLEAN) ? 'TRUE' : 'FALSE';
         }
         if (!empty($filters['tanggal'])) {
             $whereCondition .= " AND DATE(p.created_at) = :tanggal";
-        }
-        // Specific tenant filter from super admin
-        if (!empty($filters['tenant_id'])) {
-            if ($filters['tenant_id'] === 'global') {
-                $whereCondition .= " AND p.tenant_id IS NULL";
-            } else {
-                $whereCondition .= " AND p.tenant_id = :filter_tenant_id";
-            }
+            $params[':tanggal'] = $filters['tanggal'];
         }
         
         $sql = "SELECT COUNT(*) as total
@@ -126,27 +119,8 @@ class PengumumanModel {
                 WHERE $whereCondition";
                 
         $stmt = $db->prepare($sql);
-        
-        if ($this->tenantId !== null) {
-            $stmt->bindValue(':tenant_id', $this->tenantId);
-        }
-        if (!empty($filters['search'])) {
-            $stmt->bindValue(':search', '%' . $filters['search'] . '%');
-        }
-        if (!empty($filters['kategori_id'])) {
-            $stmt->bindValue(':kategori_id', $filters['kategori_id']);
-        }
-        if (!empty($filters['visibilitas'])) {
-            $stmt->bindValue(':visibilitas', $filters['visibilitas']);
-        }
-        if (isset($filters['is_active']) && $filters['is_active'] !== '' && $filters['is_active'] !== 'all') {
-            $stmt->bindValue(':is_active', filter_var($filters['is_active'], FILTER_VALIDATE_BOOLEAN) ? 'TRUE' : 'FALSE', PDO::PARAM_BOOL);
-        }
-        if (!empty($filters['tanggal'])) {
-            $stmt->bindValue(':tanggal', $filters['tanggal']);
-        }
-        if (!empty($filters['tenant_id']) && $filters['tenant_id'] !== 'global') {
-            $stmt->bindValue(':filter_tenant_id', $filters['tenant_id']);
+        foreach ($params as $key => $val) {
+            $stmt->bindValue($key, $val);
         }
         
         $stmt->execute();
@@ -157,7 +131,7 @@ class PengumumanModel {
     public function getActiveForUser(string $roleName, int $limit = 5, int $offset = 0, string $searchQuery = '', string $kategoriId = '', string $tanggal = ''): array {
         $db = Database::getConnection();
         
-        $whereTenant = ($this->tenantId === null) ? "1=1" : "(p.tenant_id = :tenant_id OR p.tenant_id IS NULL)";
+        $whereTenant = ($this->tenantId === null) ? "1=1" : "(p.tenant_id = :tenant_id OR p.tenant_id IS NULL OR p.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')";
         
         $roleNameStr = strtolower($roleName);
         $isAdmin = in_array($roleNameStr, ['super_admin', 'admin', 'admin_sekolah']) ? 1 : 0;
@@ -172,7 +146,7 @@ class PengumumanModel {
                           
         $searchCondition = "";
         if (!empty($searchQuery)) {
-            $searchCondition .= " AND p.judul LIKE :search ";
+            $searchCondition .= " AND p.judul ILIKE :search ";
         }
         if (!empty($kategoriId)) {
             $searchCondition .= " AND p.kategori_id = :kategori_id ";
@@ -181,10 +155,10 @@ class PengumumanModel {
             $searchCondition .= " AND DATE(p.created_at) = :tanggal ";
         }
         
-        $sql = "SELECT p.*, p.deskripsi as isi_pengumuman, u.nama_lengkap as nama_pembuat, r.nama_role as pembuat_role, t.nama_sekolah, k.nama_kategori 
+        $sql = "SELECT p.*, p.deskripsi as isi_pengumuman, u.nama_lengkap as nama_pembuat, r.nama_role as pembuat_role, COALESCE(t.nama_sekolah, 'Global / Pusat') as nama_sekolah, COALESCE(k.nama_kategori, 'Umum') as nama_kategori 
                 FROM sistem.pengumuman p 
-                JOIN core.users u ON p.created_by = u.id 
-                JOIN core.roles r ON u.role_id = r.id
+                LEFT JOIN core.users u ON p.created_by = u.id 
+                LEFT JOIN core.roles r ON u.role_id = r.id
                 LEFT JOIN core.tenants t ON p.tenant_id = t.id
                 LEFT JOIN sistem.kategori_pengumuman k ON p.kategori_id = k.id
                 WHERE $whereTenant AND p.is_active = true AND $roleCondition $searchCondition
@@ -221,7 +195,7 @@ class PengumumanModel {
     public function countActiveForUser(string $roleName, string $searchQuery = '', string $kategoriId = '', string $tanggal = ''): int {
         $db = Database::getConnection();
         
-        $whereTenant = ($this->tenantId === null) ? "1=1" : "(p.tenant_id = :tenant_id OR p.tenant_id IS NULL)";
+        $whereTenant = ($this->tenantId === null) ? "1=1" : "(p.tenant_id = :tenant_id OR p.tenant_id IS NULL OR p.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')";
         
         $roleNameStr = strtolower($roleName);
         $isAdmin = in_array($roleNameStr, ['super_admin', 'admin', 'admin_sekolah']) ? 1 : 0;
@@ -236,7 +210,7 @@ class PengumumanModel {
                           
         $searchCondition = "";
         if (!empty($searchQuery)) {
-            $searchCondition .= " AND p.judul LIKE :search ";
+            $searchCondition .= " AND p.judul ILIKE :search ";
         }
         if (!empty($kategoriId)) {
             $searchCondition .= " AND p.kategori_id = :kategori_id ";
@@ -278,10 +252,15 @@ class PengumumanModel {
         $db = Database::getConnection();
         $targetTenant = $tenantId !== null ? $tenantId : $this->tenantId;
         
-        $whereTenant = ($targetTenant === null) ? "1=1" : "(p.tenant_id = :tenant_id OR p.tenant_id IS NULL)";
         $params = [];
-        if ($targetTenant !== null) {
-            $params[':tenant_id'] = $targetTenant;
+        $whereTenant = "1=1";
+        if (!empty($targetTenant)) {
+            if ($targetTenant === 'global' || $targetTenant === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
+                $whereTenant = "(p.tenant_id IS NULL OR p.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')";
+            } else {
+                $whereTenant = "(p.tenant_id = :tenant_id OR p.tenant_id IS NULL OR p.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')";
+                $params[':tenant_id'] = $targetTenant;
+            }
         }
 
         $sql = "SELECT 
@@ -297,9 +276,18 @@ class PengumumanModel {
         $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
         // Count total categories in master
-        $whereKat = ($targetTenant === null) ? "1=1" : "(tenant_id = :tenant_id OR tenant_id IS NULL)";
+        $whereKat = "1=1";
+        $paramsKat = [];
+        if (!empty($targetTenant)) {
+            if ($targetTenant === 'global' || $targetTenant === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
+                $whereKat = "(tenant_id IS NULL OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')";
+            } else {
+                $whereKat = "tenant_id = :tenant_id";
+                $paramsKat[':tenant_id'] = $targetTenant;
+            }
+        }
         $stmtKat = $db->prepare("SELECT COUNT(*) FROM sistem.kategori_pengumuman WHERE $whereKat");
-        $stmtKat->execute($params);
+        $stmtKat->execute($paramsKat);
         $totalKatMaster = (int)$stmtKat->fetchColumn();
 
         return [
@@ -398,7 +386,7 @@ class PengumumanModel {
             $params['set_tenant_id'] = $data['tenant_id'];
         }
 
-        $whereTenant = ($this->tenantId === null) ? "1=1" : "tenant_id = :where_tenant_id";
+        $whereTenant = ($this->tenantId === null) ? "1=1" : "(tenant_id = :where_tenant_id OR tenant_id IS NULL)";
         if ($this->tenantId !== null) {
             $params['where_tenant_id'] = $this->tenantId;
         }
@@ -427,6 +415,7 @@ class PengumumanModel {
         if ($this->tenantId !== null) {
             $params['tenant_id'] = $this->tenantId;
         }
-        return $stmt->execute($params);
+        $stmt->execute($params);
+        return $stmt->rowCount() > 0;
     }
 }

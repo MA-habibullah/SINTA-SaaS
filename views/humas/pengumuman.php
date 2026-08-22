@@ -518,18 +518,18 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════════════════
-         5. MODAL 1: BUAT / EDIT PENGUMUMAN (MODERN EXECUTIVE POPUP)
-         ═══════════════════════════════════════════════════════════════════════ -->
-    <div class="modal fade custom-modal-backdrop" :class="{'show d-block': modalPengumuman.show}" tabindex="-1" v-if="modalPengumuman.show">
-        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-            <div class="modal-content rounded-3xl border-0 shadow-2xl overflow-hidden modal-animate-in">
+          5. MODAL 1: BUAT / EDIT PENGUMUMAN (MODERN EXECUTIVE POPUP)
+          ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="modal fade custom-modal-backdrop" :class="{'show d-flex': modalPengumuman.show}" tabindex="-1" v-if="modalPengumuman.show">
+        <div class="modal-dialog modal-dialog-centered modal-lg my-auto" style="width: 100%; max-width: 820px; max-height: 90vh;">
+            <div class="modal-content rounded-3xl border-0 shadow-2xl overflow-hidden modal-animate-in d-flex flex-column" style="max-height: 90vh;">
                 <!-- Header with Sleek Indigo-Blue Gradient & Ambient Glow -->
-                <div class="modal-header px-4 px-md-5 py-4 border-0 d-flex align-items-center justify-content-between text-white position-relative overflow-hidden"
+                <div class="modal-header flex-shrink-0 px-4 px-md-5 py-3.5 border-0 d-flex align-items-center justify-content-between text-white position-relative overflow-hidden"
                      style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #2563eb 100%);">
                     <div class="position-absolute rounded-circle" style="width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%); top: -40px; right: -30px; pointer-events: none;"></div>
                     
                     <div class="d-flex align-items-center gap-3 position-relative" style="z-index: 2;">
-                        <div class="w-11 h-11 rounded-2xl bg-white/15 text-white border border-white/20 d-flex align-items-center justify-content-center fs-5 shadow-xs flex-shrink-0" style="backdrop-filter: blur(8px);">
+                        <div class="w-10 h-10 rounded-2xl bg-white/15 text-white border border-white/20 d-flex align-items-center justify-content-center fs-5 shadow-xs flex-shrink-0" style="backdrop-filter: blur(8px);">
                             <i class="bi" :class="modalPengumuman.isEdit ? 'bi-pencil-square text-amber-300' : 'bi-megaphone-fill text-blue-200'"></i>
                         </div>
                         <div>
@@ -549,8 +549,8 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
                     </button>
                 </div>
 
-                <form @submit.prevent="submitPengumuman()">
-                    <div class="modal-body p-4 p-md-5 text-slate-700 text-xs bg-slate-50/40">
+                <form @submit.prevent="submitPengumuman()" class="d-flex flex-column flex-grow-1 overflow-hidden" style="min-height: 0;">
+                    <div class="modal-body p-4 p-md-5 text-slate-700 text-xs bg-slate-50/40 overflow-y-auto flex-grow-1 custom-scrollbar" style="max-height: calc(90vh - 140px);">
                         <div class="row g-3 g-md-4">
                             
                             <!-- Judul Pengumuman -->
@@ -581,7 +581,7 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
                                     <select v-model="modalPengumuman.form.kategori_id" required 
                                             class="form-select text-xs font-semibold rounded-2xl ps-5 pe-3 py-2.5 border-slate-200 shadow-2xs bg-white cursor-pointer focus:ring-2 focus:ring-blue-500 transition">
                                         <option value="" disabled>-- Pilih Kategori Topik --</option>
-                                        <option v-for="kat in kategoriList" :key="kat.id" :value="kat.id">
+                                        <option v-for="kat in modalKategoriOptions" :key="kat.id" :value="kat.id">
                                             {{ kat.nama_kategori }}
                                         </option>
                                     </select>
@@ -597,9 +597,9 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
                                     <span class="position-absolute top-50 start-0 translate-middle-y ms-3 text-slate-400">
                                         <i class="bi bi-building text-blue-500"></i>
                                     </span>
-                                    <select v-model="modalPengumuman.form.tenant_id" class="form-select text-xs font-semibold rounded-2xl ps-5 pe-3 py-2.5 border-slate-200 shadow-2xs bg-white cursor-pointer focus:ring-2 focus:ring-blue-500 transition">
+                                    <select v-model="modalPengumuman.form.tenant_id" @change="onModalTenantChange()" class="form-select text-xs font-semibold rounded-2xl ps-5 pe-3 py-2.5 border-slate-200 shadow-2xs bg-white cursor-pointer focus:ring-2 focus:ring-blue-500 transition">
                                         <option value="global">🌐 Pengumuman Global (Seluruh Sekolah/Tenant)</option>
-                                        <option v-for="t in tenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }} ({{ t.npsn || 'Tenant' }})</option>
+                                        <option v-for="t in tenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
                                     </select>
                                 </div>
                             </div>
@@ -732,8 +732,8 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
                         </div>
                     </div>
                     
-                    <!-- Footer with Clean Action Buttons -->
-                    <div class="modal-footer px-4 px-md-5 py-3.5 border-t border-slate-100 d-flex align-items-center justify-content-between bg-white">
+                    <!-- Footer with Clean Action Buttons (Always Docked at Bottom) -->
+                    <div class="modal-footer flex-shrink-0 px-4 px-md-5 py-3.5 border-t border-slate-100 d-flex align-items-center justify-content-between bg-white">
                         <button type="button" class="btn btn-sm btn-light border border-slate-200 text-slate-600 hover:bg-slate-100 rounded-xl font-bold px-4 py-2 text-xs shadow-2xs transition" @click="modalPengumuman.show = false">
                             Batal
                         </button>
@@ -749,13 +749,13 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════════════════
-         6. MODAL 2: DETAIL / PREVIEW PENGUMUMAN (EXECUTIVE ARTICLE READER)
-         ═══════════════════════════════════════════════════════════════════════ -->
-    <div class="modal fade custom-modal-backdrop" :class="{'show d-block': modalPreview.show}" tabindex="-1" v-if="modalPreview.show">
-        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-            <div class="modal-content rounded-3xl border-0 shadow-2xl overflow-hidden modal-animate-in">
+          6. MODAL 2: DETAIL / PREVIEW PENGUMUMAN (EXECUTIVE ARTICLE READER)
+          ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="modal fade custom-modal-backdrop" :class="{'show d-flex': modalPreview.show}" tabindex="-1" v-if="modalPreview.show">
+        <div class="modal-dialog modal-dialog-centered modal-lg my-auto" style="width: 100%; max-width: 820px; max-height: 90vh;">
+            <div class="modal-content rounded-3xl border-0 shadow-2xl overflow-hidden modal-animate-in d-flex flex-column" style="max-height: 90vh;">
                 <!-- Executive Blue Header -->
-                <div class="modal-header px-4 px-md-5 py-4 border-0 d-flex align-items-center justify-content-between text-white position-relative overflow-hidden"
+                <div class="modal-header flex-shrink-0 px-4 px-md-5 py-3.5 border-0 d-flex align-items-center justify-content-between text-white position-relative overflow-hidden"
                      style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);">
                     <div class="d-flex align-items-center gap-3 position-relative" style="z-index: 2;">
                         <div class="w-10 h-10 rounded-2xl bg-white/20 text-white d-flex align-items-center justify-content-center fs-5 shadow-xs flex-shrink-0" style="backdrop-filter: blur(8px);">
@@ -773,7 +773,7 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
                     </button>
                 </div>
 
-                <div class="modal-body p-4 p-md-5 text-slate-700 text-xs bg-slate-50/50">
+                <div class="modal-body p-4 p-md-5 text-slate-700 text-xs bg-slate-50/50 overflow-y-auto flex-grow-1 custom-scrollbar" style="max-height: calc(90vh - 140px);">
                     <div v-if="modalPreview.item" class="d-flex flex-column gap-3.5">
                         
                         <!-- Top Metadata Badges -->
@@ -809,9 +809,29 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
                                     <span class="text-slate-400 text-[11px]">Penulis &amp; Editor Warta</span>
                                 </div>
                             </div>
-                            <div class="d-flex align-items-center gap-3 text-slate-500 text-xs font-medium pe-2">
-                                <span class="d-inline-flex align-items-center gap-1.5">
+                            <div class="d-flex align-items-center gap-2 text-slate-500 text-xs font-medium pe-2 flex-wrap">
+                                <span v-if="!modalPreview.item.tenant_id" class="badge bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold px-2.5 py-1 rounded-pill">
+                                    <i class="bi bi-globe me-1"></i> Global (Pusat)
+                                </span>
+                                <span v-else-if="modalPreview.item.nama_sekolah" class="badge bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold px-2.5 py-1 rounded-pill">
+                                    <i class="bi bi-building me-1"></i> {{ modalPreview.item.nama_sekolah }}
+                                </span>
+                                <span class="d-inline-flex align-items-center gap-1.5 text-slate-500">
                                     <i class="bi bi-calendar-event text-blue-600"></i> {{ formatDateIndo(modalPreview.item.created_at) }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Target Roles Info (if private) -->
+                        <div v-if="modalPreview.item.visibilitas === 'private' && modalPreview.item.target_roles" class="p-3 bg-rose-50/60 border border-rose-200/80 rounded-2xl">
+                            <div class="d-flex align-items-center gap-1.5 mb-1.5">
+                                <i class="bi bi-shield-lock-fill text-rose-600"></i>
+                                <span class="font-bold text-rose-900 text-xs">Penerima Khusus (Role Terpilih):</span>
+                            </div>
+                            <div class="d-flex flex-wrap gap-1.5">
+                                <span v-for="r in (typeof modalPreview.item.target_roles === 'string' ? JSON.parse(modalPreview.item.target_roles) : modalPreview.item.target_roles)" :key="r"
+                                      class="badge bg-white text-rose-700 border border-rose-200 font-semibold px-2.5 py-1 rounded-lg text-xs shadow-2xs">
+                                    {{ r }}
                                 </span>
                             </div>
                         </div>
@@ -824,27 +844,33 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
                     </div>
                 </div>
 
-                <div class="modal-footer px-4 px-md-5 py-3.5 border-t border-slate-100 d-flex align-items-center justify-content-between bg-white">
+                <div class="modal-footer flex-shrink-0 px-4 px-md-5 py-3.5 border-t border-slate-100 d-flex align-items-center justify-content-between bg-white">
                     <button type="button" class="btn btn-sm btn-light border border-slate-200 text-slate-600 rounded-xl font-bold px-4 py-2 text-xs shadow-2xs" @click="modalPreview.show = false">
                         Tutup
                     </button>
-                    <button type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-4 py-2 text-xs shadow-sm d-flex align-items-center gap-1.5 hover:shadow transition" @click="modalPreview.show = false; editPengumuman(modalPreview.item)">
-                        <i class="bi bi-pencil-square"></i>
-                        <span>Edit Pengumuman Ini</span>
-                    </button>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-danger rounded-xl font-bold px-3.5 py-2 text-xs shadow-2xs d-inline-flex align-items-center gap-1.5 hover:bg-rose-50" @click="modalPreview.show = false; deletePengumuman(modalPreview.item)">
+                            <i class="bi bi-trash3"></i>
+                            <span>Hapus</span>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-4 py-2 text-xs shadow-sm d-flex align-items-center gap-1.5 hover:shadow transition" @click="modalPreview.show = false; editPengumuman(modalPreview.item)">
+                            <i class="bi bi-pencil-square"></i>
+                            <span>Edit Pengumuman</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════════════════
-         7. MODAL 3: TAMBAH / EDIT KATEGORI (MODERN INDIGO POPUP)
-         ═══════════════════════════════════════════════════════════════════════ -->
-    <div class="modal fade custom-modal-backdrop" :class="{'show d-block': modalKategori.show}" tabindex="-1" v-if="modalKategori.show">
-        <div class="modal-dialog modal-dialog-centered modal-md">
-            <div class="modal-content rounded-3xl border-0 shadow-2xl overflow-hidden modal-animate-in">
+          7. MODAL 3: TAMBAH / EDIT KATEGORI (MODERN INDIGO POPUP)
+          ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="modal fade custom-modal-backdrop" :class="{'show d-flex': modalKategori.show}" tabindex="-1" v-if="modalKategori.show">
+        <div class="modal-dialog modal-dialog-centered modal-md my-auto" style="width: 100%; max-width: 520px; max-height: 90vh;">
+            <div class="modal-content rounded-3xl border-0 shadow-2xl overflow-hidden modal-animate-in d-flex flex-column" style="max-height: 90vh;">
                 <!-- Header with Indigo Gradient -->
-                <div class="modal-header px-4 px-md-5 py-4 border-0 d-flex align-items-center justify-content-between text-white position-relative overflow-hidden"
+                <div class="modal-header flex-shrink-0 px-4 px-md-5 py-3.5 border-0 d-flex align-items-center justify-content-between text-white position-relative overflow-hidden"
                      style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%);">
                     <div class="d-flex align-items-center gap-3 position-relative" style="z-index: 2;">
                         <div class="w-10 h-10 rounded-2xl bg-white/15 text-white border border-white/20 d-flex align-items-center justify-content-center fs-5 shadow-xs flex-shrink-0" style="backdrop-filter: blur(8px);">
@@ -862,8 +888,8 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
                     </button>
                 </div>
 
-                <form @submit.prevent="submitKategori()">
-                    <div class="modal-body p-4 p-md-5 text-slate-700 text-xs bg-slate-50/50">
+                <form @submit.prevent="submitKategori()" class="d-flex flex-column flex-grow-1 overflow-hidden" style="min-height: 0;">
+                    <div class="modal-body p-4 p-md-5 text-slate-700 text-xs bg-slate-50/50 overflow-y-auto flex-grow-1 custom-scrollbar" style="max-height: calc(90vh - 140px);">
                         <div class="mb-3.5">
                             <label class="form-label font-bold text-slate-800 mb-1.5">
                                 Nama Kategori Informasi <span class="text-rose-500">*</span>
@@ -889,7 +915,7 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
                         </div>
                     </div>
 
-                    <div class="modal-footer px-4 px-md-5 py-3.5 border-t border-slate-100 d-flex align-items-center justify-content-between bg-white">
+                    <div class="modal-footer flex-shrink-0 px-4 px-md-5 py-3.5 border-t border-slate-100 d-flex align-items-center justify-content-between bg-white">
                         <button type="button" class="btn btn-sm btn-light border border-slate-200 text-slate-600 rounded-xl font-bold px-4 py-2 text-xs shadow-2xs" @click="modalKategori.show = false">
                             Batal
                         </button>
@@ -937,6 +963,7 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
             // Data Stores
             const pengumumanList = ref([]);
             const kategoriList = ref([]);
+            const allKategoriList = ref([]);
             const rolesList = ref([]);
             const stats = ref({
                 total_pengumuman: 0,
@@ -985,6 +1012,33 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
                 }
             });
 
+            // ─── MODAL KATEGORI COMPUTED (TENANT SPECIFIC FILTER) ───
+            const modalKategoriOptions = computed(() => {
+                const modalTenant = modalPengumuman.value.form.tenant_id;
+                const pool = (allKategoriList.value && allKategoriList.value.length > 0) 
+                    ? allKategoriList.value 
+                    : (kategoriList.value || []);
+
+                if (!pool || pool.length === 0) return [];
+
+                if (!modalTenant || modalTenant === 'global') {
+                    const globals = pool.filter(k => !k.tenant_id);
+                    return globals.length > 0 ? globals : pool;
+                }
+                const filtered = pool.filter(k => k.tenant_id === modalTenant);
+                return filtered.length > 0 ? filtered : pool;
+            });
+
+            const onModalTenantChange = () => {
+                const opts = modalKategoriOptions.value;
+                if (opts && opts.length > 0) {
+                    const exists = opts.some(o => o.id === modalPengumuman.value.form.kategori_id);
+                    if (!exists) {
+                        modalPengumuman.value.form.kategori_id = opts[0].id;
+                    }
+                }
+            };
+
             // ─── API DATA FETCHERS ──────────────────────────────────
             const fetchOptionsAndStats = async () => {
                 try {
@@ -994,7 +1048,7 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
                     }
                     const res = await axios.get(url);
                     if (res.data && res.data.success) {
-                        kategoriList.value = res.data.data.kategori || [];
+                        allKategoriList.value = res.data.data.kategori || [];
                         rolesList.value = res.data.data.roles || [];
                         if (res.data.data.stats) {
                             stats.value = res.data.data.stats;
@@ -1147,17 +1201,23 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
 
             // ─── PENGUMUMAN ACTIONS ─────────────────────────────────
             const openModalPengumuman = () => {
+                const targetTenant = filterTenantId.value || (isSuperAdmin.value ? 'global' : currentTenantId.value);
                 modalPengumuman.value.isEdit = false;
                 modalPengumuman.value.form = {
                     id: '',
                     judul: '',
-                    kategori_id: kategoriList.value.length ? kategoriList.value[0].id : '',
+                    kategori_id: '',
                     visibilitas: 'public',
                     target_roles: [],
                     deskripsi: '',
                     is_active: true,
-                    tenant_id: filterTenantId.value || (isSuperAdmin.value ? 'global' : currentTenantId.value)
+                    tenant_id: targetTenant
                 };
+
+                const opts = modalKategoriOptions.value;
+                if (opts && opts.length > 0) {
+                    modalPengumuman.value.form.kategori_id = opts[0].id;
+                }
                 modalPengumuman.value.show = true;
             };
 
@@ -1171,6 +1231,7 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
                     }
                 }
 
+                const targetTenant = item.tenant_id || 'global';
                 modalPengumuman.value.isEdit = true;
                 modalPengumuman.value.form = {
                     id: item.id,
@@ -1180,8 +1241,14 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
                     target_roles: Array.isArray(parsedRoles) ? parsedRoles : [],
                     deskripsi: item.deskripsi || item.isi_pengumuman || '',
                     is_active: item.is_active,
-                    tenant_id: item.tenant_id || 'global'
+                    tenant_id: targetTenant
                 };
+
+                const opts = modalKategoriOptions.value;
+                if (opts && opts.length > 0 && !opts.some(o => o.id === modalPengumuman.value.form.kategori_id)) {
+                    modalPengumuman.value.form.kategori_id = opts[0].id;
+                }
+
                 modalPengumuman.value.show = true;
             };
 
@@ -1449,6 +1516,8 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
                 searchKategori,
                 pengumumanList,
                 kategoriList,
+                allKategoriList,
+                modalKategoriOptions,
                 rolesList,
                 stats,
                 modalPengumuman,
@@ -1472,6 +1541,7 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
                 refreshAll,
                 switchTab,
                 onTenantChange,
+                onModalTenantChange,
                 debounceSearch,
                 resetFilters,
                 openModalPengumuman,
@@ -1528,10 +1598,21 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
    PREMIUM POPUP MODAL STYLING & ANIMATIONS
    ═══════════════════════════════════════════════════════════════════════ */
 .custom-modal-backdrop {
-    background: rgba(15, 23, 42, 0.65) !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(15, 23, 42, 0.70) !important;
     backdrop-filter: blur(8px) !important;
     -webkit-backdrop-filter: blur(8px) !important;
-    transition: all 0.25s ease-out;
+    z-index: 99999 !important;
+    overflow: hidden !important;
+    padding: 1rem !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
 
 .modal-animate-in {

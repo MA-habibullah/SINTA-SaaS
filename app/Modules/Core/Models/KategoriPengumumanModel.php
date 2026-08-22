@@ -18,29 +18,25 @@ class KategoriPengumumanModel {
         $params = [];
         $whereCondition = "1=1";
         
-        if ($this->tenantId !== null) {
-            $whereCondition = "(k.tenant_id = :scoped_tenant_id OR k.tenant_id IS NULL)";
-            $params[':scoped_tenant_id'] = $this->tenantId;
-        }
-
-        if (!empty($filters['tenant_id'])) {
-            if ($filters['tenant_id'] === 'global') {
-                $whereCondition .= " AND k.tenant_id IS NULL";
+        $targetTenant = array_key_exists('tenant_id', $filters) ? $filters['tenant_id'] : $this->tenantId;
+        if (!empty($targetTenant)) {
+            if ($targetTenant === 'global' || $targetTenant === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
+                $whereCondition = "(k.tenant_id IS NULL OR k.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')";
             } else {
-                $whereCondition .= " AND k.tenant_id = :filter_tenant_id";
-                $params[':filter_tenant_id'] = $filters['tenant_id'];
+                $whereCondition = "k.tenant_id = :filter_tenant_id";
+                $params[':filter_tenant_id'] = $targetTenant;
             }
         }
 
         if (!empty($filters['search'])) {
-            $whereCondition .= " AND k.nama_kategori ILIKE :search";
+            $whereCondition .= ($whereCondition === "1=1" ? "" : " AND") . " k.nama_kategori ILIKE :search";
             $params[':search'] = '%' . $filters['search'] . '%';
         }
 
-        $sql = "SELECT k.*, t.nama_sekolah, COUNT(p.id) as total_pengumuman
+        $sql = "SELECT k.*, COALESCE(t.nama_sekolah, 'Global / Pusat') as nama_sekolah, COUNT(p.id) as total_pengumuman
                 FROM sistem.kategori_pengumuman k 
                 LEFT JOIN core.tenants t ON k.tenant_id = t.id 
-                LEFT JOIN sistem.pengumuman p ON p.kategori_id = k.id
+                LEFT JOIN sistem.pengumuman p ON p.kategori_id = k.id AND (p.tenant_id = k.tenant_id OR (k.tenant_id IS NULL AND p.tenant_id IS NULL))
                 WHERE $whereCondition
                 GROUP BY k.id, t.nama_sekolah
                 ORDER BY k.nama_kategori ASC";
