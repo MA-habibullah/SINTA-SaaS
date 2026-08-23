@@ -165,7 +165,7 @@ class PersuratanModel
                 ) VALUES (
                     gen_random_uuid(), :tid, :no_agenda, :no_surat, :pengirim, :perihal,
                     :tgl_surat, :tgl_terima, :ringkasan, :file_lampiran,
-                    'Menunggu Disposisi', :keamanan, :sifat, TRUE, NOW(), NOW()
+                    'Menunggu Disposisi', :keamanan, :sifat, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                 ) RETURNING id
             ");
             $stmt->execute([
@@ -194,7 +194,7 @@ class PersuratanModel
                     tingkat_keamanan = :keamanan,
                     sifat_surat = :sifat,
                     " . ($fileLampiran ? "file_lampiran = :file_lampiran," : "") . "
-                    updated_at = NOW()
+                    updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id AND (tenant_id = :tid OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')
             ");
             $binds = [
@@ -224,7 +224,7 @@ class PersuratanModel
     {
         $stmt = $this->db->prepare("
             UPDATE persuratan.surat_masuk 
-            SET is_active = FALSE, updated_at = NOW() 
+            SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP 
             WHERE id = :id AND (tenant_id = :tid OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')
         ");
         return $stmt->execute([':id' => $id, ':tid' => $tenantId]);
@@ -274,7 +274,7 @@ class PersuratanModel
             ) VALUES (
                 gen_random_uuid(), :tid, :id_sm, :p_id, :p_nama,
                 :r_id, :r_nama, :instruksi,
-                :catatan, :tgl_disp, :batas, 'Pending', TRUE, NOW(), NOW()
+                :catatan, :tgl_disp, :batas, 'Pending', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
             ) RETURNING id
         ");
         $stmt->execute([
@@ -294,7 +294,7 @@ class PersuratanModel
         // Update status di surat masuk menjadi 'Didisposisikan'
         $stmtUpdateSm = $this->db->prepare("
             UPDATE persuratan.surat_masuk 
-            SET status_disposisi = 'Didisposisikan', updated_at = NOW() 
+            SET status_disposisi = 'Didisposisikan', updated_at = CURRENT_TIMESTAMP 
             WHERE id = :id AND (tenant_id = :tid OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')
         ");
         $stmtUpdateSm->execute([':id' => $idSuratMasuk, ':tid' => $tenantId]);
@@ -457,7 +457,7 @@ class PersuratanModel
                     :id_jenis, :id_tpl, :tujuan, :perihal, :tgl_surat,
                     :ringkasan, :id_pembuat, :nama_pembuat, :nama_ttd,
                     :jab_ttd, :status_surat, :id_ref,
-                    :modul_ref, :qr_token, TRUE, NOW(), NOW()
+                    :modul_ref, :qr_token, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                 ) RETURNING id
             ");
             $stmt->execute([
@@ -487,7 +487,7 @@ class PersuratanModel
                 INSERT INTO persuratan.tte_qr_validation (
                     id, tenant_id, id_surat_keluar, qr_token, hash_dokumen, penandatangan, is_valid, created_at, updated_at
                 ) VALUES (
-                    gen_random_uuid(), :tid, :sk_id, :qr_token, :hash, :ttd, TRUE, NOW(), NOW()
+                    gen_random_uuid(), :tid, :sk_id, :qr_token, :hash, :ttd, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                 )
             ");
             $hashDoc = hash('sha256', $nomorSurat . '|' . $tglSurat . '|' . $tujuan . '|' . $tenantId);
@@ -514,7 +514,7 @@ class PersuratanModel
                     nama_penandatangan = :nama_ttd,
                     jabatan_penandatangan = :jab_ttd,
                     status_surat = :status_surat,
-                    updated_at = NOW()
+                    updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id AND (tenant_id = :tid OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')
             ");
             $stmt->execute([
@@ -543,7 +543,7 @@ class PersuratanModel
     {
         $stmt = $this->db->prepare("
             UPDATE persuratan.surat_keluar 
-            SET is_active = FALSE, updated_at = NOW() 
+            SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP 
             WHERE id = :id AND (tenant_id = :tid OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')
         ");
         return $stmt->execute([':id' => $id, ':tid' => $tenantId]);
@@ -593,7 +593,7 @@ class PersuratanModel
             ) VALUES (
                 gen_random_uuid(), :tid, :siswa_id, :nama_siswa, :nisn, :kelas, :poin,
                 :jenis, :alasan, :tgl, :jam, :ruang, :guru_nama, :guru_id,
-                'Menunggu Penerbitan TU', TRUE, NOW(), NOW()
+                'Menunggu Penerbitan TU', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
             ) RETURNING id
         ");
         $stmt->execute([
@@ -718,9 +718,9 @@ class PersuratanModel
                 status_pengajuan = 'Surat Resmi Telah Terbit',
                 id_surat_keluar = :sk_id,
                 nomor_surat_terbit = :no_surat,
-                tgl_terbit_surat = NOW(),
+                tgl_terbit_surat = CURRENT_TIMESTAMP,
                 catatan_tu = :catatan,
-                updated_at = NOW()
+                updated_at = CURRENT_TIMESTAMP
             WHERE id = :id
         ");
         $stmtUpd->execute([
@@ -736,7 +736,7 @@ class PersuratanModel
                 id_surat_keluar = :sk_id,
                 nomor_surat_resmi = :no_surat,
                 status_surat = 'Surat Resmi Telah Terbit',
-                updated_at = NOW()
+                updated_at = CURRENT_TIMESTAMP
             WHERE id_pengajuan_surat = :id_p OR (kategori = :siswa_id AND status_surat = 'Menunggu Penerbitan TU')
         ");
         $stmtUpdBk->execute([
@@ -793,7 +793,7 @@ class PersuratanModel
                     kode_template, judul_surat, konten_html, is_active, created_at, updated_at
                 ) VALUES (
                     gen_random_uuid(), :tid, :id_jenis, :nama,
-                    :kode, :judul, :konten, TRUE, NOW(), NOW()
+                    :kode, :judul, :konten, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                 ) RETURNING id
             ");
             $stmt->execute([
@@ -813,7 +813,7 @@ class PersuratanModel
                     kode_template = :kode,
                     judul_surat = :judul,
                     konten_html = :konten,
-                    updated_at = NOW()
+                    updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id AND (tenant_id = :tid OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')
             ");
             $stmt->execute([
@@ -836,7 +836,7 @@ class PersuratanModel
     {
         $stmt = $this->db->prepare("
             UPDATE persuratan.template_surat 
-            SET is_active = FALSE, updated_at = NOW() 
+            SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP 
             WHERE id = :id AND (tenant_id = :tid OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')
         ");
         return $stmt->execute([':id' => $id, ':tid' => $tenantId]);
@@ -897,7 +897,7 @@ class PersuratanModel
     {
         $stmt = $this->db->prepare("
             UPDATE persuratan.kode_klasifikasi_surat 
-            SET is_active = :status, updated_at = NOW() 
+            SET is_active = :status, updated_at = CURRENT_TIMESTAMP 
             WHERE id = :id AND (tenant_id = :tid OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' OR tenant_id IS NULL)
         ");
         return $stmt->execute([
@@ -914,7 +914,7 @@ class PersuratanModel
     {
         $stmt = $this->db->prepare("
             UPDATE persuratan.kode_klasifikasi_surat 
-            SET is_active = :status, updated_at = NOW() 
+            SET is_active = :status, updated_at = CURRENT_TIMESTAMP 
             WHERE (tahun_berlaku_mulai <= :tahun AND (tahun_berlaku_selesai IS NULL OR tahun_berlaku_selesai >= :tahun))
               AND (tenant_id = :tid OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' OR tenant_id IS NULL)
         ");
@@ -952,7 +952,7 @@ class PersuratanModel
                     tahun_berlaku_mulai, tahun_berlaku_selesai, versi_regulasi, is_active, created_at, updated_at
                 ) VALUES (
                     gen_random_uuid(), :tid, :kode, :nama, :deskripsi, :retensi,
-                    :tmulai, :tselesai, :versi, :is_active, NOW(), NOW()
+                    :tmulai, :tselesai, :versi, :is_active, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                 ) RETURNING id
             ");
             $stmt->execute([
@@ -978,7 +978,7 @@ class PersuratanModel
                     tahun_berlaku_selesai = :tselesai,
                     versi_regulasi = :versi,
                     is_active = :is_active,
-                    updated_at = NOW()
+                    updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id AND (tenant_id = :tid OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' OR tenant_id IS NULL)
             ");
             $stmt->execute([
@@ -1021,7 +1021,7 @@ class PersuratanModel
                 ) VALUES (
                     gen_random_uuid(), :tid, :kode, :nama, :parent,
                     :level, :kat, :ret_aktif, :ret_inaktif,
-                    :ret_aktif, :tahun, :versi, TRUE, NOW(), NOW()
+                    :ret_aktif, :tahun, :versi, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                 )
             ");
 
@@ -1036,7 +1036,7 @@ class PersuratanModel
                     tahun_berlaku_mulai = :tahun,
                     versi_regulasi = :versi,
                     is_active = TRUE,
-                    updated_at = NOW()
+                    updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
             ");
 
@@ -1187,7 +1187,7 @@ class PersuratanModel
                 ) VALUES (
                     gen_random_uuid(), :tid, :instansi, :sekolah, :npsn, :akreditasi,
                     :alamat, :telepon, :email, :website, :logo_kiri, :logo_kanan,
-                    TRUE, TRUE, TRUE, NOW(), NOW()
+                    TRUE, TRUE, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                 ) RETURNING id
             ");
             $stmt->execute([
@@ -1217,7 +1217,7 @@ class PersuratanModel
                     website = :website,
                     " . ($logoKiri ? "logo_kiri = :logo_kiri," : "") . "
                     " . ($logoKanan ? "logo_kanan = :logo_kanan," : "") . "
-                    updated_at = NOW()
+                    updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id AND (tenant_id = :tid OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')
             ");
             $binds = [
@@ -1262,7 +1262,7 @@ class PersuratanModel
             // Update hit counter
             $stmtUpd = $this->db->prepare("
                 UPDATE persuratan.tte_qr_validation 
-                SET total_verifikasi = total_verifikasi + 1, last_verified_at = NOW() 
+                SET total_verifikasi = total_verifikasi + 1, last_verified_at = CURRENT_TIMESTAMP 
                 WHERE qr_token = :token
             ");
             $stmtUpd->execute([':token' => $token]);

@@ -7,7 +7,7 @@ use PDO;
 
 class UserModel extends BaseModel {
     protected static string $schema = 'core';
-    protected static string $table = 'users';
+    protected static string $table = 'core.users';
 
     /**
      * Cari Pengguna berdasarkan Email dan Context Tenant (PostgreSQL Multi-Schema / MySQL Fallback)

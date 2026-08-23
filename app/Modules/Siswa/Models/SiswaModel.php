@@ -11,8 +11,8 @@ use PDO;
  * Tidak lagi bergantung pada legacy App\Models\Siswa.
  */
 class SiswaModel extends BaseModel {
-    protected static string $table  = 'siswa';
-    protected static string $schema = 'siswa';
+    protected static string $table  = 'siswa.siswa';
+    protected static string $schema = 'siswa.siswa';
     protected ?string $tenantId = null;
 
     public function __construct(?string $tenantId = null) {
@@ -514,7 +514,7 @@ class SiswaModel extends BaseModel {
      */
     public function delete(string $id): bool {
         $db = self::getPdo();
-        $stmt = $db->prepare("UPDATE siswa.siswa SET is_active = false, updated_at = NOW() WHERE id::text = :id");
+        $stmt = $db->prepare("UPDATE siswa.siswa SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id::text = :id");
         return $stmt->execute(['id' => $id]);
     }
 
@@ -572,7 +572,7 @@ class SiswaModel extends BaseModel {
                 alergi = COALESCE(:alergi, alergi), 
                 disabilitas = COALESCE(:disab, disabilitas), 
                 detail_semester = COALESCE(:detail_sem, detail_semester),
-                updated_at = NOW() 
+                updated_at = CURRENT_TIMESTAMP 
                 WHERE id = :id")->execute([
                 'tb' => $tb, 'bb' => $bb, 'lk' => $lk, 'goldar' => $goldar, 'penyakit' => $penyakit, 'alergi' => $alergi, 'disab' => $disab,
                 'detail_sem' => $detailSemesterJson, 'id' => $kId
@@ -652,7 +652,7 @@ class SiswaModel extends BaseModel {
             $detailSem= isset($data['kesehatan']) && is_array($data['kesehatan']) ? json_encode($data['kesehatan']) : null;
 
             if ($kId) {
-                $db->prepare("UPDATE siswa.fisik_kesehatan_siswa SET tinggi_badan = COALESCE(:tb, tinggi_badan), berat_badan = COALESCE(:bb, berat_badan), lingkar_kepala = COALESCE(:lk, lingkar_kepala), golongan_darah = COALESCE(:goldar, golongan_darah), riwayat_penyakit = COALESCE(:penyakit, riwayat_penyakit), alergi = COALESCE(:alergi, alergi), disabilitas = COALESCE(:disab, disabilitas), detail_semester = COALESCE(:detail_sem, detail_semester), updated_at = NOW() WHERE id = :id")->execute([
+                $db->prepare("UPDATE siswa.fisik_kesehatan_siswa SET tinggi_badan = COALESCE(:tb, tinggi_badan), berat_badan = COALESCE(:bb, berat_badan), lingkar_kepala = COALESCE(:lk, lingkar_kepala), golongan_darah = COALESCE(:goldar, golongan_darah), riwayat_penyakit = COALESCE(:penyakit, riwayat_penyakit), alergi = COALESCE(:alergi, alergi), disabilitas = COALESCE(:disab, disabilitas), detail_semester = COALESCE(:detail_sem, detail_semester), updated_at = CURRENT_TIMESTAMP WHERE id = :id")->execute([
                     'tb' => $tb, 'bb' => $bb, 'lk' => $lk, 'goldar' => $goldar, 'penyakit' => $penyakit, 'alergi' => $alergi, 'disab' => $disab, 'detail_sem' => $detailSem, 'id' => $kId
                 ]);
             } else if ($tb || $bb || $lk || $penyakit || $alergi || $disab || $detailSem) {
@@ -755,7 +755,7 @@ class SiswaModel extends BaseModel {
                         hubungan_wali = COALESCE(:hub_wali, hubungan_wali),
                         tempat_lahir = COALESCE(:tempat_lahir, tempat_lahir),
                         id_tempat_lahir = COALESCE(:id_tempat_lahir, id_tempat_lahir),
-                        updated_at = NOW() 
+                        updated_at = CURRENT_TIMESTAMP 
                         WHERE id = :id")->execute([
                         'nama' => $namaVal, 'nik' => $nikVal, 'pekerjaan' => $pekerjaanVal, 'pendidikan' => $pendidikanVal,
                         'penghasilan' => $penghasilanVal, 'no_hp' => $noHpVal, 'thn_lahir' => $thnLahirVal,
@@ -867,7 +867,7 @@ class SiswaModel extends BaseModel {
                     sekolah_asal_mutasi = COALESCE(:sek_asal_mut, sekolah_asal_mutasi),
                     pindah_dari_tingkat = COALESCE(:pind_ting, pindah_dari_tingkat),
                     pindah_no_surat = COALESCE(:pind_surat, pindah_no_surat),
-                    updated_at = NOW() 
+                    updated_at = CURRENT_TIMESTAMP 
                     WHERE id = :id")->execute([
                     'jns' => $jnsReg, 'asal' => $asalSek, 'npsn' => $npsnAsal, 'thn' => $thnDaftar, 'noreg' => $noReg,
                     'status' => $statusPpdb, 'catatan' => $catatan,
@@ -921,7 +921,7 @@ class SiswaModel extends BaseModel {
                 $dId = $stD->fetchColumn();
 
                 if ($dId) {
-                    $db->prepare("UPDATE siswa.dokumen SET url_file = :url, nama_file = :nama, updated_at = NOW() WHERE id = :id")->execute([
+                    $db->prepare("UPDATE siswa.dokumen SET url_file = :url, nama_file = :nama, updated_at = CURRENT_TIMESTAMP WHERE id = :id")->execute([
                         'url' => $fileUrl, 'nama' => $fileName, 'id' => $dId
                     ]);
                 } else {

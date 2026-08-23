@@ -6,7 +6,7 @@ use App\Core\BaseModel;
 use PDO;
 
 class TransaksiPembayaranModel extends BaseModel {
-    protected static string $table = 'transaksi_spp_pembayaran';
+    protected static string $table = 'keuangan.transaksi_spp_pembayaran';
     protected static string $schema = 'keuangan';
 
     public static function getTransaksiByTagihan(string $tenantId, string $tagihanId): array {

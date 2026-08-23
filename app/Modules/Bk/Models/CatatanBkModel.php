@@ -6,7 +6,7 @@ use App\Core\BaseModel;
 use PDO;
 
 class CatatanBkModel extends BaseModel {
-    protected static string $table = 'catatan_bk';
+    protected static string $table = 'bk.catatan_bk';
     protected static string $schema = 'bk';
 
     public static function getCatatanBySiswa(string $tenantId, string $siswaId): array {

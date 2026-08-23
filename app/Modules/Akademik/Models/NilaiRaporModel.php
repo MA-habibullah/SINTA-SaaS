@@ -6,7 +6,7 @@ use App\Core\BaseModel;
 use PDO;
 
 class NilaiRaporModel extends BaseModel {
-    protected static string $table = 'nilai_sumatif';
+    protected static string $table = 'akademik.nilai_sumatif';
     protected static string $schema = 'akademik';
 
     public static function getNilaiBySiswaSemester(string $tenantId, string $siswaId, string $semester): array {

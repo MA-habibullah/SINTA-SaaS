@@ -6,7 +6,7 @@ use App\Core\BaseModel;
 use PDO;
 
 class TenantModel extends BaseModel {
-    protected static string $table = 'tenants';
+    protected static string $table = 'core.tenants';
     protected static string $schema = 'core';
 
     /**

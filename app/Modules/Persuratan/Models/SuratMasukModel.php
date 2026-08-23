@@ -7,7 +7,7 @@ use PDO;
 
 class SuratMasukModel extends BaseModel
 {
-    protected static string $table = 'surat_masuk';
+    protected static string $table = 'persuratan.surat_masuk';
     protected static string $schema = 'persuratan';
 
     public static function getSuratMasuk(string $tenantId, int $limit = 50, int $offset = 0): array

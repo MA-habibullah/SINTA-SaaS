@@ -247,7 +247,8 @@ class AgendaModel {
         return (string)$stmt->fetchColumn();
     }
 
-    public function update(string $id, array $data): bool {
+    public function update(string $id, array $data, ?string $tenantId = null): bool {
+        $targetTenant = $tenantId ?? $this->tenantId;
         $descPayload = $this->packDescription($data);
 
         $sql = "UPDATE sistem.agenda_sekolah SET
@@ -259,26 +260,52 @@ class AgendaModel {
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id";
 
+        if (!empty($targetTenant) && $targetTenant !== 'global') {
+            $sql .= " AND (tenant_id = :filter_tenant_id OR tenant_id IS NULL)";
+        }
+
         $stmt = $this->db->prepare($sql);
         $stmt->bindValue(':id', $id);
-        $stmt->bindValue(':tenant_id', array_key_exists('tenant_id', $data) ? $data['tenant_id'] : null);
+        $stmt->bindValue(':tenant_id', array_key_exists('tenant_id', $data) ? $data['tenant_id'] : $targetTenant);
         $stmt->bindValue(':nama_agenda_sekolah', $data['nama_agenda_sekolah'] ?? $data['judul'] ?? 'Agenda Tanpa Judul');
         $stmt->bindValue(':kategori', $data['kategori'] ?? 'Umum');
         $stmt->bindValue(':deskripsi', $descPayload);
         $stmt->bindValue(':is_active', isset($data['is_active']) ? (bool)$data['is_active'] : true, PDO::PARAM_BOOL);
+        if (!empty($targetTenant) && $targetTenant !== 'global') {
+            $stmt->bindValue(':filter_tenant_id', $targetTenant);
+        }
         return $stmt->execute();
     }
 
-    public function toggleActive(string $id): bool {
-        $stmt = $this->db->prepare("UPDATE sistem.agenda_sekolah SET is_active = NOT is_active, updated_at = CURRENT_TIMESTAMP WHERE id = :id RETURNING is_active");
+    public function toggleActive(string $id, ?string $tenantId = null): bool {
+        $targetTenant = $tenantId ?? $this->tenantId;
+        $sql = "UPDATE sistem.agenda_sekolah SET is_active = NOT is_active, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
+        if (!empty($targetTenant) && $targetTenant !== 'global') {
+            $sql .= " AND (tenant_id = :tenant_id OR tenant_id IS NULL)";
+        }
+        $sql .= " RETURNING is_active";
+
+        $stmt = $this->db->prepare($sql);
         $stmt->bindValue(':id', $id);
+        if (!empty($targetTenant) && $targetTenant !== 'global') {
+            $stmt->bindValue(':tenant_id', $targetTenant);
+        }
         $stmt->execute();
         return (bool)$stmt->fetchColumn();
     }
 
-    public function delete(string $id): bool {
-        $stmt = $this->db->prepare("DELETE FROM sistem.agenda_sekolah WHERE id = :id");
+    public function delete(string $id, ?string $tenantId = null): bool {
+        $targetTenant = $tenantId ?? $this->tenantId;
+        $sql = "DELETE FROM sistem.agenda_sekolah WHERE id = :id";
+        if (!empty($targetTenant) && $targetTenant !== 'global') {
+            $sql .= " AND (tenant_id = :tenant_id OR tenant_id IS NULL)";
+        }
+
+        $stmt = $this->db->prepare($sql);
         $stmt->bindValue(':id', $id);
+        if (!empty($targetTenant) && $targetTenant !== 'global') {
+            $stmt->bindValue(':tenant_id', $targetTenant);
+        }
         return $stmt->execute();
     }
 

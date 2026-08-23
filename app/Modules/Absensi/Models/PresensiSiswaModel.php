@@ -6,7 +6,7 @@ use App\Core\BaseModel;
 use PDO;
 
 class PresensiSiswaModel extends BaseModel {
-    protected static string $table = 'presensi_siswa_harian';
+    protected static string $table = 'absensi.presensi_siswa_harian';
     protected static string $schema = 'absensi';
 
     public static function getPresensiByTanggal(string $tenantId, string $tanggal): array {

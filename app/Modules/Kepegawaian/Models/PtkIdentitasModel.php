@@ -6,7 +6,7 @@ use App\Core\BaseModel;
 use PDO;
 
 class PtkIdentitasModel extends BaseModel {
-    protected static string $table = 'ptk_identitas';
+    protected static string $table = 'kepegawaian.ptk_identitas';
     protected static string $schema = 'kepegawaian';
 
     public static function findById(string $tenantId, string $ptkId): ?array {

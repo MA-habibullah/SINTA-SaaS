@@ -6,7 +6,7 @@ use App\Core\BaseModel;
 use PDO;
 
 class PrestasiSiswaModel extends BaseModel {
-    protected static string $table = 'prestasi_siswa';
+    protected static string $table = 'kesiswaan.prestasi_siswa';
     protected static string $schema = 'kesiswaan';
 
     public static function getPrestasiBySiswa(string $tenantId, string $siswaId): array {

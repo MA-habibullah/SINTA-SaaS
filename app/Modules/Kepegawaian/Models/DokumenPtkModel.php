@@ -6,7 +6,7 @@ use App\Core\BaseModel;
 use PDO;
 
 class DokumenPtkModel extends BaseModel {
-    protected static string $table = 'dokumen_ptk';
+    protected static string $table = 'kepegawaian.dokumen_ptk';
     protected static string $schema = 'kepegawaian';
 
     public static function getDokumenByPtk(string $tenantId, string $ptkId): array {

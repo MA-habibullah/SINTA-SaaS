@@ -6,7 +6,7 @@ use App\Core\BaseModel;
 use PDO;
 
 class PklModel extends BaseModel {
-    protected static string $table = 'pkl_penempatan';
+    protected static string $table = 'smk.pkl_penempatan';
     protected static string $schema = 'smk';
 
     public static function getPenempatanPkl(string $tenantId, string $siswaId): array {
