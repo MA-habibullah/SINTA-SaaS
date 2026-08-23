@@ -123,7 +123,7 @@ class ImportModuleController extends BaseController {
                     status_siswa, id_angkatan, id_tahun_ajaran, tanggal_lulus
                 ) VALUES (
                     :id, :tenant_id, :nisn, :nama_lengkap, :tanggal_lahir, 
-                    'L', :password, true, NOW(), NOW(),
+                    'L', :password, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP,
                     :status_siswa, :id_angkatan, :id_tahun_ajaran, :tanggal_lulus
                 )
             ");

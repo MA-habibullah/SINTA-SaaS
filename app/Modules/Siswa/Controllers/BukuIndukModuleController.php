@@ -1709,24 +1709,24 @@ class BukuIndukModuleController extends BaseController {
             $db->beginTransaction();
 
             // Soft delete the student
-            $stmtDel = $db->prepare("UPDATE siswa.siswa SET deleted_at = NOW() WHERE id = ?");
+            $stmtDel = $db->prepare("UPDATE siswa.siswa SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?");
             $stmtDel->execute([$id]);
 
             // Soft delete detail nilai rapor
-            $stmtDelRapor = $db->prepare("UPDATE akademik.detail_nilai_rapor SET deleted_at = NOW() WHERE siswa_id = ?");
+            $stmtDelRapor = $db->prepare("UPDATE akademik.detail_nilai_rapor SET deleted_at = CURRENT_TIMESTAMP WHERE siswa_id = ?");
             $stmtDelRapor->execute([$id]);
             
             // Soft delete prestasi
             $stmtDelPrestasi = $db->prepare("
                 UPDATE prestasi_siswa ps
                 JOIN prestasi_siswa_anggota psa ON ps.id = psa.id_prestasi
-                SET ps.deleted_at = NOW()
+                SET ps.deleted_at = CURRENT_TIMESTAMP
                 WHERE psa.id_siswa = ?
             ");
             $stmtDelPrestasi->execute([$id]);
 
             // Soft delete pelanggaran
-            $stmtDelPelanggaran = $db->prepare("UPDATE catatan_pelanggaran_siswa SET deleted_at = NOW() WHERE siswa_id = ?");
+            $stmtDelPelanggaran = $db->prepare("UPDATE catatan_pelanggaran_siswa SET deleted_at = CURRENT_TIMESTAMP WHERE siswa_id = ?");
             $stmtDelPelanggaran->execute([$id]);
 
             // Record activity
@@ -2885,7 +2885,7 @@ class BukuIndukModuleController extends BaseController {
                         tahun_mulai = :tahun_menerima,
                         nominal = :nominal,
                         keterangan = :keterangan,
-                        updated_at = NOW()
+                        updated_at = CURRENT_TIMESTAMP
                     WHERE id::text = :id AND (tenant_id::text = :tenant_id OR :is_super = TRUE)
                 ");
                 $stmt->execute([
@@ -2909,7 +2909,7 @@ class BukuIndukModuleController extends BaseController {
                 INSERT INTO siswa.riwayat_beasiswa (
                     id, tenant_id, siswa_id, nama_beasiswa, penyelenggara, tahun_mulai, nominal, keterangan, created_at, updated_at
                 ) VALUES (
-                    gen_random_uuid(), :tenant_id, :siswa_id, :jenis_beasiswa, :sumber, :tahun_menerima, :nominal, :keterangan, NOW(), NOW()
+                    gen_random_uuid(), :tenant_id, :siswa_id, :jenis_beasiswa, :sumber, :tahun_menerima, :nominal, :keterangan, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                 )
             ");
             $stmt->execute([

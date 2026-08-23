@@ -186,7 +186,7 @@ class SiswaAuthModuleController extends BaseController {
 
             $hashedPassword = password_hash($passwordBaru, PASSWORD_BCRYPT);
 
-            $stmt = $db->prepare("UPDATE siswa.siswa SET password = :password, is_first_login = false, updated_at = NOW() WHERE id = :id");
+            $stmt = $db->prepare("UPDATE siswa.siswa SET password = :password, is_first_login = false, updated_at = CURRENT_TIMESTAMP WHERE id = :id");
             $stmt->execute([
                 'password' => $hashedPassword,
                 'id' => $siswaId

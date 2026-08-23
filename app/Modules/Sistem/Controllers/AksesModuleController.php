@@ -277,7 +277,7 @@ class AksesModuleController extends BaseController {
             $stmtDel = $db->prepare("DELETE FROM sistem.user_access_overrides WHERE user_id::text = ?");
             $stmtDel->execute([$userId]);
 
-            $stmtIns = $db->prepare("INSERT INTO sistem.user_access_overrides (id, user_id, menu_id, is_allowed, created_at) VALUES (gen_random_uuid(), :user_id::uuid, :menu_id::uuid, :is_allowed, NOW())");
+            $stmtIns = $db->prepare("INSERT INTO sistem.user_access_overrides (id, user_id, menu_id, is_allowed, created_at) VALUES (gen_random_uuid(), :user_id::uuid, :menu_id::uuid, :is_allowed, CURRENT_TIMESTAMP)");
             foreach ($overrides as $ov) {
                 if (!empty($ov['menu_id']) && isset($ov['access_grant'])) {
                     $grantVal = filter_var($ov['access_grant'], FILTER_VALIDATE_BOOLEAN);

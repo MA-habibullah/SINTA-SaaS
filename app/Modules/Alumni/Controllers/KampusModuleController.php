@@ -122,7 +122,7 @@ class KampusModuleController extends BaseController
             } else {
                 $stmt = $db->prepare("
                     UPDATE pdss.master_kampus 
-                    SET nama_kampus=?, kota=?, kota_kampus=?, jenis=?, jenis_kampus=?, alamat=?, alamat_kampus=?, updated_at=NOW()
+                    SET nama_kampus=?, kota=?, kota_kampus=?, jenis=?, jenis_kampus=?, alamat=?, alamat_kampus=?, updated_at=CURRENT_TIMESTAMP
                     WHERE id=?
                 ");
                 $stmt->execute([$nama_kampus, $kota_kampus, $kota_kampus, $jenis_kampus, $jenis_kampus, $alamat_kampus, $alamat_kampus, $id]);
@@ -227,7 +227,7 @@ class KampusModuleController extends BaseController
             } else {
                 $stmt = $db->prepare("
                     UPDATE pdss.master_kampus_prodi 
-                    SET program_studi=?, nama_prodi=?, kode_prodi=?, fakultas=?, jenjang=?, jenis_portofolio=?, daya_tampung_sekarang=?, updated_at=NOW() 
+                    SET program_studi=?, nama_prodi=?, kode_prodi=?, fakultas=?, jenjang=?, jenis_portofolio=?, daya_tampung_sekarang=?, updated_at=CURRENT_TIMESTAMP 
                     WHERE id=?
                 ");
                 $stmt->execute([$program_studi, $program_studi, $kode_prodi, $fakultas, $jenjang, $portofolio, $daya_tampung, $id]);
@@ -380,7 +380,7 @@ class KampusModuleController extends BaseController
                 $stmt = $db->prepare("INSERT INTO bk.master_jalur_masuk (id, tenant_id, nama_jalur, nama_master_jalur_masuk, kategori, deskripsi, is_active) VALUES (?, ?, ?, ?, ?, ?, TRUE)");
                 $stmt->execute([$id, $targetTenant, $nama_jalur, $nama_jalur, $kategori, $deskripsi]);
             } else {
-                $stmt = $db->prepare("UPDATE bk.master_jalur_masuk SET nama_jalur=?, nama_master_jalur_masuk=?, kategori=?, deskripsi=?, updated_at=NOW() WHERE id=?");
+                $stmt = $db->prepare("UPDATE bk.master_jalur_masuk SET nama_jalur=?, nama_master_jalur_masuk=?, kategori=?, deskripsi=?, updated_at=CURRENT_TIMESTAMP WHERE id=?");
                 $stmt->execute([$nama_jalur, $nama_jalur, $kategori, $deskripsi, $id]);
             }
             $this->jsonResponse(['success' => true, 'message' => 'Jalur masuk berhasil disimpan.']);
@@ -1049,7 +1049,7 @@ class KampusModuleController extends BaseController
                 } else {
                     $stmtUpdProdi = $db->prepare("
                         UPDATE pdss.master_kampus_prodi
-                        SET kode_prodi = COALESCE(NULLIF(?, ''), kode_prodi), program_studi = ?, nama_prodi = ?, fakultas = ?, jenjang = ?, jenis_portofolio = ?, updated_at = NOW()
+                        SET kode_prodi = COALESCE(NULLIF(?, ''), kode_prodi), program_studi = ?, nama_prodi = ?, fakultas = ?, jenjang = ?, jenis_portofolio = ?, updated_at = CURRENT_TIMESTAMP
                         WHERE id = ?
                     ");
                     $stmtUpdProdi->execute([$kodeProdi, $namaProdi, $namaProdi, $fakultas, $jenjang, $portofolio, $prodiId]);

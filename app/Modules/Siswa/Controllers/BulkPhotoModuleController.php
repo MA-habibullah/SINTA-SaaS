@@ -178,7 +178,7 @@ class BulkPhotoModuleController extends BaseController {
                 }
             }
 
-            $stmtUpdateS = $db->prepare("UPDATE siswa.siswa SET foto_url = :foto_url, updated_at = NOW() WHERE id::text = :siswa_id");
+            $stmtUpdateS = $db->prepare("UPDATE siswa.siswa SET foto_url = :foto_url, updated_at = CURRENT_TIMESTAMP WHERE id::text = :siswa_id");
             $stmtUpdateS->execute([
                 'foto_url' => 'uploads/' . $tenantId . '/' . $siswaId . '/' . $newFileName,
                 'siswa_id' => $siswaId

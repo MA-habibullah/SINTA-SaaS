@@ -144,11 +144,20 @@ class KesiswaanModuleController extends BaseController {
             $stmtGuru->execute([$tenantId]);
             $guruList = $stmtGuru->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
+            $roles = $_SESSION['roles'] ?? [$_SESSION['role_name'] ?? ''];
+            $isSuperAdmin = in_array('super_admin', $roles, true) || in_array('superadmin', $roles, true);
+            $tenants = [];
+            if ($isSuperAdmin) {
+                $stmtTenants = $db->query("SELECT id, nama_sekolah, npsn FROM core.tenants WHERE id != 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' AND (status = 'active' OR status IS NULL) ORDER BY nama_sekolah ASC");
+                $tenants = $stmtTenants->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            }
+
             $stats = $this->model->getSummaryStats($tenantId);
 
             $this->jsonResponse([
                 'success' => true,
                 'data' => [
+                    'tenants' => $tenants,
                     'tahun_ajaran' => $tahunAjaran,
                     'kelas_list' => $kelasList,
                     'guru_list' => $guruList,

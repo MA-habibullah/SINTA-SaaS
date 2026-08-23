@@ -884,7 +884,7 @@ class NilaiRaporModuleController extends BaseController {
 
             $db->beginTransaction();
             try {
-                $stmt = $db->prepare("UPDATE akademik.detail_nilai_rapor SET is_active = false, updated_at = NOW() WHERE (siswa_id = ? OR siswa_id::text = ?) AND (kelas_id = ? OR kelas_id::text = ?) AND tahun_ajaran = ? AND semester = ? AND tenant_id = ? AND is_active = true");
+                $stmt = $db->prepare("UPDATE akademik.detail_nilai_rapor SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE (siswa_id = ? OR siswa_id::text = ?) AND (kelas_id = ? OR kelas_id::text = ?) AND tahun_ajaran = ? AND semester = ? AND tenant_id = ? AND is_active = true");
                 $stmt->execute([$siswaId, $siswaId, $kelasId, $kelasId, $tahunAjaran, $semester, $tenantId]);
                 $db->commit();
             } catch (\Throwable $e) {

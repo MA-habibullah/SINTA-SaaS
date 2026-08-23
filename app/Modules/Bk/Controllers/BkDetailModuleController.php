@@ -356,7 +356,7 @@ class BkDetailModuleController extends BaseController {
 
             $db->beginTransaction();
 
-            $stmtUpdate = $db->prepare("UPDATE bk.catatan_bk SET status_kasus = ?, updated_at = NOW() WHERE id = ?::uuid");
+            $stmtUpdate = $db->prepare("UPDATE bk.catatan_bk SET status_kasus = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?::uuid");
             $stmtUpdate->execute([$status, $idKasus]);
 
             $currentUserRole = 'guru_bk';
@@ -544,7 +544,7 @@ class BkDetailModuleController extends BaseController {
                         tindak_lanjut = :tindak,
                         status_kasus = :status,
                         is_rahasia = :rahasia,
-                        updated_at = NOW()
+                        updated_at = CURRENT_TIMESTAMP
                     WHERE id = :id::uuid
                 ");
                 $stmt->execute([
@@ -893,7 +893,7 @@ class BkDetailModuleController extends BaseController {
             // Update status pilihan
             $stmtUpd = $db->prepare("
                 UPDATE bk.pilihan_penjurusan
-                SET status = ?, catatan_bk = ?, diproses_oleh = ?, diproses_at = NOW(), updated_at = NOW()
+                SET status = ?, catatan_bk = ?, diproses_oleh = ?, diproses_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
             ");
             $stmtUpd->execute([$statusBaru, $catatanBk ?: null, $userId, $idPilihan]);
@@ -994,8 +994,8 @@ class BkDetailModuleController extends BaseController {
                     catatan_bk    = ?,
                     diajukan_oleh = 'Guru BK',
                     diproses_oleh = ?,
-                    diproses_at   = NOW(),
-                    updated_at    = NOW()
+                    diproses_at   = CURRENT_TIMESTAMP,
+                    updated_at    = CURRENT_TIMESTAMP
                 WHERE id = ?
             ");
             $stmtUpd->execute([$idJurusanBaru, $catatanBk, $userId, $idPilihan]);
@@ -1063,7 +1063,7 @@ class BkDetailModuleController extends BaseController {
 
             $db->beginTransaction();
 
-            $db->prepare("UPDATE bk.pilihan_penjurusan SET dikunci = ?, updated_at = NOW() WHERE id = ?")
+            $db->prepare("UPDATE bk.pilihan_penjurusan SET dikunci = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                ->execute([$dikunci, $idPilihan]);
 
             $aksiLabel = $dikunci ? 'Kunci' : 'Buka Kunci';
@@ -1661,7 +1661,7 @@ class BkDetailModuleController extends BaseController {
                     foto_siswa_prestasi = :foto_siswa_prestasi,
                     foto_kegiatan_lomba = :foto_kegiatan_lomba,
                     surat_tugas_pdf = :surat_tugas_pdf,
-                    updated_at = NOW()
+                    updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id AND tenant_id = :tenant_id
             ");
             $stmtUpdate->execute([
@@ -1754,7 +1754,7 @@ class BkDetailModuleController extends BaseController {
             $siswaIds = $stmtAnggota->fetchAll(\PDO::FETCH_COLUMN);
 
             // Soft delete
-            $stmt = $db->prepare("UPDATE kesiswaan.prestasi_siswa SET deleted_at = NOW() WHERE id = ? AND tenant_id = ?");
+            $stmt = $db->prepare("UPDATE kesiswaan.prestasi_siswa SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND tenant_id = ?");
             $stmt->execute([$idPrestasi, $tenantId]);
 
             foreach ($siswaIds as $sId) {
@@ -2154,7 +2154,7 @@ class BkDetailModuleController extends BaseController {
                     sakit = :sakit,
                     izin = :izin,
                     alfa = :alfa,
-                    updated_at = NOW()
+                    updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
             ");
 
@@ -2495,7 +2495,7 @@ class BkDetailModuleController extends BaseController {
                 UPDATE siswa.absensi_semester SET 
                     is_locked = :is_locked,
                     dikunci = :dikunci,
-                    updated_at = NOW()
+                    updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
             ");
 
@@ -2747,7 +2747,7 @@ class BkDetailModuleController extends BaseController {
                     sakit = :sakit,
                     izin = :izin,
                     alfa = :alfa,
-                    updated_at = NOW()
+                    updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
             ");
 
@@ -2943,7 +2943,7 @@ class BkDetailModuleController extends BaseController {
                     COUNT(ps.id) AS jumlah_kasus
                 FROM bk.pelanggaran_siswa ps
                 WHERE ps.tenant_id = ?
-                  AND ps.created_at >= NOW() - INTERVAL '12 months'
+                  AND ps.created_at >= CURRENT_TIMESTAMP - INTERVAL '12 months'
                 GROUP BY TO_CHAR(ps.created_at, 'YYYY-MM')
                 ORDER BY bulan ASC
             ");
@@ -3077,7 +3077,7 @@ class BkDetailModuleController extends BaseController {
         try {
             $stmt = $db->prepare("
                 UPDATE bk.master_pelanggaran 
-                SET kategori = ?, nama_master_pelanggaran = ?, nama_pelanggaran = ?, bobot_poin = ?, updated_at = NOW()
+                SET kategori = ?, nama_master_pelanggaran = ?, nama_pelanggaran = ?, bobot_poin = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ? AND tenant_id = ?
             ");
             $stmt->execute([$kategori, $namaPelanggaran, $namaPelanggaran, $bobotPoin, $id, $tenantId]);
@@ -3107,7 +3107,7 @@ class BkDetailModuleController extends BaseController {
         try {
             $stmt = $db->prepare("
                 UPDATE bk.master_pelanggaran 
-                SET is_active = FALSE, updated_at = NOW()
+                SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ? AND tenant_id = ?
             ");
             $stmt->execute([$id, $tenantId]);
@@ -3506,7 +3506,7 @@ class BkDetailModuleController extends BaseController {
         }
 
         try {
-            $sql = "UPDATE bk.pelanggaran_siswa SET deskripsi = :deskripsi, updated_at = NOW()";
+            $sql = "UPDATE bk.pelanggaran_siswa SET deskripsi = :deskripsi, updated_at = CURRENT_TIMESTAMP";
             $params = ['deskripsi' => $deskripsi, 'id' => $id, 'tenant_id' => $tenantId];
 
             if ($namaSiswa) {
@@ -3554,7 +3554,7 @@ class BkDetailModuleController extends BaseController {
 
             $stmt = $db->prepare("
                 UPDATE bk.pelanggaran_siswa 
-                SET is_active = FALSE, updated_at = NOW()
+                SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
                 WHERE id::text = ? AND tenant_id = ?
             ");
             $stmt->execute([$id, $tenantId]);
@@ -3779,7 +3779,7 @@ class BkDetailModuleController extends BaseController {
                 INSERT INTO bk.pembinaan_monitoring (
                     id, tenant_id, nama_pembinaan_monitoring, kategori, deskripsi, is_active, surat_panggilan_pdf, foto_bukti, id_user, nama_guru, created_at, updated_at
                 ) VALUES (
-                    gen_random_uuid(), ?, ?, ?, ?, TRUE, ?, ?, ?, ?, NOW(), NOW()
+                    gen_random_uuid(), ?, ?, ?, ?, TRUE, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                 )
             ");
             $stmtIns->execute([
@@ -3879,7 +3879,7 @@ class BkDetailModuleController extends BaseController {
                 ) VALUES (
                     gen_random_uuid(), :tid, :siswa_id, :nama_siswa, :nisn, :kelas, :poin,
                     :jenis, :alasan, :tgl, :jam, :ruang, :guru_nama, :guru_id,
-                    'Menunggu Penerbitan TU', TRUE, NOW(), NOW()
+                    'Menunggu Penerbitan TU', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                 ) RETURNING id
             ");
             $stmtIns->execute([
@@ -3906,7 +3906,7 @@ class BkDetailModuleController extends BaseController {
                     id_pengajuan_surat, status_surat, tanggal_menghadap, ruangan_menghadap, id_user, nama_guru, created_at, updated_at
                 ) VALUES (
                     gen_random_uuid(), :tid, :jenis, :siswa_id, :desc, TRUE,
-                    :p_id, 'Menunggu Penerbitan TU', :tgl, :ruang, :u_id, :u_nama, NOW(), NOW()
+                    :p_id, 'Menunggu Penerbitan TU', :tgl, :ruang, :u_id, :u_nama, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                 )
             ");
             $stmtLog->execute([
@@ -4074,7 +4074,7 @@ class BkDetailModuleController extends BaseController {
                         tahun_mulai = :tahun_menerima,
                         nominal = :nominal,
                         keterangan = :keterangan,
-                        updated_at = NOW()
+                        updated_at = CURRENT_TIMESTAMP
                     WHERE id = :id AND tenant_id = :tenant_id
                 ");
                 $stmt->execute([
@@ -4093,7 +4093,7 @@ class BkDetailModuleController extends BaseController {
                     INSERT INTO siswa.riwayat_beasiswa (
                         id, tenant_id, siswa_id, nama_beasiswa, penyelenggara, tahun_mulai, nominal, keterangan, created_at, updated_at
                     ) VALUES (
-                        gen_random_uuid(), :tenant_id, :siswa_id, :jenis_beasiswa, :sumber, :tahun_menerima, :nominal, :keterangan, NOW(), NOW()
+                        gen_random_uuid(), :tenant_id, :siswa_id, :jenis_beasiswa, :sumber, :tahun_menerima, :nominal, :keterangan, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                     )
                 ");
                 $stmt->execute([
@@ -4411,7 +4411,7 @@ class BkDetailModuleController extends BaseController {
 
             $upsertStmt = $db->prepare("
                 INSERT INTO pdss.kesiapan_siswa (id, tenant_id, siswa_id, tahun_ajaran_id, is_eligible, nilai_rata_rata, ranking_sekolah, updated_at)
-                VALUES (gen_random_uuid(), :tenant_id, :siswa_id, :ta_id, :is_eligible, :nilai_rata_rata, :ranking, NOW())
+                VALUES (gen_random_uuid(), :tenant_id, :siswa_id, :ta_id, :is_eligible, :nilai_rata_rata, :ranking, CURRENT_TIMESTAMP)
             ");
 
             $checkExistingStmt = $db->prepare("
@@ -4424,7 +4424,7 @@ class BkDetailModuleController extends BaseController {
                     is_eligible = :is_eligible,
                     nilai_rata_rata = :nilai_rata_rata,
                     ranking_sekolah = :ranking,
-                    updated_at = NOW()
+                    updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
             ");
 
@@ -4567,7 +4567,7 @@ class BkDetailModuleController extends BaseController {
                     UPDATE pdss.kesiapan_siswa SET
                         is_eligible = :is_eligible,
                         tahun_ajaran_id = COALESCE(:ta_id, tahun_ajaran_id),
-                        updated_at = NOW()
+                        updated_at = CURRENT_TIMESTAMP
                     WHERE id = :id
                 ");
                 $stmt->execute([
@@ -4578,7 +4578,7 @@ class BkDetailModuleController extends BaseController {
             } else {
                 $stmt = $db->prepare("
                     INSERT INTO pdss.kesiapan_siswa (id, tenant_id, siswa_id, tahun_ajaran_id, is_eligible, nilai_rata_rata, ranking_sekolah, updated_at)
-                    VALUES (gen_random_uuid(), :tenant_id, :siswa_id, :ta_id, :is_eligible, 0, 0, NOW())
+                    VALUES (gen_random_uuid(), :tenant_id, :siswa_id, :ta_id, :is_eligible, 0, 0, CURRENT_TIMESTAMP)
                 ");
                 $stmt->execute([
                     'tenant_id'   => $tenantId,
@@ -4669,9 +4669,9 @@ class BkDetailModuleController extends BaseController {
         try {
             $stmt = $db->prepare("
                 INSERT INTO pdss.simulasi_setting (id, tenant_id, tahun_ajaran_id, no_simulasi, is_open, updated_at)
-                VALUES (gen_random_uuid(), ?, ?, ?, TRUE, NOW())
+                VALUES (gen_random_uuid(), ?, ?, ?, TRUE, CURRENT_TIMESTAMP)
                 ON CONFLICT (tenant_id, tahun_ajaran_id, no_simulasi)
-                DO UPDATE SET is_open = NOT pdss.simulasi_setting.is_open, updated_at = NOW()
+                DO UPDATE SET is_open = NOT pdss.simulasi_setting.is_open, updated_at = CURRENT_TIMESTAMP
             ");
             $stmt->execute([$tenantId, $tahunAjaranId ?: null, $noSimulasi]);
             $this->jsonResponse(['success' => true, 'data' => null, 'message' => "Setting Simulasi {$noSimulasi} berhasil diperbarui."]);
@@ -4730,7 +4730,7 @@ class BkDetailModuleController extends BaseController {
         }
 
         try {
-            $stmt = $db->prepare("INSERT INTO pdss.master_kampus (id, nama_kampus, jenis, akreditasi, kota, provinsi, created_at, updated_at) VALUES (gen_random_uuid(), ?, ?, ?, ?, ?, NOW(), NOW())");
+            $stmt = $db->prepare("INSERT INTO pdss.master_kampus (id, nama_kampus, jenis, akreditasi, kota, provinsi, created_at, updated_at) VALUES (gen_random_uuid(), ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
             $stmt->execute([$namaKampus, $jenis, $akreditasi, $kota, $provinsi]);
             $this->jsonResponse(['success' => true, 'data' => null, 'message' => "Kampus '{$namaKampus}' berhasil ditambahkan."]);
         } catch (\Throwable $e) {
@@ -4755,7 +4755,7 @@ class BkDetailModuleController extends BaseController {
         }
 
         try {
-            $stmt = $db->prepare("UPDATE pdss.master_kampus SET nama_kampus = ?, jenis = ?, akreditasi = ?, kota = ?, provinsi = ?, updated_at = NOW() WHERE id = ?");
+            $stmt = $db->prepare("UPDATE pdss.master_kampus SET nama_kampus = ?, jenis = ?, akreditasi = ?, kota = ?, provinsi = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
             $stmt->execute([$namaKampus, $this->sanitize($body['jenis'] ?? 'PTN'), $this->sanitize($body['akreditasi'] ?? ''), $this->sanitize($body['kota'] ?? ''), $this->sanitize($body['provinsi'] ?? ''), $id]);
             $this->jsonResponse(['success' => true, 'data' => null, 'message' => 'Data kampus berhasil diperbarui.']);
         } catch (\Throwable $e) {
