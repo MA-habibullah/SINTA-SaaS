@@ -191,9 +191,9 @@ $isSuperAdmin = ($data['user_role'] ?? '') === 'super_admin';
                                                type="checkbox"
                                                name="access[<?= $role['id'] ?>][]"
                                                value="<?= $menu['id'] ?>"
-                                               data-role="<?= $role['id'] ?>"
-                                               data-menu="<?= $menu['id'] ?>"
-                                               data-parent="<?= $menu['parent_id'] ?: '' ?>"
+                                               data-role="<?= htmlspecialchars((string)$role['id'], ENT_QUOTES, 'UTF-8') ?>"
+                                               data-menu="<?= htmlspecialchars((string)$menu['id'], ENT_QUOTES, 'UTF-8') ?>"
+                                               data-parent="<?= htmlspecialchars((string)($menu['parent_id'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"
                                                <?= $checked ?>
                                                style="cursor: pointer; width: 1.15rem; height: 1.15rem;">
                                     </div>

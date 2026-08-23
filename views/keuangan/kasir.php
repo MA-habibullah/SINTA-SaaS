@@ -372,15 +372,7 @@
     </div>
 </div>
 
-<!-- Data Injection -->
-<script id="user-session" type="application/json">
-    <?php echo json_encode([
-        'is_super_admin' => (($_SESSION['role_name'] ?? '') === 'super_admin'),
-        'tenant_id' => ($_SESSION['tenant_id'] ?? ''),
-        'nama_petugas' => ($_SESSION['nama_lengkap'] ?? $_SESSION['name'] ?? $_SESSION['nama'] ?? $_SESSION['username'] ?? 'Petugas Kasir'),
-        'nama_sekolah' => ($_SESSION['nama_sekolah'] ?? $_SESSION['tenant_name'] ?? 'SINTA SCHOOL')
-    ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>
-</script>
+<!-- Session context is handled via secure session cookie and standard API requests -->
 
 <style>
 [v-cloak] { display: none !important; }

@@ -93,7 +93,7 @@
                 <h5 class="modal-title fw-bold" id="modalDistribusiPaketLabel"><i class="bi bi-box-seam me-2"></i> Form Distribusi Buku Paket Pelajaran</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="<?= $this->getBaseUrl() ?>/perpustakaan/buku-paket" method="POST" data-turbo="false">
+            <form action="<?= htmlspecialchars($this->getBaseUrl(), ENT_QUOTES, 'UTF-8') ?>/perpustakaan/buku-paket" method="POST" data-turbo="false">
                 <div class="modal-body p-4">
                     <div class="row g-3">
                         <div class="col-12 col-md-6">

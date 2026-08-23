@@ -2768,7 +2768,7 @@
                 capturedAlumniImages: [],
                 capturedAlumniImageUrls: [],
                 userRole: '<?php echo htmlspecialchars($user_role ?? ""); ?>',
-                listTenants: <?php echo json_encode($tenantList ?? [], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>,
+                listTenants: [],
                 tempFilterTenantId: '',
                 filterTenantId: '', 
                 jenjangOptions: [],

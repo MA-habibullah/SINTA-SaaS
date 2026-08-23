@@ -1251,11 +1251,11 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
             }
 
             onMounted(() => {
-                const initTab = <?= json_encode($tracer_initial_tab, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-                const isSubModule = <?= json_encode($is_sub_module ?? false, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+                const initTab = 'kuliah';
+                const isSubModule = false;
                 
                 if (isSubModule) {
-                    const selector = <?= json_encode($tracer_vue_selector, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+                    const selector = '#tracer-study-app';
                     const containerEl = document.querySelector(selector);
                     const tabPane = containerEl ? containerEl.closest('.tab-pane') : null;
                     const isVisible = tabPane ? tabPane.classList.contains('active') : true;

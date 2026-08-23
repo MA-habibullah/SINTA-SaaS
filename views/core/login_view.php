@@ -247,7 +247,7 @@
 
     <script>
 {
-        const INITIAL_TENANTS = <?= json_encode($tenants ?? [], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+        const INITIAL_TENANTS = [];
         
         document.addEventListener('DOMContentLoaded', function() {
             Vue.createApp({

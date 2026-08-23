@@ -85,7 +85,7 @@
                 <h5 class="modal-title fw-bold" id="modalEventOSNLabel"><i class="bi bi-trophy me-2"></i> Pendaftaran Event OSN / Kontingen Lomba</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="<?= $this->getBaseUrl() ?>/perpustakaan/event" method="POST" data-turbo="false">
+            <form action="<?= htmlspecialchars($this->getBaseUrl(), ENT_QUOTES, 'UTF-8') ?>/perpustakaan/event" method="POST" data-turbo="false">
                 <div class="modal-body p-4">
                     <div class="row g-3">
                         <div class="col-12 col-md-6">

@@ -6,7 +6,11 @@
 $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
 ?>
 
-<div id="pengumumanApp" v-cloak class="p-3 p-md-4 max-w-7xl mx-auto font-sans">
+<div id="pengumumanApp" 
+     data-is-super-admin="<?= $isSuperAdmin ? 'true' : 'false' ?>" 
+     data-tenant-id="<?= htmlspecialchars((string)($selectedTenantId ?? ''), ENT_QUOTES, 'UTF-8') ?>" 
+     v-cloak 
+     class="p-3 p-md-4 max-w-7xl mx-auto font-sans">
 
     <!-- ═══════════════════════════════════════════════════════════════════════
          1. HERO HEADER & 4 METRIC STAT CARDS
@@ -947,10 +951,11 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
     window.VueAppRegistry.register('#pengumumanApp', {
         setup() {
             // Global State
-            const _baseUrl = <?= json_encode($this->getBaseUrl(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-            const isSuperAdmin = ref(<?= json_encode($isSuperAdmin, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
-            const tenants = ref(<?= json_encode($tenants, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
-            const currentTenantId = ref(<?= json_encode($selectedTenantId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
+            const rootEl = document.getElementById('pengumumanApp');
+            const _baseUrl = document.querySelector('meta[name="base-url"]')?.getAttribute('content') || '<?= htmlspecialchars($this->getBaseUrl(), ENT_QUOTES, 'UTF-8') ?>';
+            const isSuperAdmin = ref(rootEl?.dataset?.isSuperAdmin === 'true');
+            const tenants = ref([]);
+            const currentTenantId = ref(rootEl?.dataset?.tenantId || null);
 
             const activeTab = ref('pengumuman');
             const loading = ref(false);
@@ -1060,6 +1065,9 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
                     }
                     const res = await axios.get(url);
                     if (res.data && res.data.success) {
+                        if (res.data.data.tenants && res.data.data.tenants.length > 0) {
+                            tenants.value = res.data.data.tenants;
+                        }
                         allKategoriList.value = res.data.data.kategori || [];
                         rolesList.value = res.data.data.roles || [];
                         if (res.data.data.stats) {

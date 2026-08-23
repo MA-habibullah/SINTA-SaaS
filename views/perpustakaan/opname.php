@@ -85,7 +85,7 @@
                 <h5 class="modal-title fw-bold" id="modalOpnameBaruLabel"><i class="bi bi-qr-code-scan me-2"></i> Buat Sesi Audit Stock Opname</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="<?= $this->getBaseUrl() ?>/perpustakaan/opname" method="POST" data-turbo="false">
+            <form action="<?= htmlspecialchars($this->getBaseUrl(), ENT_QUOTES, 'UTF-8') ?>/perpustakaan/opname" method="POST" data-turbo="false">
                 <div class="modal-body p-4">
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Judul Sesi Audit Opname <span class="text-danger">*</span></label>

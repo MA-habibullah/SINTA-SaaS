@@ -628,7 +628,7 @@
             // Initial empty refs populated onMounted
             const tenant = ref({});
             const logoPreview = ref(null);
-            const isSuperAdmin = ref(<?= json_encode($user_role === 'super_admin', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
+            const isSuperAdmin = ref(document.getElementById('profil-sekolah-app')?.dataset?.isSuperAdmin === 'true');
             
             // Cert Modal State
             const showCertModal = ref(false);

@@ -171,13 +171,7 @@
     </div>
 </div>
 
-<!-- User Session Context -->
-<script id="user-session" type="application/json">
-    <?php echo json_encode([
-        'is_super_admin' => (($_SESSION['role_name'] ?? '') === 'super_admin'),
-        'tenant_id' => ($_SESSION['tenant_id'] ?? '')
-    ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>
-</script>
+<!-- User Session Context is handled securely via standard session cookie -->
 
 <style>
 /* Styling Tabel Modern Borderless (Gambar 1) */

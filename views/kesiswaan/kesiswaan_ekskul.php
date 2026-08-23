@@ -4,7 +4,11 @@
  * Path: views/kesiswaan/kesiswaan_ekskul.php
  */
 ?>
-<div id="ekskulApp" class="container-fluid px-3 px-md-4 py-4" v-cloak>
+<div id="ekskulApp" 
+     class="container-fluid px-3 px-md-4 py-4" 
+     data-is-super-admin="<?= $isSuperAdmin ? 'true' : 'false' ?>" 
+     data-tenant-id="<?= htmlspecialchars((string)($selectedTenantId ?? ''), ENT_QUOTES, 'UTF-8') ?>" 
+     v-cloak>
 
     <!-- ═══════════════════════════════════════════════════════════════════════
          1. HERO BANNER & STATISTIK RINGKASAN
@@ -34,11 +38,11 @@
                         </p>
                     </div>
 
-                    <!-- Right Controls: Super Admin Tenant Filter (Persis Desain Acuan Gambar 1) -->
+                    <!-- Right Controls: Super Admin Tenant Filter (Persis Desain Acuan Modern SaaS) -->
                     <div v-if="isSuperAdmin && tenants.length > 0" class="d-flex align-items-center gap-2 flex-wrap flex-shrink-0">
-                        <div class="d-flex align-items-center gap-2 bg-white/15 p-2 rounded-xl border border-white/25 shadow-xs" style="backdrop-filter: blur(6px); width: fit-content;">
-                            <i class="bi bi-buildings text-white fs-6 ms-1.5"></i>
-                            <select v-model="currentTenantId" @change="onTenantChange()" class="form-select form-select-sm border-0 text-xs font-semibold bg-white text-slate-800 rounded-lg shadow-2xs cursor-pointer" style="min-width: 240px; max-width: 280px; width: auto !important; background-color: #ffffff !important; color: #0f172a !important;">
+                        <div class="d-flex align-items-center gap-2 bg-white/15 p-2 ps-3 pe-2 rounded-2xl border border-white/30 shadow-xs" style="backdrop-filter: blur(8px);">
+                            <i class="bi bi-buildings text-white fs-6"></i>
+                            <select v-model="currentTenantId" @change="onTenantChange()" class="form-select form-select-sm border-0 text-xs font-bold rounded-xl shadow-2xs cursor-pointer py-2 px-3" style="width: auto; min-width: 220px; max-width: 280px; background-color: #ffffff !important; color: #0f172a !important; -webkit-text-fill-color: #0f172a !important;">
                                 <option v-for="t in tenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}{{ t.npsn ? ' (' + t.npsn + ')' : '' }}</option>
                             </select>
                         </div>
@@ -1275,10 +1279,11 @@
     window.VueAppRegistry.register('#ekskulApp', {
         setup() {
             // Global App State
-            const _baseUrl = <?= json_encode($this->getBaseUrl(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-            const isSuperAdmin = ref(<?= json_encode($isSuperAdmin, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
-            const tenants = ref(<?= json_encode($tenants, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
-            const currentTenantId = ref(<?= json_encode($selectedTenantId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
+            const rootEl = document.getElementById('ekskulApp');
+            const _baseUrl = document.querySelector('meta[name="base-url"]')?.getAttribute('content') || '<?= htmlspecialchars($this->getBaseUrl(), ENT_QUOTES, 'UTF-8') ?>';
+            const isSuperAdmin = ref(rootEl?.dataset?.isSuperAdmin === 'true');
+            const tenants = ref([]);
+            const currentTenantId = ref(rootEl?.dataset?.tenantId || null);
 
             const activeTab = ref('master');
             const loading = ref(false);
@@ -1438,6 +1443,12 @@
                     if (currentTenantId.value) url += `?tenant_id=${encodeURIComponent(currentTenantId.value)}`;
                     const res = await axios.get(url);
                     if (res.data.success && res.data.data) {
+                        if (res.data.data.tenants && res.data.data.tenants.length > 0) {
+                            tenants.value = res.data.data.tenants;
+                            if (!currentTenantId.value) {
+                                currentTenantId.value = tenants.value[0].id;
+                            }
+                        }
                         listTahunAjaran.value = res.data.data.tahun_ajaran || [];
                         listKelasMaster.value = res.data.data.kelas_list || [];
                         listGuruMaster.value = res.data.data.guru_list || [];

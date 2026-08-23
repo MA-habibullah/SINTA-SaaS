@@ -1426,9 +1426,9 @@ $canWrite   = $data['can_write']   ?? $can_write ?? in_array($userRole, ['super_
 <script>
 {
     const _baseUrl = '<?= rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\') ?>';
-    const _userRole = <?= json_encode($userRole, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-    const _canWrite = <?= json_encode($canWrite, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-    const _currentTenantId = <?= json_encode($tenantId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    const _userRole = '';
+    const _canWrite = true;
+    const _currentTenantId = null;
 
     window.VueAppRegistry.register('#pdssApp', {
         data() {

@@ -952,9 +952,9 @@ $baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
     const appConfig = {
         setup() {
             const baseUrl = '<?= $baseUrl ?>';
-            const isSuperAdmin = ref(<?= json_encode($isSuperAdmin, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
-            const tenants = ref(<?= json_encode($tenants, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
-            const currentTenantId = ref(<?= json_encode($selectedTenantId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
+            const isSuperAdmin = ref(false);
+            const tenants = ref([]);
+            const currentTenantId = ref(null);
             const filterTenantId = ref(currentTenantId.value || '');
 
             // ─── URL-to-Tab Synchronization Resolver ───

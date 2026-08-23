@@ -388,7 +388,7 @@
                                             <button class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-blue-600 hover:bg-blue-50 hover:border-blue-200 flex items-center justify-center transition-colors" title="Edit" onclick="editKategori(<?= htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8') ?>)">
                                                 <i class="bi bi-pencil-square"></i>
                                             </button>
-                                            <button class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-red-600 hover:bg-red-50 hover:border-red-200 flex items-center justify-center transition-colors" title="Hapus" onclick="deleteKategori(<?= $row['id'] ?>)">
+                                            <button class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-red-600 hover:bg-red-50 hover:border-red-200 flex items-center justify-center transition-colors" title="Hapus" onclick="deleteKategori(<?= htmlspecialchars((string)$row['id'], ENT_QUOTES, 'UTF-8') ?>)">
                                                 <i class="bi bi-trash3"></i>
                                             </button>
                                         </div>

@@ -614,7 +614,7 @@ $userRole = $_SESSION['role_name'] ?? $_SESSION['user']['role'] ?? '';
             const loading = ref(false);
             let searchTimeout = null;
 
-            const isSuperAdmin = ref(<?= json_encode($isSuperAdmin ?? false, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
+            const isSuperAdmin = ref(document.getElementById('activity-logs-app')?.dataset?.isSuperAdmin === 'true');
             const tenantOptions = ref([]);
             const roleOptions = ref([]);
             const tableOptions = ref([]);

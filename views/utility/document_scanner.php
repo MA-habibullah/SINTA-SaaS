@@ -856,7 +856,7 @@
                 modeBookBtn.classList.remove('active');
                 toggleSpineBtn.classList.remove('hidden');
 
-                document.getElementById('tip-text').innerHTML = `<strong>Tips:</strong> Geser titik penanda berwarna biru (cyan) pada sudut dokumen di atas jika hasil potong otomatis kurang presisi.`;
+                document.getElementById('tip-text').innerHTML = '<strong>Tips:</strong> Geser titik penanda berwarna biru (cyan) pada sudut dokumen di atas jika hasil potong otomatis kurang presisi.';
                 document.getElementById('comp-size-label').innerText = "Ukuran Hasil";
                 document.getElementById('comp-ratio-label').innerText = "Rasio Hemat";
 

@@ -1,5 +1,6 @@
 <!-- Halaman Sentral: Master Data Kelembagaan -->
-<div id="masterKelembagaanApp" v-cloak>
+<div id="masterKelembagaanApp" data-user-role="<?= htmlspecialchars($userRole, ENT_QUOTES, 'UTF-8') ?>" data-tenant-id="<?= htmlspecialchars((string)($tenantId ?? ''), ENT_QUOTES, 'UTF-8') ?>" v-cloak>
+
     
     <!-- Row Header & Tabs -->
     <div class="row mb-3 mb-md-4 align-items-start">
@@ -624,8 +625,8 @@
                     { id: 'kurikulum', name: 'Kurikulum', icon: 'bi bi-gear-wide-connected' }
                 ],
                 activeTab: 'pendidikan',
-                userRole: <?= json_encode($user_role ?? '', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
-                listTenants: <?php echo json_encode($tenant_list ?? [], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>,
+                userRole: document.getElementById('masterKelembagaanApp')?.dataset?.userRole || '<?= htmlspecialchars($userRole ?? '', ENT_QUOTES, 'UTF-8') ?>',
+                listTenants: [],
                 filterTenantId: '', // Filter sekolah aktif (Super Admin only)
                 listData: [],
                 listJenjang: [], // Opsi khusus dropdown Kelas
@@ -658,11 +659,27 @@
             };
         },
         mounted() {
+            const rootEl = document.getElementById('masterKelembagaanApp');
+            if (rootEl?.dataset?.userRole) {
+                this.userRole = rootEl.dataset.userRole;
+            }
+            if (this.userRole === 'super_admin') {
+                this.fetchTenantsList();
+            }
             this.fetchData(1);
             this.fetchAuxiliaryData();
-            // listTenants sudah di-inject via PHP (json_encode), tidak perlu fetch API
         },
         methods: {
+            async fetchTenantsList() {
+                try {
+                    const res = await axios.get('<?= htmlspecialchars($this->getBaseUrl(), ENT_QUOTES, 'UTF-8') ?>/api/v1/kelembagaan/tenants');
+                    if (res.data && res.data.success) {
+                        this.listTenants = res.data.data || [];
+                    }
+                } catch (e) {
+                    console.error('Gagal memuat daftar sekolah:', e);
+                }
+            },
             getModal() {
                 const el = document.getElementById('formModal');
                 return (el && typeof bootstrap !== 'undefined' && bootstrap.Modal) ? bootstrap.Modal.getOrCreateInstance(el) : null;

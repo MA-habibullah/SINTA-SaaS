@@ -4499,11 +4499,11 @@ if (str_starts_with($defaultMainTab, 'p_')) {
 const { ref, computed, onMounted, nextTick } = Vue;
 
 // Inject PHP variables safely
-const _tenantId  = <?= json_encode($tenantId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-const _userRole  = <?= json_encode($userRole, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-const _userId    = <?= json_encode($_SESSION['user_id'] ?? '', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+const _tenantId = '';
+const _userRole = '';
+const _userId = '';
 const _baseUrl   = '<?php echo $baseUrl ?? rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\'); ?>';
-const _tahunAjaranList = <?= json_encode($tahunAjaranList, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+const _tahunAjaranList = [];
 
 window.VueAppRegistry.register('#bkApp', {
     setup() {
