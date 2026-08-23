@@ -242,5 +242,46 @@ class BaseController {
         $tenantId = $this->tenantId ?: ($_SESSION['tenant_id'] ?? null);
         return $tenantId ? (string)$tenantId : null;
     }
+
+    /**
+     * Dapatkan token CSRF aktif untuk sesi saat ini
+     */
+    protected function getCsrfToken(): string
+    {
+        return SessionManager::getCsrfToken();
+    }
+
+    /**
+     * Validasi token CSRF pada request mutasi data (POST/PUT/DELETE)
+     *
+     * @param ?string $token Token opsional jika dikirim manual
+     * @param bool $autoExit Jika true, langsung kirim response 403 jika tidak valid
+     * @return bool True jika valid
+     */
+    protected function validateCsrfToken(?string $token = null, bool $autoExit = true): bool
+    {
+        if ($token === null) {
+            $token = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null;
+            if (!$token) {
+                $rawInput = $this->getJsonInput();
+                $token = $rawInput['_csrf_token'] ?? ($rawInput['csrf_token'] ?? ($_POST['_csrf_token'] ?? ($_POST['csrf_token'] ?? null)));
+            }
+        }
+
+        $valid = SessionManager::validateCsrfToken($token);
+
+        if (!$valid && $autoExit) {
+            if ($this->isJsonRequest()) {
+                $this->jsonResponse(false, null, 'Sesi keamanan tidak valid atau telah kedaluwarsa (CSRF token mismatch). Silakan segarkan halaman.', 403);
+            } else {
+                http_response_code(403);
+                header('Content-Type: text/plain; charset=utf-8');
+                echo "403 Forbidden: Sesi keamanan tidak valid (CSRF token mismatch).";
+                exit;
+            }
+        }
+
+        return $valid;
+    }
 }
 

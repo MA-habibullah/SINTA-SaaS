@@ -248,4 +248,27 @@ class SessionManager {
             error_log("Failed to run SessionManager::cleanupStaleSessions: " . $e->getMessage());
         }
     }
+
+    /**
+     * Dapatkan atau buat token CSRF baru di sesi
+     */
+    public static function getCsrfToken(): string {
+        self::start();
+        if (empty($_SESSION['csrf_token'])) {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        }
+        return $_SESSION['csrf_token'];
+    }
+
+    /**
+     * Validasi kecocokan token CSRF dengan timing-safe comparison
+     */
+    public static function validateCsrfToken(?string $token): bool {
+        self::start();
+        if (empty($token) || empty($_SESSION['csrf_token'])) {
+            return false;
+        }
+        return hash_equals($_SESSION['csrf_token'], $token);
+    }
 }
+

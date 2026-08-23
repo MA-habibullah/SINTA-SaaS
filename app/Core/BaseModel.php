@@ -15,6 +15,9 @@ abstract class BaseModel {
     }
 
     public static function getTableName(): string {
+        if (str_contains(static::$table, '.')) {
+            return static::$table;
+        }
         if (!empty(static::$schema) && static::$schema !== 'public') {
             return static::$schema . '.' . static::$table;
         }

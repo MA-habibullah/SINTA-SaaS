@@ -1,6 +1,9 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
+    # Proteksi Berkas Rahasia & Konfigurasi (.env, .git, .yaml, .json, .log, dll.)
+    RewriteRule ^(\.env|\.git|\.user\.ini|composer\.(json|lock)|package\.(json|lock)|.*\.log|.*\.sql|.*\.md)$ - [F,L,NC]
+
     # Jangan mengarahkan request jika file atau direktori fisik memang ada di server
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
@@ -8,3 +11,12 @@
     # Arahkan seluruh request sisa (seperti /login, /admin, /api/v1/...) ke index.php
     RewriteRule ^(.*)$ index.php [L,QSA]
 </IfModule>
+
+# Blokir akses langsung ke file sensitif
+<FilesMatch "^\.(env|git|htaccess|htpasswd|ini|log|sh|inc|bak|sql)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Matikan directory browsing
+Options -Indexes

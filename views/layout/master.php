@@ -98,28 +98,35 @@
     })();
     </script>
 
+    <!-- Base URL & CSRF Token Meta -->
+    <meta name="base-url" content="<?= htmlspecialchars($this->getBaseUrl(), ENT_QUOTES, 'UTF-8') ?>">
+    <meta name="csrf-token" content="<?= htmlspecialchars(\App\Core\SessionManager::getCsrfToken(), ENT_QUOTES, 'UTF-8') ?>">
+    <script>
+        window.BASE_URL = '<?= htmlspecialchars($this->getBaseUrl(), ENT_QUOTES, 'UTF-8') ?>';
+    </script>
+
     <!-- Google Fonts: Plus Jakarta Sans & Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" data-turbo-track="reload">
     
     <!-- Bootstrap 5.3 CSS -->
-    <link href="<?= $this->getBaseUrl() ?>/assets/css/bootstrap.min.css" rel="stylesheet" data-turbo-track="reload">
+    <link href="<?= htmlspecialchars($this->getBaseUrl(), ENT_QUOTES, 'UTF-8') ?>/assets/css/bootstrap.min.css" rel="stylesheet" data-turbo-track="reload">
     
     <!-- Bootstrap Icons -->
-    <link href="<?= $this->getBaseUrl() ?>/assets/css/bootstrap-icons.css" rel="stylesheet" data-turbo-track="reload">
+    <link href="<?= htmlspecialchars($this->getBaseUrl(), ENT_QUOTES, 'UTF-8') ?>/assets/css/bootstrap-icons.css" rel="stylesheet" data-turbo-track="reload">
     
     <!-- jQuery 3.7.0 -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js" data-turbo-track="reload"></script>
     
     <!-- Bootstrap Bundle with Popper -->
-    <script src="<?= $this->getBaseUrl() ?>/assets/js/bootstrap.bundle.min.js" data-turbo-track="reload"></script>
+    <script src="<?= htmlspecialchars($this->getBaseUrl(), ENT_QUOTES, 'UTF-8') ?>/assets/js/bootstrap.bundle.min.js" data-turbo-track="reload"></script>
     
     <!-- Vue 3 Global Build -->
-    <script src="<?= $this->getBaseUrl() ?>/assets/js/vue.global.prod.js" data-turbo-track="reload"></script>
+    <script src="<?= htmlspecialchars($this->getBaseUrl(), ENT_QUOTES, 'UTF-8') ?>/assets/js/vue.global.prod.js" data-turbo-track="reload"></script>
     
     <!-- Axios (API Requests client) -->
-    <script src="<?= $this->getBaseUrl() ?>/assets/js/axios.min.js" data-turbo-track="reload"></script>
+    <script src="<?= htmlspecialchars($this->getBaseUrl(), ENT_QUOTES, 'UTF-8') ?>/assets/js/axios.min.js" data-turbo-track="reload"></script>
     
     <!-- Tailwind CSS (Play CDN) with Preflight disabled to prevent conflicts with Bootstrap -->
     <script data-turbo-track="reload">
@@ -149,16 +156,17 @@
         };
     </script>
     <script src="https://unpkg.com/core-js-bundle@3.37.1/minified.js"></script>
-    <link rel="stylesheet" href="<?= $this->getBaseUrl() ?>/assets/css/tailwind.css">
+    <link rel="stylesheet" href="<?= htmlspecialchars($this->getBaseUrl(), ENT_QUOTES, 'UTF-8') ?>/assets/css/tailwind.css">
 
     <!-- Hotwire Turbo Drive -->
-    <script src="<?= $this->getBaseUrl() ?>/assets/js/turbo.es2017-umd.js" defer data-turbo-track="reload"></script>
+    <script src="<?= htmlspecialchars($this->getBaseUrl(), ENT_QUOTES, 'UTF-8') ?>/assets/js/turbo.es2017-umd.js" defer data-turbo-track="reload"></script>
     
     <!-- SweetAlert2 (Loaded globally to support all pages offline) -->
-    <script src="<?= $this->getBaseUrl() ?>/assets/js/sweetalert2.all.min.js" data-turbo-track="reload"></script>
+    <script src="<?= htmlspecialchars($this->getBaseUrl(), ENT_QUOTES, 'UTF-8') ?>/assets/js/sweetalert2.all.min.js" data-turbo-track="reload"></script>
     
     <!-- Chart.js (Loaded globally to support offline graphs without race conditions) -->
-    <script src="<?= $this->getBaseUrl() ?>/assets/js/chart.umd.js" data-turbo-track="reload"></script>
+    <script src="<?= htmlspecialchars($this->getBaseUrl(), ENT_QUOTES, 'UTF-8') ?>/assets/js/chart.umd.js" data-turbo-track="reload"></script>
+
     
     <!-- Vue 3 Lifecycle Registry and Turbo Drive Integration -->
     <script>
@@ -208,14 +216,18 @@
             }
         });
 
-        // Debug Mode: Global Axios Interceptor
+        // Global Axios Configuration & Interceptors
         if (window.axios) {
+            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            if (csrfMeta && csrfMeta.getAttribute('content')) {
+                axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfMeta.getAttribute('content');
+            }
             axios.interceptors.response.use(
                 response => response,
                 error => {
                     const status = error.response ? error.response.status : null;
                     if (status === 401) {
-                        window.location.href = '<?= $this->getBaseUrl() ?>/login';
+                        window.location.href = '<?= htmlspecialchars($this->getBaseUrl(), ENT_QUOTES, 'UTF-8') ?>/login';
                         return new Promise(() => {}); // Gantung request agar tidak memicu error modal/alert lain di halaman
                     }
                     const statusText = status || 'Network / Timeout Error';
@@ -228,7 +240,6 @@
                             '\nPayload Response:', data,
                             '\nRequest Config:', error.config
                         );
-                        alert('API Error: ' + statusText + '\n(Periksa Developer Console Chrome untuk detail data payload)');
                     }
                     return Promise.reject(error);
                 }
@@ -865,11 +876,11 @@
 
             const pref = localStorage.getItem('sinta_viewport_preference') || 'mobile';
             if (pref === 'desktop') {
-                txt.innerHTML = '🖥️ Mode Desktop';
+                txt.textContent = '🖥️ Mode Desktop';
                 btn.classList.remove('btn-outline-secondary');
                 btn.classList.add('btn-primary');
             } else {
-                txt.innerHTML = '📱 Mode Mobile';
+                txt.textContent = '📱 Mode Mobile';
                 btn.classList.remove('btn-primary');
                 btn.classList.add('btn-outline-secondary');
             }
