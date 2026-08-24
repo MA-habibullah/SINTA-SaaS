@@ -600,24 +600,12 @@ class EkskulModel {
 
     public function saveNilaiBatch(string $tenantId, string $ekskulId, string $tahunAjaranId, string $semester, array $grades): int {
         $saved = 0;
-        $stmtUpsert = $this->db->prepare("
-            INSERT INTO kesiswaan.nilai_ekskul (
-                tenant_id, ekskul_id, siswa_id, tahun_ajaran_id, semester, predikat, nilai_angka, keterangan, updated_at
-            ) VALUES (
-                :tenant_id, :ekskul_id, :siswa_id, :ta_id, :semester, :predikat, :nilai_angka, :keterangan, CURRENT_TIMESTAMP
-            )
-            ON CONFLICT (id) DO UPDATE SET
-                predikat = EXCLUDED.predikat,
-                nilai_angka = EXCLUDED.nilai_angka,
-                keterangan = EXCLUDED.keterangan,
-                updated_at = CURRENT_TIMESTAMP
-        ");
 
         $stmtCheck = $this->db->prepare("
             SELECT id FROM kesiswaan.nilai_ekskul
-            WHERE tenant_id = :tenant_id 
-              AND ekskul_id = :ekskul_id 
-              AND siswa_id = :siswa_id 
+            WHERE (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)
+              AND ekskul_id = :ekskul_id::uuid 
+              AND siswa_id = :siswa_id::uuid 
               AND tahun_ajaran_id = :ta_id 
               AND semester = :semester
             LIMIT 1
@@ -629,14 +617,14 @@ class EkskulModel {
                 nilai_angka = :nilai_angka,
                 keterangan = :keterangan,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = :id AND tenant_id = :tenant_id
+            WHERE id = :id::uuid AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)
         ");
 
         $stmtInsert = $this->db->prepare("
             INSERT INTO kesiswaan.nilai_ekskul (
-                tenant_id, ekskul_id, siswa_id, tahun_ajaran_id, semester, predikat, nilai_angka, keterangan
+                id, tenant_id, ekskul_id, siswa_id, tahun_ajaran_id, semester, predikat, nilai_angka, keterangan, created_at, updated_at
             ) VALUES (
-                :tenant_id, :ekskul_id, :siswa_id, :ta_id, :semester, :predikat, :nilai_angka, :keterangan
+                gen_random_uuid(), :tenant_id::uuid, :ekskul_id::uuid, :siswa_id::uuid, :ta_id, :semester, :predikat, :nilai_angka, :keterangan, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
             )
         ");
 
@@ -691,7 +679,7 @@ class EkskulModel {
         $stmt = $this->db->prepare("
             SELECT lock_anggota, lock_nilai, locked_by, locked_at
             FROM kesiswaan.kunci_ekskul
-            WHERE tenant_id = :tenant_id 
+            WHERE (tenant_id = :tenant_id OR tenant_id IS NULL)
               AND ekskul_id = :ekskul_id 
               AND tahun_ajaran_id = :ta_id 
               AND semester = :semester
@@ -735,7 +723,7 @@ class EkskulModel {
 
         $stmtCheck = $this->db->prepare("
             SELECT id FROM kesiswaan.kunci_ekskul
-            WHERE tenant_id = :tenant_id AND ekskul_id = :ekskul_id AND tahun_ajaran_id = :ta_id AND semester = :semester
+            WHERE (tenant_id = :tenant_id OR tenant_id IS NULL) AND ekskul_id = :ekskul_id AND tahun_ajaran_id = :ta_id AND semester = :semester
             LIMIT 1
         ");
         $stmtCheck->execute([
@@ -754,7 +742,7 @@ class EkskulModel {
                     locked_by = :locked_by,
                     locked_at = CURRENT_TIMESTAMP,
                     updated_at = CURRENT_TIMESTAMP
-                WHERE id = :id AND tenant_id = :tenant_id
+                WHERE id = :id AND (tenant_id = :tenant_id OR tenant_id IS NULL)
             ");
             $stmt->bindValue(':id', $existingId);
             $stmt->bindValue(':tenant_id', $tenantId);
@@ -793,10 +781,21 @@ class EkskulModel {
        ═══════════════════════════════════════════════════════════════════════ */
 
     public function getSummaryStats(string $tenantId): array {
-        $totalEkskul = (int)$this->db->query("SELECT COUNT(*) FROM kesiswaan.master_ekskul WHERE tenant_id = '{$tenantId}' AND deleted_at IS NULL AND is_active = true")->fetchColumn();
-        $totalPembina = (int)$this->db->query("SELECT COUNT(*) FROM kesiswaan.data_pembina WHERE tenant_id = '{$tenantId}' AND is_active = true")->fetchColumn();
-        $totalAnggota = (int)$this->db->query("SELECT COUNT(DISTINCT siswa_id) FROM kesiswaan.anggota_ekskul WHERE tenant_id = '{$tenantId}' AND status_keanggotaan = 'Aktif'")->fetchColumn();
-        $totalJurnal = (int)$this->db->query("SELECT COUNT(*) FROM kesiswaan.jurnal_ekskul WHERE tenant_id = '{$tenantId}'")->fetchColumn();
+        $stmtEkskul = $this->db->prepare("SELECT COUNT(*) FROM kesiswaan.master_ekskul WHERE (tenant_id = :tenant_id OR tenant_id IS NULL) AND deleted_at IS NULL AND is_active = true");
+        $stmtEkskul->execute([':tenant_id' => $tenantId]);
+        $totalEkskul = (int)$stmtEkskul->fetchColumn();
+
+        $stmtPembina = $this->db->prepare("SELECT COUNT(*) FROM kesiswaan.data_pembina WHERE (tenant_id = :tenant_id OR tenant_id IS NULL) AND is_active = true");
+        $stmtPembina->execute([':tenant_id' => $tenantId]);
+        $totalPembina = (int)$stmtPembina->fetchColumn();
+
+        $stmtAnggota = $this->db->prepare("SELECT COUNT(DISTINCT siswa_id) FROM kesiswaan.anggota_ekskul WHERE (tenant_id = :tenant_id OR tenant_id IS NULL) AND status_keanggotaan = 'Aktif'");
+        $stmtAnggota->execute([':tenant_id' => $tenantId]);
+        $totalAnggota = (int)$stmtAnggota->fetchColumn();
+
+        $stmtJurnal = $this->db->prepare("SELECT COUNT(*) FROM kesiswaan.jurnal_ekskul WHERE (tenant_id = :tenant_id OR tenant_id IS NULL)");
+        $stmtJurnal->execute([':tenant_id' => $tenantId]);
+        $totalJurnal = (int)$stmtJurnal->fetchColumn();
 
         return [
             'total_ekskul' => $totalEkskul,

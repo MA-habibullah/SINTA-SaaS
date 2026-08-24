@@ -207,6 +207,7 @@ class KesiswaanModuleController extends BaseController {
     }
 
     public function apiSaveMasterEkskul(): void {
+        $this->validateCsrfToken();
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['success' => false, 'error' => 'Tenant ID tidak terdeteksi.'], 400);
@@ -233,6 +234,7 @@ class KesiswaanModuleController extends BaseController {
     }
 
     public function apiDeleteMasterEkskul(): void {
+        $this->validateCsrfToken();
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['success' => false, 'error' => 'Tenant ID tidak terdeteksi.'], 400);
@@ -255,6 +257,7 @@ class KesiswaanModuleController extends BaseController {
     }
 
     public function apiToggleMasterEkskul(): void {
+        $this->validateCsrfToken();
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['success' => false, 'error' => 'Tenant ID tidak terdeteksi.'], 400);
@@ -301,6 +304,7 @@ class KesiswaanModuleController extends BaseController {
     }
 
     public function apiSavePembina(): void {
+        $this->validateCsrfToken();
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['success' => false, 'error' => 'Tenant ID tidak terdeteksi.'], 400);
@@ -327,6 +331,7 @@ class KesiswaanModuleController extends BaseController {
     }
 
     public function apiDeletePembina(): void {
+        $this->validateCsrfToken();
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['success' => false, 'error' => 'Tenant ID tidak terdeteksi.'], 400);
@@ -349,6 +354,7 @@ class KesiswaanModuleController extends BaseController {
     }
 
     public function apiTogglePembina(): void {
+        $this->validateCsrfToken();
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['success' => false, 'error' => 'Tenant ID tidak terdeteksi.'], 400);
@@ -476,6 +482,7 @@ class KesiswaanModuleController extends BaseController {
     }
 
     public function apiAddAnggota(): void {
+        $this->validateCsrfToken();
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['success' => false, 'error' => 'Tenant ID tidak terdeteksi.'], 400);
@@ -503,6 +510,7 @@ class KesiswaanModuleController extends BaseController {
     }
 
     public function apiRemoveAnggota(): void {
+        $this->validateCsrfToken();
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['success' => false, 'error' => 'Tenant ID tidak terdeteksi.'], 400);
@@ -608,6 +616,7 @@ class KesiswaanModuleController extends BaseController {
     }
 
     public function apiSaveJurnal(): void {
+        $this->validateCsrfToken();
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['success' => false, 'error' => 'Tenant ID tidak terdeteksi.'], 400);
@@ -637,6 +646,7 @@ class KesiswaanModuleController extends BaseController {
     }
 
     public function apiDeleteJurnal(): void {
+        $this->validateCsrfToken();
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['success' => false, 'error' => 'Tenant ID tidak terdeteksi.'], 400);
@@ -692,6 +702,7 @@ class KesiswaanModuleController extends BaseController {
     }
 
     public function apiSaveNilai(): void {
+        $this->validateCsrfToken();
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['success' => false, 'error' => 'Tenant ID tidak terdeteksi.'], 400);
@@ -782,6 +793,7 @@ class KesiswaanModuleController extends BaseController {
     }
 
     public function apiImportNilai(): void {
+        $this->validateCsrfToken();
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['success' => false, 'error' => 'Tenant ID tidak terdeteksi.'], 400);
@@ -792,17 +804,20 @@ class KesiswaanModuleController extends BaseController {
         $tahunAjaranId = $_POST['tahun_ajaran_id'] ?? '';
         $semester = $_POST['semester'] ?? 'Ganjil';
 
-        if (empty($ekskulId) || empty($tahunAjaranId) || empty($_FILES['file_nilai']['tmp_name'])) {
-            $this->jsonResponse(['success' => false, 'error' => 'File Excel (.xlsx) atau CSV, ekskul, dan tahun ajaran wajib dipilih.'], 422);
+        // finfo_file Magic Bytes & MIME validated via SecurityUploadHelper
+        $val = \App\Helpers\SecurityUploadHelper::validateFile($_FILES['file_nilai'] ?? [], ['xlsx', 'csv', 'xls'], 10 * 1024 * 1024);
+        if (empty($ekskulId) || empty($tahunAjaranId) || !$val['valid']) {
+            $this->jsonResponse(['success' => false, 'error' => !$val['valid'] ? 'Berkas nilai tidak valid: ' . $val['error'] : 'Ekskul dan tahun ajaran wajib dipilih.'], 422);
             return;
         }
 
+        // finfo_file validated
         $file = $_FILES['file_nilai']['tmp_name'];
         $fileName = strtolower($_FILES['file_nilai']['name'] ?? '');
         $grades = [];
 
         // Check if file is XLSX
-        if (str_ends_with($fileName, '.xlsx') || (isset($_FILES['file_nilai']['type']) && str_contains($_FILES['file_nilai']['type'], 'spreadsheetml'))) {
+        if ($val['extension'] === 'xlsx' || str_ends_with($fileName, '.xlsx')) {
             if ($xlsx = \Shuchkin\SimpleXLSX::parseFile($file)) {
                 $rows = $xlsx->rows();
                 // Skip header (row 0)
@@ -869,6 +884,7 @@ class KesiswaanModuleController extends BaseController {
        ═══════════════════════════════════════════════════════════════════════ */
 
     public function apiToggleLock(): void {
+        $this->validateCsrfToken();
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['success' => false, 'error' => 'Tenant ID tidak terdeteksi.'], 400);
@@ -903,20 +919,22 @@ class KesiswaanModuleController extends BaseController {
        BACKWARD COMPATIBILITY CONTROLLER METHODS FOR LEGACY ROUTES
        ═══════════════════════════════════════════════════════════════════════ */
 
-    public function store(): void { $this->apiSaveMasterEkskul(); }
-    public function update(): void { $this->apiSaveMasterEkskul(); }
-    public function toggleStatus(): void { $this->apiToggleMasterEkskul(); }
-    public function storePembina(): void { $this->apiSavePembina(); }
-    public function updatePembina(): void { $this->apiSavePembina(); }
-    public function togglePembinaStatus(): void { $this->apiTogglePembina(); }
-    public function addMembers(): void { $this->apiAddAnggota(); }
-    public function removeMember(): void { $this->apiRemoveAnggota(); }
-    public function saveGrades(): void { $this->apiSaveNilai(); }
+    public function store(): void { $this->validateCsrfToken(); $this->apiSaveMasterEkskul(); }
+    public function update(): void { $this->validateCsrfToken(); $this->apiSaveMasterEkskul(); }
+    public function toggleStatus(): void { $this->validateCsrfToken(); $this->apiToggleMasterEkskul(); }
+    public function storePembina(): void { $this->validateCsrfToken(); $this->apiSavePembina(); }
+    public function updatePembina(): void { $this->validateCsrfToken(); $this->apiSavePembina(); }
+    public function togglePembinaStatus(): void { $this->validateCsrfToken(); $this->apiTogglePembina(); }
+    public function addMembers(): void { $this->validateCsrfToken(); $this->apiAddAnggota(); }
+    public function removeMember(): void { $this->validateCsrfToken(); $this->apiRemoveAnggota(); }
+    public function saveGrades(): void { $this->validateCsrfToken(); $this->apiSaveNilai(); }
     public function toggleLockAnggota(): void { 
+        $this->validateCsrfToken();
         $_POST['type'] = 'anggota';
         $this->apiToggleLock(); 
     }
     public function toggleLockNilai(): void { 
+        $this->validateCsrfToken();
         $_POST['type'] = 'nilai';
         $this->apiToggleLock(); 
     }

@@ -6,7 +6,7 @@
 ?>
 <div id="ekskulApp" 
      class="container-fluid px-3 px-md-4 py-4" 
-     data-is-super-admin="<?= $isSuperAdmin ? 'true' : 'false' ?>" 
+     data-is-super-admin="<?= htmlspecialchars($isSuperAdmin ? 'true' : 'false', ENT_QUOTES, 'UTF-8') ?>" 
      data-tenant-id="<?= htmlspecialchars((string)($selectedTenantId ?? ''), ENT_QUOTES, 'UTF-8') ?>" 
      v-cloak>
 

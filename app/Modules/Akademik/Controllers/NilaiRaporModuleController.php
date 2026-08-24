@@ -98,8 +98,15 @@ class NilaiRaporModuleController extends BaseController {
     }
 
     private function getStudentsInKelas(PDO $db, string $kelasId, string $tenantId, string $tahunAjaran, string $semester): array {
-        $stK = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id::text = :id LIMIT 1");
-        $stK->execute(['id' => $kelasId]);
+        $sqlK = "SELECT nama_kelas FROM akademik.kelas WHERE id::text = :id";
+        $paramsK = ['id' => $kelasId];
+        if (!empty($tenantId) && $tenantId !== 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
+            $sqlK .= " AND (tenant_id::text = :tenant_id OR tenant_id IS NULL)";
+            $paramsK['tenant_id'] = $tenantId;
+        }
+        $sqlK .= " LIMIT 1";
+        $stK = $db->prepare($sqlK);
+        $stK->execute($paramsK);
         $namaKelas = $stK->fetchColumn() ?: '';
 
         $params = [
@@ -408,8 +415,15 @@ class NilaiRaporModuleController extends BaseController {
         if (!$tenantId)  die("Tenant ID tidak terdeteksi.");
         if (empty($kelasId) || empty($tahunAjaran) || empty($semester)) die("Parameter tidak lengkap.");
 
-        $stKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE (id::text = :id) LIMIT 1");
-        $stKelas->execute(['id' => $kelasId]);
+        $sqlKelas = "SELECT nama_kelas FROM akademik.kelas WHERE (id::text = :id)";
+        $paramsKelas = ['id' => $kelasId];
+        if (!empty($tenantId) && $tenantId !== 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
+            $sqlKelas .= " AND (tenant_id::text = :tenant_id OR tenant_id IS NULL)";
+            $paramsKelas['tenant_id'] = $tenantId;
+        }
+        $sqlKelas .= " LIMIT 1";
+        $stKelas = $db->prepare($sqlKelas);
+        $stKelas->execute($paramsKelas);
         $kelasName = $stKelas->fetchColumn() ?: 'Kelas';
 
         $semList = ($semester === 'Ganjil' || $semester === '1') ? ['Ganjil', '1'] : ['Genap', '2'];
@@ -505,15 +519,13 @@ class NilaiRaporModuleController extends BaseController {
         $tenantId = $this->resolveTenantId($db, $kelasId);
         if (!$tenantId) { $this->jsonResponse(false, null, 'Tenant ID tidak terdeteksi.', 400); return; }
 
-        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-            $this->jsonResponse(false, null, 'File tidak terunggah.', 400); return;
+        // finfo_file Magic Bytes & MIME validated via SecurityUploadHelper
+        $val = \App\Helpers\SecurityUploadHelper::validateFile($_FILES['file'] ?? [], ['xlsx', 'xls'], 10 * 1024 * 1024);
+        if (!$val['valid']) {
+            $this->jsonResponse(false, null, 'Berkas Excel tidak valid: ' . $val['error'], 400); return;
         }
 
-        $fileExt = strtolower(pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION));
-        if ($fileExt !== 'xlsx') {
-            $this->jsonResponse(false, null, 'Hanya file .xlsx yang didukung.', 400); return;
-        }
-
+        // finfo_file validated
         $xlsx = \Shuchkin\SimpleXLSX::parse($_FILES['file']['tmp_name']);
         if (!$xlsx) {
             $this->jsonResponse(false, null, 'Gagal membaca Excel: ' . \Shuchkin\SimpleXLSX::parseError(), 400); return;
@@ -540,8 +552,15 @@ class NilaiRaporModuleController extends BaseController {
                        (($fileSem === '2' || $fileSem === 'Genap') && ($semester === '2' || $semester === 'Genap'));
 
             if ($fileTA !== $tahunAjaran || !$semMatch || (!empty($fileKelasId) && $fileKelasId !== $kelasId)) {
-                $stK = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id::text = :id LIMIT 1");
-                $stK->execute(['id' => $kelasId]);
+                $sqlK = "SELECT nama_kelas FROM akademik.kelas WHERE id::text = :id";
+                $paramsK = ['id' => $kelasId];
+                if (!empty($tenantId) && $tenantId !== 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
+                    $sqlK .= " AND (tenant_id::text = :tenant_id OR tenant_id IS NULL)";
+                    $paramsK['tenant_id'] = $tenantId;
+                }
+                $sqlK .= " LIMIT 1";
+                $stK = $db->prepare($sqlK);
+                $stK->execute($paramsK);
                 $selKelasName = $stK->fetchColumn() ?: 'Kelas';
 
                 $msg = "Berkas Excel ini untuk Tahun Ajaran {$fileTA} - Semester {$fileSem} - Kelas {$fileKelasName}.\n" .
@@ -574,8 +593,15 @@ class NilaiRaporModuleController extends BaseController {
         $officialIds       = array_column($officialStudents, 'id');
         $officialIdsMap    = array_flip($officialIds);
 
-        $stK = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id::text = :id LIMIT 1");
-        $stK->execute(['id' => $kelasId]);
+        $sqlK = "SELECT nama_kelas FROM akademik.kelas WHERE id::text = :id";
+        $paramsK = ['id' => $kelasId];
+        if (!empty($tenantId) && $tenantId !== 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
+            $sqlK .= " AND (tenant_id::text = :tenant_id OR tenant_id IS NULL)";
+            $paramsK['tenant_id'] = $tenantId;
+        }
+        $sqlK .= " LIMIT 1";
+        $stK = $db->prepare($sqlK);
+        $stK->execute($paramsK);
         $selKelasName = $stK->fetchColumn() ?: 'Kelas';
 
         $stSiswaList = $db->prepare("SELECT id::text AS id, nisn, nis, nama_lengkap, agama FROM siswa.siswa WHERE (tenant_id::text = :tenant_id OR tenant_id IS NULL) AND (is_active = true OR is_active IS NULL)");
@@ -697,15 +723,13 @@ class NilaiRaporModuleController extends BaseController {
         $tenantId = $this->resolveTenantId($db, $kelasId);
         if (!$tenantId) { $this->jsonResponse(false, null, 'Tenant ID tidak terdeteksi.', 400); return; }
 
-        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-            $this->jsonResponse(false, null, 'File tidak terunggah.', 400); return;
+        // finfo_file Magic Bytes & MIME validated via SecurityUploadHelper
+        $val = \App\Helpers\SecurityUploadHelper::validateFile($_FILES['file'] ?? [], ['xlsx', 'xls'], 10 * 1024 * 1024);
+        if (!$val['valid']) {
+            $this->jsonResponse(false, null, 'Berkas Excel tidak valid: ' . $val['error'], 400); return;
         }
 
-        $fileExt = strtolower(pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION));
-        if ($fileExt !== 'xlsx') {
-            $this->jsonResponse(false, null, 'Hanya file .xlsx yang didukung.', 400); return;
-        }
-
+        // finfo_file validated
         $xlsx = \Shuchkin\SimpleXLSX::parse($_FILES['file']['tmp_name']);
         if (!$xlsx) {
             $this->jsonResponse(false, null, 'Gagal membaca Excel: ' . \Shuchkin\SimpleXLSX::parseError(), 400); return;
@@ -732,8 +756,15 @@ class NilaiRaporModuleController extends BaseController {
                        (($fileSem === '2' || $fileSem === 'Genap') && ($semester === '2' || $semester === 'Genap'));
 
             if ($fileTA !== $tahunAjaran || !$semMatch || (!empty($fileKelasId) && $fileKelasId !== $kelasId)) {
-                $stK = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id::text = :id LIMIT 1");
-                $stK->execute(['id' => $kelasId]);
+                $sqlK = "SELECT nama_kelas FROM akademik.kelas WHERE id::text = :id";
+                $paramsK = ['id' => $kelasId];
+                if (!empty($tenantId) && $tenantId !== 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
+                    $sqlK .= " AND (tenant_id::text = :tenant_id OR tenant_id IS NULL)";
+                    $paramsK['tenant_id'] = $tenantId;
+                }
+                $sqlK .= " LIMIT 1";
+                $stK = $db->prepare($sqlK);
+                $stK->execute($paramsK);
                 $selKelasName = $stK->fetchColumn() ?: 'Kelas';
 
                 $msg = "Berkas Excel ini untuk Tahun Ajaran {$fileTA} - Semester {$fileSem} - Kelas {$fileKelasName}.\n" .
@@ -766,8 +797,15 @@ class NilaiRaporModuleController extends BaseController {
         $officialIds       = array_column($officialStudents, 'id');
         $officialIdsMap    = array_flip($officialIds);
 
-        $stK = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id::text = :id LIMIT 1");
-        $stK->execute(['id' => $kelasId]);
+        $sqlK = "SELECT nama_kelas FROM akademik.kelas WHERE id::text = :id";
+        $paramsK = ['id' => $kelasId];
+        if (!empty($tenantId) && $tenantId !== 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
+            $sqlK .= " AND (tenant_id::text = :tenant_id OR tenant_id IS NULL)";
+            $paramsK['tenant_id'] = $tenantId;
+        }
+        $sqlK .= " LIMIT 1";
+        $stK = $db->prepare($sqlK);
+        $stK->execute($paramsK);
         $selKelasName = $stK->fetchColumn() ?: 'Kelas';
 
         $stSiswaList = $db->prepare("SELECT id::text AS id, nisn, nis, nama_lengkap, agama FROM siswa.siswa WHERE (tenant_id::text = :tenant_id OR tenant_id IS NULL) AND (is_active = true OR is_active IS NULL)");
@@ -855,6 +893,7 @@ class NilaiRaporModuleController extends BaseController {
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 $this->jsonResponse(false, null, 'Method not allowed.', 405); return;
             }
+            $this->validateCsrfToken();
 
             $siswaId     = $_POST['siswa_id']    ?? '';
             $kelasId     = $_POST['kelas_id']    ?? '';

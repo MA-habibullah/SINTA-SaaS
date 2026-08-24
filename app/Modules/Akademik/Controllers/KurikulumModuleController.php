@@ -129,7 +129,7 @@ class KurikulumModuleController extends BaseController {
             $stmtRef = $db->prepare("SELECT id, nama_ref_kurikulum AS nama_kurikulum, kategori AS tipe_penilaian FROM akademik.ref_kurikulum WHERE is_active = true AND (tenant_id::text = :tenant_id OR tenant_id IS NULL) ORDER BY nama_ref_kurikulum ASC");
             $stmtRef->execute(['tenant_id' => $tenantId]);
         } else {
-            $stmtRef = $db->prepare("SELECT id, nama_ref_kurikulum AS nama_kurikulum, kategori AS tipe_penilaian FROM akademik.ref_kurikulum WHERE is_active = true ORDER BY nama_ref_kurikulum ASC");
+            $stmtRef = $db->prepare("SELECT id, nama_ref_kurikulum AS nama_kurikulum, kategori AS tipe_penilaian FROM akademik.ref_kurikulum WHERE is_active = true AND (tenant_id IS NULL OR tenant_id::text = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') ORDER BY nama_ref_kurikulum ASC");
             $stmtRef->execute();
         }
         $kurikulumList = $stmtRef->fetchAll(PDO::FETCH_ASSOC) ?: [];
@@ -450,12 +450,21 @@ class KurikulumModuleController extends BaseController {
 
         if ($row) {
             $col = $type === 'kurikulum' ? 'is_locked_kurikulum' : 'is_locked_nilai';
-            $update = $db->prepare("UPDATE akademik.kunci_akademik SET {$col} = ? WHERE id = ?");
-            $update->execute([$status, $row['id']]);
+            $update = $db->prepare("UPDATE akademik.kunci_akademik SET {$col} = :status WHERE id = :id AND tenant_id = :tenant_id");
+            $update->execute([
+                'status'    => $status,
+                'id'        => $row['id'],
+                'tenant_id' => $tenantId
+            ]);
         } else {
             $col = $type === 'kurikulum' ? 'is_locked_kurikulum' : 'is_locked_nilai';
-            $insert = $db->prepare("INSERT INTO akademik.kunci_akademik (tenant_id, tahun_ajaran, semester, {$col}) VALUES (?, ?, ?, ?)");
-            $insert->execute([$tenantId, $tahunAjaran, $semester, $status]);
+            $insert = $db->prepare("INSERT INTO akademik.kunci_akademik (tenant_id, tahun_ajaran, semester, {$col}) VALUES (:tenant_id, :tahun_ajaran, :semester, :status)");
+            $insert->execute([
+                'tenant_id'    => $tenantId,
+                'tahun_ajaran' => $tahunAjaran,
+                'semester'     => $semester,
+                'status'       => $status
+            ]);
         }
 
         $this->jsonResponse(true, ['message' => 'Status kunci berhasil diperbarui.']);

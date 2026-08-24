@@ -955,8 +955,8 @@ class PdssDetailModuleController extends BaseController {
             }
 
             // Ambil nama tahun ajaran
-            $stmtTaName = $db->prepare("SELECT nama_tahun_ajaran FROM akademik.tahun_ajaran WHERE id = ? LIMIT 1");
-            $stmtTaName->execute([$tahunAjaranId]);
+            $stmtTaName = $db->prepare("SELECT nama_tahun_ajaran FROM akademik.tahun_ajaran WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1");
+            $stmtTaName->execute([$tahunAjaranId, $tenantId]);
             $selectedTaName = $stmtTaName->fetchColumn() ?: null;
 
             // Ambil siswa kelas 12 via helper cohort terpadu
@@ -1590,8 +1590,8 @@ class PdssDetailModuleController extends BaseController {
             $configMapels = $stmtSelected->fetchAll(PDO::FETCH_ASSOC);
 
             // Ambil data siswa aktif kelas 12
-            $stmtTaName = $db->prepare("SELECT nama_tahun_ajaran FROM akademik.tahun_ajaran WHERE id = ? LIMIT 1");
-            $stmtTaName->execute([$tahunAjaranId]);
+            $stmtTaName = $db->prepare("SELECT nama_tahun_ajaran FROM akademik.tahun_ajaran WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1");
+            $stmtTaName->execute([$tahunAjaranId, $tenantId]);
             $selectedTaName = $stmtTaName->fetchColumn() ?: null;
 
             $students = $this->getKelas12Students($tenantId, $selectedTaName);
@@ -2440,37 +2440,50 @@ class PdssDetailModuleController extends BaseController {
             return;
         }
 
+        $this->validateCsrfToken();
+
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['success' => false, 'error' => 'Tenant tidak terdeteksi.'], 200);
             return;
         }
 
-        $siswaId = $_POST['siswa_id'] ?? '';
-        $tahunAjaranId = $_POST['tahun_ajaran_id'] ?? null;
+        $siswaId = htmlspecialchars(strip_tags(trim($_POST['siswa_id'] ?? '')), ENT_QUOTES, 'UTF-8');
+        $tahunAjaranId = !empty($_POST['tahun_ajaran_id']) ? htmlspecialchars(strip_tags(trim($_POST['tahun_ajaran_id'])), ENT_QUOTES, 'UTF-8') : null;
         $noSimulasi = (int)($_POST['no_simulasi'] ?? 3);
 
-        if (empty($siswaId) || empty($_FILES['bukti_file'])) {
-            $this->jsonResponse(['success' => false, 'error' => 'Pilih file bukti yang akan diunggah.'], 200);
+        if (empty($siswaId) || !preg_match('/^[a-f0-9\-]{36}$/i', $siswaId)) {
+            $this->jsonResponse(['success' => false, 'error' => 'Pilih siswa terlebih dahulu.'], 200);
             return;
         }
 
-        $file = $_FILES['bukti_file'];
-        if ($file['error'] !== UPLOAD_ERR_OK) {
-            $this->jsonResponse(['success' => false, 'error' => 'Terjadi kesalahan saat mengunggah file.'], 200);
+        $file = $_FILES['bukti_file'] ?? [];
+        if (empty($file) || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || empty($file['tmp_name'])) {
+            $this->jsonResponse(['success' => false, 'error' => 'File bukti simulasi wajib diunggah.'], 200);
             return;
         }
 
-        $maxSize = 10 * 1024 * 1024; // 10MB
-        if ($file['size'] > $maxSize) {
+        if (!is_uploaded_file($file['tmp_name'])) {
+            $this->jsonResponse(['success' => false, 'error' => 'File unggahan tidak valid.'], 200);
+            return;
+        }
+
+        // Validasi otentik Magic Bytes & MIME Type
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
+
+        $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+        $ext = strtolower(pathinfo($file['name'] ?? '', PATHINFO_EXTENSION));
+        $allowedExts = ['jpg', 'jpeg', 'png', 'webp', 'pdf'];
+
+        if (!in_array($mimeType, $allowedMimes, true) || !in_array($ext, $allowedExts, true)) {
+            $this->jsonResponse(['success' => false, 'error' => 'Format file tidak diizinkan. Hanya menerima PDF, JPG, PNG, atau WEBP otentik.'], 200);
+            return;
+        }
+
+        if ($file['size'] > 10 * 1024 * 1024) {
             $this->jsonResponse(['success' => false, 'error' => 'Ukuran file maksimal 10MB.'], 200);
-            return;
-        }
-
-        $allowedExts = ['pdf', 'jpg', 'jpeg', 'png', 'webp'];
-        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-        if (!in_array($ext, $allowedExts, true)) {
-            $this->jsonResponse(['success' => false, 'error' => 'Format file tidak didukung. Hanya PDF, JPG, PNG, WEBP.'], 200);
             return;
         }
 
@@ -2478,7 +2491,7 @@ class PdssDetailModuleController extends BaseController {
             $db = \App\Config\Database::getConnection();
 
             if (empty($tahunAjaranId)) {
-                $stmtTA = $db->prepare("SELECT id FROM akademik.tahun_ajaran WHERE tenant_id = ? ORDER BY is_active DESC, id DESC LIMIT 1");
+                $stmtTA = $db->prepare("SELECT id FROM akademik.tahun_ajaran WHERE (tenant_id = ? OR tenant_id IS NULL) ORDER BY is_active DESC, id DESC LIMIT 1");
                 $stmtTA->execute([$tenantId]);
                 $tahunAjaranId = $stmtTA->fetchColumn();
             }
@@ -2493,6 +2506,7 @@ class PdssDetailModuleController extends BaseController {
                 }
                 $filename = 'bukti_sim_' . $noSimulasi . '_' . $siswaId . '_' . time() . '.' . $ext;
                 $targetAbs = $uploadDir . $filename;
+                // finfo_file Magic Bytes validated on upload
                 if (!move_uploaded_file($file['tmp_name'], $targetAbs)) {
                     $this->jsonResponse(['success' => false, 'error' => 'Gagal menyimpan file ke penyimpanan server.'], 200);
                     return;
@@ -2515,7 +2529,7 @@ class PdssDetailModuleController extends BaseController {
                 $file['name'],
                 $storedRelPath,
                 $file['size'],
-                $file['type'] ?? 'application/octet-stream'
+                $mimeType
             ]);
 
             $this->jsonResponse(['success' => true, 'message' => 'Berkas bukti simulasi berhasil diunggah.']);

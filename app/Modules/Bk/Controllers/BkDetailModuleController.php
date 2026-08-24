@@ -126,12 +126,13 @@ class BkDetailModuleController extends BaseController {
         try {
             $db = \App\Config\Database::getConnection();
             if ($tenantId) {
-                $stmt = $db->prepare("SELECT id, COALESCE(nama_tahun_ajaran, '2025/2026') AS tahun_ajaran, is_active FROM akademik.tahun_ajaran WHERE tenant_id = ? AND is_active = TRUE ORDER BY created_at DESC");
-                $stmt->execute([$tenantId]);
+                $stmt = $db->prepare("SELECT id, COALESCE(nama_tahun_ajaran, '2025/2026') AS tahun_ajaran, is_active FROM akademik.tahun_ajaran WHERE (tenant_id = :tenant_id OR tenant_id IS NULL) AND is_active = TRUE ORDER BY created_at DESC");
+                $stmt->execute(['tenant_id' => $tenantId]);
                 $tahunAjaranList = $stmt->fetchAll(\PDO::FETCH_ASSOC);
             }
             if (empty($tahunAjaranList)) {
-                $stmt = $db->query("SELECT id, COALESCE(nama_tahun_ajaran, '2025/2026') AS tahun_ajaran, is_active FROM akademik.tahun_ajaran WHERE is_active = TRUE ORDER BY created_at DESC");
+                $stmt = $db->prepare("SELECT id, COALESCE(nama_tahun_ajaran, '2025/2026') AS tahun_ajaran, is_active FROM akademik.tahun_ajaran WHERE (tenant_id = :tenant_id OR tenant_id IS NULL) AND is_active = TRUE ORDER BY created_at DESC");
+                $stmt->execute(['tenant_id' => $tenantId]);
                 $tahunAjaranList = $stmt->fetchAll(\PDO::FETCH_ASSOC);
             }
         } catch (\Throwable $e) {
@@ -356,8 +357,8 @@ class BkDetailModuleController extends BaseController {
 
             $db->beginTransaction();
 
-            $stmtUpdate = $db->prepare("UPDATE bk.catatan_bk SET status_kasus = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?::uuid");
-            $stmtUpdate->execute([$status, $idKasus]);
+            $stmtUpdate = $db->prepare("UPDATE bk.catatan_bk SET status_kasus = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?::uuid AND (?::uuid IS NULL OR tenant_id = ?::uuid OR tenant_id IS NULL)");
+            $stmtUpdate->execute([$status, $idKasus, $tenantId, $tenantId]);
 
             $currentUserRole = 'guru_bk';
             foreach (['super_admin', 'operator_sekolah', 'guru_bk'] as $allowed) {
@@ -1063,8 +1064,8 @@ class BkDetailModuleController extends BaseController {
 
             $db->beginTransaction();
 
-            $db->prepare("UPDATE bk.pilihan_penjurusan SET dikunci = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
-               ->execute([$dikunci, $idPilihan]);
+            $db->prepare("UPDATE bk.pilihan_penjurusan SET dikunci = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)")
+               ->execute([$dikunci, $idPilihan, $tenantId]);
 
             $aksiLabel = $dikunci ? 'Kunci' : 'Buka Kunci';
             $this->writeLog($db, [
@@ -1340,6 +1341,8 @@ class BkDetailModuleController extends BaseController {
             return;
         }
 
+        $this->validateCsrfToken();
+
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['error' => 'Tenant tidak terdeteksi.'], 400);
@@ -1490,6 +1493,8 @@ class BkDetailModuleController extends BaseController {
             return;
         }
 
+        $this->validateCsrfToken();
+
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['error' => 'Tenant tidak terdeteksi.'], 400);
@@ -1509,7 +1514,7 @@ class BkDetailModuleController extends BaseController {
             $newUploadedPaths = [];
 
             // Ambil data prestasi saat ini
-            $stmtGet = $db->prepare("SELECT * FROM kesiswaan.prestasi_siswa WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL LIMIT 1");
+            $stmtGet = $db->prepare("SELECT * FROM kesiswaan.prestasi_siswa WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL) AND deleted_at IS NULL LIMIT 1");
             $stmtGet->execute([$idPrestasi, $tenantId]);
             $current = $stmtGet->fetch(\PDO::FETCH_ASSOC);
 
@@ -1538,8 +1543,13 @@ class BkDetailModuleController extends BaseController {
             $siswaIds     = json_decode($siswaIdsJson, true);
             if (!is_array($siswaIds) || empty($siswaIds)) {
                 // Fallback: keep relasi anggota yang sudah ada (mode edit siswa terkunci)
-                $stmtExistingAnggota = $db->prepare("SELECT id_siswa FROM kesiswaan.prestasi_siswa_anggota WHERE id_prestasi = ?");
-                $stmtExistingAnggota->execute([$idPrestasi]);
+                $stmtExistingAnggota = $db->prepare("
+                    SELECT a.id_siswa 
+                    FROM kesiswaan.prestasi_siswa_anggota a 
+                    JOIN kesiswaan.prestasi_siswa p ON a.id_prestasi = p.id 
+                    WHERE a.id_prestasi = ? AND (p.tenant_id = ? OR p.tenant_id IS NULL)
+                ");
+                $stmtExistingAnggota->execute([$idPrestasi, $tenantId]);
                 $siswaIds = array_column($stmtExistingAnggota->fetchAll(\PDO::FETCH_ASSOC), 'id_siswa');
                 if (empty($siswaIds)) {
                     $this->jsonResponse(['error' => 'Minimal pilih satu siswa.'], 422);
@@ -1593,17 +1603,27 @@ class BkDetailModuleController extends BaseController {
 
             foreach ($fileKeys as $formKey => &$dbVal) {
                 if (isset($_FILES[$formKey]) && $_FILES[$formKey]['error'] === UPLOAD_ERR_OK) {
+                    $allowedExt = ($formKey === 'surat_tugas_pdf') ? ['pdf', 'jpg', 'jpeg', 'png'] : ['jpg', 'jpeg', 'png'];
+                    $val = \App\Helpers\SecurityUploadHelper::validateFile($_FILES[$formKey], $allowedExt, 1024 * 1024);
+                    if (!$val['valid']) {
+                        throw new \Exception("Berkas {$formKey}: " . $val['error']);
+                    }
                     $tmpName   = $_FILES[$formKey]['tmp_name'];
                     $fileName  = $_FILES[$formKey]['name'];
                     $fileSize  = $_FILES[$formKey]['size'];
-                    $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+                    $extension = $val['extension'];
 
-                    $allowedExt = ($formKey === 'surat_tugas_pdf') ? ['pdf', 'jpg', 'jpeg', 'png'] : ['jpg', 'jpeg', 'png'];
-                    if (!in_array($extension, $allowedExt, true)) {
-                        throw new \Exception("Ekstensi berkas {$formKey} tidak diizinkan.");
-                    }
-                    if ($fileSize > 1024 * 1024) {
-                        throw new \Exception("Ukuran berkas {$formKey} melebihi batas 1 MB.");
+                    // Verifikasi Magic Bytes & MIME Type biner
+                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                    $detectedMime = finfo_file($finfo, $tmpName);
+                    finfo_close($finfo);
+
+                    $allowedMimes = ($formKey === 'surat_tugas_pdf') 
+                        ? ['application/pdf', 'image/jpeg', 'image/png'] 
+                        : ['image/jpeg', 'image/png', 'image/webp'];
+
+                    if (!in_array($detectedMime, $allowedMimes, true)) {
+                        throw new \Exception("Format berkas {$formKey} tidak aman (MIME: {$detectedMime}).");
                     }
 
                     // Kompres dan simpan menggunakan FileCompressor
@@ -1662,7 +1682,7 @@ class BkDetailModuleController extends BaseController {
                     foto_kegiatan_lomba = :foto_kegiatan_lomba,
                     surat_tugas_pdf = :surat_tugas_pdf,
                     updated_at = CURRENT_TIMESTAMP
-                WHERE id = :id AND tenant_id = :tenant_id
+                WHERE id = :id::uuid AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)
             ");
             $stmtUpdate->execute([
                 'tahun_ajaran_id'     => $tahunAjaranId,
@@ -1688,7 +1708,10 @@ class BkDetailModuleController extends BaseController {
             ]);
 
             // Sync anggota pivot table
-            $db->prepare("DELETE FROM kesiswaan.prestasi_siswa_anggota WHERE id_prestasi = ?")->execute([$idPrestasi]);
+            $db->prepare("DELETE FROM kesiswaan.prestasi_siswa_anggota a USING kesiswaan.prestasi_siswa p WHERE a.id_prestasi = p.id AND a.id_prestasi = :id_prestasi::uuid AND (:tenant_id::uuid IS NULL OR p.tenant_id = :tenant_id::uuid OR p.tenant_id IS NULL)")->execute([
+                'id_prestasi' => $idPrestasi,
+                'tenant_id'   => $tenantId
+            ]);
             $stmtAnggota = $db->prepare("INSERT INTO kesiswaan.prestasi_siswa_anggota (id_prestasi, id_siswa) VALUES (?, ?)");
             foreach ($siswaIds as $sId) {
                 $stmtAnggota->execute([$idPrestasi, $sId]);
@@ -1731,6 +1754,8 @@ class BkDetailModuleController extends BaseController {
             return;
         }
 
+        $this->validateCsrfToken();
+
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['error' => 'Tenant tidak terdeteksi.'], 400);
@@ -1749,12 +1774,17 @@ class BkDetailModuleController extends BaseController {
             $db = \App\Config\Database::getConnection();
 
             // Get student IDs before soft-deleting prestasi
-            $stmtAnggota = $db->prepare("SELECT id_siswa FROM kesiswaan.prestasi_siswa_anggota WHERE id_prestasi = ?");
-            $stmtAnggota->execute([$idPrestasi]);
+            $stmtAnggota = $db->prepare("
+                SELECT a.id_siswa 
+                FROM kesiswaan.prestasi_siswa_anggota a 
+                JOIN kesiswaan.prestasi_siswa p ON a.id_prestasi = p.id 
+                WHERE a.id_prestasi = ? AND (p.tenant_id = ? OR p.tenant_id IS NULL)
+            ");
+            $stmtAnggota->execute([$idPrestasi, $tenantId]);
             $siswaIds = $stmtAnggota->fetchAll(\PDO::FETCH_COLUMN);
 
             // Soft delete
-            $stmt = $db->prepare("UPDATE kesiswaan.prestasi_siswa SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND tenant_id = ?");
+            $stmt = $db->prepare("UPDATE kesiswaan.prestasi_siswa SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)");
             $stmt->execute([$idPrestasi, $tenantId]);
 
             foreach ($siswaIds as $sId) {
@@ -1830,17 +1860,27 @@ class BkDetailModuleController extends BaseController {
 
         foreach ($fileKeys as $formKey => &$dbVal) {
             if (isset($_FILES[$formKey]) && $_FILES[$formKey]['error'] === UPLOAD_ERR_OK) {
+                $allowedExt = ($formKey === 'surat_tugas_pdf') ? ['pdf', 'jpg', 'jpeg', 'png'] : ['jpg', 'jpeg', 'png'];
+                $val = \App\Helpers\SecurityUploadHelper::validateFile($_FILES[$formKey], $allowedExt, 1024 * 1024);
+                if (!$val['valid']) {
+                    throw new \Exception("Format berkas {$formKey}: " . $val['error']);
+                }
                 $tmpName   = $_FILES[$formKey]['tmp_name'];
                 $fileName  = $_FILES[$formKey]['name'];
                 $fileSize  = $_FILES[$formKey]['size'];
-                $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+                $extension = $val['extension'];
 
-                $allowedExt = ($formKey === 'surat_tugas_pdf') ? ['pdf', 'jpg', 'jpeg', 'png'] : ['jpg', 'jpeg', 'png'];
-                if (!in_array($extension, $allowedExt, true)) {
-                    throw new \Exception("Format berkas {$formKey} tidak diizinkan.");
-                }
-                if ($fileSize > 1024 * 1024) {
-                    throw new \Exception("Ukuran berkas {$formKey} melebihi batas 1 MB.");
+                // Verifikasi Magic Bytes & MIME Type biner
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $detectedMime = finfo_file($finfo, $tmpName);
+                finfo_close($finfo);
+
+                $allowedMimes = ($formKey === 'surat_tugas_pdf') 
+                    ? ['application/pdf', 'image/jpeg', 'image/png'] 
+                    : ['image/jpeg', 'image/png', 'image/webp'];
+
+                if (!in_array($detectedMime, $allowedMimes, true)) {
+                    throw new \Exception("Format berkas {$formKey} tidak aman (MIME: {$detectedMime}).");
                 }
 
                 // Kompres dan simpan menggunakan FileCompressor
@@ -2572,12 +2612,32 @@ class BkDetailModuleController extends BaseController {
             return;
         }
 
+        $val = \App\Helpers\SecurityUploadHelper::validateFile($_FILES['file'], ['xlsx', 'xls'], 10 * 1024 * 1024);
+        if (!$val['valid']) {
+            $this->jsonResponse(['error' => 'Format file tidak valid: ' . $val['error']], 400);
+            return;
+        }
+
         $fileTmp = $_FILES['file']['tmp_name'];
         $fileName = $_FILES['file']['name'];
-        $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+        $fileExt = $val['extension'];
 
-        if ($fileExt !== 'xlsx') {
-            $this->jsonResponse(['error' => 'Format file tidak valid. Unggah berkas Excel (.xlsx) hasil ekspor template.'], 400);
+        // Verifikasi Magic Bytes & MIME Type langsung
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $detectedMime = finfo_file($finfo, $fileTmp);
+        finfo_close($finfo);
+
+        $allowedMimes = [
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-excel',
+            'application/x-msexcel',
+            'application/zip',
+            'application/x-zip-compressed',
+            'application/octet-stream'
+        ];
+
+        if (!in_array($detectedMime, $allowedMimes, true)) {
+            $this->jsonResponse(['error' => "Format berkas tidak aman (MIME: {$detectedMime})."], 400);
             return;
         }
 
@@ -3024,6 +3084,8 @@ class BkDetailModuleController extends BaseController {
 
     /** POST /api/v1/bk/pelanggaran/master */
     public function apiStoreMasterPelanggaran(): void {
+        $this->validateCsrfToken();
+
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
@@ -3058,6 +3120,8 @@ class BkDetailModuleController extends BaseController {
 
     /** POST /api/v1/bk/pelanggaran/master/update */
     public function apiUpdateMasterPelanggaran(): void {
+        $this->validateCsrfToken();
+
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
@@ -3078,7 +3142,7 @@ class BkDetailModuleController extends BaseController {
             $stmt = $db->prepare("
                 UPDATE bk.master_pelanggaran 
                 SET kategori = ?, nama_master_pelanggaran = ?, nama_pelanggaran = ?, bobot_poin = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE id = ? AND tenant_id = ?
+                WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)
             ");
             $stmt->execute([$kategori, $namaPelanggaran, $namaPelanggaran, $bobotPoin, $id, $tenantId]);
 
@@ -3091,6 +3155,7 @@ class BkDetailModuleController extends BaseController {
 
     /** POST /api/v1/bk/pelanggaran/master/delete */
     public function apiDeleteMasterPelanggaran(): void {
+        $this->validateCsrfToken();
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
@@ -3220,6 +3285,8 @@ class BkDetailModuleController extends BaseController {
 
     /** POST /api/v1/bk/pelanggaran/catatan */
     public function apiStoreCatatanPelanggaran(): void {
+        $this->validateCsrfToken();
+
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
@@ -3234,16 +3301,16 @@ class BkDetailModuleController extends BaseController {
 
         $namaSiswa = $this->sanitize($input['nama_siswa'] ?? ($_POST['nama_siswa'] ?? 'Siswa'));
         if (!empty($siswaId)) {
-            $stmtS = $db->prepare("SELECT nama_lengkap FROM siswa.siswa WHERE id::text = ? LIMIT 1");
-            $stmtS->execute([$siswaId]);
+            $stmtS = $db->prepare("SELECT nama_lengkap FROM siswa.siswa WHERE id::text = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1");
+            $stmtS->execute([$siswaId, $tenantId]);
             $sNama = $stmtS->fetchColumn();
             if ($sNama) $namaSiswa = $sNama;
         }
 
         $kategori = 'Ringan';
         if (!empty($pelanggaranId)) {
-            $stmtM = $db->prepare("SELECT kategori, nama_pelanggaran FROM bk.master_pelanggaran WHERE id::text = ? LIMIT 1");
-            $stmtM->execute([$pelanggaranId]);
+            $stmtM = $db->prepare("SELECT kategori, nama_pelanggaran FROM bk.master_pelanggaran WHERE id::text = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1");
+            $stmtM->execute([$pelanggaranId, $tenantId]);
             $m = $stmtM->fetch(\PDO::FETCH_ASSOC);
             if ($m) {
                 $kategori = $m['kategori'] ?: 'Ringan';
@@ -3257,13 +3324,25 @@ class BkDetailModuleController extends BaseController {
         // Format: storage/app/public/pelanggaran/{tenant_id}/{siswa_id}/{sha1}.ext
         $fotoBuktiPath = null;
         if (isset($_FILES['foto_bukti']) && $_FILES['foto_bukti']['error'] === UPLOAD_ERR_OK) {
-            $subId = !empty($siswaId) ? $siswaId : 'unknown';
-            $fotoBuktiPath = FileStorage::store(
-                $_FILES['foto_bukti']['tmp_name'],
-                'pelanggaran',
-                $tenantId,
-                $subId
-            );
+            $val = \App\Helpers\SecurityUploadHelper::validateFile($_FILES['foto_bukti'], ['jpg', 'jpeg', 'png', 'webp'], 5 * 1024 * 1024);
+            if ($val['valid']) {
+                $tmpName = $_FILES['foto_bukti']['tmp_name'];
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $detectedMime = finfo_file($finfo, $tmpName);
+                finfo_close($finfo);
+
+                $allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+                if (in_array($detectedMime, $allowedMimes, true)) {
+                    $subId = !empty($siswaId) ? $siswaId : 'unknown';
+                    $fotoBuktiPath = FileStorage::store(
+                        $tmpName,
+                        'pelanggaran',
+                        $tenantId,
+                        $subId,
+                        'image'
+                    );
+                }
+            }
         }
 
         try {
@@ -3444,6 +3523,8 @@ class BkDetailModuleController extends BaseController {
 
     /** POST /api/v1/bk/pelanggaran/catatan/update */
     public function apiUpdateCatatanPelanggaran(): void {
+        $this->validateCsrfToken();
+
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
@@ -3464,15 +3545,15 @@ class BkDetailModuleController extends BaseController {
 
         $namaSiswa = null;
         if (!empty($siswaId)) {
-            $stmtS = $db->prepare("SELECT nama_lengkap FROM siswa.siswa WHERE id::text = ? LIMIT 1");
-            $stmtS->execute([$siswaId]);
+            $stmtS = $db->prepare("SELECT nama_lengkap FROM siswa.siswa WHERE id::text = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1");
+            $stmtS->execute([$siswaId, $tenantId]);
             $namaSiswa = $stmtS->fetchColumn();
         }
 
         $kategori = null;
         if (!empty($pelanggaranId)) {
-            $stmtM = $db->prepare("SELECT kategori, nama_pelanggaran FROM bk.master_pelanggaran WHERE id::text = ? LIMIT 1");
-            $stmtM->execute([$pelanggaranId]);
+            $stmtM = $db->prepare("SELECT kategori, nama_pelanggaran FROM bk.master_pelanggaran WHERE id::text = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1");
+            $stmtM->execute([$pelanggaranId, $tenantId]);
             $m = $stmtM->fetch(\PDO::FETCH_ASSOC);
             if ($m) {
                 $kategori = $m['kategori'] ?: 'Ringan';
@@ -3486,22 +3567,34 @@ class BkDetailModuleController extends BaseController {
         // Format: storage/app/public/pelanggaran/{tenant_id}/{siswa_id}/{sha1}.ext
         $fotoBuktiPath = null;
         if (isset($_FILES['foto_bukti']) && $_FILES['foto_bukti']['error'] === UPLOAD_ERR_OK) {
-            $subId      = !empty($siswaId) ? $siswaId : 'unknown';
-            $newPath    = FileStorage::store(
-                $_FILES['foto_bukti']['tmp_name'],
-                'pelanggaran',
-                $tenantId,
-                $subId
-            );
-            if ($newPath !== null) {
-                // Hapus file lama
-                $stmtOld = $db->prepare("SELECT foto_bukti FROM bk.pelanggaran_siswa WHERE id::text = ? AND tenant_id = ? LIMIT 1");
-                $stmtOld->execute([$id, $tenantId]);
-                $oldRow  = $stmtOld->fetch(\PDO::FETCH_ASSOC);
-                if (!empty($oldRow['foto_bukti'])) {
-                    FileStorage::deleteOld($oldRow['foto_bukti'], $tenantId);
+            $val = \App\Helpers\SecurityUploadHelper::validateFile($_FILES['foto_bukti'], ['jpg', 'jpeg', 'png', 'webp'], 5 * 1024 * 1024);
+            if ($val['valid']) {
+                $tmpName = $_FILES['foto_bukti']['tmp_name'];
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $detectedMime = finfo_file($finfo, $tmpName);
+                finfo_close($finfo);
+
+                $allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+                if (in_array($detectedMime, $allowedMimes, true)) {
+                    $subId      = !empty($siswaId) ? $siswaId : 'unknown';
+                    $newPath = FileStorage::store(
+                        $tmpName,
+                        'pelanggaran',
+                        $tenantId,
+                        $subId,
+                        'image'
+                    );
+                    if ($newPath !== null) {
+                        // Hapus file lama
+                        $stmtOld = $db->prepare("SELECT foto_bukti FROM bk.pelanggaran_siswa WHERE id::text = ? AND tenant_id = ? LIMIT 1");
+                        $stmtOld->execute([$id, $tenantId]);
+                        $oldRow  = $stmtOld->fetch(\PDO::FETCH_ASSOC);
+                        if (!empty($oldRow['foto_bukti'])) {
+                            FileStorage::deleteOld($oldRow['foto_bukti'], $tenantId);
+                        }
+                        $fotoBuktiPath = $newPath;
+                    }
                 }
-                $fotoBuktiPath = $newPath;
             }
         }
 
@@ -3536,6 +3629,7 @@ class BkDetailModuleController extends BaseController {
 
     /** POST /api/v1/bk/pelanggaran/catatan/delete */
     public function apiDeleteCatatanPelanggaran(): void {
+        $this->validateCsrfToken();
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
@@ -3715,6 +3809,8 @@ class BkDetailModuleController extends BaseController {
 
     /** POST /api/v1/bk/pelanggaran/sanksi/tindak-lanjut */
     public function apiStoreTindakLanjutSanksi(): void {
+        $this->validateCsrfToken();
+
         $tenantId = $this->getSecureTenantId();
         if (!$tenantId) {
             $this->jsonResponse(['error' => 'Tenant ID tidak valid.'], 400);
@@ -3738,12 +3834,12 @@ class BkDetailModuleController extends BaseController {
 
         try {
             // Verify student exists in siswa.siswa or bk.pelanggaran_siswa
-            $stmt = $db->prepare("SELECT id FROM siswa.siswa WHERE id::text = ? LIMIT 1");
-            $stmt->execute([$siswaId]);
+            $stmt = $db->prepare("SELECT id FROM siswa.siswa WHERE id::text = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1");
+            $stmt->execute([$siswaId, $tenantId]);
             $st = $stmt->fetch(\PDO::FETCH_ASSOC);
             if (!$st) {
-                $stmtFB = $db->prepare("SELECT id FROM bk.pelanggaran_siswa WHERE id::text = ? LIMIT 1");
-                $stmtFB->execute([$siswaId]);
+                $stmtFB = $db->prepare("SELECT id FROM bk.pelanggaran_siswa WHERE id::text = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1");
+                $stmtFB->execute([$siswaId, $tenantId]);
                 $st = $stmtFB->fetch(\PDO::FETCH_ASSOC);
             }
 
@@ -3755,24 +3851,46 @@ class BkDetailModuleController extends BaseController {
             // Handle file upload — format: {base}/{tenant_id}/{siswa_id}/{sha1}.ext
             $suratPanggilanPath = null;
             if (isset($_FILES['surat_panggilan']) && $_FILES['surat_panggilan']['error'] === UPLOAD_ERR_OK) {
-                $suratPanggilanPath = FileStorage::store(
-                    $_FILES['surat_panggilan']['tmp_name'],
-                    'pembinaan',
-                    $tenantId,
-                    $siswaId,
-                    'default'
-                );
+                $valSurat = \App\Helpers\SecurityUploadHelper::validateFile($_FILES['surat_panggilan'], ['pdf', 'jpg', 'jpeg', 'png'], 5 * 1024 * 1024);
+                if ($valSurat['valid']) {
+                    $tmpName = $_FILES['surat_panggilan']['tmp_name'];
+                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                    $detectedMime = finfo_file($finfo, $tmpName);
+                    finfo_close($finfo);
+
+                    $allowedMimes = ['application/pdf', 'image/jpeg', 'image/png'];
+                    if (in_array($detectedMime, $allowedMimes, true)) {
+                        $suratPanggilanPath = FileStorage::store(
+                            $tmpName,
+                            'pembinaan',
+                            $tenantId,
+                            $siswaId,
+                            'default'
+                        );
+                    }
+                }
             }
 
             $fotoBuktiPath = null;
             if (isset($_FILES['foto_pembinaan']) && $_FILES['foto_pembinaan']['error'] === UPLOAD_ERR_OK) {
-                $fotoBuktiPath = FileStorage::store(
-                    $_FILES['foto_pembinaan']['tmp_name'],
-                    'pembinaan',
-                    $tenantId,
-                    $siswaId,
-                    'image_only'
-                );
+                $valFoto = \App\Helpers\SecurityUploadHelper::validateFile($_FILES['foto_pembinaan'], ['jpg', 'jpeg', 'png', 'webp'], 5 * 1024 * 1024);
+                if ($valFoto['valid']) {
+                    $tmpName = $_FILES['foto_pembinaan']['tmp_name'];
+                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                    $detectedMime = finfo_file($finfo, $tmpName);
+                    finfo_close($finfo);
+
+                    $allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+                    if (in_array($detectedMime, $allowedMimes, true)) {
+                        $fotoBuktiPath = FileStorage::store(
+                            $tmpName,
+                            'pembinaan',
+                            $tenantId,
+                            $siswaId,
+                            'image_only'
+                        );
+                    }
+                }
             }
 
             $stmtIns = $db->prepare("
@@ -3827,13 +3945,13 @@ class BkDetailModuleController extends BaseController {
 
         try {
             // Ambil info siswa
-            $stmtS = $db->prepare("SELECT id, nama_lengkap, nisn, kelas_saat_ini AS nama_kelas FROM siswa.siswa WHERE id::text = ? LIMIT 1");
-            $stmtS->execute([$siswaId]);
+            $stmtS = $db->prepare("SELECT id, nama_lengkap, nisn, kelas_saat_ini AS nama_kelas FROM siswa.siswa WHERE id::text = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1");
+            $stmtS->execute([$siswaId, $tenantId]);
             $student = $stmtS->fetch(\PDO::FETCH_ASSOC);
 
             if (!$student) {
-                $stmtFB = $db->prepare("SELECT id, nama_pelanggaran_siswa AS nama_lengkap, 'N/A' AS nisn, 'Siswa' AS nama_kelas FROM bk.pelanggaran_siswa WHERE id::text = ? LIMIT 1");
-                $stmtFB->execute([$siswaId]);
+                $stmtFB = $db->prepare("SELECT id, nama_pelanggaran_siswa AS nama_lengkap, 'N/A' AS nisn, 'Siswa' AS nama_kelas FROM bk.pelanggaran_siswa WHERE id::text = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1");
+                $stmtFB->execute([$siswaId, $tenantId]);
                 $student = $stmtFB->fetch(\PDO::FETCH_ASSOC);
             }
 
@@ -4755,8 +4873,9 @@ class BkDetailModuleController extends BaseController {
         }
 
         try {
-            $stmt = $db->prepare("UPDATE pdss.master_kampus SET nama_kampus = ?, jenis = ?, akreditasi = ?, kota = ?, provinsi = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-            $stmt->execute([$namaKampus, $this->sanitize($body['jenis'] ?? 'PTN'), $this->sanitize($body['akreditasi'] ?? ''), $this->sanitize($body['kota'] ?? ''), $this->sanitize($body['provinsi'] ?? ''), $id]);
+            $tenantId = $this->getSecureTenantId();
+            $stmt = $db->prepare("UPDATE pdss.master_kampus SET nama_kampus = ?, jenis = ?, akreditasi = ?, kota = ?, provinsi = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)");
+            $stmt->execute([$namaKampus, $this->sanitize($body['jenis'] ?? 'PTN'), $this->sanitize($body['akreditasi'] ?? ''), $this->sanitize($body['kota'] ?? ''), $this->sanitize($body['provinsi'] ?? ''), $id, $tenantId]);
             $this->jsonResponse(['success' => true, 'data' => null, 'message' => 'Data kampus berhasil diperbarui.']);
         } catch (\Throwable $e) {
             error_log('[BK::apiKampusUpdate] ' . $e->getMessage());
@@ -4774,7 +4893,8 @@ class BkDetailModuleController extends BaseController {
         if (!$id) { http_response_code(422); $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'id wajib diisi.']); return; }
 
         try {
-            $db->prepare("DELETE FROM pdss.master_kampus WHERE id = ?")->execute([$id]);
+            $tenantId = $this->getSecureTenantId();
+            $db->prepare("DELETE FROM pdss.master_kampus WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)")->execute([$id, $tenantId]);
             $this->jsonResponse(['success' => true, 'data' => null, 'message' => 'Kampus berhasil dihapus.']);
         } catch (\Throwable $e) {
             error_log('[BK::apiKampusDelete] ' . $e->getMessage());
@@ -4790,7 +4910,9 @@ class BkDetailModuleController extends BaseController {
     public function apiJalurList(): void {
         $db = \App\Config\Database::getConnection();
         try {
-            $stmt = $db->query("SELECT id, nama_jalur, deskripsi, persyaratan FROM pdss.master_jalur_masuk ORDER BY nama_jalur ASC");
+            $tenantId = $this->getSecureTenantId();
+            $stmt = $db->prepare("SELECT id, nama_jalur, deskripsi, persyaratan FROM pdss.master_jalur_masuk WHERE (tenant_id = ? OR tenant_id IS NULL) ORDER BY nama_jalur ASC");
+            $stmt->execute([$tenantId]);
             $this->jsonResponse(['success' => true, 'data' => $stmt->fetchAll(\PDO::FETCH_ASSOC)]);
         } catch (\Throwable $e) {
             error_log('[BK::apiJalurList] ' . $e->getMessage());
@@ -4808,8 +4930,9 @@ class BkDetailModuleController extends BaseController {
         if (!$namaJalur) { http_response_code(422); $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'Nama jalur wajib diisi.']); return; }
 
         try {
-            $stmt = $db->prepare("INSERT INTO pdss.master_jalur_masuk (id, nama_jalur, deskripsi, persyaratan) VALUES (gen_random_uuid(), ?, ?, ?)");
-            $stmt->execute([$namaJalur, $this->sanitize($body['deskripsi'] ?? ''), $this->sanitize($body['persyaratan'] ?? '')]);
+            $tenantId = $this->getSecureTenantId();
+            $stmt = $db->prepare("INSERT INTO pdss.master_jalur_masuk (id, tenant_id, nama_jalur, deskripsi, persyaratan) VALUES (gen_random_uuid(), ?, ?, ?, ?)");
+            $stmt->execute([$tenantId, $namaJalur, $this->sanitize($body['deskripsi'] ?? ''), $this->sanitize($body['persyaratan'] ?? '')]);
             $this->jsonResponse(['success' => true, 'data' => null, 'message' => "Jalur '{$namaJalur}' berhasil ditambahkan."]);
         } catch (\Throwable $e) {
             error_log('[BK::apiJalurCreate] ' . $e->getMessage());
@@ -4828,8 +4951,9 @@ class BkDetailModuleController extends BaseController {
         if (!$id || !$namaJalur) { http_response_code(422); $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'id dan nama_jalur wajib diisi.']); return; }
 
         try {
-            $stmt = $db->prepare("UPDATE pdss.master_jalur_masuk SET nama_jalur = ?, deskripsi = ?, persyaratan = ? WHERE id = ?");
-            $stmt->execute([$namaJalur, $this->sanitize($body['deskripsi'] ?? ''), $this->sanitize($body['persyaratan'] ?? ''), $id]);
+            $tenantId = $this->getSecureTenantId();
+            $stmt = $db->prepare("UPDATE pdss.master_jalur_masuk SET nama_jalur = ?, deskripsi = ?, persyaratan = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)");
+            $stmt->execute([$namaJalur, $this->sanitize($body['deskripsi'] ?? ''), $this->sanitize($body['persyaratan'] ?? ''), $id, $tenantId]);
             $this->jsonResponse(['success' => true, 'data' => null, 'message' => 'Jalur masuk berhasil diperbarui.']);
         } catch (\Throwable $e) {
             error_log('[BK::apiJalurUpdate] ' . $e->getMessage());
@@ -4847,7 +4971,8 @@ class BkDetailModuleController extends BaseController {
         if (!$id) { http_response_code(422); $this->jsonResponse(['success' => false, 'data' => null, 'error' => 'id wajib diisi.']); return; }
 
         try {
-            $db->prepare("DELETE FROM pdss.master_jalur_masuk WHERE id = ?")->execute([$id]);
+            $tenantId = $this->getSecureTenantId();
+            $db->prepare("DELETE FROM pdss.master_jalur_masuk WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)")->execute([$id, $tenantId]);
             $this->jsonResponse(['success' => true, 'data' => null, 'message' => 'Jalur masuk berhasil dihapus.']);
         } catch (\Throwable $e) {
             error_log('[BK::apiJalurDelete] ' . $e->getMessage());
