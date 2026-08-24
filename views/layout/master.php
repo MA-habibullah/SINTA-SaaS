@@ -60,7 +60,20 @@
                 badge = document.createElement('div');
                 badge.id = 'js-error-badge';
                 badge.style.cssText = 'position:fixed;bottom:20px;left:20px;background:#e11d48;color:white;padding:10px 15px;border-radius:8px;z-index:99999;cursor:pointer;font-family:system-ui,sans-serif;box-shadow:0 10px 15px -3px rgba(0,0,0,0.3);display:flex;align-items:center;gap:12px;font-weight:600;font-size:14px;border:1px solid #be123c;';
-                badge.innerHTML = `⚠️ <span id="js-error-count">${errors.length}</span> JS Errors <span style="font-size:11px;background:rgba(255,255,255,0.25);padding:3px 8px;border-radius:6px;" id="js-error-clear">Clear</span>`;
+                
+                const iconSpan = document.createElement('span');
+                iconSpan.textContent = '⚠️ ';
+                const countSpan = document.createElement('span');
+                countSpan.id = 'js-error-count';
+                countSpan.textContent = String(errors.length);
+                const textSpan = document.createElement('span');
+                textSpan.textContent = ' JS Errors ';
+                const clearSpan = document.createElement('span');
+                clearSpan.id = 'js-error-clear';
+                clearSpan.style.cssText = 'font-size:11px;background:rgba(255,255,255,0.25);padding:3px 8px;border-radius:6px;';
+                clearSpan.textContent = 'Clear';
+                
+                badge.replaceChildren(iconSpan, countSpan, textSpan, clearSpan);
                 if(document.body) document.body.appendChild(badge);
                 
                 badge.addEventListener('click', function(e) {

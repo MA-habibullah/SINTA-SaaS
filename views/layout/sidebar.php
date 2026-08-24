@@ -89,58 +89,157 @@ if (!empty($roles)) {
     try {
         $db = Database::getConnection();
         $tenantId = $_SESSION['tenant_id'] ?? null;
+        $globalTenantId = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12';
+        $inClause = implode(',', array_fill(0, count($roles), '?'));
         
         if ($tenantId) {
             $stmtCheckCustom = $db->prepare("SELECT COUNT(*) FROM core.role_menu_access WHERE tenant_id = :tenant_id");
             $stmtCheckCustom->execute(['tenant_id' => $tenantId]);
             $hasCustomAccess = (int)$stmtCheckCustom->fetchColumn() > 0;
-            $accessTenantId = $hasCustomAccess ? $tenantId : 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12';
+            $accessTenantId = $hasCustomAccess ? $tenantId : $globalTenantId;
 
-            $inClause = implode(',', array_fill(0, count($roles), '?'));
-            $sql = "SELECT DISTINCT m.* 
+            $sql = "SELECT DISTINCT m.id, m.parent_id, m.nama_menu, m.url, m.icon, COALESCE(m.urutan, 999) AS urutan
                     FROM core.menus m
                     JOIN core.tenant_menu_access tma ON m.id = tma.menu_id
-                    WHERE (tma.tenant_id = ? OR tma.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')
+                    WHERE (tma.tenant_id = ? OR tma.tenant_id = ?)
+                      AND m.is_active = TRUE
                       AND (
                           m.id IN (
                               SELECT rma.menu_id 
                               FROM core.role_menu_access rma
                               JOIN core.roles r ON rma.role_id = r.id
-                              WHERE LOWER(r.nama_role) IN ($inClause) AND (rma.tenant_id = ? OR rma.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')
+                              WHERE LOWER(r.nama_role) IN ($inClause) AND (rma.tenant_id = ? OR rma.tenant_id = ?)
                           )
                           OR m.id IN (
                               SELECT uma.menu_id 
                               FROM core.user_menu_access uma 
-                              WHERE uma.user_id = ? AND (uma.tenant_id = ? OR uma.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')
+                              WHERE uma.user_id = ? AND (uma.tenant_id = ? OR uma.tenant_id = ?)
                           )
                       )
-                    ORDER BY m.parent_id ASC, m.urutan ASC";
+                    ORDER BY urutan ASC, m.nama_menu ASC";
             $stmt = $db->prepare($sql);
-            $params = array_merge([$tenantId], $roles, [$accessTenantId, $_SESSION['user_id'] ?? '', $tenantId]);
+            $params = array_merge([$tenantId, $globalTenantId], $roles, [$accessTenantId, $globalTenantId], [$_SESSION['user_id'] ?? '', $tenantId, $globalTenantId]);
             $stmt->execute($params);
         } else {
-            $inClause = implode(',', array_fill(0, count($roles), '?'));
-            $sql = "SELECT DISTINCT m.* 
+            $sql = "SELECT DISTINCT m.id, m.parent_id, m.nama_menu, m.url, m.icon, COALESCE(m.urutan, 999) AS urutan
                     FROM core.menus m
                     JOIN core.role_menu_access rma ON m.id = rma.menu_id
                     JOIN core.roles r ON rma.role_id = r.id
                     WHERE LOWER(r.nama_role) IN ($inClause)
-                      AND (rma.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' OR rma.tenant_id IS NOT NULL)
-                    ORDER BY m.parent_id ASC, m.urutan ASC";
+                      AND m.is_active = TRUE
+                      AND (rma.tenant_id = ? OR rma.tenant_id IS NOT NULL)
+                    ORDER BY urutan ASC, m.nama_menu ASC";
             $stmt = $db->prepare($sql);
-            $stmt->execute($roles);
+            $stmt->execute(array_merge($roles, [$globalTenantId]));
         }
         $allMenus = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $buildTree = function(array $menus, ?string $parentId = null) use (&$buildTree) {
-            $branch = [];
-            foreach ($menus as $menu) {
-                if ($menu['parent_id'] == $parentId) {
-                    $children = $buildTree($menus, $menu['id']);
-                    $menu['children'] = $children ?: [];
-                    $branch[] = $menu;
+        // Algoritma Pembangun Tree Deterministik dengan Kamus Posisi Kanonikal Mutlak (Anti-Swapping)
+        $canonicalParentOrder = [
+            'dashboard'               => 10,
+            'ppdb'                    => 20,
+            'penerimaan siswa'        => 20,
+            'data pokok'              => 30,
+            'core dapodik'            => 30,
+            'dapodik'                 => 30,
+            'sistem & utilitas'       => 40,
+            'sistem'                  => 40,
+            'utilitas'                => 40,
+            'informasi & kegiatan'    => 50,
+            'informasi'               => 50,
+            'kegiatan'                => 50,
+            'kesiswaan'               => 60,
+            'bimbingan konseling'     => 70,
+            'bimbingan'               => 70,
+            'konseling'               => 70,
+            'bk'                      => 70,
+            'alumni & tracer study'   => 80,
+            'tracer study'            => 80,
+            'tracer'                  => 80,
+            'alumni'                  => 80,
+            'perpustakaan'            => 90,
+            'perpus'                  => 90,
+            'persuratan & tata usaha' => 100,
+            'persuratan'              => 100,
+            'tata usaha'              => 100,
+            'pembinaan & supervisi'   => 110,
+            'pembinaan'               => 110,
+            'supervisi'               => 110,
+            'pusat bantuan'           => 120,
+            'bantuan'                 => 120,
+            'keuangan & pembayaran'   => 130,
+            'keuangan'                => 130,
+            'pembayaran'              => 130,
+        ];
+
+        $canonicalChildOrder = [
+            // 1. PPDB
+            'verifikasi' => 1, 'calon siswa' => 2, 'jalur ppdb' => 3, 'riwayat jalur' => 3,
+            // 2. Data Pokok
+            'pengguna' => 1, 'master data' => 2, 'buku induk' => 3,
+            // 3. Sistem & Utilitas
+            'identitas' => 1, 'manajemen user' => 2, 'hak akses' => 2, 'sesi aktif' => 3, 
+            'antrean' => 4, 'fitur sekolah' => 5, 'kelola sekolah' => 6,
+            'log aktivitas' => 7, 'error monitor' => 8, 'server monitor' => 9, 'pemindai' => 10,
+            // 4. Informasi & Kegiatan
+            'pengumuman' => 1, 'agenda' => 2, 'timeline' => 2,
+            // 5. Kesiswaan
+            'ekstrakurikuler' => 1, 'prestasi' => 2,
+            // 6. Bimbingan Konseling (BK)
+            'layanan' => 1, 'kedisiplinan' => 1, 'kesiapan' => 2, 'pdss' => 2, 'alumni' => 3, 'tracer' => 3,
+            // 7. Perpustakaan
+            'katalog' => 1, 'inventori' => 1, 'sirkulasi' => 2, 'layanan perpus' => 2, 'anggota' => 3, 'keanggotaan' => 3, 'opac' => 4, 'pengaturan' => 5,
+            // 8. Keuangan & Pembayaran
+            'dashboard keuangan' => 1, 'master keuangan' => 2, 'loket' => 3, 'laporan keuangan' => 4, 'tagihan' => 5, 'audit trail' => 6,
+        ];
+
+        $getMenuRank = function(array $menu, bool $isChild = false) use ($canonicalParentOrder, $canonicalChildOrder): int {
+            $name = strtolower(trim((string)($menu['nama_menu'] ?? '')));
+            $url  = strtolower(trim((string)($menu['url'] ?? '')));
+            $map  = $isChild ? $canonicalChildOrder : $canonicalParentOrder;
+
+            // Prioritas 1 MUTLAK: Cocokkan kata kunci kanonikal
+            foreach ($map as $keyword => $rank) {
+                if (str_contains($name, $keyword) || str_contains($url, $keyword)) {
+                    return $rank * 10;
                 }
             }
+
+            // Prioritas 2: Urutan eksplisit database jika tidak terdaftar di kamus kanonikal
+            $order = (int)($menu['urutan'] ?? 999);
+            return ($order > 0 && $order < 999) ? ($order * 100) : 9999;
+        };
+
+        $buildTree = function(array $items, ?string $parentId = null) use (&$buildTree, $getMenuRank) {
+            $branch = [];
+            $isChildLevel = !empty($parentId);
+
+            foreach ($items as $item) {
+                $mParent = !empty($item['parent_id']) ? (string)$item['parent_id'] : null;
+                $targetParent = !empty($parentId) ? (string)$parentId : null;
+
+                if ($mParent === $targetParent) {
+                    $children = $buildTree($items, (string)$item['id']);
+                    
+                    if (!empty($children)) {
+                        usort($children, function($a, $b) use ($getMenuRank) {
+                            $rankA = $getMenuRank($a, true);
+                            $rankB = $getMenuRank($b, true);
+                            return ($rankA !== $rankB) ? ($rankA <=> $rankB) : strcmp($a['nama_menu'], $b['nama_menu']);
+                        });
+                    }
+                    
+                    $item['children'] = $children ?: [];
+                    $branch[] = $item;
+                }
+            }
+
+            usort($branch, function($a, $b) use ($getMenuRank, $isChildLevel) {
+                $rankA = $getMenuRank($a, $isChildLevel);
+                $rankB = $getMenuRank($b, $isChildLevel);
+                return ($rankA !== $rankB) ? ($rankA <=> $rankB) : strcmp($a['nama_menu'], $b['nama_menu']);
+            });
+
             return $branch;
         };
         
@@ -161,14 +260,14 @@ if (!empty($roles)) {
         }
 
         $filteredSidebarMenus = [];
-        foreach ($sidebarMenus as $menu) {
-            if ($menu['nama_menu'] == 'Keuangan') {
-                $menu['nama_menu'] = $customModulName;
+        foreach ($sidebarMenus as $menuItem) {
+            if ($menuItem['nama_menu'] == 'Keuangan') {
+                $menuItem['nama_menu'] = $customModulName;
                 if ($visibilitasSiswa === 0 && in_array('siswa', $roles)) {
                     continue;
                 }
             }
-            $filteredSidebarMenus[] = $menu;
+            $filteredSidebarMenus[] = $menuItem;
         }
         $sidebarMenus = $filteredSidebarMenus;
 
@@ -177,30 +276,36 @@ if (!empty($roles)) {
             $statusSiswa = 'Aktif';
             if (!empty($siswaId)) {
                 try {
-                    $stmtStatus = $db->prepare("SELECT status FROM siswa.siswa WHERE id = ? AND deleted_at IS NULL LIMIT 1");
-                    $stmtStatus->execute([$siswaId]);
+                    $stmtStatus = $db->prepare("SELECT status_siswa FROM siswa.siswa WHERE id = :id::uuid AND deleted_at IS NULL LIMIT 1");
+                    $stmtStatus->execute(['id' => $siswaId]);
                     $statusSiswa = $stmtStatus->fetchColumn() ?: 'Aktif';
                 } catch (\Throwable $e) {}
             }
 
-            foreach ($sidebarMenus as &$menu) {
-                if (stripos($menu['nama_menu'], 'Data Diri') !== false && !empty($siswaId)) {
-                    $menu['url'] = '/pengguna';
+            $adjustedMenus = [];
+            foreach ($sidebarMenus as $menuItem) {
+                $m = $menuItem;
+                if (stripos($m['nama_menu'], 'Data Diri') !== false && !empty($siswaId)) {
+                    $m['url'] = '/pengguna';
                 }
-                if ((stripos($menu['nama_menu'], 'Data Pokok') !== false || stripos($menu['nama_menu'], 'Core Dapodik') !== false) && !empty($siswaId)) {
-                    $menu['url'] = '/pengguna';
-                    $menu['children'] = [];
+                if ((stripos($m['nama_menu'], 'Data Pokok') !== false || stripos($m['nama_menu'], 'Core Dapodik') !== false) && !empty($siswaId)) {
+                    $m['url'] = '/pengguna';
+                    $m['children'] = [];
                 }
-                if (!empty($menu['children'])) {
-                    foreach ($menu['children'] as &$child) {
-                        if (stripos($child['nama_menu'], 'Data Diri') !== false && !empty($siswaId)) {
-                            $child['url'] = '/pengguna';
+                if (!empty($m['children'])) {
+                    $newChildren = [];
+                    foreach ($m['children'] as $child) {
+                        $c = $child;
+                        if (stripos($c['nama_menu'], 'Data Diri') !== false && !empty($siswaId)) {
+                            $c['url'] = '/pengguna';
                         }
+                        $newChildren[] = $c;
                     }
-                    unset($child);
+                    $m['children'] = $newChildren;
                 }
+                $adjustedMenus[] = $m;
             }
-            unset($menu);
+            $sidebarMenus = $adjustedMenus;
 
             $tracerExists = false;
             foreach ($sidebarMenus as $m) {
@@ -211,12 +316,13 @@ if (!empty($roles)) {
             }
             if ($statusSiswa === 'Lulus' && !$tracerExists) {
                 $sidebarMenus[] = [
-                    'id'        => 99,
+                    'id'        => 'tracer_alumni_link',
                     'nama_menu' => 'Tracer Study',
                     'url'       => '/tracer-study',
                     'icon'      => 'bi bi-mortarboard-fill',
                     'badge'     => 'BARU',
-                    'children'  => []
+                    'children'  => [],
+                    'urutan'    => 998
                 ];
             }
         }
@@ -253,7 +359,8 @@ if (!empty($roles)) {
                     </li>
                 <?php 
                 else:
-                    foreach ($sidebarMenus as $menu):
+                    foreach ($sidebarMenus as $index => $menu):
+                        $collapseId = 'menuCollapse_' . substr(md5((string)$menu['id']), 0, 10);
                         if (!empty($menu['children'])):
                             $hasActiveChild = false;
                             foreach ($menu['children'] as $child) {
@@ -271,10 +378,10 @@ if (!empty($roles)) {
                                 <!-- Induk Menu Collapsible -->
                                 <a class="nav-link-item d-flex justify-content-between align-items-center <?= $parentActiveClass ?> <?= $collapsedClass ?>" 
                                    data-bs-toggle="collapse" 
-                                   href="#menuCollapse<?= $menu['id'] ?>" 
+                                   href="#<?= $collapseId ?>" 
                                    role="button" 
                                    aria-expanded="<?= $ariaExpanded ?>" 
-                                   aria-controls="menuCollapse<?= $menu['id'] ?>">
+                                   aria-controls="<?= $collapseId ?>">
                                     <div class="d-flex align-items-center">
                                         <i class="<?= htmlspecialchars($menu['icon'] ?? 'bi bi-folder-fill') ?>"></i>
                                         <span class="nav-label"><?= htmlspecialchars($menu['nama_menu']) ?></span>
@@ -283,7 +390,7 @@ if (!empty($roles)) {
                                 </a>
                                 
                                 <!-- Container Sub-menu (Collapsible) -->
-                                <div class="collapse <?= $collapseShow ?>" id="menuCollapse<?= $menu['id'] ?>">
+                                <div class="collapse <?= $collapseShow ?>" id="<?= $collapseId ?>">
                                     <ul class="nav flex-column gap-1">
                                         <?php 
                                         foreach ($menu['children'] as $child): 
@@ -317,11 +424,7 @@ if (!empty($roles)) {
                                    <?= ($menu['url'] === '#' || empty($menu['url'])) ? 'onclick="showSimulationAlert(\'' . htmlspecialchars($menu['nama_menu'], ENT_QUOTES, 'UTF-8') . '\'); return false;"' : '' ?>>
                                     <i class="<?= htmlspecialchars($menu['icon'] ?? 'bi bi-circle') ?>"></i>
                                     <span class="nav-label"><?= htmlspecialchars($menu['nama_menu']) ?></span>
-                                     <?php if ($menu['id'] == 61 && $unreadBadgeCount > 0): ?>
-                                     <span class="ms-auto badge rounded-pill bg-danger" style="font-size:0.6rem;padding:2px 6px;">
-                                         <?= $unreadBadgeCount ?>
-                                     </span>
-                                     <?php elseif (!empty($menu['badge'])): ?>
+                                     <?php if (!empty($menu['badge'])): ?>
                                      <span class="ms-auto badge rounded-pill text-bg-success" style="font-size:0.6rem;padding:2px 6px;">
                                          <?= htmlspecialchars($menu['badge']) ?>
                                      </span>
@@ -367,15 +470,15 @@ if (!empty($roles)) {
 }
 
 #sidebar .nav-item {
-    margin-bottom: 0.2rem;
+    margin-bottom: 0.15rem;
 }
 
 #sidebar .nav-link-item {
-    padding: 0.65rem 0.95rem;
-    border-radius: 0.65rem;
+    padding: 0.45rem 0.75rem;
+    border-radius: 0.55rem;
     color: #475569;
     font-weight: 500;
-    font-size: 0.875rem;
+    font-size: 0.8rem;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
@@ -385,8 +488,8 @@ if (!empty($roles)) {
 }
 
 #sidebar .nav-link-item i {
-    font-size: 1.15rem;
-    margin-right: 0.75rem;
+    font-size: 0.95rem;
+    margin-right: 0.65rem;
     color: #64748b;
     transition: all 0.2s ease;
 }
@@ -394,6 +497,8 @@ if (!empty($roles)) {
 #sidebar .nav-link-item .nav-label {
     font-family: 'Inter', 'Segoe UI', sans-serif;
     letter-spacing: -0.01em;
+    font-size: 0.8rem;
+    line-height: 1.35;
 }
 
 /* Hover State */
@@ -412,7 +517,7 @@ if (!empty($roles)) {
     background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
     color: #ffffff !important;
     font-weight: 600 !important;
-    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
+    box-shadow: 0 3px 10px rgba(37, 99, 235, 0.3) !important;
     border-left-color: #1e40af !important;
 }
 
@@ -424,9 +529,9 @@ if (!empty($roles)) {
 #sidebar .nav-link-item.parent-active {
     background: linear-gradient(135deg, rgba(239, 246, 255, 0.95) 0%, rgba(219, 234, 254, 0.8) 100%) !important;
     color: #1e40af !important;
-    font-weight: 700 !important;
+    font-weight: 600 !important;
     border-left-color: #2563eb !important;
-    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1) !important;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.08) !important;
 }
 
 #sidebar .nav-link-item.parent-active i {
@@ -436,31 +541,36 @@ if (!empty($roles)) {
 /* Sub-menu Collapsible Container & Professional Alignment */
 #sidebar .collapse ul {
     border-left: 2px solid rgba(203, 213, 225, 0.8);
-    margin-left: 1.35rem;
-    padding-left: 0.5rem;
-    margin-top: 0.25rem;
-    margin-bottom: 0.35rem;
+    margin-left: 1.15rem;
+    padding-left: 0.4rem;
+    margin-top: 0.15rem;
+    margin-bottom: 0.25rem;
 }
 
 #sidebar .collapse .nav-link-item.sub-nav-item {
-    padding: 0.5rem 0.8rem;
-    font-size: 0.875rem;
-    border-radius: 0.5rem;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.75rem;
+    border-radius: 0.45rem;
     color: #64748b;
     font-weight: 500;
     border-left: none;
 }
 
-#sidebar .collapse .nav-link-item.sub-nav-item i {
+#sidebar .collapse .nav-link-item.sub-nav-item .nav-label {
     font-size: 0.75rem;
-    margin-right: 0.55rem;
+    line-height: 1.3;
+}
+
+#sidebar .collapse .nav-link-item.sub-nav-item i {
+    font-size: 0.65rem;
+    margin-right: 0.5rem;
     color: #94a3b8;
 }
 
 #sidebar .collapse .nav-link-item.sub-nav-item:hover {
     background: rgba(241, 245, 249, 0.95);
     color: #0f172a;
-    transform: translateX(3px);
+    transform: translateX(2px);
 }
 
 #sidebar .collapse .nav-link-item.sub-nav-item:hover i {
@@ -472,8 +582,8 @@ if (!empty($roles)) {
     background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
     color: #ffffff !important;
     font-weight: 600 !important;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35) !important;
-    transform: translateX(3px);
+    box-shadow: 0 3px 8px rgba(37, 99, 235, 0.3) !important;
+    transform: translateX(2px);
 }
 
 #sidebar .collapse .nav-link-item.sub-nav-item.active i {
