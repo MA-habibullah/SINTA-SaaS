@@ -2,6 +2,7 @@
 .env
 .env.local
 .deploy_pass
+laporan.html
 
 # Mengabaikan konfigurasi database (berisi credential sensitif)
 /app/Config/Database.php

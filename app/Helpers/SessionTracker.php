@@ -13,7 +13,7 @@ class SessionTracker {
      */
     public static function track(): void {
         if (session_status() === PHP_SESSION_NONE) {
-            @session_start();
+            \App\Core\SessionManager::start();
         }
 
         $userId = $_SESSION['user_id'] ?? null;

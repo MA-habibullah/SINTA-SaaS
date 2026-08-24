@@ -135,6 +135,18 @@ class BaseController {
             $data = $this->sanitizeDataArray($data);
         }
 
+        if ($statusCode >= 500 && !empty($error)) {
+            try {
+                \App\Helpers\ErrorTracker::logToDatabase(
+                    level: 'API_SERVER_ERROR',
+                    message: is_string($error) ? $error : json_encode($error),
+                    file: null,
+                    line: $statusCode,
+                    trace: debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 8)
+                );
+            } catch (\Throwable $ignored) {}
+        }
+
         echo json_encode([
             'success' => $success,
             'data'    => $data,

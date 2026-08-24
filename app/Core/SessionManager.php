@@ -20,8 +20,8 @@ class SessionManager {
             }
 
             if (!headers_sent()) {
-                // Force PHP garbage collection to 1 hour (3600 seconds)
-                @ini_set('session.gc_maxlifetime', '3600');
+                // Force PHP garbage collection to 24 hours (86400 seconds)
+                @ini_set('session.gc_maxlifetime', '86400');
                 
                 // Secure by Design cookie configuration
                 $cookieParams = [
@@ -74,8 +74,8 @@ class SessionManager {
             $db = \App\Config\Database::getConnection();
             $stmt = $db->prepare("
                 SELECT r.nama_role 
-                FROM user_roles ur
-                JOIN roles r ON ur.role_id = r.id
+                FROM core.user_roles ur
+                JOIN core.roles r ON ur.role_id = r.id
                 WHERE ur.user_id = ?
             ");
             $stmt->execute([$user['id']]);
@@ -142,31 +142,40 @@ class SessionManager {
     public static function isLoggedIn(): bool {
         self::start();
         
-        // Cek juga session timeout (1 Jam / 3600 detik tidak aktif)
+        // Cek apakah session logged_in aktif
         if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
-            $timeout = 3600; // 1 Jam (3600 Detik)
-            if (time() - ($_SESSION['last_activity'] ?? 0) > $timeout) {
+            $timeout = 86400; // 24 Jam timeout sesi
+            $lastActivity = (int)($_SESSION['last_activity'] ?? 0);
+            
+            // Jika last_activity belum terisi (misal baru pertama kali login), inisialisasi dengan waktu saat ini
+            if ($lastActivity === 0) {
+                $_SESSION['last_activity'] = time();
+            } elseif ((time() - $lastActivity) > $timeout) {
                 self::logout();
                 return false;
             }
 
-            // Secure SaaS Gatekeeper: Check tenant status if not Super Admin
-            if (!empty($_SESSION['tenant_id'])) {
+            // Secure SaaS Gatekeeper: Cek status tenant HANYA untuk non-superadmin
+            $role = strtolower((string)($_SESSION['role_name'] ?? ''));
+            $isSuperAdmin = in_array($role, ['super_admin', 'super admin', 'superadmin', 'admin platform'], true);
+            
+            if (!$isSuperAdmin && !empty($_SESSION['tenant_id'])) {
                 try {
                     $db = \App\Config\Database::getConnection();
-                    $stmt = $db->prepare("SELECT status FROM core.tenants WHERE id = ?");
-                    $stmt->execute([$_SESSION['tenant_id']]);
+                    $stmt = $db->prepare("SELECT status FROM core.tenants WHERE id = :id");
+                    $stmt->execute(['id' => $_SESSION['tenant_id']]);
                     $status = $stmt->fetchColumn();
-                    if ($status !== 'active') {
+                    // Hanya logout jika data status sekolah secara eksplisit ditemukan dan statusnya dinonaktifkan / ditangguhkan
+                    if ($status !== false && $status !== null && $status !== 'active') {
                         self::logout();
                         return false;
                     }
                 } catch (\Throwable $e) {
-                    // Fail-safe: ignore DB connection errors during session checks
+                    // Fail-safe: jangan putus sesi jika terjadi gangguan query sesaat
                 }
             }
             
-            $_SESSION['last_activity'] = time(); // Refresh aktivitas terakhir
+            $_SESSION['last_activity'] = time(); // Refresh waktu aktivitas terakhir
             return true;
         }
         

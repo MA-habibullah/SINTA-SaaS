@@ -253,6 +253,19 @@
                             '\nPayload Response:', data,
                             '\nRequest Config:', error.config
                         );
+
+                        // Kirim otomatis ke Error Monitor jika status 500 atau kegagalan jaringan
+                        if (typeof window.logErrorToBackend === 'function' && (!status || status >= 500)) {
+                            window.logErrorToBackend({
+                                type: 'API_HTTP_ERROR_' + (status || 'NETWORK'),
+                                message: `[HTTP ${status || 'ERR'}] ${error.config ? error.config.method?.toUpperCase() + ' ' + error.config.url : 'Request Failed'}: ` + (typeof data === 'object' ? (data.error || data.message || JSON.stringify(data)) : String(data)),
+                                file: error.config ? error.config.url : window.location.href,
+                                line: status || 0,
+                                url: window.location.href,
+                                trace: error.stack ? error.stack.split('\n').map(s => s.trim()) : [],
+                                context: window.getTelemetryContext ? window.getTelemetryContext() : {}
+                            });
+                        }
                     }
                     return Promise.reject(error);
                 }
@@ -314,7 +327,7 @@
                         try {
                             const app = Vue.createApp(appConfig);
 
-                            // Debug Mode: Global Vue 3 Error Handler
+                            // Global Vue 3 Error Handler: Tangkap dan teruskan ke backend error monitor
                             app.config.errorHandler = (err, instance, info) => {
                                 console.error(
                                     '%c[VUE RUNTIME ERROR]', 
@@ -323,6 +336,18 @@
                                     '\nComponent Instance:', instance,
                                     '\nLifecycle Info / Source:', info
                                 );
+
+                                if (typeof window.logErrorToBackend === 'function') {
+                                    window.logErrorToBackend({
+                                        type: 'VUE3_ERROR',
+                                        message: err ? (err.message || String(err)) : 'Unknown Vue Component Error',
+                                        file: window.location.href,
+                                        line: 0,
+                                        url: window.location.href,
+                                        trace: err && err.stack ? err.stack.split('\n').map(s => s.trim()) : [info],
+                                        context: window.getTelemetryContext ? window.getTelemetryContext(instance, info) : { info }
+                                    });
+                                }
                             };
 
                             if (typeof configureFn === 'function') {

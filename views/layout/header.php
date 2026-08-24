@@ -158,14 +158,14 @@ if ($tenantId) {
 
     // =========================================================================
     // GLOBAL FRONTEND TELEMETRY TRACKER
-    // Mengumpulkan error JavaScript, Unhandled Promises, & kegagalan AJAX (Axios)
-    // dan mengirimkannya ke Dashboard Error Monitor secara diam-diam.
+    // Mengumpulkan error JavaScript, Unhandled Promises, Vue 3, & Axios
+    // dan mengirimkannya ke Dashboard Error Monitor secara real-time.
     // =========================================================================
     (function() {
         // Jangan melacak jika sedang di halaman error monitor untuk mencegah infinite loop
         if (window.location.pathname.includes('/error-monitor')) return;
 
-        function getTelemetryContext(vueVm = null, vueInfo = null) {
+        window.getTelemetryContext = function(vueVm = null, vueInfo = null) {
             let connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
             let ctx = {
                 url: window.location.href,
@@ -177,48 +177,55 @@ if ($tenantId) {
                 time: new Date().toISOString()
             };
             if (vueVm) {
-                // Ekstrak info komponen Vue secara dangkal
-                ctx.vue_component = vueVm.$options ? vueVm.$options.name || 'AnonymousComponent' : 'Unknown';
+                ctx.vue_component = vueVm.$options ? (vueVm.$options.name || 'AnonymousComponent') : 'Unknown';
                 ctx.vue_lifecycle = vueInfo || 'unknown';
             }
             return ctx;
-        }
+        };
 
-        function logErrorToBackend(errorData) {
-            // Gunakan fetch dengan keepalive atau sendBeacon agar tetap terkirim meskipun halaman ditutup
-            const payload = JSON.stringify(errorData);
-            if (navigator.sendBeacon) {
-                navigator.sendBeacon('<?= $this->getBaseUrl() ?>/api/v1/error-monitor/log-client', payload);
-            } else {
-                fetch('<?= $this->getBaseUrl() ?>/api/v1/error-monitor/log-client', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: payload,
-                    keepalive: true
-                }).catch(() => {});
+        window.logErrorToBackend = function(errorData) {
+            try {
+                if (!errorData || !errorData.message) return;
+                const endpoint = '<?= $this->getBaseUrl() ?>/api/v1/error-monitor/log-client';
+                const payload = JSON.stringify(errorData);
+
+                if (navigator.sendBeacon) {
+                    const blob = new Blob([payload], { type: 'application/json' });
+                    navigator.sendBeacon(endpoint, blob);
+                } else {
+                    fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: payload,
+                        keepalive: true
+                    }).catch(() => {});
+                }
+            } catch (e) {
+                // Ignore telemetry errors
             }
-        }
+        };
 
         // 1. Tangkap JS Runtime Errors
         window.onerror = function(message, source, lineno, colno, error) {
             const stackTrace = error && error.stack ? error.stack.split('\n').map(s => s.trim()) : [];
-            logErrorToBackend({
-                type: 'JS_ERROR',
-                message: message,
-                file: source,
-                line: lineno,
+            window.logErrorToBackend({
+                type: 'JS_RUNTIME_ERROR',
+                message: String(message || 'Unknown JavaScript Error'),
+                file: source || window.location.href,
+                line: lineno || 0,
                 url: window.location.href,
                 trace: stackTrace,
-                context: getTelemetryContext()
+                context: window.getTelemetryContext()
             });
-            return false; // biarkan default console.error tetap jalan
+            return false;
         };
 
         // 2. Tangkap Unhandled Promise Rejections (e.g., Axios gagal tanpa try/catch)
         window.addEventListener('unhandledrejection', function(event) {
             let msg = 'Unhandled Promise Rejection';
             let stack = [];
-            let file = '';
+            let file = window.location.href;
+            let line = 0;
             
             if (event.reason) {
                 if (event.reason.message) msg = event.reason.message;
@@ -228,41 +235,25 @@ if ($tenantId) {
                     stack = event.reason.stack.split('\n').map(s => s.trim());
                 }
                 
-                // Deteksi khusus jika ini Axios Error
                 if (event.reason.isAxiosError) {
-                    msg = `[AXIOS API ERROR] Status: ${(event.reason.response && event.reason.response.status) || 'Network Error'} - ${msg}`;
+                    const status = (event.reason.response && event.reason.response.status) || 'Network Error';
+                    msg = `[AXIOS API ERROR] Status: ${status} - ${msg}`;
                     if (event.reason.config) {
                         stack.unshift(`Request URL: ${event.reason.config.url}`);
                     }
                 }
             }
             
-            logErrorToBackend({
-                type: 'PROMISE_ERROR',
+            window.logErrorToBackend({
+                type: 'PROMISE_REJECTION',
                 message: msg,
-                file: window.location.href, // sulit mendapatkan file asal di promise, pakai url saja
-                line: 0,
+                file: file,
+                line: line,
                 url: window.location.href,
                 trace: stack,
-                context: getTelemetryContext()
+                context: window.getTelemetryContext()
             });
         });
-
-        // 3. Tangkap Vue Global Errors (Jika Vue ada dan mendukung global config)
-        if (typeof window.Vue !== 'undefined' && window.Vue.config) {
-            window.Vue.config.errorHandler = function(err, vm, info) {
-                logErrorToBackend({
-                    type: 'VUE_ERROR',
-                    message: err.message,
-                    file: window.location.href,
-                    line: 0,
-                    url: window.location.href,
-                    trace: err.stack ? err.stack.split('\n').map(s => s.trim()) : [info],
-                    context: getTelemetryContext(vm, info)
-                });
-                console.error(err);
-            };
-        }
     })();
 </script>
 
@@ -293,4 +284,3 @@ if ($tenantId) {
     animation: pulse 2s infinite;
 }
 </style>
-

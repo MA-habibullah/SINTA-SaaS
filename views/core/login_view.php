@@ -358,7 +358,8 @@
                             const data = await response.json();
 
                             if (response.ok && data.success) {
-                                window.location.href = data.redirect || 'dashboard';
+                                const targetUrl = (data.data && data.data.redirect) ? data.data.redirect : (data.redirect || (appBaseUrl ? appBaseUrl + '/dashboard' : '/dashboard'));
+                                window.location.href = targetUrl;
                             } else {
                                 this.errorMsg = data.error || 'Email atau password salah.';
                                 this.loading = false;
