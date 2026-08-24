@@ -867,7 +867,9 @@ if (typeof Vue !== 'undefined') {
             const syncEditorFromSource = () => {
                 const el = document.getElementById('visualWordEditor');
                 if (el) {
-                    el.innerHTML = formTemplate.value.konten_html || '';
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(formTemplate.value.konten_html || '', 'text/html');
+                    el.replaceChildren(...doc.body.childNodes);
                 }
             };
 

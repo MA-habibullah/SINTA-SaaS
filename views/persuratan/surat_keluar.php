@@ -604,7 +604,9 @@ if (typeof Vue !== 'undefined') {
             const syncSuratEditor = () => {
                 const el = document.getElementById('visualSuratEditor');
                 if (el) {
-                    el.innerHTML = formSuratKeluar.value.ringkasan_isi || '';
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(formSuratKeluar.value.ringkasan_isi || '', 'text/html');
+                    el.replaceChildren(...doc.body.childNodes);
                 }
             };
 

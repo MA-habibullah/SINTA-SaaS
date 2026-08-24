@@ -670,16 +670,16 @@ class PersuratanModel
         }
 
         // 2. Ambil atau tentukan template & klasifikasi
-        $stmtKlas = $this->db->prepare("SELECT id FROM persuratan.kode_klasifikasi_surat WHERE kode_klasifikasi = '421.3' LIMIT 1");
-        $stmtKlas->execute();
+        $stmtKlas = $this->db->prepare("SELECT id FROM persuratan.kode_klasifikasi_surat WHERE kode_klasifikasi = '421.3' AND (tenant_id = :tid OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' OR tenant_id IS NULL) LIMIT 1");
+        $stmtKlas->execute([':tid' => $tenantId]);
         $idKlas = $stmtKlas->fetchColumn() ?: null;
 
-        $stmtTpl = $this->db->prepare("SELECT id FROM persuratan.template_surat WHERE kode_template = 'SP-ORTU-01' LIMIT 1");
-        $stmtTpl->execute();
+        $stmtTpl = $this->db->prepare("SELECT id FROM persuratan.template_surat WHERE kode_template = 'SP-ORTU-01' AND (tenant_id = :tid OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' OR tenant_id IS NULL) LIMIT 1");
+        $stmtTpl->execute([':tid' => $tenantId]);
         $idTpl = $stmtTpl->fetchColumn() ?: null;
 
-        $stmtJenis = $this->db->prepare("SELECT id FROM persuratan.jenis_surat WHERE kode_jenis = 'SP-ORTU' LIMIT 1");
-        $stmtJenis->execute();
+        $stmtJenis = $this->db->prepare("SELECT id FROM persuratan.jenis_surat WHERE kode_jenis = 'SP-ORTU' AND (tenant_id = :tid OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' OR tenant_id IS NULL) LIMIT 1");
+        $stmtJenis->execute([':tid' => $tenantId]);
         $idJenis = $stmtJenis->fetchColumn() ?: null;
 
         // 3. Generate nomor surat resmi jika belum diinput manual
@@ -1037,7 +1037,7 @@ class PersuratanModel
                     versi_regulasi = :versi,
                     is_active = TRUE,
                     updated_at = CURRENT_TIMESTAMP
-                WHERE id = :id
+                WHERE id = :id AND (tenant_id = :tid OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12' OR tenant_id IS NULL)
             ");
 
             foreach ($items as $item) {
@@ -1057,6 +1057,7 @@ class PersuratanModel
                 if ($existingId) {
                     $stmtUpdate->execute([
                         ':id' => $existingId,
+                        ':tid' => $tenantId,
                         ':nama' => $nama,
                         ':parent' => $parent,
                         ':level' => $level,

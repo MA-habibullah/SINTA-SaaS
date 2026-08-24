@@ -865,19 +865,19 @@ class PerpustakaanModel {
             $tglHariIni = date('Y-m-d');
             $tglAwalBulan = date('Y-m-01');
 
-            $stmtHari = $this->db->prepare("SELECT COUNT(*) FROM perpustakaan.perpus_buku_tamu WHERE tenant_id = :tenant_id AND (is_active = true OR is_active IS NULL) AND created_at::date = :tgl");
+            $stmtHari = $this->db->prepare("SELECT COUNT(*) FROM perpustakaan.perpus_buku_tamu WHERE tenant_id = :tenant_id AND is_active = true AND created_at::date = :tgl");
             $stmtHari->execute(['tenant_id' => $tenantId, 'tgl' => $tglHariIni]);
             $totalHariIni = (int)$stmtHari->fetchColumn();
 
-            $stmtBulan = $this->db->prepare("SELECT COUNT(*) FROM perpustakaan.perpus_buku_tamu WHERE tenant_id = :tenant_id AND (is_active = true OR is_active IS NULL) AND created_at::date >= :tgl");
+            $stmtBulan = $this->db->prepare("SELECT COUNT(*) FROM perpustakaan.perpus_buku_tamu WHERE tenant_id = :tenant_id AND is_active = true AND created_at::date >= :tgl");
             $stmtBulan->execute(['tenant_id' => $tenantId, 'tgl' => $tglAwalBulan]);
             $totalBulanIni = (int)$stmtBulan->fetchColumn();
 
-            $stmtSiswa = $this->db->prepare("SELECT COUNT(*) FROM perpustakaan.perpus_buku_tamu WHERE tenant_id = :tenant_id AND (is_active = true OR is_active IS NULL) AND (LOWER(kategori) = 'siswa' OR deskripsi ILIKE '%\"tipe\":\"Siswa\"%')");
+            $stmtSiswa = $this->db->prepare("SELECT COUNT(*) FROM perpustakaan.perpus_buku_tamu WHERE tenant_id = :tenant_id AND is_active = true AND (LOWER(kategori) = 'siswa' OR deskripsi ILIKE '%\"tipe\":\"Siswa\"%')");
             $stmtSiswa->execute(['tenant_id' => $tenantId]);
             $totalSiswa = (int)$stmtSiswa->fetchColumn();
 
-            $stmtGuru = $this->db->prepare("SELECT COUNT(*) FROM perpustakaan.perpus_buku_tamu WHERE tenant_id = :tenant_id AND (is_active = true OR is_active IS NULL) AND (LOWER(kategori) IN ('guru', 'tendik', 'ptk', 'staf') OR deskripsi ILIKE '%\"tipe\":\"Guru\"%' OR deskripsi ILIKE '%\"tipe\":\"Tendik\"%')");
+            $stmtGuru = $this->db->prepare("SELECT COUNT(*) FROM perpustakaan.perpus_buku_tamu WHERE tenant_id = :tenant_id AND is_active = true AND (LOWER(kategori) IN ('guru', 'tendik', 'ptk', 'staf') OR deskripsi ILIKE '%\"tipe\":\"Guru\"%' OR deskripsi ILIKE '%\"tipe\":\"Tendik\"%')");
             $stmtGuru->execute(['tenant_id' => $tenantId]);
             $totalGuru = (int)$stmtGuru->fetchColumn();
 
@@ -1778,12 +1778,12 @@ class PerpustakaanModel {
             $tenantId = $this->resolveTenantId($tenantId);
 
             // 1. Ambil Kelas dari akademik.kelas
-            $stmtKelas = $this->db->prepare("SELECT id, nama_kelas, kode_kelas FROM akademik.kelas WHERE tenant_id = :tenant_id AND (is_active = true OR is_active IS NULL) ORDER BY nama_kelas ASC");
+            $stmtKelas = $this->db->prepare("SELECT id, nama_kelas, kode_kelas FROM akademik.kelas WHERE tenant_id = :tenant_id AND is_active = true ORDER BY nama_kelas ASC");
             $stmtKelas->execute(['tenant_id' => $tenantId]);
             $kelasList = $stmtKelas->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
             // 2. Ambil Koleksi Buku dari perpustakaan.perpus_bibliografi
-            $stmtBuku = $this->db->prepare("SELECT id, nama_perpus_bibliografi AS judul, deskripsi FROM perpustakaan.perpus_bibliografi WHERE tenant_id = :tenant_id AND (is_active = true OR is_active IS NULL) ORDER BY nama_perpus_bibliografi ASC");
+            $stmtBuku = $this->db->prepare("SELECT id, nama_perpus_bibliografi AS judul, deskripsi FROM perpustakaan.perpus_bibliografi WHERE tenant_id = :tenant_id AND is_active = true ORDER BY nama_perpus_bibliografi ASC");
             $stmtBuku->execute(['tenant_id' => $tenantId]);
             $rawBuku = $stmtBuku->fetchAll(PDO::FETCH_ASSOC) ?: [];
             $bukuList = [];

@@ -56,28 +56,28 @@ class TracerDetailModuleController extends BaseController {
         // Admin Sekolah hanya melihat data dalam tenantnya
         if ($roleName === 'siswa') {
             // Siswa hanya melihat datanya sendiri
-            $kuliah    = $db->prepare("SELECT * FROM riwayat_kuliah WHERE id_siswa = ? ORDER BY tahun_masuk DESC");
-            $pekerjaan = $db->prepare("SELECT * FROM riwayat_pekerjaan WHERE id_siswa = ? ORDER BY tahun_mulai DESC");
-            $kuliah->execute([$siswaId]);
-            $pekerjaan->execute([$siswaId]);
+            $kuliah    = $db->prepare("SELECT * FROM tracer.riwayat_kuliah WHERE id_siswa = :siswa_id::uuid AND tenant_id = :tenant_id ORDER BY tahun_masuk DESC");
+            $pekerjaan = $db->prepare("SELECT * FROM tracer.riwayat_pekerjaan WHERE id_siswa = :siswa_id::uuid AND tenant_id = :tenant_id ORDER BY tahun_mulai DESC");
+            $kuliah->execute(['siswa_id' => $siswaId, 'tenant_id' => $tenantId]);
+            $pekerjaan->execute(['siswa_id' => $siswaId, 'tenant_id' => $tenantId]);
         } elseif ($tenantId) {
             // Admin sekolah — lihat semua alumni di tenant ini
             $targetId  = $_GET['siswa_id'] ?? '';
             if ($targetId) {
-                $kuliah    = $db->prepare("SELECT * FROM riwayat_kuliah WHERE id_siswa = ? AND tenant_id = ? ORDER BY tahun_masuk DESC");
-                $pekerjaan = $db->prepare("SELECT * FROM riwayat_pekerjaan WHERE id_siswa = ? AND tenant_id = ? ORDER BY tahun_mulai DESC");
-                $kuliah->execute([$targetId, $tenantId]);
-                $pekerjaan->execute([$targetId, $tenantId]);
+                $kuliah    = $db->prepare("SELECT * FROM tracer.riwayat_kuliah WHERE id_siswa = :target_id::uuid AND tenant_id = :tenant_id ORDER BY tahun_masuk DESC");
+                $pekerjaan = $db->prepare("SELECT * FROM tracer.riwayat_pekerjaan WHERE id_siswa = :target_id::uuid AND tenant_id = :tenant_id ORDER BY tahun_mulai DESC");
+                $kuliah->execute(['target_id' => $targetId, 'tenant_id' => $tenantId]);
+                $pekerjaan->execute(['target_id' => $targetId, 'tenant_id' => $tenantId]);
             } else {
-                $kuliah    = $db->prepare("SELECT rk.*, s.nama_lengkap FROM riwayat_kuliah rk JOIN siswa s ON rk.id_siswa = s.id WHERE rk.tenant_id = ? ORDER BY rk.created_at DESC");
-                $pekerjaan = $db->prepare("SELECT rp.*, s.nama_lengkap FROM riwayat_pekerjaan rp JOIN siswa s ON rp.id_siswa = s.id WHERE rp.tenant_id = ? ORDER BY rp.created_at DESC");
-                $kuliah->execute([$tenantId]);
-                $pekerjaan->execute([$tenantId]);
+                $kuliah    = $db->prepare("SELECT rk.*, s.nama_lengkap FROM tracer.riwayat_kuliah rk JOIN siswa.siswa s ON rk.id_siswa = s.id WHERE rk.tenant_id = :tenant_id ORDER BY rk.created_at DESC");
+                $pekerjaan = $db->prepare("SELECT rp.*, s.nama_lengkap FROM tracer.riwayat_pekerjaan rp JOIN siswa.siswa s ON rp.id_siswa = s.id WHERE rp.tenant_id = :tenant_id ORDER BY rp.created_at DESC");
+                $kuliah->execute(['tenant_id' => $tenantId]);
+                $pekerjaan->execute(['tenant_id' => $tenantId]);
             }
         } else {
-            // Super Admin — tampilkan semua (dengan JOIN nama kampus)
-            $kuliah    = $db->query("SELECT rk.*, s.nama_lengkap, t.nama_sekolah FROM riwayat_kuliah rk JOIN siswa s ON rk.id_siswa = s.id JOIN tenants t ON rk.tenant_id = t.id ORDER BY rk.created_at DESC LIMIT 200");
-            $pekerjaan = $db->query("SELECT rp.*, s.nama_lengkap, t.nama_sekolah FROM riwayat_pekerjaan rp JOIN siswa s ON rp.id_siswa = s.id JOIN tenants t ON rp.tenant_id = t.id ORDER BY rp.created_at DESC LIMIT 200");
+            // Super Admin — tampilkan semua (dengan JOIN nama sekolah)
+            $kuliah    = $db->query("SELECT rk.*, s.nama_lengkap, t.nama_sekolah FROM tracer.riwayat_kuliah rk JOIN siswa.siswa s ON rk.id_siswa = s.id JOIN core.tenants t ON rk.tenant_id = t.id ORDER BY rk.created_at DESC LIMIT 200");
+            $pekerjaan = $db->query("SELECT rp.*, s.nama_lengkap, t.nama_sekolah FROM tracer.riwayat_pekerjaan rp JOIN siswa.siswa s ON rp.id_siswa = s.id JOIN core.tenants t ON rp.tenant_id = t.id ORDER BY rp.created_at DESC LIMIT 200");
         }
 
         $this->render('alumni/tracer_study', [
@@ -94,6 +94,7 @@ class TracerDetailModuleController extends BaseController {
     // POST /api/v1/tracer/kuliah
     // =========================================================================
     public function storeKuliah(): void {
+        $this->validateCsrfToken();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->jsonResponse(['error' => 'Method not allowed.'], 405);
         }
@@ -161,7 +162,7 @@ class TracerDetailModuleController extends BaseController {
             $db->beginTransaction();
 
             $stmt = $db->prepare("
-                INSERT INTO riwayat_kuliah
+                INSERT INTO tracer.riwayat_kuliah
                     (id_siswa, tenant_id, nama_alumni, kampus_prodi_id, jalur_masuk_id, nama_kampus, fakultas, jurusan, tahun_masuk, tahun_lulus, status_kuliah)
                 VALUES
                     (:id_siswa, :tenant_id, :nama_alumni, :kampus_prodi_id, :jalur_masuk_id, :nama_kampus, :fakultas, :jurusan, :tahun_masuk, :tahun_lulus, :status_kuliah)
@@ -199,6 +200,7 @@ class TracerDetailModuleController extends BaseController {
     // POST /api/v1/tracer/pekerjaan
     // =========================================================================
     public function storePekerjaan(): void {
+        $this->validateCsrfToken();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->jsonResponse(['error' => 'Method not allowed.'], 405);
         }
@@ -262,7 +264,7 @@ class TracerDetailModuleController extends BaseController {
             $db->beginTransaction();
 
             $stmt = $db->prepare("
-                INSERT INTO riwayat_pekerjaan
+                INSERT INTO tracer.riwayat_pekerjaan
                     (id_siswa, tenant_id, nama_alumni, nama_perusahaan, posisi_jabatan, pendapatan_bulanan, tahun_mulai, tahun_selesai, status_kerja)
                 VALUES
                     (:id_siswa, :tenant_id, :nama_alumni, :nama_perusahaan, :posisi_jabatan, :pendapatan_bulanan, :tahun_mulai, :tahun_selesai, :status_kerja)
@@ -304,8 +306,8 @@ class TracerDetailModuleController extends BaseController {
     private function getSiswaStatus(string $siswaId): ?string {
         try {
             $db   = \App\Config\Database::getConnection();
-            $stmt = $db->prepare("SELECT status FROM siswa WHERE id = ? AND deleted_at IS NULL LIMIT 1");
-            $stmt->execute([$siswaId]);
+            $stmt = $db->prepare("SELECT status_siswa FROM siswa.siswa WHERE id = :id::uuid AND deleted_at IS NULL LIMIT 1");
+            $stmt->execute(['id' => $siswaId]);
             return $stmt->fetchColumn() ?: null;
         } catch (\Throwable) {
             return null;
@@ -335,19 +337,19 @@ class TracerDetailModuleController extends BaseController {
         $db = \App\Config\Database::getConnection();
 
         if ($roleName === 'siswa') {
-            $stmt = $db->prepare("SELECT * FROM riwayat_kuliah WHERE id_siswa = ? ORDER BY tahun_masuk DESC");
-            $stmt->execute([$siswaId]);
+            $stmt = $db->prepare("SELECT * FROM tracer.riwayat_kuliah WHERE id_siswa = :siswa_id::uuid AND tenant_id = :tenant_id ORDER BY tahun_masuk DESC");
+            $stmt->execute(['siswa_id' => $siswaId, 'tenant_id' => $tenantId]);
         } elseif ($tenantId) {
             $targetId = $_GET['siswa_id'] ?? '';
             if ($targetId) {
-                $stmt = $db->prepare("SELECT * FROM riwayat_kuliah WHERE id_siswa = ? AND tenant_id = ? ORDER BY tahun_masuk DESC");
-                $stmt->execute([$targetId, $tenantId]);
+                $stmt = $db->prepare("SELECT * FROM tracer.riwayat_kuliah WHERE id_siswa = :target_id::uuid AND tenant_id = :tenant_id ORDER BY tahun_masuk DESC");
+                $stmt->execute(['target_id' => $targetId, 'tenant_id' => $tenantId]);
             } else {
-                $stmt = $db->prepare("SELECT rk.*, s.nama_lengkap FROM riwayat_kuliah rk LEFT JOIN siswa s ON rk.id_siswa = s.id WHERE rk.tenant_id = ? ORDER BY rk.created_at DESC");
-                $stmt->execute([$tenantId]);
+                $stmt = $db->prepare("SELECT rk.*, s.nama_lengkap FROM tracer.riwayat_kuliah rk LEFT JOIN siswa.siswa s ON rk.id_siswa = s.id WHERE rk.tenant_id = :tenant_id ORDER BY rk.created_at DESC");
+                $stmt->execute(['tenant_id' => $tenantId]);
             }
         } else {
-            $stmt = $db->query("SELECT rk.*, s.nama_lengkap, t.nama_sekolah FROM riwayat_kuliah rk LEFT JOIN siswa s ON rk.id_siswa = s.id JOIN tenants t ON rk.tenant_id = t.id ORDER BY rk.created_at DESC LIMIT 200");
+            $stmt = $db->query("SELECT rk.*, s.nama_lengkap, t.nama_sekolah FROM tracer.riwayat_kuliah rk LEFT JOIN siswa.siswa s ON rk.id_siswa = s.id JOIN core.tenants t ON rk.tenant_id = t.id ORDER BY rk.created_at DESC LIMIT 200");
         }
 
         $this->jsonResponse([
@@ -370,19 +372,19 @@ class TracerDetailModuleController extends BaseController {
         $db = \App\Config\Database::getConnection();
 
         if ($roleName === 'siswa') {
-            $stmt = $db->prepare("SELECT * FROM riwayat_pekerjaan WHERE id_siswa = ? ORDER BY tahun_mulai DESC");
-            $stmt->execute([$siswaId]);
+            $stmt = $db->prepare("SELECT * FROM tracer.riwayat_pekerjaan WHERE id_siswa = :siswa_id::uuid AND tenant_id = :tenant_id ORDER BY tahun_mulai DESC");
+            $stmt->execute(['siswa_id' => $siswaId, 'tenant_id' => $tenantId]);
         } elseif ($tenantId) {
             $targetId = $_GET['siswa_id'] ?? '';
             if ($targetId) {
-                $stmt = $db->prepare("SELECT * FROM riwayat_pekerjaan WHERE id_siswa = ? AND tenant_id = ? ORDER BY tahun_mulai DESC");
-                $stmt->execute([$targetId, $tenantId]);
+                $stmt = $db->prepare("SELECT * FROM tracer.riwayat_pekerjaan WHERE id_siswa = :target_id::uuid AND tenant_id = :tenant_id ORDER BY tahun_mulai DESC");
+                $stmt->execute(['target_id' => $targetId, 'tenant_id' => $tenantId]);
             } else {
-                $stmt = $db->prepare("SELECT rp.*, s.nama_lengkap FROM riwayat_pekerjaan rp LEFT JOIN siswa s ON rp.id_siswa = s.id WHERE rp.tenant_id = ? ORDER BY rp.created_at DESC");
-                $stmt->execute([$tenantId]);
+                $stmt = $db->prepare("SELECT rp.*, s.nama_lengkap FROM tracer.riwayat_pekerjaan rp LEFT JOIN siswa.siswa s ON rp.id_siswa = s.id WHERE rp.tenant_id = :tenant_id ORDER BY rp.created_at DESC");
+                $stmt->execute(['tenant_id' => $tenantId]);
             }
         } else {
-            $stmt = $db->query("SELECT rp.*, s.nama_lengkap, t.nama_sekolah FROM riwayat_pekerjaan rp LEFT JOIN siswa s ON rp.id_siswa = s.id JOIN tenants t ON rp.tenant_id = t.id ORDER BY rp.created_at DESC LIMIT 200");
+            $stmt = $db->query("SELECT rp.*, s.nama_lengkap, t.nama_sekolah FROM tracer.riwayat_pekerjaan rp LEFT JOIN siswa.siswa s ON rp.id_siswa = s.id JOIN core.tenants t ON rp.tenant_id = t.id ORDER BY rp.created_at DESC LIMIT 200");
         }
 
         $this->jsonResponse([
@@ -397,6 +399,7 @@ class TracerDetailModuleController extends BaseController {
     // Hanya admin, guru_bk, operator_sekolah yang boleh menghapus.
     // =========================================================================
     public function deleteKuliah(): void {
+        $this->validateCsrfToken();
         $roleName = $_SESSION['role_name'] ?? '';
         $tenantId = SessionManager::getTenantId();
         if (empty($tenantId) && !empty($_GET['tenant_id'])) {
@@ -417,18 +420,9 @@ class TracerDetailModuleController extends BaseController {
 
         $db = \App\Config\Database::getConnection();
 
-        // Verifikasi bahwa record milik tenant ini (kecuali super_admin)
-        if ($roleName !== 'super_admin') {
-            $stmt = $db->prepare("SELECT id FROM riwayat_kuliah WHERE id = ? AND tenant_id = ?");
-            $stmt->execute([$id, $tenantId]);
-            if (!$stmt->fetch()) {
-                $this->jsonResponse(['error' => 'Data tidak ditemukan atau akses ditolak.'], 404);
-                return;
-            }
-        }
-
-        $stmt = $db->prepare("DELETE FROM riwayat_kuliah WHERE id = ?");
-        $stmt->execute([$id]);
+        $filterTenant = ($roleName !== 'super_admin') ? $tenantId : null;
+        $stmt = $db->prepare("DELETE FROM tracer.riwayat_kuliah WHERE id = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid)");
+        $stmt->execute(['id' => $id, 'tenant_id' => $filterTenant]);
 
         if ($stmt->rowCount() > 0) {
             $this->jsonResponse(['success' => true, 'message' => 'Riwayat kuliah berhasil dihapus.']);
@@ -442,6 +436,7 @@ class TracerDetailModuleController extends BaseController {
     // DELETE /api/v1/tracer/pekerjaan/delete?id={id}
     // =========================================================================
     public function deletePekerjaan(): void {
+        $this->validateCsrfToken();
         $roleName = $_SESSION['role_name'] ?? '';
         $tenantId = SessionManager::getTenantId();
         if (empty($tenantId) && !empty($_GET['tenant_id'])) {
@@ -461,17 +456,9 @@ class TracerDetailModuleController extends BaseController {
 
         $db = \App\Config\Database::getConnection();
 
-        if ($roleName !== 'super_admin') {
-            $stmt = $db->prepare("SELECT id FROM riwayat_pekerjaan WHERE id = ? AND tenant_id = ?");
-            $stmt->execute([$id, $tenantId]);
-            if (!$stmt->fetch()) {
-                $this->jsonResponse(['error' => 'Data tidak ditemukan atau akses ditolak.'], 404);
-                return;
-            }
-        }
-
-        $stmt = $db->prepare("DELETE FROM riwayat_pekerjaan WHERE id = ?");
-        $stmt->execute([$id]);
+        $filterTenant = ($roleName !== 'super_admin') ? $tenantId : null;
+        $stmt = $db->prepare("DELETE FROM tracer.riwayat_pekerjaan WHERE id = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid)");
+        $stmt->execute(['id' => $id, 'tenant_id' => $filterTenant]);
 
         if ($stmt->rowCount() > 0) {
             $this->jsonResponse(['success' => true, 'message' => 'Riwayat pekerjaan berhasil dihapus.']);

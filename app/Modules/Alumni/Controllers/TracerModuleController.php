@@ -60,9 +60,10 @@ class TracerModuleController extends BaseController {
     public function index(): void {
         $roleName = $_SESSION['role_name'] ?? '';
         $siswaId  = $_SESSION['user_id']   ?? '';
+        $tenantId = $this->getTenantContext();
 
         if ($roleName === 'siswa') {
-            $status = $this->getSiswaStatus($siswaId);
+            $status = $this->getSiswaStatus($siswaId, $tenantId);
             if ($status !== 'Lulus') {
                 http_response_code(403);
                 $this->render('error_403', [
@@ -207,6 +208,8 @@ class TracerModuleController extends BaseController {
             return;
         }
 
+        $this->validateCsrfToken();
+
         $roleName = $_SESSION['role_name'] ?? '';
         $siswaId  = $_SESSION['user_id']   ?? '';
         $tenantId = $this->getTenantContext();
@@ -309,6 +312,8 @@ class TracerModuleController extends BaseController {
             return;
         }
 
+        $this->validateCsrfToken();
+
         $roleName = $_SESSION['role_name'] ?? '';
         $tenantId = $this->getTenantContext();
         $body     = $this->getJsonInput();
@@ -351,41 +356,80 @@ class TracerModuleController extends BaseController {
                 }
             }
 
-            $stmt = $db->prepare("
-                UPDATE tracer.riwayat_kuliah
-                SET nama_alumni = :nama_alumni,
-                    nisn = :nisn,
-                    kampus_id = :kampus_id,
-                    prodi_id = :prodi_id,
-                    jalur_masuk_id = :jalur_masuk_id,
-                    nama_kampus = :nama_kampus,
-                    nama_prodi = :nama_prodi,
-                    fakultas = :fakultas,
-                    jenjang = :jenjang,
-                    tahun_masuk = :tahun_masuk,
-                    tahun_lulus = :tahun_lulus,
-                    status_kuliah = :status_kuliah,
-                    is_kampus_swasta = :is_kampus_swasta,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = :id
-            ");
+            if ($roleName === 'super_admin') {
+                $stmt = $db->prepare("
+                    UPDATE tracer.riwayat_kuliah
+                    SET nama_alumni = :nama_alumni,
+                        nisn = :nisn,
+                        kampus_id = :kampus_id,
+                        prodi_id = :prodi_id,
+                        jalur_masuk_id = :jalur_masuk_id,
+                        nama_kampus = :nama_kampus,
+                        nama_prodi = :nama_prodi,
+                        fakultas = :fakultas,
+                        jenjang = :jenjang,
+                        tahun_masuk = :tahun_masuk,
+                        tahun_lulus = :tahun_lulus,
+                        status_kuliah = :status_kuliah,
+                        is_kampus_swasta = :is_kampus_swasta,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = :id
+                ");
+                $params = [
+                    'id'               => $id,
+                    'nama_alumni'      => $namaAlumni ?: null,
+                    'nisn'             => $nisn ?: null,
+                    'kampus_id'        => $kampusId ?: null,
+                    'prodi_id'         => $prodiId ?: null,
+                    'jalur_masuk_id'   => $jalurMasukId,
+                    'nama_kampus'      => $namaKampus,
+                    'nama_prodi'       => $namaProdi ?: null,
+                    'fakultas'         => $fakultas ?: null,
+                    'jenjang'          => $jenjang,
+                    'tahun_masuk'      => $tahunMasuk,
+                    'tahun_lulus'      => $tahunLulus,
+                    'status_kuliah'    => $statusKuliah,
+                    'is_kampus_swasta' => $isKampusSwasta ? 'TRUE' : 'FALSE'
+                ];
+            } else {
+                $stmt = $db->prepare("
+                    UPDATE tracer.riwayat_kuliah
+                    SET nama_alumni = :nama_alumni,
+                        nisn = :nisn,
+                        kampus_id = :kampus_id,
+                        prodi_id = :prodi_id,
+                        jalur_masuk_id = :jalur_masuk_id,
+                        nama_kampus = :nama_kampus,
+                        nama_prodi = :nama_prodi,
+                        fakultas = :fakultas,
+                        jenjang = :jenjang,
+                        tahun_masuk = :tahun_masuk,
+                        tahun_lulus = :tahun_lulus,
+                        status_kuliah = :status_kuliah,
+                        is_kampus_swasta = :is_kampus_swasta,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = :id AND (tenant_id = :tenant_id OR tenant_id IS NULL)
+                ");
+                $params = [
+                    'id'               => $id,
+                    'tenant_id'        => $tenantId,
+                    'nama_alumni'      => $namaAlumni ?: null,
+                    'nisn'             => $nisn ?: null,
+                    'kampus_id'        => $kampusId ?: null,
+                    'prodi_id'         => $prodiId ?: null,
+                    'jalur_masuk_id'   => $jalurMasukId,
+                    'nama_kampus'      => $namaKampus,
+                    'nama_prodi'       => $namaProdi ?: null,
+                    'fakultas'         => $fakultas ?: null,
+                    'jenjang'          => $jenjang,
+                    'tahun_masuk'      => $tahunMasuk,
+                    'tahun_lulus'      => $tahunLulus,
+                    'status_kuliah'    => $statusKuliah,
+                    'is_kampus_swasta' => $isKampusSwasta ? 'TRUE' : 'FALSE'
+                ];
+            }
 
-            $stmt->execute([
-                'id'               => $id,
-                'nama_alumni'      => $namaAlumni ?: null,
-                'nisn'             => $nisn ?: null,
-                'kampus_id'        => $kampusId ?: null,
-                'prodi_id'         => $prodiId ?: null,
-                'jalur_masuk_id'   => $jalurMasukId,
-                'nama_kampus'      => $namaKampus,
-                'nama_prodi'       => $namaProdi ?: null,
-                'fakultas'         => $fakultas ?: null,
-                'jenjang'          => $jenjang,
-                'tahun_masuk'      => $tahunMasuk,
-                'tahun_lulus'      => $tahunLulus,
-                'status_kuliah'    => $statusKuliah,
-                'is_kampus_swasta' => $isKampusSwasta ? 'TRUE' : 'FALSE'
-            ]);
+            $stmt->execute($params);
 
             $this->jsonResponse([
                 'success' => true,
@@ -402,6 +446,8 @@ class TracerModuleController extends BaseController {
     // POST /api/v1/tracer/kuliah/delete
     // =========================================================================
     public function deleteKuliah(): void {
+        $this->validateCsrfToken();
+
         $roleName = $_SESSION['role_name'] ?? '';
         $tenantId = $this->getTenantContext();
 
@@ -424,17 +470,13 @@ class TracerModuleController extends BaseController {
         try {
             $db = Database::getConnection();
 
-            if ($roleName !== 'super_admin') {
-                $stmt = $db->prepare("SELECT id FROM tracer.riwayat_kuliah WHERE id = ? AND tenant_id = ?");
-                $stmt->execute([$id, $tenantId]);
-                if (!$stmt->fetch()) {
-                    $this->jsonResponse(['error' => 'Data tidak ditemukan atau akses ditolak.'], 404);
-                    return;
-                }
+            if ($roleName === 'super_admin') {
+                $stmt = $db->prepare("DELETE FROM tracer.riwayat_kuliah WHERE id = :id");
+                $stmt->execute(['id' => $id]);
+            } else {
+                $stmt = $db->prepare("DELETE FROM tracer.riwayat_kuliah WHERE id = :id AND (tenant_id = :tenant_id OR tenant_id IS NULL)");
+                $stmt->execute(['id' => $id, 'tenant_id' => $tenantId]);
             }
-
-            $stmt = $db->prepare("DELETE FROM tracer.riwayat_kuliah WHERE id = ?");
-            $stmt->execute([$id]);
 
             $this->jsonResponse(['success' => true, 'message' => 'Riwayat kuliah berhasil dihapus.']);
         } catch (\Throwable $e) {
@@ -549,6 +591,8 @@ class TracerModuleController extends BaseController {
             return;
         }
 
+        $this->validateCsrfToken();
+
         $roleName = $_SESSION['role_name'] ?? '';
         $siswaId  = $_SESSION['user_id']   ?? '';
         $tenantId = $this->getTenantContext();
@@ -647,6 +691,8 @@ class TracerModuleController extends BaseController {
             return;
         }
 
+        $this->validateCsrfToken();
+
         $roleName = $_SESSION['role_name'] ?? '';
         $tenantId = $this->getTenantContext();
         $body     = $this->getJsonInput();
@@ -688,35 +734,68 @@ class TracerModuleController extends BaseController {
                 }
             }
 
-            $stmt = $db->prepare("
-                UPDATE tracer.riwayat_pekerjaan
-                SET nama_alumni = :nama_alumni,
-                    nisn = :nisn,
-                    nama_perusahaan = :nama_perusahaan,
-                    posisi = :posisi,
-                    posisi_jabatan = :posisi_jabatan,
-                    jenis_instansi = :jenis_instansi,
-                    pendapatan_bulanan = :pendapatan_bulanan,
-                    tahun_mulai = :tahun_mulai,
-                    tahun_selesai = :tahun_selesai,
-                    status_kerja = :status_kerja,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = :id
-            ");
+            if ($roleName === 'super_admin') {
+                $stmt = $db->prepare("
+                    UPDATE tracer.riwayat_pekerjaan
+                    SET nama_alumni = :nama_alumni,
+                        nisn = :nisn,
+                        nama_perusahaan = :nama_perusahaan,
+                        posisi = :posisi,
+                        posisi_jabatan = :posisi_jabatan,
+                        jenis_instansi = :jenis_instansi,
+                        pendapatan_bulanan = :pendapatan_bulanan,
+                        tahun_mulai = :tahun_mulai,
+                        tahun_selesai = :tahun_selesai,
+                        status_kerja = :status_kerja,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = :id
+                ");
+                $params = [
+                    'id'                 => $id,
+                    'nama_alumni'        => $namaAlumni ?: null,
+                    'nisn'               => $nisn ?: null,
+                    'nama_perusahaan'    => $namaPerusahaan,
+                    'posisi'             => $posisiJabatan,
+                    'posisi_jabatan'     => $posisiJabatan,
+                    'jenis_instansi'     => $jenisInstansi,
+                    'pendapatan_bulanan' => $pendapatanBulanan ?: null,
+                    'tahun_mulai'        => $tahunMulai,
+                    'tahun_selesai'      => $tahunSelesai,
+                    'status_kerja'       => $statusKerja
+                ];
+            } else {
+                $stmt = $db->prepare("
+                    UPDATE tracer.riwayat_pekerjaan
+                    SET nama_alumni = :nama_alumni,
+                        nisn = :nisn,
+                        nama_perusahaan = :nama_perusahaan,
+                        posisi = :posisi,
+                        posisi_jabatan = :posisi_jabatan,
+                        jenis_instansi = :jenis_instansi,
+                        pendapatan_bulanan = :pendapatan_bulanan,
+                        tahun_mulai = :tahun_mulai,
+                        tahun_selesai = :tahun_selesai,
+                        status_kerja = :status_kerja,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = :id AND (tenant_id = :tenant_id OR tenant_id IS NULL)
+                ");
+                $params = [
+                    'id'                 => $id,
+                    'tenant_id'          => $tenantId,
+                    'nama_alumni'        => $namaAlumni ?: null,
+                    'nisn'               => $nisn ?: null,
+                    'nama_perusahaan'    => $namaPerusahaan,
+                    'posisi'             => $posisiJabatan,
+                    'posisi_jabatan'     => $posisiJabatan,
+                    'jenis_instansi'     => $jenisInstansi,
+                    'pendapatan_bulanan' => $pendapatanBulanan ?: null,
+                    'tahun_mulai'        => $tahunMulai,
+                    'tahun_selesai'      => $tahunSelesai,
+                    'status_kerja'       => $statusKerja
+                ];
+            }
 
-            $stmt->execute([
-                'id'                 => $id,
-                'nama_alumni'        => $namaAlumni ?: null,
-                'nisn'               => $nisn ?: null,
-                'nama_perusahaan'    => $namaPerusahaan,
-                'posisi'             => $posisiJabatan,
-                'posisi_jabatan'     => $posisiJabatan,
-                'jenis_instansi'     => $jenisInstansi,
-                'pendapatan_bulanan' => $pendapatanBulanan ?: null,
-                'tahun_mulai'        => $tahunMulai,
-                'tahun_selesai'      => $tahunSelesai,
-                'status_kerja'       => $statusKerja
-            ]);
+            $stmt->execute($params);
 
             $this->jsonResponse([
                 'success' => true,
@@ -733,6 +812,8 @@ class TracerModuleController extends BaseController {
     // POST /api/v1/tracer/pekerjaan/delete
     // =========================================================================
     public function deletePekerjaan(): void {
+        $this->validateCsrfToken();
+
         $roleName = $_SESSION['role_name'] ?? '';
         $tenantId = $this->getTenantContext();
 
@@ -755,17 +836,13 @@ class TracerModuleController extends BaseController {
         try {
             $db = Database::getConnection();
 
-            if ($roleName !== 'super_admin') {
-                $stmt = $db->prepare("SELECT id FROM tracer.riwayat_pekerjaan WHERE id = ? AND tenant_id = ?");
-                $stmt->execute([$id, $tenantId]);
-                if (!$stmt->fetch()) {
-                    $this->jsonResponse(['error' => 'Data tidak ditemukan atau akses ditolak.'], 404);
-                    return;
-                }
+            if ($roleName === 'super_admin' && empty($tenantId)) {
+                $stmt = $db->prepare("DELETE FROM tracer.riwayat_pekerjaan WHERE id = :id");
+                $stmt->execute(['id' => $id]);
+            } else {
+                $stmt = $db->prepare("DELETE FROM tracer.riwayat_pekerjaan WHERE id = :id AND (tenant_id = :tenant_id OR tenant_id IS NULL)");
+                $stmt->execute(['id' => $id, 'tenant_id' => $tenantId]);
             }
-
-            $stmt = $db->prepare("DELETE FROM tracer.riwayat_pekerjaan WHERE id = ?");
-            $stmt->execute([$id]);
 
             $this->jsonResponse(['success' => true, 'message' => 'Riwayat pekerjaan berhasil dihapus.']);
         } catch (\Throwable $e) {
@@ -777,11 +854,14 @@ class TracerModuleController extends BaseController {
     // =========================================================================
     // PRIVATE HELPERS
     // =========================================================================
-    private function getSiswaStatus(string $siswaId): ?string {
+    private function getSiswaStatus(string $siswaId, ?string $tenantId = null): ?string {
         try {
-            $db   = Database::getConnection();
-            $stmt = $db->prepare("SELECT status_siswa FROM siswa.siswa WHERE id = ? LIMIT 1");
-            $stmt->execute([$siswaId]);
+            $db = Database::getConnection();
+            $targetTenant = $tenantId ?? $this->getSecureTenantId();
+            $stmt = $db->prepare("SELECT status_siswa FROM siswa.siswa WHERE id = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL) LIMIT 1");
+            $stmt->bindValue(':id', $siswaId);
+            $stmt->bindValue(':tenant_id', $targetTenant);
+            $stmt->execute();
             return $stmt->fetchColumn() ?: null;
         } catch (\Throwable) {
             return null;

@@ -270,7 +270,13 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
 <?php endif; ?>
 
 <!-- Vue App Mount Point -->
-<div id="<?= htmlspecialchars($tracer_instance_id, ENT_QUOTES, 'UTF-8') ?>" v-cloak>
+<div id="<?= htmlspecialchars($tracer_instance_id, ENT_QUOTES, 'UTF-8') ?>" 
+     data-initial-tab="<?= htmlspecialchars($tracer_initial_tab, ENT_QUOTES, 'UTF-8') ?>"
+     data-user-role="<?= htmlspecialchars((string)$userRole, ENT_QUOTES, 'UTF-8') ?>"
+     data-is-admin="<?= htmlspecialchars($isAdmin ? 'true' : 'false', ENT_QUOTES, 'UTF-8') ?>"
+     data-tenant-id="<?= htmlspecialchars((string)$tenantId, ENT_QUOTES, 'UTF-8') ?>"
+     data-instance-id="<?= htmlspecialchars($tracer_instance_id, ENT_QUOTES, 'UTF-8') ?>"
+     v-cloak>
 
     <!-- BANNER: Status tergantung role (Hanya jika bukan sub-module) -->
     <?php if ($isAdmin && empty($is_sub_module)): ?>
@@ -1033,9 +1039,16 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
 {
     const { ref, computed, onMounted } = Vue;
 
-    window.VueAppRegistry.register(<?= json_encode($tracer_vue_selector, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>, {
+    const rootEl = document.querySelector('[data-instance-id^="tracerApp_"]') || document.querySelector('[id^="tracerApp_"]');
+    const tracerSelector = rootEl ? '#' + rootEl.id : '#tracerApp_kuliah';
+    const initTabVal = rootEl?.dataset?.initialTab || 'kuliah';
+    const userRoleVal = rootEl?.dataset?.userRole || '';
+    const isAdminVal = rootEl?.dataset?.isAdmin === 'true';
+    const tenantIdVal = rootEl?.dataset?.tenantId || '';
+
+    window.VueAppRegistry.register(tracerSelector, {
         setup() {
-            const activeTab        = ref(<?= json_encode($tracer_initial_tab, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
+            const activeTab        = ref(initTabVal);
             const currentYear      = ref(new Date().getFullYear());
             const loadingKuliah    = ref(false);
             const loadingPekerjaan = ref(false);
@@ -1051,8 +1064,8 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
             const searchPekerjaan    = ref('');
             const filterStatusKerja  = ref('');
 
-            const userRole = ref(<?= json_encode($userRole, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
-            const isAdmin  = ref(<?= json_encode($isAdmin, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
+            const userRole = ref(userRoleVal);
+            const isAdmin  = ref(isAdminVal);
 
             // Modal Form Kuliah State (Unified for Tambah & Edit)
             const modalFormKuliah = ref({
@@ -1112,7 +1125,7 @@ $tracer_vue_selector = '#' . $tracer_instance_id;
             const activeForm = ref('');
 
             const urlParams = new URLSearchParams(window.location.search);
-            const tenantId  = urlParams.get('tenant_id') || <?= json_encode($tenantId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?> || '';
+            const tenantId  = urlParams.get('tenant_id') || tenantIdVal || '';
 
             // Computed Filters
             const filteredKuliah = computed(() => {

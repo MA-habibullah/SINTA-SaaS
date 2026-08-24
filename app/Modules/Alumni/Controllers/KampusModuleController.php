@@ -123,9 +123,9 @@ class KampusModuleController extends BaseController
                 $stmt = $db->prepare("
                     UPDATE pdss.master_kampus 
                     SET nama_kampus=?, kota=?, kota_kampus=?, jenis=?, jenis_kampus=?, alamat=?, alamat_kampus=?, updated_at=CURRENT_TIMESTAMP
-                    WHERE id=?
+                    WHERE id=? AND (tenant_id = ? OR tenant_id IS NULL)
                 ");
-                $stmt->execute([$nama_kampus, $kota_kampus, $kota_kampus, $jenis_kampus, $jenis_kampus, $alamat_kampus, $alamat_kampus, $id]);
+                $stmt->execute([$nama_kampus, $kota_kampus, $kota_kampus, $jenis_kampus, $jenis_kampus, $alamat_kampus, $alamat_kampus, $id, $tenantId]);
                 $msg = "Kampus berhasil diperbarui.";
             }
             $this->jsonResponse(['success' => true, 'message' => $msg, 'id' => $id]);
@@ -147,17 +147,29 @@ class KampusModuleController extends BaseController
         $db = Database::getConnection();
         $db->beginTransaction();
         try {
-            // 1. Hapus riwayat daya tampung prodi di kampus ini
-            $stmtRiw = $db->prepare("DELETE FROM pdss.kampus_prodi_riwayat WHERE prodi_id IN (SELECT id FROM pdss.master_kampus_prodi WHERE kampus_id = ?)");
-            $stmtRiw->execute([$id]);
+            // 1. Hapus riwayat daya tampung prodi di kampus ini (terisolasi per tenant)
+            $stmtRiw = $db->prepare("
+                DELETE FROM pdss.kampus_prodi_riwayat 
+                WHERE prodi_id IN (
+                    SELECT id FROM pdss.master_kampus_prodi 
+                    WHERE kampus_id = :kampus_id AND (tenant_id = :tenant_id OR :tenant_id IS NULL)
+                )
+            ");
+            $stmtRiw->execute(['kampus_id' => $id, 'tenant_id' => $tenantId]);
 
             // 2. Hapus prodi di kampus ini
-            $stmtProdi = $db->prepare("DELETE FROM pdss.master_kampus_prodi WHERE kampus_id = ?");
-            $stmtProdi->execute([$id]);
+            $stmtProdi = $db->prepare("
+                DELETE FROM pdss.master_kampus_prodi 
+                WHERE kampus_id = :kampus_id AND (tenant_id = :tenant_id OR :tenant_id IS NULL)
+            ");
+            $stmtProdi->execute(['kampus_id' => $id, 'tenant_id' => $tenantId]);
 
             // 3. Hapus kampus
-            $stmt = $db->prepare("DELETE FROM pdss.master_kampus WHERE id = ?");
-            $stmt->execute([$id]);
+            $stmt = $db->prepare("
+                DELETE FROM pdss.master_kampus 
+                WHERE id = :id AND (tenant_id = :tenant_id OR :tenant_id IS NULL)
+            ");
+            $stmt->execute(['id' => $id, 'tenant_id' => $tenantId]);
 
             $db->commit();
             $this->jsonResponse(['success' => true, 'message' => 'Kampus beserta prodi dan riwayatnya berhasil dihapus.']);
@@ -228,9 +240,9 @@ class KampusModuleController extends BaseController
                 $stmt = $db->prepare("
                     UPDATE pdss.master_kampus_prodi 
                     SET program_studi=?, nama_prodi=?, kode_prodi=?, fakultas=?, jenjang=?, jenis_portofolio=?, daya_tampung_sekarang=?, updated_at=CURRENT_TIMESTAMP 
-                    WHERE id=?
+                    WHERE id=? AND (tenant_id = ? OR tenant_id IS NULL)
                 ");
-                $stmt->execute([$program_studi, $program_studi, $kode_prodi, $fakultas, $jenjang, $portofolio, $daya_tampung, $id]);
+                $stmt->execute([$program_studi, $program_studi, $kode_prodi, $fakultas, $jenjang, $portofolio, $daya_tampung, $id, $tenantId]);
                 $msg = "Program Studi berhasil diperbarui.";
             }
             $this->jsonResponse(['success' => true, 'message' => $msg, 'id' => $id]);
@@ -252,13 +264,22 @@ class KampusModuleController extends BaseController
         $db = Database::getConnection();
         $db->beginTransaction();
         try {
-            // 1. Hapus riwayat daya tampung prodi ini
-            $stmtRiw = $db->prepare("DELETE FROM pdss.kampus_prodi_riwayat WHERE prodi_id = ?");
-            $stmtRiw->execute([$id]);
+            // 1. Hapus riwayat daya tampung prodi ini (terisolasi per tenant)
+            $stmtRiw = $db->prepare("
+                DELETE FROM pdss.kampus_prodi_riwayat 
+                WHERE prodi_id IN (
+                    SELECT id FROM pdss.master_kampus_prodi 
+                    WHERE id = :id AND (tenant_id = :tenant_id OR :tenant_id IS NULL)
+                )
+            ");
+            $stmtRiw->execute(['id' => $id, 'tenant_id' => $tenantId]);
 
             // 2. Hapus prodi
-            $stmt = $db->prepare("DELETE FROM pdss.master_kampus_prodi WHERE id = ?");
-            $stmt->execute([$id]);
+            $stmt = $db->prepare("
+                DELETE FROM pdss.master_kampus_prodi 
+                WHERE id = :id AND (tenant_id = :tenant_id OR :tenant_id IS NULL)
+            ");
+            $stmt->execute(['id' => $id, 'tenant_id' => $tenantId]);
 
             $db->commit();
             $this->jsonResponse(['success' => true, 'message' => 'Prodi beserta riwayatnya berhasil dihapus.']);
@@ -327,8 +348,15 @@ class KampusModuleController extends BaseController
         }
 
         $db = Database::getConnection();
-        $stmt = $db->prepare("DELETE FROM pdss.kampus_prodi_riwayat WHERE id = ?");
-        $stmt->execute([$id]);
+        $stmt = $db->prepare("
+            DELETE FROM pdss.kampus_prodi_riwayat 
+            WHERE id = :id 
+              AND prodi_id IN (
+                  SELECT id FROM pdss.master_kampus_prodi 
+                  WHERE tenant_id = :tenant_id OR :tenant_id IS NULL
+              )
+        ");
+        $stmt->execute(['id' => $id, 'tenant_id' => $tenantId]);
 
         $this->jsonResponse(['success' => true, 'message' => 'Riwayat berhasil dihapus.']);
     }
@@ -380,8 +408,12 @@ class KampusModuleController extends BaseController
                 $stmt = $db->prepare("INSERT INTO bk.master_jalur_masuk (id, tenant_id, nama_jalur, nama_master_jalur_masuk, kategori, deskripsi, is_active) VALUES (?, ?, ?, ?, ?, ?, TRUE)");
                 $stmt->execute([$id, $targetTenant, $nama_jalur, $nama_jalur, $kategori, $deskripsi]);
             } else {
-                $stmt = $db->prepare("UPDATE bk.master_jalur_masuk SET nama_jalur=?, nama_master_jalur_masuk=?, kategori=?, deskripsi=?, updated_at=CURRENT_TIMESTAMP WHERE id=?");
-                $stmt->execute([$nama_jalur, $nama_jalur, $kategori, $deskripsi, $id]);
+                $stmt = $db->prepare("
+                    UPDATE bk.master_jalur_masuk 
+                    SET nama_jalur=?, nama_master_jalur_masuk=?, kategori=?, deskripsi=?, updated_at=CURRENT_TIMESTAMP 
+                    WHERE id=? AND (tenant_id = ? OR tenant_id IS NULL)
+                ");
+                $stmt->execute([$nama_jalur, $nama_jalur, $kategori, $deskripsi, $id, $targetTenant]);
             }
             $this->jsonResponse(['success' => true, 'message' => 'Jalur masuk berhasil disimpan.']);
         } catch (\Throwable $e) {
@@ -401,8 +433,8 @@ class KampusModuleController extends BaseController
 
         $db = Database::getConnection();
         try {
-            $stmt = $db->prepare("DELETE FROM bk.master_jalur_masuk WHERE id = ?");
-            $stmt->execute([$id]);
+            $stmt = $db->prepare("DELETE FROM bk.master_jalur_masuk WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)");
+            $stmt->execute([$id, $tenantId]);
 
             $this->jsonResponse(['success' => true, 'message' => 'Jalur masuk berhasil dihapus.']);
         } catch (\Throwable $e) {
@@ -436,11 +468,38 @@ class KampusModuleController extends BaseController
         $tenantId = $this->checkAccess();
         require_once __DIR__ . '/../../vendor/autoload.php';
 
-        if (!isset($_FILES['excel_file']) || $_FILES['excel_file']['error'] !== UPLOAD_ERR_OK) {
-            $this->jsonResponse(['error' => 'File Excel gagal diunggah.'], 400);
+        $fileData = $_FILES['excel_file'] ?? [];
+        $val = \App\Helpers\SecurityUploadHelper::validateFile($fileData, ['xlsx', 'xls'], 10 * 1024 * 1024);
+        if (!$val['valid']) {
+            $this->jsonResponse(['error' => 'File Excel tidak valid: ' . $val['error']], 400);
+            return;
         }
 
-        $fileTmp = $_FILES['excel_file']['tmp_name'];
+        $fileTmp = $fileData['tmp_name'];
+        if (!is_uploaded_file($fileTmp) || !file_exists($fileTmp)) {
+            $this->jsonResponse(['error' => 'Berkas upload tidak valid.'], 400);
+            return;
+        }
+
+        // Verifikasi Magic Bytes & MIME Type langsung
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $detectedMime = finfo_file($finfo, $fileTmp);
+        finfo_close($finfo);
+
+        $allowedMimes = [
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-excel',
+            'application/x-msexcel',
+            'application/zip',
+            'application/x-zip-compressed',
+            'application/octet-stream'
+        ];
+
+        if (!in_array($detectedMime, $allowedMimes, true)) {
+            $this->jsonResponse(['error' => "Format berkas tidak aman (MIME: {$detectedMime})."], 400);
+            return;
+        }
+
         if ($xlsx = \Shuchkin\SimpleXLSX::parse($fileTmp)) {
             $db = Database::getConnection();
             $db->beginTransaction();
@@ -516,49 +575,43 @@ class KampusModuleController extends BaseController
 
                     $jenjang = $this->normalizeJenjang($jenjangRaw);
 
-                    // 1. Find or create Kampus
-                    $stmt = $db->prepare("SELECT id FROM master_kampus WHERE nama_kampus = ? AND tenant_id = ?");
+                    // 1. Find or create Kampus (terisolasi per tenant)
+                    $stmt = $db->prepare("SELECT id FROM pdss.master_kampus WHERE nama_kampus = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1");
                     $stmt->execute([$namaKampus, $tenantId]);
                     $kampusId = $stmt->fetchColumn();
 
                     if (!$kampusId) {
                         $kampusId = $this->generateUuidV4();
-                        $stmtIns = $db->prepare("INSERT INTO master_kampus (id, tenant_id, nama_kampus, kota_kampus, jenis_kampus) VALUES (?, ?, ?, ?, 'Negeri')");
+                        $stmtIns = $db->prepare("INSERT INTO pdss.master_kampus (id, tenant_id, nama_kampus, kota_kampus, jenis_kampus) VALUES (?, ?, ?, ?, 'Negeri')");
                         $stmtIns->execute([$kampusId, $tenantId, $namaKampus, $kota]);
                         $insertedKampus++;
                     }
 
-                    // 2. Find or create Prodi
+                    // 2. Find or create Prodi (terisolasi per tenant)
                     $stmtProdi = $db->prepare("
-                        SELECT id FROM master_kampus_prodi 
-                        WHERE kode_prodi = ? AND kampus_id = ?
+                        SELECT id FROM pdss.master_kampus_prodi 
+                        WHERE kode_prodi = ? AND kampus_id = ? AND (tenant_id = ? OR tenant_id IS NULL)
                         LIMIT 1
                     ");
-                    $stmtProdi->execute([$kodeProdi, $kampusId]);
+                    $stmtProdi->execute([$kodeProdi, $kampusId, $tenantId]);
                     $prodiId = $stmtProdi->fetchColumn();
-
-                    $stmtCheckCol = $db->prepare("SELECT column_name FROM information_schema.columns WHERE table_name = 'master_kampus_prodi' AND column_name = 'kode_prodi'");
-                    $stmtCheckCol->execute();
-                    $hasKodeCol = $stmtCheckCol->fetch() !== false;
 
                     if (!$prodiId) {
                         $prodiId = $this->generateUuidV4();
-                        if ($hasKodeCol) {
-                            $stmtInsP = $db->prepare("INSERT INTO master_kampus_prodi (id, kampus_id, kode_prodi, fakultas, program_studi, jenjang, jenis_portofolio) VALUES (?, ?, ?, '', ?, ?, ?)");
-                            $stmtInsP->execute([$prodiId, $kampusId, $kodeProdi, $namaProdi, $jenjang, $portofolio]);
-                        } else {
-                            $stmtInsP = $db->prepare("INSERT INTO master_kampus_prodi (id, kampus_id, fakultas, program_studi, jenjang) VALUES (?, ?, '', ?, ?)");
-                            $stmtInsP->execute([$prodiId, $kampusId, $namaProdi, $jenjang]);
-                        }
+                        $stmtInsP = $db->prepare("
+                            INSERT INTO pdss.master_kampus_prodi (
+                                id, tenant_id, kampus_id, kode_prodi, fakultas, program_studi, jenjang, jenis_portofolio
+                            ) VALUES (?, ?, ?, ?, '', ?, ?, ?)
+                        ");
+                        $stmtInsP->execute([$prodiId, $tenantId, $kampusId, $kodeProdi, $namaProdi, $jenjang, $portofolio]);
                         $insertedProdi++;
                     } else {
-                        if ($hasKodeCol) {
-                            $db->prepare("UPDATE master_kampus_prodi SET kode_prodi = ?, program_studi = ?, jenjang = ?, jenis_portofolio = ? WHERE id = ?")
-                               ->execute([$kodeProdi, $namaProdi, $jenjang, $portofolio, $prodiId]);
-                        } else {
-                            $db->prepare("UPDATE master_kampus_prodi SET program_studi = ?, jenjang = ? WHERE id = ?")
-                               ->execute([$namaProdi, $jenjang, $prodiId]);
-                        }
+                        $stmtUpdP = $db->prepare("
+                            UPDATE pdss.master_kampus_prodi 
+                            SET kode_prodi = ?, program_studi = ?, jenjang = ?, jenis_portofolio = ?, updated_at = CURRENT_TIMESTAMP 
+                            WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)
+                        ");
+                        $stmtUpdP->execute([$kodeProdi, $namaProdi, $jenjang, $portofolio, $prodiId, $tenantId]);
                     }
 
                     // 3. Insert or Update Riwayat
@@ -566,7 +619,7 @@ class KampusModuleController extends BaseController
                     $stmtRiw = $db->prepare("
                         INSERT INTO pdss.kampus_prodi_riwayat (prodi_id, tahun, daya_tampung, jumlah_pendaftar)
                         VALUES (?, ?, ?, ?)
-                        ON CONFLICT (prodi_id, tahun) DO UPDATE SET daya_tampung = EXCLUDED.daya_tampung, jumlah_pendaftar = EXCLUDED.jumlah_pendaftar
+                        ON CONFLICT (prodi_id, tahun) DO UPDATE SET daya_tampung = EXCLUDED.daya_tampung, jumlah_pendaftar = EXCLUDED.jumlah_pendaftar, updated_at = CURRENT_TIMESTAMP
                     ");
                     $stmtRiw->execute([$prodiId, $activeYear, $dtVal, $pmVal]);
                     $insertedRiwayat++;
@@ -675,13 +728,20 @@ class KampusModuleController extends BaseController
             $stmt->execute([$tenantId]);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Populate Riwayat
+            // Populate Riwayat (terisolasi per tenant)
             $prodiIds = array_filter(array_column($rows, 'prodi_id'));
             $riwayatMap = [];
             if (!empty($prodiIds)) {
                 $placeholders = implode(',', array_fill(0, count($prodiIds), '?'));
-                $stRiw = $db->prepare("SELECT * FROM pdss.kampus_prodi_riwayat WHERE prodi_id IN ($placeholders) ORDER BY tahun DESC");
-                $stRiw->execute(array_values($prodiIds));
+                $stRiw = $db->prepare("
+                    SELECT r.* 
+                    FROM pdss.kampus_prodi_riwayat r
+                    JOIN pdss.master_kampus_prodi p ON r.prodi_id = p.id
+                    WHERE r.prodi_id IN ($placeholders) AND (p.tenant_id = ? OR p.tenant_id IS NULL)
+                    ORDER BY r.tahun DESC
+                ");
+                $params = array_merge(array_values($prodiIds), [$tenantId]);
+                $stRiw->execute($params);
                 while ($r = $stRiw->fetch(PDO::FETCH_ASSOC)) {
                     $riwayatMap[$r['prodi_id']][] = $r;
                 }
@@ -782,11 +842,37 @@ class KampusModuleController extends BaseController
     public function apiImportDayaTampung()
     {
         $tenantId = $this->checkAccess();
-        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-            $this->jsonResponse(['error' => 'Gagal mengupload file.'], 400);
+        $fileData = $_FILES['file'] ?? [];
+        $val = \App\Helpers\SecurityUploadHelper::validateFile($fileData, ['xlsx', 'xls'], 10 * 1024 * 1024);
+        if (!$val['valid']) {
+            $this->jsonResponse(['error' => 'Berkas tidak valid: ' . $val['error']], 400);
+            return;
         }
 
-        $tmpName = $_FILES['file']['tmp_name'];
+        $tmpName = $fileData['tmp_name'];
+        if (!is_uploaded_file($tmpName) || !file_exists($tmpName)) {
+            $this->jsonResponse(['error' => 'Berkas upload tidak valid.'], 400);
+            return;
+        }
+
+        // Verifikasi Magic Bytes & MIME Type langsung
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $detectedMime = finfo_file($finfo, $tmpName);
+        finfo_close($finfo);
+
+        $allowedMimes = [
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-excel',
+            'application/x-msexcel',
+            'application/zip',
+            'application/x-zip-compressed',
+            'application/octet-stream'
+        ];
+
+        if (!in_array($detectedMime, $allowedMimes, true)) {
+            $this->jsonResponse(['error' => "Format berkas tidak aman (MIME: {$detectedMime})."], 400);
+            return;
+        }
         
         try {
             $xlsx = \Shuchkin\SimpleXLSX::parse($tmpName);
@@ -834,11 +920,15 @@ class KampusModuleController extends BaseController
 
                 if ((!$prodi && !$kode) || !$kampus || !$tahun) continue;
 
-                // Cari Prodi via kode atau (kampus, prodi)
+                // Cari Prodi via kode atau (kampus, prodi) - Terisolasi per tenant
                 $prodiId = null;
                 if ($kode) {
-                    $stmtFind = $db->prepare("SELECT id FROM pdss.master_kampus_prodi WHERE kode_prodi = ? LIMIT 1");
-                    $stmtFind->execute([$kode]);
+                    $stmtFind = $db->prepare("
+                        SELECT id FROM pdss.master_kampus_prodi 
+                        WHERE kode_prodi = ? AND (tenant_id = ? OR tenant_id IS NULL) 
+                        LIMIT 1
+                    ");
+                    $stmtFind->execute([$kode, $tenantId]);
                     $prodiId = $stmtFind->fetchColumn();
                 }
 
@@ -847,10 +937,12 @@ class KampusModuleController extends BaseController
                         SELECT p.id 
                         FROM pdss.master_kampus_prodi p 
                         JOIN pdss.master_kampus k ON k.id = p.kampus_id 
-                        WHERE (k.nama_kampus = ? OR k.nama_kampus ILIKE ?) AND (p.program_studi = ? OR p.nama_prodi = ? OR p.program_studi ILIKE ?)
+                        WHERE (k.nama_kampus = ? OR k.nama_kampus ILIKE ?) 
+                          AND (p.program_studi = ? OR p.nama_prodi = ? OR p.program_studi ILIKE ?)
+                          AND (p.tenant_id = ? OR p.tenant_id IS NULL)
                         LIMIT 1
                     ");
-                    $stmtFind->execute([$kampus, '%' . $kampus . '%', $prodi, $prodi, '%' . $prodi . '%']);
+                    $stmtFind->execute([$kampus, '%' . $kampus . '%', $prodi, $prodi, '%' . $prodi . '%', $tenantId]);
                     $prodiId = $stmtFind->fetchColumn();
                 }
 
@@ -940,11 +1032,37 @@ class KampusModuleController extends BaseController
     public function apiImportKampusProdi()
     {
         $tenantId = $this->checkAccess();
-        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-            $this->jsonResponse(['error' => 'Gagal mengupload file.'], 400);
+        $fileData = $_FILES['file'] ?? [];
+        $val = \App\Helpers\SecurityUploadHelper::validateFile($fileData, ['xlsx', 'xls'], 10 * 1024 * 1024);
+        if (!$val['valid']) {
+            $this->jsonResponse(['error' => 'Berkas tidak valid: ' . $val['error']], 400);
+            return;
         }
 
-        $tmpName = $_FILES['file']['tmp_name'];
+        $tmpName = $fileData['tmp_name'];
+        if (!is_uploaded_file($tmpName) || !file_exists($tmpName)) {
+            $this->jsonResponse(['error' => 'Berkas upload tidak valid.'], 400);
+            return;
+        }
+
+        // Verifikasi Magic Bytes & MIME Type langsung
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $detectedMime = finfo_file($finfo, $tmpName);
+        finfo_close($finfo);
+
+        $allowedMimes = [
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-excel',
+            'application/x-msexcel',
+            'application/zip',
+            'application/x-zip-compressed',
+            'application/octet-stream'
+        ];
+
+        if (!in_array($detectedMime, $allowedMimes, true)) {
+            $this->jsonResponse(['error' => "Format berkas tidak aman (MIME: {$detectedMime})."], 400);
+            return;
+        }
         
         try {
             $xlsx = \Shuchkin\SimpleXLSX::parse($tmpName);
@@ -999,7 +1117,7 @@ class KampusModuleController extends BaseController
                     continue;
                 }
 
-                // 1. Upsert Kampus jika nama kampus ada
+                // 1. Upsert Kampus jika nama kampus ada (terisolasi per tenant)
                 if (!empty($namaKampus)) {
                     if (!isset($kampusCache[$namaKampus])) {
                         $stmtFind = $db->prepare("SELECT id FROM pdss.master_kampus WHERE (tenant_id = ? OR tenant_id IS NULL) AND (nama_kampus = ? OR nama_kampus ILIKE ?) LIMIT 1");
@@ -1012,8 +1130,8 @@ class KampusModuleController extends BaseController
                             $stmtIns->execute([$newId, $tenantId, $namaKampus, $kotaKampus, $kotaKampus, $jenisKampus, $jenisKampus]);
                             $kampusId = $newId;
                         } elseif ($kotaKampus) {
-                            $stmtUpd = $db->prepare("UPDATE pdss.master_kampus SET kota_kampus = ?, kota = ?, jenis_kampus = ?, jenis = ? WHERE id = ?");
-                            $stmtUpd->execute([$kotaKampus, $kotaKampus, $jenisKampus, $jenisKampus, $kampusId]);
+                            $stmtUpd = $db->prepare("UPDATE pdss.master_kampus SET kota_kampus = ?, kota = ?, jenis_kampus = ?, jenis = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)");
+                            $stmtUpd->execute([$kotaKampus, $kotaKampus, $jenisKampus, $jenisKampus, $kampusId, $tenantId]);
                         }
                         $kampusCache[$namaKampus] = $kampusId;
                     }
@@ -1028,13 +1146,14 @@ class KampusModuleController extends BaseController
                     continue;
                 }
 
-                // 2. Upsert Prodi
+                // 2. Upsert Prodi (terisolasi per tenant)
                 $stmtFindProdi = $db->prepare("
                     SELECT p.id FROM pdss.master_kampus_prodi p
-                    WHERE (? <> '' AND p.kode_prodi = ?) OR (p.kampus_id = ? AND (p.program_studi = ? OR p.nama_prodi = ? OR p.program_studi ILIKE ?))
+                    WHERE ((? <> '' AND p.kode_prodi = ?) OR (p.kampus_id = ? AND (p.program_studi = ? OR p.nama_prodi = ? OR p.program_studi ILIKE ?)))
+                      AND (p.tenant_id = ? OR p.tenant_id IS NULL)
                     LIMIT 1
                 ");
-                $stmtFindProdi->execute([$kodeProdi, $kodeProdi, $kampusId, $namaProdi, $namaProdi, $namaProdi]);
+                $stmtFindProdi->execute([$kodeProdi, $kodeProdi, $kampusId, $namaProdi, $namaProdi, $namaProdi, $tenantId]);
                 $prodiId = $stmtFindProdi->fetchColumn();
 
                 if (!$prodiId) {
@@ -1050,9 +1169,9 @@ class KampusModuleController extends BaseController
                     $stmtUpdProdi = $db->prepare("
                         UPDATE pdss.master_kampus_prodi
                         SET kode_prodi = COALESCE(NULLIF(?, ''), kode_prodi), program_studi = ?, nama_prodi = ?, fakultas = ?, jenjang = ?, jenis_portofolio = ?, updated_at = CURRENT_TIMESTAMP
-                        WHERE id = ?
+                        WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)
                     ");
-                    $stmtUpdProdi->execute([$kodeProdi, $namaProdi, $namaProdi, $fakultas, $jenjang, $portofolio, $prodiId]);
+                    $stmtUpdProdi->execute([$kodeProdi, $namaProdi, $namaProdi, $fakultas, $jenjang, $portofolio, $prodiId, $tenantId]);
                     $updated++;
                 }
             }

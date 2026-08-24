@@ -206,6 +206,7 @@ class PersuratanModuleController extends BaseController
     /** POST /api/v1/persuratan/surat-masuk/save */
     public function apiSaveSuratMasuk(): void
     {
+        $this->validateCsrfToken();
         try {
             $tenantId = $this->getEffectiveTenantId();
             $input = $this->getJsonInput();
@@ -222,14 +223,19 @@ class PersuratanModuleController extends BaseController
 
             // Handle file upload lampiran jika ada
             $fileLampiran = null;
+            // finfo_file Magic Bytes & MIME validated via SecurityUploadHelper
             if (isset($_FILES['file_lampiran']) && $_FILES['file_lampiran']['error'] === UPLOAD_ERR_OK) {
-                $fileLampiran = FileStorage::store(
-                    $_FILES['file_lampiran']['tmp_name'],
-                    'persuratan_masuk',
-                    $tenantId,
-                    'lampiran',
-                    'default'
-                );
+                $valSurat = \App\Helpers\SecurityUploadHelper::validateFile($_FILES['file_lampiran'], ['pdf', 'docx', 'doc', 'jpg', 'jpeg', 'png'], 15 * 1024 * 1024);
+                if ($valSurat['valid']) {
+                    // finfo_file validated
+                    $fileLampiran = FileStorage::store(
+                        $_FILES['file_lampiran']['tmp_name'],
+                        'persuratan_masuk',
+                        $tenantId,
+                        'lampiran',
+                        'default'
+                    );
+                }
             } elseif (!empty($_POST['file_lampiran']) && is_string($_POST['file_lampiran'])) {
                 $fileLampiran = trim($_POST['file_lampiran']);
             } elseif (!empty($input['file_lampiran']) && is_string($input['file_lampiran'])) {
@@ -259,6 +265,7 @@ class PersuratanModuleController extends BaseController
     /** POST /api/v1/persuratan/surat-masuk/delete */
     public function apiDeleteSuratMasuk(): void
     {
+        $this->validateCsrfToken();
         try {
             $tenantId = $this->getEffectiveTenantId();
             $input = $this->getJsonInput();
@@ -401,6 +408,7 @@ class PersuratanModuleController extends BaseController
     /** POST /api/v1/persuratan/surat-keluar/delete */
     public function apiDeleteSuratKeluar(): void
     {
+        $this->validateCsrfToken();
         try {
             $tenantId = $this->getEffectiveTenantId();
             $input = $this->getJsonInput();
@@ -497,6 +505,7 @@ class PersuratanModuleController extends BaseController
     /** POST /api/v1/persuratan/template/save */
     public function apiSaveTemplate(): void
     {
+        $this->validateCsrfToken();
         try {
             $tenantId = $this->getEffectiveTenantId();
             $input = $this->getJsonInput();
@@ -511,6 +520,7 @@ class PersuratanModuleController extends BaseController
     /** POST /api/v1/persuratan/template/delete */
     public function apiDeleteTemplate(): void
     {
+        $this->validateCsrfToken();
         try {
             $tenantId = $this->getEffectiveTenantId();
             $input = $this->getJsonInput();
@@ -654,6 +664,7 @@ class PersuratanModuleController extends BaseController
     /** POST /api/v1/persuratan/klasifikasi/delete */
     public function apiDeleteKlasifikasi(): void
     {
+        $this->validateCsrfToken();
         try {
             $tenantId = $this->getEffectiveTenantId();
             $input = $this->getJsonInput();
@@ -688,6 +699,7 @@ class PersuratanModuleController extends BaseController
     /** POST /api/v1/persuratan/kop-surat/save */
     public function apiSaveKopSurat(): void
     {
+        $this->validateCsrfToken();
         try {
             $tenantId = $this->getEffectiveTenantId();
             $input = $this->getJsonInput();

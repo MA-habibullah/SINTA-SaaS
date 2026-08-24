@@ -296,6 +296,7 @@ class PerpustakaanModuleController extends BaseController {
     }
 
     public function apiSaveBibliografi(): void {
+        $this->validateCsrfToken();
         try {
             $tenantId = $this->getResolvedTenantId();
             $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
@@ -319,6 +320,7 @@ class PerpustakaanModuleController extends BaseController {
     }
 
     public function apiDeleteBibliografi(): void {
+        $this->validateCsrfToken();
         try {
             $tenantId = $this->getResolvedTenantId();
             $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
@@ -410,6 +412,7 @@ class PerpustakaanModuleController extends BaseController {
     }
 
     public function apiSaveAnggota(): void {
+        $this->validateCsrfToken();
         $tenantId = $this->getResolvedTenantId();
         $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
 
@@ -429,6 +432,7 @@ class PerpustakaanModuleController extends BaseController {
     }
 
     public function apiDeleteAnggota(): void {
+        $this->validateCsrfToken();
         $tenantId = $this->getResolvedTenantId();
         $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
         $id = $input['id'] ?? ($_GET['id'] ?? null);
@@ -455,6 +459,7 @@ class PerpustakaanModuleController extends BaseController {
     }
 
     public function apiPinjamReguler(): void {
+        $this->validateCsrfToken();
         $tenantId = $this->getResolvedTenantId();
         $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
         $res = $this->model->prosesPeminjaman($tenantId, $input);
@@ -462,6 +467,7 @@ class PerpustakaanModuleController extends BaseController {
     }
 
     public function apiKembaliReguler(): void {
+        $this->validateCsrfToken();
         $tenantId = $this->getResolvedTenantId();
         $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
         $sirkulasiId = $input['sirkulasi_id'] ?? ($input['id'] ?? '');
@@ -488,6 +494,7 @@ class PerpustakaanModuleController extends BaseController {
     }
 
     public function apiSaveRak(): void {
+        $this->validateCsrfToken();
         try {
             $tenantId = $this->getResolvedTenantId();
             $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
@@ -500,6 +507,7 @@ class PerpustakaanModuleController extends BaseController {
     }
 
     public function apiDeleteRak(): void {
+        $this->validateCsrfToken();
         try {
             $tenantId = $this->getResolvedTenantId();
             $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
@@ -526,6 +534,7 @@ class PerpustakaanModuleController extends BaseController {
     }
 
     public function apiSaveUsulan(): void {
+        $this->validateCsrfToken();
         try {
             $tenantId = $this->getResolvedTenantId();
             $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
@@ -538,6 +547,7 @@ class PerpustakaanModuleController extends BaseController {
     }
 
     public function apiDeleteUsulan(): void {
+        $this->validateCsrfToken();
         try {
             $tenantId = $this->getResolvedTenantId();
             $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
@@ -554,6 +564,7 @@ class PerpustakaanModuleController extends BaseController {
     }
 
     public function apiUpdateStatusUsulan(): void {
+        $this->validateCsrfToken();
         try {
             $tenantId = $this->getResolvedTenantId();
             $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
@@ -581,6 +592,7 @@ class PerpustakaanModuleController extends BaseController {
     }
 
     public function apiSaveSerial(): void {
+        $this->validateCsrfToken();
         try {
             $tenantId = $this->getResolvedTenantId();
             $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
@@ -593,6 +605,7 @@ class PerpustakaanModuleController extends BaseController {
     }
 
     public function apiDeleteSerial(): void {
+        $this->validateCsrfToken();
         try {
             $tenantId = $this->getResolvedTenantId();
             $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
@@ -620,6 +633,7 @@ class PerpustakaanModuleController extends BaseController {
     }
 
     public function apiSaveEksemplar(): void {
+        $this->validateCsrfToken();
         try {
             $tenantId = $this->getResolvedTenantId();
             $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
@@ -632,6 +646,7 @@ class PerpustakaanModuleController extends BaseController {
     }
 
     public function apiDeleteEksemplar(): void {
+        $this->validateCsrfToken();
         try {
             $tenantId = $this->getResolvedTenantId();
             $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
@@ -672,6 +687,7 @@ class PerpustakaanModuleController extends BaseController {
     }
 
     public function apiSaveVisitorLog(): void {
+        $this->validateCsrfToken();
         try {
             $tenantId = $this->getResolvedTenantId();
             $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
@@ -693,6 +709,7 @@ class PerpustakaanModuleController extends BaseController {
     }
 
     public function apiSavePengaturan(): void {
+        $this->validateCsrfToken();
         try {
             $tenantId = $this->getResolvedTenantId();
             $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
@@ -724,6 +741,7 @@ class PerpustakaanModuleController extends BaseController {
     }
 
     public function apiSimpanPaketBuku(): void {
+        $this->validateCsrfToken();
         try {
             $tenantId = $this->getResolvedTenantId();
             $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
@@ -739,6 +757,7 @@ class PerpustakaanModuleController extends BaseController {
     }
 
     public function apiSimpanUlasan(): void {
+        $this->validateCsrfToken();
         $this->jsonResponse(true, null, 'Ulasan berhasil dikirim.');
     }
 
