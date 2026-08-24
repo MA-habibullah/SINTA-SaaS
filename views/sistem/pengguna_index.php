@@ -1,87 +1,325 @@
 
+<style>
+    [v-cloak] { display: none !important; }
+    .fs-9 { font-size: 0.725rem !important; }
+    .fs-8 { font-size: 0.815rem !important; }
+    .fs-7\.5 { font-size: 0.875rem !important; }
+
+    /* Custom Table Styles */
+    .pengguna-table {
+        border-collapse: separate;
+        border-spacing: 0;
+        min-width: 1050px;
+    }
+    .pengguna-table thead th {
+        background: #f8fafc !important;
+        border-bottom: 2px solid #e2e8f0 !important;
+        font-weight: 700;
+        font-size: 0.72rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: #475569;
+        padding: 0.85rem 0.75rem;
+        white-space: nowrap;
+    }
+    .pengguna-table tbody td {
+        padding: 0.85rem 0.75rem;
+        vertical-align: middle;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .pengguna-table tbody tr:hover td {
+        background-color: #f8fafc !important;
+    }
+
+    .avatar-circle {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        flex-shrink: 0;
+    }
+    .bg-light-primary {
+        background: #eff6ff;
+        color: #2563eb;
+        border: 1px solid #dbeafe;
+    }
+    .bg-light-danger {
+        background: #fef2f2;
+        color: #dc2626;
+        border: 1px solid #fee2e2;
+    }
+
+    .gender-badge-l {
+        background: #eff6ff;
+        color: #1d4ed8;
+        border: 1px solid #bfdbfe;
+        font-weight: 700;
+        font-size: 0.72rem;
+        padding: 2px 7px;
+        border-radius: 6px;
+    }
+    .gender-badge-p {
+        background: #fdf2f8;
+        color: #be185d;
+        border: 1px solid #fbcfe8;
+        font-weight: 700;
+        font-size: 0.72rem;
+        padding: 2px 7px;
+        border-radius: 6px;
+    }
+
+    .filter-card-modern {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 1rem;
+    }
+
+    /* KPI Summary Cards */
+    .kpi-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 1.25rem;
+        padding: 1.15rem 1.25rem;
+        transition: all 0.2s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    .kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+        border-color: #cbd5e1;
+    }
+    .kpi-icon-box {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+</style>
+
 <!-- Halaman Sentral: Manajemen Pengguna -->
 <div id="penggunaApp" v-cloak>
     
-    <!-- Row Header & Actions -->
-    <div class="row mb-3 mb-md-4 align-items-center">
-        <div class="col-12 col-md-7 mb-3 mb-md-0">
+    <!-- Row Header & Modern Action Toolbar -->
+    <div class="row mb-3 mb-md-4 align-items-center justify-content-between g-3">
+        <div class="col-12 col-lg-6">
             <template v-if="userRole === 'siswa'">
-                <h3 class="fw-bold text-dark mb-1 fs-4 fs-md-3">
-                    <i class="bi bi-person-bounding-box text-primary me-2"></i>Profil Data Diri
-                </h3>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-blue-600 text-white rounded-2xl d-flex align-items-center justify-content-center shadow-xs" style="width: 48px; height: 48px;">
+                        <i class="bi bi-person-bounding-box fs-4"></i>
+                    </div>
+                    <div>
+                        <h3 class="fw-bold text-slate-900 mb-0.5 fs-4">Profil Data Diri</h3>
+                        <p class="text-slate-500 fs-8 mb-0">Kelola dan lengkapi data induk kependidikan Anda secara mandiri.</p>
+                    </div>
+                </div>
             </template>
             <template v-else>
-                <h3 class="fw-bold text-dark mb-1 fs-4 fs-md-3">
-                    <i class="bi bi-people-fill text-primary me-2"></i>Manajemen Pengguna
-                </h3>
-                <p class="text-muted fs-8 fs-md-7 mb-0">Kelola data akademik dan non-akademik sekolah (Siswa, Guru, Karyawan, dan Operator) secara terintegrasi.</p>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-blue-600 text-white rounded-2xl d-flex align-items-center justify-content-center shadow-xs" style="width: 48px; height: 48px;">
+                        <i class="bi bi-people-fill fs-4"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <h3 class="fw-bold text-slate-900 mb-0 fs-4">Manajemen Pengguna</h3>
+                            <span v-if="userRole === 'super_admin'" class="badge bg-slate-100 text-slate-700 border border-slate-200 rounded-pill px-2.5 py-1 fs-9 font-bold">
+                                <i class="bi bi-shield-check text-blue-600 me-1"></i>Super Admin
+                            </span>
+                        </div>
+                        <p class="text-slate-500 fs-8 mb-0 mt-0.5">Kelola data akademik dan non-akademik (Siswa, Guru, Staf, & Operator) secara terpusat.</p>
+                    </div>
+                </div>
             </template>
         </div>
         
-        <!-- Toggle Trash & Add Action -->
-        <div class="col-12 col-md-5 d-flex gap-2 justify-content-start justify-content-md-end align-items-center flex-wrap" v-if="userRole !== 'siswa' && activeTab !== 'profile_rapot'">
-            <button class="btn btn-outline-secondary btn-sm rounded-3 px-3 py-2 fs-8 fs-md-7 flex-grow-1 flex-md-grow-0" 
+        <!-- Grouped Action Buttons (Sleek & Space-Efficient) -->
+        <div class="col-12 col-lg-6 d-flex gap-2 justify-content-start justify-content-lg-end align-items-center flex-wrap" v-if="userRole !== 'siswa' && activeTab !== 'profile_rapot' && activeTab !== 'naikkan_kelas'">
+            <!-- Tombol Tong Sampah Toggle -->
+            <button type="button"
+                    class="btn btn-sm rounded-xl px-3 py-2 fs-8 font-semibold transition d-inline-flex align-items-center gap-1.5 shadow-2xs" 
                     @click="toggleTrashMode" 
-                    :class="{'btn-danger text-white': trashMode}"
-                    :style="!trashMode ? 'color: #334155; border-color: #94a3b8;' : ''">
-                <i class="bi" :class="trashMode ? 'bi-table' : 'bi-trash3'"></i>
-                {{ trashMode ? 'Kembali ke Data Aktif' : 'Lihat Tong Sampah' }}
+                    v-if="activeTab !== 'mutasi'"
+                    :class="trashMode ? 'btn-danger text-white' : 'btn-light border border-slate-200 text-slate-600 hover:bg-slate-100'"
+                    :title="trashMode ? 'Kembali ke data aktif' : 'Lihat data di tong sampah'">
+                <i class="bi" :class="trashMode ? 'bi-arrow-left-circle' : 'bi-trash3'"></i>
+                <span>{{ trashMode ? 'Kembali' : 'Sampah' }}</span>
             </button>
-            <button class="btn btn-outline-primary btn-sm rounded-3 px-3 py-2 fs-8 fs-md-7 flex-grow-1 flex-md-grow-0" @click="downloadExcel" v-if="activeTab === 'siswa' && !trashMode">
-                <i class="bi bi-download me-1"></i> Download Excel
+
+            <!-- Dropdown Menu Opsi Data (Export / Import) -->
+            <div class="dropdown" v-if="activeTab === 'siswa' && !trashMode">
+                <button class="btn btn-sm btn-light border border-slate-200 text-slate-700 rounded-xl px-3 py-2 fs-8 font-semibold dropdown-toggle shadow-2xs d-inline-flex align-items-center gap-1.5" 
+                        type="button" 
+                        data-bs-toggle="dropdown" 
+                        aria-expanded="false">
+                    <i class="bi bi-box-arrow-in-down text-slate-500"></i>
+                    <span>Opsi Data</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-md border border-slate-100 rounded-2xl py-2 fs-8">
+                    <li>
+                        <button class="dropdown-item py-2 px-3 d-flex align-items-center gap-2 text-slate-700" @click="downloadExcel">
+                            <i class="bi bi-file-earmark-spreadsheet text-emerald-600 fs-6"></i> Download Excel (.xlsx)
+                        </button>
+                    </li>
+                    <li>
+                        <button class="dropdown-item py-2 px-3 d-flex align-items-center gap-2 text-slate-700" @click="openImportModal">
+                            <i class="bi bi-cloud-arrow-up text-blue-600 fs-6"></i> Import Siswa dari Excel
+                        </button>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Tombol Registrasi Cepat -->
+            <button class="btn btn-sm btn-emerald-soft rounded-xl px-3 py-2 fs-8 font-semibold shadow-2xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition d-inline-flex align-items-center gap-1.5" 
+                    @click="openQuickAddModal" 
+                    v-if="activeTab === 'siswa' && !trashMode && userRole !== 'siswa' && userRole !== 'guru'">
+                <i class="bi bi-lightning-charge-fill text-emerald-600"></i>
+                <span>Registrasi Cepat</span>
             </button>
-            <button class="btn btn-outline-success btn-sm rounded-3 px-3 py-2 fs-8 fs-md-7 flex-grow-1 flex-md-grow-0" @click="openImportModal" v-if="activeTab === 'siswa' && !trashMode">
-                <i class="bi bi-file-earmark-excel me-1"></i> Import Siswa
-            </button>
-            <button class="btn btn-success btn-sm rounded-3 px-3 py-2 fs-8 fs-md-7 shadow-sm flex-grow-1 flex-md-grow-0" @click="openQuickAddModal" v-if="activeTab === 'siswa' && !trashMode && userRole !== 'siswa' && userRole !== 'guru'">
-                <i class="bi bi-lightning-fill me-1"></i> Registrasi Cepat
-            </button>
-            <button class="btn btn-primary btn-sm rounded-3 px-3 py-2 fs-8 fs-md-7 shadow-sm flex-grow-1 flex-md-grow-0" @click="openCreateModal" v-if="!trashMode && activeTab !== 'mutasi'">
-                <i class="bi bi-plus-lg me-1"></i> Tambah {{ getActiveTabName() }}
+
+            <!-- Tombol Tambah Utama -->
+            <button class="btn btn-sm btn-primary rounded-xl px-3.5 py-2 fs-8 font-semibold shadow-2xs d-inline-flex align-items-center gap-1.5 hover-lift" 
+                    @click="openCreateModal" 
+                    v-if="!trashMode && activeTab !== 'mutasi' && activeTab !== 'naikkan_kelas'">
+                <i class="bi bi-plus-lg"></i>
+                <span>Tambah {{ getActiveTabName() }}</span>
             </button>
         </div>
     </div>
 
-    <!-- Filter Sekolah Banner (Di bawah tulisan Manajemen Pengguna & Sebelum Navtab) -->
-    <div class="mb-4 p-3 px-md-4 rounded-4 shadow-sm border border-blue-100" 
-         style="background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%); border-left: 4px solid #2563eb !important;"
-         v-if="userRole !== 'siswa'">
+    <!-- Compact School Selector Banner (Khusus Super Admin) -->
+    <div class="mb-4 p-3 px-md-4 rounded-2xl shadow-2xs border border-blue-100 bg-white" 
+         v-if="userRole === 'super_admin' && listTenants.length > 0">
         <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
-            <div class="d-flex align-items-center flex-wrap gap-2">
-                <i class="bi bi-building text-primary fs-5"></i>
-                <span class="fw-bold text-dark me-1" style="font-size: 0.95rem;">Filter Sekolah</span>
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1.5 fs-8">
-                    <i class="bi bi-funnel-fill me-1"></i>Aktif
+            <div class="d-flex align-items-center flex-wrap gap-2.5">
+                <span class="d-inline-flex align-items-center justify-content-center bg-blue-50 text-blue-600 rounded-xl" style="width: 34px; height: 34px;">
+                    <i class="bi bi-building fs-6"></i>
                 </span>
-
-                <!-- Dropdown Filter Sekolah (Khusus Super Admin) -->
-                <div v-if="userRole === 'super_admin'" class="ms-md-2 my-1 my-md-0">
-                    <select id="top_filter_tenant_id" name="top_filter_tenant_id" 
-                            class="form-select form-select-sm bg-white border-blue-200 rounded-3 text-dark fw-medium shadow-sm" 
-                            style="min-width: 250px; max-width: 340px; height: 38px; font-size: 0.875rem;" 
+                <div>
+                    <span class="fs-8 fw-bold text-slate-800 d-block leading-tight">Sekolah Terpilih:</span>
+                    <span class="fs-9 text-slate-500">Filter data berdasarkan tenant sekolah</span>
+                </div>
+                
+                <div class="ms-md-2 my-1 my-md-0">
+                    <select id="top_filter_tenant_id" 
+                            name="top_filter_tenant_id" 
+                            class="form-select form-select-sm bg-slate-50 border-slate-200 rounded-xl text-slate-800 font-semibold shadow-2xs py-1.5" 
+                            style="min-width: 260px; max-width: 360px; font-size: 0.85rem;" 
                             v-model="filterTenantId" 
                             @change="onFilterTenantChange">
-                        <option value="">-- Semua Sekolah --</option>
+                        <option value="">-- Semua Sekolah (Global SaaS) --</option>
                         <option v-for="t in listTenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
                     </select>
                 </div>
-
-                <!-- Tombol Terapkan Filter -->
-                <button v-if="userRole === 'super_admin'" 
-                        type="button" 
-                        @click="onFilterTenantChange" 
-                        class="btn btn-primary btn-sm rounded-3 px-3 py-2 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-sm"
-                        style="height: 38px;">
-                    <i class="bi bi-funnel-fill"></i> Terapkan Filter
-                </button>
             </div>
 
-            <!-- Informational Text -->
-            <div class="text-muted fs-8 fs-md-7">
-                Menampilkan data milik: 
-                <strong class="text-primary fw-bold ms-1">
-                    {{ getSelectedTenantName() }}
-                </strong>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-blue-50 text-blue-700 border border-blue-200 rounded-pill px-3 py-1.5 fs-8 font-medium">
+                    <i class="bi bi-check2-circle me-1"></i>{{ getSelectedTenantName() }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4 KPI Metric Summary Cards (Live Data Ringkasan Cepat) -->
+    <div class="row g-3 mb-4" v-if="activeTab !== 'naikkan_kelas' && activeTab !== 'profile_rapot'">
+        <!-- Card 1: Total Data -->
+        <div class="col-6 col-md-3">
+            <div class="kpi-card shadow-2xs h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="fs-9 font-bold text-slate-400 text-uppercase tracking-wider d-block mb-1">
+                            Total {{ activeTab === 'siswa' ? 'Siswa' : getActiveTabName() }}
+                        </span>
+                        <h4 class="fw-bolder text-slate-900 mb-0 font-monospace">
+                            {{ summaryStats.total ?? total ?? 0 }}
+                        </h4>
+                    </div>
+                    <div class="kpi-icon-box bg-blue-50 text-blue-600">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                </div>
+                <div class="mt-2.5 pt-2 border-top border-slate-100 fs-9 text-slate-500 d-flex align-items-center gap-1">
+                    <i class="bi bi-layers text-blue-500"></i>
+                    <span>{{ filterKelas ? 'Kelas Terfilter' : 'Seluruh Rombel' }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 2: Laki-laki / Perempuan (Tab Siswa) atau Aktif -->
+        <div class="col-6 col-md-3">
+            <div class="kpi-card shadow-2xs h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="fs-9 font-bold text-slate-400 text-uppercase tracking-wider d-block mb-1">
+                            Rasio Gender (L/P)
+                        </span>
+                        <h4 class="fw-bolder text-slate-900 mb-0 font-monospace">
+                            <span class="text-blue-600">{{ summaryStats.male ?? 0 }}</span> / <span class="text-pink-600">{{ summaryStats.female ?? 0 }}</span>
+                        </h4>
+                    </div>
+                    <div class="kpi-icon-box bg-indigo-50 text-indigo-600">
+                        <i class="bi bi-gender-ambiguous"></i>
+                    </div>
+                </div>
+                <div class="mt-2.5 pt-2 border-top border-slate-100 fs-9 text-slate-500 d-flex align-items-center gap-1">
+                    <span class="badge gender-badge-l" style="font-size:0.65rem;">L: {{ summaryStats.male ?? 0 }}</span>
+                    <span class="badge gender-badge-p" style="font-size:0.65rem;">P: {{ summaryStats.female ?? 0 }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 3: Status Aktif -->
+        <div class="col-6 col-md-3">
+            <div class="kpi-card shadow-2xs h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="fs-9 font-bold text-slate-400 text-uppercase tracking-wider d-block mb-1">
+                            Status Aktif
+                        </span>
+                        <h4 class="fw-bolder text-emerald-600 mb-0 font-monospace">
+                            {{ summaryStats.active ?? total ?? 0 }}
+                        </h4>
+                    </div>
+                    <div class="kpi-icon-box bg-emerald-50 text-emerald-600">
+                        <i class="bi bi-check2-circle"></i>
+                    </div>
+                </div>
+                <div class="mt-2.5 pt-2 border-top border-slate-100 fs-9 text-slate-500 d-flex align-items-center gap-1">
+                    <i class="bi bi-patch-check-fill text-emerald-500"></i>
+                    <span>Tervalidasi aktif di sistem</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 4: Jenjang & Rombel Terdata -->
+        <div class="col-6 col-md-3">
+            <div class="kpi-card shadow-2xs h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="fs-9 font-bold text-slate-400 text-uppercase tracking-wider d-block mb-1">
+                            Tingkat Jenjang
+                        </span>
+                        <h4 class="fw-bolder text-slate-900 mb-0 font-monospace">
+                            {{ listJenjang.length }} Jenjang
+                        </h4>
+                    </div>
+                    <div class="kpi-icon-box bg-amber-50 text-amber-600">
+                        <i class="bi bi-mortarboard-fill"></i>
+                    </div>
+                </div>
+                <div class="mt-2.5 pt-2 border-top border-slate-100 fs-9 text-slate-500 d-flex align-items-center gap-1">
+                    <i class="bi bi-grid-3x3 text-amber-500"></i>
+                    <span>{{ listKelas.length }} Rombel terdaftar</span>
+                </div>
             </div>
         </div>
     </div>
@@ -120,72 +358,134 @@
     </div>
 
     <!-- Main Datatable Grid (disembunyikan saat tab aksi aktif) -->
-    <div class="card border-0 shadow-sm rounded-4" v-if="activeTab !== 'naikkan_kelas' && activeTab !== 'profile_rapot'">
+    <div class="card border border-slate-200/80 shadow-xs rounded-3xl overflow-hidden mb-5 bg-white" v-if="activeTab !== 'naikkan_kelas' && activeTab !== 'profile_rapot'">
         <div class="card-body p-3 p-md-4">
             
-            <!-- Horizontal Filter Form (Tailwind CSS) -->
-            <div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-100" v-if="activeTab === 'siswa' || activeTab === 'mutasi'">
-                <form @submit.prevent="fetchData(1)" class="flex flex-col md:flex-row md:items-end gap-3">
-                    <!-- Filter 1: Jenjang / Tingkat -->
-                    <div class="flex-1 min-w-[150px]">
-                        <label for="filter_jenjang" class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Tingkat Jenjang</label>
-                        <select id="filter_jenjang" name="filter_jenjang" class="w-full h-10 px-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" v-model="filterJenjang" @change="onJenjangFilterChange">
-                            <option value="">-- Semua Jenjang --</option>
-                            <option v-for="j in listJenjang" :key="j.id" :value="j.id">{{ j.nama || j.nama_jenjang || j.kode_jenjang }}</option>
-                        </select>
+            <!-- Horizontal Filter Form (Dinamis & Responsive Modern Card) -->
+            <div class="mb-4 filter-card-modern p-3.5 p-md-4 shadow-2xs" v-if="activeTab === 'siswa' || activeTab === 'mutasi'">
+                <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="d-inline-flex align-items-center justify-content-center bg-blue-100 text-blue-700 rounded-lg shadow-2xs" style="width: 28px; height: 28px;">
+                            <i class="bi bi-funnel-fill fs-8"></i>
+                        </span>
+                        <span class="fs-8 fw-bold text-slate-800 text-uppercase tracking-wider">
+                            Filter Data {{ activeTab === 'siswa' ? 'Siswa' : 'Mutasi' }}
+                        </span>
+                        <span v-if="filterJenjang || filterKelas || filterStatus" class="badge bg-blue-50 text-blue-700 border border-blue-200 text-xs px-2.5 py-1 rounded-pill font-medium d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-check-circle-fill text-blue-600 fs-9"></i> Filter Aktif
+                        </span>
                     </div>
+                    <button v-if="filterJenjang || filterKelas || filterStatus" 
+                            type="button" 
+                            @click="resetFilters" 
+                            class="btn btn-sm btn-link text-slate-500 hover:text-rose-600 p-0 fs-8 text-decoration-none d-flex align-items-center gap-1">
+                        <i class="bi bi-x-circle"></i> Reset Semua Filter
+                    </button>
+                </div>
 
-                    <!-- Filter 2: Kelas / Rombel (Filtering berdasarkan Jenjang) -->
-                    <div class="flex-1 min-w-[150px]">
-                        <label for="filter_kelas" class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Kelas / Rombel</label>
-                        <select id="filter_kelas" name="filter_kelas" class="w-full h-10 px-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" v-model="filterKelas" @change="fetchData(1)">
-                            <option value="">-- Semua Kelas --</option>
-                            <option v-for="k in filteredKelasList" :key="k.id" :value="k.id">{{ k.nama_kelas || k.nama }}</option>
-                        </select>
-                    </div>
+                <form @submit.prevent="fetchData(1)">
+                    <div class="row g-2.5 align-items-end">
+                        <!-- Filter 1: Jenjang / Tingkat -->
+                        <div class="col-12 col-sm-6 col-md-3">
+                            <label for="filter_jenjang" class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Tingkat Jenjang</label>
+                            <select id="filter_jenjang" 
+                                    name="filter_jenjang" 
+                                    class="form-select rounded-xl border border-slate-200 bg-white fs-8 text-slate-800 font-medium py-2 shadow-2xs" 
+                                    v-model="filterJenjang" 
+                                    @change="onJenjangFilterChange">
+                                <option value="">-- Semua Jenjang --</option>
+                                <option v-for="j in listJenjang" :key="j.id" :value="j.id">{{ j.nama || j.nama_jenjang || j.kode_jenjang }}</option>
+                            </select>
+                        </div>
 
-                    <!-- Filter 3: Status Siswa -->
-                    <div class="flex-1 min-w-[150px]" v-if="activeTab === 'siswa'">
-                        <label for="filter_status" class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Status Siswa</label>
-                        <select id="filter_status" name="filter_status" class="w-full h-10 px-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" v-model="filterStatus" @change="fetchData(1)">
-                            <option value="">-- Semua Status --</option>
-                            <option value="Aktif">Aktif</option>
-                            <option value="Lulus">Lulus</option>
-                            <option value="Pindah">Pindah</option>
-                            <option value="Keluar">Keluar</option>
-                        </select>
-                    </div>
+                        <!-- Filter 2: Kelas / Rombel -->
+                        <div class="col-12 col-sm-6 col-md-3">
+                            <label for="filter_kelas" class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Kelas / Rombel</label>
+                            <select id="filter_kelas" 
+                                    name="filter_kelas" 
+                                    class="form-select rounded-xl border border-slate-200 bg-white fs-8 text-slate-800 font-medium py-2 shadow-2xs" 
+                                    v-model="filterKelas" 
+                                    @change="fetchData(1)">
+                                <option value="">-- Semua Kelas --</option>
+                                <option v-for="k in filteredKelasList" :key="k.id" :value="k.id">{{ k.nama_kelas || k.nama }}</option>
+                            </select>
+                        </div>
 
-                    <!-- Button Cari & Reset -->
-                    <div class="flex gap-2">
-                        <button type="submit" class="h-10 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-colors shadow-sm flex items-center gap-1.5 border-0">
-                            <i class="bi bi-search"></i> Cari
-                        </button>
-                        <button type="button" @click="resetFilters" class="h-10 px-4 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold text-sm transition-colors cursor-pointer">
-                            Reset
-                        </button>
+                        <!-- Filter 3: Status Siswa (Hanya untuk tab siswa) -->
+                        <div class="col-12 col-sm-6" :class="activeTab === 'siswa' ? 'col-md-3' : 'd-none'">
+                            <label for="filter_status" class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Status Siswa</label>
+                            <select id="filter_status" 
+                                    name="filter_status" 
+                                    class="form-select rounded-xl border border-slate-200 bg-white fs-8 text-slate-800 font-medium py-2 shadow-2xs" 
+                                    v-model="filterStatus" 
+                                    @change="fetchData(1)">
+                                <option value="">-- Semua Status --</option>
+                                <option value="Aktif">Aktif</option>
+                                <option value="Lulus">Lulus</option>
+                                <option value="Pindah">Pindah</option>
+                                <option value="Keluar">Keluar</option>
+                            </select>
+                        </div>
+
+                        <!-- Button Cari & Reset (Responsive Column) -->
+                        <div class="col-12 col-sm-6" :class="activeTab === 'siswa' ? 'col-md-3' : 'col-md-6'">
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary rounded-xl py-2 px-3.5 fs-8 font-semibold flex-grow-1 shadow-2xs d-flex align-items-center justify-content-center gap-1.5 hover-lift">
+                                    <i class="bi bi-search"></i>
+                                    <span>Cari</span>
+                                </button>
+                                <button type="button" 
+                                        @click="resetFilters" 
+                                        class="btn btn-light border border-slate-200 text-slate-600 rounded-xl py-2 px-3 fs-8 font-semibold shadow-2xs hover-lift d-flex align-items-center gap-1">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                    <span>Reset</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>
 
-            <!-- Table Action Filters -->
+            <!-- Table Action Toolbar (Search & Per Page) -->
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
                 <div class="d-flex align-items-center gap-2 order-2 order-md-1">
-                    <label for="per_page_select" class="fs-8 text-muted mb-0">Tampilkan</label>
-                    <select id="per_page_select" name="per_page" aria-label="Tampilkan baris data" class="form-select form-select-sm rounded-3" v-model="perPage" @change="fetchData(1)" style="width: 80px;">
+                    <label for="per_page_select" class="fs-8 text-slate-600 font-medium mb-0">Tampilkan</label>
+                    <select id="per_page_select" 
+                            name="per_page" 
+                            aria-label="Tampilkan baris data" 
+                            class="form-select form-select-sm rounded-xl border border-slate-200 bg-white text-slate-800 font-medium shadow-2xs" 
+                            v-model="perPage" 
+                            @change="fetchData(1)" 
+                            style="width: 84px; height: 38px;">
                         <option value="5">5</option>
                         <option value="10">10</option>
                         <option value="25">25</option>
                         <option value="50">50</option>
+                        <option value="100">100</option>
                     </select>
-                    <span class="fs-8 text-muted">Baris</span>
+                    <span class="fs-8 text-slate-600 font-medium">Baris</span>
                 </div>
                 
-                <div class="search-box-wrapper order-1 order-md-2 w-100" style="max-width: 350px;">
+                <div class="search-box-wrapper order-1 order-md-2 w-100" style="max-width: 360px;">
                     <div class="input-group input-group-sm">
-                        <span class="input-group-text bg-light border-end-0 rounded-start-3"><i class="bi bi-search text-muted"></i></span>
+                        <span class="input-group-text bg-slate-50 border-slate-200 border-end-0 rounded-start-xl text-slate-400 ps-3">
+                            <i class="bi bi-search"></i>
+                        </span>
                         <label for="search_input" class="visually-hidden">Cari data pengguna</label>
-                        <input id="search_input" name="search" aria-label="Cari data pengguna" type="text" class="form-control bg-light border-start-0 rounded-end-3" placeholder="Cari nama, email, NISN, NIS..." v-model="search" @input="debounceSearch">
+                        <input id="search_input" 
+                               name="search" 
+                               aria-label="Cari data pengguna" 
+                               type="text" 
+                               class="form-control bg-slate-50 border-slate-200 border-start-0 border-end-0 text-slate-800 fs-8 font-medium py-2 shadow-none focus:bg-white" 
+                               placeholder="Cari nama, email, NISN, NIS..." 
+                               v-model="search" 
+                               @input="debounceSearch">
+                        <span class="input-group-text bg-slate-50 border-slate-200 border-start-0 rounded-end-xl pe-2" v-if="search">
+                            <button type="button" class="btn btn-sm btn-link text-slate-400 p-0 text-decoration-none" @click="search=''; fetchData(1)">
+                                <i class="bi bi-x-circle-fill"></i>
+                            </button>
+                        </span>
+                        <span class="input-group-text bg-slate-50 border-slate-200 border-start-0 rounded-end-xl pe-2" v-else></span>
                     </div>
                 </div>
             </div>
@@ -200,27 +500,27 @@
 
             <!-- Table Content (Dinamis berdasarkan tab aktif) -->
             <div v-else class="table-responsive">
-                <table class="table table-hover align-middle mb-4" style="font-size: 0.85rem;">
-                    <thead class="table-light">
+                <table class="table table-hover align-middle mb-4 pengguna-table" style="font-size: 0.85rem;">
+                    <thead>
                         <!-- Head Table Siswa -->
                         <tr v-if="activeTab === 'siswa'">
-                            <th style="width: 50px;">No</th>
+                            <th style="width: 50px;" class="text-center">No</th>
                             <th v-if="userRole === 'super_admin'">Sekolah</th>
                             <th>Nama Lengkap</th>
                             <th>Jenjang</th>
                             <th>Kelas</th>
                             <th>NISN & NIS</th>
-                            <th class="text-center">L/P</th>
+                            <th class="text-center" style="width: 70px;">L/P</th>
                             <th>TTL</th>
                             <th>Alamat</th>
 
                             <th>Kelengkapan Data</th>
                             <th class="text-center" style="width: 120px;">Status Siswa</th>
-                            <th class="text-center" style="width: 160px;">Aksi</th>
+                            <th class="text-center pe-3" style="width: 160px;">Aksi</th>
                         </tr>
                         <!-- Head Table Mutasi -->
                         <tr v-else-if="activeTab === 'mutasi'">
-                            <th style="width: 50px;">No</th>
+                            <th style="width: 50px;" class="text-center">No</th>
                             <th v-if="userRole === 'super_admin'">Sekolah</th>
                             <th>Nama Lengkap</th>
                             <th>Kelas</th>
@@ -228,18 +528,18 @@
                             <th>Keluar Karena</th>
                             <th>Tanggal Keluar</th>
                             <th>Alasan / Keterangan</th>
-                            <th class="text-center" style="width: 160px;">Aksi</th>
+                            <th class="text-center pe-3" style="width: 160px;">Aksi</th>
                         </tr>
                         <!-- Head Table Staff (Guru, Karyawan, Operator) -->
                         <tr v-else>
-                            <th style="width: 50px;">No</th>
+                            <th style="width: 50px;" class="text-center">No</th>
                             <th v-if="userRole === 'super_admin'">Sekolah</th>
                             <th>Nama Lengkap & NIP</th>
                             <th>Email & Kontak</th>
                             <th>Jenis GTK & Jabatan</th>
                             <th>Peran & Tugas Tambahan</th>
                             <th class="text-center" style="width: 110px;">Status</th>
-                            <th class="text-center" style="width: 180px;">Aksi</th>
+                            <th class="text-center pe-3" style="width: 180px;">Aksi</th>
                         </tr>
                     </thead>
                     
@@ -247,14 +547,14 @@
                         <!-- Loop Data Siswa -->
                         <template v-if="activeTab === 'siswa'">
                             <tr v-for="(item, idx) in listData" :key="item.id" :class="{'table-light-danger text-muted': trashMode}">
-                                <td class="text-muted">{{ (currentPage - 1) * perPage + idx + 1 }}</td>
+                                <td class="text-center text-muted font-monospace fs-9">{{ (currentPage - 1) * perPage + idx + 1 }}</td>
                                 <td v-if="userRole === 'super_admin'" class="fw-semibold text-secondary fs-8">{{ item.nama_sekolah || '-' }}</td>
                                 <td>
                                     <div class="d-flex align-items-center">
-                                        <div class="avatar-circle me-2 bg-light-primary fw-bold">
+                                        <div class="avatar-circle me-2.5 bg-light-primary fw-bold shadow-2xs">
                                             {{ getInitials(item.nama_lengkap) }}
                                         </div>
-                                        <span class="fw-semibold text-dark">{{ item.nama_lengkap }}</span>
+                                        <span class="fw-bold text-slate-800">{{ item.nama_lengkap }}</span>
                                     </div>
                                 </td>
                                 <td>
@@ -264,12 +564,12 @@
                                     <span class="badge bg-light-primary border">{{ item.nama_kelas || '-' }}</span>
                                 </td>
                                 <td>
-                                    <div><small class="text-muted d-block">NISN: <span class="font-monospace text-dark">{{ item.nisn || '-' }}</span></small></div>
+                                    <div><small class="text-muted d-block">NISN: <span class="font-monospace text-dark fw-semibold">{{ item.nisn || '-' }}</span></small></div>
                                     <div><small class="text-muted">NIS: <span class="font-monospace text-dark">{{ item.nis || '-' }}</span></small></div>
                                 </td>
                                 <td class="text-center">
-                                    <span class="badge" :class="item.jenis_kelamin === 'L' ? 'bg-info text-dark' : 'bg-warning text-dark'">
-                                        {{ item.jenis_kelamin }}
+                                    <span :class="item.jenis_kelamin === 'L' ? 'gender-badge-l' : 'gender-badge-p'">
+                                        {{ item.jenis_kelamin || '-' }}
                                     </span>
                                 </td>
                                 <td>
@@ -379,9 +679,9 @@
                                 </td>
                                 <td class="text-center">
                                     <div class="d-inline-flex gap-2" v-if="!trashMode">
-                                        <button class="btn btn-sm btn-outline-secondary rounded-2 px-2 py-1 fs-8" @click="openEditModal(item)">
+                                        <a :href="'<?= $this->getBaseUrl() ?>/siswa/edit?id=' + item.id" class="btn btn-sm btn-outline-secondary rounded-2 px-2 py-1 fs-8">
                                             <i class="bi bi-pencil-square me-1"></i>Edit
-                                        </button>
+                                        </a>
                                         <button class="btn btn-sm btn-outline-danger rounded-2 px-2 py-1 fs-8" @click="deleteItem(item.id)">
                                             <i class="bi bi-trash3 me-1"></i>Hapus
                                         </button>
@@ -564,12 +864,20 @@
     <!-- Reusable Form Modal (Siswa & Staff Dynamic Modal) -->
     <div class="modal fade" id="formModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-            <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
                 
-                <div class="modal-header border-bottom py-3">
-                    <h5 class="modal-title fw-bold text-dark">
-                        {{ isEditMode ? 'Edit ' + getActiveTabName() : 'Tambah ' + getActiveTabName() }}
-                    </h5>
+                <div class="modal-header border-bottom py-3 bg-white sticky-top">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="kpi-icon-box bg-blue-50 text-blue-600" style="width:36px; height:36px; font-size:1.1rem;">
+                            <i class="bi" :class="isEditMode ? 'bi-pencil-square' : 'bi-plus-circle-fill'"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-slate-900 mb-0 fs-6">
+                                {{ isEditMode ? 'Edit ' + getActiveTabName() : 'Tambah ' + getActiveTabName() }}
+                            </h5>
+                            <span class="fs-9 text-slate-500">Lengkapi data formulir di bawah ini dengan valid.</span>
+                        </div>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 
@@ -579,303 +887,534 @@
                             
                             <!-- Input Sekolah khusus Super Admin -->
                             <div class="col-12" v-if="userRole === 'super_admin'">
-                                <label for="form_tenant_id" class="form-label fw-semibold fs-8 text-muted mb-1">Sekolah / Tenant <span class="text-danger">*</span></label>
-                                <select id="form_tenant_id" name="tenant_id" class="form-select rounded-3" :class="{'is-invalid': errors.tenant_id}" v-model="form.tenant_id" :disabled="isEditMode" required>
-                                    <option value="" disabled>-- Pilih Sekolah --</option>
-                                    <option v-for="t in listTenants" :value="t.id" :key="t.id">{{ t.nama_sekolah }}</option>
-                                </select>
-                                <div class="invalid-feedback">{{ getError('tenant_id') }}</div>
+                                <div class="p-3 bg-blue-50/60 border border-blue-200 rounded-3">
+                                    <label for="form_tenant_id" class="form-label fw-bold fs-8 text-blue-900 mb-1">
+                                        <i class="bi bi-buildings-fill me-1 text-blue-600"></i>Sekolah / Tenant <span class="text-danger">*</span>
+                                    </label>
+                                    <select id="form_tenant_id" name="tenant_id" class="form-select form-select-sm bg-white rounded-3 shadow-2xs font-semibold" :class="{'is-invalid': errors.tenant_id}" v-model="form.tenant_id" :disabled="isEditMode" required>
+                                        <option value="" disabled>-- Pilih Sekolah Tujuan --</option>
+                                        <option v-for="t in listTenants" :value="t.id" :key="t.id">{{ t.nama_sekolah }}</option>
+                                    </select>
+                                    <div class="invalid-feedback">{{ getError('tenant_id') }}</div>
+                                </div>
                             </div>
                             
-                            <!-- Form inputs khusus kategori SISWA -->
-                            <template v-if="activeTab === 'siswa'">
-                                <div class="col-12 col-md-6">
-                                    <label for="form_nama_lengkap" class="form-label fw-semibold fs-8 text-muted mb-1">Nama Lengkap <span class="text-danger">*</span></label>
-                                    <input id="form_nama_lengkap" name="nama_lengkap" type="text" class="form-control rounded-3" :class="{'is-invalid': errors.nama_lengkap}" v-model="form.nama_lengkap" placeholder="Nama lengkap siswa" required>
-                                    <div class="invalid-feedback">{{ getError('nama_lengkap') }}</div>
-                                </div>
-
-                                <div class="col-12 col-md-6">
-                                    <label for="form_jenis_kelamin" class="form-label fw-semibold fs-8 text-muted mb-1">Jenis Kelamin <span class="text-danger">*</span></label>
-                                    <select id="form_jenis_kelamin" name="jenis_kelamin" class="form-select rounded-3" :class="{'is-invalid': errors.jenis_kelamin}" v-model="form.jenis_kelamin" required>
-                                        <option value="" disabled>-- Pilih Jenis Kelamin --</option>
-                                        <option value="L">Laki-laki (L)</option>
-                                        <option value="P">Perempuan (P)</option>
-                                    </select>
-                                    <div class="invalid-feedback">{{ getError('jenis_kelamin') }}</div>
-                                </div>
-
-                                <div class="col-12 col-md-6">
-                                    <label for="form_nisn" class="form-label fw-semibold fs-8 text-muted mb-1">NISN <small class="text-muted">(10 Digit - Opsional)</small></label>
-                                    <input id="form_nisn" name="nisn" type="text" class="form-control rounded-3 font-monospace" :class="{'is-invalid': errors.nisn}" v-model="form.nisn" placeholder="Contoh: 0054231901" maxlength="10">
-                                    <div class="invalid-feedback">{{ getError('nisn') }}</div>
-                                </div>
-
-                                <div class="col-12 col-md-6">
-                                    <label for="form_nis" class="form-label fw-semibold fs-8 text-muted mb-1">NIS <small class="text-muted">(Nomor Induk Siswa - Opsional)</small></label>
-                                    <input id="form_nis" name="nis" type="text" class="form-control rounded-3 font-monospace" :class="{'is-invalid': errors.nis}" v-model="form.nis" placeholder="Contoh: 2026102">
-                                    <div class="invalid-feedback">{{ getError('nis') }}</div>
-                                </div>
-
-                                <div class="col-12 col-md-6">
-                                    <label for="form_tempat_lahir" class="form-label fw-semibold fs-8 text-muted mb-1">Tempat Lahir</label>
-                                    <input id="form_tempat_lahir" name="tempat_lahir" type="text" class="form-control rounded-3" :class="{'is-invalid': errors.tempat_lahir}" v-model="form.tempat_lahir" placeholder="Tempat lahir">
-                                    <div class="invalid-feedback">{{ getError('tempat_lahir') }}</div>
-                                </div>
-
-                                <div class="col-12 col-md-6">
-                                    <label for="form_tanggal_lahir" class="form-label fw-semibold fs-8 text-muted mb-1">Tanggal Lahir</label>
-                                    <input id="form_tanggal_lahir" name="tanggal_lahir" type="date" class="form-control rounded-3" :class="{'is-invalid': errors.tanggal_lahir}" v-model="form.tanggal_lahir">
-                                    <div class="invalid-feedback">{{ getError('tanggal_lahir') }}</div>
-                                </div>
-
-                                <div class="col-12 col-md-6">
-                                    <label for="form_nama_wali" class="form-label fw-semibold fs-8 text-muted mb-1">Nama Wali Siswa</label>
-                                    <input id="form_nama_wali" name="nama_wali" type="text" class="form-control rounded-3" :class="{'is-invalid': errors.nama_wali}" v-model="form.nama_wali" placeholder="Nama ayah/ibu/wali">
-                                    <div class="invalid-feedback">{{ getError('nama_wali') }}</div>
-                                </div>
-
-                                <div class="col-12 col-md-6">
-                                    <label for="form_kontak_wali" class="form-label fw-semibold fs-8 text-muted mb-1">Kontak Wali Siswa</label>
-                                    <input id="form_kontak_wali" name="kontak_wali" type="text" class="form-control rounded-3" :class="{'is-invalid': errors.kontak_wali}" v-model="form.kontak_wali" placeholder="No. HP / Kontak wali">
-                                    <div class="invalid-feedback">{{ getError('kontak_wali') }}</div>
-                                </div>
-
+                            <!-- ======================================================= -->
+                            <!-- 1. FORM KHUSUS GURU (activeTab === 'guru')               -->
+                            <!-- ======================================================= -->
+                            <template v-if="activeTab === 'guru'">
+                                <!-- Section A: Identitas & Akun Login -->
                                 <div class="col-12">
-                                    <label for="form_alamat" class="form-label fw-semibold fs-8 text-muted mb-1">Alamat Lengkap</label>
-                                    <textarea id="form_alamat" name="alamat" class="form-control rounded-3" :class="{'is-invalid': errors.alamat}" v-model="form.alamat" rows="2" placeholder="Alamat tinggal siswa"></textarea>
-                                    <div class="invalid-feedback">{{ getError('alamat') }}</div>
+                                    <div class="form-section-card">
+                                        <div class="form-section-title">
+                                            <i class="bi bi-person-circle text-blue-600"></i> Identitas & Akun Login Guru
+                                        </div>
+                                        <div class="row g-2.5">
+                                            <div class="col-12">
+                                                <label for="form_guru_nama" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Nama Lengkap & Gelar <span class="text-danger">*</span></label>
+                                                <input id="form_guru_nama" name="nama_lengkap" type="text" class="form-control form-control-sm rounded-3" :class="{'is-invalid': errors.nama_lengkap}" v-model="form.nama_lengkap" placeholder="Contoh: Drs. H. Ahmad Dahlan, M.Pd" required>
+                                                <div class="invalid-feedback">{{ getError('nama_lengkap') }}</div>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <label for="form_guru_email" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Email Login <span class="text-danger">*</span></label>
+                                                <input id="form_guru_email" name="email" type="email" class="form-control form-control-sm rounded-3 font-monospace" :class="{'is-invalid': errors.email}" v-model="form.email" placeholder="guru@sekolah.sch.id" required autocomplete="email">
+                                                <div class="invalid-feedback">{{ getError('email') }}</div>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <label for="form_guru_password" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Password <span class="text-danger" v-if="!isEditMode">*</span></label>
+                                                <input id="form_guru_password" name="password" type="password" class="form-control form-control-sm rounded-3" :class="{'is-invalid': errors.password}" v-model="form.password" :placeholder="isEditMode ? 'Kosongkan jika tidak diubah' : 'Min. 6 karakter'" :required="!isEditMode" autocomplete="new-password">
+                                                <div class="invalid-feedback">{{ getError('password') }}</div>
+                                            </div>
+
+                                            <div class="col-12 col-md-4">
+                                                <label for="form_guru_nip" class="form-label fw-semibold fs-8 text-slate-700 mb-1">NIP <small class="text-muted">(18 Digit)</small></label>
+                                                <input id="form_guru_nip" name="nip" type="text" class="form-control form-control-sm rounded-3 font-monospace" :class="{'is-invalid': errors.nip}" v-model="form.nip" placeholder="198503152010011005">
+                                                <div class="invalid-feedback">{{ getError('nip') }}</div>
+                                            </div>
+
+                                            <div class="col-12 col-md-4">
+                                                <label for="form_guru_nuptk" class="form-label fw-semibold fs-8 text-slate-700 mb-1">NUPTK <small class="text-muted">(16 Digit)</small></label>
+                                                <input id="form_guru_nuptk" name="nuptk" type="text" class="form-control form-control-sm rounded-3 font-monospace" :class="{'is-invalid': errors.nuptk}" v-model="form.nuptk" placeholder="1234567890123456" maxlength="16">
+                                                <div class="invalid-feedback">{{ getError('nuptk') }}</div>
+                                            </div>
+
+                                            <div class="col-12 col-md-4">
+                                                <label for="form_guru_jk" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Jenis Kelamin</label>
+                                                <select id="form_guru_jk" name="jenis_kelamin" class="form-select form-select-sm rounded-3" v-model="form.jenis_kelamin">
+                                                    <option value="L">Laki-laki (L)</option>
+                                                    <option value="P">Perempuan (P)</option>
+                                                </select>
+                                            </div>
+
+                                            <div class="col-12">
+                                                <label for="form_guru_nohp" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Nomor WhatsApp / HP</label>
+                                                <input id="form_guru_nohp" name="no_hp" type="text" class="form-control form-control-sm rounded-3 font-monospace" v-model="form.no_hp" placeholder="Contoh: 081234567890">
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <div class="col-12 border-top my-3 pt-3">
-                                    <h6 class="fw-bold text-secondary mb-2"><i class="bi bi-shield-lock me-1"></i>Akses Akun Siswa (Opsional)</h6>
-                                    <p class="text-muted fs-8 mb-3">Isi email & password di bawah jika ingin siswa memiliki akun login tersendiri.</p>
+                                <!-- Section B: Status Kepegawaian & Tugas Akademik -->
+                                <div class="col-12">
+                                    <div class="form-section-card">
+                                        <div class="form-section-title">
+                                            <i class="bi bi-briefcase-fill text-blue-600"></i> Status Kepegawaian & Tugas Guru
+                                        </div>
+                                        <div class="row g-2.5">
+                                            <div class="col-12 col-md-6">
+                                                <label for="form_guru_jenis_gtk" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Jenis GTK / Kategori Guru</label>
+                                                <select id="form_guru_jenis_gtk" name="jenis_gtk" class="form-select form-select-sm rounded-3" v-model="form.jenis_gtk">
+                                                    <option value="Guru Mata Pelajaran">Guru Mata Pelajaran</option>
+                                                    <option value="Guru Bimbingan Konseling (BK)">Guru Bimbingan Konseling (BK)</option>
+                                                    <option value="Guru Kelas">Guru Kelas</option>
+                                                    <option value="Guru Pendamping Khusus">Guru Pendamping Khusus</option>
+                                                </select>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <label for="form_guru_kepegawaian" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Status Kepegawaian</label>
+                                                <select id="form_guru_kepegawaian" name="status_kepegawaian" class="form-select form-select-sm rounded-3" v-model="form.status_kepegawaian">
+                                                    <option value="PNS">PNS (Pegawai Negeri Sipil)</option>
+                                                    <option value="PPPK">PPPK (P3K)</option>
+                                                    <option value="GTY/PTY">GTY / PTY (Tetap Yayasan)</option>
+                                                    <option value="GTT">GTT (Guru Tidak Tetap)</option>
+                                                    <option value="Honorer Sekolah">Honorer Sekolah</option>
+                                                </select>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <label for="form_guru_jabatan" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Jabatan Struktural Utama</label>
+                                                <input id="form_guru_jabatan" name="jabatan_struktural" type="text" class="form-control form-control-sm rounded-3" v-model="form.jabatan_struktural" placeholder="Contoh: Kepala Sekolah / Waka Kurikulum">
+                                            </div>
+
+                                            <div class="col-6 col-md-3">
+                                                <label for="form_guru_jam" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Jam Ajar / Minggu</label>
+                                                <input id="form_guru_jam" name="jam_mengajar" type="number" min="0" max="60" class="form-control form-control-sm rounded-3 text-center" v-model="form.jam_mengajar" placeholder="0">
+                                            </div>
+
+                                            <div class="col-6 col-md-3">
+                                                <label class="form-label fw-semibold fs-8 text-slate-700 mb-1">Sertifikasi GTK</label>
+                                                <div class="form-check form-switch pt-1">
+                                                    <input id="form_guru_sertifikasi" name="status_sertifikasi" class="form-check-input" type="checkbox" role="switch" v-model="form.status_sertifikasi">
+                                                    <label class="form-check-label fs-8 text-slate-700" for="form_guru_sertifikasi">{{ form.status_sertifikasi ? 'Sudah Sertifikasi' : 'Belum' }}</label>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12">
+                                                <label for="form_guru_alamat" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Alamat Tinggal</label>
+                                                <textarea id="form_guru_alamat" name="alamat" class="form-control form-control-sm rounded-3" v-model="form.alamat" rows="2" placeholder="Alamat lengkap tempat tinggal guru"></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <div class="col-12 col-md-6">
-                                    <label for="form_email" class="form-label fw-semibold fs-8 text-muted mb-1">Email Akun</label>
-                                    <input id="form_email" name="email" type="email" class="form-control rounded-3 font-monospace" :class="{'is-invalid': errors.email}" v-model="form.email" placeholder="siswa@sekolah.sch.id" autocomplete="email">
-                                    <div class="invalid-feedback">{{ getError('email') }}</div>
-                                </div>
+                                <!-- Section C: Penugasan Peran & Multi-Role Tambahan -->
+                                <div class="col-12">
+                                    <div class="form-section-card">
+                                        <div class="form-section-title">
+                                            <i class="bi bi-shield-check text-blue-600"></i> Penugasan Peran & Tugas Tambahan (Multi-Role)
+                                        </div>
+                                        <p class="text-slate-500 fs-9 mb-2.5">Centang peran di bawah untuk mengaktifkan akses modul terkait pada akun Guru ini:</p>
+                                        
+                                        <div class="row g-2">
+                                            <div class="col-12 col-md-6">
+                                                <div class="p-2 border border-slate-200 rounded-3 bg-white">
+                                                    <div class="form-check">
+                                                        <input id="isWaliKelasCheckbox" name="is_wali_kelas" class="form-check-input" type="checkbox" v-model="form.is_wali_kelas">
+                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isWaliKelasCheckbox">Wali Kelas</label>
+                                                        <p class="text-slate-400 fs-9 mb-0">Rekap absensi, rapor kelas, & pembinaan siswa.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                                <div class="col-12 col-md-6">
-                                    <label for="form_password" class="form-label fw-semibold fs-8 text-muted mb-1">Password</label>
-                                    <input id="form_password" name="password" type="password" class="form-control rounded-3" :class="{'is-invalid': errors.password}" v-model="form.password" :placeholder="isEditMode ? 'Kosongkan jika tidak ingin diubah' : 'Min. 6 karakter (default: siswa123)'" autocomplete="new-password">
-                                    <div class="invalid-feedback">{{ getError('password') }}</div>
+                                            <div class="col-12 col-md-6">
+                                                <div class="p-2 border border-slate-200 rounded-3 bg-white">
+                                                    <div class="form-check">
+                                                        <input id="isPembinaEkskulCheckbox" name="is_pembina_ekskul" class="form-check-input" type="checkbox" v-model="form.is_pembina_ekskul">
+                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isPembinaEkskulCheckbox">Pembina Ekstrakurikuler</label>
+                                                        <p class="text-slate-400 fs-9 mb-0">Input nilai, absensi, dan jurnal kegiatan ekskul.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <div class="p-2 border border-slate-200 rounded-3 bg-white">
+                                                    <div class="form-check">
+                                                        <input id="isBkCheckbox" name="is_bk" class="form-check-input" type="checkbox" v-model="form.is_bk">
+                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isBkCheckbox">Guru BK (Bimbingan Konseling)</label>
+                                                        <p class="text-slate-400 fs-9 mb-0">Layanan BK, Kedisiplinan, & PDSS SNBP.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="col-12 col-md-6">
+                                                <div class="p-2 border border-slate-200 rounded-3 bg-white">
+                                                    <div class="form-check">
+                                                        <input id="isKesiswaanCheckbox" name="is_kesiswaan" class="form-check-input" type="checkbox" v-model="form.is_kesiswaan">
+                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isKesiswaanCheckbox">Staf / Waka Kesiswaan</label>
+                                                        <p class="text-slate-400 fs-9 mb-0">Kelola master ekskul, mutasi, dan kedisiplinan.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="col-12 col-md-6">
+                                                <div class="p-2 border border-slate-200 rounded-3 bg-white">
+                                                    <div class="form-check">
+                                                        <input id="isKurikulumCheckbox" name="is_kurikulum" class="form-check-input" type="checkbox" v-model="form.is_kurikulum">
+                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isKurikulumCheckbox">Staf / Waka Kurikulum</label>
+                                                        <p class="text-slate-400 fs-9 mb-0">Jadwal pelajaran, kurikulum, dan leger rapor.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="col-12 col-md-6">
+                                                <div class="p-2 border border-slate-200 rounded-3 bg-white">
+                                                    <div class="form-check">
+                                                        <input id="isSarprasCheckbox" name="is_sarpras" class="form-check-input" type="checkbox" v-model="form.is_sarpras">
+                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isSarprasCheckbox">Staf / Waka Sarpras</label>
+                                                        <p class="text-slate-400 fs-9 mb-0">Pendataan sarana, ruang kelas, dan inventaris.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <div class="p-2 border border-slate-200 rounded-3 bg-white">
+                                                    <div class="form-check">
+                                                        <input id="isHumasCheckbox" name="is_humas" class="form-check-input" type="checkbox" v-model="form.is_humas">
+                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isHumasCheckbox">Staf / Waka HUMAS</label>
+                                                        <p class="text-slate-400 fs-9 mb-0">Warta pengumuman publik, agenda, & berita.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <div class="p-2 border border-slate-200 rounded-3 bg-white">
+                                                    <div class="form-check">
+                                                        <input id="isKeuanganCheckbox" name="is_keuangan" class="form-check-input" type="checkbox" v-model="form.is_keuangan">
+                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isKeuanganCheckbox">Bendahara / Staf Keuangan</label>
+                                                        <p class="text-slate-400 fs-9 mb-0">Loket pembayaran, pos tarif, & laporan SPP.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <div class="p-2 border border-slate-200 rounded-3 bg-white">
+                                                    <div class="form-check">
+                                                        <input id="isPerpustakaanCheckbox" name="is_perpustakaan" class="form-check-input" type="checkbox" v-model="form.is_perpustakaan">
+                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isPerpustakaanCheckbox">Pengelola Perpustakaan</label>
+                                                        <p class="text-slate-400 fs-9 mb-0">Sirkulasi buku, katalog barcode, dan peminjaman.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </template>
 
-                            <!-- Form inputs khusus kategori STAFF (Guru, Karyawan, Operator) -->
-                            <template v-else>
+                            <!-- ======================================================= -->
+                            <!-- 2. FORM KHUSUS KARYAWAN (activeTab === 'karyawan')       -->
+                            <!-- ======================================================= -->
+                            <template v-else-if="activeTab === 'karyawan'">
+                                <!-- Section A: Identitas & Akun Login -->
                                 <div class="col-12">
-                                    <label for="form_staff_nama_lengkap" class="form-label fw-semibold fs-8 text-muted mb-1">Nama Lengkap & Gelar <span class="text-danger">*</span></label>
-                                    <input id="form_staff_nama_lengkap" name="nama_lengkap" type="text" class="form-control rounded-3" :class="{'is-invalid': errors.nama_lengkap}" v-model="form.nama_lengkap" placeholder="Contoh: Drs. H. Ahmad Dahlan, M.Pd" required>
-                                    <div class="invalid-feedback">{{ getError('nama_lengkap') }}</div>
+                                    <div class="form-section-card">
+                                        <div class="form-section-title">
+                                            <i class="bi bi-person-lines-fill text-indigo-600"></i> Identitas & Akun Login Karyawan
+                                        </div>
+                                        <div class="row g-2.5">
+                                            <div class="col-12">
+                                                <label for="form_karyawan_nama" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Nama Lengkap & Gelar <span class="text-danger">*</span></label>
+                                                <input id="form_karyawan_nama" name="nama_lengkap" type="text" class="form-control form-control-sm rounded-3" :class="{'is-invalid': errors.nama_lengkap}" v-model="form.nama_lengkap" placeholder="Contoh: Siti Rahmawati, S.Kom" required>
+                                                <div class="invalid-feedback">{{ getError('nama_lengkap') }}</div>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <label for="form_karyawan_email" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Email Login <span class="text-danger">*</span></label>
+                                                <input id="form_karyawan_email" name="email" type="email" class="form-control form-control-sm rounded-3 font-monospace" :class="{'is-invalid': errors.email}" v-model="form.email" placeholder="staf@sekolah.sch.id" required autocomplete="email">
+                                                <div class="invalid-feedback">{{ getError('email') }}</div>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <label for="form_karyawan_password" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Password <span class="text-danger" v-if="!isEditMode">*</span></label>
+                                                <input id="form_karyawan_password" name="password" type="password" class="form-control form-control-sm rounded-3" :class="{'is-invalid': errors.password}" v-model="form.password" :placeholder="isEditMode ? 'Kosongkan jika tidak diubah' : 'Min. 6 karakter'" :required="!isEditMode" autocomplete="new-password">
+                                                <div class="invalid-feedback">{{ getError('password') }}</div>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <label for="form_karyawan_nip" class="form-label fw-semibold fs-8 text-slate-700 mb-1">NIP / NIY / No. Induk Pegawai</label>
+                                                <input id="form_karyawan_nip" name="nip" type="text" class="form-control form-control-sm rounded-3 font-monospace" v-model="form.nip" placeholder="Contoh: 199008202022012001">
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <label for="form_karyawan_jk" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Jenis Kelamin</label>
+                                                <select id="form_karyawan_jk" name="jenis_kelamin" class="form-select form-select-sm rounded-3" v-model="form.jenis_kelamin">
+                                                    <option value="L">Laki-laki (L)</option>
+                                                    <option value="P">Perempuan (P)</option>
+                                                </select>
+                                            </div>
+
+                                            <div class="col-12">
+                                                <label for="form_karyawan_nohp" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Nomor WhatsApp / HP</label>
+                                                <input id="form_karyawan_nohp" name="no_hp" type="text" class="form-control form-control-sm rounded-3 font-monospace" v-model="form.no_hp" placeholder="Contoh: 085712345678">
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <div class="col-12 col-md-6">
-                                    <label for="form_staff_nip" class="form-label fw-semibold fs-8 text-muted mb-1">NIP <small class="text-muted">(Nomor Induk Pegawai)</small></label>
-                                    <input id="form_staff_nip" name="nip" type="text" class="form-control rounded-3 font-monospace" :class="{'is-invalid': errors.nip}" v-model="form.nip" placeholder="Contoh: 198503152010011005">
-                                    <div class="invalid-feedback">{{ getError('nip') }}</div>
+                                <!-- Section B: Bidang Tugas & Kepegawaian -->
+                                <div class="col-12">
+                                    <div class="form-section-card">
+                                        <div class="form-section-title">
+                                            <i class="bi bi-building-gear text-indigo-600"></i> Bidang Tugas & Kepegawaian Karyawan
+                                        </div>
+                                        <div class="row g-2.5">
+                                            <div class="col-12 col-md-6">
+                                                <label for="form_karyawan_bidang" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Kategori Bidang Staf</label>
+                                                <select id="form_karyawan_bidang" name="jenis_gtk" class="form-select form-select-sm rounded-3" v-model="form.jenis_gtk">
+                                                    <option value="Tata Usaha / Administrasi">Tata Usaha / Administrasi</option>
+                                                    <option value="Tenaga Kependidikan">Tenaga Kependidikan</option>
+                                                    <option value="Laboran">Laboran</option>
+                                                    <option value="Pustakawan">Pustakawan</option>
+                                                    <option value="Keuangan & Kasir">Keuangan & Kasir</option>
+                                                    <option value="Staf IT & Multimedia">Staf IT & Multimedia</option>
+                                                    <option value="Keamanan / Security">Keamanan / Security</option>
+                                                    <option value="Kebersihan / Janitor">Kebersihan / Janitor</option>
+                                                    <option value="Bagian Umum">Bagian Umum</option>
+                                                </select>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <label for="form_karyawan_kepegawaian" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Status Kepegawaian</label>
+                                                <select id="form_karyawan_kepegawaian" name="status_kepegawaian" class="form-select form-select-sm rounded-3" v-model="form.status_kepegawaian">
+                                                    <option value="PNS">PNS (Pegawai Negeri Sipil)</option>
+                                                    <option value="PPPK">PPPK (P3K)</option>
+                                                    <option value="GTY/PTY">GTY / PTY (Tetap Yayasan)</option>
+                                                    <option value="PTT">PTT (Pegawai Tidak Tetap)</option>
+                                                    <option value="Honorer Sekolah">Honorer Sekolah</option>
+                                                    <option value="Outsourcing">Outsourcing</option>
+                                                </select>
+                                            </div>
+
+                                            <div class="col-12">
+                                                <label for="form_karyawan_jabatan" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Jabatan / Posisi Penugasan</label>
+                                                <input id="form_karyawan_jabatan" name="jabatan_struktural" type="text" class="form-control form-control-sm rounded-3" v-model="form.jabatan_struktural" placeholder="Contoh: Kepala Tata Usaha / Petugas Sirkulasi Perpus">
+                                            </div>
+
+                                            <div class="col-12">
+                                                <label for="form_karyawan_alamat" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Alamat Tinggal</label>
+                                                <textarea id="form_karyawan_alamat" name="alamat" class="form-control form-control-sm rounded-3" v-model="form.alamat" rows="2" placeholder="Alamat tempat tinggal pegawai"></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <div class="col-12 col-md-6">
-                                    <label for="form_staff_nuptk" class="form-label fw-semibold fs-8 text-muted mb-1">NUPTK <small class="text-muted">(16 Digit)</small></label>
-                                    <input id="form_staff_nuptk" name="nuptk" type="text" class="form-control rounded-3 font-monospace" :class="{'is-invalid': errors.nuptk}" v-model="form.nuptk" placeholder="Contoh: 1234567890123456" maxlength="16">
-                                    <div class="invalid-feedback">{{ getError('nuptk') }}</div>
-                                </div>
+                                <!-- Section C: Hak Akses Tambahan Staf -->
+                                <div class="col-12">
+                                    <div class="form-section-card">
+                                        <div class="form-section-title">
+                                            <i class="bi bi-key-fill text-indigo-600"></i> Hak Akses Modul Operasional Tambahan
+                                        </div>
+                                        <p class="text-slate-500 fs-9 mb-2.5">Aktifkan hak akses ke modul khusus berikut jika staf ini ditugaskan mengelola sistem:</p>
+                                        
+                                        <div class="row g-2">
+                                            <div class="col-12 col-md-6">
+                                                <div class="p-2 border border-slate-200 rounded-3 bg-white">
+                                                    <div class="form-check">
+                                                        <input id="karyawanPerpusCheckbox" name="is_perpustakaan" class="form-check-input" type="checkbox" v-model="form.is_perpustakaan">
+                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="karyawanPerpusCheckbox">Pengelola Perpustakaan Digital</label>
+                                                        <p class="text-slate-400 fs-9 mb-0">Katalog buku, sirkulasi peminjaman, & denda.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                                <div class="col-12 col-md-6">
-                                    <label for="form_staff_email" class="form-label fw-semibold fs-8 text-muted mb-1">Email Login <span class="text-danger">*</span></label>
-                                    <input id="form_staff_email" name="email" type="email" class="form-control rounded-3 font-monospace" :class="{'is-invalid': errors.email}" v-model="form.email" placeholder="nama@sekolah.sch.id" required autocomplete="email">
-                                    <div class="invalid-feedback">{{ getError('email') }}</div>
-                                </div>
+                                            <div class="col-12 col-md-6">
+                                                <div class="p-2 border border-slate-200 rounded-3 bg-white">
+                                                    <div class="form-check">
+                                                        <input id="karyawanKeuanganCheckbox" name="is_keuangan" class="form-check-input" type="checkbox" v-model="form.is_keuangan">
+                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="karyawanKeuanganCheckbox">Loket Keuangan / Kasir SPP</label>
+                                                        <p class="text-slate-400 fs-9 mb-0">Transaksi bayar, cetak kuitansi, & rekap tagihan.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                                <div class="col-12 col-md-6">
-                                    <label for="form_staff_password" class="form-label fw-semibold fs-8 text-muted mb-1">Password <span class="text-danger" v-if="!isEditMode">*</span></label>
-                                    <input id="form_staff_password" name="password" type="password" class="form-control rounded-3" :class="{'is-invalid': errors.password}" v-model="form.password" :placeholder="isEditMode ? 'Kosongkan jika tidak ingin diubah' : 'Min. 6 karakter'" :required="!isEditMode" autocomplete="new-password">
-                                    <div class="invalid-feedback">{{ getError('password') }}</div>
-                                </div>
+                                            <div class="col-12 col-md-6">
+                                                <div class="p-2 border border-slate-200 rounded-3 bg-white">
+                                                    <div class="form-check">
+                                                        <input id="karyawanSarprasCheckbox" name="is_sarpras" class="form-check-input" type="checkbox" v-model="form.is_sarpras">
+                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="karyawanSarprasCheckbox">Staf Pengelola Sarana & Prasarana</label>
+                                                        <p class="text-slate-400 fs-9 mb-0">Inventaris barang, ruang kelas, & aset gedung.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                                <div class="col-12 col-md-6">
-                                    <label for="form_staff_jk" class="form-label fw-semibold fs-8 text-muted mb-1">Jenis Kelamin</label>
-                                    <select id="form_staff_jk" name="jenis_kelamin" class="form-select rounded-3" v-model="form.jenis_kelamin">
-                                        <option value="">-- Pilih Jenis Kelamin --</option>
-                                        <option value="L">Laki-laki (L)</option>
-                                        <option value="P">Perempuan (P)</option>
-                                    </select>
+                                            <div class="col-12 col-md-6">
+                                                <div class="p-2 border border-slate-200 rounded-3 bg-white">
+                                                    <div class="form-check">
+                                                        <input id="karyawanHumasCheckbox" name="is_humas" class="form-check-input" type="checkbox" v-model="form.is_humas">
+                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="karyawanHumasCheckbox">Staf Publikasi & HUMAS</label>
+                                                        <p class="text-slate-400 fs-9 mb-0">Pengumuman portal publik dan agenda kegiatan.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
+                            </template>
 
-                                <div class="col-12 col-md-6">
-                                    <label for="form_staff_nohp" class="form-label fw-semibold fs-8 text-muted mb-1">Nomor WhatsApp / HP</label>
-                                    <input id="form_staff_nohp" name="no_hp" type="text" class="form-control rounded-3 font-monospace" v-model="form.no_hp" placeholder="Contoh: 081234567890">
-                                </div>
+                            <!-- ======================================================= -->
+                            <!-- 3. FORM KHUSUS OPERATOR (activeTab === 'operator')       -->
+                            <!-- ======================================================= -->
+                            <template v-else-if="activeTab === 'operator'">
+                                <div class="col-12">
+                                    <div class="form-section-card">
+                                        <div class="form-section-title">
+                                            <i class="bi bi-person-gear text-emerald-600"></i> Akun Administrator & Operator Sekolah
+                                        </div>
+                                        <div class="row g-2.5">
+                                            <div class="col-12">
+                                                <label for="form_operator_nama" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Nama Lengkap Operator <span class="text-danger">*</span></label>
+                                                <input id="form_operator_nama" name="nama_lengkap" type="text" class="form-control form-control-sm rounded-3" :class="{'is-invalid': errors.nama_lengkap}" v-model="form.nama_lengkap" placeholder="Contoh: Budi Prasetyo, S.Kom" required>
+                                                <div class="invalid-feedback">{{ getError('nama_lengkap') }}</div>
+                                            </div>
 
-                                <div class="col-12 col-md-6">
-                                    <label for="form_staff_jenis_gtk" class="form-label fw-semibold fs-8 text-muted mb-1">Jenis GTK / Kategori</label>
-                                    <select id="form_staff_jenis_gtk" name="jenis_gtk" class="form-select rounded-3" v-model="form.jenis_gtk">
-                                        <option value="Guru Mata Pelajaran">Guru Mata Pelajaran</option>
-                                        <option value="Guru Bimbingan Konseling (BK)">Guru Bimbingan Konseling (BK)</option>
-                                        <option value="Guru Kelas">Guru Kelas</option>
-                                        <option value="Guru Pendamping Khusus">Guru Pendamping Khusus</option>
-                                        <option value="Tenaga Kependidikan">Tenaga Kependidikan</option>
-                                        <option value="Tata Usaha / Administrasi">Tata Usaha / Administrasi</option>
-                                        <option value="Laboran">Laboran</option>
-                                        <option value="Pustakawan">Pustakawan</option>
-                                    </select>
-                                </div>
+                                            <div class="col-12 col-md-6">
+                                                <label for="form_operator_email" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Email Login Utama <span class="text-danger">*</span></label>
+                                                <input id="form_operator_email" name="email" type="email" class="form-control form-control-sm rounded-3 font-monospace" :class="{'is-invalid': errors.email}" v-model="form.email" placeholder="admin.operator@sekolah.sch.id" required autocomplete="email">
+                                                <div class="invalid-feedback">{{ getError('email') }}</div>
+                                            </div>
 
-                                <div class="col-12 col-md-6">
-                                    <label for="form_staff_kepegawaian" class="form-label fw-semibold fs-8 text-muted mb-1">Status Kepegawaian</label>
-                                    <select id="form_staff_kepegawaian" name="status_kepegawaian" class="form-select rounded-3" v-model="form.status_kepegawaian">
-                                        <option value="PNS">PNS (Pegawai Negeri Sipil)</option>
-                                        <option value="PPPK">PPPK (P3K)</option>
-                                        <option value="GTY/PTY">GTY / PTY (Tetap Yayasan)</option>
-                                        <option value="GTT">GTT (Guru Tidak Tetap)</option>
-                                        <option value="PTT">PTT (Pegawai Tidak Tetap)</option>
-                                        <option value="Honorer Sekolah">Honorer Sekolah</option>
-                                    </select>
-                                </div>
+                                            <div class="col-12 col-md-6">
+                                                <label for="form_operator_password" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Password <span class="text-danger" v-if="!isEditMode">*</span></label>
+                                                <input id="form_operator_password" name="password" type="password" class="form-control form-control-sm rounded-3" :class="{'is-invalid': errors.password}" v-model="form.password" :placeholder="isEditMode ? 'Kosongkan jika tidak diubah' : 'Min. 6 karakter'" :required="!isEditMode" autocomplete="new-password">
+                                                <div class="invalid-feedback">{{ getError('password') }}</div>
+                                            </div>
 
-                                <div class="col-12 col-md-6">
-                                    <label for="form_staff_jabatan" class="form-label fw-semibold fs-8 text-muted mb-1">Jabatan Struktural Utama</label>
-                                    <input id="form_staff_jabatan" name="jabatan_struktural" type="text" class="form-control rounded-3" v-model="form.jabatan_struktural" placeholder="Contoh: Kepala Lab / Waka Kurikulum">
-                                </div>
+                                            <div class="col-12 col-md-6">
+                                                <label for="form_operator_jk" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Jenis Kelamin</label>
+                                                <select id="form_operator_jk" name="jenis_kelamin" class="form-select form-select-sm rounded-3" v-model="form.jenis_kelamin">
+                                                    <option value="L">Laki-laki (L)</option>
+                                                    <option value="P">Perempuan (P)</option>
+                                                </select>
+                                            </div>
 
-                                <div class="col-6 col-md-3">
-                                    <label for="form_staff_jam" class="form-label fw-semibold fs-8 text-muted mb-1">Jam Ajar / Minggu</label>
-                                    <input id="form_staff_jam" name="jam_mengajar" type="number" min="0" max="60" class="form-control rounded-3 text-center" v-model="form.jam_mengajar" placeholder="0">
-                                </div>
+                                            <div class="col-12 col-md-6">
+                                                <label for="form_operator_nohp" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Nomor WhatsApp / HP</label>
+                                                <input id="form_operator_nohp" name="no_hp" type="text" class="form-control form-control-sm rounded-3 font-monospace" v-model="form.no_hp" placeholder="Contoh: 081298765432">
+                                            </div>
 
-                                <div class="col-6 col-md-3">
-                                    <label class="form-label fw-semibold fs-8 text-muted mb-1">Sertifikasi GTK</label>
-                                    <div class="form-check form-switch pt-1">
-                                        <input id="form_staff_sertifikasi" name="status_sertifikasi" class="form-check-input" type="checkbox" role="switch" v-model="form.status_sertifikasi">
-                                        <label class="form-check-label fs-8 text-dark" for="form_staff_sertifikasi">{{ form.status_sertifikasi ? 'Sudah Sertifikasi' : 'Belum' }}</label>
+                                            <div class="col-12">
+                                                <label for="form_operator_jabatan" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Tanggung Jawab / Posisi Admin</label>
+                                                <input id="form_operator_jabatan" name="jabatan_struktural" type="text" class="form-control form-control-sm rounded-3" v-model="form.jabatan_struktural" placeholder="Contoh: Operator Dapodik & SINTA SaaS / Tim IT Sekolah">
+                                            </div>
+
+                                            <div class="col-12">
+                                                <label for="form_operator_alamat" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Alamat Lengkap</label>
+                                                <textarea id="form_operator_alamat" name="alamat" class="form-control form-control-sm rounded-3" v-model="form.alamat" rows="2" placeholder="Alamat tinggal operator"></textarea>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
                                 <div class="col-12">
-                                    <label for="form_staff_alamat" class="form-label fw-semibold fs-8 text-muted mb-1">Alamat Tinggal Pegawai</label>
-                                    <textarea id="form_staff_alamat" name="alamat" class="form-control rounded-3" v-model="form.alamat" rows="2" placeholder="Alamat lengkap tempat tinggal"></textarea>
+                                    <div class="p-3 bg-emerald-50/70 border border-emerald-200 rounded-3 d-flex align-items-start gap-2.5">
+                                        <i class="bi bi-info-circle-fill text-emerald-600 fs-6 mt-0.5"></i>
+                                        <div class="fs-9 text-emerald-900">
+                                            <strong>Hak Akses Operator:</strong> Akun ini memiliki izin penuh untuk mengelola konfigurasi sekolah, manajemen pengguna (siswa, guru, staf), sinkronisasi data akademik, serta operasional sistem sekolah.
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- ======================================================= -->
+                            <!-- 4. FORM KHUSUS SISWA & MUTASI                           -->
+                            <!-- ======================================================= -->
+                            <template v-else>
+                                <div class="col-12">
+                                    <div class="form-section-card">
+                                        <div class="form-section-title">
+                                            <i class="bi bi-mortarboard-fill text-blue-600"></i> Biodata Siswa
+                                        </div>
+                                        <div class="row g-2.5">
+                                            <div class="col-12 col-md-6">
+                                                <label for="form_nama_lengkap" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Nama Lengkap Siswa <span class="text-danger">*</span></label>
+                                                <input id="form_nama_lengkap" name="nama_lengkap" type="text" class="form-control form-control-sm rounded-3" :class="{'is-invalid': errors.nama_lengkap}" v-model="form.nama_lengkap" placeholder="Nama lengkap siswa" required>
+                                                <div class="invalid-feedback">{{ getError('nama_lengkap') }}</div>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <label for="form_jenis_kelamin" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Jenis Kelamin <span class="text-danger">*</span></label>
+                                                <select id="form_jenis_kelamin" name="jenis_kelamin" class="form-select form-select-sm rounded-3" :class="{'is-invalid': errors.jenis_kelamin}" v-model="form.jenis_kelamin" required>
+                                                    <option value="L">Laki-laki (L)</option>
+                                                    <option value="P">Perempuan (P)</option>
+                                                </select>
+                                                <div class="invalid-feedback">{{ getError('jenis_kelamin') }}</div>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <label for="form_nisn" class="form-label fw-semibold fs-8 text-slate-700 mb-1">NISN <small class="text-muted">(10 Digit)</small></label>
+                                                <input id="form_nisn" name="nisn" type="text" class="form-control form-control-sm rounded-3 font-monospace" :class="{'is-invalid': errors.nisn}" v-model="form.nisn" placeholder="0054231901" maxlength="10">
+                                                <div class="invalid-feedback">{{ getError('nisn') }}</div>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <label for="form_nis" class="form-label fw-semibold fs-8 text-slate-700 mb-1">NIS <small class="text-muted">(Nomor Induk Siswa)</small></label>
+                                                <input id="form_nis" name="nis" type="text" class="form-control form-control-sm rounded-3 font-monospace" :class="{'is-invalid': errors.nis}" v-model="form.nis" placeholder="2026102">
+                                                <div class="invalid-feedback">{{ getError('nis') }}</div>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <label for="form_tempat_lahir" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Tempat Lahir</label>
+                                                <input id="form_tempat_lahir" name="tempat_lahir" type="text" class="form-control form-control-sm rounded-3" :class="{'is-invalid': errors.tempat_lahir}" v-model="form.tempat_lahir" placeholder="Tempat lahir">
+                                                <div class="invalid-feedback">{{ getError('tempat_lahir') }}</div>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <label for="form_tanggal_lahir" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Tanggal Lahir</label>
+                                                <input id="form_tanggal_lahir" name="tanggal_lahir" type="date" class="form-control form-control-sm rounded-3" :class="{'is-invalid': errors.tanggal_lahir}" v-model="form.tanggal_lahir">
+                                                <div class="invalid-feedback">{{ getError('tanggal_lahir') }}</div>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <label for="form_nama_wali" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Nama Wali Siswa</label>
+                                                <input id="form_nama_wali" name="nama_wali" type="text" class="form-control form-control-sm rounded-3" :class="{'is-invalid': errors.nama_wali}" v-model="form.nama_wali" placeholder="Nama ayah/ibu/wali">
+                                                <div class="invalid-feedback">{{ getError('nama_wali') }}</div>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <label for="form_kontak_wali" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Kontak Wali Siswa</label>
+                                                <input id="form_kontak_wali" name="kontak_wali" type="text" class="form-control form-control-sm rounded-3" :class="{'is-invalid': errors.kontak_wali}" v-model="form.kontak_wali" placeholder="No. HP / Kontak wali">
+                                                <div class="invalid-feedback">{{ getError('kontak_wali') }}</div>
+                                            </div>
+
+                                            <div class="col-12">
+                                                <label for="form_alamat" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Alamat Lengkap</label>
+                                                <textarea id="form_alamat" name="alamat" class="form-control form-control-sm rounded-3" :class="{'is-invalid': errors.alamat}" v-model="form.alamat" rows="2" placeholder="Alamat tinggal siswa"></textarea>
+                                                <div class="invalid-feedback">{{ getError('alamat') }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <!-- Checkbox Role & Multi-Jabatan Penugasan Tambahan -->
-                                <div class="col-12 mt-3">
-                                    <div class="border rounded-3 p-3 bg-light">
-                                        <div class="d-flex align-items-center justify-content-between mb-2">
-                                            <h6 class="fw-bold fs-7 text-dark mb-0"><i class="bi bi-person-badge-fill text-primary me-2"></i>Penugasan Peran & Tugas Tambahan (Multi-Role)</h6>
-                                            <span class="badge bg-primary-subtle text-primary border fs-9">Otomatisasi Akses Fitur</span>
+                                <div class="col-12">
+                                    <div class="form-section-card">
+                                        <div class="form-section-title">
+                                            <i class="bi bi-shield-lock-fill text-blue-600"></i> Akun Login Siswa (Opsional)
                                         </div>
-                                        <p class="text-muted fs-8 mb-3">Centang peran tambahan di bawah ini agar pengguna mendapatkan akses ke menu dan fitur terkait tanpa mengubah peran utamanya.</p>
+                                        <p class="text-slate-500 fs-9 mb-2.5">Isi email & password di bawah jika ingin siswa memiliki akun login tersendiri:</p>
                                         
-                                        <div class="row g-2">
+                                        <div class="row g-2.5">
                                             <div class="col-12 col-md-6">
-                                                <div class="p-2 border rounded-3 bg-white">
-                                                    <div class="form-check">
-                                                        <input id="isWaliKelasCheckbox" name="is_wali_kelas" class="form-check-input" type="checkbox" v-model="form.is_wali_kelas">
-                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isWaliKelasCheckbox">
-                                                            Wali Kelas
-                                                        </label>
-                                                        <p class="text-muted fs-9 mb-0">Akses monitoring rekap absensi, rapor, dan bina siswa binaan.</p>
-                                                    </div>
-                                                </div>
+                                                <label for="form_email" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Email Akun</label>
+                                                <input id="form_email" name="email" type="email" class="form-control form-control-sm rounded-3 font-monospace" :class="{'is-invalid': errors.email}" v-model="form.email" placeholder="siswa@sekolah.sch.id" autocomplete="email">
+                                                <div class="invalid-feedback">{{ getError('email') }}</div>
                                             </div>
 
                                             <div class="col-12 col-md-6">
-                                                <div class="p-2 border rounded-3 bg-white">
-                                                    <div class="form-check">
-                                                        <input id="isPembinaEkskulCheckbox" name="is_pembina_ekskul" class="form-check-input" type="checkbox" v-model="form.is_pembina_ekskul">
-                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isPembinaEkskulCheckbox">
-                                                            Pembina Ekstrakurikuler
-                                                        </label>
-                                                        <p class="text-muted fs-9 mb-0">Input nilai, absensi, dan jurnal kegiatan ekskul binaan.</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div class="col-12 col-md-6">
-                                                <div class="p-2 border rounded-3 bg-white">
-                                                    <div class="form-check">
-                                                        <input id="isBkCheckbox" name="is_bk" class="form-check-input" type="checkbox" v-model="form.is_bk">
-                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isBkCheckbox">
-                                                            Guru / Tim BK (Bimbingan Konseling)
-                                                        </label>
-                                                        <p class="text-muted fs-9 mb-0">Akses modul Layanan BK, Kedisiplinan, & PDSS SNBP.</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="col-12 col-md-6">
-                                                <div class="p-2 border rounded-3 bg-white">
-                                                    <div class="form-check">
-                                                        <input id="isKesiswaanCheckbox" name="is_kesiswaan" class="form-check-input" type="checkbox" v-model="form.is_kesiswaan">
-                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isKesiswaanCheckbox">
-                                                            Staf / Waka Kesiswaan
-                                                        </label>
-                                                        <p class="text-muted fs-9 mb-0">Kelola master ekskul, anggota, dan kunci penilaian.</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="col-12 col-md-6">
-                                                <div class="p-2 border rounded-3 bg-white">
-                                                    <div class="form-check">
-                                                        <input id="isKurikulumCheckbox" name="is_kurikulum" class="form-check-input" type="checkbox" v-model="form.is_kurikulum">
-                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isKurikulumCheckbox">
-                                                            Staf / Waka Kurikulum
-                                                        </label>
-                                                        <p class="text-muted fs-9 mb-0">Kelola jadwal pelajaran, mapel, dan leger e-rapor.</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="col-12 col-md-6">
-                                                <div class="p-2 border rounded-3 bg-white">
-                                                    <div class="form-check">
-                                                        <input id="isSarprasCheckbox" name="is_sarpras" class="form-check-input" type="checkbox" v-model="form.is_sarpras">
-                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isSarprasCheckbox">
-                                                            Staf / Waka Sarpras
-                                                        </label>
-                                                        <p class="text-muted fs-9 mb-0">Kelola pendataan sarana, ruang kelas, dan inventaris.</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div class="col-12 col-md-6">
-                                                <div class="p-2 border rounded-3 bg-white">
-                                                    <div class="form-check">
-                                                        <input id="isHumasCheckbox" name="is_humas" class="form-check-input" type="checkbox" v-model="form.is_humas">
-                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isHumasCheckbox">
-                                                            Staf / Waka HUMAS
-                                                        </label>
-                                                        <p class="text-muted fs-9 mb-0">Kelola portal warta pengumuman publik dan agenda.</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div class="col-12 col-md-6">
-                                                <div class="p-2 border rounded-3 bg-white">
-                                                    <div class="form-check">
-                                                        <input id="isKeuanganCheckbox" name="is_keuangan" class="form-check-input" type="checkbox" v-model="form.is_keuangan">
-                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isKeuanganCheckbox">
-                                                            Bendahara / Kasir Keuangan
-                                                        </label>
-                                                        <p class="text-muted fs-9 mb-0">Akses loket kasir pembayaran, pos tarif, dan laporan SPP.</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div class="col-12 col-md-6">
-                                                <div class="p-2 border rounded-3 bg-white">
-                                                    <div class="form-check">
-                                                        <input id="isPerpustakaanCheckbox" name="is_perpustakaan" class="form-check-input" type="checkbox" v-model="form.is_perpustakaan">
-                                                        <label class="form-check-label fw-semibold fs-8 text-dark" for="isPerpustakaanCheckbox">
-                                                            Pengelola Perpustakaan Digital
-                                                        </label>
-                                                        <p class="text-muted fs-9 mb-0">Sirkulasi peminjaman buku, katalog barcode, dan denda.</p>
-                                                    </div>
-                                                </div>
+                                                <label for="form_password" class="form-label fw-semibold fs-8 text-slate-700 mb-1">Password</label>
+                                                <input id="form_password" name="password" type="password" class="form-control form-control-sm rounded-3" :class="{'is-invalid': errors.password}" v-model="form.password" :placeholder="isEditMode ? 'Kosongkan jika tidak diubah' : 'Min. 6 karakter (default: siswa123)'" autocomplete="new-password">
+                                                <div class="invalid-feedback">{{ getError('password') }}</div>
                                             </div>
                                         </div>
                                     </div>
@@ -885,14 +1424,18 @@
                         </div>
                     </div>
                     
-                    <div class="modal-footer border-top bg-light py-2.5 rounded-bottom-4">
-                        <button type="button" class="btn btn-light rounded-3 fs-8 px-3" data-bs-dismiss="modal">Batal</button>
-                        <button type="submit" class="btn btn-primary rounded-3 fs-8 px-4" :disabled="submitLoading">
+                    <div class="modal-footer border-top bg-slate-50 py-2.5 px-4 sticky-bottom">
+                        <button type="button" class="btn btn-sm btn-light border border-slate-200 text-slate-600 rounded-xl fs-8 px-3 font-semibold" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-sm btn-primary rounded-xl fs-8 px-4 font-semibold shadow-2xs d-inline-flex align-items-center gap-1.5" :disabled="submitLoading">
                             <span v-if="submitLoading" class="spinner-border spinner-border-sm me-1" role="status"></span>
-                            Simpan Data
+                            <i v-else class="bi bi-check2-circle"></i>
+                            <span>{{ isEditMode ? 'Perbarui Data' : 'Simpan Data' }}</span>
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
 
             </div>
         </div>
@@ -1540,6 +2083,50 @@
         color: #084298 !important;
     }
 
+    /* Modal Form Scroll & Clean Section Layout */
+    .modal-dialog-scrollable .modal-body {
+        max-height: min(74vh, 620px) !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        padding: 1.5rem !important;
+    }
+    
+    .modal-dialog-scrollable .modal-body::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .modal-dialog-scrollable .modal-body::-webkit-scrollbar-track {
+        background: #f8fafc;
+        border-radius: 6px;
+    }
+    
+    .modal-dialog-scrollable .modal-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 6px;
+    }
+    
+    .modal-dialog-scrollable .modal-body::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
+    .form-section-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 14px 16px;
+        margin-bottom: 8px;
+    }
+
+    .form-section-title {
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
     /* =============================================
        AKSI PANEL: Naikkan Kelas & Luluskan Siswa
        ============================================= */
@@ -1606,8 +2193,8 @@
                     { id: 'guru', name: 'Guru', icon: 'bi bi-person-badge' },
                     { id: 'karyawan', name: 'Karyawan', icon: 'bi bi-briefcase' },
                     { id: 'operator', name: 'Operator', icon: 'bi bi-person-gear' },
-                    { id: 'naikkan_kelas', name: 'Naikkan Kelas', icon: 'bi bi-arrow-up-circle' },
                     { id: 'mutasi', name: 'Log Mutasi & Putus Sekolah', icon: 'bi bi-person-x' },
+                    { id: 'naikkan_kelas', name: 'Naikkan Kelas', icon: 'bi bi-arrow-up-circle' },
                     { id: 'profile_rapot', name: 'Profile Rapot', icon: 'bi bi-file-earmark-person' }
                 ],
                 activeTab: 'siswa', // Default tab aktif
@@ -1622,6 +2209,7 @@
                 total: 0,
                 from: 0,
                 to: 0,
+                summaryStats: { total: 0, male: 0, female: 0, active: 0 },
                 
                 // New Filters state
                 filterTenantId: '',
@@ -1985,6 +2573,12 @@
                     this.listData = res.data.data;
                     this.totalPages = res.data.last_page;
                     this.total = res.data.total;
+                    this.summaryStats = res.data.summary_stats || { 
+                        total: res.data.total, 
+                        male: 0, 
+                        female: 0, 
+                        active: res.data.total 
+                    };
                     this.from = res.data.from;
                     this.to = res.data.to;
                     this.loading = false;
@@ -2138,7 +2732,7 @@
             },
             resetForm() {
                 this.errors = {};
-                if (this.activeTab === 'siswa') {
+                if (this.activeTab === 'siswa' || this.activeTab === 'mutasi') {
                     this.form = { 
                         nama_lengkap: '', 
                         nisn: '',
@@ -2148,16 +2742,18 @@
                         jenis_kelamin: 'L',
                         alamat: '',
                         nama_wali: '',
-                        kontak_wali: ''
+                        kontak_wali: '',
+                        email: '',
+                        password: ''
                     };
-                } else {
+                } else if (this.activeTab === 'guru') {
                     this.form = { 
                         nama_lengkap: '', 
                         email: '', 
                         password: '',
                         nip: '',
                         nuptk: '',
-                        jenis_gtk: this.activeTab === 'guru' ? 'Guru Mata Pelajaran' : 'Tenaga Kependidikan',
+                        jenis_gtk: 'Guru Mata Pelajaran',
                         jabatan_struktural: '',
                         status_kepegawaian: 'GTY/PTY',
                         jam_mengajar: 0,
@@ -2175,9 +2771,59 @@
                         is_keuangan: false,
                         is_perpustakaan: false
                     };
+                } else if (this.activeTab === 'karyawan') {
+                    this.form = { 
+                        nama_lengkap: '', 
+                        email: '', 
+                        password: '',
+                        nip: '',
+                        nuptk: '',
+                        jenis_gtk: 'Tata Usaha / Administrasi',
+                        jabatan_struktural: '',
+                        status_kepegawaian: 'PTT',
+                        jam_mengajar: 0,
+                        status_sertifikasi: false,
+                        no_hp: '',
+                        alamat: '',
+                        jenis_kelamin: 'L',
+                        is_wali_kelas: false,
+                        is_pembina_ekskul: false,
+                        is_bk: false,
+                        is_kesiswaan: false,
+                        is_humas: false,
+                        is_kurikulum: false,
+                        is_sarpras: false,
+                        is_keuangan: false,
+                        is_perpustakaan: false
+                    };
+                } else {
+                    this.form = { 
+                        nama_lengkap: '', 
+                        email: '', 
+                        password: '',
+                        nip: '',
+                        nuptk: '',
+                        jenis_gtk: 'Tenaga IT & Operator Sistem',
+                        jabatan_struktural: 'Operator Sekolah',
+                        status_kepegawaian: 'Honorer Sekolah',
+                        jam_mengajar: 0,
+                        status_sertifikasi: false,
+                        no_hp: '',
+                        alamat: '',
+                        jenis_kelamin: 'L',
+                        is_wali_kelas: false,
+                        is_pembina_ekskul: false,
+                        is_bk: false,
+                        is_kesiswaan: false,
+                        is_humas: false,
+                        is_kurikulum: false,
+                        is_sarpras: false,
+                        is_keuangan: false,
+                        is_perpustakaan: false
+                    };
                 }
                 if (this.userRole === 'super_admin') {
-                    this.form.tenant_id = '';
+                    this.form.tenant_id = this.filterTenantId || '';
                 }
             },
             openCreateModal() {
@@ -2186,7 +2832,7 @@
                 this.modalObj.show();
             },
             openEditModal(item) {
-                if (this.activeTab === 'siswa') {
+                if (this.activeTab === 'siswa' || this.activeTab === 'mutasi') {
                     window.location.href = '<?= $this->getBaseUrl() ?>/siswa/edit?id=' + item.id;
                     return;
                 }
@@ -2321,6 +2967,18 @@
                     initials += parts[1].charAt(0);
                 }
                 return initials.toUpperCase();
+            },
+            getStatsMaleCount() {
+                return (this.listData || []).filter(item => item.jenis_kelamin === 'L').length;
+            },
+            getStatsFemaleCount() {
+                return (this.listData || []).filter(item => item.jenis_kelamin === 'P').length;
+            },
+            getStatsActiveCount() {
+                if (this.activeTab === 'siswa') {
+                    return (this.listData || []).filter(item => item.status_siswa === 'Aktif' || !item.status_siswa).length;
+                }
+                return (this.listData || []).filter(item => item.status === '1' || item.status === 1 || item.status === true || item.status === 'Aktif').length;
             },
             formatDate(dateStr) {
                 if (!dateStr) return '';

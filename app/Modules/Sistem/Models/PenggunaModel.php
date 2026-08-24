@@ -40,7 +40,7 @@ class PenggunaModel extends Model {
                           LEFT JOIN core.tenants t ON s.tenant_id = t.id";
             $countSql = "SELECT COUNT(*) FROM siswa.siswa s 
                           LEFT JOIN core.tenants t ON s.tenant_id = t.id";
-            $whereClause = $isSuperAdmin ? " WHERE s.status_siswa != 'aktif'" : " WHERE s.tenant_id = :tenant_id AND s.status_siswa != 'aktif'";
+            $whereClause = $isSuperAdmin ? " WHERE (s.status_siswa NOT ILIKE 'aktif' AND s.status_siswa IS NOT NULL)" : " WHERE s.tenant_id = :tenant_id AND (s.status_siswa NOT ILIKE 'aktif' AND s.status_siswa IS NOT NULL)";
 
             if ($isSuperAdmin && !empty($filters['tenant_id'])) {
                 $whereClause .= " AND s.tenant_id = :filter_tenant_id";
@@ -90,10 +90,10 @@ class PenggunaModel extends Model {
                                      END
                                  ) AS nama_jenjang,
                                  CASE 
-                                     WHEN s.status_siswa = 'aktif' THEN 'Aktif'
-                                     WHEN s.status_siswa = 'lulus' THEN 'Lulus'
-                                     WHEN s.status_siswa = 'pindah' THEN 'Pindah'
-                                     WHEN s.status_siswa = 'putus_sekolah' THEN 'Putus Sekolah'
+                                     WHEN s.status_siswa ILIKE 'aktif' THEN 'Aktif'
+                                     WHEN s.status_siswa ILIKE 'lulus' THEN 'Lulus'
+                                     WHEN s.status_siswa ILIKE 'pindah' THEN 'Pindah'
+                                     WHEN s.status_siswa ILIKE 'putus_sekolah' OR s.status_siswa ILIKE 'keluar' THEN 'Putus Sekolah'
                                      ELSE INITCAP(COALESCE(s.status_siswa, 'Aktif'))
                                  END AS status,
                                  COALESCE(k.nama_kelas, s.kelas_saat_ini, '-') AS nama_kelas
@@ -319,14 +319,48 @@ class PenggunaModel extends Model {
         $from = $total > 0 ? $offset + 1 : 0;
         $to = min($offset + $perPage, $total);
 
+        // Hitung agregat server-wide untuk KPI cards
+        $stats = [
+            'total'  => $total,
+            'male'   => 0,
+            'female' => 0,
+            'active' => $total,
+        ];
+
+        try {
+            if ($tab === 'siswa') {
+                $statsSql = "SELECT 
+                    COUNT(*) FILTER (WHERE UPPER(s.jenis_kelamin) = 'L') AS male_count,
+                    COUNT(*) FILTER (WHERE UPPER(s.jenis_kelamin) = 'P') AS female_count,
+                    COUNT(*) FILTER (WHERE s.status_siswa ILIKE 'aktif' OR s.status_siswa IS NULL) AS active_count
+                    FROM siswa.siswa s 
+                    LEFT JOIN core.tenants t ON s.tenant_id = t.id
+                    LEFT JOIN akademik.kelas k ON (s.tenant_id = k.tenant_id AND (s.kelas_saat_ini = k.id::text OR s.kelas_saat_ini = k.nama_kelas OR s.kelas_saat_ini = k.kode_kelas))
+                    LEFT JOIN core.jenjang j ON k.id_jenjang::text = j.id::text " . $whereClause;
+                $statsStmt = $this->db->prepare($statsSql);
+                $statsStmt->execute($params);
+                $stRow = $statsStmt->fetch(PDO::FETCH_ASSOC);
+                if ($stRow) {
+                    $stats['male']   = (int)($stRow['male_count'] ?? 0);
+                    $stats['female'] = (int)($stRow['female_count'] ?? 0);
+                    $stats['active'] = (int)($stRow['active_count'] ?? 0);
+                }
+            } elseif ($tab === 'mutasi') {
+                $stats['active'] = 0;
+            }
+        } catch (\Throwable $e) {
+            error_log("Failed to calculate summary stats: " . $e->getMessage());
+        }
+
         return [
-            'data' => $list,
-            'current_page' => $page,
-            'last_page' => $totalPages,
-            'per_page' => $perPage,
-            'total' => $total,
-            'from' => $from,
-            'to' => $to
+            'data'          => $list,
+            'current_page'  => $page,
+            'last_page'     => $totalPages,
+            'per_page'      => $perPage,
+            'total'         => $total,
+            'from'          => $from,
+            'to'            => $to,
+            'summary_stats' => $stats
         ];
     }
 
@@ -1038,8 +1072,8 @@ class PenggunaModel extends Model {
                 FROM siswa.siswa s
                 WHERE s.tenant_id = :tenant_id
                   AND s.kelas_saat_ini = (SELECT nama_kelas FROM akademik.kelas WHERE id = :id_kelas LIMIT 1)
-                  AND s.status_siswa = 'aktif'
-                  AND s.is_active = true
+                  AND (s.status_siswa ILIKE 'aktif' OR s.status_siswa IS NULL)
+                  AND (s.is_active = true OR s.is_active IS NULL)
                 ORDER BY s.nama_lengkap ASC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute(['tenant_id' => $tenantId, 'id_kelas' => $idKelas]);
