@@ -9,25 +9,102 @@
     [v-cloak] { display: none !important; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .fs-9 { font-size: 0.725rem !important; }
+    .fs-8 { font-size: 0.815rem !important; }
+    .fs-7\.5 { font-size: 0.875rem !important; }
 
-    /* High contrast color overrides for WCAG compliance (ratio > 4.5:1 on light backgrounds) */
-    .text-slate-600 {
-        color: #475569 !important;
-    }
-    .text-slate-700 {
-        color: #334155 !important;
-    }
+    /* High contrast color overrides for WCAG compliance */
+    .text-slate-600 { color: #475569 !important; }
+    .text-slate-700 { color: #334155 !important; }
+    .text-slate-800 { color: #1e293b !important; }
+    .text-slate-900 { color: #0f172a !important; }
+    
     #errorMonitorApp .text-muted,
-    #errorMonitorApp .text-secondary,
-    #modalErrorTrace .text-muted,
-    #modalErrorTrace .text-secondary,
-    .swal2-container .text-muted,
-    .swal2-container .text-secondary {
-        color: #475569 !important;
+    #errorMonitorApp .text-secondary {
+        color: #64748b !important;
     }
-    #errorMonitorApp .bg-light .text-primary,
-    #modalErrorTrace .bg-light .text-primary {
-        color: #1d4ed8 !important;
+
+    /* Error Monitor Table Custom Styles */
+    .error-log-table {
+        table-layout: fixed;
+        width: 100%;
+        min-width: 1080px;
+    }
+    .error-log-table th {
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #475569;
+        background: #f8fafc !important;
+        border-bottom: 2px solid #e2e8f0 !important;
+        font-size: 0.72rem;
+    }
+    .error-log-table td {
+        vertical-align: top !important;
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .error-log-table tr:hover td {
+        background-color: #f8fafc !important;
+    }
+
+    .error-msg-box {
+        color: #0f172a;
+        font-weight: 600;
+        font-size: 0.835rem;
+        line-height: 1.5;
+        word-break: break-word;
+        white-space: normal;
+    }
+    
+    .source-box {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 6px 10px;
+        transition: all 0.2s;
+    }
+    .source-box:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+    }
+
+    .tenant-chip {
+        font-size: 0.7rem;
+        font-weight: 600;
+        background: #f1f5f9;
+        color: #334155;
+        border: 1px solid #e2e8f0;
+        padding: 2px 8px;
+        border-radius: 9999px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        max-width: 100%;
+    }
+
+    .method-badge {
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        padding: 3px 6px;
+        border-radius: 6px;
+        font-family: monospace;
+    }
+    .method-get { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+    .method-post { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .method-client { background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+    .method-put { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+    .method-delete { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+    .line-badge {
+        background: #fefce8;
+        color: #854d0e;
+        border: 1px solid #fde68a;
+        font-size: 0.68rem;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 4px;
     }
 </style>
 
@@ -210,31 +287,29 @@
                 </button>
             </div>
         </div>
-    </div>
-
-    <!-- ============================================================
-         TABEL ERROR LOG
+    </div>    <!-- ============================================================
+         TABEL ERROR LOG (MODERN DEVELOPER CONSOLE)
          ============================================================ -->
-    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-5">
+    <div class="card border border-slate-200/80 shadow-xs rounded-3xl overflow-hidden mb-5 bg-white">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+            <table class="table align-middle mb-0 error-log-table">
                 <thead>
-                    <tr class="fs-8 text-muted" style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
-                        <th class="ps-4 py-3 fw-semibold" style="width:155px;">Waktu</th>
-                        <th class="py-3 fw-semibold" style="width:130px;">Level</th>
-                        <th class="py-3 fw-semibold">Pesan Error</th>
-                        <th class="py-3 fw-semibold" style="width:190px;">File : Baris</th>
-                        <th class="py-3 fw-semibold" style="width:160px;">Request</th>
-                        <th class="py-3 fw-semibold text-center" style="width:110px;">Aksi</th>
+                    <tr>
+                        <th class="ps-4" style="width: 155px;">Waktu</th>
+                        <th style="width: 130px;">Error Level</th>
+                        <th style="width: 320px;">Pesan & Sumber Error</th>
+                        <th style="width: 250px;">File Sumber : Baris</th>
+                        <th style="width: 175px;">Endpoint / Request</th>
+                        <th class="text-center pe-4" style="width: 110px;">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     <!-- Loading shimmer -->
                     <tr v-if="loading">
                         <td colspan="6" class="text-center py-5">
-                            <div class="d-flex flex-column align-items-center gap-2 text-muted">
-                                <div class="spinner-border text-primary" role="status" style="width:2rem;height:2rem;"></div>
-                                <span class="fs-8">Memuat data error log...</span>
+                            <div class="d-flex flex-column align-items-center gap-2 text-slate-500">
+                                <div class="spinner-border text-primary" role="status" style="width:2.2rem;height:2.2rem;"></div>
+                                <span class="fs-8 font-medium">Memuat data log error secara asinkron...</span>
                             </div>
                         </td>
                     </tr>
@@ -242,14 +317,14 @@
                     <!-- Empty state -->
                     <tr v-else-if="errors.length === 0">
                         <td colspan="6" class="text-center py-5">
-                            <div class="d-flex flex-column align-items-center gap-2">
+                            <div class="d-flex flex-column align-items-center gap-2 py-3">
                                 <div class="rounded-circle d-flex align-items-center justify-content-center mb-1"
-                                     style="width:56px;height:56px;background:#f0fdf4;">
-                                    <i class="bi bi-shield-check fs-2 text-success"></i>
+                                     style="width:64px;height:64px;background:#f0fdf4;">
+                                    <i class="bi bi-shield-check fs-1 text-success"></i>
                                 </div>
-                                <span class="fs-7 fw-semibold text-success">Tidak ada error ditemukan</span>
-                                <span class="fs-8 text-muted" v-if="searchQuery || levelFilter">
-                                    Coba hapus filter untuk melihat semua log.
+                                <span class="fs-6 fw-bold text-slate-800">Tidak ada log error yang tercatat</span>
+                                <span class="fs-8 text-slate-500" v-if="searchQuery || levelFilter">
+                                    Coba atur ulang pencarian atau filter untuk menampilkan data lainnya.
                                 </span>
                             </div>
                         </td>
@@ -259,68 +334,86 @@
                     <tr v-else
                         v-for="err in errors"
                         :key="err.id"
-                        class="fs-8 border-bottom"
-                        style="border-color:#f1f5f9 !important;">
-                        <!-- Waktu -->
-                        <td class="ps-4 text-muted font-monospace" style="white-space:nowrap;font-size:0.73rem;">
-                            {{ formatDateTime(err.created_at) }}
+                        class="fs-8 transition">
+                        
+                        <!-- 1. Waktu -->
+                        <td class="ps-4 py-3">
+                            <div class="fw-bold text-slate-800 font-monospace fs-8">
+                                {{ formatTimeOnly(err.created_at) }}
+                            </div>
+                            <div class="text-slate-500 fs-9 mt-0.5 font-medium">
+                                <i class="bi bi-calendar3 me-1 text-slate-400"></i>{{ formatDateOnly(err.created_at) }}
+                            </div>
                         </td>
-                        <!-- Level Badge -->
-                        <td>
-                            <span class="badge fw-semibold font-monospace px-2 py-1"
-                                  style="font-size:0.7rem;"
-                                  :class="levelBadgeClass(err.error_level)">
-                                {{ err.error_level }}
+
+                        <!-- 2. Level Badge -->
+                        <td class="py-3">
+                            <span class="badge fw-bold font-monospace px-2.5 py-1.5 rounded-lg border d-inline-flex align-items-center gap-1.5 shadow-2xs"
+                                  :class="levelBadgeClasses(err.error_level)">
+                                <i :class="levelDotIcon(err.error_level)" class="fs-9"></i>
+                                <span>{{ err.error_level }}</span>
                             </span>
                         </td>
-                        <!-- Pesan -->
-                        <td style="max-width:0;">
-                            <div class="text-dark fw-semibold text-truncate" style="max-width:340px;">
+
+                        <!-- 3. Pesan & Sumber Tenant -->
+                        <td class="py-3">
+                            <div class="error-msg-box" :title="err.message">
                                 {{ err.message }}
                             </div>
-                            <div class="mt-1 d-flex align-items-center gap-1 flex-wrap">
-                                <span v-if="err.nama_sekolah"
-                                      class="badge bg-light text-dark border fs-9">
-                                    <i class="bi bi-building me-1"></i>{{ err.nama_sekolah }}
+                            <div class="mt-2 d-flex align-items-center gap-1.5 flex-wrap">
+                                <span v-if="err.nama_sekolah" class="tenant-chip" :title="err.nama_sekolah">
+                                    <i class="bi bi-buildings text-primary"></i>
+                                    <span class="text-truncate" style="max-width: 250px;">{{ err.nama_sekolah }}</span>
+                                </span>
+                                <span v-else class="tenant-chip text-slate-500">
+                                    <i class="bi bi-globe text-secondary"></i>
+                                    <span>Pusat Kendali SaaS (Global)</span>
                                 </span>
                             </div>
                         </td>
-                        <!-- File & Baris -->
-                        <td>
-                            <div class="d-flex align-items-center gap-1 flex-wrap">
-                                <code class="text-primary d-block" style="font-size:0.7rem;word-break:break-all;max-width:160px;" :title="err.file">
+
+                        <!-- 4. File Sumber & Baris -->
+                        <td class="py-3 pe-3">
+                            <div class="source-box shadow-2xs">
+                                <div class="d-flex align-items-center justify-content-between gap-1 mb-1 border-bottom pb-1 border-slate-200/60">
+                                    <span class="fs-9 fw-bold text-slate-500 font-monospace">SOURCE</span>
+                                    <span class="line-badge font-monospace">
+                                        L.{{ err.line || '?' }}
+                                    </span>
+                                </div>
+                                <div class="font-monospace text-primary fs-8 text-truncate fw-semibold" :title="err.file">
                                     {{ shortenPath(err.file) }}
-                                </code>
-                                <span class="badge text-warning-emphasis fw-semibold flex-shrink-0"
-                                      style="background:#fefce8;border:1px solid #fde68a;font-size:0.68rem;">
-                                    L.{{ err.line || '?' }}
-                                </span>
+                                </div>
                             </div>
                         </td>
-                        <!-- Request URL -->
-                        <td>
-                            <div class="d-flex align-items-center gap-1 mb-1">
-                                <span class="badge bg-slate-100 text-slate-700 border fs-9 font-monospace flex-shrink-0"
-                                      style="background:#f1f5f9;color:#475569;border-color:#e2e8f0;">
-                                    {{ err.request_method }}
+
+                        <!-- 5. Request URL & IP Address -->
+                        <td class="py-3">
+                            <div class="d-flex align-items-center gap-1.5 mb-1.5">
+                                <span class="method-badge flex-shrink-0" :class="methodBadgeClass(err.request_method)">
+                                    {{ (err.request_method || 'GET').toUpperCase() }}
                                 </span>
-                                <code class="text-muted text-truncate" style="font-size:0.7rem;max-width:100px;" :title="err.request_url">
+                                <span class="text-slate-800 font-monospace fs-8 text-truncate fw-semibold" style="max-width: 115px;" :title="err.request_url">
                                     {{ shortenUrl(err.request_url) }}
-                                </code>
+                                </span>
                             </div>
-                            <div class="text-muted font-monospace" style="font-size:0.68rem;">{{ err.ip_address }}</div>
+                            <div class="text-slate-500 font-monospace fs-9 d-flex align-items-center gap-1">
+                                <i class="bi bi-hdd-network text-slate-400"></i>
+                                <span>{{ err.ip_address || '127.0.0.1' }}</span>
+                            </div>
                         </td>
-                        <!-- Aksi -->
-                        <td class="text-center pe-3">
-                            <div class="d-flex gap-1 justify-content-center">
-                                <button class="btn btn-sm btn-primary rounded-3 px-2 py-1 shadow-sm"
-                                        style="font-size:0.72rem;"
+
+                        <!-- 6. Aksi -->
+                        <td class="text-center pe-4 py-3">
+                            <div class="d-flex gap-1.5 justify-content-center align-items-center">
+                                <button class="btn btn-sm btn-primary rounded-xl px-2.5 py-1.5 shadow-2xs d-flex align-items-center gap-1 font-semibold fs-8 hover-lift"
                                         @click="openTraceModal(err)"
-                                        title="Lihat Stack Trace">
-                                    <i class="bi bi-bug me-1"></i>Trace
+                                        title="Lihat Detail Stack Trace">
+                                    <i class="bi bi-bug-fill"></i>
+                                    <span>Trace</span>
                                 </button>
-                                <button class="btn btn-sm btn-outline-danger rounded-3 px-2 py-1"
-                                        style="font-size:0.72rem;"
+                                <button class="btn btn-sm btn-light border border-slate-200 text-danger hover-bg-danger-subtle rounded-xl d-flex align-items-center justify-content-center hover-lift"
+                                        style="width: 32px; height: 32px;"
                                         @click="deleteOne(err.id)"
                                         title="Hapus log ini">
                                     <i class="bi bi-trash3"></i>
@@ -333,23 +426,23 @@
         </div>
 
         <!-- Pagination Footer -->
-        <div class="d-flex align-items-center justify-content-between px-4 py-3 border-top flex-wrap gap-2"
+        <div class="d-flex align-items-center justify-content-between px-4 py-3 border-top border-slate-200/80 flex-wrap gap-2"
              style="background:#f8fafc;"
              v-if="totalPages > 0">
-            <div class="text-muted fs-8">
+            <div class="text-slate-600 fs-8 font-medium">
                 <span v-if="totalErrors > 0">
-                    Halaman <strong class="text-dark">{{ currentPage }}</strong> / <strong class="text-dark">{{ totalPages }}</strong>
-                    &nbsp;·&nbsp; Total <strong class="text-dark">{{ totalErrors }}</strong> entri
-                    <span v-if="lastUpdatedTime" class="ms-2 text-secondary fs-9 font-monospace">
+                    Menampilkan Halaman <strong class="text-slate-900">{{ currentPage }}</strong> dari <strong class="text-slate-900">{{ totalPages }}</strong>
+                    &nbsp;·&nbsp; Total <strong class="text-primary">{{ totalErrors }}</strong> entri log
+                    <span v-if="lastUpdatedTime" class="ms-2 text-slate-500 fs-9 font-monospace">
                         <i class="bi bi-clock me-1"></i>Diperbarui {{ lastUpdatedTime }}
                     </span>
                 </span>
-                <span v-else class="text-muted fs-8">Tidak ada data</span>
+                <span v-else class="text-slate-500 fs-8">Tidak ada data</span>
             </div>
 
             <!-- Numbered Pagination -->
             <div class="d-flex align-items-center gap-1 flex-wrap" v-if="totalPages > 1">
-                <button class="btn btn-sm btn-light border rounded-3 px-2 py-1"
+                <button class="btn btn-sm btn-light border border-slate-200 rounded-xl px-2.5 py-1 text-slate-600 hover-lift"
                         @click="loadErrors(currentPage - 1)"
                         :disabled="currentPage <= 1 || loading"
                         title="Halaman Sebelumnya">
@@ -357,17 +450,17 @@
                 </button>
 
                 <template v-for="(p, idx) in visiblePages" :key="idx">
-                    <span v-if="p === '...'" class="px-2 text-muted fs-8 select-none">...</span>
+                    <span v-if="p === '...'" class="px-2 text-slate-400 fs-8 select-none">...</span>
                     <button v-else
-                            class="btn btn-sm rounded-3 px-3 py-1 font-monospace fw-semibold"
-                            :class="p === currentPage ? 'btn-primary shadow-sm' : 'btn-light border text-dark'"
+                            class="btn btn-sm rounded-xl px-3 py-1 font-monospace fw-bold transition"
+                            :class="p === currentPage ? 'btn-primary shadow-xs' : 'btn-light border border-slate-200 text-slate-700 hover-lift'"
                             @click="loadErrors(p)"
                             :disabled="loading">
                         {{ p }}
                     </button>
                 </template>
 
-                <button class="btn btn-sm btn-light border rounded-3 px-2 py-1"
+                <button class="btn btn-sm btn-light border border-slate-200 rounded-xl px-2.5 py-1 text-slate-600 hover-lift"
                         @click="loadErrors(currentPage + 1)"
                         :disabled="currentPage >= totalPages || loading"
                         title="Halaman Selanjutnya">
@@ -789,15 +882,75 @@
                 });
             },
 
+            formatTimeOnly(raw) {
+                if (!raw) return '--:--:--';
+                const d = new Date(raw.replace(/-/g, '/'));
+                if (isNaN(d)) return raw;
+                return d.toLocaleTimeString('id-ID', {
+                    hour: '2-digit', minute: '2-digit', second: '2-digit'
+                });
+            },
+
+            formatDateOnly(raw) {
+                if (!raw) return '-';
+                const d = new Date(raw.replace(/-/g, '/'));
+                if (isNaN(d)) return raw;
+                return d.toLocaleDateString('id-ID', {
+                    day: '2-digit', month: 'short', year: 'numeric'
+                });
+            },
+
             shortenPath(path) {
                 if (!path) return '-';
-                const parts = (path || '').replace(/\\/g, '/').split('/');
-                return '…/' + parts.slice(-3).join('/');
+                const clean = (path || '').replace(/\\/g, '/');
+                const parts = clean.split('/');
+                if (parts.length <= 3) return clean;
+                return '…/' + parts.slice(-2).join('/');
             },
 
             shortenUrl(url) {
                 if (!url) return '-';
-                try { return new URL(url).pathname; } catch { return (url + '').substring(0, 40); }
+                try { return new URL(url).pathname; } catch { return (url + '').substring(0, 30); }
+            },
+
+            levelBadgeClasses(level) {
+                const l = (level || '').toLowerCase();
+                if (l.includes('parseerror') || l.includes('fatal') || l.includes('exception') || l === 'e_error') {
+                    return 'bg-rose-50 text-rose-700 border-rose-200';
+                }
+                if (l.includes('warning') || l === 'e_warning') {
+                    return 'bg-amber-50 text-amber-800 border-amber-200';
+                }
+                if (l.includes('notice') || l === 'e_notice') {
+                    return 'bg-sky-50 text-sky-700 border-sky-200';
+                }
+                if (l.includes('deprecat')) {
+                    return 'bg-slate-100 text-slate-700 border-slate-300';
+                }
+                return 'bg-violet-50 text-violet-700 border-violet-200';
+            },
+
+            levelDotIcon(level) {
+                const l = (level || '').toLowerCase();
+                if (l.includes('parseerror') || l.includes('fatal') || l.includes('exception') || l === 'e_error') {
+                    return 'bi bi-x-circle-fill text-rose-600';
+                }
+                if (l.includes('warning') || l === 'e_warning') {
+                    return 'bi bi-exclamation-triangle-fill text-amber-600';
+                }
+                if (l.includes('notice') || l === 'e_notice') {
+                    return 'bi bi-info-circle-fill text-sky-600';
+                }
+                return 'bi bi-dot text-violet-600';
+            },
+
+            methodBadgeClass(method) {
+                const m = (method || 'GET').toUpperCase();
+                if (m === 'POST') return 'method-post';
+                if (m === 'PUT' || m === 'PATCH') return 'method-put';
+                if (m === 'DELETE') return 'method-delete';
+                if (m === 'CLIENT') return 'method-client';
+                return 'method-get';
             },
 
             levelBadgeClass(level) {

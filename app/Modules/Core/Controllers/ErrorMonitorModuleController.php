@@ -27,12 +27,12 @@ class ErrorMonitorModuleController extends BaseController
     {
         parent::__construct();
 
-        SessionManager::requireLogin();
-
         $uri = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
         if (str_contains($uri, '/log-client')) {
-            return; // Allow logging client JS errors for any logged-in user
+            return; // Allow logging client JS errors (public telemetry endpoint)
         }
+
+        SessionManager::requireLogin();
 
         if (!$this->isUserSuperAdmin()) {
             if ($this->isJsonRequest()) {
