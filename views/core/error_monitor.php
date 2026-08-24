@@ -639,7 +639,7 @@
 
                 const modalBodyEl = document.getElementById('modal-trace-body');
                 if (modalBodyEl) {
-                    modalBodyEl.innerHTML = `
+                    const htmlContent = `
                         <!-- Metadata Row -->
                         <div class="row g-2 mb-3">
                             <div class="col-md-4">
@@ -656,9 +656,27 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="rounded-3 p-3 h-100" style="background:#f8fafc;border:1px solid #e2e8f0;">
-                                    <div class="fs-9 text-muted fw-semibold text-uppercase mb-1" style="letter-spacing:.5px;">Request</div>
-                                    <div class="fs-9 font-monospace text-dark text-break">
-                                        <span class="badge bg-secondary me-1">${esc(err.request_method)}</span>${esc(err.request_url)}
+                                    <div class="fs-9 text-muted fw-semibold text-uppercase mb-1" style="letter-spacing:.5px;">HTTP Status</div>
+                                    <span class="badge bg-light text-dark font-monospace border fs-8">${esc(String(err.http_status_code || 500))}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Lokasi File & URL -->
+                        <div class="rounded-3 p-3 mb-3" style="background:#f8fafc;border:1px solid #e2e8f0;">
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <div class="fs-9 text-muted fw-semibold text-uppercase mb-0.5">Request URL</div>
+                                    <div class="fs-8 font-monospace text-truncate text-primary fw-semibold" title="${esc(err.request_url || '-')}">
+                                        <span class="badge bg-primary me-1">${esc(err.request_method || 'GET')}</span>
+                                        ${esc(err.request_url || '-')}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="fs-9 text-muted fw-semibold text-uppercase mb-0.5">File Source</div>
+                                    <div class="fs-8 font-monospace text-truncate text-dark" title="${esc(err.file_path || '-')}:${esc(String(err.line_number || ''))}">
+                                        ${esc(err.file_path || '-')}
+                                        <span class="text-danger fw-bold">:${esc(String(err.line_number || ''))}</span>
                                     </div>
                                 </div>
                             </div>
@@ -697,6 +715,9 @@
 
                         ${contextHtml}
                     `;
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(htmlContent, 'text/html');
+                    modalBodyEl.replaceChildren(...doc.body.childNodes);
                 }
 
                 if (this._traceModal) {

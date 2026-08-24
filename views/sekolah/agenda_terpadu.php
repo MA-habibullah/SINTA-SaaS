@@ -649,7 +649,12 @@ function deleteKategori(id) {
 var picSelect = null;
 
 window.editAgenda = function(data) {
-    document.getElementById('modalTitle').innerHTML = '<i class="bi bi-pencil-square me-2 text-primary"></i> Edit Kegiatan';
+    const titleEl = document.getElementById('modalTitle');
+    if (titleEl) {
+        const icon = document.createElement('i');
+        icon.className = 'bi bi-pencil-square me-2 text-primary';
+        titleEl.replaceChildren(icon, document.createTextNode(' Edit Kegiatan'));
+    }
     document.getElementById('formAgenda').action = '<?= $this->getBaseUrl() ?>/informasi/agenda/update';
     
     document.getElementById('a_id').value = data.id;
@@ -712,7 +717,12 @@ window.editAgenda = function(data) {
 }
 
 document.getElementById('addAgendaModal').addEventListener('hidden.bs.modal', function () {
-    document.getElementById('modalTitle').innerHTML = '<i class="bi bi-journal-plus me-2 text-primary"></i> Tambah Kegiatan';
+    const titleEl = document.getElementById('modalTitle');
+    if (titleEl) {
+        const icon = document.createElement('i');
+        icon.className = 'bi bi-journal-plus me-2 text-primary';
+        titleEl.replaceChildren(icon, document.createTextNode(' Tambah Kegiatan'));
+    }
     document.getElementById('formAgenda').action = '<?= $this->getBaseUrl() ?>/informasi/agenda/store';
     document.getElementById('a_id').value = '';
     document.getElementById('formAgenda').reset();
@@ -970,7 +980,12 @@ function initAgendaTerpadu() {
                                 });
                                 bodyHtml += '</div>';
                             }
-                            document.getElementById('agendaDetailBody').innerHTML = bodyHtml;
+                            const detailBodyEl = document.getElementById('agendaDetailBody');
+                            if (detailBodyEl) {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(bodyHtml, 'text/html');
+                                detailBodyEl.replaceChildren(...doc.body.childNodes);
+                            }
                             
                             document.getElementById('btnTambahDariDetail').onclick = function() {
                                 var detailModal = bootstrap.Modal.getInstance(document.getElementById('agendaDetailModal'));

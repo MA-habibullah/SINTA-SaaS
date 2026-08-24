@@ -214,14 +214,16 @@ class AgendaModel {
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
-    public function getById(string $id): ?array {
+    public function getById(string $id, ?string $tenantId = null): ?array {
+        $effectiveTenantId = $tenantId ?: $this->tenantId;
         $stmt = $this->db->prepare("
             SELECT a.*, t.nama_sekolah 
             FROM sistem.agenda_sekolah a
             LEFT JOIN core.tenants t ON a.tenant_id = t.id
-            WHERE a.id = :id
+            WHERE a.id = :id::uuid AND (:tenant_id::uuid IS NULL OR a.tenant_id = :tenant_id::uuid OR a.tenant_id IS NULL)
         ");
         $stmt->bindValue(':id', $id);
+        $stmt->bindValue(':tenant_id', $effectiveTenantId);
         $stmt->execute();
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row ? $this->formatRow($row) : null;
@@ -250,62 +252,50 @@ class AgendaModel {
     public function update(string $id, array $data, ?string $tenantId = null): bool {
         $targetTenant = $tenantId ?? $this->tenantId;
         $descPayload = $this->packDescription($data);
+        $newTenantId = array_key_exists('tenant_id', $data) ? $data['tenant_id'] : $targetTenant;
 
         $sql = "UPDATE sistem.agenda_sekolah SET
                     nama_agenda_sekolah = :nama_agenda_sekolah,
                     kategori = :kategori,
                     deskripsi = :deskripsi,
                     is_active = :is_active,
-                    tenant_id = :tenant_id,
+                    tenant_id = :set_tenant_id,
                     updated_at = CURRENT_TIMESTAMP
-                WHERE id = :id";
-
-        if (!empty($targetTenant) && $targetTenant !== 'global') {
-            $sql .= " AND (tenant_id = :filter_tenant_id OR tenant_id IS NULL)";
-        }
+                WHERE id = :id::uuid AND (:filter_tenant_id::uuid IS NULL OR tenant_id = :filter_tenant_id::uuid OR tenant_id IS NULL)";
 
         $stmt = $this->db->prepare($sql);
         $stmt->bindValue(':id', $id);
-        $stmt->bindValue(':tenant_id', array_key_exists('tenant_id', $data) ? $data['tenant_id'] : $targetTenant);
+        $stmt->bindValue(':set_tenant_id', $newTenantId);
         $stmt->bindValue(':nama_agenda_sekolah', $data['nama_agenda_sekolah'] ?? $data['judul'] ?? 'Agenda Tanpa Judul');
         $stmt->bindValue(':kategori', $data['kategori'] ?? 'Umum');
         $stmt->bindValue(':deskripsi', $descPayload);
         $stmt->bindValue(':is_active', isset($data['is_active']) ? (bool)$data['is_active'] : true, PDO::PARAM_BOOL);
-        if (!empty($targetTenant) && $targetTenant !== 'global') {
-            $stmt->bindValue(':filter_tenant_id', $targetTenant);
-        }
+        $stmt->bindValue(':filter_tenant_id', $targetTenant);
         return $stmt->execute();
     }
 
     public function toggleActive(string $id, ?string $tenantId = null): bool {
         $targetTenant = $tenantId ?? $this->tenantId;
-        $sql = "UPDATE sistem.agenda_sekolah SET is_active = NOT is_active, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
-        if (!empty($targetTenant) && $targetTenant !== 'global') {
-            $sql .= " AND (tenant_id = :tenant_id OR tenant_id IS NULL)";
-        }
-        $sql .= " RETURNING is_active";
+        $sql = "UPDATE sistem.agenda_sekolah 
+                SET is_active = NOT is_active, updated_at = CURRENT_TIMESTAMP 
+                WHERE id = :id::uuid AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)
+                RETURNING is_active";
 
         $stmt = $this->db->prepare($sql);
         $stmt->bindValue(':id', $id);
-        if (!empty($targetTenant) && $targetTenant !== 'global') {
-            $stmt->bindValue(':tenant_id', $targetTenant);
-        }
+        $stmt->bindValue(':tenant_id', $targetTenant);
         $stmt->execute();
         return (bool)$stmt->fetchColumn();
     }
 
     public function delete(string $id, ?string $tenantId = null): bool {
         $targetTenant = $tenantId ?? $this->tenantId;
-        $sql = "DELETE FROM sistem.agenda_sekolah WHERE id = :id";
-        if (!empty($targetTenant) && $targetTenant !== 'global') {
-            $sql .= " AND (tenant_id = :tenant_id OR tenant_id IS NULL)";
-        }
+        $sql = "DELETE FROM sistem.agenda_sekolah 
+                WHERE id = :id::uuid AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)";
 
         $stmt = $this->db->prepare($sql);
         $stmt->bindValue(':id', $id);
-        if (!empty($targetTenant) && $targetTenant !== 'global') {
-            $stmt->bindValue(':tenant_id', $targetTenant);
-        }
+        $stmt->bindValue(':tenant_id', $targetTenant);
         return $stmt->execute();
     }
 

@@ -34,8 +34,7 @@ class ErrorMonitorModuleController extends BaseController
             return; // Allow logging client JS errors for any logged-in user
         }
 
-        $role = $_SESSION['role_name'] ?? '';
-        if (!in_array($role, self::ALLOWED_ROLES, true)) {
+        if (!$this->isUserSuperAdmin()) {
             if ($this->isJsonRequest()) {
                 $this->jsonResponse(false, null, 'Akses ditolak. Fitur ini khusus Super Admin Platform.', 403);
             }
@@ -60,11 +59,12 @@ class ErrorMonitorModuleController extends BaseController
      */
     public function fetchApi(): void
     {
-        $page        = max(1, (int)($_GET['page']     ?? 1));
-        $perPage     = min(100, max(10, (int)($_GET['per_page'] ?? 20)));
-        $search      = trim($_GET['search']       ?? '');
-        $levelFilter = trim($_GET['level_filter'] ?? '');
-        $offset      = ($page - 1) * $perPage;
+        $page           = max(1, (int)($_GET['page']        ?? 1));
+        $perPage        = min(100, max(10, (int)($_GET['per_page'] ?? 20)));
+        $search         = trim($_GET['search']          ?? '');
+        $levelFilter    = trim($_GET['level_filter']    ?? '');
+        $tenantIdFilter = trim($_GET['tenant_id']       ?? '');
+        $offset         = ($page - 1) * $perPage;
 
         try {
             $db = Database::getConnection();
@@ -85,11 +85,27 @@ class ErrorMonitorModuleController extends BaseController
                 $params['level_filter'] = $levelFilter;
             }
 
+            $sessionTenantId = $this->getSecureTenantId();
+            $isSuperAdmin    = $this->isUserSuperAdmin();
+
+            if (!$isSuperAdmin && !empty($sessionTenantId)) {
+                $whereClauses[] = "(e.tenant_id = :session_tenant_id OR e.tenant_id IS NULL)";
+                $params['session_tenant_id'] = $sessionTenantId;
+            } elseif (!empty($tenantIdFilter)) {
+                if ($tenantIdFilter === 'global') {
+                    $whereClauses[] = "e.tenant_id IS NULL";
+                } elseif (preg_match('/^[a-f0-9\-]{36}$/i', $tenantIdFilter)) {
+                    $whereClauses[] = "e.tenant_id = :tenant_filter";
+                    $params['tenant_filter'] = $tenantIdFilter;
+                }
+            }
+
             $whereSql = !empty($whereClauses) ? 'WHERE ' . implode(' AND ', $whereClauses) : '';
 
             $sql = "
                 SELECT
                     e.id,
+                    e.tenant_id,
                     e.error_level,
                     e.message,
                     e.file,
@@ -117,7 +133,7 @@ class ErrorMonitorModuleController extends BaseController
             $stmt->execute();
             $errors = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Query total
+            // Query total terisolasi filter
             $countStmt = $db->prepare("SELECT COUNT(*) FROM sistem.system_errors e {$whereSql}");
             foreach ($params as $k => $v) {
                 $countStmt->bindValue(':' . $k, $v, PDO::PARAM_STR);
@@ -126,12 +142,12 @@ class ErrorMonitorModuleController extends BaseController
             $total = (int)$countStmt->fetchColumn();
 
             // Statistik ringkasan per level
-            $statsStmt = $db->query("
-                SELECT error_level, COUNT(*) AS jumlah
-                FROM sistem.system_errors
-                GROUP BY error_level
-                ORDER BY jumlah DESC
-            ");
+            $statsSql = "SELECT error_level, COUNT(*) AS jumlah FROM sistem.system_errors e {$whereSql} GROUP BY error_level ORDER BY jumlah DESC";
+            $statsStmt = $db->prepare($statsSql);
+            foreach ($params as $k => $v) {
+                $statsStmt->bindValue(':' . $k, $v, PDO::PARAM_STR);
+            }
+            $statsStmt->execute();
             $stats = $statsStmt->fetchAll(PDO::FETCH_ASSOC);
 
             header('Content-Type: application/json');
@@ -160,8 +176,21 @@ class ErrorMonitorModuleController extends BaseController
     public function clearAll(): void
     {
         try {
+            $this->validateCsrfToken();
             $db = Database::getConnection();
-            $db->exec("DELETE FROM sistem.system_errors");
+
+            $tenantIdFilter = trim($_POST['tenant_id'] ?? ($_GET['tenant_id'] ?? ''));
+            $sessionTenantId = $this->getSecureTenantId();
+            $targetTenant = !empty($tenantIdFilter) && preg_match('/^[a-f0-9\-]{36}$/i', $tenantIdFilter) ? $tenantIdFilter : $sessionTenantId;
+
+            if (!$this->isUserSuperAdmin() || !empty($targetTenant)) {
+                $stmt = $db->prepare("DELETE FROM sistem.system_errors WHERE (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)");
+                $stmt->execute(['tenant_id' => $targetTenant]);
+            } else {
+                $stmt = $db->prepare("DELETE FROM sistem.system_errors WHERE (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)");
+                $stmt->bindValue(':tenant_id', null);
+                $stmt->execute();
+            }
 
             header('Content-Type: application/json');
             echo json_encode([
@@ -180,18 +209,28 @@ class ErrorMonitorModuleController extends BaseController
      */
     public function deleteOne(): void
     {
-        $body = $this->getJsonInput();
-        $id   = trim($body['id'] ?? '');
-
-        if (empty($id)) {
-            $this->jsonResponse(false, null, 'ID error tidak boleh kosong.', 422);
-            return;
-        }
-
         try {
+            $this->validateCsrfToken();
+            $body = $this->getJsonInput();
+            $id   = trim((string)($body['id'] ?? ($_POST['id'] ?? '')));
+
+            if (empty($id) || !preg_match('/^[a-f0-9\-]{36}$/i', $id)) {
+                $this->jsonResponse(false, null, 'ID error tidak valid.', 422);
+                return;
+            }
+
+            $sessionTenantId = $this->getSecureTenantId();
             $db   = Database::getConnection();
-            $stmt = $db->prepare("DELETE FROM sistem.system_errors WHERE id = :id");
-            $stmt->execute(['id' => $id]);
+
+            if (!$this->isUserSuperAdmin() && !empty($sessionTenantId)) {
+                $stmt = $db->prepare("DELETE FROM sistem.system_errors WHERE id = :id::uuid AND (tenant_id = :tenant_id::uuid OR tenant_id IS NULL)");
+                $stmt->execute(['id' => $id, 'tenant_id' => $sessionTenantId]);
+            } else {
+                $stmt = $db->prepare("DELETE FROM sistem.system_errors WHERE id = :id::uuid AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)");
+                $stmt->bindValue(':id', $id);
+                $stmt->bindValue(':tenant_id', $sessionTenantId);
+                $stmt->execute();
+            }
 
             header('Content-Type: application/json');
             echo json_encode([

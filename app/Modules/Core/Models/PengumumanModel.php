@@ -275,19 +275,10 @@ class PengumumanModel {
         $stmt->execute($params);
         $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
-        // Count total categories in master
-        $whereKat = "1=1";
-        $paramsKat = [];
-        if (!empty($targetTenant)) {
-            if ($targetTenant === 'global' || $targetTenant === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
-                $whereKat = "(tenant_id IS NULL OR tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')";
-            } else {
-                $whereKat = "tenant_id = :tenant_id";
-                $paramsKat[':tenant_id'] = $targetTenant;
-            }
-        }
-        $stmtKat = $db->prepare("SELECT COUNT(*) FROM sistem.kategori_pengumuman WHERE $whereKat");
-        $stmtKat->execute($paramsKat);
+        // Count total categories in master (terisolasi tenant)
+        $stmtKat = $db->prepare("SELECT COUNT(*) FROM sistem.kategori_pengumuman WHERE (tenant_id = :tenant_id OR tenant_id IS NULL)");
+        $stmtKat->bindValue(':tenant_id', $targetTenant);
+        $stmtKat->execute();
         $totalKatMaster = (int)$stmtKat->fetchColumn();
 
         return [
@@ -298,26 +289,24 @@ class PengumumanModel {
         ];
     }
 
-    public function toggleActive(string $id): bool {
+    public function toggleActive(string $id, ?string $tenantId = null): bool {
         $db = Database::getConnection();
-        $whereTenant = ($this->tenantId === null) ? "1=1" : "(tenant_id = :tenant_id OR tenant_id IS NULL)";
+        $targetTenant = $tenantId ?? $this->tenantId;
         $stmt = $db->prepare("
             UPDATE sistem.pengumuman 
             SET is_active = NOT is_active, updated_at = CURRENT_TIMESTAMP 
-            WHERE id = :id AND $whereTenant 
+            WHERE id = :id::uuid AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)
             RETURNING is_active
         ");
-        $params = [':id' => $id];
-        if ($this->tenantId !== null) {
-            $params[':tenant_id'] = $this->tenantId;
-        }
-        $stmt->execute($params);
+        $stmt->bindValue(':id', $id);
+        $stmt->bindValue(':tenant_id', $targetTenant);
+        $stmt->execute();
         return (bool)$stmt->fetchColumn();
     }
 
-    public function findById(string $id): ?array {
+    public function findById(string $id, ?string $tenantId = null): ?array {
         $db = Database::getConnection();
-        $whereTenant = ($this->tenantId === null) ? "1=1" : "(p.tenant_id = :tenant_id OR p.tenant_id IS NULL)";
+        $targetTenant = $tenantId ?? $this->tenantId;
         $stmt = $db->prepare("
             SELECT p.*, p.deskripsi as isi_pengumuman, COALESCE(u.nama_lengkap, 'Administrator') as nama_pembuat, COALESCE(r.nama_role, 'super_admin') as pembuat_role, t.nama_sekolah, COALESCE(k.nama_kategori, 'Umum') as nama_kategori
             FROM sistem.pengumuman p 
@@ -325,13 +314,11 @@ class PengumumanModel {
             LEFT JOIN core.roles r ON u.role_id = r.id
             LEFT JOIN core.tenants t ON p.tenant_id = t.id
             LEFT JOIN sistem.kategori_pengumuman k ON p.kategori_id = k.id
-            WHERE p.id = :id AND $whereTenant
+            WHERE p.id = :id::uuid AND (:tenant_id::uuid IS NULL OR p.tenant_id = :tenant_id::uuid OR p.tenant_id IS NULL)
         ");
-        $params = ['id' => $id];
-        if ($this->tenantId !== null) {
-            $params['tenant_id'] = $this->tenantId;
-        }
-        $stmt->execute($params);
+        $stmt->bindValue(':id', $id);
+        $stmt->bindValue(':tenant_id', $targetTenant);
+        $stmt->execute();
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row) {
             $row['is_active'] = (bool)$row['is_active'];
@@ -367,55 +354,48 @@ class PengumumanModel {
         return (string)$stmt->fetchColumn();
     }
 
-    public function update(string $id, array $data): bool {
+    public function update(string $id, array $data, ?string $tenantId = null): bool {
         $db = Database::getConnection();
+        $targetTenant = $tenantId ?? $this->tenantId;
         
-        $setTenantClause = "";
-        $params = [
-            'judul'          => $data['judul'],
-            'kategori_id'    => !empty($data['kategori_id']) ? $data['kategori_id'] : null,
-            'deskripsi'      => $data['isi_pengumuman'] ?? ($data['deskripsi'] ?? ''),
-            'visibilitas'    => $data['visibilitas'] ?? 'public',
-            'target_roles'   => !empty($data['target_roles']) ? (is_array($data['target_roles']) ? json_encode(array_values($data['target_roles'])) : $data['target_roles']) : null,
-            'is_active'      => filter_var($data['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN) ? 'TRUE' : 'FALSE',
-            'id'             => $id
-        ];
+        $isActive = array_key_exists('is_active', $data) ? (filter_var($data['is_active'], FILTER_VALIDATE_BOOLEAN) ? 'TRUE' : 'FALSE') : 'TRUE';
+        $targetRoles = !empty($data['target_roles']) ? (is_array($data['target_roles']) ? json_encode(array_values($data['target_roles'])) : $data['target_roles']) : null;
+        $kategoriId = !empty($data['kategori_id']) ? $data['kategori_id'] : null;
+        $newTenantId = array_key_exists('tenant_id', $data) ? $data['tenant_id'] : $targetTenant;
 
-        if (array_key_exists('tenant_id', $data)) {
-            $setTenantClause = "tenant_id = :set_tenant_id, ";
-            $params['set_tenant_id'] = $data['tenant_id'];
-        }
+        $sql = "UPDATE sistem.pengumuman SET 
+                    tenant_id = :set_tenant_id,
+                    judul = :judul, 
+                    kategori_id = :kategori_id,
+                    deskripsi = :deskripsi, 
+                    visibilitas = :visibilitas, 
+                    target_roles = :target_roles, 
+                    is_active = :is_active,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = :id::uuid AND (:filter_tenant_id::uuid IS NULL OR tenant_id = :filter_tenant_id::uuid OR tenant_id IS NULL)";
 
-        $whereTenant = ($this->tenantId === null) ? "1=1" : "(tenant_id = :where_tenant_id OR tenant_id IS NULL)";
-        if ($this->tenantId !== null) {
-            $params['where_tenant_id'] = $this->tenantId;
-        }
+        $stmt = $db->prepare($sql);
+        $stmt->bindValue(':id', $id);
+        $stmt->bindValue(':set_tenant_id', $newTenantId);
+        $stmt->bindValue(':judul', $data['judul'] ?? '');
+        $stmt->bindValue(':kategori_id', $kategoriId);
+        $stmt->bindValue(':deskripsi', $data['isi_pengumuman'] ?? ($data['deskripsi'] ?? ''));
+        $stmt->bindValue(':visibilitas', $data['visibilitas'] ?? 'public');
+        $stmt->bindValue(':target_roles', $targetRoles);
+        $stmt->bindValue(':is_active', $isActive);
+        $stmt->bindValue(':filter_tenant_id', $targetTenant);
 
-        $stmt = $db->prepare("
-            UPDATE sistem.pengumuman SET 
-                $setTenantClause
-                judul = :judul, 
-                kategori_id = :kategori_id,
-                deskripsi = :deskripsi, 
-                visibilitas = :visibilitas, 
-                target_roles = :target_roles, 
-                is_active = :is_active,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = :id AND $whereTenant
-        ");
-        
-        return $stmt->execute($params);
+        return $stmt->execute();
     }
 
-    public function delete(string $id): bool {
+    public function delete(string $id, ?string $tenantId = null): bool {
         $db = Database::getConnection();
-        $whereTenant = ($this->tenantId === null) ? "1=1" : "(tenant_id = :tenant_id OR tenant_id IS NULL)";
-        $stmt = $db->prepare("DELETE FROM sistem.pengumuman WHERE id = :id AND $whereTenant");
-        $params = ['id' => $id];
-        if ($this->tenantId !== null) {
-            $params['tenant_id'] = $this->tenantId;
-        }
-        $stmt->execute($params);
+        $targetTenant = $tenantId ?? $this->tenantId;
+        $sql = "DELETE FROM sistem.pengumuman WHERE id = :id::uuid AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)";
+        $stmt = $db->prepare($sql);
+        $stmt->bindValue(':id', $id);
+        $stmt->bindValue(':tenant_id', $targetTenant);
+        $stmt->execute();
         return $stmt->rowCount() > 0;
     }
 }

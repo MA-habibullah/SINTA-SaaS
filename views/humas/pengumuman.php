@@ -7,7 +7,7 @@ $pageTitle = $title ?? 'Manajemen Pengumuman & Informasi Sekolah';
 ?>
 
 <div id="pengumumanApp" 
-     data-is-super-admin="<?= $isSuperAdmin ? 'true' : 'false' ?>" 
+     data-is-super-admin="<?= htmlspecialchars($isSuperAdmin ? 'true' : 'false', ENT_QUOTES, 'UTF-8') ?>" 
      data-tenant-id="<?= htmlspecialchars((string)($selectedTenantId ?? ''), ENT_QUOTES, 'UTF-8') ?>" 
      v-cloak 
      class="p-3 p-md-4 max-w-7xl mx-auto font-sans">

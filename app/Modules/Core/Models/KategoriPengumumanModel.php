@@ -52,14 +52,12 @@ class KategoriPengumumanModel {
 
     public function findById(string $id, ?string $tenantId = null): ?array {
         $targetTenant = $tenantId ?? $this->tenantId;
-        $sql = "SELECT * FROM sistem.kategori_pengumuman WHERE id = :id";
-        $params = ['id' => $id];
-        if (!empty($targetTenant) && $targetTenant !== 'global') {
-            $sql .= " AND (tenant_id = :tenant_id OR tenant_id IS NULL)";
-            $params['tenant_id'] = $targetTenant;
-        }
+        $sql = "SELECT * FROM sistem.kategori_pengumuman 
+                WHERE id = :id::uuid AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)";
         $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
+        $stmt->bindValue(':id', $id);
+        $stmt->bindValue(':tenant_id', $targetTenant);
+        $stmt->execute();
         $res = $stmt->fetch(PDO::FETCH_ASSOC);
         return $res ?: null;
     }
@@ -81,38 +79,32 @@ class KategoriPengumumanModel {
 
     public function update(string $id, string $nama_kategori, ?string $tenantId = null): bool {
         $targetTenant = $tenantId ?? $this->tenantId;
-        $sql = "UPDATE sistem.kategori_pengumuman SET nama_kategori = :nama_kategori, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
-        $params = [
-            'id' => $id,
-            'nama_kategori' => trim($nama_kategori)
-        ];
-        if (!empty($targetTenant) && $targetTenant !== 'global') {
-            $sql .= " AND tenant_id = :tenant_id";
-            $params['tenant_id'] = $targetTenant;
-        }
+        $sql = "UPDATE sistem.kategori_pengumuman 
+                SET nama_kategori = :nama_kategori, updated_at = CURRENT_TIMESTAMP 
+                WHERE id = :id::uuid AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)";
         $stmt = $this->db->prepare($sql);
-        return $stmt->execute($params);
+        $stmt->bindValue(':id', $id);
+        $stmt->bindValue(':nama_kategori', trim($nama_kategori));
+        $stmt->bindValue(':tenant_id', $targetTenant);
+        return $stmt->execute();
     }
 
     public function delete(string $id, ?string $tenantId = null): bool {
         $targetTenant = $tenantId ?? $this->tenantId;
         // Detach pengumuman associated with this category
-        $sqlDetach = "UPDATE sistem.pengumuman SET kategori_id = NULL WHERE kategori_id = :id";
-        $paramsDetach = ['id' => $id];
-        if (!empty($targetTenant) && $targetTenant !== 'global') {
-            $sqlDetach .= " AND tenant_id = :tenant_id";
-            $paramsDetach['tenant_id'] = $targetTenant;
-        }
+        $sqlDetach = "UPDATE sistem.pengumuman 
+                      SET kategori_id = NULL 
+                      WHERE kategori_id = :id::uuid AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)";
         $stmtDetach = $this->db->prepare($sqlDetach);
-        $stmtDetach->execute($paramsDetach);
+        $stmtDetach->bindValue(':id', $id);
+        $stmtDetach->bindValue(':tenant_id', $targetTenant);
+        $stmtDetach->execute();
 
-        $sql = "DELETE FROM sistem.kategori_pengumuman WHERE id = :id";
-        $params = ['id' => $id];
-        if (!empty($targetTenant) && $targetTenant !== 'global') {
-            $sql .= " AND tenant_id = :tenant_id";
-            $params['tenant_id'] = $targetTenant;
-        }
+        $sql = "DELETE FROM sistem.kategori_pengumuman 
+                WHERE id = :id::uuid AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)";
         $stmt = $this->db->prepare($sql);
-        return $stmt->execute($params);
+        $stmt->bindValue(':id', $id);
+        $stmt->bindValue(':tenant_id', $targetTenant);
+        return $stmt->execute();
     }
 }

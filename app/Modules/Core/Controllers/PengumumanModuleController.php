@@ -89,7 +89,7 @@ class PengumumanModuleController extends BaseController {
             // Fetch all categories so frontend modals can filter options by target tenant
             $kategoriList = $kategoriModel->getAll([]);
 
-            // Fetch available roles for target audience selection
+            // Fetch available roles for target audience selection (Audit: core.roles adalah katalog master global platform)
             $stmtRoles = $db->query("SELECT id, nama_role FROM core.roles ORDER BY nama_role ASC");
             $rolesList = $stmtRoles->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
@@ -162,16 +162,18 @@ class PengumumanModuleController extends BaseController {
 
     public function apiSavePengumuman(): void {
         try {
+            $this->validateCsrfToken();
+
             $tenantId = $this->getSecureTenantId();
             $input = $this->getJsonInput();
 
-            $judul = trim($input['judul'] ?? '');
-            $deskripsi = trim($input['deskripsi'] ?? ($input['isi_pengumuman'] ?? ''));
-            $kategoriId = !empty($input['kategori_id']) ? trim($input['kategori_id']) : null;
-            $visibilitas = !empty($input['visibilitas']) ? trim($input['visibilitas']) : 'public';
-            $targetRoles = !empty($input['target_roles']) ? $input['target_roles'] : null;
+            $judul = trim((string)($input['judul'] ?? ''));
+            $deskripsi = trim((string)($input['deskripsi'] ?? ($input['isi_pengumuman'] ?? '')));
+            $kategoriId = !empty($input['kategori_id']) ? $this->sanitizeId((string)$input['kategori_id']) : null;
+            $visibilitas = !empty($input['visibilitas']) ? trim((string)$input['visibilitas']) : 'public';
+            $targetRoles = !empty($input['target_roles']) ? (array)$input['target_roles'] : null;
             $isActive = isset($input['is_active']) ? (bool)$input['is_active'] : true;
-            $id = !empty($input['id']) ? trim($input['id']) : null;
+            $id = $this->sanitizeId($input['id'] ?? null);
 
             if (empty($judul)) {
                 $this->jsonResponse(['success' => false, 'error' => 'Judul pengumuman wajib diisi.'], 422);
@@ -184,7 +186,7 @@ class PengumumanModuleController extends BaseController {
             $model = new PengumumanModel($effectiveTenant);
 
             $payload = [
-                'tenant_id' => array_key_exists('tenant_id', $input) ? ($input['tenant_id'] === 'global' ? null : $input['tenant_id']) : $tenantId,
+                'tenant_id' => array_key_exists('tenant_id', $input) ? ($input['tenant_id'] === 'global' ? null : $this->sanitizeId($input['tenant_id'])) : $tenantId,
                 'kategori_id' => $kategoriId,
                 'created_by' => $currentUserId,
                 'judul' => $judul,
@@ -195,7 +197,7 @@ class PengumumanModuleController extends BaseController {
             ];
 
             if ($id) {
-                $success = $model->update($id, $payload);
+                $success = $model->update($id, $payload, $effectiveTenant);
                 $this->jsonResponse([
                     'success' => $success,
                     'message' => $success ? 'Pengumuman berhasil diperbarui.' : 'Gagal memperbarui pengumuman.'
@@ -215,9 +217,11 @@ class PengumumanModuleController extends BaseController {
 
     public function apiToggleStatus(): void {
         try {
+            $this->validateCsrfToken();
+
             $tenantId = $this->getSecureTenantId();
             $input = $this->getJsonInput();
-            $id = $input['id'] ?? '';
+            $id = $this->sanitizeId($input['id'] ?? null);
 
             if (empty($id)) {
                 $this->jsonResponse(['success' => false, 'error' => 'ID pengumuman tidak valid.'], 422);
@@ -225,7 +229,7 @@ class PengumumanModuleController extends BaseController {
             }
 
             $model = new PengumumanModel($tenantId);
-            $newStatus = $model->toggleActive($id);
+            $newStatus = $model->toggleActive($id, $tenantId);
 
             $this->jsonResponse([
                 'success' => true,
@@ -239,9 +243,11 @@ class PengumumanModuleController extends BaseController {
 
     public function apiDeletePengumuman(): void {
         try {
+            $this->validateCsrfToken();
+
             $tenantId = $this->getSecureTenantId();
             $input = $this->getJsonInput();
-            $id = $input['id'] ?? ($_GET['id'] ?? '');
+            $id = $this->sanitizeId($input['id'] ?? ($_POST['id'] ?? ($_GET['id'] ?? null)));
 
             if (empty($id)) {
                 $this->jsonResponse(['success' => false, 'error' => 'ID pengumuman tidak valid.'], 422);
@@ -251,7 +257,7 @@ class PengumumanModuleController extends BaseController {
             $isSuperAdmin = $this->isUserSuperAdmin();
             $effectiveTenant = $isSuperAdmin ? null : $tenantId;
             $model = new PengumumanModel($effectiveTenant);
-            $deleted = $model->delete($id);
+            $deleted = $model->delete($id, $effectiveTenant);
 
             $this->jsonResponse([
                 'success' => $deleted,
@@ -284,11 +290,13 @@ class PengumumanModuleController extends BaseController {
 
     public function apiSaveKategori(): void {
         try {
+            $this->validateCsrfToken();
+
             $tenantId = $this->getSecureTenantId();
             $input = $this->getJsonInput();
 
-            $namaKategori = trim($input['nama_kategori'] ?? '');
-            $id = !empty($input['id']) ? trim($input['id']) : null;
+            $namaKategori = htmlspecialchars(strip_tags(trim((string)($input['nama_kategori'] ?? ''))), ENT_QUOTES, 'UTF-8');
+            $id = $this->sanitizeId($input['id'] ?? null);
 
             if (empty($namaKategori)) {
                 $this->jsonResponse(['success' => false, 'error' => 'Nama kategori pengumuman wajib diisi.'], 422);
@@ -297,14 +305,14 @@ class PengumumanModuleController extends BaseController {
 
             $kategoriModel = new KategoriPengumumanModel($tenantId);
             if ($id) {
-                $success = $kategoriModel->update($id, $namaKategori);
+                $success = $kategoriModel->update($id, $namaKategori, $tenantId);
                 $this->jsonResponse([
                     'success' => $success,
                     'message' => $success ? 'Kategori berhasil diperbarui.' : 'Gagal memperbarui kategori.'
                 ], $success ? 200 : 400);
             } else {
                 $newId = $kategoriModel->create([
-                    'tenant_id' => array_key_exists('tenant_id', $input) ? ($input['tenant_id'] === 'global' ? null : $input['tenant_id']) : $tenantId,
+                    'tenant_id' => array_key_exists('tenant_id', $input) ? ($input['tenant_id'] === 'global' ? null : $this->sanitizeId($input['tenant_id'])) : $tenantId,
                     'nama_kategori' => $namaKategori
                 ]);
                 $this->jsonResponse([
@@ -320,9 +328,11 @@ class PengumumanModuleController extends BaseController {
 
     public function apiDeleteKategori(): void {
         try {
+            $this->validateCsrfToken();
+
             $tenantId = $this->getSecureTenantId();
             $input = $this->getJsonInput();
-            $id = $input['id'] ?? ($_GET['id'] ?? '');
+            $id = $this->sanitizeId($input['id'] ?? ($_POST['id'] ?? ($_GET['id'] ?? null)));
 
             if (empty($id)) {
                 $this->jsonResponse(['success' => false, 'error' => 'ID kategori tidak valid.'], 422);
@@ -330,7 +340,7 @@ class PengumumanModuleController extends BaseController {
             }
 
             $kategoriModel = new KategoriPengumumanModel($tenantId);
-            $deleted = $kategoriModel->delete($id);
+            $deleted = $kategoriModel->delete($id, $tenantId);
 
             $this->jsonResponse([
                 'success' => $deleted,
@@ -339,6 +349,15 @@ class PengumumanModuleController extends BaseController {
         } catch (Exception $e) {
             $this->jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
         }
+    }
+
+    private function sanitizeId(?string $id): ?string {
+        if (empty($id)) return null;
+        $id = trim($id);
+        if (!preg_match('/^[a-f0-9\-]{36}$/i', $id)) {
+            return null;
+        }
+        return $id;
     }
 
     /* ═══════════════════════════════════════════════════════════════════════

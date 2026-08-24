@@ -83,7 +83,7 @@ class AgendaModuleController extends BaseController {
 
             $kategoriList = $this->model->getKategoriList($tenantId);
 
-            // Fetch available roles
+            // Audit Note: core.roles adalah katalog role master global platform (tanpa tenant_id & deleted_at)
             $stmtRoles = $db->query("SELECT id, nama_role FROM core.roles ORDER BY nama_role ASC");
             $rolesList = $stmtRoles->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
@@ -155,22 +155,24 @@ class AgendaModuleController extends BaseController {
 
     public function apiSaveAgenda(): void {
         try {
+            $this->validateCsrfToken();
+
             $tenantId = $this->getSecureTenantId();
             $input = $this->getJsonInput();
 
-            $judul = trim($input['nama_agenda_sekolah'] ?? ($input['judul'] ?? ''));
-            $kategori = trim($input['kategori'] ?? 'Akademik');
-            $deskripsi = trim($input['deskripsi'] ?? ($input['isi'] ?? ''));
-            $tglMulai = !empty($input['tanggal_mulai']) ? trim($input['tanggal_mulai']) : date('Y-m-d');
-            $tglSelesai = !empty($input['tanggal_selesai']) ? trim($input['tanggal_selesai']) : $tglMulai;
-            $waktuMulai = !empty($input['waktu_mulai']) ? trim($input['waktu_mulai']) : '07:30';
-            $waktuSelesai = !empty($input['waktu_selesai']) ? trim($input['waktu_selesai']) : '15:00';
-            $lokasi = !empty($input['lokasi']) ? trim($input['lokasi']) : 'Kampus Sekolah';
-            $pj = !empty($input['penanggung_jawab']) ? trim($input['penanggung_jawab']) : 'Panitia Acara';
-            $visibilitas = !empty($input['visibilitas']) ? trim($input['visibilitas']) : 'public';
-            $targetRoles = !empty($input['target_roles']) ? $input['target_roles'] : [];
+            $judul = trim((string)($input['nama_agenda_sekolah'] ?? ($input['judul'] ?? '')));
+            $kategori = trim((string)($input['kategori'] ?? 'Akademik'));
+            $deskripsi = trim((string)($input['deskripsi'] ?? ($input['isi'] ?? '')));
+            $tglMulai = !empty($input['tanggal_mulai']) ? trim((string)$input['tanggal_mulai']) : date('Y-m-d');
+            $tglSelesai = !empty($input['tanggal_selesai']) ? trim((string)$input['tanggal_selesai']) : $tglMulai;
+            $waktuMulai = !empty($input['waktu_mulai']) ? trim((string)$input['waktu_mulai']) : '07:30';
+            $waktuSelesai = !empty($input['waktu_selesai']) ? trim((string)$input['waktu_selesai']) : '15:00';
+            $lokasi = !empty($input['lokasi']) ? trim((string)$input['lokasi']) : 'Kampus Sekolah';
+            $pj = !empty($input['penanggung_jawab']) ? trim((string)$input['penanggung_jawab']) : 'Panitia Acara';
+            $visibilitas = !empty($input['visibilitas']) ? trim((string)$input['visibilitas']) : 'public';
+            $targetRoles = !empty($input['target_roles']) ? (array)$input['target_roles'] : [];
             $isActive = isset($input['is_active']) ? (bool)$input['is_active'] : true;
-            $id = !empty($input['id']) ? trim($input['id']) : null;
+            $id = $this->sanitizeId($input['id'] ?? null);
 
             if (empty($judul)) {
                 $this->jsonResponse(['success' => false, 'error' => 'Nama kegiatan agenda wajib diisi.'], 422);
@@ -180,7 +182,7 @@ class AgendaModuleController extends BaseController {
             $model = new AgendaModel($tenantId);
 
             $payload = [
-                'tenant_id' => array_key_exists('tenant_id', $input) ? ($input['tenant_id'] === 'global' ? null : $input['tenant_id']) : $tenantId,
+                'tenant_id' => array_key_exists('tenant_id', $input) ? ($input['tenant_id'] === 'global' ? null : $this->sanitizeId($input['tenant_id'])) : $tenantId,
                 'nama_agenda_sekolah' => $judul,
                 'judul' => $judul,
                 'kategori' => $kategori,
@@ -197,7 +199,7 @@ class AgendaModuleController extends BaseController {
             ];
 
             if ($id) {
-                $success = $model->update($id, $payload);
+                $success = $model->update($id, $payload, $tenantId);
                 $this->jsonResponse([
                     'success' => $success,
                     'message' => $success ? 'Agenda kegiatan berhasil diperbarui.' : 'Gagal memperbarui agenda.'
@@ -217,9 +219,11 @@ class AgendaModuleController extends BaseController {
 
     public function apiToggleStatus(): void {
         try {
+            $this->validateCsrfToken();
+
             $tenantId = $this->getSecureTenantId();
             $input = $this->getJsonInput();
-            $id = $input['id'] ?? '';
+            $id = $this->sanitizeId($input['id'] ?? null);
 
             if (empty($id)) {
                 $this->jsonResponse(['success' => false, 'error' => 'ID agenda tidak valid.'], 422);
@@ -227,7 +231,7 @@ class AgendaModuleController extends BaseController {
             }
 
             $model = new AgendaModel($tenantId);
-            $newStatus = $model->toggleActive($id);
+            $newStatus = $model->toggleActive($id, $tenantId);
 
             $this->jsonResponse([
                 'success' => true,
@@ -241,9 +245,11 @@ class AgendaModuleController extends BaseController {
 
     public function apiDeleteAgenda(): void {
         try {
+            $this->validateCsrfToken();
+
             $tenantId = $this->getSecureTenantId();
             $input = $this->getJsonInput();
-            $id = $input['id'] ?? ($_GET['id'] ?? '');
+            $id = $this->sanitizeId($input['id'] ?? ($_POST['id'] ?? ($_GET['id'] ?? null)));
 
             if (empty($id)) {
                 $this->jsonResponse(['success' => false, 'error' => 'ID agenda tidak valid.'], 422);
@@ -251,7 +257,7 @@ class AgendaModuleController extends BaseController {
             }
 
             $model = new AgendaModel($tenantId);
-            $deleted = $model->delete($id);
+            $deleted = $model->delete($id, $tenantId);
 
             $this->jsonResponse([
                 'success' => $deleted,
@@ -260,5 +266,14 @@ class AgendaModuleController extends BaseController {
         } catch (Exception $e) {
             $this->jsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
         }
+    }
+
+    private function sanitizeId(?string $id): ?string {
+        if (empty($id)) return null;
+        $id = trim($id);
+        if (!preg_match('/^[a-f0-9\-]{36}$/i', $id)) {
+            return null;
+        }
+        return $id;
     }
 }

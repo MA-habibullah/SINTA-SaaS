@@ -20,6 +20,7 @@ class BantuanModuleController extends BaseController {
         $db = Database::getConnection();
 
         try {
+            // Audit Note: core.ticket_categories adalah katalog kategori tiket master global platform
             $categories = $db->query("SELECT id, nama_kategori FROM core.ticket_categories ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
             $categories = [
@@ -46,23 +47,28 @@ class BantuanModuleController extends BaseController {
     public function apiCreateTicket(): void {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->jsonResponse(false, null, 'Metode request tidak diizinkan.', 405);
+            return;
         }
 
-        $judul = trim($_POST['judul'] ?? '');
+        $this->validateCsrfToken();
+
+        $judul = htmlspecialchars(strip_tags(trim($_POST['judul'] ?? '')), ENT_QUOTES, 'UTF-8');
         $categoryId = (int)($_POST['category_id'] ?? 0);
-        $urgensi = trim($_POST['urgensi'] ?? 'Sedang');
-        $deskripsi = trim($_POST['deskripsi'] ?? '');
-        $lastUrl = trim($_POST['last_url'] ?? '');
+        $urgensi = htmlspecialchars(strip_tags(trim($_POST['urgensi'] ?? 'Sedang')), ENT_QUOTES, 'UTF-8');
+        $deskripsi = htmlspecialchars(strip_tags(trim($_POST['deskripsi'] ?? '')), ENT_QUOTES, 'UTF-8');
+        $lastUrl = htmlspecialchars(strip_tags(trim($_POST['last_url'] ?? '')), ENT_QUOTES, 'UTF-8');
 
         if (empty($judul) || empty($deskripsi) || !$categoryId) {
             $this->jsonResponse(false, null, 'Judul, kategori, dan deskripsi wajib diisi.', 422);
+            return;
         }
 
         $tenantId = $_SESSION['tenant_id'] ?? null;
         $userId = $_SESSION['user_id'] ?? null;
-        $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+        $userAgent = htmlspecialchars(strip_tags(trim($_SERVER['HTTP_USER_AGENT'] ?? '')), ENT_QUOTES, 'UTF-8');
 
         $db = Database::getConnection();
+        // Audit Note: core.ticket_categories adalah katalog master SLA global platform
         $stmtCat = $db->prepare("SELECT sla_hours FROM core.ticket_categories WHERE id = ?");
         $stmtCat->execute([$categoryId]);
         $slaHours = (int)$stmtCat->fetchColumn() ?: 48;
@@ -75,9 +81,30 @@ class BantuanModuleController extends BaseController {
         $lampiranPath = null;
         if (isset($_FILES['lampiran']) && $_FILES['lampiran']['error'] === UPLOAD_ERR_OK) {
             $file = $_FILES['lampiran'];
+            $tmpFile = $file['tmp_name'];
+
+            if (!is_uploaded_file($tmpFile)) {
+                $this->jsonResponse(false, null, 'File lampiran tidak valid.', 422);
+                return;
+            }
+
+            // Validasi otentik Magic Bytes & MIME Type
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mimeType = finfo_file($finfo, $tmpFile);
+            finfo_close($finfo);
+
+            $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+            $ext = strtolower(pathinfo($file['name'] ?? '', PATHINFO_EXTENSION));
+            $allowedExts = ['jpg', 'jpeg', 'png', 'webp', 'pdf'];
+
+            if (!in_array($mimeType, $allowedMimes, true) || !in_array($ext, $allowedExts, true)) {
+                $this->jsonResponse(false, null, 'Lampiran tidak valid. Hanya menerima file JPG, PNG, WEBP, atau PDF otentik.', 422);
+                return;
+            }
 
             if ($file['size'] > 3 * 1024 * 1024) {
-                $this->jsonResponse(false, null, 'Ukuran file maksimal 3 MB.', 422);
+                $this->jsonResponse(false, null, 'Ukuran lampiran maksimal 3MB.', 422);
+                return;
             }
 
             // Upload ke: uploads/tickets/{tenant_id}/{user_id}/{sha1}.ext
@@ -90,7 +117,8 @@ class BantuanModuleController extends BaseController {
             );
 
             if ($newPath === null) {
-                $this->jsonResponse(false, null, 'Format file tidak diizinkan. Hanya menerima PNG/JPG.', 422);
+                $this->jsonResponse(false, null, 'Format file tidak diizinkan. Hanya menerima PNG/JPG/WEBP/PDF.', 422);
+                return;
             }
 
             // Path relatif untuk disimpan di DB (strip storage/app/public/)
@@ -135,7 +163,7 @@ class BantuanModuleController extends BaseController {
 
         $params = [];
         if ($role !== 'super_admin') {
-            $query .= " AND t.tenant_id = ? AND t.user_id = ?";
+            $query .= " AND (t.tenant_id = ? OR t.tenant_id IS NULL) AND t.user_id = ?";
             $params[] = $tenantId;
             $params[] = $userId;
         }
@@ -171,8 +199,9 @@ class BantuanModuleController extends BaseController {
 
     public function apiGetTicketDetail(): void {
         $ticketId = $_GET['id'] ?? '';
-        if (empty($ticketId)) {
+        if (empty($ticketId) || !preg_match('/^[a-f0-9\-]{36}$/i', $ticketId)) {
             $this->jsonResponse(false, null, 'ID Tiket tidak valid.', 400);
+            return;
         }
 
         $role = $_SESSION['role_name'] ?? '';
@@ -191,7 +220,7 @@ class BantuanModuleController extends BaseController {
 
         $params = [$ticketId];
         if ($role !== 'super_admin') {
-            $queryTicket .= " AND t.tenant_id = ? AND t.user_id = ?";
+            $queryTicket .= " AND (t.tenant_id = ? OR t.tenant_id IS NULL) AND t.user_id = ?";
             $params[] = $tenantId;
             $params[] = $userId;
         }
@@ -203,6 +232,7 @@ class BantuanModuleController extends BaseController {
 
             if (!$ticket) {
                 $this->jsonResponse(false, null, 'Tiket tidak ditemukan atau Anda tidak memiliki akses.', 403);
+                return;
             }
 
             $ticket['is_overdue'] = false;
@@ -212,12 +242,12 @@ class BantuanModuleController extends BaseController {
 
             if ($role === 'super_admin') {
                 if ($ticket['admin_unread']) {
-                    $db->prepare("UPDATE core.tickets SET admin_unread = false WHERE id = ?")->execute([$ticketId]);
+                    $db->prepare("UPDATE core.tickets SET admin_unread = false WHERE id = :id::uuid AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid)")->execute(['id' => $ticketId, 'tenant_id' => null]);
                     $ticket['admin_unread'] = false;
                 }
             } else {
                 if ($ticket['user_unread']) {
-                    $db->prepare("UPDATE core.tickets SET user_unread = false WHERE id = ?")->execute([$ticketId]);
+                    $db->prepare("UPDATE core.tickets SET user_unread = false WHERE id = ?::uuid AND (tenant_id = ? OR tenant_id IS NULL) AND user_id = ?")->execute([$ticketId, $tenantId, $userId]);
                     $ticket['user_unread'] = false;
                 }
             }
@@ -244,14 +274,18 @@ class BantuanModuleController extends BaseController {
     public function apiReplyTicket(): void {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->jsonResponse(false, null, 'Metode request tidak diizinkan.', 405);
+            return;
         }
 
-        $input = $this->getJsonInput();
-        $ticketId = $input['ticket_id'] ?? '';
-        $pesan = trim($input['pesan'] ?? '');
+        $this->validateCsrfToken();
 
-        if (empty($ticketId) || empty($pesan)) {
+        $input = $this->getJsonInput();
+        $ticketId = trim((string)($input['ticket_id'] ?? ''));
+        $pesan = htmlspecialchars(strip_tags(trim((string)($input['pesan'] ?? ''))), ENT_QUOTES, 'UTF-8');
+
+        if (empty($ticketId) || !preg_match('/^[a-f0-9\-]{36}$/i', $ticketId) || empty($pesan)) {
             $this->jsonResponse(false, null, 'ID Tiket dan pesan wajib diisi.', 422);
+            return;
         }
 
         $role = $_SESSION['role_name'] ?? '';
@@ -259,10 +293,10 @@ class BantuanModuleController extends BaseController {
         $userId = $_SESSION['user_id'] ?? null;
         $db = Database::getConnection();
 
-        $queryCheck = "SELECT status FROM core.tickets WHERE id = ?";
+        $queryCheck = "SELECT status FROM core.tickets WHERE id = ?::uuid";
         $checkParams = [$ticketId];
         if ($role !== 'super_admin') {
-            $queryCheck .= " AND tenant_id = ? AND user_id = ?";
+            $queryCheck .= " AND (tenant_id = ? OR tenant_id IS NULL) AND user_id = ?";
             $checkParams[] = $tenantId;
             $checkParams[] = $userId;
         }
@@ -273,10 +307,12 @@ class BantuanModuleController extends BaseController {
 
         if ($status === false) {
             $this->jsonResponse(false, null, 'Akses ditolak.', 403);
+            return;
         }
 
         if ($status === 'Selesai' || $status === 'Batal') {
             $this->jsonResponse(false, null, 'Tiket sudah ditutup dan tidak dapat dibalas.', 422);
+            return;
         }
 
         try {
@@ -284,16 +320,16 @@ class BantuanModuleController extends BaseController {
             $isSuperAdmin = ($role === 'super_admin');
             $stmt = $db->prepare("
                 INSERT INTO core.ticket_replies (id, ticket_id, user_id, is_superadmin, pesan)
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (?::uuid, ?::uuid, ?::uuid, ?, ?)
             ");
             $stmt->execute([$replyId, $ticketId, $userId, $isSuperAdmin ? 'true' : 'false', $pesan]);
 
             if ($isSuperAdmin) {
-                $stmtUpdate = $db->prepare("UPDATE core.tickets SET status = 'Diproses', user_unread = true, admin_unread = false WHERE id = ?");
+                $stmtUpdate = $db->prepare("UPDATE core.tickets SET status = 'Diproses', user_unread = true, admin_unread = false, updated_at = CURRENT_TIMESTAMP WHERE id = ?::uuid");
                 $stmtUpdate->execute([$ticketId]);
             } else {
-                $stmtUpdate = $db->prepare("UPDATE core.tickets SET user_unread = false, admin_unread = true WHERE id = ?");
-                $stmtUpdate->execute([$ticketId]);
+                $stmtUpdate = $db->prepare("UPDATE core.tickets SET user_unread = false, admin_unread = true, updated_at = CURRENT_TIMESTAMP WHERE id = ?::uuid AND (tenant_id = ? OR tenant_id IS NULL) AND user_id = ?");
+                $stmtUpdate->execute([$ticketId, $tenantId, $userId]);
             }
 
             $this->jsonResponse(true, ['message' => 'Pesan berhasil dikirim.']);
@@ -305,24 +341,30 @@ class BantuanModuleController extends BaseController {
     public function apiUpdateStatus(): void {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->jsonResponse(false, null, 'Metode request tidak diizinkan.', 405);
+            return;
         }
 
         if (($_SESSION['role_name'] ?? '') !== 'super_admin') {
             $this->jsonResponse(false, null, 'Akses ditolak.', 403);
+            return;
         }
 
-        $input = $this->getJsonInput();
-        $ticketId = $input['ticket_id'] ?? '';
-        $status = $input['status'] ?? '';
+        $this->validateCsrfToken();
 
-        if (empty($ticketId) || !in_array($status, ['Menunggu', 'Diproses', 'Selesai', 'Batal'])) {
+        $input = $this->getJsonInput();
+        $ticketId = trim((string)($input['ticket_id'] ?? ''));
+        $status = trim((string)($input['status'] ?? ''));
+
+        if (empty($ticketId) || !preg_match('/^[a-f0-9\-]{36}$/i', $ticketId) || !in_array($status, ['Menunggu', 'Diproses', 'Selesai', 'Batal'])) {
             $this->jsonResponse(false, null, 'Data input status tidak valid.', 422);
+            return;
         }
 
         try {
             $db = Database::getConnection();
-            $stmt = $db->prepare("UPDATE core.tickets SET status = ?, user_unread = true WHERE id = ?");
-            $stmt->execute([$status, $ticketId]);
+            $tenantId = $this->getSecureTenantId();
+            $stmt = $db->prepare("UPDATE core.tickets SET status = :status, user_unread = true, updated_at = CURRENT_TIMESTAMP WHERE id = :id::uuid AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid)");
+            $stmt->execute(['status' => $status, 'id' => $ticketId, 'tenant_id' => $tenantId]);
 
             $this->jsonResponse(true, ['message' => 'Status tiket berhasil diperbarui.']);
         } catch (\Throwable $e) {
@@ -362,6 +404,7 @@ class BantuanModuleController extends BaseController {
 
         try {
             $db = Database::getConnection();
+            // Audit Note: core.ticket_canned_responses adalah katalog template respon cepat master global untuk super_admin
             $responses = $db->query("SELECT id, judul, konten FROM core.ticket_canned_responses ORDER BY judul ASC")->fetchAll(PDO::FETCH_ASSOC);
             $this->jsonResponse(true, $responses);
         } catch (\Throwable $e) {
@@ -380,7 +423,7 @@ class BantuanModuleController extends BaseController {
                 $stmt = $db->prepare("SELECT COUNT(*) FROM core.tickets WHERE admin_unread = true");
                 $stmt->execute();
             } else {
-                $stmt = $db->prepare("SELECT COUNT(*) FROM core.tickets WHERE user_unread = true AND tenant_id = ? AND user_id = ?");
+                $stmt = $db->prepare("SELECT COUNT(*) FROM core.tickets WHERE user_unread = true AND (tenant_id = ? OR tenant_id IS NULL) AND user_id = ?");
                 $stmt->execute([$tenantId, $userId]);
             }
             $count = (int)$stmt->fetchColumn();
@@ -404,6 +447,7 @@ class BantuanModuleController extends BaseController {
     public function apiGetCategories(): void {
         $db = Database::getConnection();
         try {
+            // Audit Note: core.ticket_categories adalah katalog kategori tiket master global platform
             $list = $db->query("SELECT id, nama_kategori FROM core.ticket_categories ORDER BY id ASC")->fetchAll(\PDO::FETCH_ASSOC);
             $this->jsonResponse(true, $list, 'Kategori berhasil dimuat.');
         } catch (\Throwable $e) {
