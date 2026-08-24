@@ -85,16 +85,22 @@ class ActivityLogger {
 
             // Verifikasi integritas relasi foreign key
             if ($effectiveTenantId) {
-                $checkTenantStmt = $db->prepare("SELECT COUNT(*) FROM core.tenants WHERE id::text = ?");
-                $checkTenantStmt->execute([$effectiveTenantId]);
+                $checkTenantStmt = $db->prepare("SELECT COUNT(*) FROM core.tenants WHERE id::text = :tid");
+                $checkTenantStmt->execute(['tid' => (string)$effectiveTenantId]);
                 if ((int)$checkTenantStmt->fetchColumn() === 0) {
                     $effectiveTenantId = null;
                 }
             }
 
             if ($effectiveUserId) {
-                $checkUserStmt = $db->prepare("SELECT COUNT(*) FROM core.users WHERE id::text = ?");
-                $checkUserStmt->execute([$effectiveUserId]);
+                $sqlUser = "SELECT COUNT(*) FROM core.users WHERE id::text = :uid";
+                $paramsUser = ['uid' => (string)$effectiveUserId];
+                if ($effectiveTenantId) {
+                    $sqlUser .= " AND (tenant_id = :tenant_id OR tenant_id IS NULL)";
+                    $paramsUser['tenant_id'] = (string)$effectiveTenantId;
+                }
+                $checkUserStmt = $db->prepare($sqlUser);
+                $checkUserStmt->execute($paramsUser);
                 if ((int)$checkUserStmt->fetchColumn() === 0) {
                     $effectiveUserId = null;
                 }

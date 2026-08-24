@@ -39,24 +39,43 @@ class SessionTracker {
             $db = Database::getConnection();
 
             // Cek apakah sesi aktif pengguna ini sudah ada di sistem.active_sessions
-            $checkStmt = $db->prepare("SELECT id FROM sistem.active_sessions WHERE user_id = :user_id LIMIT 1");
-            $checkStmt->execute(['user_id' => $userId]);
+            $sqlCheck = "SELECT id FROM sistem.active_sessions WHERE user_id = :user_id";
+            $paramsCheck = ['user_id' => $userId];
+            if ($tenantId) {
+                $sqlCheck .= " AND (tenant_id = :tenant_id OR tenant_id IS NULL)";
+                $paramsCheck['tenant_id'] = $tenantId;
+            }
+            $sqlCheck .= " LIMIT 1";
+            $checkStmt = $db->prepare($sqlCheck);
+            $checkStmt->execute($paramsCheck);
             $existingId = $checkStmt->fetchColumn();
 
             if ($existingId) {
                 // Update sesi yang ada
-                $updateStmt = $db->prepare("
+                $sqlUpdate = "
                     UPDATE sistem.active_sessions SET
                         ip_address = :ip_address,
                         user_agent = :user_agent,
                         last_activity = CURRENT_TIMESTAMP
                     WHERE id = :id
-                ");
-                $updateStmt->execute([
+                ";
+                $paramsUpdate = [
                     'ip_address' => $ipAddress,
                     'user_agent' => $userAgent,
                     'id'         => $existingId
-                ]);
+                ];
+                if ($tenantId) {
+                    $sqlUpdate = "
+                        UPDATE sistem.active_sessions SET
+                            ip_address = :ip_address,
+                            user_agent = :user_agent,
+                            last_activity = CURRENT_TIMESTAMP
+                        WHERE id = :id AND (tenant_id = :tenant_id OR tenant_id IS NULL)
+                    ";
+                    $paramsUpdate['tenant_id'] = $tenantId;
+                }
+                $updateStmt = $db->prepare($sqlUpdate);
+                $updateStmt->execute($paramsUpdate);
             } else {
                 // Insert sesi baru
                 $insertStmt = $db->prepare("

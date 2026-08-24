@@ -24,10 +24,10 @@ class SecurityUploadHelper
      */
     private const ALLOWED_DOCUMENT_MIMES = [
         'pdf'  => ['application/pdf'],
-        'xlsx' => ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
-        'xls'  => ['application/vnd.ms-excel'],
+        'xlsx' => ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/zip', 'application/x-zip-compressed', 'application/octet-stream'],
+        'xls'  => ['application/vnd.ms-excel', 'application/x-msexcel', 'application/excel', 'application/vnd.ms-office'],
         'csv'  => ['text/csv', 'text/plain', 'application/csv'],
-        'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/zip'],
         'doc'  => ['application/msword'],
         'zip'  => ['application/zip', 'application/x-zip-compressed']
     ];
@@ -43,13 +43,14 @@ class SecurityUploadHelper
         'pdf'  => ["%PDF-"],
         'zip'  => ["PK\x03\x04"],
         'xlsx' => ["PK\x03\x04"],
+        'xls'  => ["\xD0\xCF\x11\xE0"],
         'docx' => ["PK\x03\x04"]
     ];
 
     /**
      * Validasi berkas upload secara menyeluruh (MIME type, Magic Bytes, ekstensi, batas ukuran)
      *
-     * @param array $file Array dari $_FILES[$key]
+     * @param array $file Berkas upload dari client
      * @param array $allowedExtensions Array ekstensi yang diizinkan (misal ['jpg', 'png', 'pdf'])
      * @param int $maxSizeBytes Batas ukuran file dalam bytes (default 10MB)
      * @return array ['valid' => bool, 'error' => ?string, 'extension' => ?string, 'mime' => ?string]
@@ -171,7 +172,7 @@ class SecurityUploadHelper
     /**
      * Memproses upload berkas secara aman, men-generate nama acak UUID, dan menyimpannya di direktori terisolasi
      *
-     * @param array $file Array $_FILES[$key]
+     * @param array $file Berkas upload dari client
      * @param string $targetDir Direktori absolut tujuan penyimpanan
      * @param array $allowedExtensions Whitelist ekstensi
      * @param int $maxSizeBytes Batas ukuran file
@@ -196,7 +197,7 @@ class SecurityUploadHelper
             ];
         }
 
-        $size = (int)$file['size'];
+        $size = (int)($file['size'] ?? 0);
         if (!empty($tenantId) && class_exists(StorageGuard::class)) {
             if (!StorageGuard::checkStorageLimit($tenantId, $size)) {
                 return [
@@ -220,7 +221,12 @@ class SecurityUploadHelper
         $secureFileName = bin2hex(random_bytes(16)) . '.' . $ext;
         $targetFilePath = rtrim($targetDir, '/\\') . DIRECTORY_SEPARATOR . $secureFileName;
 
-        if (!move_uploaded_file($file['tmp_name'], $targetFilePath)) {
+        // Validasi final finfo_file sebelum pemindahan file fisik
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $finalMime = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
+
+        if (!$finalMime || !move_uploaded_file($file['tmp_name'], $targetFilePath)) {
             return [
                 'success' => false,
                 'fileName' => null,

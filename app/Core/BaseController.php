@@ -283,5 +283,26 @@ class BaseController {
 
         return $valid;
     }
+
+    /**
+     * Cek apakah pengguna saat ini memiliki role super_admin / admin platform
+     */
+    protected function isUserSuperAdmin(): bool
+    {
+        $role = $_SESSION['user']['role'] ?? $_SESSION['role_name'] ?? '';
+        if (in_array(strtolower((string)$role), ['super_admin', 'super admin', 'superadmin', 'admin platform'], true)) {
+            return true;
+        }
+        $roles = $_SESSION['roles'] ?? [];
+        if (is_array($roles)) {
+            foreach ($roles as $r) {
+                if (in_array(strtolower((string)$r), ['super_admin', 'super admin', 'superadmin', 'admin platform'], true)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 }
+
 

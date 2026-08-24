@@ -264,17 +264,35 @@ return [
 - **Gunakan** `IF NOT EXISTS` / `IF EXISTS` untuk operasi tabel/kolom agar migrasi bersifat *idempotent* (aman dijalankan berulang kali).
 - **Gunakan** `CASCADE` pada operasi `DROP TABLE` jika tabel tersebut memiliki *foreign key* yang saling terikat (PostgreSQL tidak mendukung perintah `SET FOREIGN_KEY_CHECKS = 0` seperti di MySQL).
 
-## Static Analysis & Security Audit Verification (OPSIONAL)
-*(Tidak wajib dieksekusi di meingkatkan efisiensi kerja).*
-Ketika pengguna meminta verifikasi, agen wajib secara otomatis menjalankan 2 langkah berikut:
-1. **PHPStan Static Analysis**:
-   ```powershell
-   vendor/bin/phpstan analyse <path-file-atau-folder> --level=5
-   ```
-2. **Automated Security Audit Script**:
-   ```powershell
-   php scratch/tests/test_security_audit.php
-   ```
+
+
+## Senior Security Auditor, OWASP ASVS L3 & Direct Remediation Protocol (WAJIB)
+Ketika melakukan analisis, audit keamanan, atau saat pengguna meminta perbaikan dan verifikasi, agen **WAJIB** bertindak sebagai **Senior Programmer & Database Security Auditor** dengan mematuhi protokol terpadu berikut:
+
+**1. Fokus Area Evaluasi Keamanan (Critical & High):**
+- **Multi-Tenant Data Isolation**: Wajib filter `tenant_id` pada seluruh skema selain tabel master katalog global.
+- **SQL Injection (SQLi)**: Wajib Prepared Statements & PDO Parameter Binding untuk seluruh kueri dinamis.
+- **Cross-Site Scripting (XSS)**: Terapkan perlindungan Anti-Script-Break XSS (`JSON_HEX_*`) dan sanitasi atribut HTML (`htmlspecialchars`).
+- **Cross-Site Request Forgery (CSRF)**: Wajib `$this->validateCsrfToken()` pada seluruh mutasi data (POST/PUT/DELETE).
+- **PostgreSQL Multi-Schema Standards**: Bersihkan seluruh sintaks MySQL legacy (`LIMIT x, y`, `NOW()`, `1/0 boolean`).
+- **Session Fixation & Hardening**: Regenerasi session ID (`session_regenerate_id(true)`) dan cookie security flag.
+
+**2. Prosedur Investigasi & Kepatuhan:**
+- **Root Cause Analysis**: Jelaskan akar masalah teknis secara ringkas dan tepat sasaran.
+- **OWASP ASVS L3 Compliance**: Pastikan seluruh solusi memenuhi standar Application Security Verification Standard Level 3.
+
+**3. Standar Penulisan Kode & Eksekusi Perbaikan (Tuntas & Drop-In Replacement):**
+- **KODE HARUS UTUH**: Dilarang keras menggunakan placeholder (seperti `// sisa kode di sini`, `/* ... */`, atau pemotongan blok logika). Seluruh fungsi, class, template, dan skrip harus dituliskan secara lengkap dan tuntas.
+- **SIAP PAKAI (DROP-IN REPLACEMENT)**: Kode harus berupa pengganti utuh sehingga pengguna dapat langsung menyalin dan menimpanya ke dalam file proyek di `C:\laragon\www\sinta` tanpa perlu merakit ulang secara manual.
+- **LANGSUNG EKSEKUSI PERBAIKAN**: Begitu agen menemukan akar penyebab masalah dan sudah mendapatkan solusinya, agen WAJIB langsung menerapkan perbaikan (*refactored & patched code*) secara tuntas pada berkas proyek terkait.
+
+**4. Eksekusi Pengujian Keamanan:**
+```powershell
+php test_security_audit.php --target "C:\laragon\www\sinta" --mode full_audit --format terminal
+```
+
+
+
 
 ## Standardisasi Desain UI/UX Horizontal NavTabs & Scroller Engine (WAJIB)
 Saat membuat halaman baru atau merombak tata letak bilah navigasi tab (navtab / navpills) di seluruh modul SINTA SaaS, agen **WAJIB** menerapkan standar desain modern pill layout dan interaksi 3-way horizontal scroller berikut:
@@ -343,4 +361,6 @@ DILARANG KERAS menghapus atau mengosongkan folder-folder berikut beserta seluruh
 3. `C:\laragon\www\sinta\scratch\tests`
 
 Setiap kali pembersihan berkas dilakukan, ketiga direktori di atas WAJIB tetap aman, utuh, dan terlindungi dari segala bentuk perintah penghapusan.
+
+
 

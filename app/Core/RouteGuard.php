@@ -37,8 +37,10 @@ class RouteGuard {
                 $normalizedPath = $baseUrl . $normalizedPath;
             }
 
-            // 3. Cari menu_id berdasarkan path URL yang diakses
-            $stmt = $db->prepare("SELECT id FROM menus WHERE url = :url LIMIT 1");
+            // 3. Cari menu_id berdasarkan path URL yang diakses dari katalog menu global
+            // @security-audit-exception: core.menus is a global system route catalog (platform-wide metadata) 
+            // without tenant_id or deleted_at columns. Tenant isolation is strictly enforced in Step 4, 5, and 6 below.
+            $stmt = $db->prepare("SELECT id FROM core.menus WHERE url = :url AND is_active = TRUE LIMIT 1");
             $stmt->execute(['url' => $normalizedPath]);
             $menuId = $stmt->fetchColumn();
 
@@ -50,7 +52,7 @@ class RouteGuard {
             // 4. Verifikasi apakah sekolah (tenant_id) saat ini memiliki akses ke menu tersebut di tabel tenant_menu_access
             $stmtCheck = $db->prepare("
                 SELECT COUNT(*) 
-                FROM tenant_menu_access 
+                FROM core.tenant_menu_access 
                 WHERE tenant_id = :tenant_id AND menu_id = :menu_id
             ");
             $stmtCheck->execute([
@@ -66,7 +68,7 @@ class RouteGuard {
             // Cek apakah user memiliki hak akses kustom langsung (override)
             $stmtUserCheck = $db->prepare("
                 SELECT COUNT(*) 
-                FROM user_menu_access 
+                FROM core.user_menu_access 
                 WHERE tenant_id = :tenant_id 
                   AND user_id = :user_id 
                   AND menu_id = :menu_id
@@ -81,7 +83,7 @@ class RouteGuard {
             }
 
             // 5. Verifikasi apakah peran user ini memiliki hak akses di tabel role_menu_access (tenant-isolated atau fallback)
-            $stmtCheckCustom = $db->prepare("SELECT COUNT(*) FROM role_menu_access WHERE tenant_id = :tenant_id");
+            $stmtCheckCustom = $db->prepare("SELECT COUNT(*) FROM core.role_menu_access WHERE tenant_id = :tenant_id");
             $stmtCheckCustom->execute(['tenant_id' => $tenantId]);
             $hasCustomAccess = (int)$stmtCheckCustom->fetchColumn() > 0;
             $accessTenantId = $hasCustomAccess ? $tenantId : 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12';
@@ -90,8 +92,8 @@ class RouteGuard {
             $inClause = implode(',', array_fill(0, count($roleNames), '?'));
             $stmtRoleCheck = $db->prepare("
                 SELECT COUNT(*) 
-                FROM role_menu_access rma
-                JOIN roles r ON rma.role_id = r.id
+                FROM core.role_menu_access rma
+                JOIN core.roles r ON rma.role_id = r.id
                 WHERE rma.tenant_id = ? 
                   AND rma.menu_id = ? 
                   AND r.nama_role IN ($inClause)

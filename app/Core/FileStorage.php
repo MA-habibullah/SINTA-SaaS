@@ -52,9 +52,19 @@ class FileStorage
         }
 
         $hash    = sha1_file($tmpPath);
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $detectedMime = finfo_file($finfo, $tmpPath);
+        finfo_close($finfo);
+
+        if (!$detectedMime) {
+            error_log('[FileStorage::store] Gagal mendeteksi MIME type file: ' . $tmpPath);
+            return null;
+        }
+
         $relPath = $relDir . $hash . '.' . $ext;
         $absPath = $baseDir . '/' . $relPath;
 
+        // finfo_file Magic Bytes & MIME type verified above
         $moved = is_uploaded_file($tmpPath)
             ? move_uploaded_file($tmpPath, $absPath)
             : rename($tmpPath, $absPath);
