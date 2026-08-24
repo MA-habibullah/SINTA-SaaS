@@ -69,8 +69,14 @@ class SiswaModel extends BaseModel {
         $actualSiswaId = $result['id'];
 
         // Sub-table: siswa.orang_tua (Ayah, Ibu, Wali)
-        $stOrtu = self::getPdo()->prepare("SELECT * FROM siswa.orang_tua WHERE siswa_id::text = :sid");
-        $stOrtu->execute([':sid' => $actualSiswaId]);
+        $sqlOrtu = "SELECT * FROM siswa.orang_tua WHERE siswa_id::text = :sid";
+        $paramsOrtu = [':sid' => $actualSiswaId];
+        if ($hasTenantFilter) {
+            $sqlOrtu .= " AND tenant_id = :tenant_id";
+            $paramsOrtu[':tenant_id'] = $this->tenantId;
+        }
+        $stOrtu = self::getPdo()->prepare($sqlOrtu);
+        $stOrtu->execute($paramsOrtu);
         $rowsOrtu = $stOrtu->fetchAll(PDO::FETCH_ASSOC) ?: [];
         foreach ($rowsOrtu as $r) {
             $h = strtolower($r['hubungan'] ?? '');
@@ -129,8 +135,15 @@ class SiswaModel extends BaseModel {
         }
 
         // Sub-table: siswa.registrasi
-        $stReg = self::getPdo()->prepare("SELECT * FROM siswa.registrasi WHERE siswa_id::text = :sid LIMIT 1");
-        $stReg->execute([':sid' => $actualSiswaId]);
+        $sqlReg = "SELECT * FROM siswa.registrasi WHERE siswa_id::text = :sid";
+        $paramsReg = [':sid' => $actualSiswaId];
+        if ($hasTenantFilter) {
+            $sqlReg .= " AND tenant_id = :tenant_id";
+            $paramsReg[':tenant_id'] = $this->tenantId;
+        }
+        $sqlReg .= " LIMIT 1";
+        $stReg = self::getPdo()->prepare($sqlReg);
+        $stReg->execute($paramsReg);
         $rowReg = $stReg->fetch(PDO::FETCH_ASSOC);
         if ($rowReg) {
             $result['id_registrasi'] = $rowReg['id'];
@@ -146,8 +159,15 @@ class SiswaModel extends BaseModel {
         }
 
         // Sub-table: siswa.fisik_kesehatan_siswa
-        $stFisik = self::getPdo()->prepare("SELECT * FROM siswa.fisik_kesehatan_siswa WHERE siswa_id::text = :sid LIMIT 1");
-        $stFisik->execute([':sid' => $actualSiswaId]);
+        $sqlFisik = "SELECT * FROM siswa.fisik_kesehatan_siswa WHERE siswa_id::text = :sid";
+        $paramsFisik = [':sid' => $actualSiswaId];
+        if ($hasTenantFilter) {
+            $sqlFisik .= " AND tenant_id = :tenant_id";
+            $paramsFisik[':tenant_id'] = $this->tenantId;
+        }
+        $sqlFisik .= " LIMIT 1";
+        $stFisik = self::getPdo()->prepare($sqlFisik);
+        $stFisik->execute($paramsFisik);
         $rowFisik = $stFisik->fetch(PDO::FETCH_ASSOC);
         if ($rowFisik) {
             if (!empty($rowFisik['tinggi_badan'])) $result['tinggi_badan'] = $rowFisik['tinggi_badan'];
@@ -162,8 +182,14 @@ class SiswaModel extends BaseModel {
         }
 
         // Sub-table: siswa.dokumen
-        $stDocs = self::getPdo()->prepare("SELECT jenis_dokumen, url_file, nama_file FROM siswa.dokumen WHERE siswa_id::text = :sid");
-        $stDocs->execute([':sid' => $actualSiswaId]);
+        $sqlDocs = "SELECT jenis_dokumen, url_file, nama_file FROM siswa.dokumen WHERE siswa_id::text = :sid";
+        $paramsDocs = [':sid' => $actualSiswaId];
+        if ($hasTenantFilter) {
+            $sqlDocs .= " AND tenant_id = :tenant_id";
+            $paramsDocs[':tenant_id'] = $this->tenantId;
+        }
+        $stDocs = self::getPdo()->prepare($sqlDocs);
+        $stDocs->execute($paramsDocs);
         $rowsDocs = $stDocs->fetchAll(PDO::FETCH_ASSOC) ?: [];
         foreach ($rowsDocs as $doc) {
             if (!empty($doc['jenis_dokumen']) && !empty($doc['url_file'])) {
@@ -314,8 +340,16 @@ class SiswaModel extends BaseModel {
                 if (is_numeric($angkatanVal)) {
                     $angkatanVal = (int) $angkatanVal;
                 } else {
-                    $stAng = $db->prepare("SELECT nama_angkatan FROM akademik.angkatan WHERE id::text = ? LIMIT 1");
-                    $stAng->execute([$angkatanVal]);
+                    $hasTenant = !empty($this->tenantId) && $this->tenantId !== 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12';
+                    $sqlAng = "SELECT nama_angkatan FROM akademik.angkatan WHERE id::text = :aid";
+                    $paramsAng = ['aid' => (string)$angkatanVal];
+                    if ($hasTenant) {
+                        $sqlAng .= " AND (tenant_id = :tenant_id OR tenant_id IS NULL)";
+                        $paramsAng['tenant_id'] = $this->tenantId;
+                    }
+                    $sqlAng .= " LIMIT 1";
+                    $stAng = $db->prepare($sqlAng);
+                    $stAng->execute($paramsAng);
                     $namaAng = $stAng->fetchColumn();
                     if ($namaAng && preg_match('/\d{4}/', $namaAng, $m)) {
                         $angkatanVal = (int) $m[0];
@@ -459,8 +493,16 @@ class SiswaModel extends BaseModel {
                         if (is_numeric($val)) {
                             $val = (int) $val;
                         } else {
-                            $stAng = $db->prepare("SELECT nama_angkatan FROM akademik.angkatan WHERE id::text = ? LIMIT 1");
-                            $stAng->execute([$val]);
+                            $hasTenant = !empty($this->tenantId) && $this->tenantId !== 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12';
+                            $sqlAng = "SELECT nama_angkatan FROM akademik.angkatan WHERE id::text = :aid";
+                            $paramsAng = ['aid' => (string)$val];
+                            if ($hasTenant) {
+                                $sqlAng .= " AND (tenant_id = :tenant_id OR tenant_id IS NULL)";
+                                $paramsAng['tenant_id'] = $this->tenantId;
+                            }
+                            $sqlAng .= " LIMIT 1";
+                            $stAng = $db->prepare($sqlAng);
+                            $stAng->execute($paramsAng);
                             $namaAng = $stAng->fetchColumn();
                             if ($namaAng && preg_match('/\d{4}/', $namaAng, $m)) {
                                 $val = (int) $m[0];
@@ -485,10 +527,8 @@ class SiswaModel extends BaseModel {
             }
 
             if (!empty($setParts)) {
-                $sql = "UPDATE siswa.siswa SET " . implode(', ', $setParts) . " WHERE id::text = :id";
-                if (!$isSuperAdmin) {
-                    $sql .= " AND tenant_id = :tenant_id";
-                }
+                $sql = "UPDATE siswa.siswa SET " . implode(', ', $setParts) . " WHERE id::text = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)";
+                $params['tenant_id'] = $this->tenantId;
                 $db->prepare($sql)->execute($params);
             }
 
@@ -514,8 +554,13 @@ class SiswaModel extends BaseModel {
      */
     public function delete(string $id): bool {
         $db = self::getPdo();
-        $stmt = $db->prepare("UPDATE siswa.siswa SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id::text = :id");
-        return $stmt->execute(['id' => $id]);
+        $sql = "UPDATE siswa.siswa SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id::text = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)";
+        $params = [
+            'id'        => $id,
+            'tenant_id' => $this->tenantId
+        ];
+        $stmt = $db->prepare($sql);
+        return $stmt->execute($params);
     }
 
     /**
@@ -523,8 +568,8 @@ class SiswaModel extends BaseModel {
      */
     public function saveKesehatanSiswa(string $idSiswa, array $kesehatanData): void {
         $db = self::getPdo();
-        $stmtT = $db->prepare("SELECT tenant_id FROM siswa.siswa WHERE id::text = ? LIMIT 1");
-        $stmtT->execute([$idSiswa]);
+        $stmtT = $db->prepare("SELECT tenant_id FROM siswa.siswa WHERE id::text = :sid LIMIT 1");
+        $stmtT->execute(['sid' => $idSiswa]);
         $tenantId = $stmtT->fetchColumn() ?: $this->tenantId;
 
         $tb = null; $bb = null; $lk = null; $goldar = null; $penyakit = null; $alergi = null; $disab = null;
@@ -558,12 +603,19 @@ class SiswaModel extends BaseModel {
             }
         }
 
-        $stK = $db->prepare("SELECT id FROM siswa.fisik_kesehatan_siswa WHERE siswa_id::text = ? LIMIT 1");
-        $stK->execute([$idSiswa]);
+        $sqlK = "SELECT id FROM siswa.fisik_kesehatan_siswa WHERE siswa_id::text = :sid";
+        $paramsK = ['sid' => $idSiswa];
+        if (!empty($tenantId)) {
+            $sqlK .= " AND tenant_id = :tenant_id";
+            $paramsK['tenant_id'] = $tenantId;
+        }
+        $sqlK .= " LIMIT 1";
+        $stK = $db->prepare($sqlK);
+        $stK->execute($paramsK);
         $kId = $stK->fetchColumn();
 
         if ($kId) {
-            $db->prepare("UPDATE siswa.fisik_kesehatan_siswa SET 
+            $sqlUpdK = "UPDATE siswa.fisik_kesehatan_siswa SET 
                 tinggi_badan = COALESCE(:tb, tinggi_badan), 
                 berat_badan = COALESCE(:bb, berat_badan), 
                 lingkar_kepala = COALESCE(:lk, lingkar_kepala),
@@ -573,10 +625,16 @@ class SiswaModel extends BaseModel {
                 disabilitas = COALESCE(:disab, disabilitas), 
                 detail_semester = COALESCE(:detail_sem, detail_semester),
                 updated_at = CURRENT_TIMESTAMP 
-                WHERE id = :id")->execute([
+                WHERE id = :id";
+            $updParamsK = [
                 'tb' => $tb, 'bb' => $bb, 'lk' => $lk, 'goldar' => $goldar, 'penyakit' => $penyakit, 'alergi' => $alergi, 'disab' => $disab,
                 'detail_sem' => $detailSemesterJson, 'id' => $kId
-            ]);
+            ];
+            if (!empty($tenantId)) {
+                $sqlUpdK .= " AND tenant_id = :tenant_id";
+                $updParamsK['tenant_id'] = $tenantId;
+            }
+            $db->prepare($sqlUpdK)->execute($updParamsK);
         } else if ($tb || $bb || $lk || $goldar || $penyakit || $alergi || $disab || $detailSemesterJson) {
             $db->prepare("INSERT INTO siswa.fisik_kesehatan_siswa (id, siswa_id, tenant_id, tinggi_badan, berat_badan, lingkar_kepala, golongan_darah, riwayat_penyakit, alergi, disabilitas, detail_semester) VALUES (gen_random_uuid(), :siswa_id, :tenant_id, :tb, :bb, :lk, :goldar, :penyakit, :alergi, :disab, :detail_sem)")->execute([
                 'siswa_id' => $idSiswa, 'tenant_id' => $tenantId,
@@ -595,8 +653,8 @@ class SiswaModel extends BaseModel {
      */
     private function saveOrUpdateSubTables(\PDO $db, string $idSiswa, array $data, bool $isCreate): void {
         // Fetch student's tenant_id
-        $stmtT = $db->prepare("SELECT tenant_id FROM siswa.siswa WHERE id::text = ? LIMIT 1");
-        $stmtT->execute([$idSiswa]);
+        $stmtT = $db->prepare("SELECT tenant_id FROM siswa.siswa WHERE id::text = :sid LIMIT 1");
+        $stmtT->execute(['sid' => $idSiswa]);
         $tenantId = $stmtT->fetchColumn() ?: $this->tenantId;
 
         // 1. Update foto_url, email, no_hp, alamat directly on siswa.siswa if present
@@ -625,7 +683,12 @@ class SiswaModel extends BaseModel {
             $mainParams['alamat'] = $data['alamat_domisili'];
         }
         if (!empty($mainUpdates)) {
-            $db->prepare("UPDATE siswa.siswa SET " . implode(', ', $mainUpdates) . " WHERE id::text = :id_siswa")->execute($mainParams);
+            $sqlMain = "UPDATE siswa.siswa SET " . implode(', ', $mainUpdates) . " WHERE id::text = :id_siswa";
+            if (!empty($tenantId)) {
+                $sqlMain .= " AND tenant_id = :tenant_id";
+                $mainParams['tenant_id'] = $tenantId;
+            }
+            $db->prepare($sqlMain)->execute($mainParams);
         }
 
         // 2. Sub-table: siswa.fisik_kesehatan_siswa
@@ -638,8 +701,15 @@ class SiswaModel extends BaseModel {
             }
         }
         if ($hasKesehatan || $isCreate) {
-            $stK = $db->prepare("SELECT id FROM siswa.fisik_kesehatan_siswa WHERE siswa_id::text = ? LIMIT 1");
-            $stK->execute([$idSiswa]);
+            $sqlK = "SELECT id FROM siswa.fisik_kesehatan_siswa WHERE siswa_id::text = :sid";
+            $paramsK = ['sid' => $idSiswa];
+            if (!empty($tenantId)) {
+                $sqlK .= " AND tenant_id = :tenant_id";
+                $paramsK['tenant_id'] = $tenantId;
+            }
+            $sqlK .= " LIMIT 1";
+            $stK = $db->prepare($sqlK);
+            $stK->execute($paramsK);
             $kId = $stK->fetchColumn();
 
             $tb       = !empty($data['tinggi_badan']) ? (int)$data['tinggi_badan'] : null;
@@ -652,9 +722,15 @@ class SiswaModel extends BaseModel {
             $detailSem= isset($data['kesehatan']) && is_array($data['kesehatan']) ? json_encode($data['kesehatan']) : null;
 
             if ($kId) {
-                $db->prepare("UPDATE siswa.fisik_kesehatan_siswa SET tinggi_badan = COALESCE(:tb, tinggi_badan), berat_badan = COALESCE(:bb, berat_badan), lingkar_kepala = COALESCE(:lk, lingkar_kepala), golongan_darah = COALESCE(:goldar, golongan_darah), riwayat_penyakit = COALESCE(:penyakit, riwayat_penyakit), alergi = COALESCE(:alergi, alergi), disabilitas = COALESCE(:disab, disabilitas), detail_semester = COALESCE(:detail_sem, detail_semester), updated_at = CURRENT_TIMESTAMP WHERE id = :id")->execute([
+                $sqlUpdK = "UPDATE siswa.fisik_kesehatan_siswa SET tinggi_badan = COALESCE(:tb, tinggi_badan), berat_badan = COALESCE(:bb, berat_badan), lingkar_kepala = COALESCE(:lk, lingkar_kepala), golongan_darah = COALESCE(:goldar, golongan_darah), riwayat_penyakit = COALESCE(:penyakit, riwayat_penyakit), alergi = COALESCE(:alergi, alergi), disabilitas = COALESCE(:disab, disabilitas), detail_semester = COALESCE(:detail_sem, detail_semester), updated_at = CURRENT_TIMESTAMP WHERE id = :id";
+                $updParamsK = [
                     'tb' => $tb, 'bb' => $bb, 'lk' => $lk, 'goldar' => $goldar, 'penyakit' => $penyakit, 'alergi' => $alergi, 'disab' => $disab, 'detail_sem' => $detailSem, 'id' => $kId
-                ]);
+                ];
+                if (!empty($tenantId)) {
+                    $sqlUpdK .= " AND tenant_id = :tenant_id";
+                    $updParamsK['tenant_id'] = $tenantId;
+                }
+                $db->prepare($sqlUpdK)->execute($updParamsK);
             } else if ($tb || $bb || $lk || $penyakit || $alergi || $disab || $detailSem) {
                 $db->prepare("INSERT INTO siswa.fisik_kesehatan_siswa (id, siswa_id, tenant_id, tinggi_badan, berat_badan, lingkar_kepala, golongan_darah, riwayat_penyakit, alergi, disabilitas, detail_semester) VALUES (:id, :siswa_id, :tenant_id, :tb, :bb, :lk, :goldar, :penyakit, :alergi, :disab, :detail_sem)")->execute([
                     'id' => $this->generateUuidV4(), 'siswa_id' => $idSiswa, 'tenant_id' => $tenantId,
@@ -695,8 +771,15 @@ class SiswaModel extends BaseModel {
             $namaVal = $data[$pKeys['nama']] ?? null;
             $nikVal  = $data[$pKeys['nik']] ?? null;
             if ($namaVal !== null || $nikVal !== null || $isCreate) {
-                $stO = $db->prepare("SELECT id FROM siswa.orang_tua WHERE siswa_id::text = :sid AND hubungan = :hub LIMIT 1");
-                $stO->execute(['sid' => $idSiswa, 'hub' => $hub]);
+                $sqlO = "SELECT id FROM siswa.orang_tua WHERE siswa_id::text = :sid AND hubungan = :hub";
+                $paramsO = ['sid' => $idSiswa, 'hub' => $hub];
+                if (!empty($tenantId)) {
+                    $sqlO .= " AND tenant_id = :tenant_id";
+                    $paramsO['tenant_id'] = $tenantId;
+                }
+                $sqlO .= " LIMIT 1";
+                $stO = $db->prepare($sqlO);
+                $stO->execute($paramsO);
                 $oId = $stO->fetchColumn();
 
                 $pekerjaanVal  = $data[$pKeys['pekerjaan']] ?? null;
@@ -740,7 +823,7 @@ class SiswaModel extends BaseModel {
                 $noHpVal       = $data['no_telepon_orang_tua'] ?? null;
 
                 if ($oId) {
-                    $db->prepare("UPDATE siswa.orang_tua SET 
+                    $sqlUpdO = "UPDATE siswa.orang_tua SET 
                         nama_lengkap = COALESCE(:nama, nama_lengkap), 
                         nik = COALESCE(:nik, nik), 
                         pekerjaan = COALESCE(:pekerjaan, pekerjaan), 
@@ -756,14 +839,20 @@ class SiswaModel extends BaseModel {
                         tempat_lahir = COALESCE(:tempat_lahir, tempat_lahir),
                         id_tempat_lahir = COALESCE(:id_tempat_lahir, id_tempat_lahir),
                         updated_at = CURRENT_TIMESTAMP 
-                        WHERE id = :id")->execute([
+                        WHERE id = :id";
+                    $updParamsO = [
                         'nama' => $namaVal, 'nik' => $nikVal, 'pekerjaan' => $pekerjaanVal, 'pendidikan' => $pendidikanVal,
                         'penghasilan' => $penghasilanVal, 'no_hp' => $noHpVal, 'thn_lahir' => $thnLahirVal,
                         'tgl_lahir' => $tglLahirVal, 'agama' => $agamaVal, 'kwg' => $kwgVal,
                         'status_hidup' => $statusHidupVal, 'hub_wali' => $hubWaliVal, 
                         'tempat_lahir' => $tempatLahirVal, 'id_tempat_lahir' => $idTmptLahirVal,
                         'id' => $oId
-                    ]);
+                    ];
+                    if (!empty($tenantId)) {
+                        $sqlUpdO .= " AND tenant_id = :tenant_id";
+                        $updParamsO['tenant_id'] = $tenantId;
+                    }
+                    $db->prepare($sqlUpdO)->execute($updParamsO);
                 } else if ($namaVal || $nikVal) {
                     $db->prepare("INSERT INTO siswa.orang_tua (
                         id, siswa_id, tenant_id, hubungan, nama_lengkap, nik, pekerjaan, pendidikan, penghasilan, no_hp,
@@ -802,8 +891,15 @@ class SiswaModel extends BaseModel {
             }
         }
         if ($hasReg || $isCreate) {
-            $stR = $db->prepare("SELECT id FROM siswa.registrasi WHERE siswa_id::text = ? LIMIT 1");
-            $stR->execute([$idSiswa]);
+            $sqlR = "SELECT id FROM siswa.registrasi WHERE siswa_id::text = :sid";
+            $paramsR = ['sid' => $idSiswa];
+            if (!empty($tenantId)) {
+                $sqlR .= " AND tenant_id = :tenant_id";
+                $paramsR['tenant_id'] = $tenantId;
+            }
+            $sqlR .= " LIMIT 1";
+            $stR = $db->prepare($sqlR);
+            $stR->execute($paramsR);
             $rId = $stR->fetchColumn();
 
             $jnsReg    = $data['jenis_pendaftaran'] ?? 'Siswa Baru';
@@ -838,7 +934,7 @@ class SiswaModel extends BaseModel {
             $pindSurat = $data['pindah_no_surat'] ?? null;
 
             if ($rId) {
-                $db->prepare("UPDATE siswa.registrasi SET 
+                $sqlUpdR = "UPDATE siswa.registrasi SET 
                     jenis_pendaftaran = COALESCE(:jns, jenis_pendaftaran), 
                     asal_sekolah = COALESCE(:asal, asal_sekolah), 
                     npsn_asal = COALESCE(:npsn, npsn_asal), 
@@ -868,7 +964,8 @@ class SiswaModel extends BaseModel {
                     pindah_dari_tingkat = COALESCE(:pind_ting, pindah_dari_tingkat),
                     pindah_no_surat = COALESCE(:pind_surat, pindah_no_surat),
                     updated_at = CURRENT_TIMESTAMP 
-                    WHERE id = :id")->execute([
+                    WHERE id = :id";
+                $updParamsR = [
                     'jns' => $jnsReg, 'asal' => $asalSek, 'npsn' => $npsnAsal, 'thn' => $thnDaftar, 'noreg' => $noReg,
                     'status' => $statusPpdb, 'catatan' => $catatan,
                     'jalur' => $jalur, 'tgl_masuk' => $tglMasuk, 'hobi' => $hobi, 'paud_f' => $paudF, 'paud_nf' => $paudNf,
@@ -878,7 +975,12 @@ class SiswaModel extends BaseModel {
                     'terima_ting' => $terimaTing, 'no_ijz_lls' => $noIjzLls, 'no_skl' => $noSkl,
                     'ket_lls' => $ketLls, 'sek_asal_mut' => $sekAsalMut, 'pind_ting' => $pindTing,
                     'pind_surat' => $pindSurat, 'id' => $rId
-                ]);
+                ];
+                if (!empty($tenantId)) {
+                    $sqlUpdR .= " AND tenant_id = :tenant_id";
+                    $updParamsR['tenant_id'] = $tenantId;
+                }
+                $db->prepare($sqlUpdR)->execute($updParamsR);
             } else if ($jnsReg || $asalSek) {
                 $db->prepare("INSERT INTO siswa.registrasi (
                     id, siswa_id, tenant_id, jenis_pendaftaran, asal_sekolah, npsn_asal, tahun_daftar, no_pendaftaran, status_ppdb, catatan,
@@ -916,14 +1018,25 @@ class SiswaModel extends BaseModel {
                 $fileUrl = $data[$dKey];
                 $fileName = basename($fileUrl);
 
-                $stD = $db->prepare("SELECT id FROM siswa.dokumen WHERE siswa_id::text = :sid AND jenis_dokumen = :jenis LIMIT 1");
-                $stD->execute(['sid' => $idSiswa, 'jenis' => $dKey]);
+                $sqlD = "SELECT id FROM siswa.dokumen WHERE siswa_id::text = :sid AND jenis_dokumen = :jenis";
+                $paramsD = ['sid' => $idSiswa, 'jenis' => $dKey];
+                if (!empty($tenantId)) {
+                    $sqlD .= " AND tenant_id = :tenant_id";
+                    $paramsD['tenant_id'] = $tenantId;
+                }
+                $sqlD .= " LIMIT 1";
+                $stD = $db->prepare($sqlD);
+                $stD->execute($paramsD);
                 $dId = $stD->fetchColumn();
 
                 if ($dId) {
-                    $db->prepare("UPDATE siswa.dokumen SET url_file = :url, nama_file = :nama, updated_at = CURRENT_TIMESTAMP WHERE id = :id")->execute([
-                        'url' => $fileUrl, 'nama' => $fileName, 'id' => $dId
-                    ]);
+                    $sqlUpdD = "UPDATE siswa.dokumen SET url_file = :url, nama_file = :nama, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
+                    $updParamsD = ['url' => $fileUrl, 'nama' => $fileName, 'id' => $dId];
+                    if (!empty($tenantId)) {
+                        $sqlUpdD .= " AND tenant_id = :tenant_id";
+                        $updParamsD['tenant_id'] = $tenantId;
+                    }
+                    $db->prepare($sqlUpdD)->execute($updParamsD);
                 } else {
                     $db->prepare("INSERT INTO siswa.dokumen (id, siswa_id, tenant_id, jenis_dokumen, nama_file, url_file) VALUES (:id, :siswa_id, :tenant_id, :jenis, :nama, :url)")->execute([
                         'id' => $this->generateUuidV4(), 'siswa_id' => $idSiswa, 'tenant_id' => $tenantId,

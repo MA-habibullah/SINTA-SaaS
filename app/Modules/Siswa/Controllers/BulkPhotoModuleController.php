@@ -27,16 +27,37 @@ class BulkPhotoModuleController extends BaseController {
     public function uploadZip(): void {
         $db = Database::getConnection();
 
-        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-            $this->jsonResponse(false, null, 'Gagal mengunggah file ZIP.', 400);
+        if (empty($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+            $this->jsonResponse(false, null, 'Silakan pilih berkas ZIP foto terlebih dahulu.', 400);
+            return;
         }
 
-        $tmpPath = $_FILES['file']['tmp_name'];
-        $fileName = $_FILES['file']['name'];
-        $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+        $file = $_FILES['file'];
+        $tmpPath = $file['tmp_name'];
 
-        if ($fileExt !== 'zip') {
-            $this->jsonResponse(false, null, 'Format file tidak didukung. Mohon unggah file ZIP (.zip).', 400);
+        // 1. Magic Bytes & MIME Type check via finfo
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($tmpPath);
+        $allowedZipMimes = ['application/zip', 'application/x-zip-compressed', 'application/x-zip', 'multipart/x-zip', 'application/octet-stream'];
+        if (!in_array($mimeType, $allowedZipMimes, true)) {
+            $this->jsonResponse(false, null, 'Format berkas tidak valid. Berkas harus berupa arsip ZIP asli.', 400);
+            return;
+        }
+
+        // 2. Read magic bytes header (PK\x03\x04 or PK\x05\x06)
+        $handle = fopen($tmpPath, 'rb');
+        $header = $handle ? fread($handle, 4) : '';
+        if ($handle) fclose($handle);
+        if (!str_starts_with($header, "PK\x03\x04") && !str_starts_with($header, "PK\x05\x06")) {
+            $this->jsonResponse(false, null, 'Header berkas ZIP korup atau tidak valid.', 400);
+            return;
+        }
+
+        // 3. Validate file via SecurityUploadHelper
+        $val = \App\Helpers\SecurityUploadHelper::validateFile($file, ['zip'], 50 * 1024 * 1024);
+        if (!$val['valid']) {
+            $this->jsonResponse(false, null, 'Berkas ZIP tidak valid: ' . $val['error'], 400);
+            return;
         }
 
         $sessionTenantId = SessionManager::getTenantId();
@@ -47,6 +68,7 @@ class BulkPhotoModuleController extends BaseController {
             $operatorNpsn = $stmtNpsn->fetchColumn();
             if (!$operatorNpsn) {
                 $this->jsonResponse(false, null, 'Data sekolah login tidak ditemukan.', 400);
+                return;
             }
         }
 
@@ -59,9 +81,48 @@ class BulkPhotoModuleController extends BaseController {
         if ($zip->open($tmpPath) !== true) {
             $this->recursiveRmdir($tempExtractDir);
             $this->jsonResponse(false, null, 'Gagal membuka atau membaca file ZIP.', 400);
+            return;
         }
 
-        $zip->extractTo($tempExtractDir);
+        // Zip Slip Protection (CWE-29): Extract files safely using getFromIndex() without extractTo()
+        $realTempDir = realpath($tempExtractDir);
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $entryName = $zip->getNameIndex($i);
+            
+            // Ignore directory entries
+            if (str_ends_with($entryName, '/') || str_ends_with($entryName, '\\')) {
+                continue;
+            }
+
+            // Extract pure base filename to prevent directory traversal
+            $cleanFilename = basename($entryName);
+            if (empty($cleanFilename) || str_starts_with($cleanFilename, '.') || str_contains($entryName, '__MACOSX')) {
+                continue;
+            }
+
+            // Allow only image extensions
+            $ext = strtolower(pathinfo($cleanFilename, PATHINFO_EXTENSION));
+            if (!in_array($ext, ['jpg', 'jpeg', 'png'], true)) {
+                continue;
+            }
+
+            $targetPath = $tempExtractDir . DIRECTORY_SEPARATOR . $cleanFilename;
+
+            // Stream / extract file content safely
+            $fileContent = $zip->getFromIndex($i);
+            if ($fileContent === false) {
+                continue;
+            }
+
+            file_put_contents($targetPath, $fileContent);
+
+            // Double check realpath bounds
+            $realTarget = realpath($targetPath);
+            if ($realTarget === false || !str_starts_with($realTarget, $realTempDir)) {
+                @unlink($targetPath);
+                continue;
+            }
+        }
         $zip->close();
 
         $allFiles = [];
@@ -126,16 +187,20 @@ class BulkPhotoModuleController extends BaseController {
             }
 
             $stmtSiswa = $db->prepare("
-                SELECT s.id AS siswa_id, s.tenant_id, s.foto_url AS foto_profil, d.file_sizes, d.id AS id_dokumen
+                SELECT s.id AS siswa_id, s.tenant_id, s.foto_url AS foto_profil
                 FROM siswa.siswa s
                 JOIN core.tenants t ON s.tenant_id = t.id
-                LEFT JOIN siswa.dokumen d ON (s.id = d.siswa_id OR s.id::text = d.siswa_id::text)
                 WHERE t.npsn = :npsn
                   AND s.nisn = :nisn
+                  AND (s.tenant_id = :session_tenant_id OR :session_tenant_id IS NULL)
                   AND (s.is_active = true OR s.is_active IS NULL)
                 LIMIT 1
             ");
-            $stmtSiswa->execute(['npsn' => $npsn, 'nisn' => $nisn]);
+            $stmtSiswa->execute([
+                'npsn' => $npsn,
+                'nisn' => $nisn,
+                'session_tenant_id' => $sessionTenantId
+            ]);
             $siswa = $stmtSiswa->fetch(PDO::FETCH_ASSOC);
 
             if (!$siswa) {
@@ -178,35 +243,41 @@ class BulkPhotoModuleController extends BaseController {
                 }
             }
 
-            $stmtUpdateS = $db->prepare("UPDATE siswa.siswa SET foto_url = :foto_url, updated_at = CURRENT_TIMESTAMP WHERE id::text = :siswa_id");
+            $stmtUpdateS = $db->prepare("UPDATE siswa.siswa SET foto_url = :foto_url, updated_at = CURRENT_TIMESTAMP WHERE id::text = :siswa_id AND tenant_id = :tenant_id");
             $stmtUpdateS->execute([
-                'foto_url' => 'uploads/' . $tenantId . '/' . $siswaId . '/' . $newFileName,
-                'siswa_id' => $siswaId
+                'foto_url'  => 'uploads/' . $tenantId . '/' . $siswaId . '/' . $newFileName,
+                'siswa_id'  => $siswaId,
+                'tenant_id' => $tenantId
             ]);
 
-            $oldSizes = [];
-            if (!empty($siswa['file_sizes'])) {
-                $oldSizes = json_decode($siswa['file_sizes'], true) ?: [];
-            }
-            $oldSizes['foto_profil'] = $fileSize;
-            $fileSizesJson = json_encode($oldSizes);
+            // Sync with siswa.dokumen
+            $stmtDok = $db->prepare("SELECT id FROM siswa.dokumen WHERE siswa_id = :siswa_id::uuid AND jenis_dokumen = 'Foto Profil' AND tenant_id = :tenant_id LIMIT 1");
+            $stmtDok->execute([
+                'siswa_id'  => $siswaId,
+                'tenant_id' => $tenantId
+            ]);
+            $existingDokId = $stmtDok->fetchColumn();
 
-            if (!empty($siswa['id_dokumen'])) {
-                $stmtUpdateDok = $db->prepare("UPDATE siswa.dokumen SET file_sizes = :file_sizes WHERE id_siswa = :siswa_id");
+            if ($existingDokId) {
+                $stmtUpdateDok = $db->prepare("UPDATE siswa.dokumen SET url_file = :url_file, nama_file = :nama_file, updated_at = CURRENT_TIMESTAMP WHERE id = :id::uuid AND tenant_id = :tenant_id");
                 $stmtUpdateDok->execute([
-                    'file_sizes' => $fileSizesJson,
-                    'siswa_id' => $siswaId
+                    'url_file'  => 'uploads/' . $tenantId . '/' . $siswaId . '/' . $newFileName,
+                    'nama_file' => $filename,
+                    'id'        => $existingDokId,
+                    'tenant_id' => $tenantId
                 ]);
             } else {
                 $stmtInsertDok = $db->prepare("
                     INSERT INTO siswa.dokumen 
-                        (id_siswa, file_sizes) 
+                        (id, siswa_id, tenant_id, jenis_dokumen, nama_file, url_file, keterangan, created_at, updated_at) 
                     VALUES 
-                        (:siswa_id, :file_sizes)
+                        (gen_random_uuid(), :siswa_id::uuid, :tenant_id::uuid, 'Foto Profil', :nama_file, :url_file, 'Foto Profil Siswa', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 ");
                 $stmtInsertDok->execute([
-                    'siswa_id' => $siswaId,
-                    'file_sizes' => $fileSizesJson
+                    'siswa_id'  => $siswaId,
+                    'tenant_id' => $tenantId,
+                    'nama_file' => $filename,
+                    'url_file'  => 'uploads/' . $tenantId . '/' . $siswaId . '/' . $newFileName
                 ]);
             }
 

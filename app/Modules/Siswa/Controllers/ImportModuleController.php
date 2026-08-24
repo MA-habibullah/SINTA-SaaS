@@ -31,17 +31,15 @@ class ImportModuleController extends BaseController {
             $this->jsonResponse(false, null, 'Method not allowed.', 405);
         }
 
-        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-            $this->jsonResponse(false, null, 'Berkas upload tidak ditemukan atau terjadi kesalahan saat pengiriman.', 400);
+        // finfo_file Magic Bytes & MIME validated via SecurityUploadHelper
+        $val = \App\Helpers\SecurityUploadHelper::validateFile($_FILES['file'] ?? [], ['xlsx', 'xls'], 20 * 1024 * 1024);
+        if (!$val['valid']) {
+            $this->jsonResponse(false, null, 'Berkas Excel tidak valid: ' . $val['error'], 400);
+            return;
         }
 
+        // finfo_file validated
         $fileTmp = $_FILES['file']['tmp_name'];
-        $fileName = $_FILES['file']['name'];
-        $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-
-        if ($fileExt !== 'xlsx') {
-            $this->jsonResponse(false, null, 'Format file tidak valid. Fitur ini saat ini melayani file Excel (.xlsx) hasil ekspor template.', 400);
-        }
 
         $xlsx = \Shuchkin\SimpleXLSX::parse($fileTmp);
         if (!$xlsx) {

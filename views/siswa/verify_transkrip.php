@@ -152,7 +152,7 @@ $token = $pageToken ?? '';
 
             function showError(title, message) {
                 document.getElementById('loadingView').classList.add('d-none');
-                document.getElementById('dataViewContainer').innerHTML = '';
+                document.getElementById('dataViewContainer')?.replaceChildren();
                 document.getElementById('errorTitle').innerText = title;
                 document.getElementById('errorText').innerText = message;
                 document.getElementById('errorView').classList.remove('d-none');
@@ -350,7 +350,12 @@ $token = $pageToken ?? '';
                     </div>
                 `;
 
-                document.getElementById('dataViewContainer').innerHTML = fullHtml;
+                const container = document.getElementById('dataViewContainer');
+                if (container) {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(fullHtml, 'text/html');
+                    container.replaceChildren(...doc.body.childNodes);
+                }
                 document.getElementById('loadingView').classList.add('d-none');
             }
 

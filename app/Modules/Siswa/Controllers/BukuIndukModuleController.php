@@ -193,8 +193,9 @@ class BukuIndukModuleController extends BaseController {
 
         // Jenjang filter
         if ($filterJenjang !== '') {
-            $stmtJ = $db->prepare("SELECT kode_jenjang, nama_jenjang FROM core.jenjang WHERE id::text = ? OR kode_jenjang = ? LIMIT 1");
-            $stmtJ->execute([$filterJenjang, $filterJenjang]);
+            // @security-audit false-positive (Shared Global Catalog: core.jenjang is a platform-wide education level dictionary without tenant_id column)
+            $stmtJ = $db->prepare("SELECT kode_jenjang, nama_jenjang FROM core.jenjang WHERE id::text = :filter_id OR kode_jenjang = :filter_kode LIMIT 1");
+            $stmtJ->execute(['filter_id' => $filterJenjang, 'filter_kode' => $filterJenjang]);
             $jDetail = $stmtJ->fetch(PDO::FETCH_ASSOC);
 
             if ($jDetail) {
@@ -324,8 +325,8 @@ class BukuIndukModuleController extends BaseController {
         $siswa['nama_kelas'] = '-';
         if (!empty($siswa['id_kelas'])) {
             try {
-                $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id::text = ? OR id = ?");
-                $stmtKelas->execute([$siswa['id_kelas'], $siswa['id_kelas']]);
+                $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE (id::text = :id OR id = :id) AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL) LIMIT 1");
+                $stmtKelas->execute(['id' => $siswa['id_kelas'], 'tenant_id' => $siswa['tenant_id'] ?? null]);
                 $siswa['nama_kelas'] = $stmtKelas->fetchColumn() ?: '-';
             } catch (\Throwable $e) {
                 // Ignore
@@ -422,8 +423,8 @@ class BukuIndukModuleController extends BaseController {
         $tahunMasuk = '-';
         if (!empty($siswa['id_tahun_ajaran'])) {
             try {
-                $stmtTa = $db->prepare("SELECT nama_tahun_ajaran FROM akademik.tahun_ajaran WHERE id::text = ? OR id = ?");
-                $stmtTa->execute([$siswa['id_tahun_ajaran'], $siswa['id_tahun_ajaran']]);
+                $stmtTa = $db->prepare("SELECT nama_tahun_ajaran FROM akademik.tahun_ajaran WHERE (id::text = :id OR id = :id) AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL) LIMIT 1");
+                $stmtTa->execute(['id' => $siswa['id_tahun_ajaran'], 'tenant_id' => $siswa['tenant_id'] ?? null]);
                 $tahunMasuk = $stmtTa->fetchColumn() ?: '-';
             } catch (\Throwable $e) {
                 // Ignore
@@ -453,8 +454,8 @@ class BukuIndukModuleController extends BaseController {
         // Fetch kesehatan
         $kesehatan = [];
         try {
-            $stmtK = $db->prepare("SELECT * FROM siswa.fisik_kesehatan_siswa WHERE siswa_id::text = ? ORDER BY created_at ASC");
-            $stmtK->execute([$id]);
+            $stmtK = $db->prepare("SELECT * FROM siswa.fisik_kesehatan_siswa WHERE siswa_id::text = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL) ORDER BY created_at ASC");
+            $stmtK->execute(['id' => $id, 'tenant_id' => $siswa['tenant_id'] ?? null]);
             $krows = $stmtK->fetchAll(PDO::FETCH_ASSOC);
             foreach ($krows as $k) {
                 if (isset($k['semester'])) {
@@ -585,8 +586,8 @@ class BukuIndukModuleController extends BaseController {
 
         // Fetch Registrasi PPDB & Mutasi
         try {
-            $stmtReg = $db->prepare("SELECT * FROM siswa.registrasi WHERE siswa_id::text = :id LIMIT 1");
-            $stmtReg->execute(['id' => $id]);
+            $stmtReg = $db->prepare("SELECT * FROM siswa.registrasi WHERE siswa_id::text = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL) LIMIT 1");
+            $stmtReg->execute(['id' => $id, 'tenant_id' => $siswa['tenant_id'] ?? null]);
             $regData = $stmtReg->fetch(PDO::FETCH_ASSOC);
             if ($regData) {
                 foreach ($regData as $rKey => $rVal) {
@@ -701,8 +702,8 @@ class BukuIndukModuleController extends BaseController {
         if (!empty($siswa['id_kelas'])) {
             try {
                 $db = \App\Config\Database::getConnection();
-                $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id = ? OR id::text = ?");
-                $stmtKelas->execute([$siswa['id_kelas'], $siswa['id_kelas']]);
+                $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE (id = :id OR id::text = :id) AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL) LIMIT 1");
+                $stmtKelas->execute(['id' => $siswa['id_kelas'], 'tenant_id' => $siswa['tenant_id'] ?? null]);
                 $siswa['nama_kelas'] = $stmtKelas->fetchColumn() ?: ($siswa['kelas_aktif'] ?? $siswa['kelas_saat_ini'] ?? '-');
             } catch (\Throwable $e) {
                 $siswa['nama_kelas'] = $siswa['kelas_aktif'] ?? $siswa['kelas_saat_ini'] ?? '-';
@@ -843,8 +844,8 @@ class BukuIndukModuleController extends BaseController {
         if (!empty($siswa['id_kelas'])) {
             try {
                 $db = \App\Config\Database::getConnection();
-                $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id = ?");
-                $stmtKelas->execute([$siswa['id_kelas']]);
+                $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL) LIMIT 1");
+                $stmtKelas->execute(['id' => $siswa['id_kelas'], 'tenant_id' => $siswa['tenant_id'] ?? null]);
                 $siswa['nama_kelas'] = $stmtKelas->fetchColumn() ?: '-';
             } catch (\Throwable $e) {
                 $siswa['nama_kelas'] = '-';
@@ -879,7 +880,7 @@ class BukuIndukModuleController extends BaseController {
             $stmtPrestasi = $db->prepare("
                 SELECT ps.* 
                 FROM kesiswaan.prestasi_siswa ps
-                JOIN prestasi_siswa_anggota psa ON ps.id = psa.id_prestasi
+                JOIN kesiswaan.prestasi_siswa_anggota psa ON ps.id = psa.id_prestasi
                 WHERE psa.id_siswa = :siswa_id AND ps.tenant_id = :tenant_id AND ps.is_active = true
                 ORDER BY ps.tanggal_lomba DESC
             ");
@@ -898,7 +899,7 @@ class BukuIndukModuleController extends BaseController {
         try {
             $stmtBeasiswa = $db->prepare("
                 SELECT * 
-                FROM siswa.siswa.riwayat_beasiswa
+                FROM siswa.riwayat_beasiswa
                 WHERE siswa_id = :siswa_id AND tenant_id = :tenant_id
                 ORDER BY tahun_menerima DESC
             ");
@@ -926,8 +927,8 @@ class BukuIndukModuleController extends BaseController {
         if (!empty($siswa['id_tahun_ajaran'])) {
             try {
                 $db = \App\Config\Database::getConnection();
-                $stmtTa = $db->prepare("SELECT tahun_ajaran FROM akademik.tahun_ajaran WHERE id = ?");
-                $stmtTa->execute([$siswa['id_tahun_ajaran']]);
+                $stmtTa = $db->prepare("SELECT tahun_ajaran FROM akademik.tahun_ajaran WHERE id = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL) LIMIT 1");
+                $stmtTa->execute(['id' => $siswa['id_tahun_ajaran'], 'tenant_id' => $siswa['tenant_id'] ?? null]);
                 $tahunAjaranMulai = $stmtTa->fetchColumn() ?: '';
             } catch (\Throwable $e) {
                 // Ignore
@@ -983,6 +984,7 @@ class BukuIndukModuleController extends BaseController {
     }
 
     public function storeRiwayatKepsek(): void {
+        $this->validateCsrfToken();
         header('Content-Type: application/json');
         try {
             $db = \App\Config\Database::getConnection();
@@ -1028,6 +1030,7 @@ class BukuIndukModuleController extends BaseController {
     }
 
     public function deleteRiwayatKepsek(): void {
+        $this->validateCsrfToken();
         header('Content-Type: application/json');
         try {
             $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
@@ -1420,8 +1423,8 @@ class BukuIndukModuleController extends BaseController {
             // Dapatkan nama kelas
             if (!empty($siswa['id_kelas'])) {
                 try {
-                    $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id = ?");
-                    $stmtKelas->execute([$siswa['id_kelas']]);
+                    $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL) LIMIT 1");
+                    $stmtKelas->execute(['id' => $siswa['id_kelas'], 'tenant_id' => $siswa['tenant_id'] ?? null]);
                     $siswa['nama_kelas'] = $stmtKelas->fetchColumn() ?: '-';
                 } catch (\Throwable $e) {
                     $siswa['nama_kelas'] = '-';
@@ -1673,6 +1676,7 @@ class BukuIndukModuleController extends BaseController {
     }
 
     public function deleteSiswaApi(): void {
+        $this->validateCsrfToken();
         header('Content-Type: application/json');
         try {
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -1709,25 +1713,25 @@ class BukuIndukModuleController extends BaseController {
             $db->beginTransaction();
 
             // Soft delete the student
-            $stmtDel = $db->prepare("UPDATE siswa.siswa SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?");
-            $stmtDel->execute([$id]);
+            $stmtDel = $db->prepare("UPDATE siswa.siswa SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)");
+            $stmtDel->execute(['id' => $id, 'tenant_id' => $siswa['tenant_id'] ?? $tenantId]);
 
             // Soft delete detail nilai rapor
-            $stmtDelRapor = $db->prepare("UPDATE akademik.detail_nilai_rapor SET deleted_at = CURRENT_TIMESTAMP WHERE siswa_id = ?");
-            $stmtDelRapor->execute([$id]);
+            $stmtDelRapor = $db->prepare("UPDATE akademik.detail_nilai_rapor SET deleted_at = CURRENT_TIMESTAMP WHERE siswa_id = :siswa_id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)");
+            $stmtDelRapor->execute(['siswa_id' => $id, 'tenant_id' => $siswa['tenant_id'] ?? $tenantId]);
             
             // Soft delete prestasi
             $stmtDelPrestasi = $db->prepare("
-                UPDATE prestasi_siswa ps
-                JOIN prestasi_siswa_anggota psa ON ps.id = psa.id_prestasi
-                SET ps.deleted_at = CURRENT_TIMESTAMP
-                WHERE psa.id_siswa = ?
+                UPDATE kesiswaan.prestasi_siswa 
+                SET deleted_at = CURRENT_TIMESTAMP 
+                WHERE id IN (SELECT id_prestasi FROM kesiswaan.prestasi_siswa_anggota WHERE id_siswa = :siswa_id) 
+                AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)
             ");
-            $stmtDelPrestasi->execute([$id]);
+            $stmtDelPrestasi->execute(['siswa_id' => $id, 'tenant_id' => $siswa['tenant_id'] ?? $tenantId]);
 
             // Soft delete pelanggaran
-            $stmtDelPelanggaran = $db->prepare("UPDATE catatan_pelanggaran_siswa SET deleted_at = CURRENT_TIMESTAMP WHERE siswa_id = ?");
-            $stmtDelPelanggaran->execute([$id]);
+            $stmtDelPelanggaran = $db->prepare("UPDATE bk.pelanggaran_siswa SET deleted_at = CURRENT_TIMESTAMP WHERE siswa_id = :siswa_id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)");
+            $stmtDelPelanggaran->execute(['siswa_id' => $id, 'tenant_id' => $siswa['tenant_id'] ?? $tenantId]);
 
             // Record activity
             \App\Helpers\ActivityLogger::record('DELETE', 'siswa', $id, $siswa, null);
@@ -1817,8 +1821,8 @@ class BukuIndukModuleController extends BaseController {
 
         // Dapatkan nama kelas
         try {
-            $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id = ?");
-            $stmtKelas->execute([$kelasId]);
+            $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL) LIMIT 1");
+            $stmtKelas->execute(['id' => $kelasId, 'tenant_id' => $tenantId]);
             $kelasName = $stmtKelas->fetchColumn() ?: '-';
         } catch (\Throwable $e) {
             $kelasName = '-';
@@ -1883,8 +1887,8 @@ class BukuIndukModuleController extends BaseController {
             $sikapK13 = [];
             foreach ($studentIds as $id) {
                 try {
-                    $stmtSikap = $db->prepare("SELECT * FROM akademik.nilai_sikap_k13 WHERE siswa_id = ? AND tahun_ajaran = ? AND semester = ? LIMIT 1");
-                    $stmtSikap->execute([$id, $ta, $semester]);
+                    $stmtSikap = $db->prepare("SELECT * FROM akademik.nilai_sikap_k13 WHERE siswa_id = :siswa_id AND tahun_ajaran = :ta AND semester = :semester AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL) LIMIT 1");
+                    $stmtSikap->execute(['siswa_id' => $id, 'ta' => $ta, 'semester' => $semester, 'tenant_id' => $tenantId]);
                     $sikapRow = $stmtSikap->fetch(PDO::FETCH_ASSOC);
                     if ($sikapRow) {
                         $sikapK13[$id] = $sikapRow;
@@ -1941,8 +1945,8 @@ class BukuIndukModuleController extends BaseController {
         }
 
         // 1. Get Kelas Name
-        $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id::text = :id LIMIT 1");
-        $stmtKelas->execute(['id' => $kelasId]);
+        $stmtKelas = $db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id::text = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL) LIMIT 1");
+        $stmtKelas->execute(['id' => $kelasId, 'tenant_id' => $tenantId]);
         $kelasName = $stmtKelas->fetchColumn() ?: 'Kelas';
         // 2. Get students in this class
         $qSiswa = "SELECT s.id, s.nama_lengkap, s.nisn, s.nis FROM siswa.siswa s 
@@ -2172,8 +2176,10 @@ class BukuIndukModuleController extends BaseController {
         // ── 4. Validasi keberadaan siswa (tanpa ambil data lengkap) ────────────
         try {
             $db = \App\Config\Database::getConnection();
-            $stmt = $db->prepare("SELECT id FROM siswa.siswa WHERE id = ? AND is_active = true LIMIT 1");
-            $stmt->execute([$id]);
+            $tenantId = trim($_GET['tenant_id'] ?? '');
+            $filterTenant = (!empty($tenantId) && preg_match($uuidPattern, $tenantId)) ? $tenantId : null;
+            $stmt = $db->prepare("SELECT id FROM siswa.siswa WHERE id = :id::uuid AND (:filter_tenant_id::uuid IS NULL OR tenant_id = :filter_tenant_id::uuid) AND is_active = true AND deleted_at IS NULL LIMIT 1");
+            $stmt->execute(['id' => $id, 'filter_tenant_id' => $filterTenant]);
             if (!$stmt->fetch()) {
                 http_response_code(404);
                 echo '<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><title>404</title></head><body>';
@@ -2435,12 +2441,31 @@ class BukuIndukModuleController extends BaseController {
             // Handle direct PDF upload
             if (isset($_FILES['pdf_file']) && $_FILES['pdf_file']['error'] === UPLOAD_ERR_OK) {
                 $file = $_FILES['pdf_file'];
-                if (strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)) !== 'pdf') {
-                    throw new \Exception("Format file harus PDF.");
+                $tmpName = $file['tmp_name'];
+
+                // 1. Magic Bytes & MIME Type check via finfo
+                $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                $mimeType = $finfo->file($tmpName);
+                if ($mimeType !== 'application/pdf') {
+                    throw new \Exception("Format file tidak valid. Berkas harus berupa dokumen PDF asli.");
+                }
+
+                // 2. Read magic bytes header (%PDF-)
+                $handle = fopen($tmpName, 'rb');
+                $header = $handle ? fread($handle, 5) : '';
+                if ($handle) fclose($handle);
+                if ($header !== '%PDF-') {
+                    throw new \Exception("Header berkas PDF korup atau tidak valid.");
+                }
+
+                // 3. Security upload validation helper
+                $valPdf = \App\Helpers\SecurityUploadHelper::validateFile($file, ['pdf'], 20 * 1024 * 1024);
+                if (!$valPdf['valid']) {
+                    throw new \Exception("Berkas PDF tidak valid: " . $valPdf['error']);
                 }
                 
                 $uuid = $this->generateUuid();
-                $cleanType = str_replace(' ', '_', strtolower($jenisDokumen));
+                $cleanType = preg_replace('/[^a-zA-Z0-9_-]/', '_', strtolower($jenisDokumen));
                 $pdfFilename = "{$cleanType}_{$uuid}.pdf";
                 $targetFile = "{$archiveDir}/{$pdfFilename}";
                 
@@ -2462,12 +2487,18 @@ class BukuIndukModuleController extends BaseController {
                 $pdf = new \FPDF();
                 
                 $validImagesCount = 0;
+                $finfo = new \finfo(FILEINFO_MIME_TYPE);
                 for ($i = 0; $i < count($tmpNames); $i++) {
                     if ($errors[$i] === UPLOAD_ERR_OK && !empty($tmpNames[$i])) {
                         $tmpPath = $tmpNames[$i];
+                        $mime = $finfo->file($tmpPath);
+                        $allowedImageMimes = ['image/jpeg', 'image/png', 'image/jpg'];
+                        if (!in_array($mime, $allowedImageMimes)) {
+                            continue;
+                        }
+
                         $size = getimagesize($tmpPath);
                         if ($size !== false) {
-                            $mime = $size['mime'];
                             $type = strtoupper(substr(strstr($mime, '/'), 1));
                             if ($type === 'JPEG') {
                                 $type = 'JPG';
@@ -2486,7 +2517,7 @@ class BukuIndukModuleController extends BaseController {
                 }
                 
                 $uuid = $this->generateUuid();
-                $cleanType = str_replace(' ', '_', strtolower($jenisDokumen));
+                $cleanType = preg_replace('/[^a-zA-Z0-9_-]/', '_', strtolower($jenisDokumen));
                 $pdfFilename = "{$cleanType}_{$uuid}.pdf";
                 $targetFile = "{$archiveDir}/{$pdfFilename}";
                 
@@ -2519,19 +2550,20 @@ class BukuIndukModuleController extends BaseController {
             if (empty($siswaId)) {
                 throw new \Exception("Siswa ID wajib diisi.");
             }
+            $tenantId = SessionManager::getTenantId();
             $db = \App\Config\Database::getConnection();
             
             // 1. Fetch archived documents from vault
             $stmt = $db->prepare("SELECT id, jenis_dokumen, file_size, keterangan, created_at 
                                   FROM tracer.arsip_dokumen_alumni 
-                                  WHERE siswa_id::text = ? 
+                                  WHERE siswa_id::text = :siswa_id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)
                                   ORDER BY created_at DESC");
-            $stmt->execute([$siswaId]);
+            $stmt->execute(['siswa_id' => $siswaId, 'tenant_id' => $tenantId]);
             $docs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             // 2. Fetch supporting documents from "siswa.dokumen" table
-            $stmtDok = $db->prepare("SELECT * FROM siswa.siswa.dokumen WHERE siswa_id::text = ?");
-            $stmtDok->execute([$siswaId]);
+            $stmtDok = $db->prepare("SELECT * FROM siswa.dokumen WHERE siswa_id::text = :siswa_id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)");
+            $stmtDok->execute(['siswa_id' => $siswaId, 'tenant_id' => $tenantId]);
             $dokList = $stmtDok->fetchAll(PDO::FETCH_ASSOC);
 
             foreach ($dokList as $dok) {
@@ -2552,6 +2584,7 @@ class BukuIndukModuleController extends BaseController {
     }
 
     public function deleteDocumentApi(): void {
+        $this->validateCsrfToken();
         header('Content-Type: application/json');
         try {
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -2562,17 +2595,18 @@ class BukuIndukModuleController extends BaseController {
                 throw new \Exception("ID Dokumen wajib diisi.");
             }
             
+            $tenantId = SessionManager::getTenantId();
             $db = \App\Config\Database::getConnection();
-            $stmt = $db->prepare("SELECT file_path, tenant_id FROM tracer.arsip_dokumen_alumni WHERE id = ?");
-            $stmt->execute([$id]);
+            $stmt = $db->prepare("SELECT file_path, tenant_id FROM tracer.arsip_dokumen_alumni WHERE id = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)");
+            $stmt->execute(['id' => $id, 'tenant_id' => $tenantId]);
             $doc = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$doc) {
                 throw new \Exception("Dokumen tidak ditemukan.");
             }
             
             // Delete record
-            $stmtDel = $db->prepare("DELETE FROM tracer.arsip_dokumen_alumni WHERE id = ?");
-            $stmtDel->execute([$id]);
+            $stmtDel = $db->prepare("DELETE FROM tracer.arsip_dokumen_alumni WHERE id = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)");
+            $stmtDel->execute(['id' => $id, 'tenant_id' => $tenantId]);
             
             // Delete file
             $fullPath = realpath(__DIR__ . '/../../') . '/' . $doc['file_path'];
@@ -2594,6 +2628,7 @@ class BukuIndukModuleController extends BaseController {
                 throw new \Exception("ID Dokumen wajib diisi.");
             }
             
+            $tenantId = SessionManager::getTenantId();
             $db = \App\Config\Database::getConnection();
             $doc = null;
 
@@ -2614,11 +2649,11 @@ class BukuIndukModuleController extends BaseController {
                     if (in_array($colName, $allowedCols)) {
                         $stmtDok = $db->prepare("
                             SELECT d.{$colName} as file_path, s.tenant_id, s.nama_lengkap 
-                            FROM siswa.siswa.dokumen d 
+                            FROM siswa.dokumen d 
                             JOIN siswa.siswa s ON d.id_siswa = s.id 
-                            WHERE d.id_siswa = ? LIMIT 1
+                            WHERE d.id_siswa = :siswa_id AND (:tenant_id::uuid IS NULL OR s.tenant_id = :tenant_id::uuid OR s.tenant_id IS NULL) LIMIT 1
                         ");
-                        $stmtDok->execute([$siswaId]);
+                        $stmtDok->execute(['siswa_id' => $siswaId, 'tenant_id' => $tenantId]);
                         $docInfo = $stmtDok->fetch(PDO::FETCH_ASSOC);
                         
                         if ($docInfo && !empty($docInfo['file_path'])) {
@@ -2633,8 +2668,8 @@ class BukuIndukModuleController extends BaseController {
                 }
             } else {
                 // Fetch standard document from vault
-                $stmt = $db->prepare("SELECT * FROM tracer.arsip_dokumen_alumni WHERE id = ?");
-                $stmt->execute([$id]);
+                $stmt = $db->prepare("SELECT * FROM tracer.arsip_dokumen_alumni WHERE id = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)");
+                $stmt->execute(['id' => $id, 'tenant_id' => $tenantId]);
                 $doc = $stmt->fetch(PDO::FETCH_ASSOC);
             }
 
@@ -2644,7 +2679,6 @@ class BukuIndukModuleController extends BaseController {
             }
 
             // Check security permissions
-            $tenantId = SessionManager::getTenantId();
             if ($tenantId && $tenantId !== $doc['tenant_id']) {
                 http_response_code(403);
                 die("Forbidden: Anda tidak memiliki hak akses ke dokumen sekolah ini.");
@@ -2654,7 +2688,7 @@ class BukuIndukModuleController extends BaseController {
             $userId = $_SESSION['user_id'] ?? 'SYSTEM';
             $ip = $_SERVER['REMOTE_ADDR'] ?? '';
             $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
-            $stmtLog = $db->prepare("INSERT INTO log_akses_arsip (user_id, tenant_id, siswa_id, aktivitas, ip_address, user_agent) 
+            $stmtLog = $db->prepare("INSERT INTO tracer.log_akses_arsip (user_id, tenant_id, siswa_id, aktivitas, ip_address, user_agent) 
                                      VALUES (?, ?, ?, ?, ?, ?)");
             $stmtLog->execute([$userId, $doc['tenant_id'], $doc['siswa_id'], "View File {$doc['jenis_dokumen']}", $ip, $ua]);
 
@@ -2976,8 +3010,8 @@ class BukuIndukModuleController extends BaseController {
                 return;
             }
 
-            $stmt = $db->prepare("DELETE FROM siswa.riwayat_beasiswa WHERE id::text = ?");
-            $stmt->execute([$id]);
+            $stmt = $db->prepare("DELETE FROM siswa.riwayat_beasiswa WHERE id::text = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)");
+            $stmt->execute(['id' => $id, 'tenant_id' => $tenantId]);
 
             \App\Helpers\CacheInvalidator::clearStudentCache($siswaId, $dbTenantId);
 

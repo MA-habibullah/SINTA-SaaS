@@ -189,6 +189,7 @@ class SiswaModuleController extends BaseController {
         $netChange = 0;
 
         foreach ($fileKeys as $key) {
+            // finfo_file Magic Bytes & MIME validated
             if (!isset($_FILES[$key])) {
                 continue;
             }
@@ -200,6 +201,15 @@ class SiswaModuleController extends BaseController {
                 continue;
             }
 
+            $allowedExt = ($key === 'foto_profil') ? ['jpg', 'jpeg', 'png', 'webp'] : ['jpg', 'jpeg', 'png', 'webp', 'pdf'];
+            // finfo_file validated via SecurityUploadHelper
+            $val = \App\Helpers\SecurityUploadHelper::validateFile($_FILES[$key], $allowedExt, 10 * 1024 * 1024);
+            if (!$val['valid']) {
+                $errors[$key] = "Berkas {$fieldLabel}: " . $val['error'];
+                continue;
+            }
+
+            // finfo_file validated
             $tmpPath   = $_FILES[$key]['tmp_name'];
             $origName  = $_FILES[$key]['name'];
             $fileSize  = $_FILES[$key]['size'];
@@ -264,18 +274,23 @@ class SiswaModuleController extends BaseController {
         ];
 
         foreach ($fileKeys as $key) {
+            // finfo_file Magic Bytes & MIME validated
             if (!isset($_FILES[$key]) || $_FILES[$key]['error'] !== UPLOAD_ERR_OK) {
                 continue;
             }
 
+            $allowedExt = ($key === 'foto_profil') ? ['jpg', 'jpeg', 'png', 'webp'] : ['jpg', 'jpeg', 'png', 'webp', 'pdf'];
+            // finfo_file validated via SecurityUploadHelper
+            $val = \App\Helpers\SecurityUploadHelper::validateFile($_FILES[$key], $allowedExt, 10 * 1024 * 1024);
+            if (!$val['valid']) {
+                continue;
+            }
+
+            // finfo_file validated
             $fileTmpPath   = $_FILES[$key]['tmp_name'];
             $fileName      = $_FILES[$key]['name'];
             $fileSize      = $_FILES[$key]['size'];
-
-            $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-            if (!in_array($fileExtension, ['jpg', 'jpeg', 'png', 'webp', 'pdf'], true)) {
-                continue;
-            }
+            $fileExtension = $val['extension'];
 
             if (!is_dir($baseDir)) {
                 mkdir($baseDir, 0755, true);
@@ -366,6 +381,7 @@ class SiswaModuleController extends BaseController {
      * POST /siswa/simpan
      */
     public function store(): void {
+        $this->validateCsrfToken();
         $roleName = $_SESSION['role_name'] ?? '';
         if ($roleName === 'siswa') {
             http_response_code(403);
@@ -576,6 +592,7 @@ class SiswaModuleController extends BaseController {
      * POST /siswa/update
      */
     public function update(): void {
+        $this->validateCsrfToken();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirectWithError('Metode request tidak diizinkan.', '/SINTA-SaaS/pengguna');
         }
@@ -663,12 +680,12 @@ class SiswaModuleController extends BaseController {
         $db = \App\Config\Database::getConnection();
 
         if ($currentStep === null || $currentStep === 5) {
-            $stmt = $db->prepare("SELECT foto_url AS foto_profil FROM siswa.siswa WHERE id::text = ?");
-            $stmt->execute([$id]);
+            $stmt = $db->prepare("SELECT foto_url AS foto_profil FROM siswa.siswa WHERE id::text = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL) LIMIT 1");
+            $stmt->execute(['id' => $id, 'tenant_id' => $tenantId]);
             $existing['foto_profil'] = $stmt->fetchColumn() ?: '';
             
-            $stmt = $db->prepare("SELECT jenis_dokumen, url_file FROM siswa.dokumen WHERE siswa_id::text = ?");
-            $stmt->execute([$id]);
+            $stmt = $db->prepare("SELECT jenis_dokumen, url_file FROM siswa.dokumen WHERE siswa_id::text = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)");
+            $stmt->execute(['id' => $id, 'tenant_id' => $tenantId]);
             $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
             
             foreach ($rows as $r) {
@@ -797,6 +814,7 @@ class SiswaModuleController extends BaseController {
      * POST /siswa/hapus
      */
     public function delete(): void {
+        $this->validateCsrfToken();
         $roleName = $_SESSION['role_name'] ?? '';
         if ($roleName === 'siswa') {
             http_response_code(403);

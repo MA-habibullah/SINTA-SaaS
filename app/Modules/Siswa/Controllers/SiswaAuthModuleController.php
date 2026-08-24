@@ -182,14 +182,21 @@ class SiswaAuthModuleController extends BaseController {
 
         try {
             $db = Database::getConnection();
-            $siswaId = $_SESSION['user_id'];
+            $siswaId = $_SESSION['user_id'] ?? null;
+            $tenantId = $_SESSION['tenant_id'] ?? $this->tenantId;
 
-            $hashedPassword = password_hash($passwordBaru, PASSWORD_BCRYPT);
+            if (empty($siswaId)) {
+                $this->jsonResponse(false, null, 'Sesi pengguna tidak valid.', 401);
+                return;
+            }
 
-            $stmt = $db->prepare("UPDATE siswa.siswa SET password = :password, is_first_login = false, updated_at = CURRENT_TIMESTAMP WHERE id = :id");
+            $hashedPassword = password_hash($passwordBaru, PASSWORD_ARGON2ID);
+
+            $stmt = $db->prepare("UPDATE siswa.siswa SET password = :password, is_first_login = false, updated_at = CURRENT_TIMESTAMP WHERE id = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)");
             $stmt->execute([
-                'password' => $hashedPassword,
-                'id' => $siswaId
+                'password'  => $hashedPassword,
+                'id'        => $siswaId,
+                'tenant_id' => $tenantId
             ]);
 
             $_SESSION['is_first_login'] = false;

@@ -342,7 +342,7 @@ $isLocked    = ($userRole === 'siswa' && ($siswaStatus === 'Lulus' || $siswaStat
 
 <!-- Main Wizard Component Container (Vue Mounted) -->
 <div id="studentWizardApp" v-cloak class="wizard-card p-4 p-md-5 mb-5"
-     data-is-locked="<?= $isLocked ? 'true' : 'false' ?>">
+     data-is-locked="<?= htmlspecialchars($isLocked ? 'true' : 'false', ENT_QUOTES, 'UTF-8') ?>">
     
     <!-- Header Card Khusus Siswa -->
     <div v-if="userRole === 'siswa'" class="alert alert-primary border-0 rounded-4 p-4 mb-5 shadow-sm d-flex align-items-center gap-3">
