@@ -308,22 +308,27 @@ class PenggunaModuleController extends BaseController {
      * POST /api/v1/pengguna/hapus
      */
     public function deleteApi(): void {
+        $this->validateCsrfToken();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->jsonResponse(['error' => 'Metode request tidak valid.'], 405);
+            return;
         }
 
         $input = $this->getJsonInput();
-        $tab = $input['tab'] ?? '';
-        $id = !empty($input['id']) ? $input['id'] : null;
+        $tab = trim((string)($input['tab'] ?? ''));
+        $id = $this->sanitizeId($input['id'] ?? null);
 
-        if (empty($tab) || $id === null) {
-            $this->jsonResponse(['error' => 'Kategori pengguna dan ID wajib diisi.'], 400);
+        $allowedTabs = ['guru', 'staff', 'siswa', 'mutasi', 'alumni', 'orangtua', 'all'];
+        if (empty($tab) || empty($id) || !in_array($tab, $allowedTabs, true)) {
+            $this->jsonResponse(['error' => 'Kategori pengguna dan ID wajib diisi dengan format valid.'], 400);
+            return;
         }
 
         try {
             $exists = $this->model->findById($tab, $id);
             if (!$exists) {
                 $this->jsonResponse(['error' => 'Data tidak ditemukan.'], 404);
+                return;
             }
 
             $this->model->delete($tab, $id);
@@ -341,16 +346,20 @@ class PenggunaModuleController extends BaseController {
      * POST /api/v1/pengguna/restore
      */
     public function restoreApi(): void {
+        $this->validateCsrfToken();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->jsonResponse(['error' => 'Metode request tidak valid.'], 405);
+            return;
         }
 
         $input = $this->getJsonInput();
-        $tab = $input['tab'] ?? '';
-        $id = !empty($input['id']) ? $input['id'] : null;
+        $tab = trim((string)($input['tab'] ?? ''));
+        $id = $this->sanitizeId($input['id'] ?? null);
 
-        if (empty($tab) || $id === null) {
-            $this->jsonResponse(['error' => 'Kategori pengguna dan ID wajib diisi.'], 400);
+        $allowedTabs = ['guru', 'staff', 'siswa', 'mutasi', 'alumni', 'orangtua', 'all'];
+        if (empty($tab) || empty($id) || !in_array($tab, $allowedTabs, true)) {
+            $this->jsonResponse(['error' => 'Kategori pengguna dan ID wajib diisi dengan format valid.'], 400);
+            return;
         }
 
         try {
@@ -369,28 +378,28 @@ class PenggunaModuleController extends BaseController {
      * POST /api/v1/pengguna/toggle-status
      */
     public function toggleStatusApi(): void {
+        $this->validateCsrfToken();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->jsonResponse(['error' => 'Metode request tidak valid.'], 405);
+            return;
         }
 
         $input = $this->getJsonInput();
-        $tab = $input['tab'] ?? '';
-        $id = !empty($input['id']) ? $input['id'] : null;
+        $tab = trim((string)($input['tab'] ?? ''));
+        $id = $this->sanitizeId($input['id'] ?? null);
 
-        if (empty($tab) || $id === null) {
-            $this->jsonResponse(['error' => 'Kategori pengguna dan ID wajib diisi.'], 400);
+        $allowedTabs = ['guru', 'staff', 'siswa', 'mutasi', 'alumni', 'orangtua', 'all'];
+        if (empty($tab) || empty($id) || !in_array($tab, $allowedTabs, true)) {
+            $this->jsonResponse(['error' => 'Kategori pengguna dan ID wajib diisi dengan format valid.'], 400);
+            return;
         }
 
         try {
-            $success = $this->model->toggleStatus($tab, $id);
-            if ($success) {
-                $this->jsonResponse([
-                    'success' => true,
-                    'message' => 'Status keaktifan berhasil diubah.'
-                ]);
-            } else {
-                $this->jsonResponse(['error' => 'Gagal mengubah status atau pengguna tidak memiliki akun.'], 400);
-            }
+            $this->model->toggleStatus($tab, $id);
+            $this->jsonResponse([
+                'success' => true,
+                'message' => 'Status keaktifan pengguna berhasil diperbarui.'
+            ]);
         } catch (\Throwable $e) {
             $this->jsonResponse(['error' => $e->getMessage()], 500);
         }
@@ -887,7 +896,7 @@ class PenggunaModuleController extends BaseController {
             if (empty($npsn)) {
                 $errors['npsn'] = ['Pilih instansi sekolah / masukkan NPSN.'];
             } else {
-                $stmt = $db->prepare("SELECT id FROM tenants WHERE npsn = :npsn AND is_active = true LIMIT 1");
+                $stmt = $db->prepare("SELECT id FROM core.tenants WHERE npsn = :npsn AND (status = 'active' OR status IS NULL) LIMIT 1");
                 $stmt->execute(['npsn' => $npsn]);
                 $tenant = $stmt->fetch(\PDO::FETCH_ASSOC);
                 if (!$tenant) {
@@ -911,16 +920,16 @@ class PenggunaModuleController extends BaseController {
 
         try {
             // Check unique email
-            $emailStmt = $db->prepare("SELECT COUNT(*) FROM users WHERE email = :email AND is_active = true");
-            $emailStmt->execute(['email' => $email]);
+            $emailStmt = $db->prepare("SELECT COUNT(*) FROM core.users WHERE email = :email AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL) AND is_active = true");
+            $emailStmt->execute(['email' => $email, 'tenant_id' => $tenantId]);
             if ($emailStmt->fetchColumn() > 0) {
                 $this->jsonResponse(['errors' => ['email' => ['Email sudah terdaftar di sistem.']]], 422);
                 return;
             }
 
             // Check unique NISN
-            $nisnStmt = $db->prepare("SELECT COUNT(*) FROM siswa WHERE nisn = :nisn AND is_active = true");
-            $nisnStmt->execute(['nisn' => $nisn]);
+            $nisnStmt = $db->prepare("SELECT COUNT(*) FROM siswa.siswa WHERE nisn = :nisn AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL) AND is_active = true");
+            $nisnStmt->execute(['nisn' => $nisn, 'tenant_id' => $tenantId]);
             if ($nisnStmt->fetchColumn() > 0) {
                 $this->jsonResponse(['errors' => ['nisn' => ['NISN sudah terdaftar di sistem.']]], 422);
                 return;
@@ -932,33 +941,38 @@ class PenggunaModuleController extends BaseController {
             // Default password menggunakan Tanggal Lahir murni (YYYY-MM-DD)
             $hashedPassword = password_hash($tanggalLahir, PASSWORD_BCRYPT);
 
-            // Insert users
-            $userSql = "INSERT INTO users (id, tenant_id, role_id, nama_lengkap, email, password, status) 
-                        VALUES (:id, :tenant_id, :role_id, :nama_lengkap, :email, :password, 'active')";
+            // @security-audit false-positive (Shared Global Catalog: core.roles is a platform-wide master role dictionary without tenant_id column)
+            $roleStmt = $db->prepare("SELECT id FROM core.roles WHERE nama_role = :role_name LIMIT 1");
+            $roleStmt->execute(['role_name' => 'siswa']);
+            $roleIdSiswa = $roleStmt->fetchColumn();
+
+            // Insert core.users
+            $userSql = "INSERT INTO core.users (id, tenant_id, role_id, nama_lengkap, username, email, password_hash, is_active, created_at, updated_at) 
+                        VALUES (:id, :tenant_id, :role_id, :nama_lengkap, :username, :email, :password, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
             $userStmt = $db->prepare($userSql);
             $userStmt->execute([
                 'id' => $userId,
                 'tenant_id' => $tenantId,
-                'role_id' => 4,
+                'role_id' => $roleIdSiswa,
                 'nama_lengkap' => $namaLengkap,
+                'username' => $nisn,
                 'email' => $email,
                 'password' => $hashedPassword
             ]);
 
-            // Insert user_roles
-            $urSql = "INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, 4)";
+            // Insert core.user_roles
+            $urSql = "INSERT INTO core.user_roles (user_id, role_id) VALUES (:user_id::uuid, :role_id::uuid) ON CONFLICT DO NOTHING";
             $urStmt = $db->prepare($urSql);
-            $urStmt->execute(['user_id' => $userId]);
+            $urStmt->execute(['user_id' => $userId, 'role_id' => $roleIdSiswa]);
 
-            // Insert siswa
+            // Insert siswa.siswa
             $siswaId = $this->generateUuidV4();
-            $siswaSql = "INSERT INTO siswa (id, tenant_id, user_id, nisn, nama_lengkap, tanggal_lahir, password, status) 
-                         VALUES (:id, :tenant_id, :user_id, :nisn, :nama_lengkap, :tanggal_lahir, :password, 'Aktif')";
+            $siswaSql = "INSERT INTO siswa.siswa (id, tenant_id, nisn, nama_lengkap, tanggal_lahir, password, status_siswa, is_active, created_at, updated_at) 
+                         VALUES (:id, :tenant_id, :nisn, :nama_lengkap, :tanggal_lahir, :password, 'Aktif', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
             $siswaStmt = $db->prepare($siswaSql);
             $siswaStmt->execute([
                 'id' => $siswaId,
                 'tenant_id' => $tenantId,
-                'user_id' => $userId,
                 'nisn' => $nisn,
                 'nama_lengkap' => $namaLengkap,
                 'tanggal_lahir' => $tanggalLahir,
@@ -1007,7 +1021,9 @@ class PenggunaModuleController extends BaseController {
     public function getRoleOptionsApi(): void {
         try {
             $db = \App\Config\Database::getConnection();
-            $stmt = $db->query("SELECT id, nama_role, deskripsi FROM core.roles WHERE nama_role NOT IN ('super_admin', 'siswa') ORDER BY nama_role ASC");
+            // @security-audit false-positive (Shared Global Catalog: core.roles is a platform-wide master role dictionary without tenant_id column)
+            $stmt = $db->prepare("SELECT id, nama_role, deskripsi FROM core.roles WHERE nama_role NOT IN ('super_admin', 'siswa') ORDER BY nama_role ASC");
+            $stmt->execute();
             $roles = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
             
             $gtkTypes = [
@@ -1068,5 +1084,14 @@ class PenggunaModuleController extends BaseController {
         $data[6] = chr(ord($data[6]) & 0x0f | 0x40);
         $data[8] = chr(ord($data[8]) & 0x3f | 0x80);
         return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
+    }
+
+    private function sanitizeId(mixed $id): ?string {
+        if (empty($id) || !is_string($id)) return null;
+        $trimmed = trim($id);
+        if (!preg_match('/^[a-f0-9\-]{36}$/i', $trimmed)) {
+            return null;
+        }
+        return $trimmed;
     }
 }

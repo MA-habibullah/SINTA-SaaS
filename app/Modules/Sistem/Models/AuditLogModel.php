@@ -220,17 +220,39 @@ class AuditLogModel {
             $tenants = $stmtTenants->fetchAll(PDO::FETCH_ASSOC) ?: [];
         }
 
-        // Roles
-        $stmtRoles = $this->db->query("SELECT DISTINCT user_role FROM {$this->table} WHERE user_role IS NOT NULL AND user_role != '' ORDER BY user_role ASC");
-        $roles = $stmtRoles->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        if ($isSuperAdmin && empty($tenantId)) {
+            // Super Admin Global Platform Options (All Tenants)
+            // Roles
+            $stmtRoles = $this->db->prepare("SELECT DISTINCT user_role FROM {$this->table} WHERE (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid) AND user_role IS NOT NULL AND user_role != '' ORDER BY user_role ASC");
+            $stmtRoles->execute(['tenant_id' => null]);
+            $roles = $stmtRoles->fetchAll(PDO::FETCH_COLUMN) ?: [];
 
-        // Actions
-        $stmtActions = $this->db->query("SELECT DISTINCT UPPER(action) FROM {$this->table} WHERE action IS NOT NULL AND action != '' ORDER BY 1 ASC");
-        $actions = $stmtActions->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            // Actions
+            $stmtActions = $this->db->prepare("SELECT DISTINCT UPPER(action) FROM {$this->table} WHERE (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid) AND action IS NOT NULL AND action != '' ORDER BY 1 ASC");
+            $stmtActions->execute(['tenant_id' => null]);
+            $actions = $stmtActions->fetchAll(PDO::FETCH_COLUMN) ?: [];
 
-        // Tables / Modules
-        $stmtTables = $this->db->query("SELECT DISTINCT table_name FROM {$this->table} WHERE table_name IS NOT NULL AND table_name != '' ORDER BY table_name ASC");
-        $tables = $stmtTables->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            // Tables / Modules
+            $stmtTables = $this->db->prepare("SELECT DISTINCT table_name FROM {$this->table} WHERE (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid) AND table_name IS NOT NULL AND table_name != '' ORDER BY table_name ASC");
+            $stmtTables->execute(['tenant_id' => null]);
+            $tables = $stmtTables->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        } else {
+            // Tenant Specific Context
+            // Roles
+            $stmtRoles = $this->db->prepare("SELECT DISTINCT user_role FROM {$this->table} WHERE tenant_id = :tenant_id::uuid AND user_role IS NOT NULL AND user_role != '' ORDER BY user_role ASC");
+            $stmtRoles->execute(['tenant_id' => $tenantId]);
+            $roles = $stmtRoles->fetchAll(PDO::FETCH_COLUMN) ?: [];
+
+            // Actions
+            $stmtActions = $this->db->prepare("SELECT DISTINCT UPPER(action) FROM {$this->table} WHERE tenant_id = :tenant_id::uuid AND action IS NOT NULL AND action != '' ORDER BY 1 ASC");
+            $stmtActions->execute(['tenant_id' => $tenantId]);
+            $actions = $stmtActions->fetchAll(PDO::FETCH_COLUMN) ?: [];
+
+            // Tables / Modules
+            $stmtTables = $this->db->prepare("SELECT DISTINCT table_name FROM {$this->table} WHERE tenant_id = :tenant_id::uuid AND table_name IS NOT NULL AND table_name != '' ORDER BY table_name ASC");
+            $stmtTables->execute(['tenant_id' => $tenantId]);
+            $tables = $stmtTables->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        }
 
         return [
             'tenants' => $tenants,

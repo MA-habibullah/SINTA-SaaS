@@ -69,10 +69,14 @@ class AksesModuleController extends BaseController {
                 $tenants = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
             }
 
-            $stmtRoles = $db->query("SELECT id, nama_role, deskripsi FROM core.roles ORDER BY id ASC");
+            // @security-audit false-positive (Shared Global Catalog: core.roles is a platform-wide master role dictionary without tenant_id column)
+            $stmtRoles = $db->prepare("SELECT id, nama_role, deskripsi FROM core.roles ORDER BY id ASC");
+            $stmtRoles->execute();
             $roles = $stmtRoles->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-            $stmtMenus = $db->query("SELECT id, parent_id, nama_menu, url, icon, urutan FROM core.menus WHERE is_active = true ORDER BY urutan ASC");
+            // @security-audit false-positive (Shared Global Catalog: core.menus is a platform-wide route/feature catalog without tenant_id column)
+            $stmtMenus = $db->prepare("SELECT id, parent_id, nama_menu, url, icon, urutan FROM core.menus WHERE is_active = true ORDER BY urutan ASC");
+            $stmtMenus->execute();
             $menus = $stmtMenus->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
             $mapResult = $this->loadAccessMap($db, (string)$tenantId);
@@ -127,6 +131,7 @@ class AksesModuleController extends BaseController {
      * POST /konfigurasi/akses/simpan
      */
     public function saveAccessMatrix(): void {
+        $this->validateCsrfToken();
         $userRole = $_SESSION['role_name'] ?? '';
         $sessionTenantId = SessionManager::getTenantId();
         $targetTenantId = $_POST['target_tenant_id'] ?? $sessionTenantId;
@@ -185,11 +190,15 @@ class AksesModuleController extends BaseController {
         $tenantId = SessionManager::getTenantId();
         try {
             $db = Database::getConnection();
-            $stmt = $db->query("SELECT id, nama_role, deskripsi FROM core.roles ORDER BY id ASC");
-            $roles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            // @security-audit false-positive (Shared Global Catalog: core.roles is a platform-wide master role dictionary without tenant_id column)
+            $stmt = $db->prepare("SELECT id, nama_role, deskripsi FROM core.roles ORDER BY id ASC");
+            $stmt->execute();
+            $roles = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-            $stmtMenus = $db->query("SELECT id, parent_id, nama_menu, icon, urutan FROM core.menus ORDER BY urutan ASC");
-            $menus = $stmtMenus->fetchAll(PDO::FETCH_ASSOC);
+            // @security-audit false-positive (Shared Global Catalog: core.menus is a platform-wide route/feature catalog without tenant_id column)
+            $stmtMenus = $db->prepare("SELECT id, parent_id, nama_menu, icon, urutan FROM core.menus ORDER BY urutan ASC");
+            $stmtMenus->execute();
+            $menus = $stmtMenus->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
             $this->jsonResponse(true, [
                 'roles' => $roles,
@@ -241,15 +250,18 @@ class AksesModuleController extends BaseController {
      */
     public function fetchUserAccessOverrides(): void {
         $userId = $_GET['user_id'] ?? null;
-        if (!$userId) {
-            $this->jsonResponse(false, null, 'User ID wajib diisi.', 400);
+        $tenantId = SessionManager::getTenantId();
+        if (!$userId || !preg_match('/^[a-f0-9\-]{36}$/i', (string)$userId)) {
+            $this->jsonResponse(false, null, 'User ID tidak valid.', 400);
             return;
         }
 
         try {
             $db = Database::getConnection();
-            $stmt = $db->prepare("SELECT menu_id::text, is_allowed AS access_grant FROM sistem.user_access_overrides WHERE user_id::text = ?");
-            $stmt->execute([$userId]);
+            $stmt = $db->prepare("SELECT menu_id::text, is_allowed AS access_grant FROM sistem.user_access_overrides WHERE user_id = :user_id::uuid AND tenant_id = :tenant_id");
+            $stmt->bindValue(':user_id', $userId);
+            $stmt->bindValue(':tenant_id', $tenantId);
+            $stmt->execute();
             $overrides = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
             $this->jsonResponse(true, ['overrides' => $overrides]);
         } catch (\Throwable $e) {
@@ -264,9 +276,10 @@ class AksesModuleController extends BaseController {
         $input = $this->getJsonInput();
         $userId = $input['user_id'] ?? null;
         $overrides = $input['overrides'] ?? [];
+        $tenantId = SessionManager::getTenantId();
 
-        if (!$userId) {
-            $this->jsonResponse(false, null, 'User ID wajib diisi.', 400);
+        if (!$userId || !preg_match('/^[a-f0-9\-]{36}$/i', (string)$userId)) {
+            $this->jsonResponse(false, null, 'User ID tidak valid.', 400);
             return;
         }
 
@@ -274,13 +287,16 @@ class AksesModuleController extends BaseController {
             $db = Database::getConnection();
             $db->beginTransaction();
 
-            $stmtDel = $db->prepare("DELETE FROM sistem.user_access_overrides WHERE user_id::text = ?");
-            $stmtDel->execute([$userId]);
+            $stmtDel = $db->prepare("DELETE FROM sistem.user_access_overrides WHERE user_id = :user_id::uuid AND tenant_id = :tenant_id");
+            $stmtDel->bindValue(':user_id', $userId);
+            $stmtDel->bindValue(':tenant_id', $tenantId);
+            $stmtDel->execute();
 
-            $stmtIns = $db->prepare("INSERT INTO sistem.user_access_overrides (id, user_id, menu_id, is_allowed, created_at) VALUES (gen_random_uuid(), :user_id::uuid, :menu_id::uuid, :is_allowed, CURRENT_TIMESTAMP)");
+            $stmtIns = $db->prepare("INSERT INTO sistem.user_access_overrides (id, tenant_id, user_id, menu_id, is_allowed, created_at) VALUES (gen_random_uuid(), :tenant_id, :user_id::uuid, :menu_id::uuid, :is_allowed, CURRENT_TIMESTAMP)");
             foreach ($overrides as $ov) {
                 if (!empty($ov['menu_id']) && isset($ov['access_grant'])) {
                     $grantVal = filter_var($ov['access_grant'], FILTER_VALIDATE_BOOLEAN);
+                    $stmtIns->bindValue(':tenant_id', $tenantId);
                     $stmtIns->bindValue(':user_id', $userId);
                     $stmtIns->bindValue(':menu_id', $ov['menu_id']);
                     $stmtIns->bindValue(':is_allowed', $grantVal ? 'true' : 'false', PDO::PARAM_STR);

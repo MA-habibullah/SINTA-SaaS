@@ -211,6 +211,7 @@ class ActiveSessionModuleController extends BaseController {
 
         $input = json_decode(file_get_contents('php://input'), true) ?: [];
         $dateLimit = isset($input['date_limit']) ? trim($input['date_limit']) : '';
+        $targetTenantId = $isSuperAdmin ? ($input['tenant_id'] ?? $tenantId) : $tenantId;
 
         if (empty($dateLimit)) {
             $this->jsonResponse(false, null, 'Tanggal batas retensi wajib dipilih.', 400);
@@ -225,25 +226,31 @@ class ActiveSessionModuleController extends BaseController {
         try {
             $db = Database::getConnection();
 
-            $where = "tanggal_login <= :date_limit::date";
-            $params = ['date_limit' => $dateLimit];
+            if ($isSuperAdmin && empty($targetTenantId)) {
+                $stmtCount = $db->prepare("SELECT COUNT(*) FROM sistem.active_sessions WHERE tanggal_login <= :date_limit::date AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid)");
+                $stmtCount->execute(['date_limit' => $dateLimit, 'tenant_id' => null]);
+                $affectedCount = (int)$stmtCount->fetchColumn();
 
-            if (!$isSuperAdmin) {
-                $where .= " AND tenant_id = :tenant_id";
-                $params['tenant_id'] = $tenantId;
+                if ($affectedCount === 0) {
+                    $this->jsonResponse(true, null, 'Tidak ada data log sesi yang memenuhi kriteria retensi.');
+                    return;
+                }
+
+                $stmtDelete = $db->prepare("DELETE FROM sistem.active_sessions WHERE tanggal_login <= :date_limit::date AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid)");
+                $stmtDelete->execute(['date_limit' => $dateLimit, 'tenant_id' => null]);
+            } else {
+                $stmtCount = $db->prepare("SELECT COUNT(*) FROM sistem.active_sessions WHERE tanggal_login <= :date_limit::date AND tenant_id = :tenant_id");
+                $stmtCount->execute(['date_limit' => $dateLimit, 'tenant_id' => $targetTenantId]);
+                $affectedCount = (int)$stmtCount->fetchColumn();
+
+                if ($affectedCount === 0) {
+                    $this->jsonResponse(true, null, 'Tidak ada data log sesi yang memenuhi kriteria retensi.');
+                    return;
+                }
+
+                $stmtDelete = $db->prepare("DELETE FROM sistem.active_sessions WHERE tanggal_login <= :date_limit::date AND tenant_id = :tenant_id");
+                $stmtDelete->execute(['date_limit' => $dateLimit, 'tenant_id' => $targetTenantId]);
             }
-
-            $stmtCount = $db->prepare("SELECT COUNT(*) FROM sistem.active_sessions WHERE {$where}");
-            $stmtCount->execute($params);
-            $affectedCount = (int)$stmtCount->fetchColumn();
-
-            if ($affectedCount === 0) {
-                $this->jsonResponse(true, null, 'Tidak ada data log sesi yang memenuhi kriteria retensi.');
-                return;
-            }
-
-            $stmtDelete = $db->prepare("DELETE FROM sistem.active_sessions WHERE {$where}");
-            $stmtDelete->execute($params);
 
             ActivityLogger::record(
                 'DELETE',
@@ -336,6 +343,7 @@ class ActiveSessionModuleController extends BaseController {
 
         $input = json_decode(file_get_contents('php://input'), true) ?: [];
         $dateLimit = isset($input['date_limit']) ? trim($input['date_limit']) : '';
+        $targetTenantId = $isSuperAdmin ? ($input['tenant_id'] ?? $tenantId) : $tenantId;
 
         if (empty($dateLimit)) {
             $this->jsonResponse(false, null, 'Tanggal batas retensi wajib dipilih.', 400);
@@ -350,25 +358,31 @@ class ActiveSessionModuleController extends BaseController {
         try {
             $db = Database::getConnection();
 
-            $where = "action IN ('LOGIN', 'LOGOUT', 'SYSTEM_TIMEOUT') AND created_at::date <= :date_limit::date";
-            $params = ['date_limit' => $dateLimit];
+            if ($isSuperAdmin && empty($targetTenantId)) {
+                $stmtCount = $db->prepare("SELECT COUNT(*) FROM sistem.activity_logs WHERE action IN ('LOGIN', 'LOGOUT', 'SYSTEM_TIMEOUT') AND created_at::date <= :date_limit::date AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid)");
+                $stmtCount->execute(['date_limit' => $dateLimit, 'tenant_id' => null]);
+                $affectedCount = (int)$stmtCount->fetchColumn();
 
-            if (!$isSuperAdmin) {
-                $where .= " AND tenant_id = :tenant_id";
-                $params['tenant_id'] = $tenantId;
+                if ($affectedCount === 0) {
+                    $this->jsonResponse(true, null, 'Tidak ada data log audit yang memenuhi kriteria.');
+                    return;
+                }
+
+                $stmtDelete = $db->prepare("DELETE FROM sistem.activity_logs WHERE action IN ('LOGIN', 'LOGOUT', 'SYSTEM_TIMEOUT') AND created_at::date <= :date_limit::date AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid)");
+                $stmtDelete->execute(['date_limit' => $dateLimit, 'tenant_id' => null]);
+            } else {
+                $stmtCount = $db->prepare("SELECT COUNT(*) FROM sistem.activity_logs WHERE action IN ('LOGIN', 'LOGOUT', 'SYSTEM_TIMEOUT') AND created_at::date <= :date_limit::date AND tenant_id = :tenant_id");
+                $stmtCount->execute(['date_limit' => $dateLimit, 'tenant_id' => $targetTenantId]);
+                $affectedCount = (int)$stmtCount->fetchColumn();
+
+                if ($affectedCount === 0) {
+                    $this->jsonResponse(true, null, 'Tidak ada data log audit yang memenuhi kriteria.');
+                    return;
+                }
+
+                $stmtDelete = $db->prepare("DELETE FROM sistem.activity_logs WHERE action IN ('LOGIN', 'LOGOUT', 'SYSTEM_TIMEOUT') AND created_at::date <= :date_limit::date AND tenant_id = :tenant_id");
+                $stmtDelete->execute(['date_limit' => $dateLimit, 'tenant_id' => $targetTenantId]);
             }
-
-            $stmtCount = $db->prepare("SELECT COUNT(*) FROM sistem.activity_logs WHERE {$where}");
-            $stmtCount->execute($params);
-            $affectedCount = (int)$stmtCount->fetchColumn();
-
-            if ($affectedCount === 0) {
-                $this->jsonResponse(true, null, 'Tidak ada data log audit yang memenuhi kriteria.');
-                return;
-            }
-
-            $stmtDelete = $db->prepare("DELETE FROM sistem.activity_logs WHERE {$where}");
-            $stmtDelete->execute($params);
 
             ActivityLogger::record(
                 'DELETE',

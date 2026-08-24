@@ -95,6 +95,7 @@ class KelembagaanModuleController extends BaseController {
      * POST /api/v1/sekolah/update
      */
     public function updateProfile(): void {
+        $this->validateCsrfToken();
         $userRole = $_SESSION['role_name'] ?? '';
         $sessionTenantId = SessionManager::getTenantId();
         $targetTenantId = $_POST['tenant_id'] ?? $sessionTenantId;
@@ -161,38 +162,48 @@ class KelembagaanModuleController extends BaseController {
             }
 
             // File Upload: Logo — format: logos/{tenant_id}/{sha1}.ext
+            // finfo_file Magic Bytes & MIME validated via SecurityUploadHelper
             if (!empty($_FILES['logo']['tmp_name']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
-                $newLogoPath = FileStorage::store(
-                    $_FILES['logo']['tmp_name'],
-                    'logos',
-                    $targetTenantId,
-                    null,
-                    'image_only'
-                );
-                if ($newLogoPath !== null) {
-                    // Hapus logo lama
-                    if (!empty($oldTenantData['logo'])) {
-                        FileStorage::deleteOld('storage/app/public/' . $oldTenantData['logo'], $targetTenantId);
+                $valLogo = \App\Helpers\SecurityUploadHelper::validateFile($_FILES['logo'], ['jpg', 'jpeg', 'png', 'webp'], 5 * 1024 * 1024);
+                if ($valLogo['valid']) {
+                    // finfo_file validated
+                    $newLogoPath = FileStorage::store(
+                        $_FILES['logo']['tmp_name'],
+                        'logos',
+                        $targetTenantId,
+                        null,
+                        'image_only'
+                    );
+                    if ($newLogoPath !== null) {
+                        // Hapus logo lama
+                        if (!empty($oldTenantData['logo'])) {
+                            FileStorage::deleteOld('storage/app/public/' . $oldTenantData['logo'], $targetTenantId);
+                        }
+                        $fields['logo'] = str_replace('storage/app/public/', '', $newLogoPath);
                     }
-                    $fields['logo'] = str_replace('storage/app/public/', '', $newLogoPath);
                 }
             }
 
             // File Upload: Sertifikat Akreditasi — format: sertifikat/{tenant_id}/{sha1}.pdf
+            // finfo_file Magic Bytes & MIME validated via SecurityUploadHelper
             if (!empty($_FILES['sertifikat_akreditasi']['tmp_name']) && $_FILES['sertifikat_akreditasi']['error'] === UPLOAD_ERR_OK) {
-                $newCertPath = FileStorage::store(
-                    $_FILES['sertifikat_akreditasi']['tmp_name'],
-                    'sertifikat',
-                    $targetTenantId,
-                    null,
-                    'default'
-                );
-                if ($newCertPath !== null) {
-                    // Hapus sertifikat lama
-                    if (!empty($oldTenantData['sertifikat_akreditasi'])) {
-                        FileStorage::deleteOld('storage/app/public/' . $oldTenantData['sertifikat_akreditasi'], $targetTenantId);
+                $valCert = \App\Helpers\SecurityUploadHelper::validateFile($_FILES['sertifikat_akreditasi'], ['pdf', 'jpg', 'jpeg', 'png'], 10 * 1024 * 1024);
+                if ($valCert['valid']) {
+                    // finfo_file validated
+                    $newCertPath = FileStorage::store(
+                        $_FILES['sertifikat_akreditasi']['tmp_name'],
+                        'sertifikat',
+                        $targetTenantId,
+                        null,
+                        'default'
+                    );
+                    if ($newCertPath !== null) {
+                        // Hapus sertifikat lama
+                        if (!empty($oldTenantData['sertifikat_akreditasi'])) {
+                            FileStorage::deleteOld('storage/app/public/' . $oldTenantData['sertifikat_akreditasi'], $targetTenantId);
+                        }
+                        $fields['sertifikat_akreditasi'] = str_replace('storage/app/public/', '', $newCertPath);
                     }
-                    $fields['sertifikat_akreditasi'] = str_replace('storage/app/public/', '', $newCertPath);
                 }
             }
 

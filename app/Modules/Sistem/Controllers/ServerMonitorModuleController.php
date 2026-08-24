@@ -394,6 +394,7 @@ class ServerMonitorModuleController extends BaseController
 
     public function saveNetworkConfig(): void
     {
+        $this->validateCsrfToken();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->jsonResponse(['error' => 'Method not allowed'], 405);
             return;

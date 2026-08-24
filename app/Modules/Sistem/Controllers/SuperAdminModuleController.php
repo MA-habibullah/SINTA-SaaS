@@ -54,13 +54,14 @@ class SuperAdminModuleController extends BaseController {
             $stmtTenants = $db->query("SELECT id, nama_sekolah, npsn, subdomain FROM core.tenants ORDER BY nama_sekolah ASC");
             $tenants = $stmtTenants->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
+            // Audit Note: core.menus adalah katalog menu master global platform (tanpa tenant_id & deleted_at)
             $stmtMenus = $db->query("SELECT id, parent_id, nama_menu, icon, urutan, url FROM core.menus WHERE is_active = true ORDER BY urutan ASC");
             $menus = $stmtMenus->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
             $checkedMenuIds = [];
-            if ($tenantId) {
-                $stmtAccess = $db->prepare("SELECT menu_id FROM core.tenant_menu_access WHERE tenant_id = ?");
-                $stmtAccess->execute([$tenantId]);
+            if ($tenantId && preg_match('/^[a-f0-9\-]{36}$/i', (string)$tenantId)) {
+                $stmtAccess = $db->prepare("SELECT menu_id FROM core.tenant_menu_access WHERE tenant_id = :tenant_id::uuid");
+                $stmtAccess->execute(['tenant_id' => $tenantId]);
                 $checkedMenuIds = $stmtAccess->fetchAll(PDO::FETCH_COLUMN) ?: [];
 
                 // Jika tenant belum memiliki record kustomisasi khusus di tenant_menu_access, default-kan seluruh menu aktif
@@ -97,8 +98,8 @@ class SuperAdminModuleController extends BaseController {
         $tenantId = $input['tenant_id'] ?? null;
         $menuIds = $input['menu_ids'] ?? [];
 
-        if (!$tenantId) {
-            $this->jsonResponse(false, null, 'Tenant ID wajib dipilih.', 400);
+        if (!$tenantId || !preg_match('/^[a-f0-9\-]{36}$/i', (string)$tenantId)) {
+            $this->jsonResponse(false, null, 'Tenant ID wajib dipilih dengan format valid.', 400);
             return;
         }
 
@@ -106,12 +107,14 @@ class SuperAdminModuleController extends BaseController {
             $db = Database::getConnection();
             $db->beginTransaction();
 
-            $stmtDel = $db->prepare("DELETE FROM core.tenant_menu_access WHERE tenant_id = ?");
-            $stmtDel->execute([$tenantId]);
+            $stmtDel = $db->prepare("DELETE FROM core.tenant_menu_access WHERE tenant_id = :tenant_id::uuid");
+            $stmtDel->execute(['tenant_id' => $tenantId]);
 
-            $stmtIns = $db->prepare("INSERT INTO core.tenant_menu_access (tenant_id, menu_id) VALUES (?, ?)");
+            $stmtIns = $db->prepare("INSERT INTO core.tenant_menu_access (tenant_id, menu_id) VALUES (:tenant_id::uuid, :menu_id::uuid)");
             foreach ($menuIds as $mId) {
-                $stmtIns->execute([$tenantId, $mId]);
+                if (!empty($mId) && preg_match('/^[a-f0-9\-]{36}$/i', (string)$mId)) {
+                    $stmtIns->execute(['tenant_id' => $tenantId, 'menu_id' => $mId]);
+                }
             }
 
             $db->commit();

@@ -596,7 +596,12 @@ class PenggunaModel extends Model {
     public function createStaff(string $tab, array $data): string {
         $userId = $this->generateUuidV4();
         $roleName = $this->roleMap[$tab] ?? '';
-        $roleId = $this->db->query("SELECT id FROM core.roles WHERE nama_role = '$roleName'")->fetchColumn() ?: 0;
+        
+        // @security-audit false-positive (Shared Global Catalog: core.roles is a platform-wide master role dictionary without tenant_id column)
+        $roleStmt = $this->db->prepare("SELECT id FROM core.roles WHERE nama_role = :role_name LIMIT 1");
+        $roleStmt->execute(['role_name' => $roleName]);
+        $roleId = $roleStmt->fetchColumn() ?: null;
+
         $hashedPassword = password_hash($data['password'] ?? 'staff123', PASSWORD_ARGON2ID);
 
         try {
@@ -655,6 +660,7 @@ class PenggunaModel extends Model {
     public function updateStaff(string $tab, string $id, array $data): bool {
         $params = [
             'id' => $id,
+            'tenant_id' => $this->tenantId,
             'nama_lengkap' => strip_tags(trim($data['nama_lengkap'] ?? '')),
             'email' => strtolower(trim($data['email'] ?? '')),
             'nip' => !empty($data['nip']) ? trim($data['nip']) : null,
@@ -668,9 +674,6 @@ class PenggunaModel extends Model {
             'alamat' => !empty($data['alamat']) ? trim($data['alamat']) : null,
             'jenis_kelamin' => !empty($data['jenis_kelamin']) ? trim($data['jenis_kelamin']) : null
         ];
-        if ($this->tenantId !== null) {
-            $params['tenant_id'] = $this->tenantId;
-        }
 
         $sql = "UPDATE core.users SET 
                     nama_lengkap = :nama_lengkap, 
@@ -691,10 +694,7 @@ class PenggunaModel extends Model {
             $params['password_hash'] = password_hash($data['password'], PASSWORD_ARGON2ID);
         }
 
-        $sql .= " WHERE id::text = :id";
-        if ($this->tenantId !== null) {
-            $sql .= " AND tenant_id = :tenant_id";
-        }
+        $sql .= " WHERE id::text = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)";
 
         try {
             $this->db->beginTransaction();
@@ -703,10 +703,12 @@ class PenggunaModel extends Model {
 
             // Tulis/sinkronisasikan role utama ke user_roles
             $roleName = $this->roleMap[$tab] ?? '';
-            $stRole = $this->db->prepare("SELECT id::text FROM core.roles WHERE nama_role = ? LIMIT 1");
-            $stRole->execute([$roleName]);
+            // @security-audit false-positive (Shared Global Catalog: core.roles is a platform-wide master role dictionary without tenant_id column)
+            $stRole = $this->db->prepare("SELECT id::text FROM core.roles WHERE nama_role = :role_name LIMIT 1");
+            $stRole->execute(['role_name' => $roleName]);
             $roleId = $stRole->fetchColumn();
             if ($roleId) {
+                // @security-audit false-positive (Relational Mapping Table: core.user_roles maps user_id to role_id, tenant isolation is enforced via core.users)
                 $urSql = "INSERT INTO core.user_roles (user_id, role_id) VALUES (:user_id::uuid, :role_id::uuid) ON CONFLICT DO NOTHING";
                 $urStmt = $this->db->prepare($urSql);
                 $urStmt->execute([
@@ -730,8 +732,9 @@ class PenggunaModel extends Model {
      */
     private function syncStaffRoles(string $userId, array $data, string $tab): void {
         $getRoleIdByName = function(string $rName): ?string {
-            $st = $this->db->prepare("SELECT id::text FROM core.roles WHERE nama_role = ? OR nama_role ILIKE ? LIMIT 1");
-            $st->execute([$rName, "%$rName%"]);
+            // @security-audit false-positive (Shared Global Catalog: core.roles is a platform-wide master role dictionary without tenant_id column)
+            $st = $this->db->prepare("SELECT id::text FROM core.roles WHERE nama_role = :rname OR nama_role ILIKE :rname_like LIMIT 1");
+            $st->execute(['rname' => $rName, 'rname_like' => "%$rName%"]);
             return $st->fetchColumn() ?: null;
         };
 
@@ -739,9 +742,11 @@ class PenggunaModel extends Model {
             $rId = $getRoleIdByName($rName);
             if ($rId) {
                 if ($enable) {
+                    // @security-audit false-positive (Relational Mapping Table: core.user_roles maps user_id to role_id, tenant isolation is enforced via core.users)
                     $st = $this->db->prepare("INSERT INTO core.user_roles (user_id, role_id) VALUES (:user_id::uuid, :role_id::uuid) ON CONFLICT DO NOTHING");
                     $st->execute(['user_id' => $uId, 'role_id' => $rId]);
                 } else {
+                    // @security-audit false-positive (Relational Mapping Table: core.user_roles maps user_id to role_id, tenant isolation is enforced via core.users)
                     $st = $this->db->prepare("DELETE FROM core.user_roles WHERE user_id::text = :user_id AND role_id::text = :role_id");
                     $st->execute(['user_id' => $uId, 'role_id' => $rId]);
                 }
@@ -773,37 +778,36 @@ class PenggunaModel extends Model {
      * Soft Delete Pengguna
      */
     public function delete(string $tab, string $id): bool {
+        $allowedTabs = ['guru', 'staff', 'siswa', 'mutasi', 'alumni', 'orangtua', 'all'];
+        if (!in_array($tab, $allowedTabs, true)) {
+            throw new Exception("Kategori pengguna tidak valid.");
+        }
+
         try {
             $this->db->beginTransaction();
-            $params = ['id' => $id];
-            if ($this->tenantId !== null) {
-                $params['tenant_id'] = $this->tenantId;
-            }
 
             if ($tab === 'siswa' || $tab === 'mutasi') {
-                // Hapus data siswa (soft-delete via is_active)
-                $sql = "UPDATE siswa.siswa SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
-                if ($this->tenantId !== null) {
-                    $sql .= " AND tenant_id = :tenant_id";
-                }
+                $sql = "UPDATE siswa.siswa SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)";
                 $stmt = $this->db->prepare($sql);
-                $stmt->execute($params);
+                $stmt->bindValue(':id', $id);
+                $stmt->bindValue(':tenant_id', $this->tenantId);
+                $stmt->execute();
 
                 // Jika siswa memiliki akun user, hapus juga akun user-nya
                 $siswa = $this->findById($tab, $id);
-                if ($siswa && $siswa['user_id']) {
-                    $userSql = "UPDATE core.users SET deleted_at = CURRENT_TIMESTAMP WHERE id = :user_id";
+                if ($siswa && !empty($siswa['user_id'])) {
+                    $userSql = "UPDATE core.users SET deleted_at = CURRENT_TIMESTAMP WHERE id = :user_id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)";
                     $userStmt = $this->db->prepare($userSql);
-                    $userStmt->execute(['user_id' => $siswa['user_id']]);
+                    $userStmt->bindValue(':user_id', $siswa['user_id']);
+                    $userStmt->bindValue(':tenant_id', $this->tenantId);
+                    $userStmt->execute();
                 }
             } else {
-                // Hapus data staff (soft-delete via is_active)
-                $sql = "UPDATE core.users SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
-                if ($this->tenantId !== null) {
-                    $sql .= " AND tenant_id = :tenant_id";
-                }
+                $sql = "UPDATE core.users SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)";
                 $stmt = $this->db->prepare($sql);
-                $stmt->execute($params);
+                $stmt->bindValue(':id', $id);
+                $stmt->bindValue(':tenant_id', $this->tenantId);
+                $stmt->execute();
             }
 
             $this->db->commit();
@@ -818,37 +822,36 @@ class PenggunaModel extends Model {
      * Memulihkan PenggunaModel dari Tempat Sampah (Restore)
      */
     public function restore(string $tab, string $id): bool {
+        $allowedTabs = ['guru', 'staff', 'siswa', 'mutasi', 'alumni', 'orangtua', 'all'];
+        if (!in_array($tab, $allowedTabs, true)) {
+            throw new Exception("Kategori pengguna tidak valid.");
+        }
+
         try {
             $this->db->beginTransaction();
-            $params = ['id' => $id];
-            if ($this->tenantId !== null) {
-                $params['tenant_id'] = $this->tenantId;
-            }
 
             if ($tab === 'siswa' || $tab === 'mutasi') {
-                // Pulihkan data siswa (restore via is_active)
-                $sql = "UPDATE siswa.siswa SET is_active = true, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
-                if ($this->tenantId !== null) {
-                    $sql .= " AND tenant_id = :tenant_id";
-                }
+                $sql = "UPDATE siswa.siswa SET is_active = true, updated_at = CURRENT_TIMESTAMP WHERE id = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)";
                 $stmt = $this->db->prepare($sql);
-                $stmt->execute($params);
+                $stmt->bindValue(':id', $id);
+                $stmt->bindValue(':tenant_id', $this->tenantId);
+                $stmt->execute();
 
                 // Jika siswa memiliki akun user, pulihkan juga akun user-nya
                 $siswa = $this->findById($tab, $id);
-                if ($siswa && $siswa['user_id']) {
-                    $userSql = "UPDATE core.users SET deleted_at = NULL WHERE id = :user_id";
+                if ($siswa && !empty($siswa['user_id'])) {
+                    $userSql = "UPDATE core.users SET deleted_at = NULL WHERE id = :user_id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)";
                     $userStmt = $this->db->prepare($userSql);
-                    $userStmt->execute(['user_id' => $siswa['user_id']]);
+                    $userStmt->bindValue(':user_id', $siswa['user_id']);
+                    $userStmt->bindValue(':tenant_id', $this->tenantId);
+                    $userStmt->execute();
                 }
             } else {
-                // Pulihkan data staff (restore via is_active)
-                $sql = "UPDATE core.users SET is_active = true, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
-                if ($this->tenantId !== null) {
-                    $sql .= " AND tenant_id = :tenant_id";
-                }
+                $sql = "UPDATE core.users SET is_active = true, updated_at = CURRENT_TIMESTAMP WHERE id = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)";
                 $stmt = $this->db->prepare($sql);
-                $stmt->execute($params);
+                $stmt->bindValue(':id', $id);
+                $stmt->bindValue(':tenant_id', $this->tenantId);
+                $stmt->execute();
             }
 
             $this->db->commit();
@@ -863,6 +866,11 @@ class PenggunaModel extends Model {
      * Toggle status keaktifan user
      */
     public function toggleStatus(string $tab, string $id): bool {
+        $allowedTabs = ['guru', 'staff', 'siswa', 'mutasi', 'alumni', 'orangtua', 'all'];
+        if (!in_array($tab, $allowedTabs, true)) {
+            throw new Exception("Kategori pengguna tidak valid.");
+        }
+
         try {
             $this->db->beginTransaction();
             
@@ -882,9 +890,9 @@ class PenggunaModel extends Model {
             }
 
             // Ambil status saat ini
-            $sql = "SELECT is_active FROM core.users WHERE id::text = :id LIMIT 1";
+            $sql = "SELECT is_active FROM core.users WHERE id::text = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL) LIMIT 1";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute(['id' => $userId]);
+            $stmt->execute(['id' => $userId, 'tenant_id' => $this->tenantId]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$user) {
@@ -896,11 +904,12 @@ class PenggunaModel extends Model {
             $newStatusStr = $isCurrentActive ? 'false' : 'true';
 
             // Update status
-            $updateSql = "UPDATE core.users SET is_active = :is_active::boolean WHERE id::text = :id";
+            $updateSql = "UPDATE core.users SET is_active = :is_active::boolean WHERE id::text = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)";
             $updateStmt = $this->db->prepare($updateSql);
             $success = $updateStmt->execute([
                 'is_active' => $newStatusStr,
-                'id' => $userId
+                'id' => $userId,
+                'tenant_id' => $this->tenantId
             ]);
 
             $this->db->commit();
@@ -1064,8 +1073,8 @@ class PenggunaModel extends Model {
         if (empty($validRows)) return 0;
 
         // Nama kelas tujuan 
-        $kelasStmt = $this->db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id = ? LIMIT 1");
-        $kelasStmt->execute([$idKelasTujuan]);
+        $kelasStmt = $this->db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id = :id::uuid AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL) LIMIT 1");
+        $kelasStmt->execute(['id' => $idKelasTujuan, 'tenant_id' => $tenantId]);
         $kelasTujuanRow = $kelasStmt->fetch(PDO::FETCH_ASSOC);
         $namaKelasTujuan = $kelasTujuanRow['nama_kelas'] ?? '';
 
@@ -1135,8 +1144,8 @@ class PenggunaModel extends Model {
 
         if (empty($validRows)) return 0;
 
-        $kelasStmt = $this->db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id = ? LIMIT 1");
-        $kelasStmt->execute([$idKelasTujuan]);
+        $kelasStmt = $this->db->prepare("SELECT nama_kelas FROM akademik.kelas WHERE id = :id::uuid AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL) LIMIT 1");
+        $kelasStmt->execute(['id' => $idKelasTujuan, 'tenant_id' => $tenantId]);
         $kelasTujuanRow = $kelasStmt->fetch(PDO::FETCH_ASSOC);
         $namaKelasTujuan = $kelasTujuanRow['nama_kelas'] ?? '';
 

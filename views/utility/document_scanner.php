@@ -847,6 +847,13 @@
         showToast('OpenCV.js berhasil dimuat. Siap memindai!', 'success');
     };
 
+    function setSafeHTML(element, htmlString) {
+        if (!element) return;
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlString || '', 'text/html');
+        element.replaceChildren(...doc.body.childNodes);
+    }
+
     // 2. PARAMS & MODE SELECTOR
     function initModeSelector() {
         modeSingleBtn.addEventListener('click', () => {
@@ -856,7 +863,7 @@
                 modeBookBtn.classList.remove('active');
                 toggleSpineBtn.classList.remove('hidden');
 
-                document.getElementById('tip-text').innerHTML = '<strong>Tips:</strong> Geser titik penanda berwarna biru (cyan) pada sudut dokumen di atas jika hasil potong otomatis kurang presisi.';
+                setSafeHTML(document.getElementById('tip-text'), '<strong>Tips:</strong> Geser titik penanda berwarna biru (cyan) pada sudut dokumen di atas jika hasil potong otomatis kurang presisi.');
                 document.getElementById('comp-size-label').innerText = "Ukuran Hasil";
                 document.getElementById('comp-ratio-label').innerText = "Rasio Hemat";
 
@@ -895,7 +902,8 @@
                 modeSingleBtn.classList.remove('active');
                 toggleSpineBtn.classList.add('hidden');
 
-                document.getElementById('tip-text').innerHTML = `<strong>Mode Buku:</strong> Geser pin <strong style="color:var(--accent-cyan)">Cyan</strong> untuk halaman kiri, dan pin <strong style="color:var(--accent-pink)">Pink/Magenta</strong> untuk halaman kanan.`;
+                document.getElementById('tip-text');
+                setSafeHTML(document.getElementById('tip-text'), `<strong>Mode Buku:</strong> Geser pin <strong style="color:var(--accent-cyan)">Cyan</strong> untuk halaman kiri, dan pin <strong style="color:var(--accent-pink)">Pink/Magenta</strong> untuk halaman kanan.`);
                 document.getElementById('comp-size-label').innerText = "Ukuran Total";
                 document.getElementById('comp-ratio-label').innerText = "Rasio Hemat";
 
@@ -929,13 +937,13 @@
             isSpineActive = !isSpineActive;
             if (isSpineActive) {
                 toggleSpineBtn.classList.add('active');
-                toggleSpineBtn.innerHTML = `<i data-lucide="split" style="width: 14px; height: 14px;" class="me-1 inline-block align-middle"></i><span class="align-middle">Nonaktifkan Pembatas Buku</span>`;
+                setSafeHTML(toggleSpineBtn, `<i data-lucide="split" style="width: 14px; height: 14px;" class="me-1 inline-block align-middle"></i><span class="align-middle">Nonaktifkan Pembatas Buku</span>`);
                 spineDivider.classList.remove('hidden');
                 if (spineX > 0.95) spineX = 0.5;
                 showToast('Pembatas buku diaktifkan. Seret garis kuning ke lipatan buku.', 'info');
             } else {
                 toggleSpineBtn.classList.remove('active');
-                toggleSpineBtn.innerHTML = `<i data-lucide="split" style="width: 14px; height: 14px;" class="me-1 inline-block align-middle"></i><span class="align-middle">Aktifkan Pembatas Buku</span>`;
+                setSafeHTML(toggleSpineBtn, `<i data-lucide="split" style="width: 14px; height: 14px;" class="me-1 inline-block align-middle"></i><span class="align-middle">Aktifkan Pembatas Buku</span>`);
                 spineDivider.classList.add('hidden');
                 spineX = 1.0;
                 showToast('Pembatas buku dinonaktifkan.', 'info');
@@ -1336,10 +1344,10 @@
         if (type === 'success') icon = 'check-circle-2';
         if (type === 'error')   icon = 'alert-triangle';
 
-        toast.innerHTML = `
+        setSafeHTML(toast, `
             <i data-lucide="${icon}" style="width: 18px; height: 18px;"></i>
             <span>${message}</span>
-        `;
+        `);
 
         container.appendChild(toast);
         safeCreateIcons({ attrs: { class: 'lucide-icon' } });
@@ -1717,7 +1725,7 @@
             spineX = detectedX;
             isSpineActive = true;
             toggleSpineBtn.classList.add('active');
-            toggleSpineBtn.innerHTML = `<i data-lucide="split" style="width: 14px; height: 14px;" class="me-1 inline-block align-middle"></i><span class="align-middle">Nonaktifkan Pembatas Buku</span>`;
+            setSafeHTML(toggleSpineBtn, `<i data-lucide="split" style="width: 14px; height: 14px;" class="me-1 inline-block align-middle"></i><span class="align-middle">Nonaktifkan Pembatas Buku</span>`);
 
             spineDivider.classList.remove('hidden');
             spineDivider.style.left = `${spineX * 100}%`;
@@ -1725,7 +1733,7 @@
         } else {
             isSpineActive = false;
             toggleSpineBtn.classList.remove('active');
-            toggleSpineBtn.innerHTML = `<i data-lucide="split" style="width: 14px; height: 14px;" class="me-1 inline-block align-middle"></i><span class="align-middle">Aktifkan Pembatas Buku</span>`;
+            setSafeHTML(toggleSpineBtn, `<i data-lucide="split" style="width: 14px; height: 14px;" class="me-1 inline-block align-middle"></i><span class="align-middle">Aktifkan Pembatas Buku</span>`);
             if (!isBookMode) {
                 spineDivider.classList.add('hidden');
                 spineX = 1.0;
@@ -2823,7 +2831,7 @@
                 }
 
                 editingPageId = null;
-                addToPdfBtn.innerHTML = `<i data-lucide="plus-circle" style="width: 14px; height: 14px;" class="me-1 inline-block align-middle"></i><span class="align-middle">Simpan Halaman Aktif</span>`;
+                setSafeHTML(addToPdfBtn, `<i data-lucide="plus-circle" style="width: 14px; height: 14px;" class="me-1 inline-block align-middle"></i><span class="align-middle">Simpan Halaman Aktif</span>`);
                 addToPdfBtn.style.borderColor = 'var(--accent-cyan)';
                 addToPdfBtn.style.color = 'var(--accent-cyan)';
                 safeCreateIcons();
@@ -2953,7 +2961,7 @@
 
     function loadPageForEditing(page) {
         editingPageId = page.id;
-        addToPdfBtn.innerHTML = `<i data-lucide="check-circle" style="width: 14px; height: 14px;" class="me-1 inline-block align-middle"></i><span class="align-middle">Simpan Perubahan</span>`;
+        setSafeHTML(addToPdfBtn, `<i data-lucide="check-circle" style="width: 14px; height: 14px;" class="me-1 inline-block align-middle"></i><span class="align-middle">Simpan Perubahan</span>`);
         addToPdfBtn.style.borderColor = 'var(--accent-pink)';
         addToPdfBtn.style.color = 'var(--accent-pink)';
         safeCreateIcons();
@@ -3053,18 +3061,18 @@
         pdfPagesCountSpan.innerText = pdfPageQueue.length;
 
         if (pdfPageQueue.length === 0) {
-            pdfThumbnailsContainer.innerHTML = `
+            setSafeHTML(pdfThumbnailsContainer, `
               <div id="pdf-queue-empty-state" class="w-100 text-center text-muted fs-8 py-4">
                 <i data-lucide="list-ordered" style="width: 24px; height: 24px; opacity: 0.4;" class="mb-2"></i>
                 <p class="mb-0">Belum ada halaman disimpan. Unggah beberapa foto sekaligus (batch) atau tambahkan halaman aktif di atas.</p>
               </div>
-            `;
+            `);
             safeCreateIcons();
             generatePdfBtn.classList.add('disabled');
             return;
         }
 
-        pdfThumbnailsContainer.innerHTML = '';
+        pdfThumbnailsContainer.replaceChildren();
 
         pdfPageQueue.forEach((page, index) => {
             const card = document.createElement('div');
@@ -3089,7 +3097,7 @@
             ctrlBar.style = `display: flex; justify-content: space-between; align-items: center; margin-top: 4px;`;
 
             const moveLeft = document.createElement('button');
-            moveLeft.innerHTML = `&larr;`;
+            moveLeft.textContent = '←';
             moveLeft.style = `background: none; border: none; color: var(--text-muted); font-size: 0.8rem; cursor: pointer; padding: 2px 6px;`;
             if (index === 0) moveLeft.style.opacity = '0.35';
             moveLeft.addEventListener('click', (e) => {
@@ -3098,7 +3106,7 @@
             });
 
             const moveRight = document.createElement('button');
-            moveRight.innerHTML = `&rarr;`;
+            moveRight.textContent = '→';
             moveRight.style = `background: none; border: none; color: var(--text-muted); font-size: 0.8rem; cursor: pointer; padding: 2px 6px;`;
             if (index === pdfPageQueue.length - 1) moveRight.style.opacity = '0.35';
             moveRight.addEventListener('click', (e) => {
@@ -3107,7 +3115,7 @@
             });
 
             const delBtn = document.createElement('button');
-            delBtn.innerHTML = `&times;`;
+            delBtn.textContent = '×';
             delBtn.style = `background: none; border: none; color: #f43f5e; font-size: 1.1rem; font-weight: bold; cursor: pointer; padding: 0 4px; line-height: 1;`;
             delBtn.title = "Hapus Halaman";
             delBtn.addEventListener('click', (e) => {

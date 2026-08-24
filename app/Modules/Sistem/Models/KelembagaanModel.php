@@ -398,39 +398,25 @@ class KelembagaanModel extends Model {
         $fullTable = $this->getTableFullName($table);
         $meta      = $this->allowedTables[$table];
 
+        $params = [
+            'id'        => $id,
+            'tenant_id' => $this->tenantId
+        ];
+
         if ($table === 'kelas') {
             $sets = ["nama_kelas = :nama_kelas", "kode_kelas = :kode_kelas", "id_jenjang = :id_jenjang", "id_jurusan = :id_jurusan"];
-            $params = [
-                'id'         => $id,
-                'nama_kelas' => strip_tags(trim($data['nama_kelas'] ?? $data['nama'] ?? '')),
-                'kode_kelas' => strip_tags(trim($data['kode_kelas'] ?? $data['kode'] ?? '')),
-                'id_jenjang' => !empty($data['id_jenjang']) ? strip_tags(trim($data['id_jenjang'])) : null,
-                'id_jurusan' => !empty($data['id_jurusan']) ? strip_tags(trim($data['id_jurusan'])) : null
-            ];
-            if ($this->tenantId !== null) {
-                $params['tenant_id'] = $this->tenantId;
-            }
+            $params['nama_kelas'] = strip_tags(trim($data['nama_kelas'] ?? $data['nama'] ?? ''));
+            $params['kode_kelas'] = strip_tags(trim($data['kode_kelas'] ?? $data['kode'] ?? ''));
+            $params['id_jenjang'] = !empty($data['id_jenjang']) ? strip_tags(trim($data['id_jenjang'])) : null;
+            $params['id_jurusan'] = !empty($data['id_jurusan']) ? strip_tags(trim($data['id_jurusan'])) : null;
         } elseif ($table === 'kurikulum') {
             $sets = ["nama_ref_kurikulum = :nama_ref_kurikulum", "kategori = :kategori"];
-            $params = [
-                'id'                 => $id,
-                'nama_ref_kurikulum' => strip_tags(trim($data['nama_kurikulum'] ?? $data['nama'] ?? '')),
-                'kategori'           => strip_tags(trim($data['tipe_penilaian'] ?? 'sederhana'))
-            ];
-            if ($this->tenantId !== null) {
-                $params['tenant_id'] = $this->tenantId;
-            }
+            $params['nama_ref_kurikulum'] = strip_tags(trim($data['nama_kurikulum'] ?? $data['nama'] ?? ''));
+            $params['kategori']           = strip_tags(trim($data['tipe_penilaian'] ?? 'sederhana'));
         } else {
             $namaVal = strip_tags(trim($data['nama'] ?? $data[$meta['name_field']] ?? $data['kode'] ?? ''));
             $sets    = ["{$meta['name_field']} = :nama"];
-            $params  = [
-                'id'   => $id,
-                'nama' => $namaVal
-            ];
-
-            if ($this->tenantId !== null) {
-                $params['tenant_id'] = $this->tenantId;
-            }
+            $params['nama'] = $namaVal;
 
             if ($meta['code_field'] !== 'id' && $meta['code_field'] !== $meta['name_field']) {
                 $sets[] = "{$meta['code_field']} = :code_val";
@@ -440,10 +426,7 @@ class KelembagaanModel extends Model {
 
         try {
             $this->db->beginTransaction();
-            $sql = "UPDATE {$fullTable} SET " . implode(', ', $sets) . " WHERE id::text = :id";
-            if ($this->tenantId !== null) {
-                $sql .= " AND tenant_id::text = :tenant_id";
-            }
+            $sql = "UPDATE {$fullTable} SET " . implode(', ', $sets) . " WHERE id::text = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)";
             $stmt = $this->db->prepare($sql);
             $success = $stmt->execute($params);
             $this->db->commit();
@@ -464,14 +447,14 @@ class KelembagaanModel extends Model {
         $reasons = [];
 
         if ($table === 'mata_pelajaran') {
-            $stmt = $this->db->prepare("SELECT COUNT(*) FROM akademik.pemetaan_mapel WHERE mapel_id::text = ? AND is_active = true");
-            $stmt->execute([$id]);
+            $stmt = $this->db->prepare("SELECT COUNT(*) FROM akademik.pemetaan_mapel WHERE mapel_id::text = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL) AND is_active = true");
+            $stmt->execute(['id' => $id, 'tenant_id' => $this->tenantId]);
             if ($stmt->fetchColumn() > 0) {
                 $reasons[] = "Pemetaan Kelompok Mata Pelajaran";
             }
         } elseif ($table === 'kelas') {
-            $stmt = $this->db->prepare("SELECT COUNT(*) FROM siswa.siswa WHERE (kelas_saat_ini::text = ? OR kelas_saat_ini = ?) AND is_active = true");
-            $stmt->execute([$id, $id]);
+            $stmt = $this->db->prepare("SELECT COUNT(*) FROM siswa.siswa WHERE (kelas_saat_ini::text = :id OR kelas_saat_ini = :id) AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL) AND is_active = true");
+            $stmt->execute(['id' => $id, 'tenant_id' => $this->tenantId]);
             if ($stmt->fetchColumn() > 0) {
                 $reasons[] = "Data Siswa Aktif";
             }
@@ -495,14 +478,9 @@ class KelembagaanModel extends Model {
 
         try {
             $this->db->beginTransaction();
-            $sql = "UPDATE {$fullTable} SET is_active = false WHERE id::text = :id";
-            $params = ['id' => $id];
-            if ($this->tenantId !== null) {
-                $sql .= " AND tenant_id::text = :tenant_id";
-                $params['tenant_id'] = $this->tenantId;
-            }
+            $sql = "UPDATE {$fullTable} SET is_active = false WHERE id::text = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)";
             $stmt = $this->db->prepare($sql);
-            $success = $stmt->execute($params);
+            $success = $stmt->execute(['id' => $id, 'tenant_id' => $this->tenantId]);
             $this->db->commit();
             return $success;
         } catch (\Throwable $e) {
@@ -517,14 +495,9 @@ class KelembagaanModel extends Model {
 
         try {
             $this->db->beginTransaction();
-            $sql = "UPDATE {$fullTable} SET is_active = true WHERE id::text = :id";
-            $params = ['id' => $id];
-            if ($this->tenantId !== null) {
-                $sql .= " AND tenant_id::text = :tenant_id";
-                $params['tenant_id'] = $this->tenantId;
-            }
+            $sql = "UPDATE {$fullTable} SET is_active = true WHERE id::text = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)";
             $stmt = $this->db->prepare($sql);
-            $success = $stmt->execute($params);
+            $success = $stmt->execute(['id' => $id, 'tenant_id' => $this->tenantId]);
             $this->db->commit();
             return $success;
         } catch (\Throwable $e) {
@@ -540,14 +513,9 @@ class KelembagaanModel extends Model {
         try {
             $this->db->beginTransaction();
             
-            $sql = "SELECT is_active FROM {$fullTable} WHERE id::text = :id LIMIT 1";
-            $params = ['id' => $id];
-            if ($this->tenantId !== null) {
-                $sql = "SELECT is_active FROM {$fullTable} WHERE id::text = :id AND tenant_id::text = :tenant_id LIMIT 1";
-                $params['tenant_id'] = $this->tenantId;
-            }
+            $sql = "SELECT is_active FROM {$fullTable} WHERE id::text = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL) LIMIT 1";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute($params);
+            $stmt->execute(['id' => $id, 'tenant_id' => $this->tenantId]);
             $current = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if (!$current) {
@@ -557,15 +525,9 @@ class KelembagaanModel extends Model {
 
             $newStatus = $current['is_active'] ? 'false' : 'true';
 
-            $updateSql = "UPDATE {$fullTable} SET is_active = {$newStatus} WHERE id::text = :id";
-            $updateParams = ['id' => $id];
-            if ($this->tenantId !== null) {
-                $updateSql .= " AND tenant_id::text = :tenant_id";
-                $updateParams['tenant_id'] = $this->tenantId;
-            }
-            
+            $updateSql = "UPDATE {$fullTable} SET is_active = {$newStatus} WHERE id::text = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)";
             $updateStmt = $this->db->prepare($updateSql);
-            $success = $updateStmt->execute($updateParams);
+            $success = $updateStmt->execute(['id' => $id, 'tenant_id' => $this->tenantId]);
             
             $this->db->commit();
             return $success;

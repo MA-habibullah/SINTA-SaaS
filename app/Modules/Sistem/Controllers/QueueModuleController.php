@@ -213,7 +213,7 @@ class QueueModuleController extends BaseController {
         $input = $this->getJsonInput();
         $jobId = $input['id'] ?? '';
 
-        if (empty($jobId)) {
+        if (empty($jobId) || !preg_match('/^[a-f0-9\-]{36}$/i', (string)$jobId)) {
             $this->jsonResponse(false, null, 'ID Pekerjaan tidak valid.', 400);
             return;
         }
@@ -221,8 +221,13 @@ class QueueModuleController extends BaseController {
         try {
             $db = Database::getConnection();
 
-            $stmt = $db->prepare("SELECT * FROM sistem.queue_jobs WHERE id = :id LIMIT 1");
-            $stmt->execute(['id' => $jobId]);
+            if ($role === 'super_admin') {
+                $stmt = $db->prepare("SELECT * FROM sistem.queue_jobs WHERE id = :id::uuid LIMIT 1");
+                $stmt->execute(['id' => $jobId]);
+            } else {
+                $stmt = $db->prepare("SELECT * FROM sistem.queue_jobs WHERE id = :id::uuid AND (tenant_id = :tenant_id::uuid OR tenant_id IS NULL) LIMIT 1");
+                $stmt->execute(['id' => $jobId, 'tenant_id' => $sessionTenantId]);
+            }
             $job = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$job) {
@@ -230,19 +235,30 @@ class QueueModuleController extends BaseController {
                 return;
             }
 
-            if ($role !== 'super_admin' && $job['tenant_id'] !== $sessionTenantId) {
+            if ($role !== 'super_admin' && !empty($sessionTenantId) && $job['tenant_id'] !== $sessionTenantId) {
                 $this->jsonResponse(false, null, 'Akses ditolak. Anda tidak memiliki hak akses atas pekerjaan ini.', 403);
                 return;
             }
 
-            $stmtRetry = $db->prepare("
-                UPDATE sistem.queue_jobs SET
-                    status = 'pending',
-                    attempts = 0,
-                    error_message = NULL
-                WHERE id = :id
-            ");
-            $stmtRetry->execute(['id' => $jobId]);
+            if ($role === 'super_admin') {
+                $stmtRetry = $db->prepare("
+                    UPDATE sistem.queue_jobs SET
+                        status = 'pending',
+                        attempts = 0,
+                        error_message = NULL
+                    WHERE id = :id::uuid
+                ");
+                $stmtRetry->execute(['id' => $jobId]);
+            } else {
+                $stmtRetry = $db->prepare("
+                    UPDATE sistem.queue_jobs SET
+                        status = 'pending',
+                        attempts = 0,
+                        error_message = NULL
+                    WHERE id = :id::uuid AND (tenant_id = :tenant_id::uuid OR tenant_id IS NULL)
+                ");
+                $stmtRetry->execute(['id' => $jobId, 'tenant_id' => $sessionTenantId]);
+            }
 
             $this->jsonResponse(true, null, "Pekerjaan sukses diatur kembali ke status pending.");
 
@@ -263,7 +279,7 @@ class QueueModuleController extends BaseController {
         $input = $this->getJsonInput();
         $jobId = $input['id'] ?? '';
 
-        if (empty($jobId)) {
+        if (empty($jobId) || !preg_match('/^[a-f0-9\-]{36}$/i', (string)$jobId)) {
             $this->jsonResponse(false, null, 'ID Pekerjaan tidak valid.', 400);
             return;
         }
@@ -271,8 +287,13 @@ class QueueModuleController extends BaseController {
         try {
             $db = Database::getConnection();
 
-            $stmt = $db->prepare("SELECT * FROM sistem.queue_jobs WHERE id = :id LIMIT 1");
-            $stmt->execute(['id' => $jobId]);
+            if ($role === 'super_admin') {
+                $stmt = $db->prepare("SELECT * FROM sistem.queue_jobs WHERE id = :id::uuid LIMIT 1");
+                $stmt->execute(['id' => $jobId]);
+            } else {
+                $stmt = $db->prepare("SELECT * FROM sistem.queue_jobs WHERE id = :id::uuid AND (tenant_id = :tenant_id::uuid OR tenant_id IS NULL) LIMIT 1");
+                $stmt->execute(['id' => $jobId, 'tenant_id' => $sessionTenantId]);
+            }
             $job = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$job) {
@@ -280,13 +301,18 @@ class QueueModuleController extends BaseController {
                 return;
             }
 
-            if ($role !== 'super_admin' && $job['tenant_id'] !== $sessionTenantId) {
+            if ($role !== 'super_admin' && !empty($sessionTenantId) && $job['tenant_id'] !== $sessionTenantId) {
                 $this->jsonResponse(false, null, 'Akses ditolak.', 403);
                 return;
             }
 
-            $stmtDelete = $db->prepare("DELETE FROM sistem.queue_jobs WHERE id = :id");
-            $stmtDelete->execute(['id' => $jobId]);
+            if ($role === 'super_admin') {
+                $stmtDelete = $db->prepare("DELETE FROM sistem.queue_jobs WHERE id = :id::uuid");
+                $stmtDelete->execute(['id' => $jobId]);
+            } else {
+                $stmtDelete = $db->prepare("DELETE FROM sistem.queue_jobs WHERE id = :id::uuid AND (tenant_id = :tenant_id::uuid OR tenant_id IS NULL)");
+                $stmtDelete->execute(['id' => $jobId, 'tenant_id' => $sessionTenantId]);
+            }
 
             $this->jsonResponse(true, null, "Pekerjaan berhasil dihapus dari antrean.");
 
