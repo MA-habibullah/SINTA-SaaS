@@ -346,12 +346,16 @@
                         .then(response => {
                             this.loading = false;
                             if (response.data.success) {
-                                if (response.data.is_first_login) {
+                                const appBaseUrl = "<?php echo rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\'); ?>";
+                                if (response.data.data && response.data.data.is_first_login) {
                                     // First login wajib ubah password
-                                    window.location.href = 'siswa/ubah-password';
+                                    window.location.href = (appBaseUrl ? appBaseUrl : '') + '/siswa/ubah-password';
                                 } else {
                                     // Siswa yang sudah update password dialihkan langsung ke dashboard
-                                    window.location.href = response.data.redirect || 'dashboard';
+                                    const targetUrl = (response.data.data && response.data.data.redirect) 
+                                        ? response.data.data.redirect 
+                                        : (response.data.redirect || (appBaseUrl ? appBaseUrl + '/dashboard' : '/dashboard'));
+                                    window.location.href = targetUrl;
                                 }
                             }
                         })

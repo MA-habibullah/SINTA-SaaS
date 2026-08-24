@@ -106,6 +106,7 @@ class SiswaAuthModuleController extends BaseController {
             $_SESSION['nama_lengkap'] = $siswa['nama_lengkap'];
             $_SESSION['nisn'] = $siswa['nisn'];
             $_SESSION['is_first_login'] = (bool)($siswa['is_first_login'] ?? false);
+            $_SESSION['last_activity'] = time();
 
             \App\Helpers\ActivityLogger::log(
                 'LOGIN', 
