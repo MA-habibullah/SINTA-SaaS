@@ -180,6 +180,224 @@
     <!-- Chart.js (Loaded globally to support offline graphs without race conditions) -->
     <script src="<?= htmlspecialchars($this->getBaseUrl(), ENT_QUOTES, 'UTF-8') ?>/assets/js/chart.umd.js" data-turbo-track="reload"></script>
 
+    <!-- SINTA SaaS Global Enterprise UI/UX Design System -->
+    <style data-turbo-track="reload">
+        [v-cloak] { display: none !important; }
+        .fs-9 { font-size: 0.725rem !important; }
+        .fs-8 { font-size: 0.815rem !important; }
+        .fs-7\.5 { font-size: 0.875rem !important; }
+
+        /* KPI Summary Cards */
+        .kpi-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 1.25rem;
+            padding: 1.15rem 1.25rem;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            border-color: #cbd5e1;
+        }
+        .kpi-icon-box {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+        .kpi-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .kpi-value {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.2;
+            margin-top: 2px;
+        }
+
+        /* Modern Table & Scrollbar */
+        .pengguna-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            min-width: 950px;
+        }
+        .pengguna-table thead th {
+            background: #f8fafc !important;
+            border-bottom: 2px solid #e2e8f0 !important;
+            font-weight: 700;
+            font-size: 0.72rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: #475569;
+            padding: 0.85rem 0.75rem;
+            white-space: nowrap;
+        }
+        .pengguna-table tbody td {
+            padding: 0.85rem 0.75rem;
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .pengguna-table tbody tr:hover td {
+            background-color: #f8fafc !important;
+        }
+
+        .table-responsive {
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 #f8fafc;
+            margin-bottom: 1.25rem;
+        }
+        .table-responsive::-webkit-scrollbar {
+            height: 6px;
+        }
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f8fafc;
+            border-radius: 9999px;
+        }
+        .table-responsive::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 9999px;
+        }
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background-color: #94a3b8;
+        }
+
+        /* Avatar Circle & Gender Badges */
+        .avatar-circle {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            flex-shrink: 0;
+        }
+        .gender-badge-l {
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+            font-weight: 700;
+            font-size: 0.72rem;
+            padding: 2px 7px;
+            border-radius: 6px;
+        }
+        .gender-badge-p {
+            background: #fdf2f8;
+            color: #be185d;
+            border: 1px solid #fbcfe8;
+            font-weight: 700;
+            font-size: 0.72rem;
+            padding: 2px 7px;
+            border-radius: 6px;
+        }
+
+        /* Per-Page Select & Pagination Modern */
+        .perpage-select {
+            width: 76px !important;
+            height: 32px !important;
+            font-size: 0.8rem !important;
+            font-weight: 600 !important;
+            padding: 0.2rem 1.6rem 0.2rem 0.65rem !important;
+            border-radius: 8px !important;
+            border-color: #e2e8f0 !important;
+            background-color: #ffffff !important;
+            color: #1e293b !important;
+        }
+        .perpage-select:focus {
+            border-color: #93c5fd !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+        }
+
+        .pagination-modern .page-link {
+            border-radius: 8px !important;
+            margin: 0 2px;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+            font-size: 0.815rem;
+            font-weight: 600;
+            padding: 0.35rem 0.75rem;
+            background-color: #ffffff;
+            transition: all 0.15s ease-in-out;
+        }
+        .pagination-modern .page-link:hover {
+            background-color: #eff6ff;
+            color: #2563eb;
+            border-color: #bfdbfe;
+        }
+        .pagination-modern .page-item.active .page-link {
+            background-color: #2563eb;
+            border-color: #2563eb;
+            color: #ffffff;
+            box-shadow: 0 2px 5px rgba(37, 99, 235, 0.25);
+        }
+        .pagination-modern .page-item.disabled .page-link {
+            color: #94a3b8;
+            background-color: #f8fafc;
+            border-color: #f1f5f9;
+        }
+
+        /* Modal Dialog & Section Cards */
+        .modal-dialog-scrollable .modal-body {
+            max-height: min(74vh, 620px) !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            padding: 1.5rem !important;
+        }
+        .modal-dialog-scrollable .modal-body::-webkit-scrollbar {
+            width: 6px;
+        }
+        .modal-dialog-scrollable .modal-body::-webkit-scrollbar-track {
+            background: #f8fafc;
+            border-radius: 6px;
+        }
+        .modal-dialog-scrollable .modal-body::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 6px;
+        }
+        .modal-dialog-scrollable .modal-body::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .form-section-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin-bottom: 8px;
+        }
+        .form-section-title {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .hover-lift {
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .hover-lift:hover {
+            transform: translateY(-1.5px);
+        }
+        .shadow-2xs {
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+        }
+    </style>
+
     
     <!-- Vue 3 Lifecycle Registry and Turbo Drive Integration -->
     <script>
