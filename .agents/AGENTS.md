@@ -354,6 +354,115 @@ Saat membuat halaman baru atau merombak tata letak bilah navigasi tab (navtab / 
   - Skrip JavaScript global di `views/layout/master.php` HANYA menangani event listener scroll wheel dan drag, dan **DILARANG** melakukan injeksi DOM `createElement` tambahan yang dapat memicu tombol dobel.
 
 
+
+## SINTA SaaS Enterprise UI/UX Design System Standard (WAJIB)
+## ini contoh kunci perintah : "tolong rombak dan sesuaikan antarmuka halaman  http://localhost/sinta/master-data agar selaras dengan standar UI/UX utama kita."  
+Setiap kali agen membuat halaman baru atau merombak tata letak halaman modul di seluruh sistem SINTA SaaS, agen **WAJIB** menerapkan standar desain UI/UX Enterprise (mengacu pada standar referensi `views/sistem/pengguna_index.php`):
+
+**1. Struktur Arsitektur 7-Blok Modular:**
+1. **Row Header & Action Toolbar**:
+   - Ikon modul di dalam kotak badge 48x48px (`bg-blue-600 text-white rounded-2xl d-flex align-items-center justify-content-center shadow-xs`).
+   - Judul modul (`h3 fw-bold text-slate-900 fs-4`) & Subjudul deskriptif (`text-slate-500 fs-8`).
+   - Action toolbar kanan: Tombol aksi utama bergaya pill modern (`btn-sm rounded-xl px-3.5 py-2 fs-8 font-semibold shadow-2xs hover-lift`).
+2. **Horizontal NavTabs (Single-Row Modern Pill NavTab)**:
+   - Mengikuti aturan 3-Way Scroller Engine (scroll wheel, drag swipe, dan tombol panah presisi).
+3. **KPI Summary Metric Cards**:
+   - 4 kartu metrik ringkasan agregat database riil (`kpi-card shadow-2xs` dengan `kpi-icon-box`, `kpi-label`, `kpi-value`).
+4. **Filter & Search Toolbar**:
+   - Dibungkus dalam kontainer filter halus (`bg-slate-50/80 border border-slate-200/80 rounded-2xl p-3.5`).
+   - Input pencarian dengan ikon `bi-search` di sisi kiri dan tombol reset silang.
+   - Tombol Cari (`btn-primary rounded-xl`) dan Reset (`btn-light border rounded-xl`).
+5. **Modern Table Architecture**:
+   - Header tabel uppercase berjarak rapat (`pengguna-table thead th`: `#f8fafc`, uppercase, `letter-spacing: 0.05em`).
+   - Baris data dengan `avatar-circle`, gender badge (`gender-badge-l` / `gender-badge-p`), dan status pill.
+   - Kolom aksi dengan tombol pill (`btn-sm rounded-2 px-2 py-1 fs-8`).
+   - Scrollbar tabel custom thin 6px (`.table-responsive::-webkit-scrollbar`) dengan `margin-bottom: 1.25rem` agar memberi spasi lega di atas garis paginasi.
+6. **Bottom Pagination Toolbar**:
+   - Pembatas garis atas berjarak lega (`border-top border-slate-100 mt-2 pt-4`).
+   - Info counter tebal ("Menampilkan **1** s.d. **10** dari **135** baris").
+   - Dropdown per-page rapi `.perpage-select` (`width: 76px; height: 32px;` tanpa tabrakan teks dengan chevron).
+   - Tombol halaman `.pagination-modern` bergaya floating pills.
+7. **Modal Dialog Standard**:
+   - Header & Footer sticky (`sticky-top bg-white` & `sticky-bottom bg-slate-50`).
+   - Modal body dengan scroll vertikal presisi (`max-height: min(74vh, 620px); overflow-y: auto;`).
+   - Pengelompokan field dengan `.form-section-card` dan `.form-section-title`.
+
+
+## Text Overflow & Clipping Prevention Standard (Anti-Overflow & Smart Truncation)
+Saat mendesain atau merombak banner filter sekolah, badge status, kartu metrik, header tabel, atau elemen antarmuka yang menampilkan teks dinamis panjang (seperti nama sekolah, NPSN, peran pengguna, dsb.), agen **WAJIB** menerapkan standar proteksi *Anti-Overflow*:
+
+**1. Pembatasan Lebar Maksimal (*Max-Width*) & Smart Truncation:**
+- Seluruh elemen teks dinamis atau badge status **WAJIB** dibungkus dengan pembatas lebar maksimal (misal: `max-width: 320px` s.d. `360px` pada badge container, dan `max-width: 260px` s.d. `280px` pada elemen teks) serta kelas `text-truncate d-inline-block`.
+- **Tujuan**: Mencegah teks meluber menembus keluar dari batas kontainer/kotak kartu (*overflow / clipping*) saat data teks sangat panjang.
+
+**2. Tooltip Interaktif (`title` Attribute):**
+- Selalu sematkan atribut `title="..."` (atau `:title="..."` pada Vue) yang memuat teks lengkap pada badge/label yang dipotong elipsis (`...`), sehingga pengguna tetap dapat membaca seluruh rincian teks saat mengarahkan kursor mouse (*hover*).
+
+**3. Proporsi Lebar Dropdown Filter Sekolah (Anti-Stretching):**
+- Dropdown pemilih sekolah pada banner **DILARANG** menggunakan `flex-grow-1` atau `max-width` yang terlalu panjang (seperti > 400px) yang menyebabkan kotak select melar tidak proporsional.
+- **Standar Proporsional**: Bungkus `<select>` di dalam container `<div class="my-1 my-md-0" style="min-width: 220px; max-width: 300px;">` dengan `w-100` dan `height: 38px;` agar tampil kompak, rapi, dan proporsional di samping label teks.
+
+**4. Format Teks Padat & Layout Responsif:**
+- Gunakan struktur flexbox inline adaptif pada banner pemilih sekolah (badge status ditempatkan berdampingan dengan select dropdown):
+  ```html
+  <div class="mb-4 p-3 px-md-4 rounded-2xl shadow-2xs border border-blue-100 bg-white">
+      <div class="d-flex align-items-center flex-wrap gap-2.5">
+          <!-- Ikon + Label -->
+          <div class="bg-blue-50 text-blue-600 p-2 rounded-xl d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px;">
+              <i class="bi bi-buildings fs-6"></i>
+          </div>
+          <div>
+              <span class="fs-8 fw-bold text-slate-800 me-1">Target Pengaturan:</span>
+          </div>
+          
+          <!-- Select Dropdown Proporsional -->
+          <div class="my-1 my-md-0" style="min-width: 220px; max-width: 300px;">
+              <select class="form-select form-select-sm bg-slate-50 border-slate-200 rounded-xl text-slate-800 fs-8 font-semibold shadow-2xs cursor-pointer focus:bg-white w-100" style="height: 38px;">
+                  <!-- Opsi -->
+              </select>
+          </div>
+
+          <!-- Badge Status Terproteksi Anti-Overflow di Samping Filter -->
+          <div class="d-inline-flex align-items-center flex-shrink-0 ms-md-1">
+              <span class="badge bg-blue-50 text-blue-700 border border-blue-200 px-3 py-2 rounded-pill fs-8 font-semibold d-inline-flex align-items-center gap-1.5 shadow-2xs" 
+                    style="max-width: 340px;" 
+                    :title="'Data Aktif: ' + fullSchoolName">
+                  <i class="bi bi-shield-fill-check text-blue-600 flex-shrink-0"></i>
+                  <span class="text-truncate d-inline-block" style="max-width: 280px;">Data Aktif: <strong>{{ fullSchoolName }}</strong></span>
+              </span>
+          </div>
+      </div>
+  </div>
+  ```
+- Hindari menyambung string statis panjang di dalam satu baris badge. Gunakan format ringkas seperti: `Target: [Nama Sekolah] (Kustom)` atau `Mengedit Fitur: [Nama Sekolah]`.
+
+
+## Standard Page Layout & Spacing Uniformity (Anti-Double-Padding & Strict Alignment Standard)
+Untuk menjamin seluruh halaman di modul SINTA SaaS memiliki jarak tepi (*margin & padding*), simetri, dan proporsi yang 100% seragam dan konsisten (merujuk pada standar utama `views/sistem/pengguna_index.php`):
+
+**1. Nilai Dasar Layout Master (`views/layout/master.php`):**
+- **Tinggi Navbar (`#app-header`)**: **`70px`** (`--header-height`, Fixed/Sticky Top).
+- **Lebar Sidebar Desktop (`#sidebar`)**: **`260px`** (`--sidebar-width`, Mode Expanded) / **`70px`** (`--sidebar-collapsed-width`, Mode Collapsed).
+- **Padding Pembungkus Utama Konten (`.content-body`)**: **`2rem`** (**`32px`** pada seluruh sisi: Atas, Kanan, Bawah, Kiri).
+
+**2. Larangan Mutlak Double Padding pada Berkas View Anak (`views/**/*.php`):**
+- **DILARANG KERAS** menambahkan padding luar ganda pada elemen root view (seperti `<div id="app" class="p-4">`, `<div class="p-3 p-md-4">`, atau `<div class="container-fluid p-4">`) karena akan menumpuk dengan `padding: 2rem` dari `.content-body` di master layout dan menyebabkan jarak halaman menjadi terlalu jauh / tidak simetris.
+- Elemen root view anak **WAJIB** ditulis bersih dan murni:
+  ```html
+  <div id="[namaModul]App" v-cloak>
+      <!-- Konten 7-Blok Modular Langsung Dimulai di Sini -->
+  </div>
+  ```
+
+**3. Standar Irama Vertikal Spasi Antar Blok (*Vertical Rhythm*):**
+- **Jarak Bawah Row Header Judul**: `mb-3 mb-md-4` (`1.5rem` / `24px`).
+- **Jarak Bawah Banner Pemilih Sekolah**: `mb-4` (`1.5rem` / `24px`).
+- **Jarak Bawah Bilah NavTabs**: `mb-4` (`1.5rem` / `24px`).
+- **Jarak Kotak Kartu Metrik KPI**: `row g-3 mb-4`.
+- **Jarak Bawah Toolbar Filter & Pencarian**: `mb-4`.
+- **Jarak Bawah Kartu Tabel Data**: `mb-4`.
+
+
 ## Strict Prohibition on Folder Deletion in Scratch (PERMANENT RULE)
 DILARANG KERAS menghapus atau mengosongkan folder-folder berikut beserta seluruh isi berkas dan sub-foldernya dalam kondisi apa pun:
 1. `C:\laragon\www\sinta\scratch\docs`
@@ -361,6 +470,8 @@ DILARANG KERAS menghapus atau mengosongkan folder-folder berikut beserta seluruh
 3. `C:\laragon\www\sinta\scratch\tests`
 
 Setiap kali pembersihan berkas dilakukan, ketiga direktori di atas WAJIB tetap aman, utuh, dan terlindungi dari segala bentuk perintah penghapusan.
+
+
 
 
 
