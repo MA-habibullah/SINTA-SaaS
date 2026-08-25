@@ -24,7 +24,7 @@ class PengumumanModel {
             if ($targetTenant === 'global' || $targetTenant === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
                 $whereCondition = "(p.tenant_id IS NULL OR p.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')";
             } else {
-                $whereCondition = "(p.tenant_id = :tenant_id OR p.tenant_id IS NULL OR p.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')";
+                $whereCondition = "p.tenant_id = :tenant_id";
                 $params[':tenant_id'] = $targetTenant;
             }
         }
@@ -88,7 +88,7 @@ class PengumumanModel {
             if ($targetTenant === 'global' || $targetTenant === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
                 $whereCondition = "(p.tenant_id IS NULL OR p.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')";
             } else {
-                $whereCondition = "(p.tenant_id = :tenant_id OR p.tenant_id IS NULL OR p.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')";
+                $whereCondition = "p.tenant_id = :tenant_id";
                 $params[':tenant_id'] = $targetTenant;
             }
         }
@@ -253,13 +253,20 @@ class PengumumanModel {
         $targetTenant = $tenantId !== null ? $tenantId : $this->tenantId;
         
         $params = [];
+        $paramsKat = [];
         $whereTenant = "1=1";
+        $whereKategori = "1=1";
+
         if (!empty($targetTenant)) {
             if ($targetTenant === 'global' || $targetTenant === 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12') {
                 $whereTenant = "(p.tenant_id IS NULL OR p.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')";
+                $whereKategori = "(k.tenant_id IS NULL OR k.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')";
             } else {
-                $whereTenant = "(p.tenant_id = :tenant_id OR p.tenant_id IS NULL OR p.tenant_id = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12')";
+                $whereTenant = "p.tenant_id = :tenant_id";
                 $params[':tenant_id'] = $targetTenant;
+
+                $whereKategori = "k.tenant_id = :tenant_id";
+                $paramsKat[':tenant_id'] = $targetTenant;
             }
         }
 
@@ -275,17 +282,17 @@ class PengumumanModel {
         $stmt->execute($params);
         $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
-        // Count total categories in master (terisolasi tenant)
-        $stmtKat = $db->prepare("SELECT COUNT(*) FROM sistem.kategori_pengumuman WHERE (tenant_id = :tenant_id OR tenant_id IS NULL)");
-        $stmtKat->bindValue(':tenant_id', $targetTenant);
-        $stmtKat->execute();
+        // Count total categories in master (terisolasi tenant secara presisi)
+        $sqlKat = "SELECT COUNT(*) FROM sistem.kategori_pengumuman k WHERE $whereKategori";
+        $stmtKat = $db->prepare($sqlKat);
+        $stmtKat->execute($paramsKat);
         $totalKatMaster = (int)$stmtKat->fetchColumn();
 
         return [
             'total_pengumuman' => (int)($row['total_pengumuman'] ?? 0),
             'total_aktif' => (int)($row['total_aktif'] ?? 0),
             'total_public' => (int)($row['total_public'] ?? 0),
-            'total_kategori' => $totalKatMaster ?: (int)($row['total_kategori'] ?? 0)
+            'total_kategori' => $totalKatMaster
         ];
     }
 

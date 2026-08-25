@@ -48,9 +48,20 @@ class ErrorMonitorModuleController extends BaseController
      */
     public function index(): void
     {
+        $tenants = [];
+        try {
+            $db = Database::getConnection();
+            $stmt = $db->query("SELECT id, nama_sekolah FROM core.tenants ORDER BY nama_sekolah ASC");
+            $tenants = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) {
+            error_log("Failed to fetch tenants for error monitor: " . $e->getMessage());
+        }
+
         $this->render('core/error_monitor', [
-            'title'     => 'Error Monitor — System Debugger',
-            'user_role' => $_SESSION['role_name'] ?? '',
+            'title'        => 'Error Monitor — System Debugger',
+            'user_role'    => $_SESSION['role_name'] ?? '',
+            'isSuperAdmin' => $this->isUserSuperAdmin(),
+            'tenants'      => $tenants
         ]);
     }
 

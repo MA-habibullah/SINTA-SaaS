@@ -33,16 +33,14 @@ class AgendaModel {
         $params = [];
 
         // Tenant filter
-        if (!empty($filters['tenant_id'])) {
-            if ($filters['tenant_id'] === 'global') {
+        $targetTenant = !empty($filters['tenant_id']) ? $filters['tenant_id'] : $this->tenantId;
+        if (!empty($targetTenant)) {
+            if ($targetTenant === 'global') {
                 $sql .= " AND a.tenant_id IS NULL";
             } else {
-                $sql .= " AND (a.tenant_id = :tenant_id OR a.tenant_id IS NULL)";
-                $params[':tenant_id'] = $filters['tenant_id'];
+                $sql .= " AND a.tenant_id = :tenant_id";
+                $params[':tenant_id'] = $targetTenant;
             }
-        } elseif (!empty($this->tenantId)) {
-            $sql .= " AND (a.tenant_id = :tenant_id OR a.tenant_id IS NULL)";
-            $params[':tenant_id'] = $this->tenantId;
         }
 
         // Search filter (Case-insensitive ILIKE)
@@ -105,33 +103,31 @@ class AgendaModel {
     }
 
     public function countAll(array $filters = []): int {
-        $sql = "SELECT COUNT(*) FROM sistem.agenda_sekolah a WHERE 1=1";
+        $sql = "SELECT COUNT(*) FROM sistem.agenda_sekolah WHERE 1=1";
         $params = [];
 
-        if (!empty($filters['tenant_id'])) {
-            if ($filters['tenant_id'] === 'global') {
-                $sql .= " AND a.tenant_id IS NULL";
+        $targetTenant = !empty($filters['tenant_id']) ? $filters['tenant_id'] : $this->tenantId;
+        if (!empty($targetTenant)) {
+            if ($targetTenant === 'global') {
+                $sql .= " AND tenant_id IS NULL";
             } else {
-                $sql .= " AND (a.tenant_id = :tenant_id OR a.tenant_id IS NULL)";
-                $params[':tenant_id'] = $filters['tenant_id'];
+                $sql .= " AND tenant_id = :tenant_id";
+                $params[':tenant_id'] = $targetTenant;
             }
-        } elseif (!empty($this->tenantId)) {
-            $sql .= " AND (a.tenant_id = :tenant_id OR a.tenant_id IS NULL)";
-            $params[':tenant_id'] = $this->tenantId;
         }
 
         if (!empty($filters['search'])) {
-            $sql .= " AND (a.nama_agenda_sekolah ILIKE :search OR a.deskripsi ILIKE :search OR a.kategori ILIKE :search)";
+            $sql .= " AND (nama_agenda_sekolah ILIKE :search OR deskripsi ILIKE :search OR kategori ILIKE :search)";
             $params[':search'] = '%' . trim($filters['search']) . '%';
         }
 
         if (!empty($filters['kategori'])) {
-            $sql .= " AND a.kategori = :kategori";
+            $sql .= " AND kategori = :kategori";
             $params[':kategori'] = $filters['kategori'];
         }
 
         if (isset($filters['is_active']) && $filters['is_active'] !== '') {
-            $sql .= " AND a.is_active = :is_active";
+            $sql .= " AND is_active = :is_active";
             $params[':is_active'] = (bool)$filters['is_active'] ? 'TRUE' : 'FALSE';
         }
 
@@ -148,7 +144,7 @@ class AgendaModel {
     }
 
     public function getStatsSummary(?string $tenantId = null): array {
-        $effectiveTenantId = $tenantId ?: $this->tenantId;
+        $effectiveTenantId = $tenantId !== null ? $tenantId : $this->tenantId;
         
         $sql = "SELECT 
                     COUNT(*) as total_agenda,
@@ -162,7 +158,7 @@ class AgendaModel {
             if ($effectiveTenantId === 'global') {
                 $sql .= " AND tenant_id IS NULL";
             } else {
-                $sql .= " AND (tenant_id = :tenant_id OR tenant_id IS NULL)";
+                $sql .= " AND tenant_id = :tenant_id";
                 $params[':tenant_id'] = $effectiveTenantId;
             }
         }
@@ -171,13 +167,13 @@ class AgendaModel {
         $stmt->execute($params);
         $res = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
-        // Count for this month
+        // Count for this month (Periode berjalan)
         $sqlMonth = "SELECT COUNT(*) FROM sistem.agenda_sekolah WHERE DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE)";
         if (!empty($effectiveTenantId)) {
             if ($effectiveTenantId === 'global') {
                 $sqlMonth .= " AND tenant_id IS NULL";
             } else {
-                $sqlMonth .= " AND (tenant_id = :tenant_id OR tenant_id IS NULL)";
+                $sqlMonth .= " AND tenant_id = :tenant_id";
             }
         }
         $stmtMonth = $this->db->prepare($sqlMonth);
@@ -193,7 +189,7 @@ class AgendaModel {
     }
 
     public function getKategoriList(?string $tenantId = null): array {
-        $effectiveTenantId = $tenantId ?: $this->tenantId;
+        $effectiveTenantId = $tenantId !== null ? $tenantId : $this->tenantId;
         $sql = "SELECT 
                     kategori as nama_kategori,
                     COUNT(*) as total_agenda
@@ -204,7 +200,7 @@ class AgendaModel {
             if ($effectiveTenantId === 'global') {
                 $sql .= " AND tenant_id IS NULL";
             } else {
-                $sql .= " AND (tenant_id = :tenant_id OR tenant_id IS NULL)";
+                $sql .= " AND tenant_id = :tenant_id";
                 $params[':tenant_id'] = $effectiveTenantId;
             }
         }
@@ -216,15 +212,23 @@ class AgendaModel {
 
     public function getById(string $id, ?string $tenantId = null): ?array {
         $effectiveTenantId = $tenantId ?: $this->tenantId;
-        $stmt = $this->db->prepare("
-            SELECT a.*, t.nama_sekolah 
-            FROM sistem.agenda_sekolah a
-            LEFT JOIN core.tenants t ON a.tenant_id = t.id
-            WHERE a.id = :id::uuid AND (:tenant_id::uuid IS NULL OR a.tenant_id = :tenant_id::uuid OR a.tenant_id IS NULL)
-        ");
-        $stmt->bindValue(':id', $id);
-        $stmt->bindValue(':tenant_id', $effectiveTenantId);
-        $stmt->execute();
+        $sql = "SELECT a.*, t.nama_sekolah 
+                FROM sistem.agenda_sekolah a
+                LEFT JOIN core.tenants t ON a.tenant_id = t.id
+                WHERE a.id = :id::uuid";
+        $params = [':id' => $id];
+
+        if (!empty($effectiveTenantId)) {
+            if ($effectiveTenantId === 'global') {
+                $sql .= " AND a.tenant_id IS NULL";
+            } else {
+                $sql .= " AND (a.tenant_id = :tenant_id OR a.tenant_id IS NULL)";
+                $params[':tenant_id'] = $effectiveTenantId;
+            }
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row ? $this->formatRow($row) : null;
     }
@@ -261,16 +265,30 @@ class AgendaModel {
                     is_active = :is_active,
                     tenant_id = :set_tenant_id,
                     updated_at = CURRENT_TIMESTAMP
-                WHERE id = :id::uuid AND (:filter_tenant_id::uuid IS NULL OR tenant_id = :filter_tenant_id::uuid OR tenant_id IS NULL)";
+                WHERE id = :id::uuid";
+
+        $params = [
+            ':id' => $id,
+            ':set_tenant_id' => $newTenantId,
+            ':nama_agenda_sekolah' => $data['nama_agenda_sekolah'] ?? $data['judul'] ?? 'Agenda Tanpa Judul',
+            ':kategori' => $data['kategori'] ?? 'Umum',
+            ':deskripsi' => $descPayload
+        ];
+
+        if (!empty($targetTenant)) {
+            if ($targetTenant === 'global') {
+                $sql .= " AND tenant_id IS NULL";
+            } else {
+                $sql .= " AND (tenant_id = :filter_tenant_id OR tenant_id IS NULL)";
+                $params[':filter_tenant_id'] = $targetTenant;
+            }
+        }
 
         $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':id', $id);
-        $stmt->bindValue(':set_tenant_id', $newTenantId);
-        $stmt->bindValue(':nama_agenda_sekolah', $data['nama_agenda_sekolah'] ?? $data['judul'] ?? 'Agenda Tanpa Judul');
-        $stmt->bindValue(':kategori', $data['kategori'] ?? 'Umum');
-        $stmt->bindValue(':deskripsi', $descPayload);
+        foreach ($params as $k => $v) {
+            $stmt->bindValue($k, $v);
+        }
         $stmt->bindValue(':is_active', isset($data['is_active']) ? (bool)$data['is_active'] : true, PDO::PARAM_BOOL);
-        $stmt->bindValue(':filter_tenant_id', $targetTenant);
         return $stmt->execute();
     }
 
@@ -278,25 +296,44 @@ class AgendaModel {
         $targetTenant = $tenantId ?? $this->tenantId;
         $sql = "UPDATE sistem.agenda_sekolah 
                 SET is_active = NOT is_active, updated_at = CURRENT_TIMESTAMP 
-                WHERE id = :id::uuid AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)
-                RETURNING is_active";
+                WHERE id = :id::uuid";
+        $params = [':id' => $id];
 
+        if (!empty($targetTenant)) {
+            if ($targetTenant === 'global') {
+                $sql .= " AND tenant_id IS NULL";
+            } else {
+                $sql .= " AND (tenant_id = :tenant_id OR tenant_id IS NULL)";
+                $params[':tenant_id'] = $targetTenant;
+            }
+        }
+
+        $sql .= " RETURNING is_active";
         $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':id', $id);
-        $stmt->bindValue(':tenant_id', $targetTenant);
-        $stmt->execute();
+        $stmt->execute($params);
         return (bool)$stmt->fetchColumn();
+    }
+
+    public function toggleStatus(string $id, ?string $tenantId = null): bool {
+        return $this->toggleActive($id, $tenantId);
     }
 
     public function delete(string $id, ?string $tenantId = null): bool {
         $targetTenant = $tenantId ?? $this->tenantId;
-        $sql = "DELETE FROM sistem.agenda_sekolah 
-                WHERE id = :id::uuid AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)";
+        $sql = "DELETE FROM sistem.agenda_sekolah WHERE id = :id::uuid";
+        $params = [':id' => $id];
+
+        if (!empty($targetTenant)) {
+            if ($targetTenant === 'global') {
+                $sql .= " AND tenant_id IS NULL";
+            } else {
+                $sql .= " AND (tenant_id = :tenant_id OR tenant_id IS NULL)";
+                $params[':tenant_id'] = $targetTenant;
+            }
+        }
 
         $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':id', $id);
-        $stmt->bindValue(':tenant_id', $targetTenant);
-        return $stmt->execute();
+        return $stmt->execute($params);
     }
 
     private function packDescription(array $data): string {

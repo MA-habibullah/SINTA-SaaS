@@ -35,13 +35,15 @@ class AgendaModuleController extends BaseController {
 
     protected function getSecureTenantId(): ?string {
         if ($this->isUserSuperAdmin()) {
-            if (isset($_GET['tenant_id']) && !empty($_GET['tenant_id'])) {
-                return $_GET['tenant_id'] === 'global' ? null : $_GET['tenant_id'];
+            if (isset($_GET['tenant_id'])) {
+                $t = trim((string)$_GET['tenant_id']);
+                return $t !== '' ? $t : null;
             }
-            if (isset($_POST['tenant_id']) && !empty($_POST['tenant_id'])) {
-                return $_POST['tenant_id'] === 'global' ? null : $_POST['tenant_id'];
+            if (isset($_POST['tenant_id'])) {
+                $t = trim((string)$_POST['tenant_id']);
+                return $t !== '' ? $t : null;
             }
-            return $_SESSION['tenant_id'] ?? $_SESSION['user']['tenant_id'] ?? null;
+            return null;
         }
         return $_SESSION['tenant_id'] ?? $_SESSION['user']['tenant_id'] ?? $this->tenantId;
     }
