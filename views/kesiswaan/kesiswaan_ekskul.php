@@ -1,187 +1,293 @@
 <?php
 /**
- * Views: Manajemen Ekstrakurikuler Kesiswaan (Vue 3 Single Page Experience - Clean Modern SaaS)
+ * Views: Manajemen Ekstrakurikuler Kesiswaan (Vue 3 SPA - SINTA SaaS Enterprise UI/UX Standard)
  * Path: views/kesiswaan/kesiswaan_ekskul.php
  */
 ?>
-<div id="ekskulApp" 
-     class="container-fluid px-3 px-md-4 py-4" 
-     data-is-super-admin="<?= htmlspecialchars($isSuperAdmin ? 'true' : 'false', ENT_QUOTES, 'UTF-8') ?>" 
-     data-tenant-id="<?= htmlspecialchars((string)($selectedTenantId ?? ''), ENT_QUOTES, 'UTF-8') ?>" 
+
+<style>
+    [v-cloak] { display: none !important; }
+    .fs-9  { font-size: 0.725rem !important; }
+    .fs-8  { font-size: 0.815rem !important; }
+    .fs-7  { font-size: 0.875rem !important; }
+
+    /* KPI Summary Cards */
+    .kpi-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 1.25rem;
+        padding: 1.15rem 1.25rem;
+        transition: all 0.2s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    .kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.06);
+        border-color: #cbd5e1;
+    }
+    .kpi-icon-box {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+    .kpi-label  { font-size: 0.72rem; color: #64748b; font-weight: 600; }
+    .kpi-value  { font-size: 1.65rem; font-weight: 900; color: #0f172a; line-height: 1.1; margin-top: 0.2rem; }
+    .kpi-sub    { font-size: 0.7rem;  font-weight: 600; margin-top: 0.25rem; display: flex; align-items: center; gap: 4px; }
+
+    /* Modern Table */
+    .pengguna-table { border-collapse: separate; border-spacing: 0; }
+    .pengguna-table thead th {
+        background: #f8fafc !important;
+        border-bottom: 2px solid #e2e8f0 !important;
+        font-weight: 700; font-size: 0.7rem;
+        letter-spacing: 0.05em; text-transform: uppercase;
+        color: #475569; padding: 0.85rem 1rem; white-space: nowrap;
+    }
+    .pengguna-table tbody td { padding: 0.75rem 1rem; vertical-align: middle; border-bottom: 1px solid #f1f5f9; }
+    .pengguna-table tbody tr:hover td { background-color: #f8fafc !important; }
+    .table-responsive::-webkit-scrollbar { height: 6px; width: 6px; }
+    .table-responsive::-webkit-scrollbar-track { background: #f8fafc; border-radius: 9999px; }
+    .table-responsive::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+
+    /* Modern Pagination */
+    .pagination-modern { display: flex; gap: 0.25rem; }
+    .pagination-modern .page-link {
+        border: 1px solid #e2e8f0; border-radius: 0.65rem;
+        color: #475569; font-size: 0.75rem; font-weight: 600;
+        padding: 0.35rem 0.65rem; background: #ffffff; transition: all 0.15s ease;
+    }
+    .pagination-modern .page-link:hover  { background: #f1f5f9; color: #2563eb; border-color: #cbd5e1; }
+    .pagination-modern .page-item.active .page-link { background: #2563eb; border-color: #2563eb; color: #fff; }
+    .perpage-select { width: 76px !important; height: 32px !important; font-size: 0.75rem !important; font-weight: 600 !important; border-radius: 0.65rem !important; border-color: #e2e8f0 !important; padding: 0.2rem 0.4rem !important; }
+
+    /* NavTab Pills */
+    .nav-pills .nav-link {
+        color: #334155 !important; background: transparent !important; border: none !important;
+        border-radius: 0.75rem !important; padding: 0.55rem 1.1rem !important;
+        font-size: 0.82rem !important; font-weight: 600 !important;
+        display: inline-flex !important; align-items: center !important;
+        transition: all 0.2s cubic-bezier(0.4,0,0.2,1) !important; white-space: nowrap !important;
+    }
+    .nav-pills .nav-link:hover  { background: #f1f5f9 !important; }
+    .nav-pills .nav-link.active { color: #fff !important; background: #2563eb !important; box-shadow: 0 1px 3px rgba(37,99,235,.35) !important; }
+
+    /* Misc */
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    .avatar-circle { width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700; flex-shrink: 0; }
+    .gender-badge-l { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-weight: 700; font-size: 0.7rem; padding: 2px 7px; border-radius: 6px; }
+    .gender-badge-p { background: #fdf2f8; color: #be185d; border: 1px solid #fbcfe8; font-weight: 700; font-size: 0.7rem; padding: 2px 7px; border-radius: 6px; }
+    .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f8fafc; border-radius: 9999px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+</style>
+
+<div id="ekskulApp"
+     data-is-super-admin="<?= htmlspecialchars($isSuperAdmin ? 'true' : 'false', ENT_QUOTES, 'UTF-8') ?>"
+     data-tenant-id="<?= htmlspecialchars((string)($selectedTenantId ?? ''), ENT_QUOTES, 'UTF-8') ?>"
      v-cloak>
 
     <!-- ═══════════════════════════════════════════════════════════════════════
-         1. HERO BANNER & STATISTIK RINGKASAN
+         1. ROW HEADER & ACTION TOOLBAR (STANDAR ENTERPRISE UI/UX)
          ═══════════════════════════════════════════════════════════════════════ -->
-    <div class="row g-3 g-md-4 mb-4">
-        <!-- Banner Title -->
-        <div class="col-12">
-            <div class="p-4 p-md-4.5 rounded-2xl text-white shadow-xs position-relative overflow-hidden" 
-                 style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #0d9488 100%);">
-                <!-- Ambient Glow Circles -->
-                <div class="position-absolute rounded-circle" style="width: 280px; height: 280px; background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 70%); top: -90px; right: -40px; pointer-events: none;"></div>
-                <div class="position-absolute rounded-circle" style="width: 200px; height: 200px; background: radial-gradient(circle, rgba(20,184,166,0.2) 0%, rgba(255,255,255,0) 70%); bottom: -70px; left: 10%; pointer-events: none;"></div>
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+        <!-- Left: Badge Icon + Title -->
+        <div class="d-flex align-items-center gap-3">
+            <div class="bg-blue-600 text-white rounded-2xl d-flex align-items-center justify-content-center shadow-xs flex-shrink-0" style="width: 48px; height: 48px;">
+                <i class="bi bi-dribbble fs-4"></i>
+            </div>
+            <div>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <h3 class="fw-bold text-slate-900 fs-4 mb-0">Manajemen Ekstrakurikuler</h3>
+                    <span class="badge bg-slate-100 text-slate-700 border border-slate-200 rounded-pill px-2.5 py-1 fs-9 font-bold">
+                        <i class="bi bi-trophy-fill text-amber-500 me-1"></i>Kesiswaan &amp; Bakat Minat
+                    </span>
+                </div>
+                <p class="text-slate-500 fs-8 mb-0 mt-0.5">Kelola pendaftaran ekskul, pembina, anggota siswa, jurnal kegiatan, dan nilai e-rapor terpadu.</p>
+            </div>
+        </div>
 
-                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 position-relative" style="z-index: 2;">
+        <!-- Right: Dynamic Action Toolbar -->
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button v-if="activeTab === 'master'" type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-3.5 py-2 fs-8 shadow-2xs hover-lift d-inline-flex align-items-center gap-1.5" @click="openModalEkskul()">
+                <i class="bi bi-plus-circle-fill"></i><span>Tambah Ekskul</span>
+            </button>
+            <button v-if="activeTab === 'pembina'" type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-3.5 py-2 fs-8 shadow-2xs hover-lift d-inline-flex align-items-center gap-1.5" @click="openModalPembina()">
+                <i class="bi bi-person-plus-fill"></i><span>Tambah Pembina</span>
+            </button>
+            <button v-if="activeTab === 'anggota'" type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-3.5 py-2 fs-8 shadow-2xs hover-lift d-inline-flex align-items-center gap-1.5"
+                    :disabled="!selectedEkskulId || currentLock.lock_anggota" @click="openModalTambahAnggota()">
+                <i class="bi bi-person-plus-fill"></i><span>Tambah Anggota</span>
+            </button>
+            <button v-if="activeTab === 'jurnal'" type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-3.5 py-2 fs-8 shadow-2xs hover-lift d-inline-flex align-items-center gap-1.5"
+                    :disabled="!selectedEkskulId" @click="openModalJurnal()">
+                <i class="bi bi-plus-circle-fill"></i><span>Catat Pertemuan</span>
+            </button>
+            <button v-if="activeTab === 'nilai'" type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-3.5 py-2 fs-8 shadow-2xs hover-lift d-inline-flex align-items-center gap-1.5"
+                    :disabled="!selectedEkskulId || currentLock.lock_nilai || savingNilai" @click="saveAllNilai()">
+                <span v-if="savingNilai" class="spinner-border spinner-border-sm"></span>
+                <i v-else class="bi bi-check-all"></i><span>Simpan Nilai</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-light border border-slate-200 text-slate-600 rounded-xl px-3 py-2 fs-8 font-bold shadow-2xs d-flex align-items-center gap-1.5" @click="refreshAll()" title="Segarkan Data">
+                <i class="bi bi-arrow-clockwise" :class="{'spin': loading}"></i><span>Segarkan</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         2. COMPACT SCHOOL SELECTOR BANNER (SUPER ADMIN ONLY)
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div v-if="isSuperAdmin && tenants.length > 0" class="mb-4 p-3 px-md-4 rounded-2xl shadow-2xs border border-blue-100 bg-white">
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+            <div class="d-flex align-items-center flex-wrap gap-2.5">
+                <div class="bg-blue-50 text-blue-600 p-2 rounded-xl d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                    <i class="bi bi-buildings fs-6"></i>
+                </div>
+                <div>
+                    <span class="fs-8 fw-bold text-slate-800 me-2">Pilih Sekolah:</span>
+                </div>
+                <div class="my-1 my-md-0">
+                    <select id="sa-filter-sekolah-ekskul" name="filter_tenant_id"
+                            class="form-select form-select-sm bg-slate-50 border-slate-200 rounded-xl text-slate-800 fs-8 font-semibold shadow-2xs cursor-pointer focus:bg-white"
+                            style="min-width: 260px; max-width: 360px; height: 38px;"
+                            v-model="currentTenantId"
+                            @change="onTenantChange()">
+                        <option v-for="t in tenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}{{ t.npsn ? ' (' + t.npsn + ')' : '' }}</option>
+                    </select>
+                </div>
+            </div>
+            <div class="text-slate-500 fs-8 d-flex align-items-center gap-1.5">
+                <i class="bi bi-info-circle text-blue-500"></i>
+                <span>Data Aktif: <strong class="text-blue-600 fw-bold text-truncate d-inline-block" style="max-width: 220px;" :title="tenants.find(t => t.id === currentTenantId)?.nama_sekolah || ''">{{ tenants.find(t => t.id === currentTenantId)?.nama_sekolah || '—' }}</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         3. KPI SUMMARY METRIC CARDS (DI ATAS NAVTABS)
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="kpi-card shadow-2xs h-100">
+                <div class="d-flex align-items-start justify-content-between gap-2">
                     <div>
-                        <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-                            <span class="badge px-3 py-1.5 rounded-pill text-xs font-semibold d-inline-flex align-items-center gap-1.5" style="background: rgba(255,255,255,0.18); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.25);">
-                                <i class="bi bi-trophy-fill text-amber-300"></i> Modul Kesiswaan &amp; Bakat Minat
-                            </span>
-                            <span v-if="selectedTaName" class="badge px-3 py-1.5 rounded-pill text-xs font-semibold d-inline-flex align-items-center gap-1.5" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);">
-                                <i class="bi bi-calendar3"></i> TA: {{ selectedTaName }} (Semester {{ filterSemester }})
-                            </span>
-                        </div>
-                        <h2 class="h3 font-bold text-white mb-1 tracking-tight">Manajemen Ekstrakurikuler</h2>
-                        <p class="text-white/85 text-xs mb-0" style="max-width: 680px; line-height: 1.6;">
-                            Kelola pendaftaran ekstrakurikuler, penugasan guru pembina, rekrutmen anggota siswa, agenda jurnal kegiatan, serta penginputan nilai dan deskripsi rapor siswa terpadu.
-                        </p>
+                        <div class="kpi-label">Ekskul Aktif</div>
+                        <div class="kpi-value">{{ stats.total_ekskul || 0 }}</div>
+                        <div class="kpi-sub text-emerald-600"><i class="bi bi-check-circle-fill"></i> Terdaftar di sistem</div>
                     </div>
-
-                    <!-- Right Controls: Super Admin Tenant Filter (Persis Desain Acuan Modern SaaS) -->
-                    <div v-if="isSuperAdmin && tenants.length > 0" class="d-flex align-items-center gap-2 flex-wrap flex-shrink-0">
-                        <div class="d-flex align-items-center gap-2 bg-white/15 p-2 ps-3 pe-2 rounded-2xl border border-white/30 shadow-xs" style="backdrop-filter: blur(8px);">
-                            <i class="bi bi-buildings text-white fs-6"></i>
-                            <select v-model="currentTenantId" @change="onTenantChange()" class="form-select form-select-sm border-0 text-xs font-bold rounded-xl shadow-2xs cursor-pointer py-2 px-3" style="width: auto; min-width: 220px; max-width: 280px; background-color: #ffffff !important; color: #0f172a !important; -webkit-text-fill-color: #0f172a !important;">
-                                <option v-for="t in tenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}{{ t.npsn ? ' (' + t.npsn + ')' : '' }}</option>
-                            </select>
-                        </div>
+                    <div class="kpi-icon-box bg-blue-50 text-blue-600 border border-blue-100 flex-shrink-0">
+                        <i class="bi bi-diagram-3-fill"></i>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- 4 Metric Cards -->
         <div class="col-6 col-lg-3">
-            <div class="bg-white p-3.5 p-md-4 rounded-2xl border border-slate-200/80 shadow-xs h-100 d-flex align-items-center justify-content-between transition hover:-translate-y-0.5">
-                <div>
-                    <span class="text-slate-400 text-xs font-semibold block">Ekskul Aktif</span>
-                    <span class="text-2xl font-black text-slate-800 block mt-0.5">{{ stats.total_ekskul || 0 }}</span>
-                    <span class="text-[11px] text-emerald-600 font-medium d-inline-flex align-items-center gap-1 mt-0.5">
-                        <i class="bi bi-check-circle-fill"></i> Terdaftar di sistem
-                    </span>
-                </div>
-                <div class="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 d-flex align-items-center justify-content-center fs-5 flex-shrink-0 border border-blue-100">
-                    <i class="bi bi-diagram-3-fill"></i>
+            <div class="kpi-card shadow-2xs h-100">
+                <div class="d-flex align-items-start justify-content-between gap-2">
+                    <div>
+                        <div class="kpi-label">Guru Pembina</div>
+                        <div class="kpi-value">{{ stats.total_pembina || 0 }}</div>
+                        <div class="kpi-sub text-indigo-600"><i class="bi bi-person-badge-fill"></i> Pembimbing aktif</div>
+                    </div>
+                    <div class="kpi-icon-box bg-indigo-50 text-indigo-600 border border-indigo-100 flex-shrink-0">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
                 </div>
             </div>
         </div>
-
         <div class="col-6 col-lg-3">
-            <div class="bg-white p-3.5 p-md-4 rounded-2xl border border-slate-200/80 shadow-xs h-100 d-flex align-items-center justify-content-between transition hover:-translate-y-0.5">
-                <div>
-                    <span class="text-slate-400 text-xs font-semibold block">Guru Pembina</span>
-                    <span class="text-2xl font-black text-slate-800 block mt-0.5">{{ stats.total_pembina || 0 }}</span>
-                    <span class="text-[11px] text-indigo-600 font-medium d-inline-flex align-items-center gap-1 mt-0.5">
-                        <i class="bi bi-person-badge-fill"></i> Pembimbing aktif
-                    </span>
-                </div>
-                <div class="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 d-flex align-items-center justify-content-center fs-5 flex-shrink-0 border border-indigo-100">
-                    <i class="bi bi-people-fill"></i>
+            <div class="kpi-card shadow-2xs h-100">
+                <div class="d-flex align-items-start justify-content-between gap-2">
+                    <div>
+                        <div class="kpi-label">Total Anggota</div>
+                        <div class="kpi-value">{{ stats.total_anggota || 0 }}</div>
+                        <div class="kpi-sub text-teal-600"><i class="bi bi-person-check-fill"></i> Siswa berpartisipasi</div>
+                    </div>
+                    <div class="kpi-icon-box bg-teal-50 text-teal-600 border border-teal-100 flex-shrink-0">
+                        <i class="bi bi-mortarboard-fill"></i>
+                    </div>
                 </div>
             </div>
         </div>
-
         <div class="col-6 col-lg-3">
-            <div class="bg-white p-3.5 p-md-4 rounded-2xl border border-slate-200/80 shadow-xs h-100 d-flex align-items-center justify-content-between transition hover:-translate-y-0.5">
-                <div>
-                    <span class="text-slate-400 text-xs font-semibold block">Total Anggota</span>
-                    <span class="text-2xl font-black text-slate-800 block mt-0.5">{{ stats.total_anggota || 0 }}</span>
-                    <span class="text-[11px] text-teal-600 font-medium d-inline-flex align-items-center gap-1 mt-0.5">
-                        <i class="bi bi-person-check-fill"></i> Siswa berpartisipasi
-                    </span>
-                </div>
-                <div class="w-11 h-11 rounded-xl bg-teal-50 text-teal-600 d-flex align-items-center justify-content-center fs-5 flex-shrink-0 border border-teal-100">
-                    <i class="bi bi-mortarboard-fill"></i>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-6 col-lg-3">
-            <div class="bg-white p-3.5 p-md-4 rounded-2xl border border-slate-200/80 shadow-xs h-100 d-flex align-items-center justify-content-between transition hover:-translate-y-0.5">
-                <div>
-                    <span class="text-slate-400 text-xs font-semibold block">Jurnal Kegiatan</span>
-                    <span class="text-2xl font-black text-slate-800 block mt-0.5">{{ stats.total_jurnal || 0 }}</span>
-                    <span class="text-[11px] text-amber-600 font-medium d-inline-flex align-items-center gap-1 mt-0.5">
-                        <i class="bi bi-journal-check"></i> Agenda terlaksana
-                    </span>
-                </div>
-                <div class="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 d-flex align-items-center justify-content-center fs-5 flex-shrink-0 border border-amber-100">
-                    <i class="bi bi-journal-text"></i>
+            <div class="kpi-card shadow-2xs h-100">
+                <div class="d-flex align-items-start justify-content-between gap-2">
+                    <div>
+                        <div class="kpi-label">Jurnal Kegiatan</div>
+                        <div class="kpi-value">{{ stats.total_jurnal || 0 }}</div>
+                        <div class="kpi-sub text-amber-600"><i class="bi bi-journal-check"></i> Agenda terlaksana</div>
+                    </div>
+                    <div class="kpi-icon-box bg-amber-50 text-amber-600 border border-amber-100 flex-shrink-0">
+                        <i class="bi bi-journal-text"></i>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════════════════
-         2. LAYOUT & HEADER NAVIGASI (STANDAR BK KEDISIPLINAN - PURE SAAS PILLS)
+         4. HORIZONTAL NAVTABS — 3-WAY SCROLLER ENGINE
          ═══════════════════════════════════════════════════════════════════════ -->
     <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-2 mb-4 position-relative">
         <div class="d-flex align-items-center position-relative">
-            <button type="button" 
-                    class="btn btn-sm btn-light border border-slate-200/80 rounded-xl shadow-2xs me-1.5 d-none d-md-flex align-items-center justify-content-center flex-shrink-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition" 
-                    style="width: 34px; height: 34px; z-index: 5;" 
+            <button type="button"
+                    class="btn btn-sm btn-light border border-slate-200/80 rounded-xl shadow-2xs me-1.5 d-none d-md-flex align-items-center justify-content-center flex-shrink-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition"
+                    style="width: 34px; height: 34px; z-index: 5;"
                     onclick="document.getElementById('kesiswaanEkskulNavTabs')?.scrollBy({ left: -220, behavior: 'smooth' })"
                     title="Geser ke Kiri">
                 <i class="bi bi-chevron-left"></i>
             </button>
 
             <div class="nav-tabs-wrapper flex-grow-1 overflow-hidden position-relative">
-                <!-- 5 Nav Tabs in Clean Row with Horizontal Scroll on Mobile -->
                 <ul class="nav nav-pills border-0 flex-nowrap overflow-x-auto text-nowrap scrollable-nav-tabs gap-1.5 px-1 mb-0 user-select-none" id="kesiswaanEkskulNavTabs" role="tablist">
                     <li class="nav-item">
-                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition d-inline-flex align-items-center" 
-                                :class="{'active': activeTab === 'master'}"
-                                @click="switchTab('master')">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition d-inline-flex align-items-center"
+                                :class="{'active': activeTab === 'master'}" @click="switchTab('master')">
                             <i class="bi bi-diagram-3 me-2 fs-6"></i> Master Ekskul
                         </button>
                     </li>
                     <li class="nav-item">
-                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition d-inline-flex align-items-center" 
-                                :class="{'active': activeTab === 'pembina'}"
-                                @click="switchTab('pembina')">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition d-inline-flex align-items-center"
+                                :class="{'active': activeTab === 'pembina'}" @click="switchTab('pembina')">
                             <i class="bi bi-person-badge me-2 fs-6"></i> Pembina Ekskul
                         </button>
                     </li>
                     <li class="nav-item">
-                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition d-inline-flex align-items-center" 
-                                :class="{'active': activeTab === 'anggota'}"
-                                @click="switchTab('anggota')">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition d-inline-flex align-items-center"
+                                :class="{'active': activeTab === 'anggota'}" @click="switchTab('anggota')">
                             <i class="bi bi-people me-2 fs-6"></i> Kelola Anggota
                         </button>
                     </li>
                     <li class="nav-item">
-                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition d-inline-flex align-items-center" 
-                                :class="{'active': activeTab === 'jurnal'}"
-                                @click="switchTab('jurnal')">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition d-inline-flex align-items-center"
+                                :class="{'active': activeTab === 'jurnal'}" @click="switchTab('jurnal')">
                             <i class="bi bi-journal-text me-2 fs-6"></i> Jurnal Kegiatan
                         </button>
                     </li>
                     <li class="nav-item">
-                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition d-inline-flex align-items-center" 
-                                :class="{'active': activeTab === 'nilai'}"
-                                @click="switchTab('nilai')">
+                        <button class="nav-link border-0 fw-semibold px-3 py-2.5 fs-7 transition d-inline-flex align-items-center"
+                                :class="{'active': activeTab === 'nilai'}" @click="switchTab('nilai')">
                             <i class="bi bi-award me-2 fs-6"></i> Penilaian e-Rapor
                         </button>
                     </li>
                 </ul>
             </div>
 
-            <button type="button" 
-                    class="btn btn-sm btn-light border border-slate-200/80 rounded-xl shadow-2xs ms-1.5 d-none d-md-flex align-items-center justify-content-center flex-shrink-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition" 
-                    style="width: 34px; height: 34px; z-index: 5;" 
+            <button type="button"
+                    class="btn btn-sm btn-light border border-slate-200/80 rounded-xl shadow-2xs ms-1.5 d-none d-md-flex align-items-center justify-content-center flex-shrink-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition"
+                    style="width: 34px; height: 34px; z-index: 5;"
                     onclick="document.getElementById('kesiswaanEkskulNavTabs')?.scrollBy({ left: 220, behavior: 'smooth' })"
                     title="Geser ke Kanan">
                 <i class="bi bi-chevron-right"></i>
             </button>
 
-            <!-- Segarkan Data Button -->
-            <div class="d-none d-md-flex align-items-center ps-2 pe-1 border-s border-slate-200/80 ms-2">
-                <button type="button" class="btn btn-sm btn-light border border-slate-200 text-slate-600 hover:bg-slate-100 rounded-xl px-3 py-2 text-xs font-bold shadow-2xs d-flex align-items-center gap-1.5" @click="refreshAll()" title="Segarkan Data">
-                    <i class="bi bi-arrow-clockwise" :class="{'spin': loading}"></i>
-                    <span>Segarkan</span>
-                </button>
-            </div>
+
         </div>
     </div>
 
@@ -189,78 +295,69 @@
          3. TAB 1: MASTER EKSTRAKURIKULER (CLEAN SAAS TABLE - NO HORIZONTAL SCROLL)
          ═══════════════════════════════════════════════════════════════════════ -->
     <div v-show="activeTab === 'master'">
-        
-        <!-- 1. Dedicated Modern Toolbar Filter Card (Single-Line Horizontal Scrollable SaaS Toolbar) -->
-        <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-2.5 mb-3 overflow-hidden">
-            <div class="d-flex align-items-center justify-content-between gap-3 overflow-x-auto flex-nowrap custom-scrollbar py-1" style="scrollbar-width: thin; -webkit-overflow-scrolling: touch;">
-                
-                <!-- Left: Academic Pill + Kategori + Live Search -->
-                <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                    <!-- Academic Selector Pill (TA & Semester) -->
-                    <div class="d-inline-flex align-items-center bg-slate-50/90 p-1 rounded-xl border border-slate-200 shadow-2xs gap-1 flex-shrink-0">
-                        <div class="d-flex align-items-center px-2 py-0.5 text-xs font-semibold text-slate-700">
-                            <i class="bi bi-calendar3 text-blue-600 me-1.5 fs-7"></i>
-                            <span class="text-slate-400 me-1 font-medium">TA:</span>
-                            <select id="filterTaEkskul" name="filter_ta" v-model="filterTahunAjaranId" @change="onAcademicFilterChange()" class="form-select form-select-sm border-0 bg-transparent text-xs font-bold py-0 ps-0 pe-4 text-slate-800 cursor-pointer shadow-none" style="width: auto;" aria-label="Filter Tahun Ajaran">
-                                <option v-for="ta in listTahunAjaran" :key="ta.id" :value="ta.id">{{ ta.nama_tahun_ajaran }}</option>
-                            </select>
-                        </div>
-                        <div class="vr bg-slate-200 opacity-60" style="height: 16px;"></div>
-                        <div class="d-flex align-items-center px-2 py-0.5 text-xs font-semibold text-slate-700">
-                            <span class="text-slate-400 me-1 font-medium">Smst:</span>
-                            <select id="filterSemesterEkskul" name="filter_semester" v-model="filterSemester" @change="onAcademicFilterChange()" class="form-select form-select-sm border-0 bg-transparent text-xs font-bold py-0 ps-0 pe-4 text-slate-800 cursor-pointer shadow-none" style="width: auto;" aria-label="Filter Semester">
-                                <option value="Ganjil">Ganjil</option>
-                                <option value="Genap">Genap</option>
-                            </select>
+
+        <!-- Filter & Search Toolbar -->
+        <div class="bg-white rounded-2xl shadow-2xs border border-slate-200/80 p-4 mb-4">
+            <div class="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 mb-3">
+                <div class="row g-3 align-items-end">
+                    <!-- Filter 1: Tahun Ajaran & Semester -->
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <label class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Tahun Ajaran</label>
+                        <select id="filterTaEkskul" v-model="filterTahunAjaranId" @change="onAcademicFilterChange()" class="form-select form-select-sm rounded-xl border-slate-200 bg-white fs-8 text-slate-800 font-medium py-2 shadow-2xs cursor-pointer" style="height: 38px;">
+                            <option v-for="ta in listTahunAjaran" :key="ta.id" :value="ta.id">{{ ta.nama_tahun_ajaran }}</option>
+                        </select>
+                    </div>
+                    <!-- Filter 2: Semester -->
+                    <div class="col-12 col-sm-6 col-lg-2">
+                        <label class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Semester</label>
+                        <select id="filterSemesterEkskul" v-model="filterSemester" @change="onAcademicFilterChange()" class="form-select form-select-sm rounded-xl border-slate-200 bg-white fs-8 text-slate-800 font-medium py-2 shadow-2xs cursor-pointer" style="height: 38px;">
+                            <option value="Ganjil">Ganjil</option>
+                            <option value="Genap">Genap</option>
+                        </select>
+                    </div>
+                    <!-- Filter 3: Kategori -->
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <label class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Kategori Ekskul</label>
+                        <select id="filterKategoriSelect" v-model="filterKategoriEkskul" class="form-select form-select-sm rounded-xl border-slate-200 bg-white fs-8 text-slate-800 font-medium py-2 shadow-2xs cursor-pointer" style="height: 38px;">
+                            <option value="">-- Semua Kategori --</option>
+                            <option value="Wajib">Wajib</option>
+                            <option value="Pilihan">Pilihan</option>
+                            <option value="Olahraga">Olahraga</option>
+                            <option value="Seni & Budaya">Seni & Budaya</option>
+                            <option value="Keagamaan">Keagamaan</option>
+                            <option value="Akademik / Sains">Akademik / Sains</option>
+                            <option value="Kepanduan & Bela Negara">Kepanduan & Bela Negara</option>
+                            <option value="Teknologi & Robotik">Teknologi & Robotik</option>
+                        </select>
+                    </div>
+                    <!-- Search + Buttons -->
+                    <div class="col-12 col-sm-6 col-lg-4">
+                        <label class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Cari Ekstrakurikuler</label>
+                        <div class="d-flex gap-2">
+                            <div class="position-relative flex-grow-1">
+                                <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-slate-400 text-xs"></i>
+                                <input type="text" id="searchEkskulInput" v-model="searchEkskul" class="form-control form-control-sm rounded-xl ps-4 pe-4 border-slate-200 bg-white fs-8 text-slate-800 font-medium shadow-2xs" placeholder="Cari nama ekskul..." style="height: 38px;">
+                                <button v-if="searchEkskul" @click="searchEkskul = ''" class="btn btn-sm p-0 position-absolute top-50 end-0 translate-middle-y me-2 text-slate-400 border-0 bg-transparent">
+                                    <i class="bi bi-x-circle-fill text-xs"></i>
+                                </button>
+                            </div>
+                            <button v-if="searchEkskul || filterKategoriEkskul" @click="searchEkskul = ''; filterKategoriEkskul = ''" class="btn btn-sm btn-light border border-slate-200 text-rose-600 rounded-xl px-3 shadow-2xs flex-shrink-0" style="height: 38px;" title="Reset">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
                         </div>
                     </div>
-
-                    <!-- Filter Kategori Dropdown -->
-                    <select id="filterKategoriSelect" name="filter_kategori" v-model="filterKategoriEkskul" class="form-select form-select-sm text-xs font-semibold rounded-xl border-slate-200 shadow-2xs bg-white text-slate-700 py-1.5 ps-3 pe-7 cursor-pointer hover:border-blue-300 transition flex-shrink-0" style="width: auto; min-width: 175px;" aria-label="Filter Kategori">
-                        <option value="">Semua Kategori ({{ ekskulList.length }})</option>
-                        <option value="Wajib">🛡️ Wajib</option>
-                        <option value="Pilihan">⭐ Pilihan</option>
-                        <option value="Olahraga">🏆 Olahraga</option>
-                        <option value="Seni & Budaya">🎨 Seni & Budaya</option>
-                        <option value="Keagamaan">🕌 Keagamaan</option>
-                        <option value="Akademik / Sains">💡 Akademik / Sains</option>
-                        <option value="Kepanduan & Bela Negara">🧭 Kepanduan & Bela Negara</option>
-                        <option value="Teknologi & Robotik">🤖 Teknologi & Robotik</option>
-                    </select>
-
-                    <!-- Search Input -->
-                    <div class="position-relative flex-shrink-0" style="width: 220px;">
-                        <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-slate-400 text-xs pointer-events-none"></i>
-                        <input type="text" id="searchEkskulInput" name="search_ekskul" v-model="searchEkskul" class="form-control form-control-sm text-xs rounded-xl ps-4 pe-4 py-1.5 border-slate-200 shadow-2xs bg-white text-slate-800 font-medium focus:ring-2 focus:ring-blue-500 hover:border-blue-300 transition" placeholder="Cari nama ekskul..." aria-label="Cari nama ekskul">
-                        <button v-if="searchEkskul" @click="searchEkskul = ''" class="btn btn-sm p-0 position-absolute top-50 end-0 translate-middle-y me-2 text-slate-400 hover:text-slate-600 border-0 bg-transparent" aria-label="Hapus kata kunci">
-                            <i class="bi bi-x-circle-fill text-xs"></i>
-                        </button>
-                    </div>
-
-                    <!-- Reset Filter Button -->
-                    <button v-if="searchEkskul || filterKategoriEkskul" @click="searchEkskul = ''; filterKategoriEkskul = ''" class="btn btn-sm btn-light border border-slate-200 text-rose-600 rounded-xl px-2.5 py-1.5 text-xs font-bold hover:bg-rose-50 shadow-2xs d-inline-flex align-items-center gap-1 flex-shrink-0" title="Reset Filter">
-                        <i class="bi bi-x-lg"></i> Reset
-                    </button>
                 </div>
-
-                <!-- Right: Counter Badge & Action Button -->
-                <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-auto">
-                    <span class="badge bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold px-3 py-2 rounded-xl d-inline-flex align-items-center gap-1.5 shadow-2xs flex-shrink-0">
-                        <i class="bi bi-grid-fill text-blue-600"></i>
-                        <span>{{ filteredEkskulList.length }} Ekskul</span>
-                    </span>
-                    <button type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-3.5 py-2 text-xs d-inline-flex align-items-center gap-1.5 shadow-sm hover:shadow transition bg-blue-600 border-0 flex-shrink-0 text-nowrap" @click="openModalEkskul()">
-                        <i class="bi bi-plus-circle-fill"></i>
-                        <span>Tambah Ekskul Baru</span>
-                    </button>
-                </div>
+            </div>
+            <!-- Counter Info -->
+            <div class="d-flex align-items-center justify-content-between">
+                <span class="fs-8 text-slate-500">Menampilkan <strong class="text-slate-800">{{ filteredEkskulList.length }}</strong> dari <strong class="text-slate-800">{{ ekskulList.length }}</strong> ekstrakurikuler</span>
             </div>
         </div>
 
-        <!-- 2. Main Table Card Container -->
-        <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden mb-4">
-            <div class="table-responsive custom-scrollbar">
-                <table class="table table-hover align-middle mb-0" style="min-width: 960px;">
+        <!-- Tabel Master Ekskul -->
+        <div class="bg-white rounded-2xl shadow-2xs border border-slate-200/80 overflow-hidden mb-4">
+            <div class="table-responsive" style="margin-bottom: 1.25rem;">
+                <table class="pengguna-table table table-hover align-middle mb-0 w-100">
                     <thead class="bg-slate-50/80 border-b border-slate-200 text-slate-500 text-[11px] font-bold uppercase tracking-wider">
                         <tr>
                             <th class="ps-4 py-3.5">NAMA EKSTRAKURIKULER</th>
@@ -375,33 +472,32 @@
          4. TAB 2: PEMBINA EKSTRAKURIKULER
          ═══════════════════════════════════════════════════════════════════════ -->
     <div v-show="activeTab === 'pembina'">
-        <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden mb-4">
-            <!-- Header Toolbar (Horizontal Scrollable) -->
-            <div class="px-3.5 py-2.5 border-b border-slate-200/80 bg-slate-50/50">
-                <div class="d-flex align-items-center justify-content-between gap-3 overflow-x-auto flex-nowrap custom-scrollbar" style="scrollbar-width: thin; -webkit-overflow-scrolling: touch;">
-                    <div class="d-flex align-items-center gap-2 flex-shrink-0" style="width: 280px;">
-                        <div class="position-relative w-100">
-                            <label for="searchPembinaInput" class="visually-hidden">Cari nama atau kontak pembina</label>
-                            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-slate-400 text-xs pointer-events-none"></i>
-                            <input type="text" id="searchPembinaInput" name="search_pembina" v-model="searchPembina" class="form-control form-control-sm text-xs rounded-xl ps-4 pe-4 py-1.5 border-slate-200 shadow-2xs bg-white text-slate-800 font-medium" placeholder="Cari nama atau kontak pembina..." aria-label="Cari nama atau kontak pembina">
-                            <button v-if="searchPembina" @click="searchPembina = ''" class="btn btn-sm p-0 position-absolute top-50 end-0 translate-middle-y me-2 text-slate-400 hover:text-slate-600 border-0 bg-transparent" aria-label="Hapus pencarian">
+        <!-- Filter Toolbar Pembina -->
+        <div class="bg-white rounded-2xl shadow-2xs border border-slate-200/80 p-4 mb-4">
+            <div class="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 mb-3">
+                <div class="row g-3 align-items-end">
+                    <div class="col-12 col-sm-6 col-lg-5">
+                        <label class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Cari Nama / Kontak Pembina</label>
+                        <div class="position-relative">
+                            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-slate-400 text-xs"></i>
+                            <input type="text" id="searchPembinaInput" v-model="searchPembina" class="form-control form-control-sm rounded-xl ps-4 pe-4 border-slate-200 bg-white fs-8 text-slate-800 font-medium shadow-2xs" placeholder="Cari nama atau kontak pembina..." style="height: 38px;">
+                            <button v-if="searchPembina" @click="searchPembina = ''" class="btn btn-sm p-0 position-absolute top-50 end-0 translate-middle-y me-2 text-slate-400 border-0 bg-transparent">
                                 <i class="bi bi-x-circle-fill text-xs"></i>
                             </button>
                         </div>
                     </div>
-                    <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-auto">
-                        <button type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-3.5 py-2 text-xs d-inline-flex align-items-center gap-1.5 shadow-sm hover:shadow transition bg-blue-600 border-0 flex-shrink-0 text-nowrap" @click="openModalPembina()">
-                            <i class="bi bi-person-plus-fill"></i>
-                            <span>Tambah Pembina Baru</span>
-                        </button>
-                    </div>
                 </div>
             </div>
+            <div class="d-flex align-items-center justify-content-between">
+                <span class="fs-8 text-slate-500">Menampilkan <strong class="text-slate-800">{{ filteredPembinaList.length }}</strong> pembina ekskul</span>
+            </div>
+        </div>
 
-            <!-- Table Pembina -->
-            <div class="table-responsive custom-scrollbar">
-                <table class="table table-hover align-middle mb-0" style="min-width: 900px;">
-                    <thead class="bg-slate-50/80 border-b border-slate-200 text-slate-500 text-[11px] font-bold uppercase tracking-wider">
+        <!-- Tabel Pembina -->
+        <div class="bg-white rounded-2xl shadow-2xs border border-slate-200/80 overflow-hidden mb-4">
+            <div class="table-responsive" style="margin-bottom: 1.25rem;">
+                <table class="pengguna-table table table-hover align-middle mb-0 w-100">
+                    <thead>
                         <tr>
                             <th class="ps-4 py-3.5">NAMA PEMBINA</th>
                             <th class="py-3.5 text-center" style="width: 140px;">KATEGORI</th>
@@ -485,169 +581,135 @@
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════════════════
-         5. TAB 3: KELOLA ANGGOTA EKSKUL (CLEAN SAAS REDESIGN)
+         5. TAB 3: KELOLA ANGGOTA EKSKUL
          ═══════════════════════════════════════════════════════════════════════ -->
     <div v-show="activeTab === 'anggota'">
-        <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden mb-4">
-            <!-- Symmetrical Modern Header Toolbar (Horizontal Scrollable) -->
-            <div class="px-3.5 py-2.5 border-b border-slate-200/80 bg-slate-50/50">
-                <div class="d-flex align-items-center justify-content-between gap-3 overflow-x-auto flex-nowrap custom-scrollbar" style="scrollbar-width: thin; -webkit-overflow-scrolling: touch;">
-                    <!-- Left: TA + Semester + Ekskul Selector + Live Search Input -->
-                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                        <!-- Academic Filter Segment (TA & Semester) -->
-                        <div class="d-inline-flex align-items-center bg-white p-1 rounded-xl border border-slate-200 shadow-2xs gap-1 flex-shrink-0">
-                            <div class="d-flex align-items-center px-2 py-0.5 text-xs font-semibold text-slate-700">
-                                <i class="bi bi-calendar3 text-blue-600 me-1.5 fs-7"></i>
-                                <span class="text-slate-400 me-1 font-medium">TA:</span>
-                                <select id="filterTaAnggota" name="filter_ta" v-model="filterTahunAjaranId" @change="onAcademicFilterChange()" class="form-select form-select-sm border-0 bg-transparent text-xs font-bold py-0 ps-0 pe-4 text-slate-800 cursor-pointer shadow-none" style="width: auto;" aria-label="Filter Tahun Ajaran">
-                                    <option v-for="ta in listTahunAjaran" :key="ta.id" :value="ta.id">{{ ta.nama_tahun_ajaran }}</option>
-                                </select>
-                            </div>
-                            <div class="vr bg-slate-200 opacity-60" style="height: 16px;"></div>
-                            <div class="d-flex align-items-center px-2 py-0.5 text-xs font-semibold text-slate-700">
-                                <span class="text-slate-400 me-1 font-medium">Smst:</span>
-                                <select id="filterSemesterAnggota" name="filter_semester" v-model="filterSemester" @change="onAcademicFilterChange()" class="form-select form-select-sm border-0 bg-transparent text-xs font-bold py-0 ps-0 pe-4 text-slate-800 cursor-pointer shadow-none" style="width: auto;" aria-label="Filter Semester">
-                                    <option value="Ganjil">Ganjil</option>
-                                    <option value="Genap">Genap</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Ekskul Selector -->
-                        <div class="d-flex align-items-center bg-white px-3 py-1 rounded-xl border border-slate-200 shadow-2xs flex-shrink-0">
-                            <i class="bi bi-diagram-3-fill text-blue-600 me-2 fs-7"></i>
-                            <span class="text-slate-400 text-xs font-bold me-2">Ekskul:</span>
-                            <select id="selectEkskulAnggota" name="selected_ekskul_id" v-model="selectedEkskulId" @change="fetchAnggota()" class="form-select form-select-sm border-0 bg-transparent text-xs font-bold text-slate-800 p-0 shadow-none cursor-pointer" style="min-width: 180px;" aria-label="Pilih Ekstrakurikuler">
-                                <option value="" disabled>-- Pilih Ekstrakurikuler --</option>
-                                <option v-for="e in ekskulList" :key="e.id" :value="e.id">{{ e.nama_ekskul }} ({{ getKategoriDisplay(e.kategori, e.nama_ekskul) }})</option>
-                            </select>
-                        </div>
-
-                        <!-- Live Search -->
-                        <div class="position-relative flex-shrink-0" style="width: 220px;" v-if="selectedEkskulId">
-                            <label for="searchAnggotaInput" class="visually-hidden">Cari nama atau NISN</label>
-                            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-slate-400 text-xs pointer-events-none"></i>
-                            <input type="text" id="searchAnggotaInput" name="search_anggota" v-model="searchAnggota" class="form-control form-control-sm text-xs rounded-xl ps-4 pe-4 py-1.5 border-slate-200 shadow-2xs bg-white text-slate-800 font-medium" placeholder="Cari nama / NISN..." aria-label="Cari nama atau NISN">
-                            <button v-if="searchAnggota" @click="searchAnggota = ''" class="btn btn-sm p-0 position-absolute top-50 end-0 translate-middle-y me-2 text-slate-400 hover:text-slate-600 border-0 bg-transparent" aria-label="Hapus pencarian">
+        <!-- Filter Toolbar Anggota -->
+        <div class="bg-white rounded-2xl shadow-2xs border border-slate-200/80 p-4 mb-4">
+            <div class="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 mb-3">
+                <div class="row g-3 align-items-end">
+                    <div class="col-12 col-sm-6 col-lg-2">
+                        <label class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Tahun Ajaran</label>
+                        <select id="filterTaAnggota" v-model="filterTahunAjaranId" @change="onAcademicFilterChange()" class="form-select form-select-sm rounded-xl border-slate-200 bg-white fs-8 text-slate-800 font-medium py-2 shadow-2xs cursor-pointer" style="height: 38px;">
+                            <option v-for="ta in listTahunAjaran" :key="ta.id" :value="ta.id">{{ ta.nama_tahun_ajaran }}</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-2">
+                        <label class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Semester</label>
+                        <select id="filterSemesterAnggota" v-model="filterSemester" @change="onAcademicFilterChange()" class="form-select form-select-sm rounded-xl border-slate-200 bg-white fs-8 text-slate-800 font-medium py-2 shadow-2xs cursor-pointer" style="height: 38px;">
+                            <option value="Ganjil">Ganjil</option>
+                            <option value="Genap">Genap</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-4">
+                        <label class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Pilih Ekstrakurikuler</label>
+                        <select id="selectEkskulAnggota" v-model="selectedEkskulId" @change="fetchAnggota()" class="form-select form-select-sm rounded-xl border-slate-200 bg-white fs-8 text-slate-800 font-medium py-2 shadow-2xs cursor-pointer" style="height: 38px;">
+                            <option value="" disabled>-- Pilih Ekstrakurikuler --</option>
+                            <option v-for="e in ekskulList" :key="e.id" :value="e.id">{{ e.nama_ekskul }} ({{ getKategoriDisplay(e.kategori, e.nama_ekskul) }})</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-4" v-if="selectedEkskulId">
+                        <label class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Cari Nama / NISN</label>
+                        <div class="position-relative">
+                            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-slate-400 text-xs"></i>
+                            <input type="text" id="searchAnggotaInput" v-model="searchAnggota" class="form-control form-control-sm rounded-xl ps-4 pe-4 border-slate-200 bg-white fs-8 text-slate-800 font-medium shadow-2xs" placeholder="Cari nama / NISN..." style="height: 38px;">
+                            <button v-if="searchAnggota" @click="searchAnggota = ''" class="btn btn-sm p-0 position-absolute top-50 end-0 translate-middle-y me-2 text-slate-400 border-0 bg-transparent">
                                 <i class="bi bi-x-circle-fill text-xs"></i>
                             </button>
                         </div>
                     </div>
-
-                    <!-- Right: Lock Toggle + Export Excel + Tambah Anggota -->
-                    <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-auto">
-                        <!-- Lock Button -->
-                        <button type="button" class="btn btn-sm rounded-xl font-bold px-3 py-1.5 text-xs d-inline-flex align-items-center gap-1.5 transition shadow-2xs flex-shrink-0 text-nowrap"
-                                :class="currentLock.lock_anggota ? 'bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'"
-                                @click="toggleLock('anggota')" :disabled="!selectedEkskulId">
-                            <i class="bi" :class="currentLock.lock_anggota ? 'bi-lock-fill text-amber-800' : 'bi-unlock text-slate-500'"></i>
-                            <span>{{ currentLock.lock_anggota ? 'Pendaftaran Terkunci' : 'Kunci Pendaftaran' }}</span>
-                        </button>
-
-                        <!-- Export Excel Button -->
-                        <a :href="getExportAnggotaUrl()" target="_blank" class="btn btn-sm btn-outline-success rounded-xl font-bold px-3 py-1.5 text-xs d-inline-flex align-items-center gap-1.5 shadow-2xs bg-white hover:bg-emerald-50 flex-shrink-0 text-nowrap"
-                           :class="{'disabled pointer-events-none opacity-50': !selectedEkskulId || filteredAnggotaList.length === 0}">
-                            <i class="bi bi-file-earmark-excel-fill text-emerald-600"></i>
-                            <span>Ekspor Excel</span>
-                        </a>
-
-                        <!-- Tambah Anggota Button -->
-                        <button type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-3.5 py-1.5 text-xs d-inline-flex align-items-center gap-1.5 shadow-2xs hover:shadow-xs transition flex-shrink-0 text-nowrap"
-                                :disabled="!selectedEkskulId || currentLock.lock_anggota" @click="openModalTambahAnggota()">
-                            <i class="bi bi-person-plus-fill"></i>
-                            <span>Tambah Anggota</span>
-                        </button>
-                    </div>
                 </div>
             </div>
-
-            <!-- Content Area: Table / Clean Empty State -->
-            <div>
-                <div v-if="!selectedEkskulId" class="text-center py-5 px-3">
-                    <div class="w-12 h-12 rounded-full bg-blue-50 text-blue-500 d-inline-flex align-items-center justify-content-center fs-4 mb-2">
-                        <i class="bi bi-diagram-3"></i>
-                    </div>
-                    <div class="font-bold text-slate-700 text-sm">Pilih Ekstrakurikuler</div>
-                    <p class="text-slate-400 text-xs mb-0">Silakan pilih ekstrakurikuler terlebih dahulu untuk melihat daftar anggota.</p>
-                </div>
-                <div v-else-if="loadingAnggota" class="text-center py-5 px-3">
-                    <div class="spinner-border spinner-border-sm text-primary me-2"></div>
-                    <span class="text-slate-400 text-xs">Memuat anggota ekstrakurikuler...</span>
-                </div>
-                <div v-else-if="filteredAnggotaList.length === 0" class="text-center py-5 px-3">
-                    <div class="w-14 h-14 rounded-full bg-slate-100 text-slate-400 d-inline-flex align-items-center justify-content-center fs-3 mb-2.5">
-                        <i class="bi bi-people"></i>
-                    </div>
-                    <div class="font-bold text-slate-700 text-base mb-1">Belum Ada Anggota Terdaftar</div>
-                    <p class="text-slate-400 text-xs mb-3" style="max-width: 480px; margin: 0 auto;">
-                        Daftarkan siswa aktif ke ekstrakurikuler ini untuk periode {{ selectedTaName }} ({{ filterSemester }}).
-                    </p>
-                    <button type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-3.5 py-2 text-xs shadow-sm" @click="openModalTambahAnggota()" :disabled="currentLock.lock_anggota">
-                        <i class="bi bi-person-plus-fill me-1.5"></i> Tambah Anggota Sekarang
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <span class="fs-8 text-slate-500">Menampilkan <strong class="text-slate-800">{{ filteredAnggotaList.length }}</strong> anggota terdaftar</span>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm rounded-xl font-bold px-3 py-1.5 fs-8 d-inline-flex align-items-center gap-1.5 shadow-2xs transition"
+                            :class="currentLock.lock_anggota ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'"
+                            @click="toggleLock('anggota')" :disabled="!selectedEkskulId">
+                        <i class="bi" :class="currentLock.lock_anggota ? 'bi-lock-fill text-amber-800' : 'bi-unlock text-slate-500'"></i>
+                        <span>{{ currentLock.lock_anggota ? 'Pendaftaran Terkunci' : 'Kunci Pendaftaran' }}</span>
                     </button>
+                    <a :href="getExportAnggotaUrl()" target="_blank" class="btn btn-sm btn-outline-success rounded-xl font-bold px-3 py-1.5 fs-8 d-inline-flex align-items-center gap-1.5 shadow-2xs bg-white"
+                       :class="{'disabled pointer-events-none opacity-50': !selectedEkskulId || filteredAnggotaList.length === 0}">
+                        <i class="bi bi-file-earmark-excel-fill text-emerald-600"></i>
+                        <span>Ekspor Excel</span>
+                    </a>
                 </div>
-                <div v-else class="table-responsive custom-scrollbar">
-                    <table class="table table-hover align-middle mb-0" style="min-width: 950px;">
-                        <thead class="bg-slate-50/80 border-b border-slate-200 text-slate-500 text-[11px] font-bold uppercase tracking-wider">
-                            <tr>
-                                <th class="ps-4 py-3.5 text-center" style="width: 50px;">NO</th>
-                                <th class="py-3.5">NAMA LENGKAP SISWA</th>
-                                <th class="py-3.5">NISN / NIS</th>
-                                <th class="py-3.5 text-center" style="width: 110px;">KELAS</th>
-                                <th class="py-3.5 text-center" style="width: 130px;">JENIS KELAMIN</th>
-                                <th class="py-3.5 text-center" style="width: 140px;">JABATAN</th>
-                                <th class="py-3.5 text-center" style="width: 100px;">STATUS</th>
-                                <th class="py-3.5 text-center pe-4" style="width: 120px;">AKSI</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="(mem, idx) in filteredAnggotaList" :key="mem.id" class="text-xs border-b border-slate-100 transition hover:bg-slate-50/60">
-                                <td class="ps-4 py-3 text-center font-bold text-slate-400">{{ idx + 1 }}</td>
-                                <td class="py-3">
-                                    <div class="d-flex align-items-center gap-2.5">
-                                        <div class="w-8 h-8 rounded-full bg-blue-50 text-blue-600 d-flex align-items-center justify-content-center font-bold text-xs flex-shrink-0 border border-blue-100 shadow-2xs">
-                                            {{ (mem.nama_lengkap || 'S').charAt(0).toUpperCase() }}
-                                        </div>
-                                        <div>
-                                            <span class="font-bold text-slate-800 text-sm d-block">{{ mem.nama_lengkap }}</span>
-                                        </div>
+            </div>
+        </div>
+        <!-- Tabel Anggota -->
+        <div class="bg-white rounded-2xl shadow-2xs border border-slate-200/80 overflow-hidden mb-4">
+            <div v-if="!selectedEkskulId" class="text-center py-5 px-3">
+                <div class="w-12 h-12 rounded-full bg-blue-50 text-blue-500 d-inline-flex align-items-center justify-content-center fs-4 mb-2"><i class="bi bi-diagram-3"></i></div>
+                <div class="font-bold text-slate-700 text-sm">Pilih Ekstrakurikuler</div>
+                <p class="text-slate-400 text-xs mb-0">Silakan pilih ekstrakurikuler terlebih dahulu untuk melihat daftar anggota.</p>
+            </div>
+            <div v-else-if="loadingAnggota" class="text-center py-5 px-3">
+                <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                <span class="text-slate-400 text-xs">Memuat anggota ekstrakurikuler...</span>
+            </div>
+            <div v-else-if="filteredAnggotaList.length === 0" class="text-center py-5 px-3">
+                <div class="w-14 h-14 rounded-full bg-slate-100 text-slate-400 d-inline-flex align-items-center justify-content-center fs-3 mb-2"><i class="bi bi-people"></i></div>
+                <div class="font-bold text-slate-700 text-sm mb-1">Belum Ada Anggota Terdaftar</div>
+                <p class="text-slate-400 text-xs mb-3" style="max-width: 480px; margin: 0 auto;">Daftarkan siswa aktif ke ekstrakurikuler ini untuk periode {{ selectedTaName }} ({{ filterSemester }}).</p>
+                <button type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-3.5 py-2 fs-8 shadow-sm" @click="openModalTambahAnggota()" :disabled="currentLock.lock_anggota">
+                    <i class="bi bi-person-plus-fill me-1"></i> Tambah Anggota Sekarang
+                </button>
+            </div>
+            <div v-else class="table-responsive" style="margin-bottom: 1.25rem;">
+                <table class="pengguna-table table table-hover align-middle mb-0 w-100">
+                    <thead>
+                        <tr>
+                            <th class="ps-4 py-3.5 text-center" style="width: 48px;">NO</th>
+                            <th class="py-3.5">NAMA LENGKAP SISWA</th>
+                            <th class="py-3.5">NISN / NIS</th>
+                            <th class="py-3.5 text-center" style="width: 90px;">KELAS</th>
+                            <th class="py-3.5 text-center" style="width: 120px;">KELAMIN</th>
+                            <th class="py-3.5 text-center" style="width: 120px;">JABATAN</th>
+                            <th class="py-3.5 text-center" style="width: 90px;">STATUS</th>
+                            <th class="py-3.5 text-center pe-4" style="width: 110px;">AKSI</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(mem, idx) in filteredAnggotaList" :key="mem.id">
+                            <td class="ps-4 text-center font-bold text-slate-400">{{ idx + 1 }}</td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="avatar-circle bg-blue-50 text-blue-600 border border-blue-100 flex-shrink-0">
+                                        {{ (mem.nama_lengkap || 'S').charAt(0).toUpperCase() }}
                                     </div>
-                                </td>
-                                <td class="py-3 font-mono text-slate-600">{{ mem.nisn || mem.nis || '—' }}</td>
-                                <td class="py-3 text-center">
-                                    <span class="badge bg-slate-100 text-slate-700 font-bold px-2.5 py-1 rounded-lg border border-slate-200 text-xs">
-                                        {{ mem.nama_kelas }}
-                                    </span>
-                                </td>
-                                <td class="py-3 text-center">
-                                    <span :class="mem.jenis_kelamin === 'L' ? 'text-blue-600' : 'text-pink-600'" class="font-semibold d-inline-flex align-items-center gap-1">
-                                        <i class="bi" :class="mem.jenis_kelamin === 'L' ? 'bi-gender-male' : 'bi-gender-female'"></i>
-                                        {{ mem.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan' }}
-                                    </span>
-                                </td>
-                                <td class="py-3 text-center">
-                                    <span class="badge text-xs px-3 py-1.5 rounded-full shadow-2xs d-inline-flex align-items-center gap-1.5"
-                                          :style="getJabatanBadgeStyle(mem.jabatan)">
-                                        <i class="bi" :class="getJabatanIcon(mem.jabatan)"></i>
-                                        {{ mem.jabatan || 'Anggota' }}
-                                    </span>
-                                </td>
-                                <td class="py-3 text-center">
-                                    <span class="badge bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold px-2.5 py-1 rounded-full d-inline-flex align-items-center gap-1">
-                                        <i class="bi bi-check-circle-fill text-emerald-600"></i> {{ mem.status_keanggotaan || 'Aktif' }}
-                                    </span>
-                                </td>
-                                <td class="py-3 text-center pe-4">
-                                    <button type="button" class="btn btn-xs btn-outline-danger rounded-xl px-2.5 py-1.5 font-bold transition shadow-2xs d-inline-flex align-items-center gap-1" 
-                                            :disabled="currentLock.lock_anggota" title="Keluarkan Anggota" @click="removeAnggota(mem)">
-                                        <i class="bi bi-person-dash"></i>
-                                        <span>Keluarkan</span>
-                                    </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                                    <span class="font-bold text-slate-800 fs-8">{{ mem.nama_lengkap }}</span>
+                                </div>
+                            </td>
+                            <td class="font-mono text-slate-500 fs-8">{{ mem.nisn || mem.nis || '—' }}</td>
+                            <td class="text-center">
+                                <span class="badge bg-slate-100 text-slate-700 font-bold px-2.5 py-1 rounded-lg border border-slate-200 text-xs">{{ mem.nama_kelas }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span :class="mem.jenis_kelamin === 'L' ? 'gender-badge-l' : 'gender-badge-p'">
+                                    {{ mem.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan' }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge text-xs px-2.5 py-1 rounded-full shadow-2xs d-inline-flex align-items-center gap-1" :style="getJabatanBadgeStyle(mem.jabatan)">
+                                    <i class="bi" :class="getJabatanIcon(mem.jabatan)"></i>
+                                    {{ mem.jabatan || 'Anggota' }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold px-2.5 py-1 rounded-full d-inline-flex align-items-center gap-1">
+                                    <i class="bi bi-check-circle-fill"></i> {{ mem.status_keanggotaan || 'Aktif' }}
+                                </span>
+                            </td>
+                            <td class="text-center pe-4">
+                                <button type="button" class="btn btn-xs btn-outline-danger rounded-xl px-2.5 py-1 font-bold transition shadow-2xs d-inline-flex align-items-center gap-1"
+                                        :disabled="currentLock.lock_anggota" @click="removeAnggota(mem)">
+                                    <i class="bi bi-person-dash"></i> <span>Keluarkan</span>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -656,108 +718,78 @@
          6. TAB 4: JURNAL & AGENDA KEGIATAN
          ═══════════════════════════════════════════════════════════════════════ -->
     <div v-show="activeTab === 'jurnal'">
-        <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden mb-4">
-            <!-- Header Toolbar (Horizontal Scrollable) -->
-            <div class="px-3.5 py-2.5 border-b border-slate-200/80 bg-slate-50/50">
-                <div class="d-flex align-items-center justify-content-between gap-3 overflow-x-auto flex-nowrap custom-scrollbar" style="scrollbar-width: thin; -webkit-overflow-scrolling: touch;">
-                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                        <!-- Academic Filter Segment (TA & Semester) -->
-                        <div class="d-inline-flex align-items-center bg-white p-1 rounded-xl border border-slate-200 shadow-2xs gap-1 flex-shrink-0">
-                            <div class="d-flex align-items-center px-2 py-0.5 text-xs font-semibold text-slate-700">
-                                <i class="bi bi-calendar3 text-blue-600 me-1.5 fs-7"></i>
-                                <span class="text-slate-400 me-1 font-medium">TA:</span>
-                                <select id="filterTaJurnal" name="filter_ta" v-model="filterTahunAjaranId" @change="onAcademicFilterChange()" class="form-select form-select-sm border-0 bg-transparent text-xs font-bold py-0 ps-0 pe-4 text-slate-800 cursor-pointer shadow-none" style="width: auto;" aria-label="Filter Tahun Ajaran">
-                                    <option v-for="ta in listTahunAjaran" :key="ta.id" :value="ta.id">{{ ta.nama_tahun_ajaran }}</option>
-                                </select>
-                            </div>
-                            <div class="vr bg-slate-200 opacity-60" style="height: 16px;"></div>
-                            <div class="d-flex align-items-center px-2 py-0.5 text-xs font-semibold text-slate-700">
-                                <span class="text-slate-400 me-1 font-medium">Smst:</span>
-                                <select id="filterSemesterJurnal" name="filter_semester" v-model="filterSemester" @change="onAcademicFilterChange()" class="form-select form-select-sm border-0 bg-transparent text-xs font-bold py-0 ps-0 pe-4 text-slate-800 cursor-pointer shadow-none" style="width: auto;" aria-label="Filter Semester">
-                                    <option value="Ganjil">Ganjil</option>
-                                    <option value="Genap">Genap</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Ekskul Selector -->
-                        <div class="d-flex align-items-center bg-white px-3 py-1 rounded-xl border border-slate-200 shadow-2xs flex-shrink-0">
-                            <i class="bi bi-diagram-3-fill text-blue-600 me-2 fs-7"></i>
-                            <span class="text-slate-400 text-xs font-bold me-2">Ekskul:</span>
-                            <select id="selectEkskulJurnal" name="selected_ekskul_id" v-model="selectedEkskulId" @change="fetchJurnal()" class="form-select form-select-sm border-0 bg-transparent text-xs font-bold text-slate-800 p-0 shadow-none cursor-pointer" style="min-width: 180px;" aria-label="Pilih Ekstrakurikuler">
-                                <option value="" disabled>-- Pilih Ekstrakurikuler --</option>
-                                <option v-for="e in ekskulList" :key="e.id" :value="e.id">{{ e.nama_ekskul }} ({{ getKategoriDisplay(e.kategori, e.nama_ekskul) }})</option>
-                            </select>
-                        </div>
+        <!-- Filter Toolbar Jurnal -->
+        <div class="bg-white rounded-2xl shadow-2xs border border-slate-200/80 p-4 mb-4">
+            <div class="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 mb-3">
+                <div class="row g-3 align-items-end">
+                    <div class="col-12 col-sm-6 col-lg-2">
+                        <label class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Tahun Ajaran</label>
+                        <select id="filterTaJurnal" v-model="filterTahunAjaranId" @change="onAcademicFilterChange()" class="form-select form-select-sm rounded-xl border-slate-200 bg-white fs-8 text-slate-800 font-medium py-2 shadow-2xs cursor-pointer" style="height: 38px;">
+                            <option v-for="ta in listTahunAjaran" :key="ta.id" :value="ta.id">{{ ta.nama_tahun_ajaran }}</option>
+                        </select>
                     </div>
-
-                    <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-auto">
-                        <button type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-3.5 py-2 text-xs d-inline-flex align-items-center gap-1.5 shadow-sm hover:shadow transition bg-blue-600 border-0 flex-shrink-0 text-nowrap"
-                                :disabled="!selectedEkskulId" @click="openModalJurnal()">
-                            <i class="bi bi-plus-circle-fill"></i>
-                            <span>Catat Pertemuan Baru</span>
-                        </button>
+                    <div class="col-12 col-sm-6 col-lg-2">
+                        <label class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Semester</label>
+                        <select id="filterSemesterJurnal" v-model="filterSemester" @change="onAcademicFilterChange()" class="form-select form-select-sm rounded-xl border-slate-200 bg-white fs-8 text-slate-800 font-medium py-2 shadow-2xs cursor-pointer" style="height: 38px;">
+                            <option value="Ganjil">Ganjil</option>
+                            <option value="Genap">Genap</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-4">
+                        <label class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Pilih Ekstrakurikuler</label>
+                        <select id="selectEkskulJurnal" v-model="selectedEkskulId" @change="fetchJurnal()" class="form-select form-select-sm rounded-xl border-slate-200 bg-white fs-8 text-slate-800 font-medium py-2 shadow-2xs cursor-pointer" style="height: 38px;">
+                            <option value="" disabled>-- Pilih Ekstrakurikuler --</option>
+                            <option v-for="e in ekskulList" :key="e.id" :value="e.id">{{ e.nama_ekskul }} ({{ getKategoriDisplay(e.kategori, e.nama_ekskul) }})</option>
+                        </select>
                     </div>
                 </div>
             </div>
-
-            <!-- Content Area -->
-            <div class="p-4">
-                <div v-if="!selectedEkskulId" class="text-center py-5 text-slate-400 text-xs">
-                    <div class="w-12 h-12 rounded-full bg-blue-50 text-blue-500 d-inline-flex align-items-center justify-content-center fs-4 mb-2">
-                        <i class="bi bi-journal-text"></i>
-                    </div>
-                    <div class="font-bold text-slate-700 text-sm">Pilih Ekstrakurikuler</div>
-                    <p class="text-slate-400 text-xs mb-0">Silakan pilih ekstrakurikuler terlebih dahulu untuk melihat catatan jurnal kegiatan.</p>
-                </div>
-                <div v-else-if="loadingJurnal" class="text-center py-5 text-slate-400 text-xs">
-                    <div class="spinner-border spinner-border-sm text-primary me-2"></div>
-                    Memuat catatan jurnal kegiatan...
-                </div>
-                <div v-else-if="jurnalList.length === 0" class="text-center py-5 text-slate-400 text-xs">
-                    <div class="w-14 h-14 rounded-full bg-slate-100 text-slate-400 d-inline-flex align-items-center justify-content-center fs-3 mb-2.5">
-                        <i class="bi bi-calendar-x"></i>
-                    </div>
-                    <div class="font-bold text-slate-700 text-base mb-1">Belum Ada Catatan Jurnal</div>
-                    <p class="text-slate-400 text-xs mb-3" style="max-width: 480px; margin: 0 auto;">
-                        Belum ada agenda pertemuan yang dicatat pada periode {{ selectedTaName }} ({{ filterSemester }}).
-                    </p>
-                    <button type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-3.5 py-2 text-xs shadow-sm" @click="openModalJurnal()">
-                        <i class="bi bi-plus-circle-fill me-1.5"></i> Catat Pertemuan Pertama
-                    </button>
-                </div>
-                <div v-else class="row g-3">
-                    <div v-for="(j, idx) in jurnalList" :key="j.id" class="col-12 col-md-6 col-xl-4">
-                        <div class="p-3.5 p-md-4 rounded-2xl border border-slate-200/80 bg-white hover:border-blue-300 hover:shadow-md hover:-translate-y-0.5 transition-all h-100 d-flex flex-column justify-content-between">
-                            <div>
-                                <div class="d-flex align-items-center justify-content-between gap-2 mb-2.5">
-                                    <span class="badge bg-blue-50 text-blue-700 border border-blue-200 font-bold px-2.5 py-1 rounded-lg text-[10px]">
-                                        <i class="bi bi-calendar-check me-1"></i> {{ formatDateIndo(j.tanggal_kegiatan) }}
-                                    </span>
-                                    <div class="d-flex align-items-center gap-1">
-                                        <button type="button" class="btn btn-xs btn-light border border-slate-200 text-slate-500 rounded-lg p-1 shadow-2xs hover:bg-slate-100" title="Edit Jurnal" @click="editJurnal(j)">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-xs btn-light border border-rose-200 text-rose-500 rounded-lg p-1 shadow-2xs hover:bg-rose-50" title="Hapus Jurnal" @click="deleteJurnal(j)">
-                                            <i class="bi bi-trash3"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <h4 class="text-slate-800 font-bold text-sm mb-1.5 leading-snug">{{ j.materi_kegiatan }}</h4>
-                                <div class="text-xs text-slate-500 d-flex align-items-center gap-2 mb-2 flex-wrap" v-if="j.lokasi || j.jam_mulai">
-                                    <span v-if="j.jam_mulai"><i class="bi bi-clock me-1 text-slate-400"></i>{{ j.jam_mulai }} - {{ j.jam_selesai || 'Selesai' }}</span>
-                                    <span v-if="j.lokasi"><i class="bi bi-geo-alt me-1 text-slate-400"></i>{{ j.lokasi }}</span>
-                                </div>
-                                <p class="text-slate-600 text-xs mb-2 bg-slate-50 p-2 rounded-xl border border-slate-200/60" v-if="j.catatan_evaluasi" style="font-style: italic;">
-                                    "{{ j.catatan_evaluasi }}"
-                                </p>
-                            </div>
-                            <div class="pt-2.5 border-t border-slate-100 d-flex align-items-center justify-content-between text-[11px] text-slate-500">
-                                <span><i class="bi bi-person-badge text-indigo-500 me-1"></i>{{ j.nama_pembina || 'Pembina' }}</span>
-                                <span class="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                                    Hadir: {{ j.jumlah_hadir || 0 }}
+            <div class="d-flex align-items-center justify-content-between">
+                <span class="fs-8 text-slate-500">Total <strong class="text-slate-800">{{ jurnalList.length }}</strong> catatan jurnal kegiatan</span>
+            </div>
+        </div>
+        <!-- Content Area Jurnal -->
+        <div class="bg-white rounded-2xl shadow-2xs border border-slate-200/80 p-4 mb-4">
+            <div v-if="!selectedEkskulId" class="text-center py-5">
+                <div class="w-12 h-12 rounded-full bg-blue-50 text-blue-500 d-inline-flex align-items-center justify-content-center fs-4 mb-2"><i class="bi bi-journal-text"></i></div>
+                <div class="font-bold text-slate-700 text-sm">Pilih Ekstrakurikuler</div>
+                <p class="text-slate-400 text-xs mb-0">Silakan pilih ekstrakurikuler terlebih dahulu untuk melihat catatan jurnal kegiatan.</p>
+            </div>
+            <div v-else-if="loadingJurnal" class="text-center py-5">
+                <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                <span class="text-slate-400 text-xs">Memuat catatan jurnal kegiatan...</span>
+            </div>
+            <div v-else-if="jurnalList.length === 0" class="text-center py-5">
+                <div class="w-14 h-14 rounded-full bg-slate-100 text-slate-400 d-inline-flex align-items-center justify-content-center fs-3 mb-2"><i class="bi bi-calendar-x"></i></div>
+                <div class="font-bold text-slate-700 text-sm mb-1">Belum Ada Catatan Jurnal</div>
+                <p class="text-slate-400 text-xs mb-3" style="max-width: 480px; margin: 0 auto;">Belum ada agenda pertemuan yang dicatat pada periode {{ selectedTaName }} ({{ filterSemester }}).</p>
+                <button type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-3.5 py-2 fs-8 shadow-sm" @click="openModalJurnal()">
+                    <i class="bi bi-plus-circle-fill me-1"></i> Catat Pertemuan Pertama
+                </button>
+            </div>
+            <div v-else class="row g-3">
+                <div v-for="(j, idx) in jurnalList" :key="j.id" class="col-12 col-md-6 col-xl-4">
+                    <div class="p-4 rounded-2xl border border-slate-200/80 bg-slate-50/30 hover:border-blue-300 hover:shadow-sm transition-all h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                                <span class="badge bg-blue-50 text-blue-700 border border-blue-200 font-bold px-2.5 py-1 rounded-lg fs-9">
+                                    <i class="bi bi-calendar-check me-1"></i> {{ formatDateIndo(j.tanggal_kegiatan) }}
                                 </span>
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-xs btn-light border border-slate-200 text-slate-500 rounded-lg p-1 shadow-2xs" @click="editJurnal(j)"><i class="bi bi-pencil"></i></button>
+                                    <button class="btn btn-xs btn-light border border-rose-200 text-rose-500 rounded-lg p-1 shadow-2xs" @click="deleteJurnal(j)"><i class="bi bi-trash3"></i></button>
+                                </div>
                             </div>
+                            <h4 class="text-slate-800 font-bold fs-8 mb-1">{{ j.materi_kegiatan }}</h4>
+                            <div class="fs-9 text-slate-500 d-flex align-items-center gap-2 mb-2 flex-wrap" v-if="j.lokasi || j.jam_mulai">
+                                <span v-if="j.jam_mulai"><i class="bi bi-clock me-1 text-slate-400"></i>{{ j.jam_mulai }} - {{ j.jam_selesai || 'Selesai' }}</span>
+                                <span v-if="j.lokasi"><i class="bi bi-geo-alt me-1 text-slate-400"></i>{{ j.lokasi }}</span>
+                            </div>
+                            <p class="text-slate-600 fs-9 mb-0 bg-white p-2 rounded-xl border border-slate-100" v-if="j.catatan_evaluasi" style="font-style: italic;">"{{ j.catatan_evaluasi }}"</p>
+                        </div>
+                        <div class="pt-2 border-top border-slate-100 mt-2 d-flex align-items-center justify-content-between fs-9 text-slate-500">
+                            <span><i class="bi bi-person-badge text-indigo-500 me-1"></i>{{ j.nama_pembina || 'Pembina' }}</span>
+                            <span class="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">Hadir: {{ j.jumlah_hadir || 0 }}</span>
                         </div>
                     </div>
                 </div>
@@ -769,151 +801,122 @@
          7. TAB 5: PENILAIAN EKSKUL & E-RAPOR INTEGRATION
          ═══════════════════════════════════════════════════════════════════════ -->
     <div v-show="activeTab === 'nilai'">
-        <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden mb-4">
-            <!-- Header Toolbar (Horizontal Scrollable) -->
-            <div class="px-3.5 py-2.5 border-b border-slate-200/80 bg-slate-50/50">
-                <div class="d-flex align-items-center justify-content-between gap-3 overflow-x-auto flex-nowrap custom-scrollbar" style="scrollbar-width: thin; -webkit-overflow-scrolling: touch;">
-                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                        <!-- Academic Filter Segment (TA & Semester) -->
-                        <div class="d-inline-flex align-items-center bg-white p-1 rounded-xl border border-slate-200 shadow-2xs gap-1 flex-shrink-0">
-                            <div class="d-flex align-items-center px-2 py-0.5 text-xs font-semibold text-slate-700">
-                                <i class="bi bi-calendar3 text-blue-600 me-1.5 fs-7"></i>
-                                <span class="text-slate-400 me-1 font-medium">TA:</span>
-                                <select id="filterTaNilai" name="filter_ta" v-model="filterTahunAjaranId" @change="onAcademicFilterChange()" class="form-select form-select-sm border-0 bg-transparent text-xs font-bold py-0 ps-0 pe-4 text-slate-800 cursor-pointer shadow-none" style="width: auto;" aria-label="Filter Tahun Ajaran">
-                                    <option v-for="ta in listTahunAjaran" :key="ta.id" :value="ta.id">{{ ta.nama_tahun_ajaran }}</option>
-                                </select>
-                            </div>
-                            <div class="vr bg-slate-200 opacity-60" style="height: 16px;"></div>
-                            <div class="d-flex align-items-center px-2 py-0.5 text-xs font-semibold text-slate-700">
-                                <span class="text-slate-400 me-1 font-medium">Smst:</span>
-                                <select id="filterSemesterNilai" name="filter_semester" v-model="filterSemester" @change="onAcademicFilterChange()" class="form-select form-select-sm border-0 bg-transparent text-xs font-bold py-0 ps-0 pe-4 text-slate-800 cursor-pointer shadow-none" style="width: auto;" aria-label="Filter Semester">
-                                    <option value="Ganjil">Ganjil</option>
-                                    <option value="Genap">Genap</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Ekskul Selector -->
-                        <div class="d-flex align-items-center bg-white px-3 py-1 rounded-xl border border-slate-200 shadow-2xs flex-shrink-0">
-                            <i class="bi bi-diagram-3-fill text-blue-600 me-2 fs-7"></i>
-                            <span class="text-slate-400 text-xs font-bold me-2">Ekskul:</span>
-                            <select id="selectEkskulNilai" name="selected_ekskul_id" v-model="selectedEkskulId" @change="fetchNilai()" class="form-select form-select-sm border-0 bg-transparent text-xs font-bold text-slate-800 p-0 shadow-none cursor-pointer" style="min-width: 180px;" aria-label="Pilih Ekstrakurikuler">
-                                <option value="" disabled>-- Pilih Ekstrakurikuler --</option>
-                                <option v-for="e in ekskulList" :key="e.id" :value="e.id">{{ e.nama_ekskul }} ({{ getKategoriDisplay(e.kategori, e.nama_ekskul) }})</option>
-                            </select>
-                        </div>
-
-                        <!-- Autofill Presets -->
-                        <div v-if="selectedEkskulId && !currentLock.lock_nilai && nilaiList.length > 0" class="d-flex align-items-center gap-1.5 flex-shrink-0">
-                            <span class="text-[11px] font-semibold text-slate-400">Autofill:</span>
-                            <button type="button" class="btn btn-xs btn-outline-secondary rounded-lg px-2.5 py-1 text-[10px] font-bold bg-white shadow-2xs" @click="autofillPredikat('A')">Semua A</button>
-                            <button type="button" class="btn btn-xs btn-outline-secondary rounded-lg px-2.5 py-1 text-[10px] font-bold bg-white shadow-2xs" @click="autofillPredikat('B')">Semua B</button>
-                        </div>
+        <!-- Filter Toolbar Nilai -->
+        <div class="bg-white rounded-2xl shadow-2xs border border-slate-200/80 p-4 mb-4">
+            <div class="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 mb-3">
+                <div class="row g-3 align-items-end">
+                    <div class="col-12 col-sm-6 col-lg-2">
+                        <label class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Tahun Ajaran</label>
+                        <select id="filterTaNilai" v-model="filterTahunAjaranId" @change="onAcademicFilterChange()" class="form-select form-select-sm rounded-xl border-slate-200 bg-white fs-8 text-slate-800 font-medium py-2 shadow-2xs cursor-pointer" style="height: 38px;">
+                            <option v-for="ta in listTahunAjaran" :key="ta.id" :value="ta.id">{{ ta.nama_tahun_ajaran }}</option>
+                        </select>
                     </div>
-
-                    <!-- Action Buttons -->
-                    <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-auto">
-                        <!-- Lock Nilai Toggle -->
-                        <button type="button" class="btn btn-xs rounded-xl font-bold px-3 py-1.5 d-inline-flex align-items-center gap-1.5 transition shadow-2xs flex-shrink-0 text-nowrap"
-                                :class="currentLock.lock_nilai ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'"
-                                @click="toggleLock('nilai')" :disabled="!selectedEkskulId">
-                            <i class="bi" :class="currentLock.lock_nilai ? 'bi-lock-fill text-amber-700' : 'bi-unlock text-slate-500'"></i>
-                            <span>{{ currentLock.lock_nilai ? 'Nilai Terkunci' : 'Kunci Nilai' }}</span>
-                        </button>
-
-                        <!-- Export Nilai Excel -->
-                        <a :href="getExportNilaiUrl()" target="_blank" class="btn btn-sm btn-outline-success rounded-xl font-bold px-3 py-1.5 text-xs d-inline-flex align-items-center gap-1.5 shadow-2xs bg-white flex-shrink-0 text-nowrap"
-                           :class="{'disabled pointer-events-none opacity-50': !selectedEkskulId || nilaiList.length === 0}">
-                            <i class="bi bi-file-earmark-excel-fill"></i> Unduh Format
-                        </a>
-
-                        <!-- Import Nilai -->
-                        <button type="button" class="btn btn-sm btn-outline-primary rounded-xl font-bold px-3 py-1.5 text-xs d-inline-flex align-items-center gap-1.5 shadow-2xs bg-white flex-shrink-0 text-nowrap"
-                                :disabled="!selectedEkskulId || currentLock.lock_nilai" @click="openModalImportNilai()">
-                            <i class="bi bi-upload"></i> Unggah Nilai
-                        </button>
-
-                        <!-- Simpan Penilaian Batch -->
-                        <button type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-3.5 py-1.5 text-xs d-inline-flex align-items-center gap-1.5 shadow-sm flex-shrink-0 text-nowrap"
-                                :disabled="!selectedEkskulId || currentLock.lock_nilai || savingNilai" @click="saveAllNilai()">
-                            <span v-if="savingNilai" class="spinner-border spinner-border-sm"></span>
-                            <i v-else class="bi bi-check-all"></i>
-                            <span>Simpan Nilai</span>
-                        </button>
+                    <div class="col-12 col-sm-6 col-lg-2">
+                        <label class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Semester</label>
+                        <select id="filterSemesterNilai" v-model="filterSemester" @change="onAcademicFilterChange()" class="form-select form-select-sm rounded-xl border-slate-200 bg-white fs-8 text-slate-800 font-medium py-2 shadow-2xs cursor-pointer" style="height: 38px;">
+                            <option value="Ganjil">Ganjil</option>
+                            <option value="Genap">Genap</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-4">
+                        <label class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Pilih Ekstrakurikuler</label>
+                        <select id="selectEkskulNilai" v-model="selectedEkskulId" @change="fetchNilai()" class="form-select form-select-sm rounded-xl border-slate-200 bg-white fs-8 text-slate-800 font-medium py-2 shadow-2xs cursor-pointer" style="height: 38px;">
+                            <option value="" disabled>-- Pilih Ekstrakurikuler --</option>
+                            <option v-for="e in ekskulList" :key="e.id" :value="e.id">{{ e.nama_ekskul }} ({{ getKategoriDisplay(e.kategori, e.nama_ekskul) }})</option>
+                        </select>
+                    </div>
+                    <div v-if="selectedEkskulId && !currentLock.lock_nilai && nilaiList.length > 0" class="col-12 col-sm-6 col-lg-4 d-flex align-items-end">
+                        <div>
+                            <label class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Autofill Predikat</label>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-xl px-3 fs-9 font-bold bg-white shadow-2xs" @click="autofillPredikat('A')" style="height: 38px;">Semua A</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-xl px-3 fs-9 font-bold bg-white shadow-2xs" @click="autofillPredikat('B')" style="height: 38px;">Semua B</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-
-            <!-- Content Area: Table / Clean Empty State -->
-            <div>
-                <div v-if="!selectedEkskulId" class="text-center py-5 px-3">
-                    <div class="w-12 h-12 rounded-full bg-blue-50 text-blue-500 d-inline-flex align-items-center justify-content-center fs-4 mb-2">
-                        <i class="bi bi-award"></i>
-                    </div>
-                    <div class="font-bold text-slate-700 text-sm">Pilih Ekstrakurikuler</div>
-                    <p class="text-slate-400 text-xs mb-0">Silakan pilih ekstrakurikuler terlebih dahulu untuk menginput penilaian rapor.</p>
-                </div>
-                <div v-else-if="loadingNilai" class="text-center py-5 px-3">
-                    <div class="spinner-border spinner-border-sm text-primary me-2"></div>
-                    <span class="text-slate-400 text-xs">Memuat data penilaian siswa...</span>
-                </div>
-                <div v-else-if="nilaiList.length === 0" class="text-center py-5 px-3">
-                    <div class="w-14 h-14 rounded-full bg-slate-100 text-slate-400 d-inline-flex align-items-center justify-content-center fs-3 mb-2.5">
-                        <i class="bi bi-person-x"></i>
-                    </div>
-                    <div class="font-bold text-slate-700 text-base mb-1">Belum Ada Anggota Terdaftar</div>
-                    <p class="text-slate-400 text-xs mb-3" style="max-width: 480px; margin: 0 auto;">
-                        Daftarkan siswa di tab <strong>Kelola Anggota</strong> terlebih dahulu sebelum melakukan penginputan nilai rapor.
-                    </p>
-                    <button type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-3.5 py-2 text-xs shadow-sm" @click="activeTab = 'anggota'">
-                        <i class="bi bi-people me-1.5"></i> Buka Tab Kelola Anggota
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <span class="fs-8 text-slate-500">Total <strong class="text-slate-800">{{ nilaiList.length }}</strong> siswa perlu penilaian</span>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm rounded-xl font-bold px-3 py-1.5 fs-8 d-inline-flex align-items-center gap-1.5 shadow-2xs transition"
+                            :class="currentLock.lock_nilai ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'"
+                            @click="toggleLock('nilai')" :disabled="!selectedEkskulId">
+                        <i class="bi" :class="currentLock.lock_nilai ? 'bi-lock-fill text-amber-700' : 'bi-unlock text-slate-500'"></i>
+                        <span>{{ currentLock.lock_nilai ? 'Nilai Terkunci' : 'Kunci Nilai' }}</span>
+                    </button>
+                    <a :href="getExportNilaiUrl()" target="_blank" class="btn btn-sm btn-outline-success rounded-xl font-bold px-3 py-1.5 fs-8 d-inline-flex align-items-center gap-1.5 shadow-2xs bg-white"
+                       :class="{'disabled pointer-events-none opacity-50': !selectedEkskulId || nilaiList.length === 0}">
+                        <i class="bi bi-file-earmark-excel-fill text-emerald-600"></i> Unduh Format
+                    </a>
+                    <button type="button" class="btn btn-sm btn-outline-primary rounded-xl font-bold px-3 py-1.5 fs-8 d-inline-flex align-items-center gap-1.5 shadow-2xs bg-white"
+                            :disabled="!selectedEkskulId || currentLock.lock_nilai" @click="openModalImportNilai()">
+                        <i class="bi bi-upload"></i> Unggah Nilai
                     </button>
                 </div>
-                <div v-else class="table-responsive custom-scrollbar">
-                    <table class="table table-hover align-middle mb-0" style="min-width: 980px;">
-                        <thead class="bg-slate-50/80 border-b border-slate-200 text-slate-500 text-[11px] font-bold uppercase tracking-wider">
-                            <tr>
-                                <th class="ps-4 py-3.5 text-center" style="width: 50px;">NO</th>
-                                <th class="py-3.5">NAMA LENGKAP SISWA</th>
-                                <th class="py-3.5">KELAS</th>
-                                <th class="py-3.5 text-center" style="width: 160px;">PREDIKAT RAPOR</th>
-                                <th class="py-3.5 text-center" style="width: 120px;">NILAI ANGKA</th>
-                                <th class="py-3.5 pe-4">CATATAN PERKEMBANGAN & KETERANGAN</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="(n, idx) in nilaiList" :key="n.siswa_id" class="text-xs border-b border-slate-100 transition hover:bg-slate-50/60">
-                                <td class="ps-4 py-2.5 text-center font-bold text-slate-400">{{ idx + 1 }}</td>
-                                <td>
-                                    <div class="font-bold text-slate-800 text-sm">{{ n.nama_lengkap }}</div>
-                                    <div class="text-[11px] font-mono text-slate-400">NISN: {{ n.nisn || n.nis || '—' }}</div>
-                                </td>
-                                <td>
-                                    <span class="badge bg-slate-100 text-slate-700 font-semibold px-2.5 py-1 rounded-lg border border-slate-200">
-                                        {{ n.nama_kelas }}
-                                    </span>
-                                </td>
-                                <td class="text-center">
-                                    <select v-model="n.predikat" class="form-select form-select-sm text-xs font-bold rounded-xl border-slate-200 text-center shadow-2xs cursor-pointer"
-                                            :class="getPredikatSelectClass(n.predikat)" :disabled="currentLock.lock_nilai">
-                                        <option value="A">A (Sangat Baik)</option>
-                                        <option value="B">B (Baik)</option>
-                                        <option value="C">C (Cukup)</option>
-                                        <option value="D">D (Kurang)</option>
-                                    </select>
-                                </td>
-                                <td class="text-center">
-                                    <input type="number" v-model.number="n.nilai_angka" class="form-control form-control-sm text-xs font-bold rounded-xl border-slate-200 text-center shadow-2xs"
-                                           min="0" max="100" placeholder="0-100" :disabled="currentLock.lock_nilai">
-                                </td>
-                                <td class="pe-4">
-                                    <input type="text" v-model="n.keterangan" class="form-control form-control-sm text-xs rounded-xl border-slate-200 shadow-2xs"
-                                           placeholder="Tulis deskripsi capaian rapor..." :disabled="currentLock.lock_nilai">
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+            </div>
+        </div>
+        <!-- Tabel Nilai -->
+        <div class="bg-white rounded-2xl shadow-2xs border border-slate-200/80 overflow-hidden mb-4">
+            <div v-if="!selectedEkskulId" class="text-center py-5 px-3">
+                <div class="w-12 h-12 rounded-full bg-blue-50 text-blue-500 d-inline-flex align-items-center justify-content-center fs-4 mb-2"><i class="bi bi-award"></i></div>
+                <div class="font-bold text-slate-700 text-sm">Pilih Ekstrakurikuler</div>
+                <p class="text-slate-400 text-xs mb-0">Silakan pilih ekstrakurikuler terlebih dahulu untuk menginput penilaian rapor.</p>
+            </div>
+            <div v-else-if="loadingNilai" class="text-center py-5 px-3">
+                <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                <span class="text-slate-400 text-xs">Memuat data penilaian siswa...</span>
+            </div>
+            <div v-else-if="nilaiList.length === 0" class="text-center py-5 px-3">
+                <div class="w-14 h-14 rounded-full bg-slate-100 text-slate-400 d-inline-flex align-items-center justify-content-center fs-3 mb-2"><i class="bi bi-person-x"></i></div>
+                <div class="font-bold text-slate-700 text-sm mb-1">Belum Ada Anggota Terdaftar</div>
+                <p class="text-slate-400 text-xs mb-3" style="max-width: 480px; margin: 0 auto;">Daftarkan siswa di tab <strong>Kelola Anggota</strong> terlebih dahulu sebelum melakukan penginputan nilai rapor.</p>
+                <button type="button" class="btn btn-sm btn-primary rounded-xl font-bold px-3.5 py-2 fs-8 shadow-sm" @click="activeTab = 'anggota'">
+                    <i class="bi bi-people me-1"></i> Buka Tab Kelola Anggota
+                </button>
+            </div>
+            <div v-else class="table-responsive" style="margin-bottom: 1.25rem;">
+                <table class="pengguna-table table table-hover align-middle mb-0 w-100">
+                    <thead>
+                        <tr>
+                            <th class="ps-4 py-3.5 text-center" style="width: 48px;">NO</th>
+                            <th class="py-3.5">NAMA LENGKAP SISWA</th>
+                            <th class="py-3.5" style="width: 110px;">KELAS</th>
+                            <th class="py-3.5 text-center" style="width: 150px;">PREDIKAT RAPOR</th>
+                            <th class="py-3.5 text-center" style="width: 110px;">NILAI ANGKA</th>
+                            <th class="py-3.5 pe-4">CATATAN PERKEMBANGAN</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(n, idx) in nilaiList" :key="n.siswa_id">
+                            <td class="ps-4 text-center font-bold text-slate-400">{{ idx + 1 }}</td>
+                            <td>
+                                <div class="font-bold text-slate-800 fs-8">{{ n.nama_lengkap }}</div>
+                                <div class="fs-9 font-mono text-slate-400">NISN: {{ n.nisn || n.nis || '—' }}</div>
+                            </td>
+                            <td>
+                                <span class="badge bg-slate-100 text-slate-700 font-semibold px-2.5 py-1 rounded-lg border border-slate-200 text-xs">{{ n.nama_kelas }}</span>
+                            </td>
+                            <td class="text-center">
+                                <select v-model="n.predikat" class="form-select form-select-sm text-xs font-bold rounded-xl border-slate-200 text-center shadow-2xs cursor-pointer"
+                                        :class="getPredikatSelectClass(n.predikat)" :disabled="currentLock.lock_nilai">
+                                    <option value="A">A (Sangat Baik)</option>
+                                    <option value="B">B (Baik)</option>
+                                    <option value="C">C (Cukup)</option>
+                                    <option value="D">D (Kurang)</option>
+                                </select>
+                            </td>
+                            <td class="text-center">
+                                <input type="number" v-model.number="n.nilai_angka" class="form-control form-control-sm text-xs font-bold rounded-xl border-slate-200 text-center shadow-2xs"
+                                       min="0" max="100" placeholder="0-100" :disabled="currentLock.lock_nilai">
+                            </td>
+                            <td class="pe-4">
+                                <input type="text" v-model="n.keterangan" class="form-control form-control-sm text-xs rounded-xl border-slate-200 shadow-2xs"
+                                       placeholder="Tulis deskripsi capaian rapor..." :disabled="currentLock.lock_nilai">
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
