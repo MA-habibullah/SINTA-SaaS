@@ -1,75 +1,71 @@
 <!-- Halaman Sentral: Buku Induk Siswa -->
 <div id="bukuIndukApp" v-cloak>
     
-    <!-- Row Header & Title -->
-    <div class="row mb-3 mb-md-4 align-items-center">
-        <div class="col-12 col-md-7 mb-3 mb-md-0">
-            <h3 class="fw-bold text-dark mb-1 fs-4 fs-md-3">
-                <i class="bi bi-book-half text-primary me-2"></i>Buku Induk Siswa
-            </h3>
-            <p class="text-muted fs-8 fs-md-7 mb-0">Catatan kumpulan rekam data pokok dan dokumen historis seluruh siswa yang terdaftar di sekolah.</p>
+    <!-- 1. Row Header & Action Toolbar -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <div class="bg-blue-600 text-white rounded-2xl d-flex align-items-center justify-content-center shadow-xs flex-shrink-0" style="width: 48px; height: 48px;">
+                <i class="bi bi-book-half fs-4"></i>
+            </div>
+            <div>
+                <div class="d-flex align-items-center gap-2">
+                    <h3 class="fw-bold text-slate-900 fs-4 mb-0">Buku Induk Siswa</h3>
+                    <span class="badge bg-slate-100 text-slate-700 border border-slate-200 rounded-pill px-2.5 py-1 fs-9 font-bold" v-if="userRole === 'super_admin'">
+                        <i class="bi bi-shield-check text-blue-600 me-1"></i>Super Admin
+                    </span>
+                </div>
+                <p class="text-slate-500 fs-8 mb-0 mt-0.5">Catatan kumpulan rekam data pokok, kurikulum, nilai rapor, dan dokumen historis seluruh siswa.</p>
+            </div>
         </div>
         
         <!-- Actions (Export Excel/PDF) -->
-        <div v-show="mainActiveTab === 'buku_induk_siswa'" class="col-12 col-md-5 d-flex gap-2 justify-content-start justify-content-md-end align-items-center flex-wrap">
-            <button v-if="filterKelas && isKelas12(getKelasName(filterKelas))" class="btn btn-outline-warning text-dark btn-sm rounded-3 px-3 py-2 fs-8 fs-md-7 flex-grow-1 flex-md-grow-0 fw-semibold" 
+        <div v-show="mainActiveTab === 'buku_induk_siswa'" class="d-flex align-items-center gap-2 flex-wrap">
+            <button v-if="filterKelas && isKelas12(getKelasName(filterKelas))" 
+                    class="btn btn-sm btn-light border border-amber-200 text-amber-800 bg-amber-50/60 rounded-xl px-3.5 py-2 fs-8 font-semibold shadow-2xs hover-lift d-inline-flex align-items-center gap-1.5" 
                     @click="exportPdssExcel">
-                <i class="bi bi-award-fill me-1"></i> Ekspor PDSS SNBP
+                <i class="bi bi-award-fill text-amber-600"></i>
+                <span>Ekspor PDSS SNBP</span>
             </button>
-            <button class="btn btn-outline-success btn-sm rounded-3 px-3 py-2 fs-8 fs-md-7 flex-grow-1 flex-md-grow-0" 
+            <button class="btn btn-sm btn-light border border-emerald-200 text-emerald-800 bg-emerald-50/60 rounded-xl px-3.5 py-2 fs-8 font-semibold shadow-2xs hover-lift d-inline-flex align-items-center gap-1.5" 
                     @click="exportExcel">
-                <i class="bi bi-file-earmark-excel me-1"></i> Ekspor Excel
+                <i class="bi bi-file-earmark-excel-fill text-emerald-600"></i>
+                <span>Ekspor Excel</span>
             </button>
         </div>
     </div>
 
-    <!-- ═══ FILTER SEKOLAH — Hanya Super Admin ═══════════════════════════════ -->
-    <div v-if="userRole === 'super_admin'" class="card border-0 shadow-sm rounded-4 mb-3" style="background:linear-gradient(135deg,#eff6ff,#f0fdf4);border-left:4px solid #2563eb !important;">
-        <div class="card-body py-3 px-4">
-            <div class="row g-3 align-items-center">
-                <div class="col-auto">
-                    <div class="d-flex align-items-center gap-2">
-                        <label for="sa-filter-sekolah-bukuinduk" class="d-flex align-items-center gap-2 m-0 fw-bold text-dark fs-7 cursor-pointer">
-                            <i class="bi bi-building-fill text-primary fs-5"></i>
-                            Filter Sekolah
-                        </label>
-                        <span v-if="filterTenantId" class="badge rounded-pill ms-1" style="background:#dbeafe;color:#1d4ed8;font-size:.72rem;">
-                            <i class="bi bi-funnel-fill me-1"></i>Aktif
-                        </span>
-                    </div>
+    <!-- 2. Compact School Selector Banner (Khusus Super Admin) -->
+    <div class="mb-4 p-3 px-md-4 rounded-2xl shadow-2xs border border-blue-100 bg-white" 
+         v-if="userRole === 'super_admin' && listTenants.length > 0">
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+            <div class="d-flex align-items-center flex-wrap gap-2.5">
+                <div class="bg-blue-50 text-blue-600 p-2 rounded-xl d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                    <i class="bi bi-building fs-6"></i>
                 </div>
-                <div class="col-12 col-md-4">
-                    <select class="form-select form-select-sm rounded-3 shadow-none"
-                            v-model="tempFilterTenantId"
-                            @change="applyTenantFilter"
-                            id="sa-filter-sekolah-bukuinduk"
-                            name="filter_tenant_id"
-                            style="border:1.5px solid #bfdbfe;">
-                        <option value="">🏫 -- Semua Sekolah --</option>
-                        <option v-for="t in listTenants" :key="t.id" :value="t.id">
-                            {{ t.nama_sekolah }}
-                        </option>
+                <div>
+                    <span class="fs-8 fw-bold text-slate-800 me-2">Pilih Sekolah:</span>
+                </div>
+                
+                <div class="my-1 my-md-0">
+                    <select id="sa-filter-sekolah-bukuinduk" name="filter_tenant_id" 
+                            class="form-select form-select-sm bg-slate-50 border-slate-200 rounded-xl text-slate-800 fs-8 font-semibold shadow-2xs cursor-pointer focus:bg-white" 
+                            style="min-width: 260px; max-width: 360px; height: 38px;" 
+                            v-model="filterTenantId" 
+                            @change="onFilterTenantSelectChange">
+                        <option value="">-- Semua Sekolah (Global) --</option>
+                        <option v-for="t in listTenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
                     </select>
                 </div>
-                <div class="col-12 col-md-auto">
-                    <button type="button" class="btn btn-primary btn-sm rounded-3 px-3 shadow-sm w-100" @click="applyTenantFilter">
-                        <i class="bi bi-funnel-fill me-1"></i> Terapkan Filter
-                    </button>
-                </div>
-                <div class="col-12 col-md-3">
-                    <div v-if="filterTenantId" class="d-flex align-items-center gap-2">
-                        <span class="fs-8 text-muted">Menampilkan data milik:</span>
-                        <span class="fw-semibold text-primary fs-8">{{ selectedTenantName }}</span>
-                    </div>
-                    <div v-else class="fs-8 text-muted">
-                        <i class="bi bi-info-circle me-1"></i>Pilih sekolah untuk memfilter semua siswa
-                    </div>
-                </div>
+            </div>
+
+            <div class="text-slate-500 fs-8 d-flex align-items-center gap-1.5">
+                <i class="bi bi-info-circle text-blue-500"></i>
+                <span>Data Aktif: <strong class="text-blue-600 fw-bold">{{ selectedTenantName || 'Semua Sekolah' }}</strong></span>
             </div>
         </div>
     </div>
 
-    <!-- Navigation Tabs Modern SINTA SaaS -->
+    <!-- 3. Navigation Tabs Modern SINTA SaaS -->
     <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-2 mb-4 position-relative">
         <div class="d-flex align-items-center position-relative">
             <button type="button" 
@@ -99,43 +95,126 @@
                     title="Geser ke Kanan">
                 <i class="bi bi-chevron-right"></i>
             </button>
+
+            <div class="d-none d-md-flex align-items-center ps-2 pe-1 border-s border-slate-200/80 ms-2">
+                <button type="button" class="btn btn-sm btn-light border border-slate-200 text-slate-600 hover:bg-slate-100 rounded-xl px-3 py-2 text-xs font-bold shadow-2xs d-flex align-items-center gap-1.5" @click="fetchData(1)" title="Segarkan Data">
+                    <i class="bi bi-arrow-clockwise" :class="{'spin': loading}"></i>
+                    <span>Segarkan</span>
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- Main Card Grid -->
-    <div v-show="mainActiveTab === 'buku_induk_siswa'" class="card border-0 shadow-sm rounded-4 animate-fade-in">
-        <div class="card-body p-3 p-md-4">
-            
-            <!-- Table Action Filters -->
-            <div class="row g-3 mb-4">
-                <!-- Search Box -->
-                <div class="col-12 col-md-3">
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text bg-light border-end-0 rounded-start-3"><i class="bi bi-search text-muted"></i></span>
-                        <input id="global_search_input" name="search" type="text" class="form-control bg-light border-start-0 rounded-end-3" placeholder="Cari Nama, NISN atau NIS..." v-model="search" @input="debounceSearch">
+    <!-- 4. KPI Summary Metric Cards (Khusus Tab Buku Induk) -->
+    <div class="row g-3 mb-4" v-if="mainActiveTab === 'buku_induk_siswa'">
+        <!-- Card 1: Total Siswa -->
+        <div class="col-6 col-md-3">
+            <div class="kpi-card shadow-2xs h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="kpi-label">TOTAL SISWA</span>
+                        <h4 class="kpi-value text-slate-900">{{ total || 0 }}</h4>
+                    </div>
+                    <div class="kpi-icon-box bg-blue-50 text-blue-600">
+                        <i class="bi bi-people-fill"></i>
                     </div>
                 </div>
+            </div>
+        </div>
+        <!-- Card 2: Siswa Aktif -->
+        <div class="col-6 col-md-3">
+            <div class="kpi-card shadow-2xs h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="kpi-label">SISWA AKTIF</span>
+                        <h4 class="kpi-value text-emerald-600">{{ countStatusAktif }}</h4>
+                    </div>
+                    <div class="kpi-icon-box bg-emerald-50 text-emerald-600">
+                        <i class="bi bi-check-circle-fill"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Card 3: Alumni / Lulus -->
+        <div class="col-6 col-md-3">
+            <div class="kpi-card shadow-2xs h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="kpi-label">ALUMNI / LULUS</span>
+                        <h4 class="kpi-value text-indigo-600">{{ countStatusLulus }}</h4>
+                    </div>
+                    <div class="kpi-icon-box bg-indigo-50 text-indigo-600">
+                        <i class="bi bi-mortarboard-fill"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Card 4: Siswa Terfilter -->
+        <div class="col-6 col-md-3">
+            <div class="kpi-card shadow-2xs h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="kpi-label">BARIS HALAMAN</span>
+                        <h4 class="kpi-value text-amber-600">{{ listData.length || 0 }}</h4>
+                    </div>
+                    <div class="kpi-icon-box bg-amber-50 text-amber-600">
+                        <i class="bi bi-list-check"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                <!-- Filter Jenjang / Bentuk Pendidikan -->
-                <div class="col-6 col-md-2">
-                    <select class="form-select form-select-sm rounded-3" v-model="filterJenjang" @change="onJenjangFilterChange">
-                        <option value="">🎓 Semua Jenjang</option>
+    <!-- 5. Main Card Grid & Table Section -->
+    <div v-show="mainActiveTab === 'buku_induk_siswa'" class="bg-white rounded-2xl shadow-2xs border border-slate-200/80 p-4 mb-4 animate-fade-in">
+        
+        <!-- Filter Lanjutan Card (Spacious & Clean Layout) -->
+        <div class="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-3.5 p-md-4 mb-4 shadow-2xs">
+            <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom border-slate-200/60">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-funnel-fill text-blue-600 fs-7"></i>
+                    <span class="fs-8 fw-bold text-slate-800 text-uppercase tracking-wider">Penyaringan & Filter Data</span>
+                </div>
+                <button type="button" 
+                        @click="resetFilters" 
+                        class="btn btn-sm btn-link text-slate-500 hover:text-rose-600 p-0 fs-8 text-decoration-none d-flex align-items-center gap-1">
+                    <i class="bi bi-arrow-counterclockwise"></i> Reset Semua Filter
+                </button>
+            </div>
+
+            <div class="row g-3 align-items-end">
+                <!-- Filter 1: Jenjang -->
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <label class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Tingkat Jenjang</label>
+                    <select class="form-select form-select-sm rounded-xl border-slate-200 bg-white fs-8 text-slate-800 font-medium py-2 shadow-2xs cursor-pointer" 
+                            v-model="filterJenjang" 
+                            @change="onJenjangFilterChange"
+                            style="height: 38px;">
+                        <option value="">🎓 -- Semua Jenjang --</option>
                         <option v-for="j in jenjangOptions" :value="j.id" :key="j.id">{{ j.nama || j.nama_jenjang || j.kode_jenjang }}</option>
                     </select>
                 </div>
 
-                <!-- Filter Kelas (Cascading berdasarkan Jenjang) -->
-                <div class="col-6 col-md-2">
-                    <select class="form-select form-select-sm rounded-3" v-model="filterKelas" @change="fetchData(1)">
-                        <option value="">🏫 Semua Kelas</option>
+                <!-- Filter 2: Kelas (Cascading) -->
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <label class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Kelas / Rombel</label>
+                    <select class="form-select form-select-sm rounded-xl border-slate-200 bg-white fs-8 text-slate-800 font-medium py-2 shadow-2xs cursor-pointer" 
+                            v-model="filterKelas" 
+                            @change="fetchData(1)"
+                            style="height: 38px;">
+                        <option value="">🏫 -- Semua Kelas --</option>
                         <option v-for="k in filteredKelasOptions" :value="k.id" :key="k.id">{{ k.nama_kelas || k.nama }}</option>
                     </select>
                 </div>
 
-                <!-- Filter Status -->
-                <div class="col-6 col-md-2">
-                    <select class="form-select form-select-sm rounded-3" v-model="filterStatus" @change="fetchData(1)">
-                        <option value="">📋 Semua Status</option>
+                <!-- Filter 3: Status Siswa -->
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <label class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Status Siswa</label>
+                    <select class="form-select form-select-sm rounded-xl border-slate-200 bg-white fs-8 text-slate-800 font-medium py-2 shadow-2xs cursor-pointer" 
+                            v-model="filterStatus" 
+                            @change="fetchData(1)"
+                            style="height: 38px;">
+                        <option value="">📋 -- Semua Status --</option>
                         <option value="Aktif">✅ Aktif</option>
                         <option value="Lulus">🎓 Lulus (Alumni)</option>
                         <option value="Pindah">🔀 Pindah</option>
@@ -143,19 +222,159 @@
                     </select>
                 </div>
 
-                <!-- Filter KIP / PIP / Afirmasi Bantuan -->
-                <div class="col-6 col-md-2">
-                    <select class="form-select form-select-sm rounded-3" v-model="filterBantuan" @change="fetchData(1)">
-                        <option value="">🎁 Semua Bantuan</option>
+                <!-- Filter 4: Bantuan KIP/PIP -->
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <label class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Afirmasi Bantuan</label>
+                    <select class="form-select form-select-sm rounded-xl border-slate-200 bg-white fs-8 text-slate-800 font-medium py-2 shadow-2xs cursor-pointer" 
+                            v-model="filterBantuan" 
+                            @change="fetchData(1)"
+                            style="height: 38px;">
+                        <option value="">🎁 -- Semua Bantuan --</option>
                         <option value="kip">🏷️ Penerima KIP</option>
                         <option value="pip">💳 Penerima PIP/KPS</option>
                         <option value="non_bantuan">👤 Non-Bantuan</option>
                     </select>
                 </div>
+            </div>
+        </div>
 
-                <!-- Per Page -->
-                <div class="col-12 col-md-1 d-flex align-items-center justify-content-md-end gap-1">
-                    <select id="per_page_select" name="per_page" class="form-select form-select-sm rounded-3 px-1 w-100" v-model="perPage" @change="fetchData(1)" title="Jumlah baris per halaman">
+        <!-- Table Action Toolbar (Search Box on Left, Quick Info on Right) -->
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+            <div class="position-relative flex-grow-1" style="max-width: 360px;">
+                <i class="bi bi-search position-absolute top-50 translate-middle-y text-slate-400 ms-3" style="font-size: 0.85rem;"></i>
+                <input id="global_search_input" name="search" type="text" 
+                       class="form-control form-control-sm ps-5 pe-5 bg-white border-slate-200 rounded-xl text-slate-800 fs-8 font-medium shadow-2xs" 
+                       placeholder="Cari Nama Siswa, NISN, atau NIS..." 
+                       v-model="search" 
+                       @input="debounceSearch"
+                       style="height: 38px;">
+                <button v-if="search" type="button" class="btn btn-sm btn-link position-absolute top-50 end-0 translate-middle-y text-slate-400 hover:text-slate-600 text-decoration-none p-0 me-3" @click="search = ''; debounceSearch()">
+                    <i class="bi bi-x-circle-fill fs-7"></i>
+                </button>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-slate-100 text-slate-700 border border-slate-200 rounded-pill px-3 py-2 fs-8 font-medium">
+                    <i class="bi bi-check2-circle text-emerald-600 me-1"></i>Total: <strong class="text-slate-900">{{ total }}</strong> Siswa
+                </span>
+            </div>
+        </div>
+
+        <!-- Loader State -->
+        <div v-if="loading" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-muted mt-2 fs-7">Mengunduh Buku Induk dari database...</p>
+        </div>
+
+        <!-- 6. Modern Table Architecture -->
+        <div v-else class="table-responsive">
+            <table class="table table-hover align-middle mb-0 pengguna-table" style="font-size: 0.85rem;">
+                <thead style="background-color: #f8fafc;">
+                    <tr>
+                        <th class="text-slate-500 font-bold fs-9 text-uppercase tracking-wider text-center" style="width: 55px;">NO</th>
+                        <th v-if="userRole === 'super_admin'" class="text-slate-500 font-bold fs-9 text-uppercase tracking-wider">SEKOLAH</th>
+                        <th class="text-slate-500 font-bold fs-9 text-uppercase tracking-wider">NIS / NISN</th>
+                        <th class="text-slate-500 font-bold fs-9 text-uppercase tracking-wider">NAMA LENGKAP</th>
+                        <th class="text-slate-500 font-bold fs-9 text-uppercase tracking-wider text-center">GENDER</th>
+                        <th class="text-slate-500 font-bold fs-9 text-uppercase tracking-wider">JURUSAN / KELAS</th>
+                        <th class="text-slate-500 font-bold fs-9 text-uppercase tracking-wider text-center" style="width: 110px;">STATUS</th>
+                        <th class="text-slate-500 font-bold fs-9 text-uppercase tracking-wider text-center" style="width: 140px;">AKSI</th>
+                    </tr>
+                </thead>
+                
+                <tbody>
+                    <tr v-for="(item, idx) in listData" :key="item.id" class="transition-all hover-row">
+                        <td class="text-center text-slate-400 font-medium fs-8">{{ (currentPage - 1) * perPage + idx + 1 }}</td>
+                        <td v-if="userRole === 'super_admin'" class="fw-semibold text-slate-700 fs-8">{{ item.nama_sekolah || '-' }}</td>
+                        <td>
+                            <div class="font-monospace fs-8 text-slate-800 fw-bold">NIS: {{ item.nis || '-' }}</div>
+                            <div class="font-monospace fs-9 text-slate-500">NISN: {{ item.nisn || '-' }}</div>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2.5">
+                                <div class="avatar-circle" :class="item.jenis_kelamin === 'P' ? 'avatar-circle-p' : 'avatar-circle-l'">
+                                    {{ (item.nama_lengkap || 'S').charAt(0).toUpperCase() }}
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-slate-900 fs-8">{{ item.nama_lengkap }}</div>
+                                    <div class="text-slate-400 fs-9">{{ item.nik ? 'NIK: ' + item.nik : 'Siswa Terdaftar' }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="gender-badge" :class="item.jenis_kelamin === 'P' ? 'gender-badge-p' : 'gender-badge-l'">
+                                {{ item.jenis_kelamin === 'P' ? 'Perempuan' : 'Laki-laki' }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="text-slate-800 fw-semibold fs-8">{{ item.nama_jurusan || '-' }}</div>
+                            <span class="badge bg-slate-100 text-slate-700 border border-slate-200 rounded-pill px-2.5 py-0.5 fs-9 mt-0.5">
+                                <i class="bi bi-door-closed me-1"></i>{{ item.nama_kelas || 'Belum Masuk Kelas' }}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge rounded-pill px-2.5 py-1 fs-9 font-semibold"
+                                  :class="{
+                                      'bg-emerald-50 text-emerald-700 border border-emerald-200': item.status === 'Aktif',
+                                      'bg-blue-50 text-blue-700 border border-blue-200': item.status === 'Lulus',
+                                      'bg-amber-50 text-amber-700 border border-amber-200': item.status === 'Pindah',
+                                      'bg-rose-50 text-rose-700 border border-rose-200': item.status === 'Keluar'
+                                  }">
+                                {{ item.status }}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <div class="d-inline-flex gap-1.5">
+                                <button class="btn btn-sm btn-primary rounded-xl px-2.5 py-1 fs-8 font-semibold d-inline-flex align-items-center gap-1 shadow-2xs hover-lift" 
+                                        @click="viewDetail(item.id)" 
+                                        title="Lihat Detail Profil & Dokumen">
+                                    <i class="bi bi-eye"></i> Detail
+                                </button>
+                                <button class="btn btn-sm btn-light border border-emerald-200 text-emerald-800 bg-emerald-50/60 rounded-xl px-2.5 py-1 fs-8 font-semibold d-inline-flex align-items-center gap-1 shadow-2xs hover-lift" 
+                                        @click="viewDetail(item.id, 'beasiswa')" 
+                                        title="Kelola Riwayat Beasiswa">
+                                    <i class="bi bi-gift text-emerald-600"></i> Beasiswa
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Empty State -->
+                    <tr v-if="listData.length === 0">
+                        <td :colspan="userRole === 'super_admin' ? 9 : 8" class="text-center py-5 text-muted">
+                            <div class="d-flex flex-column align-items-center justify-content-center py-4">
+                                <div class="bg-slate-100 text-slate-400 rounded-3xl p-3.5 mb-3">
+                                    <i class="bi bi-journal-x fs-1"></i>
+                                </div>
+                                <h6 class="fw-bold text-slate-800 mb-1">Belum Ada Data Siswa Ditemukan</h6>
+                                <p class="fs-8 text-slate-500 mb-0 mx-auto" style="max-width: 550px;">
+                                    Belum ada rekam data siswa yang cocok dengan filter atau kata kunci pencarian yang dipilih.<br>
+                                    <small class="text-slate-400 mt-1 d-block">
+                                        Pastikan jenjang atau kelas yang dipilih sudah memiliki rekam data siswa aktif.
+                                    </small>
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 7. Bottom Pagination Toolbar Standard -->
+        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3 border-top border-slate-100 mt-2 pt-4">
+            <div class="d-flex align-items-center gap-3">
+                <span class="fs-8 text-slate-500">
+                    Menampilkan <strong>{{ from }}</strong> s.d. <strong>{{ to }}</strong> dari <strong>{{ total }}</strong> baris
+                </span>
+                <div class="d-flex align-items-center gap-1.5 ms-2">
+                    <span class="fs-9 text-slate-400 text-uppercase font-bold">Baris:</span>
+                    <select id="per_page_select" name="per_page" 
+                            class="form-select form-select-sm perpage-select shadow-2xs cursor-pointer" 
+                            v-model="perPage" 
+                            @change="fetchData(1)" 
+                            title="Jumlah baris per halaman">
                         <option value="10">10</option>
                         <option value="25">25</option>
                         <option value="50">50</option>
@@ -164,114 +383,22 @@
                 </div>
             </div>
 
-            <!-- Loader State -->
-            <div v-if="loading" class="text-center py-5">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-                <p class="text-muted mt-2 fs-7">Mengunduh Buku Induk dari database...</p>
-            </div>
-
-            <!-- Table Content -->
-            <div v-else class="table-responsive">
-                <table class="table table-hover align-middle mb-4" style="font-size: 0.85rem;">
-                    <thead class="table-light">
-                        <tr>
-                            <th style="width: 50px;">No</th>
-                            <th v-if="userRole === 'super_admin'">Sekolah</th>
-                            <th>NIS / NISN</th>
-                            <th>Nama Lengkap</th>
-                            <th>L/P</th>
-                            <th>Jurusan / Peminatan</th>
-                            <th>Kelas</th>
-                            <th class="text-center" style="width: 100px;">Status</th>
-                            <th class="text-center" style="width: 120px;">Aksi</th>
-                        </tr>
-                    </thead>
-                    
-                    <tbody>
-                        <tr v-for="(item, idx) in listData" :key="item.id" class="transition-all hover-row">
-                            <td class="text-muted">{{ (currentPage - 1) * perPage + idx + 1 }}</td>
-                            <td v-if="userRole === 'super_admin'" class="fw-semibold text-secondary">{{ item.nama_sekolah || '-' }}</td>
-                            <td>
-                                <div class="font-monospace fs-8 text-dark fw-bold">NIS: {{ item.nis || '-' }}</div>
-                                <div class="font-monospace fs-9 text-muted">NISN: {{ item.nisn || '-' }}</div>
-                            </td>
-                            <td>
-                                <div class="fw-bold text-dark">{{ item.nama_lengkap }}</div>
-                            </td>
-                            <td>
-                                <span class="badge" :class="item.jenis_kelamin === 'L' ? 'bg-light-blue text-blue-700' : 'bg-light-rose text-rose-700'">
-                                    {{ item.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan' }}
-                                </span>
-                            </td>
-                            <td>{{ item.nama_jurusan || '-' }}</td>
-                            <td>
-                                <span class="badge bg-light text-dark border px-2.5 py-1.5 fs-8">
-                                    <i class="bi bi-door-closed me-1"></i>{{ item.nama_kelas || 'Belum Masuk Kelas' }}
-                                </span>
-                            </td>
-                            <td class="text-center">
-                                <span class="badge rounded-pill px-2.5 py-1.5 fs-9"
-                                      :class="{
-                                          'bg-success-subtle text-success': item.status === 'Aktif',
-                                          'bg-primary-subtle text-primary': item.status === 'Lulus',
-                                          'bg-warning-subtle text-warning': item.status === 'Pindah',
-                                          'bg-danger-subtle text-danger': item.status === 'Keluar'
-                                      }">
-                                    {{ item.status }}
-                                </span>
-                            </td>
-                            <td class="text-center">
-                                <div class="d-inline-flex gap-1">
-                                    <button class="btn btn-sm btn-primary rounded-2 px-2.5 py-1.5 d-inline-flex align-items-center gap-1 shadow-sm" @click="viewDetail(item.id)">
-                                        <i class="bi bi-eye"></i> Detail
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-success rounded-2 px-2.5 py-1.5 d-inline-flex align-items-center gap-1 shadow-sm" @click="viewDetail(item.id, 'beasiswa')">
-                                        <i class="bi bi-gift"></i> Beasiswa
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <!-- Empty State -->
-                        <tr v-if="listData.length === 0">
-                            <td :colspan="userRole === 'super_admin' ? 9 : 8" class="text-center py-5 text-muted">
-                                <i class="bi bi-journal-x fs-1 d-block mb-2 text-secondary opacity-50"></i>
-                                <h6 class="fw-bold text-dark mb-1">Belum Ada Data Siswa Ditemukan</h6>
-                                <p class="fs-8 text-muted mb-0 mx-auto" style="max-width: 550px;">
-                                    Belum ada rekam data siswa yang cocok dengan filter yang dipilih.<br>
-                                    <small class="text-muted">
-                                        <strong>Pendidikan:</strong> SMA, SMK, SMP, SD, MA, MTs, MI.<br>
-                                        <strong>Jenjang:</strong> 7, 8, 9, 10, 11, 12 | <strong>Kelas:</strong> VII A, VIII B, IX C, X IPA 1, XI TKJ 1, XII DKV 1.
-                                    </small>
-                                </p>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Table Pagination Footer -->
-            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3">
-                <span class="fs-8 text-muted">Menampilkan {{ from }} s.d. {{ to }} dari {{ total }} baris</span>
-                <nav v-if="totalPages > 1">
-                    <ul class="pagination pagination-sm m-0">
-                        <li class="page-item" :class="{disabled: currentPage === 1}">
-                            <a class="page-link" href="#" @click.prevent="fetchData(currentPage - 1)">&laquo;</a>
-                        </li>
-                        <li class="page-item" v-for="(page, idx) in paginationPages" :key="idx" 
-                            :class="{active: page === currentPage, disabled: page === '...'}">
-                            <a class="page-link" href="#" @click.prevent="page !== '...' ? fetchData(page) : null">{{ page }}</a>
-                        </li>
-                        <li class="page-item" :class="{disabled: currentPage === totalPages}">
-                            <a class="page-link" href="#" @click.prevent="fetchData(currentPage + 1)">&raquo;</a>
-                        </li>
-                    </ul>
-                </nav>
-            </div>
-
+            <nav v-if="totalPages > 1">
+                <ul class="pagination pagination-modern m-0">
+                    <li class="page-item" :class="{disabled: currentPage === 1}">
+                        <a class="page-link" href="#" @click.prevent="fetchData(currentPage - 1)" title="Halaman Sebelumnya">&laquo;</a>
+                    </li>
+                    <li class="page-item" v-for="(page, idx) in paginationPages" :key="idx" 
+                        :class="{active: page === currentPage, disabled: page === '...'}">
+                        <a class="page-link" href="#" @click.prevent="page !== '...' ? fetchData(page) : null">{{ page }}</a>
+                    </li>
+                    <li class="page-item" :class="{disabled: currentPage === totalPages}">
+                        <a class="page-link" href="#" @click.prevent="fetchData(currentPage + 1)" title="Halaman Selanjutnya">&raquo;</a>
+                    </li>
+                </ul>
+            </nav>
         </div>
+
     </div>
 
     <!-- ═══ PANEL SETING KURIKULUM ═══════════════════════════════ -->
@@ -3068,6 +3195,14 @@
                     return this.masterNilaiRapor.kelas;
                 }
                 return this.masterNilaiRapor.kelas.filter(k => String(k.id_jenjang) === String(this.nilaiRapor.jenjangId));
+            },
+            countStatusAktif() {
+                if (!this.listData || !Array.isArray(this.listData)) return 0;
+                return this.listData.filter(item => item.status === 'Aktif').length;
+            },
+            countStatusLulus() {
+                if (!this.listData || !Array.isArray(this.listData)) return 0;
+                return this.listData.filter(item => item.status === 'Lulus').length;
             }
         },
         watch: {
@@ -3084,6 +3219,27 @@
             }
         },
         methods: {
+            onFilterTenantSelectChange() {
+                this.filterKelas = '';
+                this.filterJenjang = '';
+                this.fetchKelasOptions(this.filterTenantId);
+                this.fetchJenjangOptions(this.filterTenantId);
+                this.fetchData(1);
+                this.fetchKurikulumMaster();
+                this.fetchNilaiRaporMaster();
+                this.fetchRiwayatKepsek();
+            },
+            applyTenantFilter() {
+                this.onFilterTenantSelectChange();
+            },
+            resetFilters() {
+                this.search = '';
+                this.filterJenjang = '';
+                this.filterKelas = '';
+                this.filterStatus = '';
+                this.filterBantuan = '';
+                this.fetchData(1);
+            },
             // --- ALUMNI ARCHIVE METHODS ---
             fetchAlumni(page = 1) {
                 this.alumniLoading = true;

@@ -3010,7 +3010,7 @@ class BukuIndukModuleController extends BaseController {
                 return;
             }
 
-            $stmt = $db->prepare("DELETE FROM siswa.riwayat_beasiswa WHERE id::text = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)");
+            $stmt = $db->prepare("DELETE FROM siswa.riwayat_beasiswa WHERE id::text = :id AND (:tenant_id::text IS NULL OR tenant_id::text = :tenant_id::text OR tenant_id IS NULL)");
             $stmt->execute(['id' => $id, 'tenant_id' => $tenantId]);
 
             \App\Helpers\CacheInvalidator::clearStudentCache($siswaId, $dbTenantId);
