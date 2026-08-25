@@ -7,42 +7,69 @@
 <!-- Area Konten Utama Terbungkus Vue.js App -->
 <div id="tenantMenusApp">
 
-    <!-- Page Header -->
-    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-2 pb-2 mb-4 border-bottom">
-        <div>
-            <h2 class="fw-bold text-dark mb-1">{{ title }}</h2>
-            <p class="text-muted fs-7">Atur ketersediaan menu sidebar dan akses modul fitur bagi masing-masing sekolah (Tenant) secara terpusat.</p>
+    <!-- 1. Row Header & Action Toolbar -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <div class="bg-blue-600 text-white rounded-2xl d-flex align-items-center justify-content-center shadow-xs flex-shrink-0" style="width: 48px; height: 48px;">
+                <i class="bi bi-diagram-3-fill fs-4"></i>
+            </div>
+            <div>
+                <div class="d-flex align-items-center gap-2">
+                    <h3 class="fw-bold text-slate-900 fs-4 mb-0">{{ title }}</h3>
+                    <span class="badge bg-slate-100 text-slate-700 border border-slate-200 rounded-pill px-2.5 py-1 fs-9 font-bold">
+                        <i class="bi bi-shield-check text-blue-600 me-1"></i>Super Admin
+                    </span>
+                </div>
+                <p class="text-slate-500 fs-8 mb-0 mt-0.5">Atur ketersediaan menu sidebar dan akses modul fitur bagi masing-masing sekolah (Tenant) secara terpusat.</p>
+            </div>
         </div>
-        <div class="btn-toolbar mb-2 mb-md-0">
-            <a href="<?= $this->getBaseUrl() ?>/dashboard" class="btn btn-outline-secondary btn-sm d-flex align-items-center rounded-3 px-3 py-2 fs-7">
-                <i class="bi bi-arrow-left me-2"></i> Kembali ke Dashboard
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <a href="<?= $this->getBaseUrl() ?>/dashboard" class="btn btn-sm btn-light border border-slate-200 text-slate-700 rounded-xl px-3.5 py-2 fs-8 font-semibold shadow-2xs hover-lift d-inline-flex align-items-center gap-1.5">
+                <i class="bi bi-arrow-left"></i>
+                <span>Kembali ke Dashboard</span>
             </a>
         </div>
     </div>
 
-    <!-- Dropdown Pemilihan Tenant (Sekolah) -->
-    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
-        <div class="row align-items-center">
-            <div class="col-12 col-md-6">
-                <label for="tenantSelect" class="form-label fw-bold text-dark mb-2">
-                    <i class="bi bi-buildings text-primary me-2"></i>Pilih Instansi Sekolah (Tenant)
-                </label>
+    <!-- 2. Compact School Selector Banner (Khusus Super Admin Auto-Filter) -->
+    <div class="mb-4 p-3 px-md-4 rounded-2xl shadow-2xs border border-blue-100 bg-white">
+        <div class="d-flex align-items-center flex-wrap gap-2.5">
+            <div class="bg-blue-50 text-blue-600 p-2 rounded-xl d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px;">
+                <i class="bi bi-buildings fs-6"></i>
+            </div>
+            <div>
+                <span class="fs-8 fw-bold text-slate-800 me-1">Pilih Instansi Sekolah:</span>
+            </div>
+            
+            <div class="my-1 my-md-0" style="min-width: 220px; max-width: 300px;">
                 <select 
                     id="tenantSelect" 
-                    class="form-select rounded-3 py-2" 
+                    class="form-select form-select-sm bg-slate-50 border-slate-200 rounded-xl text-slate-800 fs-8 font-semibold shadow-2xs cursor-pointer focus:bg-white w-100" 
                     v-model="selectedTenantId" 
                     @change="fetchTenantData"
                     :disabled="isLoading"
+                    style="height: 38px;"
                 >
                     <option value="">-- Pilih Sekolah / Tenant --</option>
                     <option v-for="tenant in tenants" :key="tenant.id" :value="tenant.id">
-                        {{ tenant.nama_sekolah }} (NPSN: {{ tenant.npsn }} - Subdomain: {{ tenant.subdomain }})
+                        {{ tenant.nama_sekolah }}{{ tenant.npsn ? ' (' + tenant.npsn + ')' : '' }}
                     </option>
                 </select>
             </div>
-            <div class="col-12 col-md-6 mt-3 mt-md-0 d-flex justify-content-md-end">
-                <span class="badge bg-primary-subtle px-3 py-2 rounded-pill fs-7" style="color: #084298;" v-if="selectedTenant">
-                    <i class="bi bi-info-circle me-1"></i> Mengedit Fitur: {{ selectedTenant.nama_sekolah }}
+
+            <!-- Badge Data Aktif Tepat di Samping Filter -->
+            <div class="d-inline-flex align-items-center flex-shrink-0 ms-md-1">
+                <span class="badge bg-blue-50 text-blue-700 border border-blue-200 px-3 py-2 rounded-pill fs-8 font-semibold d-inline-flex align-items-center gap-1.5 shadow-2xs" 
+                      style="max-width: 340px;" 
+                      :title="'Mengedit Fitur: ' + (selectedTenant ? selectedTenant.nama_sekolah : '')" 
+                      v-if="selectedTenant">
+                    <i class="bi bi-check2-circle text-blue-600 flex-shrink-0"></i>
+                    <span class="text-truncate d-inline-block" style="max-width: 280px;">
+                        Mengedit Fitur: <strong>{{ selectedTenant.nama_sekolah }}</strong>
+                    </span>
+                </span>
+                <span class="badge bg-slate-100 text-slate-500 border border-slate-200 px-3 py-2 rounded-pill fs-8 font-medium" v-else>
+                    <i class="bi bi-info-circle text-blue-500 me-1"></i>Pilih sekolah untuk memuat fitur
                 </span>
             </div>
         </div>

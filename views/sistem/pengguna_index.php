@@ -771,31 +771,31 @@
             </div>
 
             <!-- Table Pagination Footer -->
-            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3" v-if="total > 0">
-                <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <span class="fs-8 text-muted">Menampilkan {{ from }} s.d. {{ to }} dari {{ total }} baris</span>
-                    <div class="d-flex align-items-center gap-1 ms-2">
-                        <label for="main-perpage" class="fs-8 text-muted mb-0">Tampilkan:</label>
-                        <select id="main-perpage" name="main_perpage" class="form-select form-select-sm py-0 px-2 rounded-2 fs-8" style="width: auto; height: 28px;" v-model="perPage" @change="fetchData(1)">
+            <div class="pt-4 mt-2 border-top border-slate-100 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3" v-if="total > 0">
+                <div class="d-flex align-items-center gap-2 flex-wrap text-slate-500 fs-8 font-medium">
+                    <span>Menampilkan <strong class="text-slate-800">{{ from }}</strong> s.d. <strong class="text-slate-800">{{ to }}</strong> dari <strong class="text-slate-800">{{ total }}</strong> baris</span>
+                    <div class="d-flex align-items-center gap-1.5 ms-md-3">
+                        <label for="main-perpage" class="fs-8 text-slate-500 mb-0">Tampilkan:</label>
+                        <select id="main-perpage" name="main_perpage" class="form-select perpage-select shadow-2xs" v-model="perPage" @change="fetchData(1)">
                             <option :value="10">10</option>
                             <option :value="25">25</option>
                             <option :value="50">50</option>
                             <option :value="80">80</option>
                             <option :value="120">120</option>
                         </select>
-                        <span class="fs-8 text-muted">per hal</span>
+                        <span class="fs-8 text-slate-500">per hal</span>
                     </div>
                 </div>
-                <nav v-if="totalPages > 1">
-                    <ul class="pagination pagination-sm m-0">
+                <nav v-if="totalPages > 1" aria-label="Navigasi Halaman Data">
+                    <ul class="pagination pagination-sm pagination-modern m-0">
                         <li class="page-item" :class="{disabled: currentPage === 1}">
-                            <a class="page-link" href="#" @click.prevent="fetchData(currentPage - 1)">&laquo;</a>
+                            <a class="page-link" href="#" @click.prevent="fetchData(currentPage - 1)" title="Sebelumnya">&laquo;</a>
                         </li>
                         <li class="page-item" v-for="(page, index) in paginationPages" :key="index" :class="{active: page === currentPage, disabled: page === '...'}">
                             <a class="page-link" href="#" @click.prevent="page !== '...' && fetchData(page)">{{ page }}</a>
                         </li>
                         <li class="page-item" :class="{disabled: currentPage === totalPages}">
-                            <a class="page-link" href="#" @click.prevent="fetchData(currentPage + 1)">&raquo;</a>
+                            <a class="page-link" href="#" @click.prevent="fetchData(currentPage + 1)" title="Berikutnya">&raquo;</a>
                         </li>
                     </ul>
                 </nav>
@@ -1437,10 +1437,6 @@
         </div>
     </div>
 
-            </div>
-        </div>
-    </div>
-
     <!-- Modal Registrasi Cepat (Quick Add) Siswa -->
     <div class="modal fade" id="quickAddModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
@@ -1962,32 +1958,32 @@
                     </table>
                 </div>
 
-                <!-- Pagination -->
-                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3 mt-3" v-if="total > 0">
-                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <span class="fs-8 text-muted">Menampilkan {{ from }} s.d. {{ to }} dari {{ total }} baris</span>
-                        <div class="d-flex align-items-center gap-1 ms-2">
-                            <label for="pr-perpage" class="fs-8 text-muted mb-0">Tampilkan:</label>
-                            <select id="pr-perpage" name="pr_perpage" class="form-select form-select-sm py-0 px-2 rounded-2 fs-8" style="width: auto; height: 28px;" v-model="perPage" @change="fetchData(1)">
+                <!-- Pagination Profile Rapot -->
+                <div class="pt-4 mt-2 border-top border-slate-100 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3" v-if="total > 0">
+                    <div class="d-flex align-items-center gap-2 flex-wrap text-slate-500 fs-8 font-medium">
+                        <span>Menampilkan <strong class="text-slate-800">{{ from }}</strong> s.d. <strong class="text-slate-800">{{ to }}</strong> dari <strong class="text-slate-800">{{ total }}</strong> baris</span>
+                        <div class="d-flex align-items-center gap-1.5 ms-md-3">
+                            <label for="pr-perpage" class="fs-8 text-slate-500 mb-0">Tampilkan:</label>
+                            <select id="pr-perpage" name="pr_perpage" class="form-select perpage-select shadow-2xs" v-model="perPage" @change="fetchData(1)">
                                 <option :value="10">10</option>
                                 <option :value="25">25</option>
                                 <option :value="50">50</option>
                                 <option :value="80">80</option>
                                 <option :value="120">120</option>
                             </select>
-                            <span class="fs-8 text-muted">per hal</span>
+                            <span class="fs-8 text-slate-500">per hal</span>
                         </div>
                     </div>
-                    <nav v-if="totalPages > 1">
-                        <ul class="pagination pagination-sm m-0">
+                    <nav v-if="totalPages > 1" aria-label="Navigasi Halaman Data Profile Rapot">
+                        <ul class="pagination pagination-sm pagination-modern m-0">
                             <li class="page-item" :class="{disabled: currentPage === 1}">
-                                <a class="page-link" href="#" @click.prevent="fetchData(currentPage - 1)">&laquo;</a>
+                                <a class="page-link" href="#" @click.prevent="fetchData(currentPage - 1)" title="Sebelumnya">&laquo;</a>
                             </li>
                             <li class="page-item" v-for="(page, index) in paginationPages" :key="index" :class="{active: page === currentPage, disabled: page === '...'}">
                                 <a class="page-link" href="#" @click.prevent="page !== '...' && fetchData(page)">{{ page }}</a>
                             </li>
                             <li class="page-item" :class="{disabled: currentPage === totalPages}">
-                                <a class="page-link" href="#" @click.prevent="fetchData(currentPage + 1)">&raquo;</a>
+                                <a class="page-link" href="#" @click.prevent="fetchData(currentPage + 1)" title="Berikutnya">&raquo;</a>
                             </li>
                         </ul>
                     </nav>
@@ -2039,6 +2035,80 @@
         color: #2563eb !important;
         background-color: transparent !important;
         border-bottom: 2px solid #2563eb !important;
+    }
+
+    .table-responsive {
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e1 #f8fafc;
+        margin-bottom: 1.25rem;
+    }
+
+    .table-responsive::-webkit-scrollbar {
+        height: 6px;
+    }
+
+    .table-responsive::-webkit-scrollbar-track {
+        background: #f8fafc;
+        border-radius: 9999px;
+    }
+
+    .table-responsive::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border-radius: 9999px;
+    }
+
+    .table-responsive::-webkit-scrollbar-thumb:hover {
+        background-color: #94a3b8;
+    }
+
+    /* Per-Page Select Styling */
+    .perpage-select {
+        width: 76px !important;
+        height: 32px !important;
+        font-size: 0.8rem !important;
+        font-weight: 600 !important;
+        padding: 0.2rem 1.6rem 0.2rem 0.65rem !important;
+        border-radius: 8px !important;
+        border-color: #e2e8f0 !important;
+        background-color: #ffffff !important;
+        color: #1e293b !important;
+    }
+
+    .perpage-select:focus {
+        border-color: #93c5fd !important;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+    }
+
+    /* Modern Pagination */
+    .pagination-modern .page-link {
+        border-radius: 8px !important;
+        margin: 0 2px;
+        border: 1px solid #e2e8f0;
+        color: #475569;
+        font-size: 0.815rem;
+        font-weight: 600;
+        padding: 0.35rem 0.75rem;
+        background-color: #ffffff;
+        transition: all 0.15s ease-in-out;
+    }
+
+    .pagination-modern .page-link:hover {
+        background-color: #eff6ff;
+        color: #2563eb;
+        border-color: #bfdbfe;
+    }
+
+    .pagination-modern .page-item.active .page-link {
+        background-color: #2563eb;
+        border-color: #2563eb;
+        color: #ffffff;
+        box-shadow: 0 2px 5px rgba(37, 99, 235, 0.25);
+    }
+
+    .pagination-modern .page-item.disabled .page-link {
+        color: #94a3b8;
+        background-color: #f8fafc;
+        border-color: #f1f5f9;
     }
 
     .table-light-danger {

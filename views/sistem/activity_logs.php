@@ -7,136 +7,303 @@ $pageTitle = $title ?? 'Audit Trail & Log Aktivitas Sistem';
 $userRole = $_SESSION['role_name'] ?? $_SESSION['user']['role'] ?? '';
 ?>
 
-<div id="activityLogsApp" v-cloak class="p-3 p-md-4 max-w-7xl mx-auto font-sans">
+<style>
+    [v-cloak] { display: none !important; }
+    .fs-9 { font-size: 0.725rem !important; }
+    .fs-8 { font-size: 0.815rem !important; }
+    .fs-7\.5 { font-size: 0.875rem !important; }
 
-    <!-- ═══════════════════════════════════════════════════════════════════════
-         1. HERO BANNER & STATISTIK RINGKASAN
-         ═══════════════════════════════════════════════════════════════════════ -->
-    <div class="row g-3 g-md-4 mb-4">
-        <!-- Banner Title -->
-        <div class="col-12">
-            <div class="p-4 p-md-4.5 rounded-2xl text-white shadow-xs position-relative overflow-hidden" 
-                 style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #0d9488 100%);">
-                <!-- Ambient Glow Circles -->
-                <div class="position-absolute rounded-circle" style="width: 280px; height: 280px; background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 70%); top: -90px; right: -40px; pointer-events: none;"></div>
-                <div class="position-absolute rounded-circle" style="width: 200px; height: 200px; background: radial-gradient(circle, rgba(20,184,166,0.2) 0%, rgba(255,255,255,0) 70%); bottom: -70px; left: 10%; pointer-events: none;"></div>
+    /* Custom Table Styles */
+    .pengguna-table {
+        border-collapse: separate;
+        border-spacing: 0;
+        min-width: 1050px;
+    }
+    .pengguna-table thead th {
+        background: #f8fafc !important;
+        border-bottom: 2px solid #e2e8f0 !important;
+        font-weight: 700;
+        font-size: 0.72rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: #475569;
+        padding: 0.85rem 0.75rem;
+        white-space: nowrap;
+    }
+    .pengguna-table tbody td {
+        padding: 0.85rem 0.75rem;
+        vertical-align: middle;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .pengguna-table tbody tr:hover td {
+        background-color: #f8fafc !important;
+    }
 
-                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 position-relative" style="z-index: 2;">
+    /* Custom Slim Scrollbar 6px */
+    .table-responsive::-webkit-scrollbar {
+        height: 6px;
+        width: 6px;
+    }
+    .table-responsive::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 9999px;
+    }
+    .table-responsive::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 9999px;
+    }
+    .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
+    /* Pagination Modern */
+    .pagination-modern {
+        display: flex;
+        gap: 0.25rem;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .pagination-modern .page-item .page-link {
+        border: 1px solid #e2e8f0;
+        border-radius: 0.625rem;
+        color: #475569;
+        font-size: 0.815rem;
+        font-weight: 600;
+        padding: 0.35rem 0.75rem;
+        background: #ffffff;
+        transition: all 0.15s ease-in-out;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 32px;
+        height: 32px;
+    }
+    .pagination-modern .page-item.active .page-link {
+        background-color: #2563eb;
+        border-color: #2563eb;
+        color: #ffffff;
+        box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
+    }
+    .pagination-modern .page-item.disabled .page-link {
+        color: #94a3b8;
+        background-color: #f8fafc;
+        border-color: #e2e8f0;
+        pointer-events: none;
+    }
+
+    .perpage-select {
+        width: 76px !important;
+        height: 32px !important;
+        font-size: 0.815rem !important;
+        font-weight: 600 !important;
+        color: #334155 !important;
+        border-color: #cbd5e1 !important;
+        border-radius: 0.5rem !important;
+        padding: 0.25rem 1.75rem 0.25rem 0.65rem !important;
+    }
+
+    /* KPI Cards */
+    .kpi-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 1rem;
+        padding: 1rem 1.25rem;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    .kpi-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #64748b;
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+    .kpi-value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        line-height: 1.2;
+        margin-bottom: 0;
+        font-family: ui-monospace, monospace;
+    }
+    .kpi-icon-box {
+        width: 42px;
+        height: 42px;
+        border-radius: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+    .shadow-2xs { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03); }
+    .shadow-xs { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); }
+    .hover-lift { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+    .hover-lift:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.06); }
+</style>
+
+<div id="activityLogsApp" v-cloak class="p-2 p-md-3">
+
+    <!-- 1. Row Header & Action Toolbar -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <div class="bg-blue-600 text-white rounded-2xl d-flex align-items-center justify-content-center shadow-xs flex-shrink-0" style="width: 48px; height: 48px;">
+                <i class="bi bi-journal-text fs-4"></i>
+            </div>
+            <div>
+                <div class="d-flex align-items-center gap-2">
+                    <h3 class="fw-bold text-slate-900 fs-4 mb-0">Audit Trail & Log Aktivitas</h3>
+                    <span class="badge bg-slate-100 text-slate-700 border border-slate-200 rounded-pill px-2.5 py-1 fs-9 font-bold" v-if="isSuperAdmin">
+                        <i class="bi bi-shield-check text-blue-600 me-1"></i>Super Admin
+                    </span>
+                </div>
+                <p class="text-slate-500 fs-8 mb-0 mt-0.5">Rekam jejak transaksi data, audit perubahan nilai (INSERT, UPDATE, DELETE), login, dan pelacakan aktor secara real-time.</p>
+            </div>
+        </div>
+        
+        <!-- Action Toolbar -->
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button type="button" 
+                    class="btn btn-sm btn-light border border-rose-200 text-rose-700 bg-rose-50/60 rounded-xl px-3.5 py-2 fs-8 font-semibold shadow-2xs hover-lift d-inline-flex align-items-center gap-1.5" 
+                    @click="openDeleteModal()">
+                <i class="bi bi-trash3-fill text-rose-600"></i>
+                <span>Hapus Log</span>
+            </button>
+            <button type="button" 
+                    class="btn btn-sm btn-light border border-slate-200 text-slate-700 rounded-xl px-3.5 py-2 fs-8 font-semibold shadow-2xs hover-lift d-inline-flex align-items-center gap-1.5" 
+                    @click="refreshAll()" 
+                    title="Segarkan Data">
+                <i class="bi bi-arrow-clockwise" :class="{'spin': loading}"></i>
+                <span>Segarkan</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. Compact School Selector Banner (Khusus Super Admin Auto-Filter) -->
+    <div class="mb-4 p-3 px-md-4 rounded-2xl shadow-2xs border border-blue-100 bg-white" 
+         v-if="isSuperAdmin && tenantOptions.length > 0">
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+            <div class="d-flex align-items-center flex-wrap gap-2.5">
+                <div class="bg-blue-50 text-blue-600 p-2 rounded-xl d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                    <i class="bi bi-building fs-6"></i>
+                </div>
+                <div>
+                    <span class="fs-8 fw-bold text-slate-800 me-2">Pilih Instansi Sekolah:</span>
+                </div>
+                
+                <div class="my-1 my-md-0" style="min-width: 220px; max-width: 300px;">
+                    <select id="sa-filter-sekolah-logs" name="filter_tenant_id" 
+                            class="form-select form-select-sm bg-slate-50 border-slate-200 rounded-xl text-slate-800 fs-8 font-semibold shadow-2xs cursor-pointer focus:bg-white w-100" 
+                            style="height: 38px;" 
+                            v-model="selectedTenant" 
+                            @change="onFilterChange()">
+                        <option value="">-- Semua Sekolah / Tenant --</option>
+                        <option value="system">🌐 Sistem (Super Admin / Global)</option>
+                        <option v-for="t in tenantOptions" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="text-slate-500 fs-8 d-flex align-items-center gap-1.5">
+                <i class="bi bi-info-circle text-blue-500"></i>
+                <span>Data Aktif: <strong class="text-blue-600 fw-bold">{{ getSelectedTenantLabel() }}</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. KPI Summary Metric Cards -->
+    <div class="row g-3 mb-4">
+        <!-- Card 1: Total Log Sistem -->
+        <div class="col-6 col-md-3">
+            <div class="kpi-card shadow-2xs h-100">
+                <div class="d-flex align-items-center justify-content-between">
                     <div>
-                        <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-                            <span class="badge px-3 py-1.5 rounded-pill text-xs font-semibold d-inline-flex align-items-center gap-1.5" style="background: rgba(255,255,255,0.18); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.25);">
-                                <i class="bi bi-shield-check text-amber-300"></i> Audit Trail & Log Keamanan Sistem
-                            </span>
-                        </div>
-                        <h2 class="h3 font-bold text-white mb-1 tracking-tight">Audit Trail & Log Aktivitas</h2>
-                        <p class="text-white/85 text-xs mb-0" style="max-width: 680px; line-height: 1.6;">
-                            Rekam jejak komprehensif seluruh transaksi data, audit perubahan nilai (INSERT, UPDATE, DELETE), riwayat login, dan pelacakan aktor secara real-time.
-                        </p>
+                        <span class="kpi-label">TOTAL LOG SISTEM</span>
+                        <h4 class="kpi-value text-blue-600">{{ stats.total_logs || 0 }}</h4>
                     </div>
-
-                    <!-- Right Controls: Super Admin Tenant Filter & Action Buttons -->
-                    <div class="d-flex align-items-center gap-2 flex-wrap flex-shrink-0">
-                        <div v-if="isSuperAdmin && tenantOptions.length > 0" class="d-flex align-items-center gap-2 bg-white/15 p-2 rounded-xl border border-white/25 shadow-xs" style="backdrop-filter: blur(6px);">
-                            <i class="bi bi-buildings text-white fs-6 ms-1.5"></i>
-                            <select v-model="selectedTenant" @change="onFilterChange()" class="form-select form-select-sm border-0 text-xs font-semibold bg-white text-slate-800 rounded-lg shadow-2xs cursor-pointer" style="min-width: 220px;">
-                                <option value="">Semua Sekolah / Tenant</option>
-                                <option value="system">🌐 Sistem (Super Admin / Global)</option>
-                                <option v-for="t in tenantOptions" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
-                            </select>
-                        </div>
-
-                        <button type="button" class="btn btn-danger rounded-xl px-3.5 py-2 text-xs md:text-sm font-bold shadow-sm d-flex align-items-center gap-2 hover:bg-rose-700 transition" @click="openDeleteModal()">
-                            <i class="bi bi-trash3-fill"></i>
-                            <span>Hapus Log</span>
-                        </button>
+                    <div class="kpi-icon-box bg-blue-50 text-blue-600">
+                        <i class="bi bi-database-fill-check"></i>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- 4 Modern Stat Metric Cards -->
-        <div class="col-6 col-lg-3">
-            <div class="bg-white p-3.5 p-md-4 rounded-2xl border border-slate-200/80 shadow-xs h-100 d-flex align-items-center justify-content-between transition hover:-translate-y-0.5">
-                <div>
-                    <span class="text-slate-400 text-xs font-semibold block">Total Log Sistem</span>
-                    <span class="text-2xl font-black text-slate-800 block mt-0.5">{{ stats.total_logs || 0 }}</span>
-                    <span class="text-[11px] text-blue-600 font-medium d-inline-flex align-items-center gap-1 mt-0.5">
-                        <i class="bi bi-journal-text"></i> Seluruh rekaman audit
-                    </span>
-                </div>
-                <div class="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 d-flex align-items-center justify-content-center fs-5 flex-shrink-0 border border-blue-100">
-                    <i class="bi bi-database-fill-check"></i>
+        <!-- Card 2: Perubahan UPDATE -->
+        <div class="col-6 col-md-3">
+            <div class="kpi-card shadow-2xs h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="kpi-label">PERUBAHAN (UPDATE)</span>
+                        <h4 class="kpi-value text-amber-600">{{ stats.total_update || 0 }}</h4>
+                    </div>
+                    <div class="kpi-icon-box bg-amber-50 text-amber-600">
+                        <i class="bi bi-pencil-square"></i>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <div class="col-6 col-lg-3">
-            <div class="bg-white p-3.5 p-md-4 rounded-2xl border border-slate-200/80 shadow-xs h-100 d-flex align-items-center justify-content-between transition hover:-translate-y-0.5">
-                <div>
-                    <span class="text-slate-400 text-xs font-semibold block">Perubahan (UPDATE)</span>
-                    <span class="text-2xl font-black text-slate-800 block mt-0.5">{{ stats.total_update || 0 }}</span>
-                    <span class="text-[11px] text-amber-600 font-medium d-inline-flex align-items-center gap-1 mt-0.5">
-                        <i class="bi bi-arrow-repeat"></i> Komparasi nilai data
-                    </span>
-                </div>
-                <div class="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 d-flex align-items-center justify-content-center fs-5 flex-shrink-0 border border-amber-100">
-                    <i class="bi bi-pencil-square"></i>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-6 col-lg-3">
-            <div class="bg-white p-3.5 p-md-4 rounded-2xl border border-slate-200/80 shadow-xs h-100 d-flex align-items-center justify-content-between transition hover:-translate-y-0.5">
-                <div>
-                    <span class="text-slate-400 text-xs font-semibold block">Data Baru (INSERT)</span>
-                    <span class="text-2xl font-black text-slate-800 block mt-0.5">{{ stats.total_insert || 0 }}</span>
-                    <span class="text-[11px] text-emerald-600 font-medium d-inline-flex align-items-center gap-1 mt-0.5">
-                        <i class="bi bi-plus-circle-fill"></i> Penambahan entri baru
-                    </span>
-                </div>
-                <div class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 d-flex align-items-center justify-content-center fs-5 flex-shrink-0 border border-emerald-100">
-                    <i class="bi bi-plus-circle"></i>
+        <!-- Card 3: Data Baru INSERT -->
+        <div class="col-6 col-md-3">
+            <div class="kpi-card shadow-2xs h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="kpi-label">DATA BARU (INSERT)</span>
+                        <h4 class="kpi-value text-emerald-600">{{ stats.total_insert || 0 }}</h4>
+                    </div>
+                    <div class="kpi-icon-box bg-emerald-50 text-emerald-600">
+                        <i class="bi bi-plus-circle-fill"></i>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <div class="col-6 col-lg-3">
-            <div class="bg-white p-3.5 p-md-4 rounded-2xl border border-slate-200/80 shadow-xs h-100 d-flex align-items-center justify-content-between transition hover:-translate-y-0.5">
-                <div>
-                    <span class="text-slate-400 text-xs font-semibold block">Hapus Data (DELETE)</span>
-                    <span class="text-2xl font-black text-slate-800 block mt-0.5">{{ stats.total_delete || 0 }}</span>
-                    <span class="text-[11px] text-rose-600 font-medium d-inline-flex align-items-center gap-1 mt-0.5">
-                        <i class="bi bi-exclamation-triangle-fill"></i> Aktivitas kritis
-                    </span>
-                </div>
-                <div class="w-11 h-11 rounded-xl bg-rose-50 text-rose-600 d-flex align-items-center justify-content-center fs-5 flex-shrink-0 border border-rose-100">
-                    <i class="bi bi-trash3"></i>
+        <!-- Card 4: Hapus Data DELETE -->
+        <div class="col-6 col-md-3">
+            <div class="kpi-card shadow-2xs h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="kpi-label">HAPUS DATA (DELETE)</span>
+                        <h4 class="kpi-value text-rose-600">{{ stats.total_delete || 0 }}</h4>
+                    </div>
+                    <div class="kpi-icon-box bg-rose-50 text-rose-600">
+                        <i class="bi bi-trash3-fill"></i>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════
-         2. FILTER TOOLBAR (RESPONSIF 1-CARD SLEEK BAR)
-         ═══════════════════════════════════════════════════════════════════════ -->
-    <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-3 mb-4">
-        <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3">
-            
-            <!-- Left: Search & Filter Dropdowns -->
-            <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
-                <!-- Search Input -->
-                <div class="position-relative flex-grow-1 flex-md-grow-0" style="min-width: 220px; max-width: 280px;">
-                    <i class="bi bi-search position-absolute text-slate-400" style="left: 12px; top: 50%; transform: translateY(-50%); font-size: 13px;"></i>
-                    <input type="text" v-model="searchQuery" @input="onSearchInput" placeholder="Cari aksi, tabel, user, IP, data..." class="form-control form-control-sm ps-5 rounded-xl border-slate-200 text-xs shadow-2xs font-semibold py-2">
-                    <button v-if="searchQuery" type="button" @click="searchQuery = ''; onFilterChange();" class="btn btn-sm position-absolute text-slate-400 hover:text-slate-600 p-0" style="right: 10px; top: 50%; transform: translateY(-50%);">
-                        <i class="bi bi-x-circle-fill fs-6"></i>
-                    </button>
+    <!-- 4. Main Card Grid & Table Section -->
+    <div class="bg-white rounded-2xl shadow-2xs border border-slate-200/80 p-4 mb-4 animate-fade-in">
+        
+        <!-- Filter Lanjutan Card (Spacious & Clean Layout) -->
+        <div class="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-3.5 p-md-4 mb-4 shadow-2xs">
+            <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom border-slate-200/60">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-funnel-fill text-blue-600 fs-7"></i>
+                    <span class="fs-8 fw-bold text-slate-800 text-uppercase tracking-wider">Penyaringan & Filter Data Log</span>
                 </div>
+                <button v-if="hasActiveFilters" 
+                        type="button" 
+                        @click="resetFilters" 
+                        class="btn btn-sm btn-link text-slate-500 hover:text-rose-600 p-0 fs-8 text-decoration-none d-flex align-items-center gap-1">
+                    <i class="bi bi-arrow-counterclockwise"></i> Reset Semua Filter
+                </button>
+            </div>
 
-                <!-- Filter Aksi -->
-                <div style="min-width: 140px;">
-                    <select v-model="selectedAction" @change="onFilterChange" class="form-select form-select-sm rounded-xl border-slate-200 text-xs shadow-2xs font-semibold py-2">
-                        <option value="">Semua Aksi</option>
+            <div class="row g-3 align-items-end">
+                <!-- Filter 1: Aksi -->
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <label class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Jenis Aksi</label>
+                    <select class="form-select form-select-sm rounded-xl border-slate-200 bg-white fs-8 text-slate-800 font-medium py-2 shadow-2xs cursor-pointer" 
+                            v-model="selectedAction" 
+                            @change="onFilterChange"
+                            style="height: 38px;">
+                        <option value="">-- Semua Aksi --</option>
                         <option value="INSERT">➕ INSERT (Tambah)</option>
                         <option value="UPDATE">🔄 UPDATE (Ubah)</option>
                         <option value="DELETE">🗑️ DELETE (Hapus)</option>
@@ -146,246 +313,217 @@ $userRole = $_SESSION['role_name'] ?? $_SESSION['user']['role'] ?? '';
                     </select>
                 </div>
 
-                <!-- Filter Role -->
-                <div style="min-width: 140px;">
-                    <select v-model="selectedRole" @change="onFilterChange" class="form-select form-select-sm rounded-xl border-slate-200 text-xs shadow-2xs font-semibold py-2">
-                        <option value="">Semua Role</option>
+                <!-- Filter 2: Role Pengguna -->
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <label class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Peran / Role</label>
+                    <select class="form-select form-select-sm rounded-xl border-slate-200 bg-white fs-8 text-slate-800 font-medium py-2 shadow-2xs cursor-pointer" 
+                            v-model="selectedRole" 
+                            @change="onFilterChange"
+                            style="height: 38px;">
+                        <option value="">-- Semua Role --</option>
                         <option v-for="r in roleOptions" :key="r" :value="r">
                             {{ formatRoleLabel(r) }}
                         </option>
                     </select>
                 </div>
 
-                <!-- Filter Modul / Tabel -->
-                <div style="min-width: 160px;">
-                    <select v-model="selectedTable" @change="onFilterChange" class="form-select form-select-sm rounded-xl border-slate-200 text-xs shadow-2xs font-semibold py-2">
-                        <option value="">Semua Modul / Tabel</option>
+                <!-- Filter 3: Modul / Tabel -->
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <label class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Modul / Tabel</label>
+                    <select class="form-select form-select-sm rounded-xl border-slate-200 bg-white fs-8 text-slate-800 font-medium py-2 shadow-2xs cursor-pointer" 
+                            v-model="selectedTable" 
+                            @change="onFilterChange"
+                            style="height: 38px;">
+                        <option value="">-- Semua Modul / Tabel --</option>
                         <option v-for="tbl in tableOptions" :key="tbl" :value="tbl">
                             {{ formatTableLabel(tbl) }}
                         </option>
                     </select>
                 </div>
 
-                <!-- Filter Rentang Tanggal -->
-                <div class="d-flex align-items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200 shadow-2xs">
-                    <span class="text-[11px] text-slate-500 font-bold px-1.5">Tgl:</span>
-                    <input type="date" v-model="startDate" @change="onFilterChange" class="form-control form-control-sm border-0 bg-transparent text-xs p-0 font-semibold text-slate-700" style="width: 110px;" title="Dari Tanggal">
-                    <span class="text-slate-400 text-xs">-</span>
-                    <input type="date" v-model="endDate" @change="onFilterChange" class="form-control form-control-sm border-0 bg-transparent text-xs p-0 font-semibold text-slate-700" style="width: 110px;" title="Sampai Tanggal">
+                <!-- Filter 4: Rentang Tanggal -->
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <label class="form-label fs-9 font-bold text-slate-500 mb-1 text-uppercase tracking-wider">Rentang Tanggal</label>
+                    <div class="d-flex align-items-center gap-1.5 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs" style="height: 38px;">
+                        <input type="date" v-model="startDate" @change="onFilterChange" class="form-control form-control-sm border-0 bg-transparent text-xs p-1 font-semibold text-slate-700" style="width: 110px;" title="Dari Tanggal">
+                        <span class="text-slate-400 text-xs">-</span>
+                        <input type="date" v-model="endDate" @change="onFilterChange" class="form-control form-control-sm border-0 bg-transparent text-xs p-1 font-semibold text-slate-700" style="width: 110px;" title="Sampai Tanggal">
+                    </div>
                 </div>
-
-                <!-- Reset Button -->
-                <button v-if="hasActiveFilters" type="button" @click="resetFilters" class="btn btn-sm btn-outline-secondary rounded-xl text-xs px-2.5 py-1.5 d-flex align-items-center gap-1 font-semibold hover:bg-slate-100">
-                    <i class="bi bi-arrow-counterclockwise"></i> Reset
-                </button>
-            </div>
-
-            <!-- Right: Counter & Refresh -->
-            <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                <span class="text-xs text-slate-500 font-semibold">
-                    Total: <strong class="text-slate-900">{{ totalLogs }}</strong> log
-                </span>
-                <button type="button" class="btn btn-sm btn-light border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-100 shadow-2xs d-flex align-items-center gap-1.5 font-semibold" @click="refreshAll()" title="Segarkan Data">
-                    <i class="bi bi-arrow-clockwise" :class="{'spin': loading}"></i>
-                    <span class="d-none d-sm-inline">Segarkan</span>
-                </button>
             </div>
         </div>
-    </div>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════
-         3. TABEL AUDIT TRAIL LOG AKTIVITAS
-         ═══════════════════════════════════════════════════════════════════════ -->
-    <div class="bg-white rounded-3xl shadow-xs border border-slate-200/80 overflow-hidden mb-4">
-        <div class="table-responsive custom-scrollbar">
-            <table class="table table-hover align-middle mb-0 text-xs">
+        <!-- Table Action Toolbar (Search Box on Left, Quick Info on Right) -->
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+            <div class="position-relative flex-grow-1" style="max-width: 360px;">
+                <i class="bi bi-search position-absolute top-50 translate-middle-y text-slate-400 ms-3" style="font-size: 0.85rem;"></i>
+                <input id="global_search_input" name="search" type="text" 
+                       class="form-control form-control-sm ps-5 pe-5 bg-white border-slate-200 rounded-xl text-slate-800 fs-8 font-medium shadow-2xs" 
+                       placeholder="Cari aksi, tabel, user, IP, data..." 
+                       v-model="searchQuery" 
+                       @input="onSearchInput"
+                       style="height: 38px;">
+                <button v-if="searchQuery" type="button" class="btn btn-sm btn-link position-absolute top-50 end-0 translate-middle-y text-slate-400 hover:text-slate-600 text-decoration-none p-0 me-3" @click="searchQuery = ''; onFilterChange()">
+                    <i class="bi bi-x-circle-fill fs-7"></i>
+                </button>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-slate-100 text-slate-700 border border-slate-200 rounded-pill px-3 py-2 fs-8 font-medium">
+                    <i class="bi bi-journal-check text-blue-600 me-1"></i>Total: <strong class="text-slate-900">{{ totalLogs }}</strong> Log
+                </span>
+            </div>
+        </div>
+
+        <!-- 5. Modern Table Architecture -->
+        <div class="table-responsive" style="margin-bottom: 1.25rem;">
+            <table class="pengguna-table table table-hover align-middle mb-0">
                 <thead>
-                    <tr class="bg-slate-50/80 text-slate-500 font-bold border-b border-slate-200 text-nowrap">
-                        <th class="ps-4 py-3" style="width: 160px;">Waktu & Tanggal</th>
-                        <th v-if="isSuperAdmin" class="py-3" style="width: 180px;">Sekolah / Tenant</th>
-                        <th class="py-3" style="width: 220px;">Aktor & Peran</th>
-                        <th class="py-3" style="width: 180px;">Aksi & Modul</th>
-                        <th class="py-3">Ringkasan Perubahan Nilai Data</th>
-                        <th class="pe-4 py-3 text-center" style="width: 100px;">Aksi</th>
+                    <tr>
+                        <th style="width: 50px;">NO</th>
+                        <th style="width: 150px;">WAKTU & TANGGAL</th>
+                        <th v-if="isSuperAdmin" style="width: 180px;">SEKOLAH / TENANT</th>
+                        <th style="width: 220px;">AKTOR & PERAN</th>
+                        <th style="width: 180px;">AKSI & MODUL</th>
+                        <th>RINGKASAN PERUBAHAN DATA</th>
+                        <th class="text-center" style="width: 90px;">AKSI</th>
                     </tr>
                 </thead>
                 <tbody>
                     <!-- Loading State -->
                     <tr v-if="loading">
-                        <td :colspan="isSuperAdmin ? 6 : 5" class="text-center py-5 text-slate-400">
+                        <td :colspan="isSuperAdmin ? 7 : 6" class="text-center py-5 text-slate-400">
                             <div class="spinner-border spinner-border-sm text-blue-600 me-2" role="status"></div>
-                            <span class="font-semibold text-xs">Memuat rekam jejak audit trail...</span>
+                            <span class="font-semibold fs-8">Memuat rekam jejak audit trail...</span>
                         </td>
                     </tr>
 
                     <!-- Empty State -->
                     <tr v-else-if="logs.length === 0">
-                        <td :colspan="isSuperAdmin ? 6 : 5" class="text-center py-5">
+                        <td :colspan="isSuperAdmin ? 7 : 6" class="text-center py-5">
                             <div class="py-4">
-                                <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 d-inline-flex align-items-center justify-center fs-3 mb-2 shadow-2xs">
-                                    <i class="bi bi-shield-slash"></i>
+                                <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 d-inline-flex align-items-center justify-content-center fs-3 mb-2 shadow-2xs" style="width: 48px; height: 48px;">
+                                    <i class="bi bi-journal-x"></i>
                                 </div>
-                                <h6 class="font-bold text-slate-800 text-sm mb-1">Tidak Ada Rekaman Log</h6>
-                                <p class="text-slate-400 text-xs mb-0">Tidak ada data audit aktivitas yang cocok dengan kriteria filter.</p>
+                                <h6 class="fw-bold text-slate-800 fs-7 mb-1">Tidak Ada Rekaman Log</h6>
+                                <p class="text-slate-400 fs-8 mb-0">Tidak ada data audit aktivitas yang cocok dengan kriteria filter.</p>
                             </div>
                         </td>
                     </tr>
 
                     <!-- Data Rows -->
-                    <tr v-else v-for="log in logs" :key="log.id" class="transition hover:bg-slate-50/70 border-b border-slate-100">
-                        
-                        <!-- Waktu -->
-                        <td class="ps-4 py-3 text-nowrap">
-                            <div class="font-bold text-slate-800 font-monospace text-xs">
+                    <tr v-else v-for="(log, idx) in logs" :key="log.id">
+                        <!-- No -->
+                        <td class="text-slate-400 fs-8 fw-semibold">{{ (currentPage - 1) * perPage + idx + 1 }}</td>
+
+                        <!-- Waktu & Tanggal -->
+                        <td class="text-nowrap">
+                            <div class="fw-bold text-slate-800 font-monospace fs-8">
                                 {{ formatTime(log.created_at) }}
                             </div>
-                            <div class="text-[11px] text-slate-400 font-medium">
+                            <div class="fs-9 text-slate-400 font-medium">
                                 {{ formatDate(log.created_at) }}
                             </div>
                         </td>
 
                         <!-- Sekolah / Tenant (Super Admin Only) -->
-                        <td v-if="isSuperAdmin" class="py-3">
-                            <div class="font-bold text-slate-800 truncate" style="max-width: 170px;" :title="log.nama_sekolah || 'Sistem (Global)'">
-                                <i class="bi bi-buildings text-slate-400 me-1"></i>
+                        <td v-if="isSuperAdmin">
+                            <div class="fw-bold text-slate-800 text-truncate fs-8" style="max-width: 170px;" :title="log.nama_sekolah || 'Sistem (Global)'">
+                                <i class="bi bi-building text-slate-400 me-1"></i>
                                 {{ log.nama_sekolah || 'Sistem (Global)' }}
                             </div>
                         </td>
 
                         <!-- Aktor & Peran -->
-                        <td class="py-3">
+                        <td>
                             <div class="d-flex align-items-center gap-2">
-                                <div class="w-8 h-8 rounded-full d-flex align-items-center justify-center text-xs font-bold text-white shadow-2xs flex-shrink-0" :style="getAvatarBgStyle(log.user_role)">
+                                <div class="avatar-circle bg-light-primary shadow-2xs flex-shrink-0" :style="getAvatarBgStyle(log.user_role)">
                                     {{ getInitials(log.actor_name || log.user_role) }}
                                 </div>
                                 <div class="overflow-hidden">
-                                    <div class="font-bold text-slate-900 text-xs truncate" :title="log.actor_name || 'System'">
+                                    <div class="fw-bold text-slate-900 fs-8 text-truncate" :title="log.actor_name || 'System'">
                                         {{ log.actor_name || 'System / Guest' }}
                                     </div>
                                     <div class="d-flex align-items-center gap-1 mt-0.5 flex-wrap">
-                                        <span class="badge px-1.5 py-0.5 rounded text-[10px] font-bold border" :class="getRoleBadgeClass(log.user_role)">
+                                        <span class="badge px-1.5 py-0.5 rounded text-uppercase" style="font-size: 0.65rem;" :class="getRoleBadgeClass(log.user_role)">
                                             {{ formatRoleLabel(log.user_role) }}
                                         </span>
-                                        <span class="text-[10px] text-slate-400 font-monospace">IP: {{ log.ip_address || '127.0.0.1' }}</span>
+                                        <span class="fs-9 text-slate-400 font-monospace">IP: {{ log.ip_address || '127.0.0.1' }}</span>
                                     </div>
                                 </div>
                             </div>
                         </td>
 
                         <!-- Aksi & Modul/Tabel -->
-                        <td class="py-3">
+                        <td>
                             <div class="d-flex align-items-center gap-1.5 mb-1">
-                                <span class="badge px-2 py-1 rounded-lg text-xs font-bold border d-inline-flex align-items-center gap-1 shadow-2xs font-monospace" :class="getActionBadgeClass(log.action)">
+                                <span class="badge px-2 py-1 rounded-pill fs-9 font-bold border d-inline-flex align-items-center gap-1 shadow-2xs font-monospace" :class="getActionBadgeClass(log.action)">
                                     <i class="bi" :class="getActionIcon(log.action)"></i>
                                     {{ log.action }}
                                 </span>
                             </div>
-                            <div class="text-[11px] font-semibold text-slate-600 truncate" :title="log.table_name" style="max-width: 170px;">
+                            <div class="fs-9 font-semibold text-slate-600 text-truncate" :title="log.table_name" style="max-width: 170px;">
                                 <i class="bi bi-table text-slate-400 me-1"></i>{{ formatTableLabel(log.table_name) }}
                             </div>
                         </td>
 
                         <!-- Preview Perubahan Nilai Data (Diff Pills) -->
-                        <td class="py-3">
+                        <td>
                             <div v-html="renderDiffPills(log)"></div>
                         </td>
 
                         <!-- Tombol Detail -->
-                        <td class="pe-4 py-3 text-center">
-                            <button type="button" class="btn btn-sm btn-outline-primary rounded-xl px-3 py-1.5 text-xs font-bold shadow-2xs d-inline-flex align-items-center gap-1.5 hover:bg-blue-600 hover:text-white transition" @click="openDetailModal(log)">
-                                <i class="bi bi-eye-fill"></i>
-                                <span>Detail</span>
+                        <td class="text-center">
+                            <button type="button" 
+                                    class="btn btn-sm btn-primary rounded-xl px-2.5 py-1 fs-8 font-semibold d-inline-flex align-items-center gap-1 shadow-2xs hover-lift" 
+                                    @click="openDetailModal(log)" 
+                                    title="Lihat Detail Transaksi">
+                                <i class="bi bi-eye"></i> Detail
                             </button>
                         </td>
-
                     </tr>
                 </tbody>
             </table>
         </div>
 
-        <!-- ═══════════════════════════════════════════════════════════════════
-             PAGINATION BAR (SMART NUMBERED CONTROLS & PER-PAGE SELECTOR)
-             ═══════════════════════════════════════════════════════════════════ -->
-        <div class="d-flex flex-column flex-lg-row align-items-center justify-content-between gap-3 p-3.5 border-t border-slate-100 bg-slate-50/70">
-            
-            <!-- Left: Showing Info & Rows Per Page -->
-            <div class="d-flex flex-wrap align-items-center gap-3 text-xs text-slate-500">
-                <span>
-                    Menampilkan <strong class="text-slate-800 font-bold">{{ totalLogs === 0 ? 0 : (currentPage - 1) * perPage + 1 }}</strong> - <strong class="text-slate-800 font-bold">{{ Math.min(currentPage * perPage, totalLogs) }}</strong> dari <strong class="text-slate-900 font-black">{{ totalLogs }}</strong> log
+        <!-- 6. Bottom Pagination Toolbar Standard -->
+        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3 border-top border-slate-100 mt-2 pt-4">
+            <div class="d-flex align-items-center gap-3">
+                <span class="fs-8 text-slate-500">
+                    Menampilkan <strong>{{ totalLogs === 0 ? 0 : (currentPage - 1) * perPage + 1 }}</strong> s.d. <strong>{{ Math.min(currentPage * perPage, totalLogs) }}</strong> dari <strong>{{ totalLogs }}</strong> log
                 </span>
-
-                <div class="d-flex align-items-center gap-1.5 border-start border-slate-300 ps-3">
-                    <span class="text-slate-400">Tampilkan:</span>
-                    <select v-model="perPage" @change="onPerPageChange()" class="form-select form-select-sm text-xs font-bold rounded-lg border-slate-200 py-1 px-2 shadow-2xs text-slate-700 bg-white" style="width: 75px;">
+                <div class="d-flex align-items-center gap-1.5 ms-2">
+                    <span class="fs-9 text-slate-400 text-uppercase font-bold">Baris:</span>
+                    <select id="per_page_select_logs" name="per_page" 
+                            class="form-select form-select-sm perpage-select shadow-2xs cursor-pointer" 
+                            v-model="perPage" 
+                            @change="onPerPageChange()" 
+                            title="Jumlah baris per halaman">
                         <option :value="10">10</option>
                         <option :value="15">15</option>
                         <option :value="25">25</option>
                         <option :value="50">50</option>
                         <option :value="100">100</option>
                     </select>
-                    <span class="text-slate-400">/ hal</span>
                 </div>
             </div>
 
-            <!-- Right: Smart Numbered Pagination Buttons & Quick Jump -->
-            <div class="d-flex flex-wrap align-items-center gap-1.5" v-if="totalPages > 1">
-                
-                <!-- First Page Button -->
-                <button type="button" class="btn btn-sm btn-light border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold shadow-2xs d-inline-flex align-items-center justify-content-center hover:bg-slate-100" 
-                        :disabled="currentPage === 1 || loading" 
-                        @click="changePage(1)" 
-                        title="Halaman Pertama">
-                    <i class="bi bi-chevron-double-left"></i>
-                </button>
-
-                <!-- Prev Page Button -->
-                <button type="button" class="btn btn-sm btn-light border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold shadow-2xs d-inline-flex align-items-center justify-content-center hover:bg-slate-100" 
-                        :disabled="currentPage === 1 || loading" 
-                        @click="changePage(currentPage - 1)" 
-                        title="Halaman Sebelumnya">
-                    <i class="bi bi-chevron-left me-1"></i> <span class="d-none d-sm-inline">Sebelumnya</span>
-                </button>
-
-                <!-- Page Number Buttons -->
-                <div class="d-flex align-items-center gap-1">
-                    <template v-for="(p, pIdx) in displayedPages" :key="pIdx">
-                        <span v-if="p === '...'" class="px-2 text-slate-400 font-bold text-xs select-none">...</span>
-                        <button v-else type="button" 
-                                class="btn btn-sm rounded-lg text-xs font-bold transition shadow-2xs d-inline-flex align-items-center justify-content-center"
-                                :class="p === currentPage ? 'btn-primary text-white shadow-xs' : 'btn-light border-slate-200 text-slate-700 hover:bg-slate-100'"
-                                style="min-width: 32px; height: 32px;"
-                                :disabled="loading"
-                                @click="changePage(p)">
-                            {{ p }}
-                        </button>
-                    </template>
-                </div>
-
-                <!-- Next Page Button -->
-                <button type="button" class="btn btn-sm btn-light border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold shadow-2xs d-inline-flex align-items-center justify-content-center hover:bg-slate-100" 
-                        :disabled="currentPage === totalPages || loading" 
-                        @click="changePage(currentPage + 1)" 
-                        title="Halaman Berikutnya">
-                    <span class="d-none d-sm-inline">Berikutnya</span> <i class="bi bi-chevron-right ms-1"></i>
-                </button>
-
-                <!-- Last Page Button -->
-                <button type="button" class="btn btn-sm btn-light border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold shadow-2xs d-inline-flex align-items-center justify-content-center hover:bg-slate-100" 
-                        :disabled="currentPage === totalPages || loading" 
-                        @click="changePage(totalPages)" 
-                        title="Halaman Terakhir">
-                    <i class="bi bi-chevron-double-right"></i>
-                </button>
-
-                <!-- Quick Jump Input -->
-                <div class="d-flex align-items-center gap-1 ms-2 border-start border-slate-300 ps-2 d-none d-md-flex">
-                    <input type="number" min="1" :max="totalPages" v-model.number="jumpPageInput" @keyup.enter="handleJumpPage()" placeholder="Hal..." class="form-control form-control-sm text-xs font-bold rounded-lg border-slate-200 py-1 text-center" style="width: 55px;">
-                    <button type="button" @click="handleJumpPage()" class="btn btn-sm btn-light border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 hover:bg-slate-100">
-                        Go
-                    </button>
-                </div>
-            </div>
+            <nav v-if="totalPages > 1">
+                <ul class="pagination pagination-modern m-0">
+                    <li class="page-item" :class="{disabled: currentPage === 1 || loading}">
+                        <a class="page-link" href="#" @click.prevent="changePage(currentPage - 1)" title="Halaman Sebelumnya">&laquo;</a>
+                    </li>
+                    <li class="page-item" v-for="(p, pIdx) in displayedPages" :key="pIdx" 
+                        :class="{active: p === currentPage, disabled: p === '...' || loading}">
+                        <a class="page-link" href="#" @click.prevent="p !== '...' ? changePage(p) : null">{{ p }}</a>
+                    </li>
+                    <li class="page-item" :class="{disabled: currentPage === totalPages || loading}">
+                        <a class="page-link" href="#" @click.prevent="changePage(currentPage + 1)" title="Halaman Selanjutnya">&raquo;</a>
+                    </li>
+                </ul>
+            </nav>
         </div>
+
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════════════════
@@ -614,11 +752,18 @@ $userRole = $_SESSION['role_name'] ?? $_SESSION['user']['role'] ?? '';
             const loading = ref(false);
             let searchTimeout = null;
 
-            const isSuperAdmin = ref(document.getElementById('activity-logs-app')?.dataset?.isSuperAdmin === 'true');
+            const isSuperAdmin = ref(<?= !empty($isSuperAdmin) ? 'true' : 'false' ?>);
             const tenantOptions = ref([]);
             const roleOptions = ref([]);
             const tableOptions = ref([]);
             const extraActions = ref([]);
+
+            const getSelectedTenantLabel = () => {
+                if (!selectedTenant.value) return 'Semua Sekolah / Tenant';
+                if (selectedTenant.value === 'system') return 'Sistem (Super Admin / Global)';
+                const found = tenantOptions.value.find(t => String(t.id) === String(selectedTenant.value));
+                return found ? found.nama_sekolah : 'Sekolah Terpilih';
+            };
 
             const displayedPages = computed(() => {
                 const total = totalPages.value;
@@ -1163,6 +1308,7 @@ $userRole = $_SESSION['role_name'] ?? $_SESSION['user']['role'] ?? '';
                 copyToClipboard,
                 openDeleteModal,
                 submitDeleteLogs,
+                getSelectedTenantLabel,
                 formatTime,
                 formatDate,
                 formatDateTime,

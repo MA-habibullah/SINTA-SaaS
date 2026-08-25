@@ -426,7 +426,7 @@ class KelembagaanModel extends Model {
 
         try {
             $this->db->beginTransaction();
-            $sql = "UPDATE {$fullTable} SET " . implode(', ', $sets) . " WHERE id::text = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)";
+            $sql = "UPDATE {$fullTable} SET " . implode(', ', $sets) . " WHERE id::text = :id AND (:tenant_id::text IS NULL OR tenant_id::text = :tenant_id::text OR tenant_id IS NULL)";
             $stmt = $this->db->prepare($sql);
             $success = $stmt->execute($params);
             $this->db->commit();
@@ -447,13 +447,13 @@ class KelembagaanModel extends Model {
         $reasons = [];
 
         if ($table === 'mata_pelajaran') {
-            $stmt = $this->db->prepare("SELECT COUNT(*) FROM akademik.pemetaan_mapel WHERE mapel_id::text = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL) AND is_active = true");
+            $stmt = $this->db->prepare("SELECT COUNT(*) FROM akademik.pemetaan_mapel WHERE mapel_id::text = :id AND (:tenant_id::text IS NULL OR tenant_id::text = :tenant_id::text OR tenant_id IS NULL) AND is_active = true");
             $stmt->execute(['id' => $id, 'tenant_id' => $this->tenantId]);
             if ($stmt->fetchColumn() > 0) {
                 $reasons[] = "Pemetaan Kelompok Mata Pelajaran";
             }
         } elseif ($table === 'kelas') {
-            $stmt = $this->db->prepare("SELECT COUNT(*) FROM siswa.siswa WHERE (kelas_saat_ini::text = :id OR kelas_saat_ini = :id) AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL) AND is_active = true");
+            $stmt = $this->db->prepare("SELECT COUNT(*) FROM siswa.siswa WHERE (kelas_saat_ini::text = :id OR kelas_saat_ini = :id) AND (:tenant_id::text IS NULL OR tenant_id::text = :tenant_id::text OR tenant_id IS NULL) AND is_active = true");
             $stmt->execute(['id' => $id, 'tenant_id' => $this->tenantId]);
             if ($stmt->fetchColumn() > 0) {
                 $reasons[] = "Data Siswa Aktif";
@@ -478,7 +478,7 @@ class KelembagaanModel extends Model {
 
         try {
             $this->db->beginTransaction();
-            $sql = "UPDATE {$fullTable} SET is_active = false WHERE id::text = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)";
+            $sql = "UPDATE {$fullTable} SET is_active = false WHERE id::text = :id AND (:tenant_id::text IS NULL OR tenant_id::text = :tenant_id::text OR tenant_id IS NULL)";
             $stmt = $this->db->prepare($sql);
             $success = $stmt->execute(['id' => $id, 'tenant_id' => $this->tenantId]);
             $this->db->commit();
@@ -495,7 +495,7 @@ class KelembagaanModel extends Model {
 
         try {
             $this->db->beginTransaction();
-            $sql = "UPDATE {$fullTable} SET is_active = true WHERE id::text = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)";
+            $sql = "UPDATE {$fullTable} SET is_active = true WHERE id::text = :id AND (:tenant_id::text IS NULL OR tenant_id::text = :tenant_id::text OR tenant_id IS NULL)";
             $stmt = $this->db->prepare($sql);
             $success = $stmt->execute(['id' => $id, 'tenant_id' => $this->tenantId]);
             $this->db->commit();
@@ -513,7 +513,7 @@ class KelembagaanModel extends Model {
         try {
             $this->db->beginTransaction();
             
-            $sql = "SELECT is_active FROM {$fullTable} WHERE id::text = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL) LIMIT 1";
+            $sql = "SELECT is_active FROM {$fullTable} WHERE id::text = :id AND (:tenant_id::text IS NULL OR tenant_id::text = :tenant_id::text OR tenant_id IS NULL) LIMIT 1";
             $stmt = $this->db->prepare($sql);
             $stmt->execute(['id' => $id, 'tenant_id' => $this->tenantId]);
             $current = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -525,7 +525,7 @@ class KelembagaanModel extends Model {
 
             $newStatus = $current['is_active'] ? 'false' : 'true';
 
-            $updateSql = "UPDATE {$fullTable} SET is_active = {$newStatus} WHERE id::text = :id AND (:tenant_id::uuid IS NULL OR tenant_id = :tenant_id::uuid OR tenant_id IS NULL)";
+            $updateSql = "UPDATE {$fullTable} SET is_active = {$newStatus} WHERE id::text = :id AND (:tenant_id::text IS NULL OR tenant_id::text = :tenant_id::text OR tenant_id IS NULL)";
             $updateStmt = $this->db->prepare($updateSql);
             $success = $updateStmt->execute(['id' => $id, 'tenant_id' => $this->tenantId]);
             

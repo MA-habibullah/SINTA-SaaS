@@ -6,22 +6,35 @@
  */
 $isSuperAdmin = ($data['user_role'] ?? '') === 'super_admin';
 ?>
-<!-- Page Header -->
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-2 pb-2 mb-4 border-bottom">
-    <div>
-        <h2 class="fw-bold text-dark mb-1"><?= htmlspecialchars($data['title'] ?? 'Kelola Akses Menu') ?></h2>
-        <p class="text-muted fs-7">Atur menu sidebar mana saja yang dapat dilihat oleh masing-masing peran secara real-time.</p>
+<!-- 1. Row Header & Action Toolbar -->
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+    <div class="d-flex align-items-center gap-3">
+        <div class="bg-blue-600 text-white rounded-2xl d-flex align-items-center justify-content-center shadow-xs flex-shrink-0" style="width: 48px; height: 48px;">
+            <i class="bi bi-shield-lock-fill fs-4"></i>
+        </div>
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <h3 class="fw-bold text-slate-900 fs-4 mb-0"><?= htmlspecialchars($data['title'] ?? 'Manajemen User & Hak Akses (RBAC)') ?></h3>
+                <?php if ($isSuperAdmin): ?>
+                    <span class="badge bg-slate-100 text-slate-700 border border-slate-200 rounded-pill px-2.5 py-1 fs-9 font-bold">
+                        <i class="bi bi-shield-check text-blue-600 me-1"></i>Super Admin
+                    </span>
+                <?php endif; ?>
+            </div>
+            <p class="text-slate-500 fs-8 mb-0 mt-0.5">Atur menu sidebar mana saja yang dapat dilihat oleh masing-masing peran secara real-time.</p>
+        </div>
     </div>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <a href="<?= $this->getBaseUrl() ?>/dashboard" class="btn btn-outline-secondary btn-sm d-flex align-items-center rounded-3 px-3 py-2 fs-7">
-            <i class="bi bi-arrow-left me-2"></i> Kembali ke Dashboard
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        <a href="<?= $this->getBaseUrl() ?>/dashboard" class="btn btn-sm btn-light border border-slate-200 text-slate-700 rounded-xl px-3.5 py-2 fs-8 font-semibold shadow-2xs hover-lift d-inline-flex align-items-center gap-1.5">
+            <i class="bi bi-arrow-left"></i>
+            <span>Kembali ke Dashboard</span>
         </a>
     </div>
 </div>
 
 <!-- Alert Feedback Status (Success/Error) -->
 <?php if (isset($_GET['success'])): ?>
-    <div class="alert alert-success border-0 rounded-3 alert-dismissible fade show shadow-sm" role="alert">
+    <div class="alert alert-success border-0 rounded-2xl alert-dismissible fade show shadow-2xs mb-4" role="alert">
         <i class="bi bi-check-circle-fill me-2"></i>
         <?= htmlspecialchars($_GET['success']) ?>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -29,43 +42,45 @@ $isSuperAdmin = ($data['user_role'] ?? '') === 'super_admin';
 <?php endif; ?>
 
 <?php if (isset($_GET['error'])): ?>
-    <div class="alert alert-danger border-0 rounded-3 alert-dismissible fade show shadow-sm" role="alert">
+    <div class="alert alert-danger border-0 rounded-2xl alert-dismissible fade show shadow-2xs mb-4" role="alert">
         <i class="bi bi-exclamation-triangle-fill me-2"></i>
         <?= htmlspecialchars($_GET['error']) ?>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 <?php endif; ?>
 
-<?php if ($isSuperAdmin && !empty($tenants)): ?>
-<!-- Dropdown Pemilih Sekolah (HANYA Super Admin) -->
-<div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
-    <div class="row align-items-end g-3">
-        <div class="col-12 col-md-7">
-            <label for="tenantSelectorAkses" class="form-label fw-bold text-dark mb-2">
-                <i class="bi bi-buildings text-primary me-2"></i>Target Pengaturan Akses
-            </label>
-            <div class="d-flex gap-2">
-                <select id="tenantSelectorAkses" class="form-select rounded-3 py-2">
-                    <option value="">— Global Default (Berlaku untuk semua sekolah yang belum dikustomisasi) —</option>
-                    <!-- Opsi tenant diisi secara asinkron oleh JavaScript di bawah (Zero Data Leakage) -->
-                </select>
-                <button type="button" id="btnTerapkanFilterAkses" class="btn btn-primary rounded-3 text-nowrap px-3">
-                    <i class="bi bi-funnel me-1"></i> Terapkan Filter
-                </button>
-            </div>
+<?php if ($isSuperAdmin): ?><!-- 2. Compact School Selector Banner (Khusus Super Admin Auto-Filter) -->
+<div class="mb-4 p-3 px-md-4 rounded-2xl shadow-2xs border border-blue-100 bg-white">
+    <div class="d-flex align-items-center flex-wrap gap-2.5">
+        <div class="bg-blue-50 text-blue-600 p-2 rounded-xl d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px;">
+            <i class="bi bi-buildings fs-6"></i>
         </div>
-        <div class="col-12 col-md-5">
-            <div id="tenantBadge" class="d-none">
-                <span class="badge bg-primary-subtle px-3 py-2 rounded-pill fs-7" style="color: #084298;">
-                    <i class="bi bi-shield-fill-check me-1"></i>
-                    <span id="tenantBadgeText"></span>
-                </span>
-            </div>
-            <div id="loadingBadge" class="d-none">
-                <span class="badge bg-secondary-subtle px-3 py-2 rounded-pill fs-7 text-muted">
-                    <span class="spinner-border spinner-border-sm me-1" role="status"></span> Memuat data akses...
-                </span>
-            </div>
+        <div>
+            <span class="fs-8 fw-bold text-slate-800 me-1">Target Pengaturan Akses:</span>
+        </div>
+        
+        <div class="my-1 my-md-0" style="min-width: 220px; max-width: 300px;">
+            <select id="tenantSelectorAkses" class="form-select form-select-sm bg-slate-50 border-slate-200 rounded-xl text-slate-800 fs-8 font-semibold shadow-2xs cursor-pointer focus:bg-white w-100" style="height: 38px;">
+                <option value="">— Global Default (Semua Sekolah) —</option>
+                <!-- Opsi tenant diisi secara asinkron oleh JavaScript di bawah (Zero Data Leakage) -->
+            </select>
+        </div>
+
+        <!-- Badge Data Aktif Tepat di Samping Filter -->
+        <div id="tenantBadge" class="d-none ms-md-1">
+            <span class="badge bg-blue-50 text-blue-700 border border-blue-200 px-3 py-2 rounded-pill fs-8 font-semibold d-inline-flex align-items-center gap-1.5 shadow-2xs" 
+                  id="tenantBadgeContainer" 
+                  style="max-width: 340px;" 
+                  title="">
+                <i class="bi bi-shield-fill-check text-blue-600 flex-shrink-0"></i>
+                <span id="tenantBadgeText" class="text-truncate d-inline-block" style="max-width: 280px;"></span>
+            </span>
+        </div>
+        <div id="loadingBadge" class="d-none ms-md-1">
+            <span class="badge bg-slate-100 text-slate-600 border border-slate-200 px-3 py-2 rounded-pill fs-8 font-semibold d-inline-flex align-items-center gap-1.5 shadow-2xs">
+                <span class="spinner-border spinner-border-sm text-blue-600 me-1" role="status"></span>
+                <span>Memuat data akses...</span>
+            </span>
         </div>
     </div>
 </div>
@@ -254,43 +269,44 @@ document.addEventListener('turbo:load', function () {
     });
 
     // =====================================================================
-    // BAGIAN 2: Dropdown pemilih tenant (HANYA Super Admin)
+    // BAGIAN 2: Dropdown pemilih tenant (HANYA Super Admin - Auto-Filter)
     // =====================================================================
     const tenantSelector = document.getElementById('tenantSelectorAkses');
     const targetTenantInput = document.getElementById('targetTenantId');
     const tenantBadge   = document.getElementById('tenantBadge');
     const tenantBadgeText = document.getElementById('tenantBadgeText');
     const loadingBadge  = document.getElementById('loadingBadge');
-    const btnTerapkanFilter = document.getElementById('btnTerapkanFilterAkses');
 
-    if (!tenantSelector || !btnTerapkanFilter) return; // bukan super admin, stop
+    if (!tenantSelector) return; // bukan super admin, stop
 
-    btnTerapkanFilter.addEventListener('click', function () {
+    tenantSelector.addEventListener('change', function () {
         const selectedTenantId = tenantSelector.value;
         const selectedText     = tenantSelector.options[tenantSelector.selectedIndex].text;
 
         // Simpan tenant_id ke hidden input
-        targetTenantInput.value = selectedTenantId;
+        if (targetTenantInput) {
+            targetTenantInput.value = selectedTenantId;
+        }
 
         if (!selectedTenantId) {
             // Kembali ke global default — reset checkbox ke nilai awal dari PHP
-            tenantBadge.classList.add('d-none');
-            loadingBadge.classList.add('d-none');
+            if (tenantBadge) tenantBadge.classList.add('d-none');
+            if (loadingBadge) loadingBadge.classList.add('d-none');
             resetCheckboxesToDefault();
             return;
         }
 
         // Tampilkan loading
-        tenantBadge.classList.add('d-none');
-        loadingBadge.classList.remove('d-none');
+        if (tenantBadge) tenantBadge.classList.add('d-none');
+        if (loadingBadge) loadingBadge.classList.remove('d-none');
 
         // Fetch access map dari server
         axios.get('<?= $this->getBaseUrl() ?>/api/v1/akses/fetch', { params: { tenant_id: selectedTenantId } })
             .then(response => {
-                loadingBadge.classList.add('d-none');
-                if (response.data.success) {
-                    const accessMap = response.data.access_map;
-                    const isCustom  = response.data.is_custom;
+                if (loadingBadge) loadingBadge.classList.add('d-none');
+                if (response.data && response.data.success) {
+                    const accessMap = response.data.access_map || {};
+                    const isCustom  = !!response.data.is_custom;
 
                     // Update semua checkbox
                     document.querySelectorAll('.rbac-matrix-checkbox').forEach(cb => {
@@ -298,15 +314,27 @@ document.addEventListener('turbo:load', function () {
                         cb.checked = !!accessMap[key];
                     });
 
-                    // Update badge
-                    tenantBadgeText.textContent = isCustom
-                        ? 'Mengedit: ' + selectedText
-                        : 'Mengedit: ' + selectedText + ' (menggunakan konfigurasi global)';
-                    tenantBadge.classList.remove('d-none');
+                    // Update badge dengan teks bersih dan tooltip lengkap
+                    const container = document.getElementById('tenantBadgeContainer');
+                    const cleanName = selectedText.replace(/^[—\-]\s*|\s*[—\-]$/g, '').trim();
+                    const fullTooltip = isCustom 
+                        ? 'Target: ' + cleanName + ' (Konfigurasi Kustom)' 
+                        : 'Target: ' + cleanName + ' (Konfigurasi Global Default)';
+                    
+                    if (container) {
+                        container.setAttribute('title', fullTooltip);
+                    }
+
+                    if (tenantBadgeText) {
+                        tenantBadgeText.textContent = isCustom
+                            ? cleanName + ' (Kustom)'
+                            : cleanName + ' (Global)';
+                    }
+                    if (tenantBadge) tenantBadge.classList.remove('d-none');
                 }
             })
             .catch(err => {
-                loadingBadge.classList.add('d-none');
+                if (loadingBadge) loadingBadge.classList.add('d-none');
                 console.error(err);
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({ icon: 'error', title: 'Gagal Memuat', text: 'Tidak dapat mengambil data akses untuk sekolah ini.' });

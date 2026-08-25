@@ -33,7 +33,7 @@ class PenggunaModel extends Model {
 
         if ($tab === 'mutasi') {
             // Query untuk Log Mutasi & Putus Sekolah (menggunakan tabel siswa.siswa langsung)
-            $selectSql = "SELECT s.id, s.nama_lengkap, s.nisn, s.nis, s.kelas_saat_ini AS nama_kelas,
+            $selectSql = "SELECT s.id, s.tenant_id, s.nama_lengkap, s.nisn, s.nis, s.kelas_saat_ini AS nama_kelas,
                                  s.status_siswa AS keluar_karena, s.updated_at AS tanggal_keluar, 'Data status ' || s.status_siswa AS alasan_keluar,
                                  t.nama_sekolah
                           FROM siswa.siswa s
@@ -169,7 +169,7 @@ class PenggunaModel extends Model {
         } else {
             // Query untuk staff (Guru, Karyawan, Operator) dari tabel users
             $roleName = $this->roleMap[$tab] ?? '';
-            $selectSql = "SELECT u.id, u.nama_lengkap, u.email, u.is_active,
+            $selectSql = "SELECT u.id, u.tenant_id, u.nama_lengkap, u.email, u.is_active,
                             u.created_at, u.updated_at, r.nama_role,
                             u.nip, u.nuptk, u.jenis_gtk, u.jabatan_struktural, u.status_kepegawaian,
                             u.jam_mengajar, u.status_sertifikasi, u.no_hp, u.alamat, u.jenis_kelamin,
