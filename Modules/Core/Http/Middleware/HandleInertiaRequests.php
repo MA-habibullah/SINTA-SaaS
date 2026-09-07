@@ -50,6 +50,7 @@ class HandleInertiaRequests extends Middleware
                     'avatar'       => $user->foto_url ?? null,
                 ] : null,
             ],
+            'menus' => fn () => $user ? \Modules\Core\Services\MenuService::getMenusForUser($user, $tenantId) : [],
             'tenant' => $tenantInfo,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

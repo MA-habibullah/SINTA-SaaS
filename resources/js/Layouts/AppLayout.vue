@@ -42,71 +42,62 @@
         </button>
       </div>
 
-      <!-- Navigation Menus List -->
-      <div class="flex-grow overflow-y-auto px-3 py-4 space-y-5 select-none scrollbar-thin">
-        <div v-for="(group, gIdx) in menuStructure" :key="gIdx" class="space-y-1">
-          <!-- Group Title Header -->
-          <div v-if="!isCollapsed" class="px-3 text-[10px] font-extrabold text-slate-400 tracking-wider uppercase">
-            {{ group.groupName }}
-          </div>
-          <div v-else class="h-1 w-6 bg-slate-200 mx-auto my-2 rounded-full"></div>
+      <!-- Navigation Menus List (100% Dynamic from Database core.menus) -->
+      <div class="flex-grow overflow-y-auto px-3 py-4 space-y-4 select-none scrollbar-thin">
+        <ul class="space-y-1">
+          <li v-for="menu in databaseMenus" :key="menu.id">
+            <!-- Single Item (Tanpa Anak / Direct Route) -->
+            <a v-if="!menu.children || menu.children.length === 0" 
+               :href="menu.url" 
+               :class="[
+                 'flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group',
+                 isUrlActive(menu.url)
+                   ? 'bg-blue-50 text-blue-600 font-bold shadow-2xs border-l-4 border-blue-600 pl-2' 
+                   : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900'
+               ]"
+               :title="isCollapsed ? menu.title : ''">
+              <i :class="[menu.icon || 'bi bi-circle', 'text-base shrink-0', isUrlActive(menu.url) ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-600']"></i>
+              <span v-if="!isCollapsed" class="truncate">{{ menu.title }}</span>
+            </a>
 
-          <!-- Menu Items in Group -->
-          <ul class="space-y-0.5">
-            <li v-for="menu in group.menus" :key="menu.id">
-              <!-- Single Item (No Children) -->
-              <a v-if="!menu.children || menu.children.length === 0" 
-                 :href="menu.url" 
-                 :class="[
-                   'flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group',
-                   isUrlActive(menu.url)
-                     ? 'bg-blue-50 text-blue-600 font-bold shadow-2xs border-l-4 border-blue-600 pl-2' 
-                     : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900'
-                 ]"
-                 :title="isCollapsed ? menu.title : ''">
-                <i :class="[menu.icon, 'text-base shrink-0', isUrlActive(menu.url) ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-600']"></i>
-                <span v-if="!isCollapsed" class="truncate">{{ menu.title }}</span>
-              </a>
+            <!-- Parent Menu with Submenus (Dropdown Collapsible) -->
+            <div v-else>
+              <button type="button" 
+                      @click="toggleSubmenu(menu.id)" 
+                      :class="[
+                        'w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group',
+                        isParentActive(menu)
+                          ? 'bg-slate-100/80 text-blue-600 font-bold' 
+                          : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900'
+                      ]"
+                      :title="isCollapsed ? menu.title : ''">
+                <div class="flex items-center gap-3 truncate">
+                  <i :class="[menu.icon || 'bi bi-folder', 'text-base shrink-0', isParentActive(menu) ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-600']"></i>
+                  <span v-if="!isCollapsed" class="truncate">{{ menu.title }}</span>
+                </div>
+                <i v-if="!isCollapsed" 
+                   :class="['bi bi-chevron-down text-[10px] transition-transform duration-200 text-slate-400', (expandedMenus[menu.id] || isParentActive(menu)) ? 'rotate-180 text-blue-600' : '']"></i>
+              </button>
 
-              <!-- Parent Menu with Submenus (Dropdown) -->
-              <div v-else>
-                <button type="button" 
-                        @click="toggleSubmenu(menu.id)" 
-                        :class="[
-                          'w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group',
-                          isParentActive(menu)
-                            ? 'bg-slate-100/80 text-blue-600 font-bold' 
-                            : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900'
-                        ]"
-                        :title="isCollapsed ? menu.title : ''">
-                  <div class="flex items-center gap-3 truncate">
-                    <i :class="[menu.icon, 'text-base shrink-0', isParentActive(menu) ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-600']"></i>
-                    <span v-if="!isCollapsed" class="truncate">{{ menu.title }}</span>
-                  </div>
-                  <i v-if="!isCollapsed" 
-                     :class="['bi bi-chevron-down text-[10px] transition-transform duration-200 text-slate-400', expandedMenus[menu.id] ? 'rotate-180 text-blue-600' : '']"></i>
-                </button>
-
-                <!-- Submenu Items List -->
-                <ul v-if="!isCollapsed && (expandedMenus[menu.id] || isParentActive(menu))" 
-                    class="mt-1 ml-4 pl-3 border-l-2 border-slate-200/80 space-y-1 py-1">
-                  <li v-for="sub in menu.children" :key="sub.url">
-                    <a :href="sub.url" 
-                       :class="[
-                         'flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs transition-all',
-                         isUrlActive(sub.url)
-                           ? 'text-blue-600 font-bold bg-blue-50/80' 
-                           : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/60'
-                       ]">
-                      <i :class="[sub.icon || 'bi bi-dot', 'text-sm shrink-0', isUrlActive(sub.url) ? 'text-blue-600' : 'text-slate-400']"></i>
-                      <span class="truncate">{{ sub.title }}</span>
-                    </a>
-                  </li>
-                </ul>
-              </div>
-            </li>
-          </ul>
-        </div>
+              <!-- Submenu Items List -->
+              <ul v-if="!isCollapsed && (expandedMenus[menu.id] || isParentActive(menu))" 
+                  class="mt-1 ml-4 pl-3 border-l-2 border-slate-200/80 space-y-1 py-1">
+                <li v-for="sub in menu.children" :key="sub.id || sub.url">
+                  <a :href="sub.url" 
+                     :class="[
+                       'flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs transition-all',
+                       isUrlActive(sub.url)
+                         ? 'text-blue-600 font-bold bg-blue-50/80' 
+                         : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/60'
+                     ]">
+                    <i :class="[sub.icon || 'bi bi-dot', 'text-sm shrink-0', isUrlActive(sub.url) ? 'text-blue-600' : 'text-slate-400']"></i>
+                    <span class="truncate">{{ sub.title }}</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </li>
+        </ul>
       </div>
 
       <!-- Sidebar Footer / User Quick Info -->
@@ -231,6 +222,11 @@ const page = usePage();
 const user = computed(() => page.props.auth?.user);
 const tenantName = computed(() => page.props.tenant?.nama_sekolah);
 
+// 100% Dynamic Menus directly fetched from Database core.menus
+const databaseMenus = computed(() => {
+  return page.props.menus && page.props.menus.length > 0 ? page.props.menus : [];
+});
+
 const isCollapsed = ref(false);
 const mobileSidebarOpen = ref(false);
 const expandedMenus = ref({});
@@ -243,7 +239,7 @@ const isUrlActive = (url) => {
 };
 
 const isParentActive = (menu) => {
-  if (!menu.children) return isUrlActive(menu.url);
+  if (!menu.children || menu.children.length === 0) return isUrlActive(menu.url);
   return menu.children.some(child => isUrlActive(child.url));
 };
 
@@ -251,127 +247,14 @@ const toggleSubmenu = (menuId) => {
   expandedMenus.value[menuId] = !expandedMenus.value[menuId];
 };
 
-// SINTA-SaaS Canonical Grouped Menus & Submenus Hierarchy (Database Aligned)
-const menuStructure = [
-  {
-    groupName: 'Utama',
-    menus: [
-      { id: 'm_dashboard', title: 'Dashboard', url: '/dashboard', icon: 'bi bi-grid-fill' },
-    ]
-  },
-  {
-    groupName: 'Data Pokok & Siswa',
-    menus: [
-      {
-        id: 'm_siswa',
-        title: 'Buku Induk Siswa',
-        icon: 'bi bi-people-fill',
-        children: [
-          { title: 'Buku Induk Lengkap', url: '/siswa/buku-induk', icon: 'bi bi-person-lines-fill' },
-          { title: 'Mutasi & Registrasi', url: '/siswa/mutasi', icon: 'bi bi-arrow-left-right' },
-          { title: 'Prestasi Siswa', url: '/siswa/prestasi', icon: 'bi bi-trophy-fill' },
-        ]
-      },
-      {
-        id: 'm_ppdb',
-        title: 'Penerimaan Siswa (PPDB)',
-        icon: 'bi bi-person-plus-fill',
-        children: [
-          { title: 'Pendaftar & SPMB', url: '/siswa/ppdb', icon: 'bi bi-person-badge' },
-        ]
-      },
-    ]
-  },
-  {
-    groupName: 'Akademik & Penilaian',
-    menus: [
-      {
-        id: 'm_akademik',
-        title: 'Kurikulum & Rombel',
-        icon: 'bi bi-journal-text',
-        children: [
-          { title: 'Master Akademik', url: '/akademik/master', icon: 'bi bi-database-fill' },
-          { title: 'Penilaian Rapor', url: '/akademik/penilaian', icon: 'bi bi-award-fill' },
-          { title: 'Presensi QR & GPS', url: '/absensi', icon: 'bi bi-qr-code-scan' },
-        ]
-      },
-    ]
-  },
-  {
-    groupName: 'Keuangan & SPP',
-    menus: [
-      {
-        id: 'm_keuangan',
-        title: 'Keuangan & Pembayaran',
-        icon: 'bi bi-wallet2',
-        children: [
-          { title: 'Pos & Tagihan SPP', url: '/keuangan/tagihan', icon: 'bi bi-receipt' },
-          { title: 'Kasir & Loket', url: '/keuangan/kasir', icon: 'bi bi-cash-coin' },
-          { title: 'Laporan Keuangan', url: '/keuangan/laporan', icon: 'bi bi-file-earmark-bar-graph' },
-        ]
-      },
-    ]
-  },
-  {
-    groupName: 'Layanan Khusus',
-    menus: [
-      {
-        id: 'm_bk',
-        title: 'Bimbingan Konseling (BK)',
-        icon: 'bi bi-heart-pulse-fill',
-        children: [
-          { title: 'Catatan Konseling', url: '/bk', icon: 'bi bi-chat-heart' },
-          { title: 'Kesiapan PDSS SNBP', url: '/pdss', icon: 'bi bi-mortarboard-fill' },
-          { title: 'Tracer Study Alumni', url: '/tracer', icon: 'bi bi-graph-up-arrow' },
-        ]
-      },
-      {
-        id: 'm_perpus',
-        title: 'Perpustakaan Digital',
-        icon: 'bi bi-book-half',
-        children: [
-          { title: 'Katalog & Sirkulasi', url: '/perpustakaan', icon: 'bi bi-journal-bookmark' },
-        ]
-      },
-      {
-        id: 'm_persuratan',
-        title: 'Persuratan & Tata Usaha',
-        icon: 'bi bi-envelope-paper-fill',
-        children: [
-          { title: 'Surat Masuk & Keluar', url: '/persuratan', icon: 'bi bi-inbox-fill' },
-        ]
-      },
-      {
-        id: 'm_sarpras',
-        title: 'Sarpras & SMK',
-        icon: 'bi bi-box-seam-fill',
-        children: [
-          { title: 'Inventaris & QR Aset', url: '/sarpras', icon: 'bi bi-qr-code' },
-          { title: 'SMK Mitra DUDI & PKL', url: '/smk', icon: 'bi bi-buildings-fill' },
-        ]
-      },
-    ]
-  },
-  {
-    groupName: 'Sistem & Pengaturan',
-    menus: [
-      { id: 'm_gtk', title: 'Kepegawaian GTK', url: '/kepegawaian', icon: 'bi bi-person-badge-fill' },
-      { id: 'm_cms', title: 'CMS & Pengumuman', url: '/cms', icon: 'bi bi-newspaper' },
-      { id: 'm_audit', title: 'Log Aktivitas & Audit', url: '/sistem/activity-logs', icon: 'bi bi-shield-check' },
-    ]
-  }
-];
-
 const flatMenuList = computed(() => {
   const list = [];
-  menuStructure.forEach(group => {
-    group.menus.forEach(menu => {
-      if (menu.children && menu.children.length > 0) {
-        menu.children.forEach(sub => list.push(sub));
-      } else {
-        list.push(menu);
-      }
-    });
+  databaseMenus.value.forEach(menu => {
+    if (menu.children && menu.children.length > 0) {
+      menu.children.forEach(sub => list.push(sub));
+    } else {
+      list.push(menu);
+    }
   });
   return list;
 });
@@ -387,5 +270,6 @@ const logout = () => {
   router.post('/logout');
 };
 </script>
+
 
 
