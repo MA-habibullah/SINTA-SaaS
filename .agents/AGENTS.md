@@ -30,6 +30,26 @@ Saat merombak, membuat Model baru, membuat Controller, atau menambahkan fitur ba
   - **JSON Response** untuk request API/Axios: `response()->json(['success' => true, 'data' => $data], 200)`
 - Gunakan `$request->validate([...])` untuk seluruh validasi data input.
 
+**5. Standar Autentikasi Laravel 11 (`config/auth.php`):**
+- Provider model pengguna wajib diarahkan ke model modular: `'model' => Modules\Core\Entities\User::class`.
+- Proxy model `App\Models\User` yang meng-extend `Modules\Core\Entities\User` wajib dipertahankan untuk backward compatibility package pihak ketiga.
+- Sistem login mendukung autentikasi terpusat (Unified Login Portal) untuk seluruh role pengguna (`super_admin`, `admin_sekolah`, `guru`, `keuangan`, `bk`, `sarpras`, `perpustakaan`, `siswa`).
+
+**6. Pipeline Frontend Vite, PostCSS & Tailwind CSS:**
+- File `postcss.config.js` wajib memuat plugin `tailwindcss` dan `autoprefixer`.
+- Konfigurasi `tailwind.config.js` wajib memindai seluruh komponen Vue 3:
+  ```js
+  content: [
+    "./resources/**/*.blade.php",
+    "./resources/**/*.js",
+    "./resources/**/*.vue",
+    "./Modules/**/Resources/**/*.blade.php",
+    "./Modules/**/Resources/**/*.vue",
+    "./Modules/**/Resources/**/*.js",
+  ]
+  ```
+- Template utama `resources/views/app.blade.php` memuat aset via: `@vite(['resources/css/app.css', 'resources/js/app.js'])`.
+
 
 ## Security Guidelines (Anti-XSS, CSRF & Multi-Tenant Data Protection)
 Saat menulis, memodifikasi, atau membenahi program, agen wajib selalu menerapkan langkah-langkah keamanan data krusial:
