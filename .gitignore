@@ -43,8 +43,6 @@ Thumbs.db
 *.njsproj
 
 # Dependencies & Build Artefacts
-/vendor/
-node_modules/
 /public/build/
 /bootstrap/cache/*
 !/bootstrap/cache/.gitignore
