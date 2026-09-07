@@ -1,0 +1,18 @@
+{
+    "Core": true,
+    "Siswa": true,
+    "Akademik": true,
+    "Keuangan": true,
+    "Bk": true,
+    "Pdss": true,
+    "Perpustakaan": true,
+    "Persuratan": true,
+    "Kesiswaan": true,
+    "Absensi": true,
+    "Kepegawaian": true,
+    "Sarpras": true,
+    "Tracer": true,
+    "Smk": true,
+    "Cms": true,
+    "Sistem": true
+}
