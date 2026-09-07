@@ -1,0 +1,1969 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Spesifikasi Lengkap Fitur, Menu, Arsitektur & Roadmap SINTA-SaaS</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-light: #eff6ff;
+            --secondary: #475569;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #0f172a;
+            --surface: #ffffff;
+            --background: #f8fafc;
+            --border: #e2e8f0;
+            --text-muted: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--background);
+            color: var(--dark);
+            line-height: 1.6;
+            padding: 25px 15px;
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+
+        /* Top Action Bar */
+        .action-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding: 12px 24px;
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+            position: sticky;
+            top: 15px;
+            z-index: 100;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-outline { background: #fff; color: var(--secondary); border: 1px solid var(--border); }
+        .btn-outline:hover { background: #f1f5f9; color: var(--dark); }
+
+        /* Hero Header */
+        .hero-card {
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%);
+            color: #ffffff;
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 28px;
+            box-shadow: 0 12px 30px -10px rgba(37, 99, 235, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-card::after {
+            content: "";
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 450px;
+            height: 450px;
+            background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 70%);
+            border-radius: 50%;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 30px;
+            font-size: 11.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+        }
+
+        .hero-title {
+            font-size: 32px;
+            font-weight: 800;
+            line-height: 1.25;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+        }
+
+        .hero-subtitle {
+            font-size: 15.5px;
+            color: rgba(255, 255, 255, 0.9);
+            max-width: 860px;
+            font-weight: 400;
+        }
+
+        .hero-meta {
+            display: flex;
+            gap: 24px;
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            font-size: 13px;
+            flex-wrap: wrap;
+        }
+
+        .hero-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: rgba(255, 255, 255, 0.88);
+        }
+
+        /* Nav Quick Links */
+        .quick-nav {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+            margin-bottom: 24px;
+        }
+
+        .quick-nav-item {
+            background: #fff;
+            border: 1px solid var(--border);
+            padding: 7px 14px;
+            border-radius: 20px;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--secondary);
+            text-decoration: none;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .quick-nav-item:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        /* Metric Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .metric-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px -3px rgba(0,0,0,0.06);
+        }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .metric-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .metric-value {
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--dark);
+            margin-bottom: 4px;
+        }
+
+        .metric-label {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        /* Section Styling */
+        .section-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 28px;
+            margin-bottom: 28px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .section-title i {
+            color: var(--primary);
+            font-size: 20px;
+        }
+
+        /* Detail Menu Accordion / Box */
+        .menu-group-box {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            background: #fff;
+            transition: border-color 0.2s;
+        }
+
+        .menu-group-box:hover {
+            border-color: #cbd5e1;
+        }
+
+        .menu-group-header {
+            background: #f8fafc;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .menu-group-title {
+            font-size: 16px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--dark);
+        }
+
+        .menu-group-body {
+            padding: 20px;
+        }
+
+        /* Tables */
+        .spec-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13.5px;
+        }
+
+        .spec-table th {
+            background: #f8fafc;
+            color: var(--secondary);
+            font-weight: 700;
+            text-align: left;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+
+        .spec-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        .spec-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .spec-table tr:hover td {
+            background-color: #fbfcfe;
+        }
+
+        /* Badges & Tags */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-blue { background: #dbeafe; color: #1e40af; }
+        .badge-emerald { background: #d1fae5; color: #065f46; }
+        .badge-amber { background: #fef3c7; color: #92400e; }
+        .badge-purple { background: #f3e8ff; color: #6b21a8; }
+        .badge-slate { background: #f1f5f9; color: #334155; }
+        .badge-rose { background: #ffe4e6; color: #9f1239; }
+        .badge-cyan { background: #cffafe; color: #0e7490; }
+
+        .status-ready { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; font-weight: 700; }
+        .status-dev { background: #fef9c3; color: #a16207; border: 1px solid #fef08a; font-weight: 700; }
+        .status-roadmap { background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; font-weight: 700; }
+
+        .code-pill {
+            font-family: 'JetBrains Mono', monospace;
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #0f172a;
+            border: 1px solid #e2e8f0;
+        }
+
+        .feature-tag {
+            display: inline-block;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11.5px;
+            margin: 2px;
+            color: #475569;
+        }
+
+        /* Filter Search Box */
+        .search-input {
+            padding: 9px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 13.5px;
+            width: 280px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        /* Roadmap Card */
+        .roadmap-card {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            background: #fff;
+            margin-bottom: 14px;
+            transition: all 0.2s;
+        }
+
+        .roadmap-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.06);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 30px 0;
+            font-size: 13px;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border);
+            margin-top: 40px;
+        }
+
+        @media print {
+            body { padding: 0; background: #fff; }
+            .action-bar, .quick-nav, .search-input { display: none; }
+            .hero-card { box-shadow: none; }
+            .section-card, .menu-group-box { page-break-inside: avoid; box-shadow: none; border: 1px solid #ccc; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sticky Action Bar -->
+        <div class="action-bar">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="badge badge-blue"><i class="bi bi-file-earmark-code-fill"></i> DOKUMEN RESMI</span>
+                <span style="font-size: 13.5px; font-weight: 700; color: var(--dark);">Katalog Lengkap Fitur, Menu, Arsitektur & Roadmap SINTA-SaaS</span>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-outline" onclick="window.print()">
+                    <i class="bi bi-printer"></i> Cetak Dokumen / PDF
+                </button>
+            </div>
+        </div>
+
+        <!-- Hero Header -->
+        <div class="hero-card">
+            <div class="hero-badge">
+                <i class="bi bi-patch-check-fill"></i> Enterprise Cloud Multi-Tenant Architecture
+            </div>
+            <h1 class="hero-title">Spesifikasi Lengkap Menu, Fitur & Roadmap SINTA-SaaS</h1>
+            <p class="hero-subtitle">
+                Pangkalan Data Terintegrasi, Otomasi Akademik, Buku Induk Digital, Manajemen Kesiswaan, Bimbingan Konseling, PDSS/SNPMB, Perpustakaan, Persuratan, Keuangan, Sarpras, Presensi, Modul SMK, dan Backlog Pengembangan Masa Depan.
+            </p>
+            <div class="hero-meta">
+                <div class="hero-meta-item">
+                    <i class="bi bi-folder-fill text-amber-300"></i>
+                    <span>Direktori Proyek: <strong>C:\laragon\www\sinta</strong></span>
+                </div>
+                <div class="hero-meta-item">
+                    <i class="bi bi-cpu-fill text-blue-300"></i>
+                    <span>Arsitektur: <strong>Modular MVC Monolith (PSR-4) + Vue 3 Asinkron</strong></span>
+                </div>
+                <div class="hero-meta-item">
+                    <i class="bi bi-database-fill-check text-emerald-300"></i>
+                    <span>Database: <strong>PostgreSQL Multi-Schema (16 Skema Terpisah)</strong></span>
+                </div>
+                <div class="hero-meta-item">
+                    <i class="bi bi-shield-lock-fill text-rose-300"></i>
+                    <span>Keamanan: <strong>OWASP ASVS L3 + Zero Data Leakage</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Navigation -->
+        <div class="quick-nav">
+            <a href="#ringkasan" class="quick-nav-item"><i class="bi bi-info-circle"></i> Ringkasan Sistem</a>
+            <a href="#techstack" class="quick-nav-item"><i class="bi bi-cpu"></i> Tech Stack</a>
+            <a href="#katalog-menu" class="quick-nav-item"><i class="bi bi-list-task"></i> 19 Grup Menu & Fitur Lengkap</a>
+            <a href="#skema-db" class="quick-nav-item"><i class="bi bi-database"></i> 16 Skema Database</a>
+            <a href="#rbac-matrix" class="quick-nav-item"><i class="bi bi-person-badge"></i> Matriks Hak Akses (RBAC)</a>
+            <a href="#roadmap" class="quick-nav-item"><i class="bi bi-rocket-takeoff"></i> Roadmap & Backlog Pengembangan</a>
+            <a href="#keamanan" class="quick-nav-item"><i class="bi bi-shield-check"></i> Standar Keamanan</a>
+        </div>
+
+        <!-- Metrics Overview -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">Grup Menu & Modul</div>
+                    <div class="metric-icon" style="background: #eff6ff; color: #2563eb;"><i class="bi bi-layout-sidebar-inset"></i></div>
+                </div>
+                <div class="metric-value">19 Grup</div>
+                <div style="font-size: 12px; color: var(--success);"><i class="bi bi-check-all"></i> Terstruktur & Terisolasi</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">Submenu & Fitur Aktif</div>
+                    <div class="metric-icon" style="background: #f0fdf4; color: #16a34a;"><i class="bi bi-ui-checks-grid"></i></div>
+                </div>
+                <div class="metric-value">75+</div>
+                <div style="font-size: 12px; color: var(--secondary);">Endpoint & Views UI</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">Skema PostgreSQL</div>
+                    <div class="metric-icon" style="background: #faf5ff; color: #9333ea;"><i class="bi bi-database-gear"></i></div>
+                </div>
+                <div class="metric-value">16</div>
+                <div style="font-size: 12px; color: var(--primary);">Multi-Tenant Partitions</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">Roadmap Inovasi</div>
+                    <div class="metric-icon" style="background: #fef2f2; color: #dc2626;"><i class="bi bi-stars"></i></div>
+                </div>
+                <div class="metric-value">7 Inovasi</div>
+                <div style="font-size: 12px; color: var(--text-muted);">Payment, WA, Mobile, CBT</div>
+            </div>
+        </div>
+
+        <!-- SECTION 1: RINGKASAN SISTEM -->
+        <div class="section-card" id="ringkasan">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="bi bi-bookmark-star-fill"></i>
+                    <span>1. Ringkasan Eksekutif & Identitas Platform</span>
+                </div>
+                <span class="badge badge-blue">SaaS Multi-Tenant</span>
+            </div>
+            <table class="spec-table">
+                <tbody>
+                    <tr>
+                        <td style="width: 25%; font-weight: 600;">Nama Resmi Aplikasi</td>
+                        <td><strong>SINTA-SaaS</strong> (Sistem Informasi Nilai dan Tata Kelola Akademik Terintegrasi)</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600;">Model Bisnis / Arsitektur</td>
+                        <td><strong>Software-as-a-Service (SaaS) Multi-Tenant Shared Database</strong> dengan partisi 16 skema terpisah di PostgreSQL dan isolasi kolom <span class="code-pill">tenant_id</span>.</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600;">Cakupan Institusi</td>
+                        <td>
+                            Dukungan penuh untuk seluruh jenjang pendidikan dasar dan menengah:
+                            <strong>SD / MI</strong>, <strong>SMP / MTs</strong>, <strong>SMA / MA</strong>, dan <strong>SMK / MAK</strong> (dilengkapi modul Vokasi/PKL DUDI).
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600;">Peran Pengguna Utama</td>
+                        <td>
+                            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                <span class="badge badge-rose">1. Super Admin Platform</span>
+                                <span class="badge badge-blue">2. Admin / Operator Sekolah</span>
+                                <span class="badge badge-purple">3. Kepala Sekolah</span>
+                                <span class="badge badge-emerald">4. Guru Mata Pelajaran</span>
+                                <span class="badge badge-cyan">5. Wali Kelas</span>
+                                <span class="badge badge-amber">6. Guru Bimbingan Konseling (BK)</span>
+                                <span class="badge badge-slate">7. Staf Tata Usaha / Keuangan / Perpus / Sarpras</span>
+                                <span class="badge badge-slate">8. Siswa</span>
+                                <span class="badge badge-slate">9. Orang Tua / Wali Murid</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- SECTION 2: TECH STACK -->
+        <div class="section-card" id="techstack">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="bi bi-motherboard-fill"></i>
+                    <span>2. Spesifikasi Teknologi (Technology Stack)</span>
+                </div>
+                <span class="badge badge-emerald">High Performance & Modern</span>
+            </div>
+            <table class="spec-table">
+                <thead>
+                    <tr>
+                        <th style="width: 20%;">Komponen</th>
+                        <th style="width: 35%;">Teknologi Terpasang</th>
+                        <th>Keterangan & Peran Teknis</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Backend Engine</strong></td>
+                        <td><span class="code-pill">PHP 8.x Native Modern OOP</span></td>
+                        <td>Arsitektur PSR-4 Modular, Strict Types, tanpa bloating overhead framework, responsif & hemat RAM.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Database Engine</strong></td>
+                        <td><span class="code-pill">PostgreSQL 15+ / 16+</span> (Fallback MySQL)</td>
+                        <td>Multi-Schema (16 skema), Strict Type Casting, Search Path terisolasi, UUID generator v4.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Styling UI</strong></td>
+                        <td><span class="code-pill">Bootstrap 5.3.x</span> + <span class="code-pill">Tailwind CSS</span></td>
+                        <td>UI modern kelas enterprise, preflight disabled untuk mencegah konflik CSS, Google Fonts <em>Plus Jakarta Sans</em>.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Reaktifitas Klien</strong></td>
+                        <td><span class="code-pill">Vue 3 (Composition API)</span> + <span class="code-pill">Axios</span></td>
+                        <td>Pola asynchronous fetch onMounted, Zero Data Leakage pada View Source HTML, CSRF token auto-header.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Navigasi & UX</strong></td>
+                        <td><span class="code-pill">Hotwire Turbo</span> + <span class="code-pill">3-Way Scroller NavTabs</span></td>
+                        <td>Navigasi instan layaknya Single Page Application (SPA), tab horizontal dapat digeser via wheel mouse, drag, & tombol panah.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Spreadsheet Engine</strong></td>
+                        <td><span class="code-pill">shuchkin/simplexlsx</span> & <span class="code-pill">simplexlsxgen</span></td>
+                        <td>Import & export buku induk, nilai rapor, ledger, katalog buku, dan data presensi format Excel hemat memori.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Cetak PDF / Rapor</strong></td>
+                        <td><span class="code-pill">Puppeteer-core (Node.js)</span></td>
+                        <td>Generator dokumen resolusi tinggi untuk cetak Rapor K13 / Merdeka, Transkrip, Surat Resmi, dan Kartu Pelajar.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Background Worker</strong></td>
+                        <td><span class="code-pill">worker.php</span> (CLI Daemon)</td>
+                        <td>Pemroses antrean tugas berat (bulk generate tagihan SPP, sinkronisasi data, import/export massal).</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- SECTION 3: KATALOG LENGKAP MENU & FITUR -->
+        <div class="section-card" id="katalog-menu">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="bi bi-list-nested"></i>
+                    <span>3. Rincian Lengkap Menu, Sub-Menu & Fitur SINTA-SaaS (19 Grup Modul)</span>
+                </div>
+                <input type="text" id="menuSearchInput" class="search-input" placeholder="🔍 Cari menu / fitur / URL..." onkeyup="searchMenuItems()">
+            </div>
+
+            <div id="allMenuContainer">
+
+                <!-- GRUP 1: DASHBOARD -->
+                <div class="menu-group-box">
+                    <div class="menu-group-header">
+                        <div class="menu-group-title">
+                            <span class="badge badge-blue">Grup 01</span>
+                            <i class="bi bi-grid-fill text-primary"></i>
+                            <span>Menu Dashboard</span>
+                            <span class="code-pill">/dashboard</span>
+                        </div>
+                        <span class="badge status-ready"><i class="bi bi-check-circle-fill"></i> SIAP PAKAI</span>
+                    </div>
+                    <div class="menu-group-body">
+                        <table class="spec-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">Sub-Menu / Tampilan</th>
+                                    <th style="width: 22%;">URL Rute</th>
+                                    <th>Rincian Fitur & Kemampuan Teknis</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Dashboard Eksekutif</strong></td>
+                                    <td><span class="code-pill">/dashboard</span></td>
+                                    <td>
+                                        <span class="feature-tag">Statistik Total Siswa Aktif</span>
+                                        <span class="feature-tag">Total Guru & Tenaga Kependidikan</span>
+                                        <span class="feature-tag">Jumlah Rombongan Belajar (Kelas)</span>
+                                        <span class="feature-tag">Ringkasan Kehadiran Hari Ini</span>
+                                        <span class="feature-tag">Arus Kas & Penerimaan SPP Bulan Berjalan</span>
+                                        <span class="feature-tag">Widget Pengumuman Terbaru</span>
+                                        <span class="feature-tag">Widget Agenda Sekolah Mendatang</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Portal Siswa / Ortu</strong></td>
+                                    <td><span class="code-pill">/siswa/dashboard</span></td>
+                                    <td>
+                                        <span class="feature-tag">Biodata Ringkas Siswa</span>
+                                        <span class="feature-tag">Jadwal Pelajaran Hari Ini</span>
+                                        <span class="feature-tag">Status Tunggakan & Riwayat SPP</span>
+                                        <span class="feature-tag">Pengumuman Khusus Siswa</span>
+                                        <span class="feature-tag">Peminjaman Buku Perpustakaan</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- GRUP 2: PPDB -->
+                <div class="menu-group-box">
+                    <div class="menu-group-header">
+                        <div class="menu-group-title">
+                            <span class="badge badge-blue">Grup 02</span>
+                            <i class="bi bi-person-plus-fill text-primary"></i>
+                            <span>Menu PPDB (Penerimaan Peserta Didik Baru)</span>
+                            <span class="code-pill">/ppdb/*</span>
+                        </div>
+                        <span class="badge status-ready"><i class="bi bi-check-circle-fill"></i> SIAP PAKAI</span>
+                    </div>
+                    <div class="menu-group-body">
+                        <table class="spec-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">Sub-Menu</th>
+                                    <th style="width: 22%;">URL Rute</th>
+                                    <th>Rincian Fitur & Kemampuan Teknis</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Verifikasi Berkas</strong></td>
+                                    <td><span class="code-pill">/ppdb/verifikasi</span></td>
+                                    <td>
+                                        <span class="feature-tag">Pemeriksaan Kelengkapan Dokumen (KK, Akta, Ijazah/SKL)</span>
+                                        <span class="feature-tag">Persetujuan / Penolakan / Revisi Berkas Calon Siswa</span>
+                                        <span class="feature-tag">Pemberian Catatan Tim Seleksi</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Data Calon Siswa</strong></td>
+                                    <td><span class="code-pill">/ppdb/calon-siswa</span></td>
+                                    <td>
+                                        <span class="feature-tag">Database Pendaftar Baru</span>
+                                        <span class="feature-tag">Cetak Bukti Registrasi & Kartu Ujian PPDB</span>
+                                        <span class="feature-tag">Konversi Calon Siswa -> Siswa Aktif (Auto-Generate NISN & Masuk Buku Induk)</span>
+                                        <span class="feature-tag">Ekspor Data Pendaftar (.xlsx)</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Jalur & Kuota PPDB</strong></td>
+                                    <td><span class="code-pill">/ppdb/riwayat</span></td>
+                                    <td>
+                                        <span class="feature-tag">Manajemen Jalur (Zonasi, Prestasi, Afirmasi, Mutasi Orang Tua)</span>
+                                        <span class="feature-tag">Monitoring Kuota Pendaftaran per Jalur</span>
+                                        <span class="feature-tag">Statistik Pendaftar per Asal Sekolah</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- GRUP 3: DATA POKOK & DAPODIK -->
+                <div class="menu-group-box">
+                    <div class="menu-group-header">
+                        <div class="menu-group-title">
+                            <span class="badge badge-blue">Grup 03</span>
+                            <i class="bi bi-folder2-open text-primary"></i>
+                            <span>Menu Data Pokok & DAPODIK</span>
+                            <span class="code-pill">/buku-induk, /master-data, /pengguna</span>
+                        </div>
+                        <span class="badge status-ready"><i class="bi bi-check-circle-fill"></i> SIAP PAKAI</span>
+                    </div>
+                    <div class="menu-group-body">
+                        <table class="spec-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">Sub-Menu</th>
+                                    <th style="width: 22%;">URL Rute</th>
+                                    <th>Rincian Fitur & Kemampuan Teknis</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Buku Induk Siswa Digital</strong></td>
+                                    <td><span class="code-pill">/buku-induk</span><br><span class="code-pill">/siswa/tambah</span></td>
+                                    <td>
+                                        <span class="feature-tag">Rekam Biodata Lengkap Peserta Didik (NISN, NIK, No Akta, Agama, Gol Darah)</span>
+                                        <span class="feature-tag">Data Orang Tua Kandung & Wali (Pekerjaan, Penghasilan, Kontak)</span>
+                                        <span class="feature-tag">Data Periodik (Tinggi/Berat Badan, Jarak Rumah, Waktu Tempuh)</span>
+                                        <span class="feature-tag">Manajemen Mutasi (Siswa Masuk, Siswa Keluar, Lulus, Tinggal Kelas)</span>
+                                        <span class="feature-tag">Cetak Format Lembar Buku Induk Nasional</span>
+                                        <span class="feature-tag">Import & Export Massal Template Excel</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Master Data Kelembagaan</strong></td>
+                                    <td><span class="code-pill">/master-data</span></td>
+                                    <td>
+                                        <span class="feature-tag">Tahun Ajaran & Semester Aktif (Ganjil/Genap)</span>
+                                        <span class="feature-tag">Struktur Kurikulum (K13 & Kurikulum Merdeka)</span>
+                                        <span class="feature-tag">Program Pengajaran / Jurusan / Konsentrasi Keahlian</span>
+                                        <span class="feature-tag">Mata Pelajaran (Kode Mapel, Kategori Umum/Peminatan, Bobot Jam)</span>
+                                        <span class="feature-tag">Rombel / Kelas (Penetapan Wali Kelas, Ruang, Kapasitas)</span>
+                                        <span class="feature-tag">Master GTK (Data Pokok Guru & Pegawai, NUPTK, NIP, Jabatan)</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Manajemen Pengguna & Akses</strong></td>
+                                    <td><span class="code-pill">/pengguna</span></td>
+                                    <td>
+                                        <span class="feature-tag">Kelola Akun Seluruh Pengguna (Admin, Guru, Siswa, Wali)</span>
+                                        <span class="feature-tag">Penetapan Multi-Role per User (misal: Guru + Wali Kelas + Pembina)</span>
+                                        <span class="feature-tag">Reset Password & Fitur Kunci/Buka Akun</span>
+                                        <span class="feature-tag">Force Password Change pada Login Pertama Siswa</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- GRUP 4: INFORMASI & KEGIATAN -->
+                <div class="menu-group-box">
+                    <div class="menu-group-header">
+                        <div class="menu-group-title">
+                            <span class="badge badge-blue">Grup 04</span>
+                            <i class="bi bi-megaphone-fill text-primary"></i>
+                            <span>Menu Informasi & Kegiatan Sekolah</span>
+                            <span class="code-pill">/informasi/*</span>
+                        </div>
+                        <span class="badge status-ready"><i class="bi bi-check-circle-fill"></i> SIAP PAKAI</span>
+                    </div>
+                    <div class="menu-group-body">
+                        <table class="spec-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">Sub-Menu</th>
+                                    <th style="width: 22%;">URL Rute</th>
+                                    <th>Rincian Fitur & Kemampuan Teknis</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Pengumuman Sekolah</strong></td>
+                                    <td><span class="code-pill">/informasi/pengumuman</span></td>
+                                    <td>
+                                        <span class="feature-tag">Publikasi Pengumuman Terpadu (Rich Text Editor)</span>
+                                        <span class="feature-tag">Target Audiens Selektif (Semua, Guru Saja, Siswa Saja, Staf Saja)</span>
+                                        <span class="feature-tag">Kategori Pengumuman Khusus per Tenant</span>
+                                        <span class="feature-tag">Lampiran File Berkas / Edaran Resmi</span>
+                                        <span class="feature-tag">Status Publikasi (Draft, Terbit, Arsip)</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Agenda & Kalender Sekolah</strong></td>
+                                    <td><span class="code-pill">/informasi/agenda</span></td>
+                                    <td>
+                                        <span class="feature-tag">Kalender Kegiatan Akademik & Non-Akademik</span>
+                                        <span class="feature-tag">Jadwal Ujian (UTS, UAS, Asesmen Nasional)</span>
+                                        <span class="feature-tag">Agenda Libur Sekolah & Rapat Dewan Guru</span>
+                                        <span class="feature-tag">Indikator Status (Akan Datang, Berlangsung, Selesai)</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- GRUP 5: KESISWAAN -->
+                <div class="menu-group-box">
+                    <div class="menu-group-header">
+                        <div class="menu-group-title">
+                            <span class="badge badge-blue">Grup 05</span>
+                            <i class="bi bi-trophy-fill text-primary"></i>
+                            <span>Menu Kesiswaan & Prestasi</span>
+                            <span class="code-pill">/kesiswaan/*</span>
+                        </div>
+                        <span class="badge status-ready"><i class="bi bi-check-circle-fill"></i> SIAP PAKAI</span>
+                    </div>
+                    <div class="menu-group-body">
+                        <table class="spec-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">Sub-Menu</th>
+                                    <th style="width: 22%;">URL Rute</th>
+                                    <th>Rincian Fitur & Kemampuan Teknis</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Ekstrakurikuler</strong></td>
+                                    <td><span class="code-pill">/kesiswaan/ekskul</span></td>
+                                    <td>
+                                        <span class="feature-tag">Master Ekstrakurikuler (Pramuka, OSIS, PMR, Paskibra, Robotik, Seni, Olahraga)</span>
+                                        <span class="feature-tag">Pembina & Pelatih Ekskul, Kuota Maksimal Anggota</span>
+                                        <span class="feature-tag">Pendaftaran & Penempatan Anggota Siswa</span>
+                                        <span class="feature-tag">Presensi Kehadiran Latihan Rutin</span>
+                                        <span class="feature-tag">Penilaian Ekskul untuk Diintegrasikan ke Rapor</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Prestasi Siswa</strong></td>
+                                    <td><span class="code-pill">/kesiswaan/prestasi</span></td>
+                                    <td>
+                                        <span class="feature-tag">Perekaman Rekam Jejak Kejuaraan & Lomba</span>
+                                        <span class="feature-tag">Tingkat Lomba (Sekolah s.d. Internasional)</span>
+                                        <span class="feature-tag">Kategori Prestasi (Sains, Olahraga, Seni & Budaya, Keagamaan)</span>
+                                        <span class="feature-tag">Upload Dokumen Sertifikat / Piagam Penghargaan</span>
+                                        <span class="feature-tag">Otomatis Terhubung ke Portofolio Buku Induk Siswa</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- GRUP 6: BK & KEDISIPLINAN -->
+                <div class="menu-group-box">
+                    <div class="menu-group-header">
+                        <div class="menu-group-title">
+                            <span class="badge badge-blue">Grup 06</span>
+                            <i class="bi bi-shield-heart text-primary"></i>
+                            <span>Menu Bimbingan Konseling (BK) & Kedisiplinan</span>
+                            <span class="code-pill">/bk/*</span>
+                        </div>
+                        <span class="badge status-ready"><i class="bi bi-check-circle-fill"></i> SIAP PAKAI</span>
+                    </div>
+                    <div class="menu-group-body">
+                        <table class="spec-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">Sub-Menu</th>
+                                    <th style="width: 22%;">URL Rute</th>
+                                    <th>Rincian Fitur & Kemampuan Teknis</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Layanan BK</strong></td>
+                                    <td><span class="code-pill">/bk/layanan</span></td>
+                                    <td>
+                                        <span class="feature-tag">Layanan Konseling Individual & Kelompok</span>
+                                        <span class="feature-tag">Bimbingan Karir & Konsultasi Belajar</span>
+                                        <span class="feature-tag">Catatan Rahasia Guru BK (Konfidensial)</span>
+                                        <span class="feature-tag">Pencatatan Kunjungan Rumah (Home Visit) Lengkap Foto Dokumentasi</span>
+                                        <span class="feature-tag">Penerbitan Surat Panggilan Orang Tua Otomatis (SP 1, 2, 3)</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Kedisiplinan Siswa</strong></td>
+                                    <td><span class="code-pill">/bk/kedisiplinan</span></td>
+                                    <td>
+                                        <span class="feature-tag">Master Tata Tertib & Kategori Pelanggaran (Ringan, Sedang, Berat)</span>
+                                        <span class="feature-tag">Pemberian Poin Skor Pelanggaran Siswa</span>
+                                        <span class="feature-tag">Ambang Batas Peringatan (SP, Skorsing, Sidang Kasus)</span>
+                                        <span class="feature-tag">Riwayat Pembinaan & Pemutihan Poin via Prestasi / Tugas Khusus</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- GRUP 7: PDSS, SNPMB & ALUMNI -->
+                <div class="menu-group-box">
+                    <div class="menu-group-header">
+                        <div class="menu-group-title">
+                            <span class="badge badge-blue">Grup 07</span>
+                            <i class="bi bi-mortarboard-fill text-primary"></i>
+                            <span>Menu PDSS, SNPMB & Alumni Tracer Study</span>
+                            <span class="code-pill">/bk/akademik, /bk/alumni, /tracer</span>
+                        </div>
+                        <span class="badge status-ready"><i class="bi bi-check-circle-fill"></i> SIAP PAKAI</span>
+                    </div>
+                    <div class="menu-group-body">
+                        <table class="spec-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">Sub-Menu</th>
+                                    <th style="width: 22%;">URL Rute</th>
+                                    <th>Rincian Fitur & Kemampuan Teknis</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Kesiapan & Simulasi PDSS</strong></td>
+                                    <td><span class="code-pill">/bk/akademik</span><br><span class="code-pill">/pdss/kesiapan</span></td>
+                                    <td>
+                                        <span class="feature-tag">5-Step Workflow Kesiapan Siswa SNBP</span>
+                                        <span class="feature-tag">Pemeringkatan Kuota Siswa Eligible Sesuai Akreditasi (40% A, 25% B, 5% C)</span>
+                                        <span class="feature-tag">Master Kampus PTN & Program Studi SNPMB Seluruh Indonesia</span>
+                                        <span class="feature-tag">Simulasi Pemilihan Jurusan Berdasarkan Rapor Semester 1 - 5</span>
+                                        <span class="feature-tag">Deteksi Tabrakan Pilihan Jurusan Antar Siswa Satu Sekolah</span>
+                                        <span class="feature-tag">Pencatatan Pengunduran Diri Siswa Eligible</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Alumni & Tracer Study</strong></td>
+                                    <td><span class="code-pill">/bk/alumni</span><br><span class="code-pill">/tracer</span></td>
+                                    <td>
+                                        <span class="feature-tag">Database Direktori Alumni per Angkatan</span>
+                                        <span class="feature-tag">Kuesioner Tracer Study (Kuliah di PTN/PTS, Bekerja di Industri, Wirausaha)</span>
+                                        <span class="feature-tag">Analisis Keselarasan Jurusan Vokasi / SMA dengan Karir</span>
+                                        <span class="feature-tag">Statistik Serapan Lulusan Masuk Dunia Kerja</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- GRUP 8: PERPUSTAKAAN DIGITAL -->
+                <div class="menu-group-box">
+                    <div class="menu-group-header">
+                        <div class="menu-group-title">
+                            <span class="badge badge-blue">Grup 08</span>
+                            <i class="bi bi-book-half text-primary"></i>
+                            <span>Menu Perpustakaan Digital (e-Library)</span>
+                            <span class="code-pill">/perpustakaan/*</span>
+                        </div>
+                        <span class="badge status-ready"><i class="bi bi-check-circle-fill"></i> SIAP PAKAI</span>
+                    </div>
+                    <div class="menu-group-body">
+                        <table class="spec-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">Sub-Menu</th>
+                                    <th style="width: 22%;">URL Rute</th>
+                                    <th>Rincian Fitur & Kemampuan Teknis</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Katalog & Inventori Buku</strong></td>
+                                    <td><span class="code-pill">/perpustakaan/katalog</span></td>
+                                    <td>
+                                        <span class="feature-tag">Manajemen Bibliografi (Judul, Pengarang, Penerbit, Tahun, ISBN, Klasifikasi DDC, Rak)</span>
+                                        <span class="feature-tag">Cetak Barcode Buku & Label Nomor Punggung (Call Number)</span>
+                                        <span class="feature-tag">e-Book Reader Terintegrasi (Baca Buku Digital Online)</span>
+                                        <span class="feature-tag">Stock Opname & Verifikasi Fisik Buku</span>
+                                        <span class="feature-tag">Import / Export Katalog Excel</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Sirkulasi & Layanan</strong></td>
+                                    <td><span class="code-pill">/perpustakaan/sirkulasi</span></td>
+                                    <td>
+                                        <span class="feature-tag">Peminjaman Buku Cepat via Scan Barcode / NISN Siswa</span>
+                                        <span class="feature-tag">Pengembalian & Perpanjangan Waktu Pinjam</span>
+                                        <span class="feature-tag">Kalkulasi Denda Keterlambatan Otomatis per Hari</span>
+                                        <span class="feature-tag">Riwayat Sirkulasi Lengkap Siswa & Guru</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Administrasi Keanggotaan</strong></td>
+                                    <td><span class="code-pill">/perpustakaan/anggota</span></td>
+                                    <td>
+                                        <span class="feature-tag">Database Anggota Perpustakaan (Siswa & Guru)</span>
+                                        <span class="feature-tag">Cetak Kartu Anggota Perpustakaan Berbarcode</span>
+                                        <span class="feature-tag">Buku Tamu Pengunjung Mandiri (Kios Pintu Perpus)</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>OPAC Publik & Pengaturan</strong></td>
+                                    <td><span class="code-pill">/perpustakaan/opac</span><br><span class="code-pill">/perpustakaan/pengaturan</span></td>
+                                    <td>
+                                        <span class="feature-tag">Online Public Access Catalog (Pencarian Koleksi Buku Tanpa Login)</span>
+                                        <span class="feature-tag">Konfigurasi Batas Pinjam (Jumlah Maks Buku, Durasi Hari, Tarif Denda/Hari)</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- GRUP 9: PERSURATAN & TATA USAHA -->
+                <div class="menu-group-box">
+                    <div class="menu-group-header">
+                        <div class="menu-group-title">
+                            <span class="badge badge-blue">Grup 09</span>
+                            <i class="bi bi-envelope-paper-fill text-primary"></i>
+                            <span>Menu Persuratan & Tata Usaha</span>
+                            <span class="code-pill">/persuratan/*</span>
+                        </div>
+                        <span class="badge status-ready"><i class="bi bi-check-circle-fill"></i> SIAP PAKAI</span>
+                    </div>
+                    <div class="menu-group-body">
+                        <table class="spec-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">Sub-Menu</th>
+                                    <th style="width: 22%;">URL Rute</th>
+                                    <th>Rincian Fitur & Kemampuan Teknis</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Surat Masuk & Disposisi</strong></td>
+                                    <td><span class="code-pill">/persuratan/surat-masuk</span></td>
+                                    <td>
+                                        <span class="feature-tag">Agenda Surat Masuk (No Surat, Pengirim, Perihal, Tgl Diterima)</span>
+                                        <span class="feature-tag">Upload Arsip Berkas Digital (PDF Scan)</span>
+                                        <span class="feature-tag">Lembar Disposisi Kepala Sekolah kepada Staf / Guru</span>
+                                        <span class="feature-tag">Pelacakan Status Tindak Lanjut Disposisi</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Surat Keluar & Penomoran</strong></td>
+                                    <td><span class="code-pill">/persuratan/surat-keluar</span></td>
+                                    <td>
+                                        <span class="feature-tag">Penomoran Otomatis Berdasarkan Kode Klasifikasi Kearsipan Nasional</span>
+                                        <span class="feature-tag">Generator Template Surat Dinas (Surat Keterangan Aktif, Surat Tugas, Panggilan, Rekomendasi)</span>
+                                        <span class="feature-tag">Workflow Persetujuan (Draft -> Disetujui -> Stempel/TTD -> Terkirim)</span>
+                                        <span class="feature-tag">Cetak Surat Resmi dengan Kop Sekolah Otomatis</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Master Template & Klasifikasi</strong></td>
+                                    <td><span class="code-pill">/persuratan/template</span><br><span class="code-pill">/persuratan/master</span></td>
+                                    <td>
+                                        <span class="feature-tag">Master Kode Klasifikasi Surat Dinas</span>
+                                        <span class="feature-tag">Pengaturan Kop Surat, Logo Sekolah & Stempel Digital</span>
+                                        <span class="feature-tag">Kustomisasi Format Pola Nomor Surat per Tenant</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- GRUP 10: KEUANGAN & PEMBAYARAN -->
+                <div class="menu-group-box">
+                    <div class="menu-group-header">
+                        <div class="menu-group-title">
+                            <span class="badge badge-blue">Grup 10</span>
+                            <i class="bi bi-wallet2 text-primary"></i>
+                            <span>Menu Keuangan & Pembayaran Sekolah</span>
+                            <span class="code-pill">/keuangan/*</span>
+                        </div>
+                        <span class="badge status-ready"><i class="bi bi-check-circle-fill"></i> SIAP PAKAI</span>
+                    </div>
+                    <div class="menu-group-body">
+                        <table class="spec-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">Sub-Menu</th>
+                                    <th style="width: 22%;">URL Rute</th>
+                                    <th>Rincian Fitur & Kemampuan Teknis</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Dashboard Keuangan</strong></td>
+                                    <td><span class="code-pill">/keuangan/dashboard</span></td>
+                                    <td>
+                                        <span class="feature-tag">Ringkasan Realtime Penerimaan Kas</span>
+                                        <span class="feature-tag">Total Piutang & Tunggakan Siswa</span>
+                                        <span class="feature-tag">Target vs Realisasi SPP Bulanan</span>
+                                        <span class="feature-tag">Grafik Tren Pemasukan Sekolah</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Master Pos Tarif & Keringanan</strong></td>
+                                    <td><span class="code-pill">/keuangan/master</span><br><span class="code-pill">/keuangan/keringanan</span></td>
+                                    <td>
+                                        <span class="feature-tag">Master Pos Tagihan (SPP Bulanan, DSP/Uang Gedung, Seragam, Praktik, Ujian)</span>
+                                        <span class="feature-tag">Pengaturan Tarif per Rombel/Kelas, Jenjang, atau Beban Kustom Siswa</span>
+                                        <span class="feature-tag">Pemberian Keringanan / Diskon / Beasiswa Prestasi & Yatim</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Kasir Loket Pembayaran</strong></td>
+                                    <td><span class="code-pill">/keuangan/kasir</span></td>
+                                    <td>
+                                        <span class="feature-tag">Kasir Pembayaran Cepat via Scan Barcode NISN</span>
+                                        <span class="feature-tag">Pembayaran Parsial (Cicilan) & Pelunasan Sekaligus</span>
+                                        <span class="feature-tag">Cetak Kwitansi & Invoice Pembayaran (PDF / Thermal 80mm)</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Generate Tagihan Massal</strong></td>
+                                    <td><span class="code-pill">/keuangan/generate</span></td>
+                                    <td>
+                                        <span class="feature-tag">Generate Invoice Tagihan Otomatis Seluruh Siswa per Bulan/Semester</span>
+                                        <span class="feature-tag">Tagihan Saya (Portal Siswa/Ortu untuk Cek Tagihan & Riwayat Pembayaran)</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Laporan & Audit Trail Kas</strong></td>
+                                    <td><span class="code-pill">/keuangan/laporan</span><br><span class="code-pill">/keuangan/audit</span></td>
+                                    <td>
+                                        <span class="feature-tag">Laporan Penerimaan Kas Harian, Bulanan, Tahunan</span>
+                                        <span class="feature-tag">Daftar Rekap Siswa Menunggak per Rombel / Angkatan</span>
+                                        <span class="feature-tag">Audit Trail Pencatatan Setiap Transaksi (Anti-Fraud & Validasi Kasir)</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- GRUP 11: AKADEMIK & RAPOR -->
+                <div class="menu-group-box">
+                    <div class="menu-group-header">
+                        <div class="menu-group-title">
+                            <span class="badge badge-blue">Grup 11</span>
+                            <i class="bi bi-journal-check text-primary"></i>
+                            <span>Menu Akademik, Penilaian & Cetak Rapor</span>
+                            <span class="code-pill">/akademik/*, /rapor/*</span>
+                        </div>
+                        <span class="badge status-ready"><i class="bi bi-check-circle-fill"></i> SIAP PAKAI</span>
+                    </div>
+                    <div class="menu-group-body">
+                        <table class="spec-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">Sub-Menu</th>
+                                    <th style="width: 22%;">URL Rute</th>
+                                    <th>Rincian Fitur & Kemampuan Teknis</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Jadwal Pelajaran & Mengajar</strong></td>
+                                    <td><span class="code-pill">/akademik/jadwal</span><br><span class="code-pill">/akademik/mapel</span></td>
+                                    <td>
+                                        <span class="feature-tag">Penyusunan Jadwal Pelajaran per Hari dan Jam Pelajaran</span>
+                                        <span class="feature-tag">Deteksi Bentrok Jadwal Guru & Ruangan</span>
+                                        <span class="feature-tag">Distribusi Beban Jam Mengajar GTK</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Penilaian & Ledger Nilai</strong></td>
+                                    <td><span class="code-pill">/akademik/rapor</span></td>
+                                    <td>
+                                        <span class="feature-tag">Input Nilai Formatif, Sumatif, Proyek P5, PTS, dan PAS</span>
+                                        <span class="feature-tag">Kalkulasi Nilai Akhir Otomatis Berdasarkan Bobot Kurikulum</span>
+                                        <span class="feature-tag">Ledger Nilai Satu Rombel / Kelas (Export Excel)</span>
+                                        <span class="feature-tag">Input Catatan Wali Kelas & Ekstrakurikuler</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Cetak Rapor Multi-Format</strong></td>
+                                    <td><span class="code-pill">/rapor/print-k13</span><br><span class="code-pill">/rapor/print-merdeka</span></td>
+                                    <td>
+                                        <span class="feature-tag">Cetak Rapor Kurikulum 2013 (Sikap, Pengetahuan, Keterampilan)</span>
+                                        <span class="feature-tag">Cetak Rapor Kurikulum Merdeka (Capaian Pembelajaran & Proyek P5)</span>
+                                        <span class="feature-tag">Bulk Print (Cetak Massal Seluruh Siswa 1 Rombel dalam 1 File PDF)</span>
+                                        <span class="feature-tag">Cetak Transkrip Nilai Kelulusan Siswa</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- GRUP 12: PEMBINAAN & SUPERVISI -->
+                <div class="menu-group-box">
+                    <div class="menu-group-header">
+                        <div class="menu-group-title">
+                            <span class="badge badge-blue">Grup 12</span>
+                            <i class="bi bi-clipboard2-pulse-fill text-primary"></i>
+                            <span>Menu Pembinaan & Supervisi Akademik</span>
+                            <span class="code-pill">/pembinaan/*, /sekolah/pembinaan</span>
+                        </div>
+                        <span class="badge status-ready"><i class="bi bi-check-circle-fill"></i> SIAP PAKAI</span>
+                    </div>
+                    <div class="menu-group-body">
+                        <table class="spec-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">Sub-Menu</th>
+                                    <th style="width: 22%;">URL Rute</th>
+                                    <th>Rincian Fitur & Kemampuan Teknis</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Supervisi Guru & Tendik</strong></td>
+                                    <td><span class="code-pill">/sekolah/pembinaan</span></td>
+                                    <td>
+                                        <span class="feature-tag">Instrumen Penilaian Kinerja Guru (PKG)</span>
+                                        <span class="feature-tag">Pencatatan Sesi Supervisi Kelas & Tindak Lanjut</span>
+                                        <span class="feature-tag">Cetak Lembar Hasil Evaluasi & Rekomendasi Supervisi</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- GRUP 13: SISTEM, UTILITAS & MONITORING -->
+                <div class="menu-group-box">
+                    <div class="menu-group-header">
+                        <div class="menu-group-title">
+                            <span class="badge badge-blue">Grup 13</span>
+                            <i class="bi bi-gear-wide-connected text-primary"></i>
+                            <span>Menu Sistem, Utilitas & Monitoring Platform</span>
+                            <span class="code-pill">/sistem/*, /utilitas/*, /utility/*</span>
+                        </div>
+                        <span class="badge status-ready"><i class="bi bi-check-circle-fill"></i> SIAP PAKAI</span>
+                    </div>
+                    <div class="menu-group-body">
+                        <table class="spec-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">Sub-Menu</th>
+                                    <th style="width: 22%;">URL Rute</th>
+                                    <th>Rincian Fitur & Kemampuan Teknis</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Identitas & Profil Sekolah</strong></td>
+                                    <td><span class="code-pill">/sekolah/identitas</span></td>
+                                    <td>
+                                        <span class="feature-tag">Profil Sekolah (NPSN, NSS, Akreditasi, Alamat, Kontak, Logo)</span>
+                                        <span class="feature-tag">Manajemen Kuota Penyimpanan & Storage Limit</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Fitur & Kelola Sekolah (Tenant)</strong></td>
+                                    <td><span class="code-pill">/sistem/fitur-sekolah</span><br><span class="code-pill">/sistem/sekolah</span></td>
+                                    <td>
+                                        <span class="feature-tag">Tenant Manager (Pendaftaran & Konfigurasi Sekolah Pelanggan)</span>
+                                        <span class="feature-tag">Feature Toggle (Aktivasi / Deaktivasi Menu per Tenant)</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Monitoring Sesi Aktif</strong></td>
+                                    <td><span class="code-pill">/utilitas/sesi-aktif</span></td>
+                                    <td>
+                                        <span class="feature-tag">Pelacakan Seluruh User Login Real-Time</span>
+                                        <span class="feature-tag">Informasi IP Address, User-Agent & Waktu Login</span>
+                                        <span class="feature-tag">Force Logout / Kick Session Aktif</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Antrean & Background Jobs</strong></td>
+                                    <td><span class="code-pill">/utilitas/antrean</span></td>
+                                    <td>
+                                        <span class="feature-tag">Monitoring Antrean Tugas Latar Belakang (Worker Daemon)</span>
+                                        <span class="feature-tag">Pelacakan Status Task (Pending, Processing, Done, Failed)</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Audit Log Aktivitas</strong></td>
+                                    <td><span class="code-pill">/utilitas/log-aktivitas</span></td>
+                                    <td>
+                                        <span class="feature-tag">Pencatatan Audit Trail Seluruh Aksi Pengguna (CREATE, UPDATE, DELETE)</span>
+                                        <span class="feature-tag">Perekaman Timestamp, User ID, IP, dan Payload Perubahan Data</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Error & Server Monitor</strong></td>
+                                    <td><span class="code-pill">/utilitas/error-monitor</span><br><span class="code-pill">/utilitas/server-monitor</span></td>
+                                    <td>
+                                        <span class="feature-tag">Pencatatan Terpusat Error Backend PHP & SQL (system_errors)</span>
+                                        <span class="feature-tag">Logging Error JavaScript Frontend via Beacon API</span>
+                                        <span class="feature-tag">Monitoring Penggunaan RAM Server, CPU Load & Disk Usage</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Pemindai Dokumen</strong></td>
+                                    <td><span class="code-pill">/utility/document-scanner</span></td>
+                                    <td>
+                                        <span class="feature-tag">Pemindaian & Digitalisasi Berkas Fisik Sekolah Langsung ke PDF/Gambar</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- GRUP 14: PUSAT BANTUAN -->
+                <div class="menu-group-box">
+                    <div class="menu-group-header">
+                        <div class="menu-group-title">
+                            <span class="badge badge-blue">Grup 14</span>
+                            <i class="bi bi-question-circle-fill text-primary"></i>
+                            <span>Menu Pusat Bantuan & Panduan</span>
+                            <span class="code-pill">/bantuan/*</span>
+                        </div>
+                        <span class="badge status-ready"><i class="bi bi-check-circle-fill"></i> SIAP PAKAI</span>
+                    </div>
+                    <div class="menu-group-body">
+                        <table class="spec-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">Sub-Menu</th>
+                                    <th style="width: 22%;">URL Rute</th>
+                                    <th>Rincian Fitur & Kemampuan Teknis</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Panduan Penggunaan</strong></td>
+                                    <td><span class="code-pill">/bantuan</span></td>
+                                    <td>
+                                        <span class="feature-tag">Petunjuk Operasional Sistem per Peran</span>
+                                        <span class="feature-tag">FAQ (Pertanyaan Umum Seputar Penggunaan Aplikasi)</span>
+                                        <span class="feature-tag">Kontak Layanan Teknis & Tiket Bantuan</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- GRUP 15: ABSENSI & PRESENSI -->
+                <div class="menu-group-box">
+                    <div class="menu-group-header">
+                        <div class="menu-group-title">
+                            <span class="badge badge-cyan">Grup 15</span>
+                            <i class="bi bi-calendar-check-fill text-info"></i>
+                            <span>Menu Absensi & Presensi Kehadiran</span>
+                            <span class="code-pill">/absensi/*, /presensi/*</span>
+                        </div>
+                        <span class="badge status-dev"><i class="bi bi-gear-fill"></i> SKEMA SIAP (UI DALAM PENYEMPURNAAN)</span>
+                    </div>
+                    <div class="menu-group-body">
+                        <p style="font-size: 13px; color: var(--secondary); margin-bottom: 12px;">
+                            Skema database <span class="code-pill">absensi.*</span> sudah terpasang dan aktif di PostgreSQL, mencakup presensi siswa harian, presensi mengajar guru per jam, dan rekapitulasi kehadiran.
+                        </p>
+                        <table class="spec-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">Sub-Fitur</th>
+                                    <th style="width: 22%;">Skema & Rute</th>
+                                    <th>Rincian Fitur & Kebutuhan Pengembangan Lanjutan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Presensi Harian & QR Code</strong></td>
+                                    <td><span class="code-pill">absensi.presensi_siswa</span><br><span class="code-pill">/absensi/harian</span></td>
+                                    <td>
+                                        <span class="feature-tag">Scan Barcode / QR Code Kartu Pelajar saat Masuk & Pulang</span>
+                                        <span class="feature-tag">Pencatatan Status Hadir, Sakit, Izin, Alpa, Terlambat</span>
+                                        <span class="feature-tag">Pengajuan Izin Mandiri oleh Orang Tua via Upload Surat Sakit</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Jurnal & Presensi Jam Mengajar</strong></td>
+                                    <td><span class="code-pill">absensi.presensi_guru</span><br><span class="code-pill">/absensi/jurnal-guru</span></td>
+                                    <td>
+                                        <span class="feature-tag">Jurnal Pembelajaran Guru per Jam Pertemuan di Kelas</span>
+                                        <span class="feature-tag">Check-in Kehadiran Siswa per Mata Pelajaran</span>
+                                        <span class="feature-tag">Rekapitulasi Kehadiran Bulanan & Masuk Nilai Rapor</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- GRUP 16: SARANA & PRASARANA -->
+                <div class="menu-group-box">
+                    <div class="menu-group-header">
+                        <div class="menu-group-title">
+                            <span class="badge badge-amber">Grup 16</span>
+                            <i class="bi bi-box-seam-fill text-warning"></i>
+                            <span>Menu Sarana & Prasarana (Sarpras)</span>
+                            <span class="code-pill">/sarpras/*</span>
+                        </div>
+                        <span class="badge status-dev"><i class="bi bi-gear-fill"></i> SKEMA SIAP (UI DALAM PENYEMPURNAAN)</span>
+                    </div>
+                    <div class="menu-group-body">
+                        <p style="font-size: 13px; color: var(--secondary); margin-bottom: 12px;">
+                            Skema database <span class="code-pill">sarpras.*</span> sudah terpasang dan aktif di PostgreSQL, mendukung inventarisasi aset, peminjaman barang, dan kartu perawatan sarana sekolah.
+                        </p>
+                        <table class="spec-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">Sub-Fitur</th>
+                                    <th style="width: 22%;">Skema & Rute</th>
+                                    <th>Rincian Fitur & Kebutuhan Pengembangan Lanjutan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Inventaris Aset & Ruangan</strong></td>
+                                    <td><span class="code-pill">sarpras.inventaris_aset</span><br><span class="code-pill">/sarpras/inventaris</span></td>
+                                    <td>
+                                        <span class="feature-tag">Pencatatan Kode Barang & Label Barcode / QR Aset</span>
+                                        <span class="feature-tag">Lokasi Ruangan (Kelas, Lab Komputer, Bengkel, Lapangan, Kantor)</span>
+                                        <span class="feature-tag">Kondisi Fisik (Baik, Rusak Ringan, Rusak Berat) & Sumber Dana (BOS/Komite)</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Peminjaman & Pemeliharaan</strong></td>
+                                    <td><span class="code-pill">sarpras.peminjaman_alat</span><br><span class="code-pill">/sarpras/pemeliharaan</span></td>
+                                    <td>
+                                        <span class="feature-tag">Form Peminjaman Alat / Proyektor / Ruang Laboratorium</span>
+                                        <span class="feature-tag">Kartu Riwayat Servis & Jadwal Pemeliharaan Rutin Sarpras</span>
+                                        <span class="feature-tag">Laporan Kerusakan & Usulan Pengadaan Aset Baru</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- GRUP 17: KEPEGAWAIAN (GTK) -->
+                <div class="menu-group-box">
+                    <div class="menu-group-header">
+                        <div class="menu-group-title">
+                            <span class="badge badge-slate">Grup 17</span>
+                            <i class="bi bi-person-badge-fill text-secondary"></i>
+                            <span>Menu Kepegawaian (GTK / HRD Sekolah)</span>
+                            <span class="code-pill">/kepegawaian/*</span>
+                        </div>
+                        <span class="badge status-dev"><i class="bi bi-gear-fill"></i> SKEMA SIAP (UI DALAM PENYEMPURNAAN)</span>
+                    </div>
+                    <div class="menu-group-body">
+                        <p style="font-size: 13px; color: var(--secondary); margin-bottom: 12px;">
+                            Skema database <span class="code-pill">kepegawaian.*</span> sudah terpasang dan aktif di PostgreSQL, mendukung manajemen karir pendidik dan tenaga kependidikan.
+                        </p>
+                        <table class="spec-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">Sub-Fitur</th>
+                                    <th style="width: 22%;">Skema & Rute</th>
+                                    <th>Rincian Fitur & Kebutuhan Pengembangan Lanjutan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Data GTK & Kepangkatan</strong></td>
+                                    <td><span class="code-pill">kepegawaian.gtk</span><br><span class="code-pill">/kepegawaian/riwayat</span></td>
+                                    <td>
+                                        <span class="feature-tag">Data Pokok Guru & Pegawai (NIP, NUPTK, NRG, Golongan/Ruang)</span>
+                                        <span class="feature-tag">Riwayat Kenaikan Pangkat & Kenaikan Gaji Berkala (KGB)</span>
+                                        <span class="feature-tag">Riwayat Sertifikasi Pendidik (PPG) & Diklat Pelatihan</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Beban Ajar & Cuti Pegawai</strong></td>
+                                    <td><span class="code-pill">kepegawaian.beban_ajar</span><br><span class="code-pill">/kepegawaian/cuti</span></td>
+                                    <td>
+                                        <span class="feature-tag">Validasi Jam Tatap Muka Mengajar (Minimal 24 Jam Linear)</span>
+                                        <span class="feature-tag">Pengajuan Surat Cuti Pegawai (Cuti Tahunan, Sakit, Melahirkan)</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- GRUP 18: VOKASI & SMK -->
+                <div class="menu-group-box">
+                    <div class="menu-group-header">
+                        <div class="menu-group-title">
+                            <span class="badge badge-amber">Grup 18</span>
+                            <i class="bi bi-tools text-warning"></i>
+                            <span>Menu Vokasi, Prakerin / PKL (Khusus SMK)</span>
+                            <span class="code-pill">/smk/*</span>
+                        </div>
+                        <span class="badge status-dev"><i class="bi bi-gear-fill"></i> SKEMA SIAP (UI DALAM PENYEMPURNAAN)</span>
+                    </div>
+                    <div class="menu-group-body">
+                        <p style="font-size: 13px; color: var(--secondary); margin-bottom: 12px;">
+                            Skema database <span class="code-pill">smk.*</span> sudah terpasang dan aktif di PostgreSQL untuk memenuhi kebutuhan spesifik Sekolah Menengah Kejuruan.
+                        </p>
+                        <table class="spec-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">Sub-Fitur</th>
+                                    <th style="width: 22%;">Skema & Rute</th>
+                                    <th>Rincian Fitur & Kebutuhan Pengembangan Lanjutan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Mitra Industri & Penempatan PKL</strong></td>
+                                    <td><span class="code-pill">smk.mitra_dudi</span><br><span class="code-pill">/smk/pkl</span></td>
+                                    <td>
+                                        <span class="feature-tag">Pangkalan Data Perusahaan & Mitra DUDI (MoU Kerjasama)</span>
+                                        <span class="feature-tag">Penempatan Siswa Magang & Pembagian Guru Pembimbing</span>
+                                        <span class="feature-tag">Logbook Jurnal Harian Siswa di Industri</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Nilai PKL & Uji Kompetensi (UKK)</strong></td>
+                                    <td><span class="code-pill">smk.sertifikasi_ukk</span><br><span class="code-pill">/smk/ukk</span></td>
+                                    <td>
+                                        <span class="feature-tag">Form Input Nilai dari Pembimbing Lapangan Industri</span>
+                                        <span class="feature-tag">Rekap Nilai Uji Kompetensi Keahlian (UKK) Standar BNSP</span>
+                                        <span class="feature-tag">Cetak Sertifikat Kelulusan Uji Kompetensi Kejuruan</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- GRUP 19: CMS & PORTAL PUBLIK -->
+                <div class="menu-group-box">
+                    <div class="menu-group-header">
+                        <div class="menu-group-title">
+                            <span class="badge badge-purple">Grup 19</span>
+                            <i class="bi bi-globe2 text-primary"></i>
+                            <span>Menu CMS Portal Publik & Website Sekolah</span>
+                            <span class="code-pill">/cms/*, /portal/*</span>
+                        </div>
+                        <span class="badge status-dev"><i class="bi bi-gear-fill"></i> SKEMA SIAP (UI DALAM PENYEMPURNAAN)</span>
+                    </div>
+                    <div class="menu-group-body">
+                        <p style="font-size: 13px; color: var(--secondary); margin-bottom: 12px;">
+                            Skema database <span class="code-pill">cms.*</span> sudah terpasang dan aktif di PostgreSQL untuk menampilkan landing page sekolah kepada masyarakat umum.
+                        </p>
+                        <table class="spec-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">Sub-Fitur</th>
+                                    <th style="width: 22%;">Skema & Rute</th>
+                                    <th>Rincian Fitur & Kebutuhan Pengembangan Lanjutan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Landing Page & Berita Publik</strong></td>
+                                    <td><span class="code-pill">cms.berita, cms.galeri</span><br><span class="code-pill">/portal/berita</span></td>
+                                    <td>
+                                        <span class="feature-tag">Landing Page Profil Sekolah Modern & Responsif</span>
+                                        <span class="feature-tag">Artikel Berita, Prestasi, dan Galeri Foto Kegiatan</span>
+                                        <span class="feature-tag">Sambutan Kepala Sekolah, Visi-Misi, dan Fasilitas</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Verifikasi Transkrip Publik</strong></td>
+                                    <td><span class="code-pill">/siswa/verify-transkrip</span></td>
+                                    <td>
+                                        <span class="feature-tag">Halaman Verifikasi Keaslian Ijazah / Transkrip via Scan QR Code Publik</span>
+                                        <span class="feature-tag">Proteksi Pemalsuan Dokumen Kelulusan Sekolah</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- SECTION 4: 16 SKEMA DATABASE -->
+        <div class="section-card" id="skema-db">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="bi bi-database-fill-lock"></i>
+                    <span>4. Arsitektur 16 Skema Database PostgreSQL</span>
+                </div>
+                <span class="badge badge-purple">Multi-Schema Search Path</span>
+            </div>
+            <table class="spec-table">
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">Nama Skema</th>
+                        <th style="width: 35%;">Tabel Utama Terkait</th>
+                        <th>Fungsi Partisi & Entitas Data</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="code-pill">core.*</span></td>
+                        <td>tenants, users, roles, permissions, menus, tenant_menu_access, role_menu_access, active_sessions</td>
+                        <td>Identitas platform, manajemen multi-tenancy, RBAC, dan sesi autentikasi.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-pill">siswa.*</span></td>
+                        <td>buku_induk, riwayat_pendidikan, orang_tua_wali, periodik_siswa, mutasi_siswa, akun_siswa</td>
+                        <td>Pangkalan data induk digital seluruh peserta didik sekolah.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-pill">akademik.*</span></td>
+                        <td>tahun_ajaran, semester, kurikulum, mata_pelajaran, kelas, rombel, jadwal_pelajaran, nilai_rapor</td>
+                        <td>Kurikulum, rombongan belajar, pembagian beban ajar, dan ledger nilai.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-pill">kesiswaan.*</span></td>
+                        <td>ekskul, anggota_ekskul, absensi_ekskul, prestasi_siswa, organisasi_siswa</td>
+                        <td>Aktivitas non-akademik, pembinaan ekstrakurikuler, dan portofolio prestasi.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-pill">absensi.*</span></td>
+                        <td>presensi_siswa, presensi_guru, rekap_kehadiran, izin_sakit</td>
+                        <td>Presensi harian, per jam pelajaran, dan rekapitulasi kehadiran berkala.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-pill">kepegawaian.*</span></td>
+                        <td>gtk, riwayat_kepangkatan, sertifikasi_guru, beban_ajar</td>
+                        <td>Data pokok GTK, NUPTK, kepangkatan, dan validasi kelayakan jam mengajar.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-pill">keuangan.*</span></td>
+                        <td>pos_keuangan, tarif_pembayaran, tagihan_siswa, pembayaran, kwitansi, audit_kas</td>
+                        <td>Penagihan SPP, pos biaya sekolah, kasir loket, dan laporan arus kas.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-pill">perpustakaan.*</span></td>
+                        <td>buku, kategori_buku, sirkulasi, peminjaman, denda, anggota_perpus, pengunjung</td>
+                        <td>Katalog buku digital (OPAC), barcode, sirkulasi peminjaman, dan denda.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-pill">sarpras.*</span></td>
+                        <td>inventaris_aset, ruangan, peminjaman_alat, pemeliharaan_sarana</td>
+                        <td>Aset barang inventaris, manajemen ruangan, peminjaman, dan perbaikan.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-pill">persuratan.*</span></td>
+                        <td>surat_masuk, surat_keluar, disposisi, kode_klasifikasi, template_surat</td>
+                        <td>Arsip surat dinas, penomoran otomatis klasifikasi nasional, dan lembar disposisi.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-pill">bk.*</span></td>
+                        <td>layanan_konseling, catatan_kedisiplinan, poin_pelanggaran, home_visit, surat_panggilan</td>
+                        <td>Bimbingan konseling, skor pelanggaran kedisiplinan, dan pembinaan siswa.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-pill">pdss.*</span></td>
+                        <td>kuota_sekolah, ranking_paralel, kampus_ptn, prodi_snpmb, simulasi_pilihan</td>
+                        <td>Pemeringkatan siswa eligible SNBP, simulasi pilihan jurusan PTN.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-pill">tracer.*</span></td>
+                        <td>tracer_study, kuesioner_alumni, riwayat_kuliah_kerja, sebaran_lulusan</td>
+                        <td>Pelacakan alumni (kuliah, bekerja, wirausaha) dan survey serapan lulusan.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-pill">smk.*</span></td>
+                        <td>mitra_dudi, pkl_siswa, monitoring_pkl, sertifikasi_ukk</td>
+                        <td>Modul vokasi SMK untuk Praktek Kerja Lapangan dan uji kompetensi keahlian.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-pill">sistem.*</span></td>
+                        <td>activity_logs, system_errors, background_jobs, audit_trail</td>
+                        <td>Logger error terpusat, audit trail pengguna, dan antrean background runner.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-pill">cms.*</span></td>
+                        <td>pengumuman, agenda, berita, galeri, profil_portal</td>
+                        <td>Portal website informasi publik, pengumuman, dan agenda sekolah.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- SECTION 5: MATRIKS RBAC -->
+        <div class="section-card" id="rbac-matrix">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="bi bi-shield-shaded"></i>
+                    <span>5. Matriks Hak Akses Peran Pengguna (RBAC Permisson Matrix)</span>
+                </div>
+                <span class="badge badge-rose">Strict Access Control</span>
+            </div>
+            <table class="spec-table">
+                <thead>
+                    <tr>
+                        <th style="width: 22%;">Peran Pengguna (Role)</th>
+                        <th>Cakupan Menu & Fitur yang Dapat Diakses</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="badge badge-rose">Super Admin Platform</span></td>
+                        <td>Mengakses <strong>100% seluruh menu dan fitur sistem</strong> lintas tenant/sekolah, konfigurasi paket, kelola server, dan database auditor.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-blue">Admin / Operator Sekolah</span></td>
+                        <td>Dashboard, PPDB, Data Pokok (Buku Induk, Master Data, Pengguna), Akademik, Keuangan, Perpustakaan, Persuratan, Kesiswaan, BK, Sarpras, Absensi, dan Utilitas Sekolah.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-purple">Kepala Sekolah</span></td>
+                        <td>Dashboard Eksekutif, Supervisi & Pembinaan Guru, Monitoring Nilai & Rapor, Laporan Keuangan/Kas, Arsip Disposisi Surat, dan Monitoring Sistem.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-emerald">Guru Mata Pelajaran</span></td>
+                        <td>Dashboard Guru, Jadwal Mengajar, Input Nilai Formatif/Sumatif/Rapor, Ledger Kelas, Data Buku Induk, Pengumuman, Agenda, Jurnal Mengajar, dan OPAC Perpustakaan.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-cyan">Wali Kelas</span></td>
+                        <td>Fitur Guru + Manajemen Rombel Asuhan, Rekap Absensi Siswa Kelas, Cetak Rapor Kelas, Catatan Sikap, dan Koordinasi Layanan BK Siswa.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-amber">Guru Bimbingan Konseling (BK)</span></td>
+                        <td>Dashboard BK, Layanan Konseling, Kedisiplinan & Poin Pelanggaran, Home Visit, Surat Panggilan, Simulasi PDSS SNBP, dan Alumni Tracer Study.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-slate">Staf TU, Keuangan & Sarpras</span></td>
+                        <td>Persuratan (Surat Masuk/Keluar/Disposisi), Kasir Loket SPP, Master Tarif, Generate Tagihan, Pemindai Dokumen, Inventaris Sarpras, dan Laporan Keuangan.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-slate">Pustakawan</span></td>
+                        <td>Katalog & Inventori Buku, Sirkulasi Peminjaman/Pengembalian, Manajemen Denda, Anggota Perpus, Barcode Generator, dan Stock Opname.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-slate">Siswa & Orang Tua</span></td>
+                        <td>Portal Siswa, Jadwal Pelajaran Saya, Tagihan & Riwayat Pembayaran SPP, Presensi Kehadiran, e-Book Reader, Riwayat Perpus, dan Pengumuman Sekolah.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- SECTION 6: ROADMAP & BACKLOG PENGEMBANGAN FITUR MASA DEPAN -->
+        <div class="section-card" id="roadmap">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="bi bi-rocket-takeoff-fill"></i>
+                    <span>6. Roadmap & Backlog Pengembangan Fitur Masa Depan (Rekomendasi Strategis)</span>
+                </div>
+                <span class="badge badge-blue">Inovasi SaaS 2026-2027</span>
+            </div>
+            <p style="font-size: 13.5px; color: var(--secondary); margin-bottom: 20px;">
+                Daftar fitur inovasi tingkat tinggi yang direkomendasikan untuk pengembangan lanjutan guna meningkatkan daya saing platform, otomatisasi transaksi, dan efisiensi operasional sekolah:
+            </p>
+
+            <div class="roadmap-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div style="font-weight: 700; font-size: 15px; color: var(--primary);">
+                        <i class="bi bi-credit-card-2-front-fill me-2"></i> 1. Integrasi Payment Gateway Otomatis (Midtrans / Xendit / Tripay / QRIS)
+                    </div>
+                    <span class="badge status-roadmap"><i class="bi bi-clock-history"></i> ROADMAP FITUR UTAMA</span>
+                </div>
+                <div style="font-size: 13px; color: var(--secondary); margin-bottom: 8px;">
+                    <strong>Deskripsi:</strong> Memungkinkan orang tua/wali murid membayar tagihan SPP dan iuran sekolah langsung melalui Virtual Account (BCA, Mandiri, BNI, BRI), e-Wallet (GoPay, OVO, ShopeePay), dan QRIS Statis/Dinamis dengan verifikasi lunas otomatis <em>(auto-settlement)</em> real-time tanpa campur tangan staf kasir.
+                </div>
+                <div style="font-size: 12px; color: #475569;">
+                    <span class="code-pill">Action Item:</span> Buat modul webhook handler <span class="code-pill">/api/v1/payment/callback</span> & table <span class="code-pill">keuangan.payment_transactions</span>.
+                </div>
+            </div>
+
+            <div class="roadmap-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div style="font-weight: 700; font-size: 15px; color: #16a34a;">
+                        <i class="bi bi-whatsapp me-2"></i> 2. WhatsApp Gateway & Notifikasi Instan Real-Time (Fonnte / WATI API)
+                    </div>
+                    <span class="badge status-roadmap"><i class="bi bi-clock-history"></i> ROADMAP FITUR UTAMA</span>
+                </div>
+                <div style="font-size: 13px; color: var(--secondary); margin-bottom: 8px;">
+                    <strong>Deskripsi:</strong> Pengiriman pesan otomatis via WhatsApp resmi ke nomor orang tua saat: (1) Siswa tidak hadir / alpa jam pertama, (2) Tagihan SPP diterbitkan atau menjelang jatuh tempo, (3) Kwitansi pembayaran berhasil dicetak, (4) Panggilan orang tua dari Guru BK.
+                </div>
+                <div style="font-size: 12px; color: #475569;">
+                    <span class="code-pill">Action Item:</span> Buat Service Class <span class="code-pill">App\Libraries\WhatsAppService</span> & integrasi job queue <span class="code-pill">worker.php</span>.
+                </div>
+            </div>
+
+            <div class="roadmap-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div style="font-weight: 700; font-size: 15px; color: #9333ea;">
+                        <i class="bi bi-phone-fill me-2"></i> 3. Mobile Progressive Web App (PWA) & Presensi GPS Geofencing Siswa/Guru
+                    </div>
+                    <span class="badge status-roadmap"><i class="bi bi-clock-history"></i> ROADMAP FITUR UTAMA</span>
+                </div>
+                <div style="font-size: 13px; color: var(--secondary); margin-bottom: 8px;">
+                    <strong>Deskripsi:</strong> Aplikasi mobile berbasis PWA/Flutter yang dapat diinstal langsung di HP siswa & guru. Dilengkapi fitur presensi selfie dengan titik radius GPS sekolah <em>(geofencing anti-fake GPS)</em> dan kartu pelajar digital dengan barcode interaktif.
+                </div>
+                <div style="font-size: 12px; color: #475569;">
+                    <span class="code-pill">Action Item:</span> Konfigurasi Service Worker PWA <span class="code-pill">manifest.json</span> & endpoint API geolokasi presensi.
+                </div>
+            </div>
+
+            <div class="roadmap-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div style="font-weight: 700; font-size: 15px; color: #ea580c;">
+                        <i class="bi bi-laptop-fill me-2"></i> 4. Modul CBT (Computer Based Test) & Bank Soal Terpadu
+                    </div>
+                    <span class="badge status-roadmap"><i class="bi bi-clock-history"></i> ROADMAP FITUR TAMBAHAN</span>
+                </div>
+                <div style="font-size: 13px; color: var(--secondary); margin-bottom: 8px;">
+                    <strong>Deskripsi:</strong> Platform ujian online siswa berbasis komputer/smartphone dengan fitur anti-curang (fullscreen lockdown, acak urutan soal & opsi jawaban, auto-submit saat waktu habis), koreksi otomatis, dan transfer nilai langsung ke ledger rapor.
+                </div>
+                <div style="font-size: 12px; color: #475569;">
+                    <span class="code-pill">Action Item:</span> Rancang skema database <span class="code-pill">cbt.ujian</span>, <span class="code-pill">cbt.bank_soal</span>, <span class="code-pill">cbt.jawaban_siswa</span>.
+                </div>
+            </div>
+
+            <div class="roadmap-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div style="font-weight: 700; font-size: 15px; color: #0284c7;">
+                        <i class="bi bi-arrow-left-right me-2"></i> 5. Integrasi Sinkronisasi API DAPODIK Kemendikbudristek
+                    </div>
+                    <span class="badge status-roadmap"><i class="bi bi-clock-history"></i> ROADMAP INTEGRASI</span>
+                </div>
+                <div style="font-size: 13px; color: var(--secondary); margin-bottom: 8px;">
+                    <strong>Deskripsi:</strong> Fitur jembatan sinkronisasi data dua arah dengan Web Service DAPODIK lokal sekolah untuk menarik data siswa, rombel, GTK, dan prasarana secara instan tanpa perlu input manual berulang kali.
+                </div>
+                <div style="font-size: 12px; color: #475569;">
+                    <span class="code-pill">Action Item:</span> Buat modul API Client Dapodik <span class="code-pill">App\Libraries\DapodikClient</span>.
+                </div>
+            </div>
+
+            <div class="roadmap-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div style="font-weight: 700; font-size: 15px; color: #dc2626;">
+                        <i class="bi bi-robot me-2"></i> 6. AI Academic Early Warning System & Rekomendasi Karir Siswa
+                    </div>
+                    <span class="badge status-roadmap"><i class="bi bi-clock-history"></i> ROADMAP INOVASI AI</span>
+                </div>
+                <div style="font-size: 13px; color: var(--secondary); margin-bottom: 8px;">
+                    <strong>Deskripsi:</strong> Kecerdasan buatan untuk mendeteksi secara dini siswa yang berpotensi mengalami penurunan prestasi drastis, absensi bermasalah, atau akumulasi poin pelanggaran, serta memberikan rekomendasi otomatis pemilihan jurusan kuliah / karir yang selaras dengan bakat minat.
+                </div>
+                <div style="font-size: 12px; color: #475569;">
+                    <span class="code-pill">Action Item:</span> Rancang algoritma predictive scoring pada modul PDSS & BK.
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 7: STANDAR KEAMANAN -->
+        <div class="section-card" id="keamanan">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="bi bi-shield-check"></i>
+                    <span>7. Standar Keamanan Sistem (OWASP ASVS L3 Oriented)</span>
+                </div>
+                <span class="badge badge-purple">Enterprise Grade Protection</span>
+            </div>
+            <table class="spec-table">
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">Vektor Keamanan</th>
+                        <th style="width: 35%;">Mekanisme Pertahanan</th>
+                        <th>Dampak & Jaminan Keamanan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Zero Data Leakage</strong></td>
+                        <td>Dynamic Fetch via Axios saat Vue 3 <span class="code-pill">onMounted</span></td>
+                        <td>Mencegah kebocoran data sensitif pada View Source HTML (<span class="code-pill">Ctrl+U</span>).</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Anti-SQL Injection (SQLi)</strong></td>
+                        <td>100% Prepared Statements dengan PDO Parameter Binding</td>
+                        <td>Menjamin tidak ada injeksi query melalui parameter URL atau request body.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Anti-XSS (Dual Layer)</strong></td>
+                        <td><span class="code-pill">htmlspecialchars(ENT_QUOTES)</span> + <span class="code-pill">JSON_HEX_*</span></td>
+                        <td>Melindungi dari Script Break XSS dan Attribute Break XSS.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>CSRF Protection</strong></td>
+                        <td>Token CSRF terintegrasi otomatis pada setiap mutasi data</td>
+                        <td>Mencegah aksi ilegal lintas situs (Cross-Site Request Forgery).</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Multi-Tenant Isolation</strong></td>
+                        <td><span class="code-pill">RouteGuard</span> & <span class="code-pill">StorageGuard</span></td>
+                        <td>Sekolah tidak dapat mengakses atau memodifikasi data & berkas sekolah lain.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>SINTA-SaaS Enterprise System, Menu Specifications & Roadmap</strong></p>
+            <p style="margin-top: 4px;">Dihasilkan secara otomatis dari basis kode & skema basis data di <code>C:\laragon\www\sinta</code></p>
+            <p style="margin-top: 4px; font-size: 11.5px; color: #94a3b8;">© 2026 SINTA-SaaS Architecture. All rights reserved.</p>
+        </div>
+    </div>
+
+    <!-- Script Pencarian Interaktif -->
+    <script>
+        function searchMenuItems() {
+            const input = document.getElementById('menuSearchInput').value.toLowerCase();
+            const groups = document.querySelectorAll('.menu-group-box');
+            
+            groups.forEach(group => {
+                const text = group.textContent.toLowerCase();
+                if (text.includes(input)) {
+                    group.style.display = 'block';
+                } else {
+                    group.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

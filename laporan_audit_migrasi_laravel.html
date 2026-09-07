@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Audit Kode Mendalam & Blueprint Migrasi SINTA-SaaS ke Laravel 11 Modular</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <style>
+        :root {
+            --primary: #ea580c;
+            --primary-dark: #c2410c;
+            --primary-light: #fff7ed;
+            --laravel: #ff2d20;
+            --secondary: #475569;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #0f172a;
+            --surface: #ffffff;
+            --background: #f8fafc;
+            --border: #e2e8f0;
+            --text-muted: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--background);
+            color: var(--dark);
+            line-height: 1.6;
+            padding: 25px 15px;
+        }
+
+        .container {
+            max-width: 1320px;
+            margin: 0 auto;
+        }
+
+        /* Top Action Bar */
+        .action-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding: 12px 24px;
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+            position: sticky;
+            top: 15px;
+            z-index: 100;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .btn-laravel { background: var(--laravel); color: #fff; }
+        .btn-laravel:hover { background: #e02417; }
+        .btn-outline { background: #fff; color: var(--secondary); border: 1px solid var(--border); }
+        .btn-outline:hover { background: #f1f5f9; color: var(--dark); }
+
+        /* Hero Header */
+        .hero-card {
+            background: linear-gradient(135deg, #18181b 0%, #7c2d12 40%, #ff2d20 100%);
+            color: #ffffff;
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 28px;
+            box-shadow: 0 12px 30px -10px rgba(255, 45, 32, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-card::after {
+            content: "";
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 450px;
+            height: 450px;
+            background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%);
+            border-radius: 50%;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 30px;
+            font-size: 11.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+        }
+
+        .hero-title {
+            font-size: 32px;
+            font-weight: 800;
+            line-height: 1.25;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+        }
+
+        .hero-subtitle {
+            font-size: 15.5px;
+            color: rgba(255, 255, 255, 0.9);
+            max-width: 950px;
+            font-weight: 400;
+        }
+
+        .hero-meta {
+            display: flex;
+            gap: 24px;
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            font-size: 13px;
+            flex-wrap: wrap;
+        }
+
+        .hero-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: rgba(255, 255, 255, 0.88);
+        }
+
+        /* Metric Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .metric-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px -3px rgba(0,0,0,0.06);
+        }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .metric-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .metric-value {
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--dark);
+            margin-bottom: 4px;
+        }
+
+        .metric-label {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        /* Section Styling */
+        .section-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 28px;
+            margin-bottom: 28px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .section-title i {
+            color: var(--laravel);
+            font-size: 20px;
+        }
+
+        /* Tables */
+        .spec-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13.5px;
+        }
+
+        .spec-table th {
+            background: #f8fafc;
+            color: var(--secondary);
+            font-weight: 700;
+            text-align: left;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+
+        .spec-table td {
+            padding: 14px 14px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        .spec-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .spec-table tr:hover td {
+            background-color: #fbfcfe;
+        }
+
+        /* Comparison Box */
+        .compare-box {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 860px) {
+            .compare-box { grid-template-columns: 1fr; }
+        }
+
+        .compare-side {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            background: #fff;
+        }
+
+        .compare-side.legacy {
+            border-left: 4px solid #94a3b8;
+        }
+
+        .compare-side.laravel {
+            border-left: 4px solid var(--laravel);
+            background: #fffafa;
+        }
+
+        .compare-title {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-red { background: #fee2e2; color: #991b1b; }
+        .badge-orange { background: #ffedd5; color: #9a3412; }
+        .badge-green { background: #dcfce7; color: #166534; }
+        .badge-blue { background: #dbeafe; color: #1e40af; }
+        .badge-purple { background: #f3e8ff; color: #6b21a8; }
+        .badge-slate { background: #f1f5f9; color: #334155; }
+
+        .code-pill {
+            font-family: 'JetBrains Mono', monospace;
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #0f172a;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Timeline / Phase Card */
+        .phase-card {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            background: #fff;
+            position: relative;
+            padding-left: 24px;
+            border-left: 4px solid var(--laravel);
+        }
+
+        .phase-number {
+            display: inline-block;
+            background: var(--laravel);
+            color: #fff;
+            font-weight: 800;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+
+        .phase-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 8px;
+        }
+
+        /* Diagram Box */
+        .diagram-box {
+            background: #0f172a;
+            border-radius: 10px;
+            padding: 20px;
+            color: #f8fafc;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            overflow-x: auto;
+            margin-top: 14px;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 30px 0;
+            font-size: 13px;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border);
+            margin-top: 40px;
+        }
+
+        @media print {
+            body { padding: 0; background: #fff; }
+            .action-bar { display: none; }
+            .hero-card { box-shadow: none; }
+            .section-card, .phase-card { page-break-inside: avoid; box-shadow: none; border: 1px solid #ccc; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Action Bar -->
+        <div class="action-bar">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="badge badge-red"><i class="bi bi-box-arrow-up-right"></i> AUDIT & MIGRATION BLUEPRINT</span>
+                <span style="font-size: 13.5px; font-weight: 700; color: var(--dark);">Laporan Audit Kode Mendalam & Blueprint Migrasi ke Laravel 11 Modular</span>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-outline" onclick="window.print()">
+                    <i class="bi bi-printer"></i> Cetak / Simpan PDF
+                </button>
+            </div>
+        </div>
+
+        <!-- Hero Card -->
+        <div class="hero-card">
+            <div class="hero-badge">
+                <i class="bi bi-code-slash"></i> Blueprint Modernisasi Arsitektur SaaS
+            </div>
+            <h1 class="hero-title">Laporan Audit Kode & Panduan Migrasi SINTA-SaaS ke Laravel 11 Modular</h1>
+            <p class="hero-subtitle">
+                Analisis teknis menyeluruh terhadap <strong>16 aspek komponen arsitektur</strong> yang perlu dibenahi, diadaptasi, dan dioptimasi dari basis kode PHP Native saat ini menuju standar ekosistem <strong>Laravel 11 + nwidart/laravel-modules + stancl/tenancy + Vue 3 / Inertia</strong>.
+            </p>
+            <div class="hero-meta">
+                <div class="hero-meta-item">
+                    <i class="bi bi-folder-fill text-amber-300"></i>
+                    <span>Direktori Sumber: <strong>C:\laragon\www\sinta</strong></span>
+                </div>
+                <div class="hero-meta-item">
+                    <i class="bi bi-boxes text-red-300"></i>
+                    <span>Target Engine: <strong>Laravel 11.x + nwidart/laravel-modules</strong></span>
+                </div>
+                <div class="hero-meta-item">
+                    <i class="bi bi-database-fill text-emerald-300"></i>
+                    <span>Multi-Tenancy: <strong>PostgreSQL 16 Multi-Schema (16 Skema Terpisah)</strong></span>
+                </div>
+                <div class="hero-meta-item">
+                    <i class="bi bi-shield-check text-rose-300"></i>
+                    <span>Keamanan: <strong>OWASP ASVS L3 + Rate Limiting</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overview Metrics -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">Status Kode Sumber</div>
+                    <div class="metric-icon" style="background: #fef2f2; color: #dc2626;"><i class="bi bi-filetype-php"></i></div>
+                </div>
+                <div class="metric-value">PHP Native</div>
+                <div style="font-size: 12px; color: var(--secondary);">OOP + PSR-4 Modular</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">Kompatibilitas Logika</div>
+                    <div class="metric-icon" style="background: #f0fdf4; color: #16a34a;"><i class="bi bi-check-circle-fill"></i></div>
+                </div>
+                <div class="metric-value">95% Siap</div>
+                <div style="font-size: 12px; color: var(--success);">Porting Mudah ke Laravel</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">Modul yang Dipetakan</div>
+                    <div class="metric-icon" style="background: #fff7ed; color: #ea580c;"><i class="bi bi-puzzle-fill"></i></div>
+                </div>
+                <div class="metric-value">17-19 Modul</div>
+                <div style="font-size: 12px; color: var(--primary);">nwidart/laravel-modules</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">Aspek Dioptimasi</div>
+                    <div class="metric-icon" style="background: #eff6ff; color: #2563eb;"><i class="bi bi-arrow-repeat"></i></div>
+                </div>
+                <div class="metric-value">16 Area</div>
+                <div style="font-size: 12px; color: var(--text-muted);">Routing, Queue, Auth, ORM, Validasi</div>
+            </div>
+        </div>
+
+        <!-- SECTION 1: PERBANDINGAN STRUKTUR ARSITEKTUR -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="bi bi-diagram-3-fill"></i>
+                    <span>1. Perbandingan Arsitektur: Native Saat Ini vs Laravel 11 Modular</span>
+                </div>
+                <span class="badge badge-orange">Structural Mapping</span>
+            </div>
+
+            <div class="compare-box">
+                <div class="compare-side legacy">
+                    <div class="compare-title text-muted">
+                        <i class="bi bi-file-earmark-code"></i> Arsitektur SINTA Saat Ini (PHP Native OOP)
+                    </div>
+                    <ul style="font-size: 13px; line-height: 1.8; color: var(--secondary); padding-left: 20px;">
+                        <li><strong>Routing Monolitik:</strong> Satu berkas <span class="code-pill">index.php</span> berisi 3.266 baris kode mapping URL, switch-case, dan middleware manual.</li>
+                        <li><strong>Model & Database:</strong> Model kustom memanggil <span class="code-pill">PDO::prepare()</span> manual dengan raw SQL string di setiap function.</li>
+                        <li><strong>Multi-Tenancy:</strong> Validasi <span class="code-pill">tenant_id</span> manual di setiap SQL query dan filter file guard.</li>
+                        <li><strong>Autentikasi & Sesi:</strong> Dikelola manual via <span class="code-pill">SessionManager.php</span> dan query session tracking sendiri.</li>
+                        <li><strong>Validasi Input:</strong> Pengecekan manual di controller via <span class="code-pill">$_POST</span>, <span class="code-pill">strip_tags()</span>, dan <span class="code-pill">filter_var()</span>.</li>
+                        <li><strong>Background Queue:</strong> Skrip CLI polling manual di <span class="code-pill">worker.php</span> dengan loop <span class="code-pill">sleep(5)</span>.</li>
+                        <li><strong>Frontend Views:</strong> File PHP view memuat Vue 3 via script global CDN dengan JavaScript inline yang sangat panjang.</li>
+                    </ul>
+                </div>
+
+                <div class="compare-side laravel">
+                    <div class="compare-title" style="color: var(--laravel);">
+                        <i class="bi bi-boxes"></i> Target Arsitektur: Laravel 11 + Modular Engine
+                    </div>
+                    <ul style="font-size: 13px; line-height: 1.8; color: var(--dark); padding-left: 20px;">
+                        <li><strong>Routing Terisolasi per Modul:</strong> Masing-masing modul memiliki berkas <span class="code-pill">Routes/web.php</span> dan <span class="code-pill">Routes/api.php</span> sendiri.</li>
+                        <li><strong>Eloquent ORM & Relations:</strong> Query SQL manual digantikan Eloquent Model lengkap dengan relasi <span class="code-pill">hasMany</span>, <span class="code-pill">belongsTo</span>, dan Type Casting.</li>
+                        <li><strong>Multi-Tenancy Otomatis:</strong> Menggunakan package <span class="code-pill">stancl/tenancy</span> (auto-schema switching PostgreSQL & auto-tenant storage).</li>
+                        <li><strong>Enterprise Auth & RBAC:</strong> Menggunakan Laravel Sanctum / Session Auth + <span class="code-pill">spatie/laravel-permission</span> (9 Role).</li>
+                        <li><strong>Form Request Validation:</strong> Validasi otomatis terpisah (<span class="code-pill">StoreSiswaRequest</span>) dengan response JSON 422 terstandarisasi.</li>
+                        <li><strong>Queue & Horizon:</strong> Background jobs diproses via <span class="code-pill">php artisan queue:work</span> (Redis) dengan auto-retry & failed job log.</li>
+                        <li><strong>Vite + Vue 3 / Inertia:</strong> UI Vue 3 di-compile bersih via Vite (Single File Component <span class="code-pill">.vue</span>) atau disatukan via Inertia.js.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="diagram-box">
+┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                    PEMETAAN FOLDER: SINTA NATIVE  ===>  LARAVEL 11 MODULAR                      │
+├─────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ [SINTA NATIVE SAAT INI]                      [LARAVEL 11 + nwidart/laravel-modules]             │
+│                                                                                                 │
+│ app/Modules/Akademik/Controllers/    ===>    Modules/Akademik/Http/Controllers/                 │
+│ app/Modules/Akademik/Models/         ===>    Modules/Akademik/Entities/ (atau Models/)          │
+│ index.php (3266 lines route map)     ===>    Modules/Akademik/Routes/web.php & api.php          │
+│ views/akademik/                      ===>    Modules/Akademik/Resources/views/ (atau Pages/)    │
+│ app/Core/RouteGuard.php              ===>    app/Http/Middleware/TenantRouteGuard.php           │
+│ app/Core/StorageGuard.php            ===>    app/Http/Middleware/TenantStorageGuard.php         │
+│ app/Core/SessionManager.php          ===>    config/session.php + Laravel Auth Sanctum          │
+│ worker.php (Manual polling)          ===>    app/Jobs/ + php artisan queue:work                 │
+│ database/migrations/*.php            ===>    Modules/Akademik/Database/Migrations/*.php         │
+│ scratch/pengujian/test_*.php         ===>    Modules/Akademik/Tests/Feature/*.php (Pest/PHPUnit)│
+└─────────────────────────────────────────────────────────────────────────────────────────────────┘
+            </div>
+        </div>
+
+        <!-- SECTION 2: RINCIAN 16 ASPEK YANG PERLU DIPERBAIKI / DIADAPTASI -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="bi bi-tools"></i>
+                    <span>2. Rincian 16 Aspek Teknis yang Perlu Dibenahi & Diadaptasi</span>
+                </div>
+                <span class="badge badge-red">Comprehensive 16-Area Audit</span>
+            </div>
+
+            <table class="spec-table">
+                <thead>
+                    <tr>
+                        <th style="width: 20%;">Komponen Sistem</th>
+                        <th style="width: 38%;">Kondisi Saat Ini & Area Perbaikan</th>
+                        <th>Solusi & Implementasi di Laravel 11</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>1. Entry Point & Routing Monolitik</strong></td>
+                        <td>
+                            Berkas <span class="code-pill">index.php</span> berukuran 133 KB (3.266 baris) menampung seluruh rute URL, pengecekan guard, switch-case, parsing path manual, dan exception handler.<br>
+                            <span class="badge badge-red">Perlu Dirombak Total</span>
+                        </td>
+                        <td>
+                            Hapus file <span class="code-pill">index.php</span> monolitik. Pecah rute ke masing-masing modul:
+                            <span class="code-pill">Modules/Siswa/Routes/web.php</span>, <span class="code-pill">Modules/Keuangan/Routes/api.php</span>, dll.
+                            Pengecekan hak akses dialihkan ke **Laravel Route Middleware**.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>2. Database Access & Eloquent ORM</strong></td>
+                        <td>
+                            Model di <span class="code-pill">app/Modules/[Modul]/Models</span> masih menggunakan raw query PDO manual (<span class="code-pill">SELECT * FROM ...</span>). Relasi tabel ditulis manual.<br>
+                            <span class="badge badge-orange">Perlu Konversi ke Eloquent</span>
+                        </td>
+                        <td>
+                            Konversi Model menjadi **Eloquent Model**:
+                            <ul style="margin-top: 4px; padding-left: 18px;">
+                                <li>Deklarasi tabel dengan skema: <span class="code-pill">protected $table = 'akademik.kelas';</span></li>
+                                <li>Definisi relasi: <span class="code-pill">public function siswa() { return $this->hasMany(Siswa::class); }</span></li>
+                                <li>Gunakan Global Scope <span class="code-pill">BelongsToTenant</span> untuk auto-filter <span class="code-pill">tenant_id</span>.</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>3. Multi-Tenancy & Schema Isolation</strong></td>
+                        <td>
+                            Pengecekan <span class="code-pill">tenant_id</span> dilakukan manual di setiap fungsi query dan file guard kustom (<span class="code-pill">RouteGuard.php</span> & <span class="code-pill">StorageGuard.php</span>).<br>
+                            <span class="badge badge-orange">Perlu Standarisasi Package</span>
+                        </td>
+                        <td>
+                            Gunakan package **`stancl/tenancy`** atau **`spatie/laravel-multitenancy`**.
+                            Sistem secara otomatis mengubah PostgreSQL <span class="code-pill">search_path</span> per request tenant dan mengisolasi direktori upload storage.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>4. Autentikasi & RBAC (9 Role)</strong></td>
+                        <td>
+                            <span class="code-pill">SessionManager.php</span> mengelola cookie, token CSRF, fingerprint perangkat, dan status multi-role secara kustom.<br>
+                            <span class="badge badge-orange">Ganti dengan Laravel Auth</span>
+                        </td>
+                        <td>
+                            Gunakan **Laravel Native Session / Sanctum** + package **`spatie/laravel-permission`**.
+                            Pemeriksaan hak akses di Controller / View menjadi sangat mudah:
+                            <span class="code-pill">$user->hasRole('guru')</span> atau <span class="code-pill">@can('input-nilai')</span>.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>5. Validasi Input (Form Request)</strong></td>
+                        <td>
+                            Validasi manual di dalam function Controller menggunakan <span class="code-pill">$_POST</span>, <span class="code-pill">filter_var()</span>, dan <span class="code-pill">isset()</span> bercampur dengan logika bisnis.<br>
+                            <span class="badge badge-orange">Pisahkan ke Form Request</span>
+                        </td>
+                        <td>
+                            Gunakan **Laravel Form Request Validation**:
+                            <span class="code-pill">StoreSiswaRequest</span>, <span class="code-pill">UpdateNilaiRequest</span>.
+                            Validasi otomatis mengecek format data, aturan unique multi-tenant, dan auto-return error JSON 422.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>6. Standarisasi API Response & Resources</strong></td>
+                        <td>
+                            Controller me-return array manual via <span class="code-pill">$this->jsonResponse(['success' => true, ...])</span> dengan mapping data kustom.<br>
+                            <span class="badge badge-green">Adaptasi ke API Resources</span>
+                        </td>
+                        <td>
+                            Gunakan **Laravel API Resources (JsonResource / Transformers)**.
+                            Data sensitif (seperti password hash, salt, internal token) disembunyikan secara deklaratif di Resource layer.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>7. Format Migrasi Database (55 File)</strong></td>
+                        <td>
+                            55 file di <span class="code-pill">database/migrations/</span> menggunakan format closure kustom <span class="code-pill">return ['up' => function(PDO $pdo)...]</span>.<br>
+                            <span class="badge badge-orange">Perlu Format Ulang Migrasi</span>
+                        </td>
+                        <td>
+                            Konversi ke format standar **Laravel Migration Class**:
+                            <span class="code-pill">Schema::create('siswa.buku_induk', function(Blueprint $table)...)</span>
+                            agar dapat dikelola via command <span class="code-pill">php artisan module:migrate</span>.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>8. Background Queue & Jobs (worker.php)</strong></td>
+                        <td>
+                            <span class="code-pill">worker.php</span> adalah daemon CLI polling manual dengan loop <span class="code-pill">sleep(5)</span> yang rentan mati jika terjadi memory limit.<br>
+                            <span class="badge badge-red">Ganti dengan Laravel Queue</span>
+                        </td>
+                        <td>
+                            Ubah tugas berat (Generate Tagihan SPP Massal, Bulk Print Rapor, Ekspor Excel) menjadi **Laravel Jobs** (<span class="code-pill">GenerateTagihanJob</span>) yang dijalankan via <span class="code-pill">php artisan queue:work</span> (driver Redis/Database) + monitoring **Laravel Horizon**.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>9. Modernisasi Frontend (Vue 3 + Vite / Inertia)</strong></td>
+                        <td>
+                            File di <span class="code-pill">views/</span> memuat Vue 3 via CDN Global Build dengan script inline JS di bawah HTML PHP (misal: file <span class="code-pill">master_bk.php</span> berukuran 489 KB).<br>
+                            <span class="badge badge-orange">Modernisasi ke SFC / Inertia</span>
+                        </td>
+                        <td>
+                            Pisahkan menjadi **Vue 3 Single File Components (.vue)** di dalam <span class="code-pill">resources/js/Pages/</span>.
+                            Gunakan **Vite** untuk build minified bundle dan **Inertia.js** agar Controller langsung merender view tanpa perlu memisahkan backend-frontend secara rumit.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>10. Spreadsheet Excel Import / Export</strong></td>
+                        <td>
+                            Menggunakan <span class="code-pill">SimpleXLSX</span> & <span class="code-pill">SimpleXLSXGen</span> secara prosedural di dalam controller.<br>
+                            <span class="badge badge-green">Upgrade ke Laravel Excel</span>
+                        </td>
+                        <td>
+                            Gunakan package **`maatwebsite/excel`**.
+                            Mendukung *Chunk Reading*, *Queueable Exports*, dan *Batched Imports* sehingga import ribuan data siswa/nilai tidak pernah mengalami timeout.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>11. Generator Dokumen & Cetak PDF</strong></td>
+                        <td>
+                            Eksekusi Node.js Puppeteer manual via script command line <span class="code-pill">exec()</span>.<br>
+                            <span class="badge badge-green">Integrasi Browsershot / Snappy</span>
+                        </td>
+                        <td>
+                            Gunakan package **`spatie/laravel-browsershot`** atau **`barryvdh/laravel-snappy`**.
+                            Terintegrasi langsung dengan background queue worker untuk cetak rapor massal 1 sekolah tanpa membebani web server utama.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>12. Single Session & Device Management</strong></td>
+                        <td>
+                            Perekaman session aktif dilakukan manual via <span class="code-pill">App\Helpers\SessionTracker.php</span> dan tabel <span class="code-pill">core.active_sessions</span>.<br>
+                            <span class="badge badge-slate">Ganti Middleware Native</span>
+                        </td>
+                        <td>
+                            Gunakan session driver <span class="code-pill">database</span> bawaan Laravel + middleware <span class="code-pill">AuthenticateSession</span> untuk otomatis meng-kick login di perangkat lain saat password diganti.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>13. Rate Limiting & Proteksi DDoS</strong></td>
+                        <td>
+                            Belum ada proteksi rate limiter pada endpoint API login dan eksekusi transaksi keuangan.<br>
+                            <span class="badge badge-red">Wajib Ditambahkan</span>
+                        </td>
+                        <td>
+                            Gunakan **Laravel Rate Limiter** (<span class="code-pill">RateLimiter::for('api', ...)</span> & <span class="code-pill">throttle:60,1</span>) untuk mencegah brute-force login dan abuse pada API endpoint.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>14. Storage Quota & File Upload Guard</strong></td>
+                        <td>
+                            Pengecekan batas kuota penyimpanan sekolah dihitung manual via iterasi direktori di <span class="code-pill">StorageGuard.php</span>.<br>
+                            <span class="badge badge-orange">Middleware Storage Quota</span>
+                        </td>
+                        <td>
+                            Gunakan Middleware Laravel <span class="code-pill">CheckTenantStorageQuota</span> yang memeriksa kolom <span class="code-pill">core.tenants.storage_used_bytes</span> sebelum file disimpan ke <span class="code-pill">Storage::disk('tenant')</span>.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>15. Centralized Error Tracking & Sentry APM</strong></td>
+                        <td>
+                            Error tracking PHP disimpan di tabel <span class="code-pill">sistem.system_errors</span> dan JS error dikirim via <span class="code-pill">sendBeacon</span>.<br>
+                            <span class="badge badge-green">Upgrade ke Monolog / Sentry</span>
+                        </td>
+                        <td>
+                            Gunakan **Laravel Exception Handler (Monolog)** + integrasi **Sentry / Bugsnag** dan **Laravel Telescope** untuk diagnostik error server secara real-time.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>16. Testing Suite (Automated QA)</strong></td>
+                        <td>
+                            Pengujian saat ini berupa 360+ berkas script uji mandiri di folder <span class="code-pill">scratch/pengujian/test_*.php</span>.<br>
+                            <span class="badge badge-purple">Standarisasi ke PHPUnit / Pest</span>
+                        </td>
+                        <td>
+                            Konversikan menjadi **Pest PHP / PHPUnit Feature Tests** terstruktur di <span class="code-pill">Modules/[Modul]/Tests/Feature/</span> yang dapat dijalankan otomatis sekali jalan via <span class="code-pill">php artisan test</span>.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- SECTION 3: LANGKAH-LANGKAH MIGRASI BERTAHAP -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="bi bi-signpost-split-fill"></i>
+                    <span>3. Rencana Eksekusi Migrasi Bertahap (Step-by-Step Migration Phases)</span>
+                </div>
+                <span class="badge badge-blue">Roadmap Eksekusi</span>
+            </div>
+
+            <!-- Fase 1 -->
+            <div class="phase-card">
+                <div class="phase-number">FASE 01</div>
+                <div class="phase-title">Inisialisasi Project Laravel 11 & Package Setup</div>
+                <p style="font-size: 13px; color: var(--secondary); margin-bottom: 10px;">
+                    Membuat fondasi proyek Laravel 11 baru dan memasang package-package inti yang dibutuhkan untuk arsitektur modular & multi-tenant.
+                </p>
+                <div style="font-size: 12.5px; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
+                    <strong>Command Utama:</strong><br>
+                    <span class="code-pill">composer create-project laravel/laravel sinta-v2</span><br>
+                    <span class="code-pill">composer require nwidart/laravel-modules stancl/tenancy spatie/laravel-permission maatwebsite/excel spatie/laravel-browsershot</span><br>
+                    <span class="code-pill">npm install vue @vitejs/plugin-vue @inertiajs/vue3 tailwindcss bootstrap bootstrap-icons</span>
+                </div>
+            </div>
+
+            <!-- Fase 2 -->
+            <div class="phase-card">
+                <div class="phase-number">FASE 02</div>
+                <div class="phase-title">Konfigurasi Database Multi-Schema & Porting Migrasi</div>
+                <p style="font-size: 13px; color: var(--secondary); margin-bottom: 10px;">
+                    Menghubungkan koneksi PostgreSQL ke 16 skema yang sudah ada (<span class="code-pill">search_path</span>) dan mengonversi berkas migrasi database ke dalam format Laravel Migration per-modul.
+                </p>
+                <div style="font-size: 12.5px; color: var(--secondary);">
+                    • Konfigurasi <span class="code-pill">config/database.php</span> driver PostgreSQL dengan 16 skema.<br>
+                    • Generate struktur modul menggunakan command: <span class="code-pill">php artisan module:make Siswa</span>, <span class="code-pill">php artisan module:make Akademik</span>, <span class="code-pill">php artisan module:make Keuangan</span>, dll.
+                </div>
+            </div>
+
+            <!-- Fase 3 -->
+            <div class="phase-card">
+                <div class="phase-number">FASE 03</div>
+                <div class="phase-title">Porting Model & Logic Bisnis (Eloquent + Form Request + RBAC)</div>
+                <p style="font-size: 13px; color: var(--secondary); margin-bottom: 10px;">
+                    Memindahkan logika controller dan model dari folder <span class="code-pill">app/Modules/</span> lama ke folder <span class="code-pill">Modules/[Modul]/</span> Laravel, serta mendefinisikan relasi Eloquent dan role permission.
+                </p>
+                <div style="font-size: 12.5px; color: var(--secondary);">
+                    • Pindahkan logika perhitungan Rapor, Ledger, SPP, Konseling BK, dan Algoritma Simulasi PDSS.<br>
+                    • Terapkan Middleware Tenancy & RBAC Guard pada route masing-masing modul.
+                </div>
+            </div>
+
+            <!-- Fase 4 -->
+            <div class="phase-card">
+                <div class="phase-number">FASE 04</div>
+                <div class="phase-title">Modernisasi Frontend Vue 3 + Inertia / Vite & Integrasi UI</div>
+                <p style="font-size: 13px; color: var(--secondary); margin-bottom: 10px;">
+                    Mengonversi tampilan view PHP yang memuat Vue inline menjadi komponen Vue 3 Single File Component (<span class="code-pill">.vue</span>) yang rapi, cepat, dan terkompilasi bersih via Vite.
+                </p>
+                <div style="font-size: 12.5px; color: var(--secondary);">
+                    • Mempertahankan seluruh desain styling Bootstrap 5.3 + Tailwind CSS dan NavTab scroller yang sudah ada.<br>
+                    • Integrasi Inertia.js untuk pertukaran data backend-frontend yang sangat cepat dan bebas error script leak.
+                </div>
+            </div>
+
+            <!-- Fase 5 -->
+            <div class="phase-card">
+                <div class="phase-number">FASE 05</div>
+                <div class="phase-title">Pengujian Menyeluruh (Pest / PHPUnit) & Switch Produksi</div>
+                <p style="font-size: 13px; color: var(--secondary);">
+                    Menjalankan pengujian fitur secara menyeluruh (CRUD Siswa, Ledger Rapor, Cetak PDF Puppeteer, Kasir SPP, dan Simulasi PDSS), validasi isolasi data tenant, dan deployment ke server produksi.
+                </p>
+            </div>
+        </div>
+
+        <!-- SECTION 4: KESIMPULAN & MANFAAT SETELAH MIGRASI -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="bi bi-trophy-fill"></i>
+                    <span>4. Keuntungan & Manfaat Bisnis Pasca Migrasi</span>
+                </div>
+                <span class="badge badge-green">High Value ROI</span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+                <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 18px;">
+                    <div style="font-weight: 700; font-size: 14px; margin-bottom: 6px; color: var(--laravel);">
+                        <i class="bi bi-speedometer2 me-1"></i> Performa & Skalabilitas Tinggi
+                    </div>
+                    <div style="font-size: 12.5px; color: var(--secondary);">
+                        Dapat melayani ratusan hingga ribuan sekolah secara simultan berkat manajemen background worker Redis, caching route, dan OPcache bawaan Laravel.
+                    </div>
+                </div>
+
+                <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 18px;">
+                    <div style="font-weight: 700; font-size: 14px; margin-bottom: 6px; color: var(--laravel);">
+                        <i class="bi bi-shield-check me-1"></i> Keamanan Standar Internasional
+                    </div>
+                    <div style="font-size: 12.5px; color: var(--secondary);">
+                        Perlindungan otomatis terhadap CSRF, SQL Injection, XSS, Session Fixation, dan Rate Limiting DDoS tanpa perlu membuat custom guard manual.
+                    </div>
+                </div>
+
+                <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 18px;">
+                    <div style="font-weight: 700; font-size: 14px; margin-bottom: 6px; color: var(--laravel);">
+                        <i class="bi bi-code-square me-1"></i> Kode Bersih & Mudah Dirawat
+                    </div>
+                    <div style="font-size: 12.5px; color: var(--secondary);">
+                        Setiap modul berdiri mandiri (<span class="code-pill">nwidart/laravel-modules</span>). Jika ada penambahan fitur baru pada modul tertentu, tidak akan mengganggu modul lainnya.
+                    </div>
+                </div>
+
+                <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 18px;">
+                    <div style="font-weight: 700; font-size: 14px; margin-bottom: 6px; color: var(--laravel);">
+                        <i class="bi bi-puzzle me-1"></i> Integrasi Ekosistem Luas
+                    </div>
+                    <div style="font-size: 12.5px; color: var(--secondary);">
+                        Sangat mudah diintegrasikan dengan Payment Gateway resmi (Midtrans/Xendit), WhatsApp Gateway API, dan integrasi mobile app Flutter/PWA di masa depan.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>SINTA-SaaS Migration & Comprehensive Code Audit Report</strong></p>
+            <p style="margin-top: 4px;">Dihasilkan secara otomatis untuk rencana modernisasi sistem di <code>C:\laragon\www\sinta</code></p>
+            <p style="margin-top: 4px; font-size: 11.5px; color: #94a3b8;">© 2026 SINTA-SaaS Architectural Review. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
