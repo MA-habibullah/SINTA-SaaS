@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PosKeuangan extends BaseTenantModel
 {
-    protected $table = 'keuangan.pos_keuangan';
+    protected $table = 'keuangan.transaksi_spp_komponen';
 
     protected $fillable = [
         'id',

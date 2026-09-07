@@ -20,17 +20,14 @@ class PerpustakaanController extends Controller
     {
         $bukuList = Buku::query()
             ->when($request->search, function ($q, $search) {
-                $q->where('judul_buku', 'ILIKE', "%{$search}%")
-                  ->orWhere('pengarang', 'ILIKE', "%{$search}%")
-                  ->orWhere('isbn', 'ILIKE', "%{$search}%")
-                  ->orWhere('nomor_klasifikasi_ddc', 'ILIKE', "%{$search}%");
+                $q->where('nama_perpus_bibliografi', 'ILIKE', "%{$search}%")
+                  ->orWhere('kategori', 'ILIKE', "%{$search}%");
             })
-            ->orderBy('judul_buku', 'asc')
+            ->orderBy('created_at', 'desc')
             ->paginate(15);
 
-        $sirkulasiAktif = Sirkulasi::with(['buku', 'siswa'])
-            ->whereIn('status_sirkulasi', ['Dipinjam', 'Terlambat'])
-            ->orderBy('tanggal_harus_kembali', 'asc')
+        $sirkulasiAktif = Sirkulasi::query()
+            ->orderBy('created_at', 'desc')
             ->paginate(15);
 
         if ($request->wantsJson()) {

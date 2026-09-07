@@ -4,17 +4,17 @@ namespace Modules\Pdss\Services;
 
 use Modules\Siswa\Entities\Siswa;
 use Modules\Akademik\Entities\NilaiRapor;
-use Modules\Core\Entities\SekolahIdentitas;
+use Modules\Core\Entities\Tenant;
 
 class PdssRankingService
 {
     /**
      * Hitung pemeringkatan siswa eligible SNBP (PDSS) berdasarkan nilai rapor semester 1-5
      */
-    public function hitungRankingSnbp(string $tenantId, string $jurusan, string $angkatan): array
+    public function hitungRankingSnbp(?string $tenantId, string $jurusan, string $angkatan): array
     {
-        $identitas = SekolahIdentitas::where('tenant_id', $tenantId)->first();
-        $akreditasi = strtoupper(trim($identitas->akreditasi ?? 'A'));
+        $tenant = $tenantId ? Tenant::where('id', $tenantId)->first() : null;
+        $akreditasi = strtoupper(trim($tenant->akreditasi ?? 'A'));
 
         // Kuota SNBP berdasarkan Akreditasi Kemendikbud:
         // A: 40%, B: 25%, C/Lainnya: 5%

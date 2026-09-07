@@ -6,7 +6,7 @@ use Modules\Core\Entities\BaseTenantModel;
 
 class Gtk extends BaseTenantModel
 {
-    protected $table = 'kepegawaian.gtk';
+    protected $table = 'kepegawaian.ptk_identitas';
 
     protected $fillable = [
         'id',

@@ -16,8 +16,8 @@ class BkController extends Controller
 {
     public function index(Request $request): InertiaResponse|JsonResponse
     {
-        $pelanggaranList = Pelanggaran::with('siswa')->orderBy('tanggal_kejadian', 'desc')->paginate(15);
-        $konselingList = Konseling::with('siswa')->orderBy('tanggal_konseling', 'desc')->paginate(15);
+        $pelanggaranList = Pelanggaran::orderBy('created_at', 'desc')->paginate(15);
+        $konselingList = Konseling::orderBy('created_at', 'desc')->paginate(15);
 
         if ($request->wantsJson()) {
             return response()->json([

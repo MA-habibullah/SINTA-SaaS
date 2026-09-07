@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TagihanSiswa extends BaseTenantModel
 {
-    protected $table = 'keuangan.tagihan_siswa';
+    protected $table = 'keuangan.transaksi_spp_tagihan';
 
     protected $fillable = [
         'id',

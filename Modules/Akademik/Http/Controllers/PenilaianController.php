@@ -53,7 +53,7 @@ class PenilaianController extends Controller
 
         return Inertia::render('Akademik/Penilaian/Index', [
             'kelasList'     => Kelas::where('is_active', true)->get(['id', 'nama_kelas']),
-            'mapelList'     => MataPelajaran::where('is_active', true)->get(['id', 'nama_mapel']),
+            'mapelList'     => MataPelajaran::where('is_active', true)->get(['id', 'nama_mata_pelajaran']),
             'siswaList'     => $siswaList,
             'existingNilai' => $existingNilai,
             'filters'       => compact('kelasId', 'mapelId', 'semester'),

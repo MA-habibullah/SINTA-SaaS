@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TarifPembayaran extends BaseTenantModel
 {
-    protected $table = 'keuangan.tarif_pembayaran';
+    protected $table = 'keuangan.transaksi_spp_tarif';
 
     protected $fillable = [
         'id',

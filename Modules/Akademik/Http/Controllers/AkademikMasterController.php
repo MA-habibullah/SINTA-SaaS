@@ -22,8 +22,8 @@ class AkademikMasterController extends Controller
     {
         $tahunAjaran = TahunAjaran::orderBy('created_at', 'desc')->get();
         $jurusan = Jurusan::where('is_active', true)->orderBy('nama_jurusan', 'asc')->get();
-        $kelas = Kelas::with(['jurusan', 'tahunAjaran'])->where('is_active', true)->orderBy('nama_kelas', 'asc')->get();
-        $mapel = MataPelajaran::where('is_active', true)->orderBy('nama_mapel', 'asc')->get();
+        $kelas = Kelas::where('is_active', true)->orderBy('nama_kelas', 'asc')->get();
+        $mapel = MataPelajaran::where('is_active', true)->orderBy('nama_mata_pelajaran', 'asc')->get();
 
         if (request()->wantsJson()) {
             return response()->json([

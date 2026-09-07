@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PrakerinPkl extends BaseTenantModel
 {
-    protected $table = 'smk.prakerin_pkl';
+    protected $table = 'smk.pkl_penempatan';
 
     protected $fillable = [
         'id',

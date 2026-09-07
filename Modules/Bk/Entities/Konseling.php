@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Konseling extends BaseTenantModel
 {
-    protected $table = 'bk.konseling';
+    protected $table = 'bk.catatan_bk';
 
     protected $fillable = [
         'id',

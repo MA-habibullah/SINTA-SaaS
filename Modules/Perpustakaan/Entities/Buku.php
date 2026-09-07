@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Buku extends BaseTenantModel
 {
-    protected $table = 'perpustakaan.buku';
+    protected $table = 'perpustakaan.perpus_bibliografi';
 
     protected $fillable = [
         'id',

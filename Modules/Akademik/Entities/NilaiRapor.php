@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class NilaiRapor extends BaseTenantModel
 {
-    protected $table = 'akademik.nilai_rapor';
+    protected $table = 'akademik.detail_nilai_rapor';
 
     protected $fillable = [
         'id',

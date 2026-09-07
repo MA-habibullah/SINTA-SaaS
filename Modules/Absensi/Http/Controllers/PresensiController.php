@@ -16,8 +16,7 @@ class PresensiController extends Controller
     {
         $tanggal = $request->input('tanggal', now()->toDateString());
 
-        $presensiList = PresensiHarian::where('tanggal', $tanggal)
-            ->orderBy('created_at', 'desc')
+        $presensiList = PresensiHarian::orderBy('created_at', 'desc')
             ->paginate(25);
 
         if ($request->wantsJson()) {

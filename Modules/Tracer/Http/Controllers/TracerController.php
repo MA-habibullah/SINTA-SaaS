@@ -14,21 +14,13 @@ class TracerController extends Controller
 {
     public function index(Request $request): InertiaResponse|JsonResponse
     {
-        $alumniList = TracerStudy::with('siswa')
-            ->when($request->status, function ($q, $status) {
-                $q->where('status_saat_ini', $status);
-            })
-            ->when($request->tahun, function ($q, $tahun) {
-                $q->where('tahun_lulus', $tahun);
-            })
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
+        $alumniList = TracerStudy::orderBy('created_at', 'desc')->paginate(20);
 
         // Rekapitulasi Statistik Vokasi
         $totalResponden = TracerStudy::count();
-        $bekerjaCount = TracerStudy::where('status_saat_ini', 'Bekerja')->count();
-        $wirausahaCount = TracerStudy::where('status_saat_ini', 'Wirausaha')->count();
-        $kuliahCount = TracerStudy::where('status_saat_ini', 'Melanjutkan Kuliah')->count();
+        $bekerjaCount = TracerStudy::where('kategori', 'Bekerja')->count();
+        $wirausahaCount = TracerStudy::where('kategori', 'Wirausaha')->count();
+        $kuliahCount = TracerStudy::where('kategori', 'Melanjutkan Kuliah')->count();
 
         if ($request->wantsJson()) {
             return response()->json([

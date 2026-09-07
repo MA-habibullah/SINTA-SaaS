@@ -6,7 +6,7 @@ use Modules\Core\Entities\BaseTenantModel;
 
 class Pengumuman extends BaseTenantModel
 {
-    protected $table = 'cms.pengumuman';
+    protected $table = 'sistem.pengumuman';
 
     protected $fillable = [
         'id',

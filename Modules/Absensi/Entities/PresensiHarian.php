@@ -6,7 +6,7 @@ use Modules\Core\Entities\BaseTenantModel;
 
 class PresensiHarian extends BaseTenantModel
 {
-    protected $table = 'absensi.presensi_harian';
+    protected $table = 'absensi.presensi_siswa_harian';
 
     protected $fillable = [
         'id',

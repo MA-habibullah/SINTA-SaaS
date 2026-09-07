@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TracerStudy extends BaseTenantModel
 {
-    protected $table = 'tracer.kuesioner_alumni';
+    protected $table = 'tracer.tracer_study_alumni';
 
     protected $fillable = [
         'id',

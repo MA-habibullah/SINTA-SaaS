@@ -6,7 +6,7 @@ use Modules\Core\Entities\BaseTenantModel;
 
 class Berita extends BaseTenantModel
 {
-    protected $table = 'cms.berita';
+    protected $table = 'cms.cms_posts';
 
     protected $fillable = [
         'id',

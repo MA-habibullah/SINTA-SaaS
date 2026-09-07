@@ -6,7 +6,7 @@ use Modules\Core\Entities\BaseTenantModel;
 
 class KasBank extends BaseTenantModel
 {
-    protected $table = 'keuangan.kas_bank';
+    protected $table = 'keuangan.transaksi_spp_audit_log';
 
     protected $fillable = [
         'id',

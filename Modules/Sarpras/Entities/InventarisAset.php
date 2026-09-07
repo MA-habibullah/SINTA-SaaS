@@ -6,7 +6,7 @@ use Modules\Core\Entities\BaseTenantModel;
 
 class InventarisAset extends BaseTenantModel
 {
-    protected $table = 'sarpras.inventaris_aset';
+    protected $table = 'sarpras.barang_modal';
 
     protected $fillable = [
         'id',

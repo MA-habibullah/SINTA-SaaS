@@ -6,7 +6,7 @@ use Modules\Core\Entities\BaseTenantModel;
 
 class PpdbPendaftar extends BaseTenantModel
 {
-    protected $table = 'siswa.calon_siswa';
+    protected $table = 'kesiswaan.pendaftaran_spmb';
 
     protected $fillable = [
         'id',

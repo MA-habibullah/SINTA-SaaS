@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TransaksiPembayaran extends BaseTenantModel
 {
-    protected $table = 'keuangan.transaksi_pembayaran';
+    protected $table = 'keuangan.transaksi_spp_pembayaran';
 
     protected $fillable = [
         'id',

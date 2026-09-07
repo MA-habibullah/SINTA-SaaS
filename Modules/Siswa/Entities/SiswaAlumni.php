@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SiswaAlumni extends BaseTenantModel
 {
-    protected $table = 'siswa.alumni';
+    protected $table = 'tracer.alumni';
 
     protected $fillable = [
         'id',
