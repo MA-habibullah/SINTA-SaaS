@@ -42,5 +42,14 @@ Thumbs.db
 *.ntvs*
 *.njsproj
 
-# Node modules / Dependencies
+# Dependencies & Build Artefacts
+/vendor/
 node_modules/
+/public/build/
+/bootstrap/cache/*
+!/bootstrap/cache/.gitignore
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/logs/*
+!/storage/logs/.gitignore
