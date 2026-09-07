@@ -22,7 +22,7 @@ class AuthController extends Controller
     public function showLoginForm(): InertiaResponse
     {
         return Inertia::render('Auth/Login', [
-            'tenants' => Tenant::where('is_active', true)->select('id', 'nama_sekolah', 'npsn', 'logo_url')->get(),
+            'tenants' => Tenant::whereIn('status', ['aktif', 'active'])->select('id', 'nama_sekolah', 'npsn', 'logo')->get(),
         ]);
     }
 
@@ -37,7 +37,7 @@ class AuthController extends Controller
             'tenant_id' => ['nullable', 'string'],
         ]);
 
-        $query = User::where(function ($q) use ($credentials) {
+        $query = User::with('role')->where(function ($q) use ($credentials) {
             $q->where('username', $credentials['username'])
               ->orWhere('email', $credentials['username']);
         });
@@ -48,7 +48,7 @@ class AuthController extends Controller
 
         $user = $query->first();
 
-        if (!$user || !Hash::check($credentials['password'], $user->password)) {
+        if (!$user || !password_verify($credentials['password'], $user->password_hash)) {
             throw ValidationException::withMessages([
                 'username' => 'Kombinasi nama pengguna atau kata sandi tidak cocok.',
             ]);
@@ -63,12 +63,6 @@ class AuthController extends Controller
         Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
         $request->session()->put('tenant_id', $user->tenant_id);
-
-        // Update tracking login
-        $user->update([
-            'last_login_at' => now(),
-            'last_login_ip' => $request->ip(),
-        ]);
 
         if ($request->wantsJson()) {
             return response()->json([

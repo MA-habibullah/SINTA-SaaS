@@ -23,4 +23,6 @@ return [
     Modules\Absensi\Providers\AbsensiServiceProvider::class,
     Modules\Kepegawaian\Providers\KepegawaianServiceProvider::class,
     Modules\Cms\Providers\CmsServiceProvider::class,
+    Modules\Sistem\Providers\SistemServiceProvider::class,
+    Modules\Kesiswaan\Providers\KesiswaanServiceProvider::class,
 ];

@@ -5,59 +5,77 @@ namespace Modules\Core\Entities;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class User extends Authenticatable
 {
-    use HasUuids, HasRoles, Notifiable, SoftDeletes;
+    use HasUuids, Notifiable;
 
     protected $table = 'core.users';
     protected $keyType = 'string';
     public $incrementing = false;
-    protected $guard_name = 'web';
+    public $timestamps = true;
 
     protected $fillable = [
         'id',
         'tenant_id',
+        'role_id',
+        'nama_lengkap',
         'username',
         'email',
-        'password',
-        'nama_lengkap',
-        'role',
-        'no_hp',
-        'foto_url',
+        'password_hash',
         'is_active',
-        'last_login_at',
-        'last_login_ip',
-        'two_factor_secret',
-        'two_factor_recovery_codes',
-        'two_factor_confirmed_at',
+        'nip',
+        'nuptk',
+        'jenis_gtk',
+        'jabatan_struktural',
+        'status_kepegawaian',
+        'jam_mengajar',
+        'status_sertifikasi',
+        'no_hp',
+        'alamat',
+        'jenis_kelamin',
     ];
 
     protected $hidden = [
-        'password',
+        'password_hash',
         'remember_token',
-        'two_factor_secret',
-        'two_factor_recovery_codes',
     ];
 
     protected $casts = [
-        'is_active'               => 'boolean',
-        'last_login_at'           => 'datetime',
-        'two_factor_confirmed_at' => 'datetime',
-        'email_verified_at'       => 'datetime',
-        'password'                => 'hashed',
+        'is_active'          => 'boolean',
+        'status_sertifikasi' => 'boolean',
+        'jam_mengajar'       => 'integer',
+        'created_at'         => 'datetime',
+        'updated_at'         => 'datetime',
     ];
+
+    /**
+     * Get password attribute for Laravel Auth
+     */
+    public function getAuthPassword(): string
+    {
+        return (string) $this->password_hash;
+    }
 
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class, 'tenant_id', 'id');
     }
 
+    public function role(): BelongsTo
+    {
+        return $this->belongsTo(Role::class, 'role_id', 'id');
+    }
+
     public function isSuperAdmin(): bool
     {
-        return $this->role === 'super_admin' || $this->hasRole('super_admin');
+        return $this->role && $this->role->nama_role === 'super_admin';
+    }
+
+    public function hasRole(string $roleName): bool
+    {
+        return $this->role && $this->role->nama_role === $roleName;
     }
 }
+

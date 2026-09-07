@@ -5,11 +5,10 @@ namespace Modules\Core\Entities;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 abstract class BaseTenantModel extends Model
 {
-    use HasUuids, SoftDeletes;
+    use HasUuids;
 
     protected $keyType = 'string';
     public $incrementing = false;

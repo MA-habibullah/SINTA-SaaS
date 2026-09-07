@@ -4,52 +4,74 @@ namespace Modules\Core\Entities;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Tenant extends Model
 {
-    use HasUuids, SoftDeletes;
+    use HasUuids;
 
     protected $table = 'core.tenants';
     protected $keyType = 'string';
     public $incrementing = false;
+    public $timestamps = true;
 
     protected $fillable = [
         'id',
-        'npsn',
         'nama_sekolah',
-        'jenjang',
+        'npsn',
+        'subdomain',
+        'custom_domain',
+        'cname_alias',
+        'cms_landing_enabled',
+        'cms_hero_title',
+        'cms_hero_subtitle',
+        'cms_theme_color',
+        'sub_portal_login_siswa',
+        'sub_portal_login_admin',
+        'sub_portal_perpus',
+        'sub_portal_pdss',
+        'sub_portal_ppdb',
+        'sub_portal_tracer',
+        'status',
+        'paket_aktif',
+        'status_sinkronisasi',
+        'logo',
+        'sertifikat_akreditasi',
+        'bentuk_pendidikan',
         'status_sekolah',
-        'alamat_jalan',
-        'desa_kelurahan',
+        'kurikulum_terapan',
+        'akreditasi',
+        'alamat',
+        'rt_rw',
+        'kode_pos',
+        'kelurahan',
         'kecamatan',
         'kabupaten_kota',
         'provinsi',
-        'kode_pos',
-        'nomor_telepon',
+        'telepon',
         'email',
         'website',
-        'logo_url',
-        'favicon_url',
-        'kepala_sekolah_nama',
-        'kepala_sekolah_nip',
-        'paket_aktif',
-        'masa_aktif_hingga',
+        'nama_kepsek',
+        'pangkat_kepsek',
+        'nip_kepsek',
+        'nama_operator',
+        'email_operator',
         'storage_limit_mb',
-        'storage_used_bytes',
-        'status_langganan',
-        'is_active',
-        'settings_json',
+        'max_siswa_limit',
+        'max_staff_limit',
+        'enable_bk',
+        'enable_tracer',
     ];
 
     protected $casts = [
-        'is_active'          => 'boolean',
-        'storage_limit_mb'   => 'integer',
-        'storage_used_bytes' => 'integer',
-        'masa_aktif_hingga'  => 'datetime',
-        'settings_json'      => 'array',
+        'cms_landing_enabled' => 'boolean',
+        'storage_limit_mb'    => 'integer',
+        'max_siswa_limit'     => 'integer',
+        'max_staff_limit'     => 'integer',
+        'enable_bk'           => 'integer',
+        'enable_tracer'       => 'integer',
+        'created_at'          => 'datetime',
+        'updated_at'          => 'datetime',
     ];
 
     public function users(): HasMany
@@ -57,8 +79,8 @@ class Tenant extends Model
         return $this->hasMany(User::class, 'tenant_id', 'id');
     }
 
-    public function identitas(): HasOne
+    public function isActive(): bool
     {
-        return $this->hasOne(SekolahIdentitas::class, 'tenant_id', 'id');
+        return $this->status === 'aktif' || $this->status === 'active';
     }
 }
