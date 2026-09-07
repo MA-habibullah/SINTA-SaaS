@@ -8,17 +8,16 @@ use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
-use Modules\Core\Entities\SekolahIdentitas;
+use Modules\Core\Entities\Tenant;
 
 class SekolahIdentitasController extends Controller
 {
     public function show(): InertiaResponse|JsonResponse
     {
-        $tenantId = session('tenant_id');
-        $identitas = SekolahIdentitas::firstOrCreate(
-            ['tenant_id' => $tenantId],
-            ['nama_sekolah' => 'SINTA SaaS Partner School']
-        );
+        $tenantId = session('tenant_id') ?? auth()->user()?->tenant_id;
+        $identitas = Tenant::find($tenantId) ?? Tenant::first() ?? new Tenant([
+            'nama_sekolah' => 'SINTA SaaS Partner School',
+        ]);
 
         if (request()->wantsJson()) {
             return response()->json(['success' => true, 'data' => $identitas]);

@@ -16,7 +16,7 @@ class CmsController extends Controller
 {
     public function index(): InertiaResponse|JsonResponse
     {
-        $pengumumanList = Pengumuman::orderBy('tanggal_publikasi', 'desc')->paginate(15);
+        $pengumumanList = Pengumuman::orderBy('created_at', 'desc')->paginate(15);
         $beritaList = Berita::orderBy('created_at', 'desc')->paginate(15);
 
         if (request()->wantsJson()) {

@@ -15,7 +15,7 @@ class PosTarifController extends Controller
 {
     public function index(): InertiaResponse|JsonResponse
     {
-        $posList = PosKeuangan::with('tarif')->where('is_active', true)->orderBy('nama_pos', 'asc')->get();
+        $posList = PosKeuangan::where('is_active', true)->orderBy('created_at', 'desc')->get();
 
         if (request()->wantsJson()) {
             return response()->json(['success' => true, 'data' => $posList]);

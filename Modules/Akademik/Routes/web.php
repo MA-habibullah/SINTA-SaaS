@@ -8,7 +8,9 @@ use Modules\Akademik\Http\Controllers\RaporController;
 Route::middleware(['auth', 'tenant.guard'])->prefix('akademik')->name('akademik.')->group(function () {
     // 1. Master Data Akademik
     Route::get('/master', [AkademikMasterController::class, 'index'])->name('master.index');
+    Route::get('/kelas', [AkademikMasterController::class, 'index'])->name('kelas.index');
     Route::post('/kelas', [AkademikMasterController::class, 'storeKelas'])->name('kelas.store');
+    Route::get('/mapel', [AkademikMasterController::class, 'index'])->name('mapel.index');
     Route::post('/mapel', [AkademikMasterController::class, 'storeMapel'])->name('mapel.store');
 
     // 2. Lembar Penilaian Siswa
