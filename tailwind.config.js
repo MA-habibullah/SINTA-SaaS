@@ -1,12 +1,20 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+export default {
   content: [
-    "./views/**/*.php",
-    "./app/**/*.php",
-    "./public/**/*.js"
+    "./resources/**/*.blade.php",
+    "./resources/**/*.js",
+    "./resources/**/*.vue",
+    "./Modules/**/Resources/**/*.blade.php",
+    "./Modules/**/Resources/**/*.vue",
+    "./Modules/**/Resources/**/*.js",
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+      },
+    },
   },
   plugins: [],
 }
+
