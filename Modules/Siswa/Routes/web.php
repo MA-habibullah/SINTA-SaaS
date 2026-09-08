@@ -10,9 +10,12 @@ Route::middleware(['auth', 'tenant.guard'])->prefix('siswa')->name('siswa.')->gr
     // 1. Buku Induk Siswa
     Route::prefix('buku-induk')->name('buku-induk.')->group(function () {
         Route::get('/', [BukuIndukController::class, 'index'])->name('index');
+        Route::get('/cetak/{id?}', [BukuIndukController::class, 'cetakLembarBukuInduk'])->name('cetak');
+        Route::get('/create', [BukuIndukController::class, 'create'])->name('create');
         Route::post('/', [BukuIndukController::class, 'store'])->name('store');
         Route::get('/{id}', [BukuIndukController::class, 'show'])->name('show');
-        Route::put('/{id}', [BukuIndukController::class, 'update'])->name('update');
+        Route::get('/{id}/edit', [BukuIndukController::class, 'edit'])->name('edit');
+        Route::match(['post', 'put', 'patch'], '/{id}', [BukuIndukController::class, 'update'])->name('update');
         Route::delete('/{id}', [BukuIndukController::class, 'destroy'])->name('destroy');
     });
 
