@@ -13,6 +13,9 @@ export default {
       fontFamily: {
         sans: ['"Plus Jakarta Sans"', 'sans-serif'],
       },
+      fontSize: {
+        '2xs': '0.65rem',
+      },
     },
   },
   plugins: [],

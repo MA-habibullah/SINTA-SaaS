@@ -15,13 +15,25 @@
 /storage/app/public/*
 /storage/app/rate_limit/*
 /storage/sessions/*
+/public/storage
+/public/storage/*
+/public/hot
+/public/storage
 
 # PENGECUALIAN: Tetap lacak berkas .htaccess untuk keamanan direktori web server
 !/storage/app/public/.htaccess
 !/storage/app/public/**/.htaccess
+!/public/storage/.htaccess
 
 # PENGECUALIAN: Tetap lacak berkas .gitkeep agar struktur folder storage tetap ada di repository
 !/storage/app/public/**/.gitkeep
+!/public/storage/**/.gitkeep
+!/storage/framework/**/.gitkeep
+!/storage/logs/**/.gitkeep
+
+# Package Managers
+/node_modules/
+/vendor/
 
 
 # Mengabaikan folder scratch & file debugging lokal

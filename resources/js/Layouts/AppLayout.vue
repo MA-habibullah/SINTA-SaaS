@@ -1,15 +1,16 @@
 <template>
-  <div class="min-h-screen bg-slate-50 flex">
+  <div class="h-screen bg-slate-50 flex overflow-hidden">
     <!-- Mobile Sidebar Backdrop Overlay -->
     <div v-if="mobileSidebarOpen" 
          class="fixed inset-0 bg-slate-900/50 z-40 lg:hidden backdrop-blur-xs transition-opacity"
          @click="mobileSidebarOpen = false"></div>
 
-    <!-- 1. Authentic SINTA-SaaS Fixed Left Sidebar with Multi-Level Submenus -->
+    <!-- 1. SINTA-SaaS Fixed Left Sidebar - Full Height Independent Scroll -->
     <aside :class="[
-      'fixed inset-y-0 left-0 z-50 bg-white border-r border-slate-200/80 flex flex-col transition-all duration-300 shadow-sm lg:static lg:translate-x-0',
+      'h-screen flex-shrink-0 bg-white border-r-2 border-slate-200 flex flex-col transition-all duration-300 z-50',
+      'shadow-[2px_0_8px_rgba(15,23,42,0.06)]',
       isCollapsed ? 'w-[72px]' : 'w-[270px]',
-      mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      mobileSidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0' : 'fixed lg:static -translate-x-full lg:translate-x-0'
     ]">
       <!-- Brand Logo Header -->
       <div class="h-16 flex items-center justify-between px-4 border-b border-slate-100 shrink-0">
@@ -43,7 +44,9 @@
       </div>
 
       <!-- Navigation Menus List (100% Dynamic from Database core.menus) -->
-      <div class="flex-grow overflow-y-auto px-3 py-4 space-y-4 select-none scrollbar-thin">
+      <!-- overflow-y-auto: sidebar bisa scroll vertikal jika menu lebih panjang dari layar -->
+      <div class="flex-grow overflow-y-auto overscroll-contain px-3 py-4 space-y-4 select-none"
+           style="scrollbar-width: thin; scrollbar-color: #e2e8f0 transparent;">
         <ul class="space-y-1">
           <li v-for="menu in databaseMenus" :key="menu.id">
             <!-- Single Item (Tanpa Anak / Direct Route) -->
@@ -101,18 +104,18 @@
       </div>
 
       <!-- Sidebar Footer / User Quick Info -->
-      <div class="p-3 border-t border-slate-100 bg-slate-50/50 shrink-0">
-        <div v-if="!isCollapsed" class="flex items-center justify-between">
+      <div class="p-3.5 border-t border-slate-200/80 bg-slate-50/60 shrink-0">
+        <div v-if="!isCollapsed" class="flex items-center justify-between gap-2">
           <div class="flex items-center gap-2.5 overflow-hidden">
-            <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
+            <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
               {{ (user?.nama_lengkap || 'U').charAt(0).toUpperCase() }}
             </div>
             <div class="truncate">
-              <div class="text-xs font-bold text-slate-800 truncate">{{ user?.nama_lengkap || 'Pengguna' }}</div>
-              <div class="text-[10px] text-slate-400 capitalize truncate">{{ user?.role || 'Pengguna' }}</div>
+              <div class="text-xs font-bold text-slate-800 truncate leading-tight">{{ user?.nama_lengkap || 'Pengguna' }}</div>
+              <div class="text-[10px] text-blue-600 font-extrabold uppercase tracking-wider truncate">{{ user?.role || 'Pengguna' }}</div>
             </div>
           </div>
-          <button @click="logout" class="text-slate-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition" title="Keluar">
+          <button @click="logout" class="text-slate-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition shrink-0" title="Keluar">
             <i class="bi bi-box-arrow-right text-sm"></i>
           </button>
         </div>
@@ -124,10 +127,10 @@
       </div>
     </aside>
 
-    <!-- 2. Main Content Wrapper -->
-    <div class="flex-grow flex flex-col min-w-0">
+    <!-- 2. Main Content Wrapper — Clean Single Unified Scroll -->
+    <div class="flex-grow flex flex-col min-w-0 h-screen overflow-hidden">
       <!-- Topbar Header -->
-      <header class="h-16 bg-white border-b border-slate-200/80 sticky top-0 z-30 px-4 sm:px-6 lg:px-8 flex items-center justify-between shadow-2xs">
+      <header class="h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shrink-0 px-4 sm:px-6 lg:px-8 flex items-center justify-between shadow-2xs z-30">
         <div class="flex items-center gap-3">
           <!-- Mobile Hamburger Toggle -->
           <button @click="mobileSidebarOpen = true" 
@@ -135,81 +138,48 @@
             <i class="bi bi-list text-xl"></i>
           </button>
 
-          <!-- Breadcrumb / Active School Indicator -->
-          <div class="flex items-center gap-2 text-xs">
-            <span class="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200/60">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              {{ tenantName || 'Tenant Sekolah Terhubung' }}
+          <!-- Active School / Tenant Indicator -->
+          <div class="flex items-center gap-2">
+            <span class="inline-flex items-center gap-2 py-1.5 px-3 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200/80 shadow-2xs">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+              <i class="bi bi-building text-emerald-600"></i>
+              <span class="truncate max-w-[200px] sm:max-w-xs">{{ tenantName || 'Pusat Kendali SaaS (Global)' }}</span>
             </span>
           </div>
         </div>
 
         <!-- Right Topbar Controls -->
         <div class="flex items-center gap-3">
-          <!-- User Dropdown Details -->
-          <div class="flex items-center gap-3 pl-3 border-l border-slate-200">
-            <div class="hidden sm:block text-right">
-              <div class="text-xs font-bold text-slate-800">{{ user?.nama_lengkap || 'Administrator' }}</div>
-              <div class="text-[10px] text-blue-600 font-semibold uppercase">{{ user?.role || 'Staff' }}</div>
+          <div class="flex items-center gap-2.5 pl-3 border-l border-slate-200">
+            <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
+              {{ (user?.nama_lengkap || 'U').charAt(0).toUpperCase() }}
             </div>
-            <button @click="logout" 
-                    class="px-3 py-1.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition flex items-center gap-1.5">
-              <i class="bi bi-box-arrow-right"></i>
-              <span class="hidden sm:inline">Keluar</span>
-            </button>
+            <div class="hidden sm:block text-right">
+              <div class="text-xs font-bold text-slate-800 leading-tight">{{ user?.nama_lengkap || 'Administrator' }}</div>
+              <div class="text-[10px] text-blue-600 font-extrabold uppercase tracking-wider">{{ user?.role || 'Staff' }}</div>
+            </div>
           </div>
+          <button @click="logout" 
+                  class="px-3 py-1.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition flex items-center gap-1.5 border border-red-200/60 shadow-2xs" title="Keluar dari Akun">
+            <i class="bi bi-box-arrow-right"></i>
+            <span class="hidden sm:inline">Keluar</span>
+          </button>
         </div>
       </header>
 
-      <!-- Main Body Container with 3-Way Scroller NavTabs -->
-      <main class="flex-grow p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
-        <!-- Horizontal NavTabs 3-Way Scroller (Standard SINTA SaaS) -->
-        <div class="bg-white rounded-2xl shadow-2xs border border-slate-200/80 p-2 relative">
-          <div class="flex items-center relative">
-            <!-- 1 Tombol Panah Kiri -->
-            <button type="button" 
-                    class="hidden md:flex items-center justify-center w-8 h-8 rounded-xl border border-slate-200/80 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition shrink-0 mr-1.5 shadow-2xs z-5" 
-                    @click="scrollNavTabs(-220)"
-                    title="Geser ke Kiri">
-              <i class="bi bi-chevron-left text-xs"></i>
-            </button>
-
-            <!-- Container Deretan Tab -->
-            <div class="grow overflow-hidden relative">
-              <ul id="sintaSubNavTabs" class="flex gap-1.5 overflow-x-auto scrollable-nav-tabs py-0.5 px-1 whitespace-nowrap select-none no-scrollbar">
-                <li v-for="menu in flatMenuList" :key="menu.url">
-                  <a :href="menu.url" 
-                     :class="[
-                       'inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition border border-transparent',
-                       isUrlActive(menu.url)
-                         ? 'bg-blue-600 text-white shadow-xs font-bold' 
-                         : 'text-slate-600 hover:bg-slate-100'
-                     ]">
-                    <i :class="menu.icon"></i>
-                    <span>{{ menu.title }}</span>
-                  </a>
-                </li>
-              </ul>
-            </div>
-
-            <!-- 1 Tombol Panah Kanan -->
-            <button type="button" 
-                    class="hidden md:flex items-center justify-center w-8 h-8 rounded-xl border border-slate-200/80 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition shrink-0 ml-1.5 shadow-2xs z-5" 
-                    @click="scrollNavTabs(220)"
-                    title="Geser ke Kanan">
-              <i class="bi bi-chevron-right text-xs"></i>
-            </button>
-          </div>
+      <!-- Main Body Container — Unified Scroll Area (Including Content and Footer) -->
+      <main class="flex-grow overflow-y-auto p-4 sm:p-6 lg:p-8 flex flex-col justify-between"
+            style="scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;">
+        <div class="max-w-7xl w-full mx-auto space-y-6 flex-grow">
+          <!-- Page Dynamic Slot Content -->
+          <slot />
         </div>
 
-        <!-- Page Dynamic Slot Content -->
-        <slot />
+        <!-- Standard Unified SINTA Footer -->
+        <footer class="mt-12 py-6 text-center text-xs text-slate-400 border-t border-slate-200/70 shrink-0">
+          &copy; {{ new Date().getFullYear() }} SINTA-SaaS Enterprise — Multi-Tenant Multi-Schema PostgreSQL Platform
+        </footer>
       </main>
-
-      <!-- Standard SINTA Footer -->
-      <footer class="bg-white border-t border-slate-200/80 py-4 px-6 text-center text-xs text-slate-400">
-        &copy; {{ new Date().getFullYear() }} SINTA-SaaS Enterprise — Multi-Tenant Multi-Schema PostgreSQL Platform
-      </footer>
     </div>
   </div>
 </template>
@@ -245,25 +215,6 @@ const isParentActive = (menu) => {
 
 const toggleSubmenu = (menuId) => {
   expandedMenus.value[menuId] = !expandedMenus.value[menuId];
-};
-
-const flatMenuList = computed(() => {
-  const list = [];
-  databaseMenus.value.forEach(menu => {
-    if (menu.children && menu.children.length > 0) {
-      menu.children.forEach(sub => list.push(sub));
-    } else {
-      list.push(menu);
-    }
-  });
-  return list;
-});
-
-const scrollNavTabs = (offset) => {
-  const el = document.getElementById('sintaSubNavTabs');
-  if (el) {
-    el.scrollBy({ left: offset, behavior: 'smooth' });
-  }
 };
 
 const logout = () => {
