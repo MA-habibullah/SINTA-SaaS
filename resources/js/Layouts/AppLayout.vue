@@ -1,4 +1,5 @@
 <template>
+  <Head :title="title ? `${title}` : ''" />
   <div class="h-screen bg-slate-50 flex overflow-hidden">
     <!-- Mobile Sidebar Backdrop Overlay -->
     <div v-if="mobileSidebarOpen" 
@@ -186,7 +187,14 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import { usePage, router } from '@inertiajs/vue3';
+import { usePage, router, Head } from '@inertiajs/vue3';
+
+const props = defineProps({
+  title: {
+    type: String,
+    default: ''
+  }
+});
 
 const page = usePage();
 const user = computed(() => page.props.auth?.user);
