@@ -409,3 +409,387 @@ Gunakan format terstruktur: `<type>(<scope>): <deskripsi singkat>`
 - Wajib menjalankan `php scratch/pengujian/verify_all_syntax.php` dan memastikan `0 Syntax Error`.
 - Pastikan tidak ada konflik merge atau unstaged file yang tertinggal (`git status -s`).
 
+
+## Standar Desain Tabel Data, Filter Bar & Layout Sidebar (WAJIB DIPATUHI)
+Saat membuat atau merombak halaman yang menampilkan data tabular (daftar siswa, pengguna, karyawan, dll.), agen **WAJIB** mengikuti standar desain berikut tanpa pengecualian:
+
+### 1. Struktur 3-Bagian Tabel (Standar Baku)
+Setiap halaman data tabular wajib terdiri dari **3 bagian** yang menyatu dalam satu box card:
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  [FILTER BAR ATAS]  bg-white border-b                            │
+│  Jenjang | Kelas/Rombel | Status | Pencarian | [Cari] [Reset]   │
+├──────────────────────────────────────────────────────────────────┤
+│  [TABEL DATA]  overflow-x-auto                                   │
+│  Header kolom + baris data                                       │
+├──────────────────────────────────────────────────────────────────┤
+│  [FOOTER PAGINATION]  bg-slate-50/50 border-t                    │
+│  Tampilkan [15▾] baris per halaman | 1 s.d. 15 dari N | ◀1 2 3▶ │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### 2. Aturan Filter Bar Atas (WAJIB)
+- Filter bar atas **HANYA** boleh berisi: filter kontekstual (Jenjang, Kelas, Status, dll.) + input Pencarian + tombol **[Cari]** dan **[Reset]**.
+- **DILARANG KERAS** menaruh dropdown jumlah baris (`per_page` / label "BARIS") di filter bar atas.
+- Container Filter Bar wajib menggunakan: `p-3.5 bg-slate-50/70 border-b border-slate-200/80 overflow-x-auto no-scrollbar` dengan form `flex flex-row items-end gap-2.5 sm:gap-3 min-w-max`.
+- Label filter: `text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider whitespace-nowrap`.
+- Input & Select filter: tinggi seragam `h-9`, `rounded-xl`, `border border-slate-200 hover:border-slate-300`, `focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition`.
+- **Dimensi Proposional & Tidak Boleh Melebar Berlebihan**:
+  - Dropdown filter: `w-36 sm:w-40 shrink-0` (Jenjang, Kelas), `w-32 sm:w-36 shrink-0` (Status).
+  - Input Pencarian: `w-64 sm:w-72 md:w-80 shrink-0` (Dilarang keras memakai `grow` tanpa batas yang menyebabkan kolom pencarian molor/stretched).
+  - Tombol clear `(x)` di sisi kanan dalam input pencarian (`v-if="searchQuery"`) untuk reset cepat kata kunci.
+  - Tombol `[Cari]` (`bg-blue-600 hover:bg-blue-700 text-white`) dan `[Reset]` (`bg-white border border-slate-200`) ditempatkan tepat di samping kanan kolom pencarian.
+
+```vue
+<!-- Standar Baku: Filter Bar Atas Proposional & Responsif -->
+<div class="p-3.5 bg-slate-50/70 border-b border-slate-200/80 overflow-x-auto no-scrollbar">
+  <form @submit.prevent="applyFilters" class="flex flex-row items-end gap-2.5 sm:gap-3 min-w-max">
+    
+    <!-- Filter Kontekstual (Contoh: Jenjang & Kelas) -->
+    <div class="w-36 sm:w-40 shrink-0" v-if="filterJenjang !== undefined">
+      <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider whitespace-nowrap">Tingkat Jenjang</label>
+      <select v-model="filterJenjang" @change="applyFilters" class="w-full h-9 px-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-white text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition">
+        <option value="">-- Semua Jenjang --</option>
+        <option v-for="j in jenjangList" :key="j.id" :value="j.id">{{ j.nama }}</option>
+      </select>
+    </div>
+
+    <!-- Search Input (Proposional w-64 s.d. w-80) -->
+    <div class="w-64 sm:w-72 md:w-80 shrink-0">
+      <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider whitespace-nowrap">Pencarian</label>
+      <div class="relative">
+        <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+        <input type="text" 
+               v-model="searchQuery" 
+               @input="handleSearchDebounce"
+               placeholder="Cari data..." 
+               class="w-full h-9 pl-8 pr-8 bg-white border border-slate-200 hover:border-slate-300 rounded-xl text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-2xs" />
+        <button v-if="searchQuery" 
+                @click="searchQuery = ''; applyFilters()" 
+                type="button" 
+                class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
+                title="Hapus Pencarian">
+          <i class="bi bi-x-circle-fill text-xs"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Tombol Cari & Reset -->
+    <div class="flex items-center gap-1.5 shrink-0">
+      <button type="submit" class="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-2xs transition flex items-center gap-1.5 whitespace-nowrap">
+        <i class="bi bi-search text-xs"></i> <span>Cari</span>
+      </button>
+      <button type="button" @click="resetFilters" class="h-9 px-3.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs transition shadow-2xs whitespace-nowrap">
+        Reset
+      </button>
+    </div>
+  </form>
+</div>
+```
+
+### 3. Aturan Footer Pagination (WAJIB)
+- Footer pagination **WAJIB** mengandung dropdown jumlah baris per halaman (pilihan: 10, 15, 25, 50, 100).
+- Dropdown `per_page` **HANYA** ditempatkan di footer bawah tabel, tidak di tempat lain.
+- Format info pagination: *"Tampilkan **[N▾]** baris per halaman | Menampilkan **X** s.d. **Y** dari **Z** baris"*
+- **Smart Windowed Pagination Helper (`getSmartPaginationLinks`)**: Wajib menampilkan maksimal 5-7 tombol nomor halaman terpusat (`1 ... 4 5 6 ... 9`) dan tombol panah chevron kompak (`<i class="bi bi-chevron-left text-xs"></i>` & `<i class="bi bi-chevron-right text-xs"></i>`) guna mencegah pagination melebar atau terpotong (*clipped*).
+- Dimensi tombol navigasi: `min-w-[32px] h-8 px-2.5 rounded-xl`, halaman aktif = `bg-blue-600 text-white shadow-xs`.
+- Footer layout: `flex flex-col md:flex-row justify-between items-center gap-3.5 p-4 bg-slate-50/50 border-t border-slate-200/80`.
+
+```vue
+<!-- Standar Baku: Footer Pagination Smart Windowing & Responsif -->
+<div v-if="items?.total > 0" 
+     class="flex flex-col md:flex-row justify-between items-center gap-3.5 p-4 bg-slate-50/50 border-t border-slate-200/80">
+  <!-- Info Tampilkan Baris -->
+  <div class="flex flex-wrap items-center justify-center md:justify-start gap-2 text-xs text-slate-500 font-medium shrink-0">
+    <span>Tampilkan</span>
+    <select v-model="perPage" @change="applyFilters" class="h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+      <option :value="10">10</option>
+      <option :value="15">15</option>
+      <option :value="25">25</option>
+      <option :value="50">50</option>
+      <option :value="100">100</option>
+    </select>
+    <span class="whitespace-nowrap">baris per halaman</span>
+    <span class="text-slate-300 hidden sm:inline">|</span>
+    <span class="whitespace-nowrap">
+      Menampilkan <span class="font-bold text-slate-800">{{ items.from || 1 }}</span> s.d. <span class="font-bold text-slate-800">{{ items.to || items.total }}</span> dari <span class="font-bold text-slate-800">{{ items.total }}</span> baris
+    </span>
+  </div>
+
+  <!-- Pagination Links (Smart Windowing & Compact Chevrons) -->
+  <div class="flex items-center justify-center md:justify-end gap-1 shrink-0 flex-wrap">
+    <template v-for="(link, i) in getSmartPaginationLinks(items)" :key="i">
+      <button v-if="link.url && !link.active" 
+              type="button"
+              @click="goToPage(link.url)"
+              class="min-w-[32px] h-8 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs"
+              :title="link.isPrev ? 'Halaman Sebelumnya' : (link.isNext ? 'Halaman Berikutnya' : 'Halaman ' + link.label)">
+        <i v-if="link.isPrev" class="bi bi-chevron-left text-xs"></i>
+        <i v-else-if="link.isNext" class="bi bi-chevron-right text-xs"></i>
+        <span v-else>{{ link.label }}</span>
+      </button>
+      <span v-else-if="link.active"
+            class="min-w-[32px] h-8 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center bg-blue-600 text-white shadow-xs">
+        <i v-if="link.isPrev" class="bi bi-chevron-left text-xs"></i>
+        <i v-else-if="link.isNext" class="bi bi-chevron-right text-xs"></i>
+        <span v-else>{{ link.label }}</span>
+      </span>
+      <span v-else 
+            class="min-w-[32px] h-8 px-2 text-xs font-bold flex items-center justify-center text-slate-400">
+        <i v-if="link.isPrev" class="bi bi-chevron-left text-xs text-slate-300"></i>
+        <i v-else-if="link.isNext" class="bi bi-chevron-right text-xs text-slate-300"></i>
+        <span v-else>{{ link.label }}</span>
+      </span>
+    </template>
+  </div>
+</div>
+```
+
+**Ketentuan Script Helper Pagination:**
+```javascript
+const getSmartPaginationLinks = (pagination) => {
+  if (!pagination?.links || pagination.links.length === 0) return [];
+  const rawLinks = pagination.links;
+  const prevLink = rawLinks[0];
+  const nextLink = rawLinks[rawLinks.length - 1];
+  const pageLinks = rawLinks.slice(1, -1);
+  const current = pagination.current_page || 1;
+  const last = pagination.last_page || (pageLinks.length ? Number(pageLinks[pageLinks.length - 1].label) || 1 : 1);
+
+  const result = [];
+  result.push({ ...prevLink, isPrev: true, isNext: false, label: prevLink.label });
+
+  if (last <= 7) {
+    pageLinks.forEach(l => result.push({ ...l, isPrev: false, isNext: false, label: l.label }));
+  } else {
+    const pagesToShow = new Set([1, last]);
+    for (let p = current - 1; p <= current + 1; p++) {
+      if (p >= 1 && p <= last) pagesToShow.add(p);
+    }
+    const sortedPages = Array.from(pagesToShow).sort((a, b) => a - b);
+    let prevPage = null;
+    sortedPages.forEach(p => {
+      if (prevPage !== null && p - prevPage > 1) {
+        result.push({ label: '...', url: null, active: false, isPrev: false, isNext: false });
+      }
+      const foundRaw = pageLinks.find(l => l.label == p.toString());
+      result.push({
+        label: p.toString(),
+        url: foundRaw ? foundRaw.url : null,
+        active: p === current,
+        isPrev: false,
+        isNext: false,
+      });
+      prevPage = p;
+    });
+  }
+
+  result.push({ ...nextLink, isPrev: false, isNext: true, label: nextLink.label });
+  return result;
+};
+```
+
+### 4. Standar Kolom Tabel (WAJIB)
+- **Header kolom**: `text-[10px] font-black text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-200 px-4 py-3`.
+- **Baris data**: `text-xs`, hover `hover:bg-blue-50/40 transition`, border bawah `border-b border-slate-100`.
+- **Kolom NO**: lebar `w-10`, center-aligned, font-mono, isi = `(current_page-1)*per_page + idx + 1`.
+- **Kolom Sekolah/Tenant**: wajib tampil untuk Super Admin dengan badge ikon berwarna per-modul.
+- **Kolom Aksi**: sticky kanan (`sticky right-0 bg-white shadow-[-4px_0_6px_rgba(15,23,42,0.04)]`), berisi tombol Edit (biru) & Delete (merah).
+- Seluruh tabel dibungkus `overflow-x-auto` agar bisa horizontal scroll di layar kecil.
+
+### 5. Standar Layout Sidebar & Main Content (WAJIB)
+- Root container wajib: `h-screen bg-slate-50 flex overflow-hidden` — **BUKAN** `min-h-screen`.
+- **Sidebar** bersifat `h-screen flex-shrink-0` dengan scroll independen.
+- Area navigasi sidebar: `flex-grow overflow-y-auto overscroll-contain` + `style="scrollbar-width: thin; scrollbar-color: #e2e8f0 transparent;"`.
+- **Pemisah sidebar & konten**: `border-r-2 border-slate-200` + `shadow-[2px_0_8px_rgba(15,23,42,0.06)]`.
+- **Main content area**: `flex-grow overflow-y-auto` — scroll sendiri, tidak mempengaruhi sidebar.
+- Sidebar header brand & footer user wajib `shrink-0` agar tidak ikut discroll.
+- Sidebar dan konten utama **DILARANG** saling mempengaruhi scroll satu sama lain.
+
+```vue
+<!-- Standar baku: layout sidebar + main scroll terpisah -->
+<div class="h-screen bg-slate-50 flex overflow-hidden">
+
+  <!-- Sidebar: scroll independen -->
+  <aside class="h-screen flex-shrink-0 bg-white border-r-2 border-slate-200
+                shadow-[2px_0_8px_rgba(15,23,42,0.06)] flex flex-col w-[270px]">
+    <div class="h-16 shrink-0 border-b border-slate-100 ..."><!-- Brand --></div>
+    <div class="flex-grow overflow-y-auto overscroll-contain px-3 py-4"
+         style="scrollbar-width: thin; scrollbar-color: #e2e8f0 transparent;">
+      <!-- Menu items -->
+    </div>
+    <div class="shrink-0 border-t border-slate-100 ..."><!-- Footer user --></div>
+  </aside>
+
+  <!-- Main: scroll independen dari sidebar -->
+  <div class="flex-grow flex flex-col min-w-0 overflow-hidden">
+    <header class="h-16 shrink-0 sticky top-0 z-30 bg-white border-b ..."></header>
+    <main class="flex-grow overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div class="max-w-7xl mx-auto space-y-6">
+        <slot />
+      </div>
+    </main>
+  </div>
+
+</div>
+```
+
+## Standardisasi Desain Filter Sekolah / Tenant Banner (Khusus Super Admin - WAJIB)
+Saat membuat halaman baru atau merombak halaman modul apa pun yang memiliki filter instansi sekolah khusus Super Admin, agen **WAJIB** menerapkan struktur desain baku banner Filter Sekolah persis seperti pada modul Manajemen Pengguna:
+
+```vue
+<!-- Filter Sekolah Banner (Legacy & Unified Design Standard) -->
+<div v-if="isSuperAdmin" class="p-4 sm:px-5 rounded-2xl shadow-xs border border-blue-100 bg-gradient-to-r from-blue-50/90 to-slate-50 border-l-4 border-l-blue-600 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+  <div class="flex flex-wrap items-center gap-2.5">
+    <i class="bi bi-building text-blue-600 text-lg"></i>
+    <span class="font-bold text-slate-800 text-sm">Filter Sekolah</span>
+    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-2xs font-extrabold bg-blue-100 text-blue-700 border border-blue-200">
+      <i class="bi bi-funnel-fill me-1"></i> Aktif
+    </span>
+
+    <!-- Dropdown Filter Sekolah (Khusus Super Admin) - Otomatis Terfilter Saat Dipilih (@change) -->
+    <div class="my-1 md:my-0">
+      <select v-model="selectedTenant" 
+              @change="applyTenantFilter"
+              class="h-9 px-3 bg-white border border-blue-200 rounded-xl text-xs font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 min-w-[220px]">
+        <option value="">-- Semua Sekolah (Global) --</option>
+        <option v-for="t in tenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Informational Text -->
+  <div class="text-xs text-slate-500 font-medium">
+    Menampilkan data milik: 
+    <strong class="text-blue-700 font-bold ml-1">
+      {{ getSelectedTenantName() }}
+    </strong>
+  </div>
+</div>
+```
+
+**Ketentuan Script Helper:**
+```javascript
+const getSelectedTenantName = () => {
+    if (!selectedTenant.value) return 'Semua Sekolah Terdaftar (Super Admin)'
+    const tenant = props.tenants?.find(t => t.id === selectedTenant.value)
+    return tenant ? tenant.nama_sekolah : 'Semua Sekolah Terdaftar (Super Admin)'
+}
+```
+
+## Standardisasi Desain Form Filter Card 2-Baris & Anti-Overflow (WAJIB DIPATUHI)
+Saat merancang formulir filter atau parameter pencarian di dalam kartu (*card container*), agen **WAJIB** menerapkan struktur 2-baris responsif untuk mencegah elemen tombol terdesak keluar dari batas kontainer (*zero card overflow*):
+
+**1. Larangan Mutlak Grid Overcrowding:**
+- **DILARANG KERAS** memaksakan input pencarian panjang beserta multiple tombol aksi (`[Cari]`, `[Reset]`, `[Export]`) ke dalam satu baris grid sempit (misalnya `lg:grid-cols-6` dengan tombol ditaruh di `col-span-1`). Hal ini memicu tombol `[Reset]` terdorong keluar melewati batas kanan kontainer kartu.
+
+**2. Standar Struktur Form Filter 2-Baris:**
+```vue
+<form @submit.prevent="applyFilters" class="space-y-3.5 pt-2">
+  <!-- Baris 1: Parameter Dropdown / Filter (Grid Terstruktur 4 Kolom) -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+    <div>
+      <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Parameter 1 <span class="text-rose-500">*</span></label>
+      <select v-model="filter1" @change="applyFilters" class="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+        <option value="">-- Pilih Parameter --</option>
+        <option v-for="item in options" :key="item.id" :value="item.id">{{ item.nama }}</option>
+      </select>
+    </div>
+    <!-- Field parameter lainnya... -->
+  </div>
+
+  <!-- Baris 2: Pencarian & Tombol Aksi (100% Contained & Responsive) -->
+  <div class="flex flex-col sm:flex-row items-stretch sm:items-end gap-2.5">
+    <!-- Input Pencarian (Mengisi Ruang Tersedia) -->
+    <div class="grow">
+      <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Pencarian Data</label>
+      <div class="relative">
+        <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+        <input type="text" 
+               v-model="searchQuery" 
+               @input="handleSearchDebounce"
+               placeholder="Cari kata kunci..." 
+               class="w-full h-9 pl-8 pr-8 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition" />
+        <button v-if="searchQuery" 
+                type="button" 
+                @click="searchQuery = ''; applyFilters()" 
+                class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
+                title="Hapus pencarian">
+          <i class="bi bi-x-circle-fill text-xs"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Tombol Aksi (Cari & Reset dengan Lebar Minimum Pasti) -->
+    <div class="flex items-center gap-2 shrink-0">
+      <button type="submit" class="h-9 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-2xs transition flex items-center justify-center gap-1.5 min-w-[80px]">
+        <i class="bi bi-search"></i> Cari
+      </button>
+      <button type="button" @click="resetFilters" class="h-9 px-4 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs shadow-2xs transition min-w-[70px]">
+        Reset
+      </button>
+    </div>
+  </div>
+</form>
+```
+
+
+## Larangan Redundansi Dropdown Sekolah & Tenant Isolation Scoping (WAJIB DIPATUHI)
+
+**1. Larangan Dropdown Sekolah Ganda:**
+- Jika pada bagian atas halaman sudah tersedia **Banner Filter Sekolah Global** (khusus Super Admin), sub-panel, sub-kartu, atau formulir di bawahnya **DILARANG KERAS** menambahkan dropdown pilihan `Instansi Sekolah` duplikat.
+
+**2. Dynamic Tenant Scoping pada Fitur Operasional:**
+- Seluruh opsi dropdown relasional (seperti *Rombel / Kelas Asal*, *Rombel / Kelas Tujuan*, *Tahun Ajaran Target*, dan *Daftar Siswa*) pada fitur operasional (seperti Kenaikan Kelas, Mutasi, Buku Induk, Profile Rapot, PDSS) **WAJIB** tersaring secara dinamis mengikuti tenant sekolah yang sedang aktif/dipilih (`tenant_id`).
+- Super Admin yang mengganti pilihan sekolah pada banner global wajib secara otomatis memperbarui (*re-scope*) opsi kelas dan siswa yang tersedia tanpa kebocoran data sekolah lain (*Zero Cross-Tenant Leakage*).
+
+## Standardisasi Unduhan & Ekspor Berkas Excel Wajib Format Murni .XLSX (WAJIB DIPATUHI)
+Saat membuat fitur ekspor data, unduh template, cetak laporan spreadsheet, atau impor massal di seluruh modul SINTA SaaS, agen **WAJIB** menerapkan standar format berikut tanpa pengecualian:
+
+**1. Format Berkas & Ekstensi Resmi (.xlsx):**
+- Seluruh unduhan berkas yang berorientasi Excel **WAJIB** berformat biner murni **`.xlsx`** (*Office Open XML Spreadsheet*). Dilarang keras mengeluarkan file `.csv` mentah sebagai output utama ekspor Excel.
+- Gunakan generator spreadsheet berkecepatan tinggi `\Shuchkin\SimpleXLSXGen::fromArray($dataRows)` atau PhpSpreadsheet.
+
+**2. Standar Respon Controller & Header HTTP:**
+- Controller wajib mengembalikan respon biner `.xlsx` dengan header resmi:
+  ```php
+  $xlsx = \Shuchkin\SimpleXLSXGen::fromArray($dataRows);
+  return response((string) $xlsx, 200, [
+      'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition' => "attachment; filename=\"{$filename}.xlsx\"",
+      'Cache-Control'       => 'max-age=0',
+  ]);
+  ```
+
+**3. Standar Parser Impor Massal (.xlsx & .csv Fallback):**
+- Handler impor berkas wajib membaca format `.xlsx` secara native menggunakan `\Shuchkin\SimpleXLSX::parse($filePath)` dengan toleransi fallback otomatis ke `.csv`:
+  ```php
+  $rows = [];
+  if (in_array($ext, ['xlsx', 'xls']) || ($parsed = \Shuchkin\SimpleXLSX::parse($realPath))) {
+      if (isset($parsed) && $parsed) {
+          $rows = $parsed->rows();
+      }
+  }
+  // Fallback to CSV parser if not XLSX
+  ```
+
+**4. Standar Antarmuka Pengguna (Vue 3 / Inertia):**
+- Tombol aksi ekspor dan unduh template pada antarmuka wajib mencantumkan ekstensi `(.XLSX)` secara transparan (contoh: `Ekspor Excel (.XLSX)`, `Unduh Format Nilai (.XLSX)`).
+- Input unggah berkas wajib menyertakan atribut: `accept=".xlsx, .xls, .csv"`.
+
+## Standar Modal Tabel Riwayat & Status Badge Anti-Wrapping (WAJIB DIPATUHI)
+Saat menampilkan tabel riwayat, log aktivitas, atau mutasi di dalam komponen dialog/modal, agen **WAJIB** menerapkan standar antarmuka berikut:
+- **Lebar Modal**: Gunakan minimal `max-w-3xl` atau `max-w-4xl` untuk modal yang memuat lebih dari 5 kolom data.
+- **Kontainer Tabel**: Wajib dibungkus dengan `<div class="overflow-x-auto border border-slate-200/80 rounded-2xl shadow-2xs">` dan `<table class="w-full text-left text-xs whitespace-nowrap min-w-[650px]">`.
+- **Kolom Status & Badge**:
+  - Kolom status wajib `whitespace-nowrap min-w-[120px] text-center`.
+  - Format markup badge status:
+    ```vue
+    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-2xs font-extrabold whitespace-nowrap"
+          :class="item.status === 'naik' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'">
+      <i class="bi bi-arrow-up-circle-fill"></i> Naik Kelas
+    </span>
+    ```
+- Mencegah teks badge terhimpit (*squeezed*), turun baris (*wrapped*), atau terpotong pada viewport desktop maupun tablet.
+
+
