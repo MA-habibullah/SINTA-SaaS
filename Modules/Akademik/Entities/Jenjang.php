@@ -4,16 +4,17 @@ namespace Modules\Akademik\Entities;
 
 use Modules\Core\Entities\BaseTenantModel;
 
-class TahunAjaran extends BaseTenantModel
+class Jenjang extends BaseTenantModel
 {
-    protected $table = 'akademik.tahun_ajaran';
+    protected $table = 'core.jenjang';
+
+    public $timestamps = false;
 
     protected $fillable = [
         'id',
         'tenant_id',
-        'nama_tahun_ajaran',
-        'kategori',
-        'deskripsi',
+        'kode_jenjang',
+        'nama_jenjang',
         'is_active',
     ];
 

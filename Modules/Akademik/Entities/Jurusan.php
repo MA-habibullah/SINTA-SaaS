@@ -12,11 +12,8 @@ class Jurusan extends BaseTenantModel
     protected $fillable = [
         'id',
         'tenant_id',
-        'kode_jurusan',
         'nama_jurusan',
-        'bidang_keahlian',
-        'program_keahlian',
-        'konsentrasi_keahlian',
+        'kategori',
         'deskripsi',
         'is_active',
     ];
@@ -27,6 +24,6 @@ class Jurusan extends BaseTenantModel
 
     public function kelas(): HasMany
     {
-        return $this->hasMany(Kelas::class, 'jurusan_id', 'id');
+        return $this->hasMany(Kelas::class, 'id_jurusan', 'id');
     }
 }

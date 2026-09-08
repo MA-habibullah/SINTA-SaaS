@@ -11,16 +11,13 @@ class MataPelajaran extends BaseTenantModel
     protected $fillable = [
         'id',
         'tenant_id',
-        'kode_mapel',
-        'nama_mapel',
-        'kelompok', // 'Umum', 'Kejuruan', 'Pilihan', 'Muatan Lokal'
+        'nama_mata_pelajaran',
         'kategori',
-        'kkm_default',
+        'deskripsi',
         'is_active',
     ];
 
     protected $casts = [
-        'kkm_default' => 'decimal:2',
-        'is_active'   => 'boolean',
+        'is_active' => 'boolean',
     ];
 }

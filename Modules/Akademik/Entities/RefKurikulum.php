@@ -4,14 +4,14 @@ namespace Modules\Akademik\Entities;
 
 use Modules\Core\Entities\BaseTenantModel;
 
-class TahunAjaran extends BaseTenantModel
+class RefKurikulum extends BaseTenantModel
 {
-    protected $table = 'akademik.tahun_ajaran';
+    protected $table = 'akademik.ref_kurikulum';
 
     protected $fillable = [
         'id',
         'tenant_id',
-        'nama_tahun_ajaran',
+        'nama_ref_kurikulum',
         'kategori',
         'deskripsi',
         'is_active',

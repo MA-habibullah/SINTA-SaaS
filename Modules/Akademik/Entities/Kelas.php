@@ -12,28 +12,26 @@ class Kelas extends BaseTenantModel
     protected $fillable = [
         'id',
         'tenant_id',
-        'tingkat', // 'X', 'XI', 'XII'
-        'nama_kelas', // 'X RPL 1'
         'kode_kelas',
-        'jurusan_id',
-        'tahun_ajaran_id',
-        'wali_kelas_id',
-        'kapasitas',
+        'nama_kelas',
+        'id_jenjang',
+        'id_jurusan',
+        'kategori',
+        'deskripsi',
         'is_active',
     ];
 
     protected $casts = [
-        'kapasitas' => 'integer',
         'is_active' => 'boolean',
     ];
 
-    public function jurusan(): BelongsTo
+    public function jenjang(): BelongsTo
     {
-        return $this->belongsTo(Jurusan::class, 'jurusan_id', 'id');
+        return $this->belongsTo(Jenjang::class, 'id_jenjang', 'id');
     }
 
-    public function tahunAjaran(): BelongsTo
+    public function jurusan(): BelongsTo
     {
-        return $this->belongsTo(TahunAjaran::class, 'tahun_ajaran_id', 'id');
+        return $this->belongsTo(Jurusan::class, 'id_jurusan', 'id');
     }
 }
