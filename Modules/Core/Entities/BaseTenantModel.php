@@ -37,6 +37,14 @@ abstract class BaseTenantModel extends Model
     }
 
     /**
+     * Relasi ke entitas Tenant (Sekolah)
+     */
+    public function tenant(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(\Modules\Core\Entities\Tenant::class, 'tenant_id', 'id');
+    }
+
+    /**
      * Helper untuk query bypass tenant (hanya untuk Super Admin Platform)
      */
     public static function withoutTenant(): Builder

@@ -41,6 +41,6 @@ Route::middleware(['auth', 'tenant.guard'])->group(function () {
     // Core - Sekolah Identitas (Profil Sekolah)
     Route::prefix('core/sekolah-identitas')->name('core.sekolah-identitas.')->group(function () {
         Route::get('/', [SekolahIdentitasController::class, 'show'])->name('show');
-        Route::put('/', [SekolahIdentitasController::class, 'update'])->name('update');
+        Route::match(['post', 'put'], '/', [SekolahIdentitasController::class, 'update'])->name('update');
     });
 });

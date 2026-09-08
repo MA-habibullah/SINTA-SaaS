@@ -68,14 +68,25 @@ class User extends Authenticatable
         return $this->belongsTo(Role::class, 'role_id', 'id');
     }
 
+    public function roles(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Role::class, 'core.user_roles', 'user_id', 'role_id');
+    }
+
     public function isSuperAdmin(): bool
     {
-        return $this->role && $this->role->nama_role === 'super_admin';
+        if ($this->role && $this->role->nama_role === 'super_admin') {
+            return true;
+        }
+        return $this->roles()->where('nama_role', 'super_admin')->exists();
     }
 
     public function hasRole(string $roleName): bool
     {
-        return $this->role && $this->role->nama_role === $roleName;
+        if ($this->role && $this->role->nama_role === $roleName) {
+            return true;
+        }
+        return $this->roles()->where('nama_role', $roleName)->exists();
     }
 }
 
