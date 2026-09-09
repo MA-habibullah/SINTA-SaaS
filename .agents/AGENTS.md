@@ -400,6 +400,66 @@ Saat membuat halaman baru atau merombak tata letak bilah navigasi tab (navtab / 
   - Tombol panah `<` dan `>` didefinisikan secara deklaratif tepat 1 pasang.
   - Skrip event listener scroll wheel dan drag HANYA menangani event gerak dan **DILARANG** melakukan injeksi DOM `createElement` tambahan yang memicu tombol ganda.
 
+## Standardisasi Desain UI/UX Popup Modal & Full-Screen Dark Backdrop (WAJIB DIPATUHI)
+Setiap kali membuat fitur baru, halaman baru, atau merombak komponen yang memuat jendela popup (modal dialog, modal form, modal konfirmasi, atau image/pdf viewer) di seluruh modul SINTA SaaS, agen **WAJIB** menerapkan standar arsitektur dan styling berikut agar tidak terjadi pemotongan layout atau kebocoran visual (*bleed-through*):
+
+**1. Kewajiban Mutlak Vue 3 `<Teleport to="body">`:**
+- **DILARANG KERAS** merender modal langsung di dalam pohon DOM anak halaman (`<main>` atau container fitur) tanpa teleportasi.
+- Seluruh elemen popup modal **WAJIB** dibungkus ke dalam tag `<Teleport to="body">` agar dirender langsung di level `document.body` dan bebas dari batasan stacking context maupun `overflow: hidden` container induk.
+
+**2. Stacking Context & Z-Index Standard (`AppLayout.vue` & Modal Backdrop):**
+- Di `resources/js/Layouts/AppLayout.vue`:
+  - Elemen header utama `<header>` wajib menggunakan kelas `relative z-10`.
+  - Kontainer `<main>` wajib menggunakan kelas `relative z-20`.
+  - Dilarang menaikkan `header` ke `z-30` / `z-50` bersamaan dengan `backdrop-blur` karena CSS Stacking Context akan memutus urutan rendering modal anak.
+- Seluruh backdrop overlay modal **WAJIB** menggunakan `z-[9999]`:
+  - `class="fixed inset-0 z-[9999] overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs"`
+- Lapisan gelap backdrop **WAJIB** menutupi 100% viewport monitor (`100vw x 100vh`) mencakup header atas (*SISTEM INTI AKADEMIK*, active tenant indicator, tombol logout), sidebar navigasi kiri, dan floating buttons tanpa ada bagian yang tembus/terpotong (*zero bleed-through*).
+
+**3. Struktur Template Baku Popup Modal (Vue 3 / Inertia):**
+```vue
+<!-- STANDAR BAKU MODAL VUE 3 TELEPORT SINTA SAAS -->
+<Teleport to="body">
+  <div v-if="showModal" class="fixed inset-0 z-[9999] overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+    
+    <!-- Kontainer Card Modal (Wajib relative z-10) -->
+    <div class="relative z-10 bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      
+      <!-- 1. Modal Header -->
+      <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between text-white">
+        <div>
+          <h3 class="text-base font-bold flex items-center gap-2 m-0 text-white">
+            <i class="bi bi-pencil-square"></i>
+            Judul Modal
+          </h3>
+          <p class="text-xs text-blue-100 mb-0 mt-0.5">Deskripsi singkat fungsi form atau aksi modal.</p>
+        </div>
+        <button type="button" @click="showModal = false" class="text-white/80 hover:text-white text-xl cursor-pointer">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <!-- 2. Modal Body Form -->
+      <form @submit.prevent="handleSubmit" class="p-6 space-y-4">
+        <!-- Field input form -->
+        
+        <!-- 3. Modal Actions Footer -->
+        <div class="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+          <button type="button" @click="showModal = false" class="h-9 px-4 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer">
+            Batal
+          </button>
+          <button type="submit" class="h-9 px-5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer">
+            <i class="bi bi-check2-circle"></i>
+            <span>Simpan Data</span>
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</Teleport>
+```
+
 ## Strict Prohibition on Folder Deletion in Scratch (PERMANENT RULE)
 DILARANG KERAS menghapus atau mengosongkan folder-folder berikut beserta seluruh isi berkas dan sub-foldernya dalam kondisi apa pun:
 1. `C:\laragon\www\sinta\scratch\docs`
