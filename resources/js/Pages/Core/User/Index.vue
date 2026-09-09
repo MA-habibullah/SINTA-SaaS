@@ -1360,62 +1360,65 @@
     <!-- ========================================================================= -->
 
     <!-- 1. Modal Registrasi Cepat Siswa -->
-    <div v-if="openQuickAddModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 animate-fade-in">
-      <div class="bg-white rounded-3xl shadow-xl w-full max-w-lg overflow-hidden border border-slate-200">
-        <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-emerald-50 to-white">
-          <div class="flex items-center gap-2.5">
-            <span class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm">
-              <i class="bi bi-lightning-fill"></i>
-            </span>
-            <h3 class="font-black text-slate-800 text-base">Registrasi Cepat Siswa</h3>
+    <Teleport to="body">
+      <div v-if="openQuickAddModal" class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fade-in">
+        <div class="bg-white rounded-3xl shadow-xl w-full max-w-lg overflow-hidden border border-slate-200 relative z-10">
+          <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-emerald-50 to-white">
+            <div class="flex items-center gap-2.5">
+              <span class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm">
+                <i class="bi bi-lightning-fill"></i>
+              </span>
+              <h3 class="font-black text-slate-800 text-base">Registrasi Cepat Siswa</h3>
+            </div>
+            <button @click="openQuickAddModal = false" class="text-slate-400 hover:text-slate-600"><i class="bi bi-x-lg"></i></button>
           </div>
-          <button @click="openQuickAddModal = false" class="text-slate-400 hover:text-slate-600"><i class="bi bi-x-lg"></i></button>
+
+          <form @submit.prevent="submitQuickAdd" class="p-5 space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap Siswa *</label>
+              <input type="text" v-model="quickAddForm.nama_lengkap" required placeholder="Nama lengkap siswa" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">NISN *</label>
+                <input type="text" v-model="quickAddForm.nisn" required placeholder="10 Digit NISN" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">NIS *</label>
+                <input type="text" v-model="quickAddForm.nis" required placeholder="NIS Siswa" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Jenis Kelamin *</label>
+                <select v-model="quickAddForm.jenis_kelamin" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                  <option value="L">Laki-laki (L)</option>
+                  <option value="P">Perempuan (P)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Rombel / Kelas</label>
+                <select v-model="quickAddForm.kelas_saat_ini" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                  <option value="">- Pilih Kelas -</option>
+                  <option v-for="k in kelasList" :key="k.id" :value="k.nama_kelas">{{ k.nama_kelas }}</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="pt-3 flex justify-end gap-2 border-t border-slate-100">
+              <button type="button" @click="openQuickAddModal = false" class="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl">Batal</button>
+              <button type="submit" class="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs">Simpan Siswa</button>
+            </div>
+          </form>
         </div>
-
-        <form @submit.prevent="submitQuickAdd" class="p-5 space-y-4">
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap Siswa *</label>
-            <input type="text" v-model="quickAddForm.nama_lengkap" required placeholder="Nama lengkap siswa" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">NISN *</label>
-              <input type="text" v-model="quickAddForm.nisn" required placeholder="10 Digit NISN" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">NIS *</label>
-              <input type="text" v-model="quickAddForm.nis" required placeholder="NIS Siswa" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">Jenis Kelamin *</label>
-              <select v-model="quickAddForm.jenis_kelamin" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
-                <option value="L">Laki-laki (L)</option>
-                <option value="P">Perempuan (P)</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">Rombel / Kelas</label>
-              <select v-model="quickAddForm.kelas_saat_ini" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
-                <option value="">- Pilih Kelas -</option>
-                <option v-for="k in kelasList" :key="k.id" :value="k.nama_kelas">{{ k.nama_kelas }}</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="pt-3 flex justify-end gap-2 border-t border-slate-100">
-            <button type="button" @click="openQuickAddModal = false" class="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl">Batal</button>
-            <button type="submit" class="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs">Simpan Siswa</button>
-          </div>
-        </form>
       </div>
-    </div>
+    </Teleport>
 
     <!-- 2. Modal Tambah / Edit GTK Multi-Role (Guru, Karyawan, Operator) -->
-    <div v-if="openUserModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 animate-fade-in overflow-y-auto">
+    <Teleport to="body">
+      <div v-if="openUserModal" class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fade-in overflow-y-auto">
       <div class="bg-white rounded-3xl shadow-xl w-full max-w-2xl overflow-hidden border border-slate-200 my-8">
         <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-blue-50 to-white">
           <div class="flex items-center gap-2.5">
@@ -1535,182 +1538,189 @@
         </form>
       </div>
     </div>
+    </Teleport>
 
     <!-- 3. Modal Import Siswa via Excel (.xlsx) -->
-    <div v-if="openImportModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 animate-fade-in">
-      <div class="bg-white rounded-3xl shadow-xl w-full max-w-lg overflow-hidden border border-slate-200">
-        <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-emerald-50 to-white">
-          <div class="flex items-center gap-2.5">
-            <span class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm">
-              <i class="bi bi-file-earmark-excel-fill"></i>
-            </span>
-            <h3 class="font-black text-slate-800 text-base">Import Siswa via Excel (.xlsx)</h3>
-          </div>
-          <button @click="openImportModal = false" class="text-slate-400 hover:text-slate-600"><i class="bi bi-x-lg"></i></button>
-        </div>
-
-        <div class="p-6 space-y-4">
-          <div>
-            <div class="flex justify-between items-center mb-1.5">
-              <label class="block text-xs font-bold text-slate-700">Pilih Berkas Excel (.xlsx) *</label>
-              <a href="/pengguna/export-excel?tab=siswa" download class="text-2xs font-extrabold text-emerald-700 hover:underline flex items-center gap-1">
-                <i class="bi bi-download"></i> Download Template Excel
-              </a>
+    <Teleport to="body">
+      <div v-if="openImportModal" class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fade-in">
+        <div class="bg-white rounded-3xl shadow-xl w-full max-w-lg overflow-hidden border border-slate-200 relative z-10">
+          <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-emerald-50 to-white">
+            <div class="flex items-center gap-2.5">
+              <span class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm">
+                <i class="bi bi-file-earmark-excel-fill"></i>
+              </span>
+              <h3 class="font-black text-slate-800 text-base">Import Siswa via Excel (.xlsx)</h3>
             </div>
-            <input type="file" accept=".xlsx,.xls,.csv" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none" />
+            <button @click="openImportModal = false" class="text-slate-400 hover:text-slate-600"><i class="bi bi-x-lg"></i></button>
           </div>
 
-          <div class="p-4 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-2">
-            <span class="text-xs font-bold text-blue-900 flex items-center gap-1"><i class="bi bi-info-circle-fill"></i> Petunjuk Import:</span>
-            <ul class="text-[11px] text-blue-800 space-y-1 list-disc pl-4">
-              <li>Pastikan format kolom: <code class="bg-blue-100 px-1 rounded">Nama Lengkap, NISN, NIS, Jenis Kelamin (L/P), Rombel, HP</code>.</li>
-              <li>Password akun siswa otomatis dibuat menggunakan tanggal lahir atau default <code class="bg-blue-100 px-1 rounded">siswa123</code>.</li>
-            </ul>
-          </div>
+          <div class="p-6 space-y-4">
+            <div>
+              <div class="flex justify-between items-center mb-1.5">
+                <label class="block text-xs font-bold text-slate-700">Pilih Berkas Excel (.xlsx) *</label>
+                <a href="/pengguna/export-excel?tab=siswa" download class="text-2xs font-extrabold text-emerald-700 hover:underline flex items-center gap-1">
+                  <i class="bi bi-download"></i> Download Template Excel
+                </a>
+              </div>
+              <input type="file" accept=".xlsx,.xls,.csv" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none" />
+            </div>
 
-          <div class="pt-3 flex justify-end gap-2 border-t border-slate-100">
-            <button type="button" @click="openImportModal = false" class="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl">Batal</button>
-            <button type="button" @click="openImportModal = false; flashMessage = 'Fitur import siswa siap diproses!'" class="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs flex items-center gap-1.5">
-              <i class="bi bi-cloud-arrow-up-fill"></i> Mulai Import
-            </button>
+            <div class="p-4 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-2">
+              <span class="text-xs font-bold text-blue-900 flex items-center gap-1"><i class="bi bi-info-circle-fill"></i> Petunjuk Import:</span>
+              <ul class="text-[11px] text-blue-800 space-y-1 list-disc pl-4">
+                <li>Pastikan format kolom: <code class="bg-blue-100 px-1 rounded">Nama Lengkap, NISN, NIS, Jenis Kelamin (L/P), Rombel, HP</code>.</li>
+                <li>Password akun siswa otomatis dibuat menggunakan tanggal lahir atau default <code class="bg-blue-100 px-1 rounded">siswa123</code>.</li>
+              </ul>
+            </div>
+
+            <div class="pt-3 flex justify-end gap-2 border-t border-slate-100">
+              <button type="button" @click="openImportModal = false" class="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl">Batal</button>
+              <button type="button" @click="openImportModal = false; flashMessage = 'Fitur import siswa siap diproses!'" class="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs flex items-center gap-1.5">
+                <i class="bi bi-cloud-arrow-up-fill"></i> Mulai Import
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </Teleport>
 
     <!-- 4. Modal Riwayat Kenaikan & Mutasi Siswa -->
-    <div v-if="openRiwayatModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 animate-fade-in">
-      <div class="bg-white rounded-3xl shadow-xl w-full max-w-3xl overflow-hidden border border-slate-200">
-        <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-blue-50 to-white">
-          <div class="flex items-center gap-2.5">
-            <span class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-base shadow-xs">
-              <i class="bi bi-clock-history"></i>
-            </span>
-            <div>
-              <h3 class="font-black text-slate-800 text-base">Riwayat Kenaikan & Mutasi Siswa</h3>
-              <p class="text-xs text-slate-500 font-medium">
-                {{ selectedSiswaForRiwayat?.nama_lengkap }} (NISN: {{ selectedSiswaForRiwayat?.nisn || '-' }})
-              </p>
+    <Teleport to="body">
+      <div v-if="openRiwayatModal" class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fade-in">
+        <div class="bg-white rounded-3xl shadow-xl w-full max-w-3xl overflow-hidden border border-slate-200 relative z-10">
+          <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-blue-50 to-white">
+            <div class="flex items-center gap-2.5">
+              <span class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-base shadow-xs">
+                <i class="bi bi-clock-history"></i>
+              </span>
+              <div>
+                <h3 class="font-black text-slate-800 text-base">Riwayat Kenaikan & Mutasi Siswa</h3>
+                <p class="text-xs text-slate-500 font-medium">
+                  {{ selectedSiswaForRiwayat?.nama_lengkap }} (NISN: {{ selectedSiswaForRiwayat?.nisn || '-' }})
+                </p>
+              </div>
+            </div>
+            <button @click="openRiwayatModal = false" class="text-slate-400 hover:text-slate-600"><i class="bi bi-x-lg"></i></button>
+          </div>
+
+          <div class="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+            <div v-if="loadingRiwayat" class="text-center py-10">
+              <div class="spinner-border text-blue-600" role="status"></div>
+              <p class="text-xs text-slate-400 font-semibold mt-2">Memuat riwayat mutasi...</p>
+            </div>
+
+            <div v-else-if="listRiwayatSiswa.length === 0" class="text-center py-10 text-slate-400">
+              <i class="bi bi-folder2-open text-3xl block mb-2 text-slate-300"></i>
+              Siswa baru atau belum memiliki riwayat siklus kenaikan/pindah kelas.
+            </div>
+
+            <div v-else class="border border-slate-200/80 rounded-2xl overflow-x-auto shadow-2xs">
+              <table class="w-full text-left text-xs text-slate-600 whitespace-nowrap min-w-[650px]">
+                <thead class="bg-slate-50 text-slate-500 font-bold border-b border-slate-200/80 uppercase tracking-wider">
+                  <tr>
+                    <th class="py-3 px-3.5 text-center w-12 whitespace-nowrap">No</th>
+                    <th class="py-3 px-3.5 whitespace-nowrap">Tahun Ajaran</th>
+                    <th class="py-3 px-3.5 whitespace-nowrap">Dari Kelas</th>
+                    <th class="py-3 px-3.5 whitespace-nowrap">Ke Kelas</th>
+                    <th class="py-3 px-4 text-center whitespace-nowrap min-w-[130px]">Aksi / Status</th>
+                    <th class="py-3 px-3.5 whitespace-nowrap">Waktu</th>
+                    <th class="py-3 px-4 whitespace-nowrap">Catatan</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 font-medium">
+                  <tr v-for="(r, idx) in listRiwayatSiswa" :key="r.id" class="hover:bg-slate-50/70 transition">
+                    <td class="py-3 px-3.5 text-center font-mono text-slate-400">{{ idx + 1 }}</td>
+                    <td class="py-3 px-3.5 font-bold text-slate-800 font-mono">{{ r.tahun_ajaran }}</td>
+                    <td class="py-3 px-3.5 font-bold text-slate-700">{{ r.dari_kelas || '-' }}</td>
+                    <td class="py-3 px-3.5 font-bold text-blue-600">{{ r.ke_kelas || '-' }}</td>
+                    <td class="py-3 px-4 text-center whitespace-nowrap">
+                      <span v-if="r.status === 'naik' || r.status === 'promote'" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-2xs font-extrabold bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">
+                        <i class="bi bi-arrow-up-circle-fill"></i> Naik Kelas
+                      </span>
+                      <span v-else-if="r.status === 'pindah'" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-2xs font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200 whitespace-nowrap">
+                        <i class="bi bi-arrow-left-right"></i> Pindah Rombel
+                      </span>
+                      <span v-else-if="r.status === 'tinggal' || r.status === 'retain'" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-2xs font-extrabold bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap">
+                        <i class="bi bi-arrow-repeat"></i> Tinggal Kelas
+                      </span>
+                      <span v-else-if="r.status === 'lulus' || r.status === 'graduate'" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-2xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+                        <i class="bi bi-mortarboard-fill"></i> Lulus
+                      </span>
+                      <span v-else-if="r.status === 'mutasi_keluar' || r.status === 'keluar'" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-2xs font-extrabold bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap">
+                        <i class="bi bi-box-arrow-right"></i> Keluar
+                      </span>
+                      <span v-else class="inline-flex items-center px-2.5 py-1 rounded-lg text-2xs font-extrabold bg-slate-100 text-slate-700 border border-slate-200 whitespace-nowrap">
+                        {{ r.status || 'Aktif' }}
+                      </span>
+                    </td>
+                    <td class="py-3 px-3.5 font-mono text-[11px] text-slate-500 whitespace-nowrap">
+                      {{ r.created_at ? new Date(r.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-' }}
+                    </td>
+                    <td class="py-3 px-4 text-slate-600 text-xs whitespace-nowrap">{{ r.catatan || '-' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="pt-3 flex justify-end border-t border-slate-100">
+              <button type="button" @click="openRiwayatModal = false" class="px-5 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl shadow-2xs transition">Tutup</button>
             </div>
           </div>
-          <button @click="openRiwayatModal = false" class="text-slate-400 hover:text-slate-600"><i class="bi bi-x-lg"></i></button>
-        </div>
-
-        <div class="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-          <div v-if="loadingRiwayat" class="text-center py-10">
-            <div class="spinner-border text-blue-600" role="status"></div>
-            <p class="text-xs text-slate-400 font-semibold mt-2">Memuat riwayat mutasi...</p>
-          </div>
-
-          <div v-else-if="listRiwayatSiswa.length === 0" class="text-center py-10 text-slate-400">
-            <i class="bi bi-folder2-open text-3xl block mb-2 text-slate-300"></i>
-            Siswa baru atau belum memiliki riwayat siklus kenaikan/pindah kelas.
-          </div>
-
-          <div v-else class="border border-slate-200/80 rounded-2xl overflow-x-auto shadow-2xs">
-            <table class="w-full text-left text-xs text-slate-600 whitespace-nowrap min-w-[650px]">
-              <thead class="bg-slate-50 text-slate-500 font-bold border-b border-slate-200/80 uppercase tracking-wider">
-                <tr>
-                  <th class="py-3 px-3.5 text-center w-12 whitespace-nowrap">No</th>
-                  <th class="py-3 px-3.5 whitespace-nowrap">Tahun Ajaran</th>
-                  <th class="py-3 px-3.5 whitespace-nowrap">Dari Kelas</th>
-                  <th class="py-3 px-3.5 whitespace-nowrap">Ke Kelas</th>
-                  <th class="py-3 px-4 text-center whitespace-nowrap min-w-[130px]">Aksi / Status</th>
-                  <th class="py-3 px-3.5 whitespace-nowrap">Waktu</th>
-                  <th class="py-3 px-4 whitespace-nowrap">Catatan</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-100 font-medium">
-                <tr v-for="(r, idx) in listRiwayatSiswa" :key="r.id" class="hover:bg-slate-50/70 transition">
-                  <td class="py-3 px-3.5 text-center font-mono text-slate-400">{{ idx + 1 }}</td>
-                  <td class="py-3 px-3.5 font-bold text-slate-800 font-mono">{{ r.tahun_ajaran }}</td>
-                  <td class="py-3 px-3.5 font-bold text-slate-700">{{ r.dari_kelas || '-' }}</td>
-                  <td class="py-3 px-3.5 font-bold text-blue-600">{{ r.ke_kelas || '-' }}</td>
-                  <td class="py-3 px-4 text-center whitespace-nowrap">
-                    <span v-if="r.status === 'naik' || r.status === 'promote'" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-2xs font-extrabold bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">
-                      <i class="bi bi-arrow-up-circle-fill"></i> Naik Kelas
-                    </span>
-                    <span v-else-if="r.status === 'pindah'" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-2xs font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200 whitespace-nowrap">
-                      <i class="bi bi-arrow-left-right"></i> Pindah Rombel
-                    </span>
-                    <span v-else-if="r.status === 'tinggal' || r.status === 'retain'" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-2xs font-extrabold bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap">
-                      <i class="bi bi-arrow-repeat"></i> Tinggal Kelas
-                    </span>
-                    <span v-else-if="r.status === 'lulus' || r.status === 'graduate'" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-2xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
-                      <i class="bi bi-mortarboard-fill"></i> Lulus
-                    </span>
-                    <span v-else-if="r.status === 'mutasi_keluar' || r.status === 'keluar'" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-2xs font-extrabold bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap">
-                      <i class="bi bi-box-arrow-right"></i> Keluar
-                    </span>
-                    <span v-else class="inline-flex items-center px-2.5 py-1 rounded-lg text-2xs font-extrabold bg-slate-100 text-slate-700 border border-slate-200 whitespace-nowrap">
-                      {{ r.status || 'Aktif' }}
-                    </span>
-                  </td>
-                  <td class="py-3 px-3.5 font-mono text-[11px] text-slate-500 whitespace-nowrap">
-                    {{ r.created_at ? new Date(r.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-' }}
-                  </td>
-                  <td class="py-3 px-4 text-slate-600 text-xs whitespace-nowrap">{{ r.catatan || '-' }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="pt-3 flex justify-end border-t border-slate-100">
-            <button type="button" @click="openRiwayatModal = false" class="px-5 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl shadow-2xs transition">Tutup</button>
-          </div>
         </div>
       </div>
-    </div>
+    </Teleport>
 
     <!-- 5. Modal Unggah Foto Siswa Masal (ZIP) -->
-    <div v-if="openBulkPhotoModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 animate-fade-in">
-      <div class="bg-white rounded-3xl shadow-xl w-full max-w-lg overflow-hidden border border-slate-200">
-        <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-emerald-50 to-white">
-          <div class="flex items-center gap-2.5">
-            <span class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm">
-              <i class="bi bi-file-earmark-zip-fill"></i>
-            </span>
-            <h3 class="font-black text-slate-800 text-base">Unggah Foto Siswa Masal (ZIP)</h3>
+    <Teleport to="body">
+      <div v-if="openBulkPhotoModal" class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fade-in">
+        <div class="bg-white rounded-3xl shadow-xl w-full max-w-lg overflow-hidden border border-slate-200 relative z-10">
+          <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-emerald-50 to-white">
+            <div class="flex items-center gap-2.5">
+              <span class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm">
+                <i class="bi bi-file-earmark-zip-fill"></i>
+              </span>
+              <h3 class="font-black text-slate-800 text-base">Unggah Foto Siswa Masal (ZIP)</h3>
+            </div>
+            <button @click="openBulkPhotoModal = false" class="text-slate-400 hover:text-slate-600"><i class="bi bi-x-lg"></i></button>
           </div>
-          <button @click="openBulkPhotoModal = false" class="text-slate-400 hover:text-slate-600"><i class="bi bi-x-lg"></i></button>
+
+          <form @submit.prevent="submitBulkPhotos" class="p-6 space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Pilih Berkas ZIP Berisi Foto (.zip) *</label>
+              <input type="file" 
+                     accept=".zip" 
+                     required
+                     @change="onBulkPhotoFileChange" 
+                     class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none" />
+            </div>
+
+            <div class="p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl space-y-2">
+              <span class="text-xs font-bold text-emerald-900 flex items-center gap-1"><i class="bi bi-info-circle-fill"></i> Ketentuan Penamaan File:</span>
+              <ul class="text-[11px] text-emerald-800 space-y-1 list-disc pl-4">
+                <li>Penamaan file di dalam ZIP: <code class="bg-emerald-100 font-bold px-1 rounded font-mono">NPSN_NISN.jpg</code> atau <code class="bg-emerald-100 font-bold px-1 rounded font-mono">NISN.jpg</code> (Contoh: <code class="bg-emerald-100 px-1 rounded font-mono">0012345678.jpg</code>).</li>
+                <li>Format didukung: <strong>JPG, JPEG, PNG, WEBP</strong>. Maksimal ukuran <strong>500 KB</strong> per foto.</li>
+                <li>Sistem akan otomatis mencocokkan NISN dan memperbarui foto profil siswa ke database.</li>
+              </ul>
+            </div>
+
+            <div v-if="bulkPhotoResult" class="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-800">
+              {{ bulkPhotoResult }}
+            </div>
+
+            <div class="pt-3 flex justify-end gap-2 border-t border-slate-100">
+              <button type="button" @click="openBulkPhotoModal = false" class="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl">Batal</button>
+              <button type="submit" 
+                      :disabled="bulkPhotoLoading" 
+                      class="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs flex items-center gap-1.5 disabled:opacity-50">
+                <i v-if="bulkPhotoLoading" class="spinner-border spinner-border-sm" role="status"></i>
+                <i v-else class="bi bi-cloud-arrow-up-fill"></i>
+                {{ bulkPhotoLoading ? 'Mengekstrak & Memproses...' : 'Unggah & Ekstrak ZIP' }}
+              </button>
+            </div>
+          </form>
         </div>
-
-        <form @submit.prevent="submitBulkPhotos" class="p-6 space-y-4">
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">Pilih Berkas ZIP Berisi Foto (.zip) *</label>
-            <input type="file" 
-                   accept=".zip" 
-                   required
-                   @change="onBulkPhotoFileChange" 
-                   class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none" />
-          </div>
-
-          <div class="p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl space-y-2">
-            <span class="text-xs font-bold text-emerald-900 flex items-center gap-1"><i class="bi bi-info-circle-fill"></i> Ketentuan Penamaan File:</span>
-            <ul class="text-[11px] text-emerald-800 space-y-1 list-disc pl-4">
-              <li>Penamaan file di dalam ZIP: <code class="bg-emerald-100 font-bold px-1 rounded font-mono">NPSN_NISN.jpg</code> atau <code class="bg-emerald-100 font-bold px-1 rounded font-mono">NISN.jpg</code> (Contoh: <code class="bg-emerald-100 px-1 rounded font-mono">0012345678.jpg</code>).</li>
-              <li>Format didukung: <strong>JPG, JPEG, PNG, WEBP</strong>. Maksimal ukuran <strong>500 KB</strong> per foto.</li>
-              <li>Sistem akan otomatis mencocokkan NISN dan memperbarui foto profil siswa ke database.</li>
-            </ul>
-          </div>
-
-          <div v-if="bulkPhotoResult" class="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-800">
-            {{ bulkPhotoResult }}
-          </div>
-
-          <div class="pt-3 flex justify-end gap-2 border-t border-slate-100">
-            <button type="button" @click="openBulkPhotoModal = false" class="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl">Batal</button>
-            <button type="submit" 
-                    :disabled="bulkPhotoLoading" 
-                    class="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs flex items-center gap-1.5 disabled:opacity-50">
-              <i v-if="bulkPhotoLoading" class="spinner-border spinner-border-sm" role="status"></i>
-              <i v-else class="bi bi-cloud-arrow-up-fill"></i>
-              {{ bulkPhotoLoading ? 'Mengekstrak & Memproses...' : 'Unggah & Ekstrak ZIP' }}
-            </button>
-          </div>
-        </form>
       </div>
-    </div>
+    </Teleport>
 
   </AppLayout>
 </template>

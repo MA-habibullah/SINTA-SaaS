@@ -901,8 +901,9 @@ const deleteTenant = (tenant) => {
         </div>
 
         <!-- MODAL DIALOG: Tambah / Edit Sekolah -->
-        <div v-if="showModal" class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-            <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <Teleport to="body">
+            <div v-if="showModal" class="fixed inset-0 z-[9999] overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+                <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 relative z-10">
                 
                 <!-- Modal Header -->
                 <div class="bg-gradient-to-r from-indigo-600 to-blue-600 px-6 py-4 flex items-center justify-between text-white">
@@ -1356,6 +1357,7 @@ const deleteTenant = (tenant) => {
 
             </div>
         </div>
+        </Teleport>
 
     </AppLayout>
 </template>

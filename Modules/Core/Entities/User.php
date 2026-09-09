@@ -75,6 +75,9 @@ class User extends Authenticatable
 
     public function isSuperAdmin(): bool
     {
+        if ($this->tenant_id === '00000000-0000-0000-0000-000000000000') {
+            return true;
+        }
         if (is_object($this->role) && isset($this->role->nama_role) && $this->role->nama_role === 'super_admin') {
             return true;
         }
@@ -86,6 +89,9 @@ class User extends Authenticatable
 
     public function hasRole(string $roleName): bool
     {
+        if ($roleName === 'super_admin' && $this->tenant_id === '00000000-0000-0000-0000-000000000000') {
+            return true;
+        }
         if (is_object($this->role) && isset($this->role->nama_role) && $this->role->nama_role === $roleName) {
             return true;
         }
@@ -93,6 +99,21 @@ class User extends Authenticatable
             return true;
         }
         return $this->roles()->where('nama_role', $roleName)->exists();
+    }
+
+    public function getRoleNames(): \Illuminate\Support\Collection
+    {
+        $names = collect();
+        if (is_object($this->role) && isset($this->role->nama_role)) {
+            $names->push($this->role->nama_role);
+        } elseif (is_string($this->role)) {
+            $names->push($this->role);
+        }
+        if ($this->tenant_id === '00000000-0000-0000-0000-000000000000') {
+            $names->push('super_admin');
+        }
+        $relNames = $this->roles()->pluck('nama_role');
+        return $names->merge($relNames)->unique()->values();
     }
 }
 
