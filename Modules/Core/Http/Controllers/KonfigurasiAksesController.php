@@ -182,10 +182,12 @@ class KonfigurasiAksesController extends Controller
             $seen = [];
 
             foreach ($accessInput as $roleId => $menuIds) {
-                if (!is_array($menuIds)) continue;
+                if (!is_array($menuIds) || !\Illuminate\Support\Str::isUuid($roleId)) continue;
 
                 foreach ($menuIds as $menuId) {
-                    $key = "{$targetTenantId}-{$roleId}-{$menuId}";
+                    if (!\Illuminate\Support\Str::isUuid($menuId)) continue;
+
+                    $key = "{$targetTenantId}___{$roleId}___{$menuId}";
                     if (!isset($seen[$key])) {
                         $seen[$key] = true;
                         $insertData[] = [
@@ -198,14 +200,16 @@ class KonfigurasiAksesController extends Controller
                     // Auto-grant parent menu if child is granted
                     if (isset($menuParents[$menuId])) {
                         $parentId = $menuParents[$menuId];
-                        $parentKey = "{$targetTenantId}-{$roleId}-{$parentId}";
-                        if (!isset($seen[$parentKey])) {
-                            $seen[$parentKey] = true;
-                            $insertData[] = [
-                                'tenant_id' => $targetTenantId,
-                                'role_id'   => $roleId,
-                                'menu_id'   => $parentId,
-                            ];
+                        if (\Illuminate\Support\Str::isUuid($parentId)) {
+                            $parentKey = "{$targetTenantId}___{$roleId}___{$parentId}";
+                            if (!isset($seen[$parentKey])) {
+                                $seen[$parentKey] = true;
+                                $insertData[] = [
+                                    'tenant_id' => $targetTenantId,
+                                    'role_id'   => $roleId,
+                                    'menu_id'   => $parentId,
+                                ];
+                            }
                         }
                     }
                 }
@@ -251,7 +255,7 @@ class KonfigurasiAksesController extends Controller
 
         $accessMap = [];
         foreach ($rows as $r) {
-            $accessMap[$r->role_id . '-' . $r->menu_id] = true;
+            $accessMap["{$r->role_id}___{$r->menu_id}"] = true;
         }
 
         return $accessMap;

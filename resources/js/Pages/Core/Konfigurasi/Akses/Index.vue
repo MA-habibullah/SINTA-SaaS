@@ -90,7 +90,7 @@ watch(() => props.accessMap, (newMap) => {
 
 // Checkbox change handler with Parent-Child Cascading logic
 const handleCheckboxChange = (roleId, menu) => {
-  const key = `${roleId}-${menu.id}`
+  const key = `${roleId}___${menu.id}`
   const isChecked = !!matrix[key]
 
   if (!isChecked) {
@@ -98,14 +98,14 @@ const handleCheckboxChange = (roleId, menu) => {
     if (!menu.is_child) {
       availableMenuList.value.forEach(m => {
         if (m.parent_id === menu.id) {
-          matrix[`${roleId}-${m.id}`] = false
+          matrix[`${roleId}___${m.id}`] = false
         }
       })
     }
   } else {
     // If Child is CHECKED -> Auto-check its parent
     if (menu.is_child && menu.parent_id) {
-      matrix[`${roleId}-${menu.parent_id}`] = true
+      matrix[`${roleId}___${menu.parent_id}`] = true
     }
   }
 }
@@ -113,7 +113,7 @@ const handleCheckboxChange = (roleId, menu) => {
 // Bulk toggle for a specific role
 const toggleAllForRole = (roleId, grantAll = true) => {
   availableMenuList.value.forEach(m => {
-    matrix[`${roleId}-${m.id}`] = grantAll
+    matrix[`${roleId}___${m.id}`] = grantAll
   })
 }
 
@@ -193,10 +193,9 @@ const saveMatrix = () => {
 
   Object.keys(matrix).forEach(key => {
     if (matrix[key]) {
-      const parts = key.split('-')
-      if (parts.length >= 2) {
-        const roleId = parts[0]
-        const menuId = parts.slice(1).join('-') // UUID might have hyphens
+      const parts = key.split('___')
+      if (parts.length === 2) {
+        const [roleId, menuId] = parts
         if (!accessPayload[roleId]) {
           accessPayload[roleId] = []
         }
@@ -462,7 +461,7 @@ const formatRoleName = (name) => {
                   <label class="inline-flex items-center justify-center p-1 rounded-lg hover:bg-blue-100/50 transition cursor-pointer">
                     <input 
                       type="checkbox" 
-                      v-model="matrix[`${role.id}-${menu.id}`]"
+                      v-model="matrix[`${role.id}___${menu.id}`]"
                       @change="handleCheckboxChange(role.id, menu)"
                       class="w-4 h-4 text-blue-600 rounded-md border-slate-300 focus:ring-blue-500 focus:ring-2 transition cursor-pointer"
                     />
