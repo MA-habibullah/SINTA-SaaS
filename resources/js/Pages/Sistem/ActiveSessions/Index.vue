@@ -952,56 +952,58 @@ onMounted(() => {
       </div>
 
       <!-- Retention Confirmation Modal -->
-      <div 
-        v-if="showRetentionModal" 
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs"
-      >
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-          <div class="flex items-center gap-3 text-red-600">
-            <div class="w-10 h-10 rounded-2xl bg-red-100 flex items-center justify-center text-xl shrink-0">
-              <i class="bi bi-trash3-fill"></i>
+      <Teleport to="body">
+        <div 
+          v-if="showRetentionModal" 
+          class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs"
+        >
+          <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 relative z-10">
+            <div class="flex items-center gap-3 text-red-600">
+              <div class="w-10 h-10 rounded-2xl bg-red-100 flex items-center justify-center text-xl shrink-0">
+                <i class="bi bi-trash3-fill"></i>
+              </div>
+              <div>
+                <h3 class="text-base font-black text-slate-900">
+                  {{ retentionModalType === 'sessions' ? 'Bersihkan Riwayat Sesi' : 'Bersihkan Log Jejak Audit' }}
+                </h3>
+                <p class="text-xs text-slate-500">Tindakan ini permanen dan tidak dapat dibatalkan</p>
+              </div>
             </div>
-            <div>
-              <h3 class="text-base font-black text-slate-900">
-                {{ retentionModalType === 'sessions' ? 'Bersihkan Riwayat Sesi' : 'Bersihkan Log Jejak Audit' }}
-              </h3>
-              <p class="text-xs text-slate-500">Tindakan ini permanen dan tidak dapat dibatalkan</p>
+
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-slate-700">Hapus Log Sebelum / Pada Tanggal:</label>
+              <input 
+                type="date" 
+                v-model="retentionDate" 
+                :max="maxRetentionDate" 
+                class="w-full text-xs font-semibold rounded-xl border border-slate-200 p-2.5 focus:ring-2 focus:ring-red-500 shadow-2xs"
+              />
+              <p class="text-[11px] text-slate-400">
+                Maksimal tanggal batas adalah kemarin ({{ maxRetentionDate }}). Sesi aktif hari ini tetap terlindungi.
+              </p>
             </div>
-          </div>
 
-          <div class="space-y-2">
-            <label class="block text-xs font-bold text-slate-700">Hapus Log Sebelum / Pada Tanggal:</label>
-            <input 
-              type="date" 
-              v-model="retentionDate" 
-              :max="maxRetentionDate" 
-              class="w-full text-xs font-semibold rounded-xl border border-slate-200 p-2.5 focus:ring-2 focus:ring-red-500 shadow-2xs"
-            />
-            <p class="text-[11px] text-slate-400">
-              Maksimal tanggal batas adalah kemarin ({{ maxRetentionDate }}). Sesi aktif hari ini tetap terlindungi.
-            </p>
-          </div>
-
-          <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
-            <button 
-              type="button" 
-              @click="showRetentionModal = false" 
-              class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition"
-            >
-              Batal
-            </button>
-            <button 
-              type="button" 
-              @click="executeRetentionClean" 
-              :disabled="!retentionDate || isCleaningRetention"
-              class="px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition shadow-2xs flex items-center gap-1.5 disabled:opacity-50"
-            >
-              <i v-if="isCleaningRetention" class="bi bi-arrow-clockwise animate-spin"></i>
-              <span>{{ isCleaningRetention ? 'Membersihkan...' : 'Ya, Hapus Log' }}</span>
-            </button>
+            <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <button 
+                type="button" 
+                @click="showRetentionModal = false" 
+                class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition"
+              >
+                Batal
+              </button>
+              <button 
+                type="button" 
+                @click="executeRetentionClean" 
+                :disabled="!retentionDate || isCleaningRetention"
+                class="px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition shadow-2xs flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <i v-if="isCleaningRetention" class="bi bi-arrow-clockwise animate-spin"></i>
+                <span>{{ isCleaningRetention ? 'Membersihkan...' : 'Ya, Hapus Log' }}</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </Teleport>
 
     </div>
   </AppLayout>

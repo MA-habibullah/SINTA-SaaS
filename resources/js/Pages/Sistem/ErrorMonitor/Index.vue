@@ -853,231 +853,235 @@ const copyTraceText = () => {
         </div>
 
         <!-- MODAL 1: Detail Stack Trace Viewer -->
-        <div v-if="showTraceModal && selectedError" class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-            <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                
-                <!-- Modal Header -->
-                <div class="bg-gradient-to-r from-slate-900 to-indigo-950 px-6 py-4 flex items-center justify-between text-white shrink-0">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-2xl bg-rose-500/20 border border-rose-400/30 text-rose-400 flex items-center justify-center text-xl">
-                            <i class="bi bi-bug-fill"></i>
-                        </div>
-                        <div>
-                            <h3 class="text-base font-bold flex items-center gap-2 m-0 text-white">
-                                Stack Trace & Crash Report
-                                <span class="px-2 py-0.5 rounded-md bg-rose-500 text-white text-[10px] font-mono font-bold">
-                                    {{ selectedError.error_level }}
-                                </span>
-                            </h3>
-                            <p class="text-xs text-slate-300 font-mono mb-0 mt-0.5">
-                                {{ selectedError.file }} : Line {{ selectedError.line || '?' }}
-                            </p>
-                        </div>
-                    </div>
-                    <button type="button" @click="showTraceModal = false" class="text-slate-400 hover:text-white text-xl cursor-pointer">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
-                </div>
-
-                <!-- Modal Body -->
-                <div class="p-6 overflow-y-auto space-y-5">
+        <Teleport to="body">
+            <div v-if="showTraceModal && selectedError" class="fixed inset-0 z-[9999] overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+                <div class="relative z-10 bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                     
-                    <!-- Message Box -->
-                    <div>
-                        <span class="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5 flex items-center gap-1.5">
-                            <i class="bi bi-chat-square-text-fill text-rose-600"></i> Pesan Error Lengkap:
-                        </span>
-                        <div class="p-3.5 bg-rose-50/50 border border-rose-200 rounded-2xl font-mono text-xs text-rose-900 break-all leading-relaxed whitespace-pre-wrap">
-                            {{ selectedError.message }}
+                    <!-- Modal Header -->
+                    <div class="bg-gradient-to-r from-slate-900 to-indigo-950 px-6 py-4 flex items-center justify-between text-white shrink-0">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-2xl bg-rose-500/20 border border-rose-400/30 text-rose-400 flex items-center justify-center text-xl">
+                                <i class="bi bi-bug-fill"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-base font-bold flex items-center gap-2 m-0 text-white">
+                                    Stack Trace & Crash Report
+                                    <span class="px-2 py-0.5 rounded-md bg-rose-500 text-white text-[10px] font-mono font-bold">
+                                        {{ selectedError.error_level }}
+                                    </span>
+                                </h3>
+                                <p class="text-xs text-slate-300 font-mono mb-0 mt-0.5">
+                                    {{ selectedError.file }} : Line {{ selectedError.line || '?' }}
+                                </p>
+                            </div>
                         </div>
+                        <button type="button" @click="showTraceModal = false" class="text-slate-400 hover:text-white text-xl cursor-pointer">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
                     </div>
 
-                    <!-- Metadata Grid -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-1">
-                            <span class="text-slate-400 font-semibold block text-[10px] uppercase">Request Context</span>
-                            <div class="font-mono text-slate-800 break-all">
-                                <strong>{{ selectedError.request_method || 'GET' }}</strong>: {{ selectedError.request_url || '-' }}
-                            </div>
-                            <div class="text-[11px] text-slate-500">
-                                IP: <code class="text-slate-700">{{ selectedError.ip_address }}</code> | Waktu: {{ formatDateTime(selectedError.created_at) }}
+                    <!-- Modal Body -->
+                    <div class="p-6 overflow-y-auto space-y-5">
+                        
+                        <!-- Message Box -->
+                        <div>
+                            <span class="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5 flex items-center gap-1.5">
+                                <i class="bi bi-chat-square-text-fill text-rose-600"></i> Pesan Error Lengkap:
+                            </span>
+                            <div class="p-3.5 bg-rose-50/50 border border-rose-200 rounded-2xl font-mono text-xs text-rose-900 break-all leading-relaxed whitespace-pre-wrap">
+                                {{ selectedError.message }}
                             </div>
                         </div>
 
-                        <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-1">
-                            <span class="text-slate-400 font-semibold block text-[10px] uppercase">User Agent & Instansi</span>
-                            <div class="text-slate-800 font-semibold">
-                                {{ selectedError.nama_sekolah || 'Pusat Kendali SaaS (Global)' }}
+                        <!-- Metadata Grid -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-1">
+                                <span class="text-slate-400 font-semibold block text-[10px] uppercase">Request Context</span>
+                                <div class="font-mono text-slate-800 break-all">
+                                    <strong>{{ selectedError.request_method || 'GET' }}</strong>: {{ selectedError.request_url || '-' }}
+                                </div>
+                                <div class="text-[11px] text-slate-500">
+                                    IP: <code class="text-slate-700">{{ selectedError.ip_address }}</code> | Waktu: {{ formatDateTime(selectedError.created_at) }}
+                                </div>
                             </div>
-                            <div class="text-[10px] text-slate-500 truncate" :title="selectedError.user_agent">
-                                {{ selectedError.user_agent || '-' }}
+
+                            <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-1">
+                                <span class="text-slate-400 font-semibold block text-[10px] uppercase">User Agent & Instansi</span>
+                                <div class="text-slate-800 font-semibold">
+                                    {{ selectedError.nama_sekolah || 'Pusat Kendali SaaS (Global)' }}
+                                </div>
+                                <div class="text-[10px] text-slate-500 truncate" :title="selectedError.user_agent">
+                                    {{ selectedError.user_agent || '-' }}
+                                </div>
                             </div>
                         </div>
+
+                        <!-- Stack Frames Table -->
+                        <div>
+                            <span class="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-2 flex items-center gap-1.5">
+                                <i class="bi bi-list-nested text-indigo-600"></i> Call Stack Execution Frames ({{ parsedTrace.length }} Frames):
+                            </span>
+
+                            <div class="border border-slate-200 rounded-2xl overflow-hidden">
+                                <table class="w-full text-left text-xs">
+                                    <thead class="bg-slate-50 border-b border-slate-200 font-bold text-slate-600 text-[11px]">
+                                        <tr>
+                                            <th class="py-2.5 px-3 w-10 text-center">#</th>
+                                            <th class="py-2.5 px-3">Function / Method Call</th>
+                                            <th class="py-2.5 px-3">Source File & Line</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 font-mono text-[11px]">
+                                        <tr v-if="parsedTrace.length === 0">
+                                            <td colspan="3" class="text-center py-6 text-slate-400 font-sans">
+                                                Tidak ada call stack frames yang terekam.
+                                            </td>
+                                        </tr>
+                                        <tr v-else v-for="(frame, i) in parsedTrace" :key="i" class="hover:bg-slate-50/60">
+                                            <td class="py-2 px-3 text-center text-slate-400">{{ i }}</td>
+                                            <td class="py-2 px-3 text-slate-800">
+                                                <span v-if="frame.class" class="text-indigo-600 font-semibold">{{ frame.class }}</span>
+                                                <span v-if="frame.type" class="text-slate-400">{{ frame.type }}</span>
+                                                <span class="text-amber-700 font-bold">{{ frame.function }}</span>
+                                                <span class="text-slate-400">()</span>
+                                            </td>
+                                            <td class="py-2 px-3 text-slate-600 break-all">
+                                                <span :title="frame.file">{{ shortenPath(frame.file) }}</span>
+                                                <span v-if="frame.line" class="ms-1 px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-200/80 font-bold text-[10px]">
+                                                    :{{ frame.line }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
                     </div>
 
-                    <!-- Stack Frames Table -->
-                    <div>
-                        <span class="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-2 flex items-center gap-1.5">
-                            <i class="bi bi-list-nested text-indigo-600"></i> Call Stack Execution Frames ({{ parsedTrace.length }} Frames):
-                        </span>
+                    <!-- Modal Footer -->
+                    <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+                        <button 
+                            type="button" 
+                            @click="copyTraceText" 
+                            class="px-3.5 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                        >
+                            <i class="bi bi-clipboard"></i>
+                            <span>Salin Stack Trace</span>
+                        </button>
 
-                        <div class="border border-slate-200 rounded-2xl overflow-hidden">
-                            <table class="w-full text-left text-xs">
-                                <thead class="bg-slate-50 border-b border-slate-200 font-bold text-slate-600 text-[11px]">
-                                    <tr>
-                                        <th class="py-2.5 px-3 w-10 text-center">#</th>
-                                        <th class="py-2.5 px-3">Function / Method Call</th>
-                                        <th class="py-2.5 px-3">Source File & Line</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-100 font-mono text-[11px]">
-                                    <tr v-if="parsedTrace.length === 0">
-                                        <td colspan="3" class="text-center py-6 text-slate-400 font-sans">
-                                            Tidak ada call stack frames yang terekam.
-                                        </td>
-                                    </tr>
-                                    <tr v-else v-for="(frame, i) in parsedTrace" :key="i" class="hover:bg-slate-50/60">
-                                        <td class="py-2 px-3 text-center text-slate-400">{{ i }}</td>
-                                        <td class="py-2 px-3 text-slate-800">
-                                            <span v-if="frame.class" class="text-indigo-600 font-semibold">{{ frame.class }}</span>
-                                            <span v-if="frame.type" class="text-slate-400">{{ frame.type }}</span>
-                                            <span class="text-amber-700 font-bold">{{ frame.function }}</span>
-                                            <span class="text-slate-400">()</span>
-                                        </td>
-                                        <td class="py-2 px-3 text-slate-600 break-all">
-                                            <span :title="frame.file">{{ shortenPath(frame.file) }}</span>
-                                            <span v-if="frame.line" class="ms-1 px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-200/80 font-bold text-[10px]">
-                                                :{{ frame.line }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <div class="flex items-center gap-2">
+                            <button 
+                                type="button" 
+                                @click="handleDeleteSingle(selectedError.id)" 
+                                class="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                            >
+                                <i class="bi bi-trash3"></i>
+                                <span>Hapus Log Ini</span>
+                            </button>
+                            <button 
+                                type="button" 
+                                @click="showTraceModal = false" 
+                                class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
+                            >
+                                Tutup
+                            </button>
                         </div>
                     </div>
 
                 </div>
-
-                <!-- Modal Footer -->
-                <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
-                    <button 
-                        type="button" 
-                        @click="copyTraceText" 
-                        class="px-3.5 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                    >
-                        <i class="bi bi-clipboard"></i>
-                        <span>Salin Stack Trace</span>
-                    </button>
-
-                    <div class="flex items-center gap-2">
-                        <button 
-                            type="button" 
-                            @click="handleDeleteSingle(selectedError.id)" 
-                            class="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
-                        >
-                            <i class="bi bi-trash3"></i>
-                            <span>Hapus Log Ini</span>
-                        </button>
-                        <button 
-                            type="button" 
-                            @click="showTraceModal = false" 
-                            class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
-                        >
-                            Tutup
-                        </button>
-                    </div>
-                </div>
-
             </div>
-        </div>
+        </Teleport>
 
         <!-- MODAL 2: Pembersihan Log Error (Clear Modal) -->
-        <div v-if="showClearModal" class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-            <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                
-                <!-- Modal Header -->
-                <div class="bg-gradient-to-r from-rose-600 to-pink-600 px-6 py-4 flex items-center justify-between text-white">
-                    <div>
-                        <h3 class="text-base font-bold flex items-center gap-2 m-0">
-                            <i class="bi bi-trash3-fill"></i>
-                            Pembersihan Log Error Sistem
-                        </h3>
-                        <p class="text-xs text-rose-100 mb-0 mt-0.5">Menghapus riwayat crash report untuk efisiensi penyimpanan database PostgreSQL.</p>
-                    </div>
-                    <button type="button" @click="showClearModal = false" class="text-white/80 hover:text-white text-xl cursor-pointer">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
-                </div>
-
-                <!-- Modal Form -->
-                <form @submit.prevent="handleClearLogs" class="p-6 space-y-4">
+        <Teleport to="body">
+            <div v-if="showClearModal" class="fixed inset-0 z-[9999] overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+                <div class="relative z-10 bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                     
-                    <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-start gap-2.5 text-xs text-amber-800 font-medium">
-                        <i class="bi bi-exclamation-triangle-fill text-base text-amber-600 shrink-0"></i>
-                        <span>
-                            Tindakan ini akan <strong>menghapus permanen</strong> log error pada rentang atau instansi yang dipilih. Tindakan ini tidak dapat dibatalkan.
-                        </span>
-                    </div>
-
-                    <!-- Target Tenant -->
-                    <div class="space-y-1">
-                        <label class="text-xs font-bold text-slate-700">Target Lingkup Instansi</label>
-                        <select 
-                            v-model="clearForm.tenantId" 
-                            class="h-10 px-3 w-full rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 focus:outline-none"
-                        >
-                            <option value="all">Semua Sekolah & Sistem (Global)</option>
-                            <option value="system">Hanya Sistem (Global)</option>
-                            <option v-for="t in tenantsList" :key="t.id" :value="t.id">
-                                {{ t.nama_sekolah }} ({{ t.npsn }})
-                            </option>
-                        </select>
-                    </div>
-
-                    <!-- Rentang Tanggal (Opsional) -->
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="space-y-1">
-                            <label class="text-xs font-bold text-slate-700">Tanggal Mulai (Opsional)</label>
-                            <input 
-                                type="date" 
-                                v-model="clearForm.startDate" 
-                                class="h-10 px-3 w-full rounded-xl border border-slate-200 text-xs text-slate-700 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 focus:outline-none"
-                            />
+                    <!-- Modal Header -->
+                    <div class="bg-gradient-to-r from-rose-600 to-pink-600 px-6 py-4 flex items-center justify-between text-white">
+                        <div>
+                            <h3 class="text-base font-bold flex items-center gap-2 m-0">
+                                <i class="bi bi-trash3-fill"></i>
+                                Pembersihan Log Error Sistem
+                            </h3>
+                            <p class="text-xs text-rose-100 mb-0 mt-0.5">Menghapus riwayat crash report untuk efisiensi penyimpanan database PostgreSQL.</p>
                         </div>
-                        <div class="space-y-1">
-                            <label class="text-xs font-bold text-slate-700">Tanggal Akhir (Opsional)</label>
-                            <input 
-                                type="date" 
-                                v-model="clearForm.endDate" 
-                                class="h-10 px-3 w-full rounded-xl border border-slate-200 text-xs text-slate-700 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 focus:outline-none"
-                            />
-                        </div>
-                    </div>
-                    <p class="text-[11px] text-slate-400 m-0">Biarkan rentang tanggal kosong jika ingin menghapus seluruh log.</p>
-
-                    <!-- Actions -->
-                    <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-                        <button 
-                            type="button" 
-                            @click="showClearModal = false" 
-                            class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition cursor-pointer"
-                        >
-                            Batal
-                        </button>
-                        <button 
-                            type="submit" 
-                            :disabled="isClearing"
-                            class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50"
-                        >
-                            <i class="bi bi-trash3" :class="{ 'animate-spin': isClearing }"></i>
-                            <span>{{ isClearing ? 'Sedang Menghapus...' : 'Eksekusi Pembersihan' }}</span>
+                        <button type="button" @click="showClearModal = false" class="text-white/80 hover:text-white text-xl cursor-pointer">
+                            <i class="bi bi-x-lg"></i>
                         </button>
                     </div>
 
-                </form>
+                    <!-- Modal Form -->
+                    <form @submit.prevent="handleClearLogs" class="p-6 space-y-4">
+                        
+                        <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-start gap-2.5 text-xs text-amber-800 font-medium">
+                            <i class="bi bi-exclamation-triangle-fill text-base text-amber-600 shrink-0"></i>
+                            <span>
+                                Tindakan ini akan <strong>menghapus permanen</strong> log error pada rentang atau instansi yang dipilih. Tindakan ini tidak dapat dibatalkan.
+                            </span>
+                        </div>
 
+                        <!-- Target Tenant -->
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-slate-700">Target Lingkup Instansi</label>
+                            <select 
+                                v-model="clearForm.tenantId" 
+                                class="h-10 px-3 w-full rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 focus:outline-none"
+                            >
+                                <option value="all">Semua Sekolah & Sistem (Global)</option>
+                                <option value="system">Hanya Sistem (Global)</option>
+                                <option v-for="t in tenantsList" :key="t.id" :value="t.id">
+                                    {{ t.nama_sekolah }} ({{ t.npsn }})
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Rentang Tanggal (Opsional) -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-slate-700">Tanggal Mulai (Opsional)</label>
+                                <input 
+                                    type="date" 
+                                    v-model="clearForm.startDate" 
+                                    class="h-10 px-3 w-full rounded-xl border border-slate-200 text-xs text-slate-700 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 focus:outline-none"
+                                />
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-slate-700">Tanggal Akhir (Opsional)</label>
+                                <input 
+                                    type="date" 
+                                    v-model="clearForm.endDate" 
+                                    class="h-10 px-3 w-full rounded-xl border border-slate-200 text-xs text-slate-700 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 focus:outline-none"
+                                />
+                            </div>
+                        </div>
+                        <p class="text-[11px] text-slate-400 m-0">Biarkan rentang tanggal kosong jika ingin menghapus seluruh log.</p>
+
+                        <!-- Actions -->
+                        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                            <button 
+                                type="button" 
+                                @click="showClearModal = false" 
+                                class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition cursor-pointer"
+                            >
+                                Batal
+                            </button>
+                            <button 
+                                type="submit" 
+                                :disabled="isClearing"
+                                class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50"
+                            >
+                                <i class="bi bi-trash3" :class="{ 'animate-spin': isClearing }"></i>
+                                <span>{{ isClearing ? 'Sedang Menghapus...' : 'Eksekusi Pembersihan' }}</span>
+                            </button>
+                        </div>
+
+                    </form>
+
+                </div>
             </div>
-        </div>
+        </Teleport>
 
     </AppLayout>
 </template>

@@ -1927,39 +1927,41 @@ const overlayPointsRight = computed(() => {
         </div>
 
         <!-- CAMERA SCANNER MODAL OVERLAY -->
-        <div v-if="showCameraModal" class="fixed inset-0 z-[10000] bg-black/90 backdrop-blur-md flex flex-col items-center justify-between p-4 sm:p-6">
-            
-            <!-- Top Status Bar -->
-            <div class="w-full max-w-md bg-slate-900/80 border border-slate-700 rounded-full py-2.5 px-6 text-center text-white text-xs font-bold shadow-2xl backdrop-blur-sm">
-                {{ cameraStatusText }}
-            </div>
+        <Teleport to="body">
+            <div v-if="showCameraModal" class="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md flex flex-col items-center justify-between p-4 sm:p-6">
+                
+                <!-- Top Status Bar -->
+                <div class="relative z-10 w-full max-w-md bg-slate-900/80 border border-slate-700 rounded-full py-2.5 px-6 text-center text-white text-xs font-bold shadow-2xl backdrop-blur-sm">
+                    {{ cameraStatusText }}
+                </div>
 
-            <!-- Video & Canvas Viewport -->
-            <div class="relative w-full max-w-2xl flex-1 max-h-[70vh] flex items-center justify-center overflow-hidden rounded-3xl border border-slate-800 bg-black my-4">
-                <video ref="cameraVideoEl" class="w-full h-full object-cover" autoplay playsinline></video>
-                <canvas ref="cameraOverlayCanvas" class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
-            </div>
+                <!-- Video & Canvas Viewport -->
+                <div class="relative z-10 w-full max-w-2xl flex-1 max-h-[70vh] flex items-center justify-center overflow-hidden rounded-3xl border border-slate-800 bg-black my-4">
+                    <video ref="cameraVideoEl" class="w-full h-full object-cover" autoplay playsinline></video>
+                    <canvas ref="cameraOverlayCanvas" class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
+                </div>
 
-            <!-- Bottom Controls -->
-            <div class="flex items-center gap-6">
-                <button 
-                    type="button" 
-                    @click="stopCamera" 
-                    class="h-12 px-6 rounded-full bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition border border-slate-600 shadow-xl cursor-pointer"
-                >
-                    Batal
-                </button>
-                <button 
-                    type="button" 
-                    @click="captureCameraPhoto" 
-                    class="h-14 px-8 rounded-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-sm transition shadow-2xl flex items-center gap-2 cursor-pointer border-2 border-white/20"
-                >
-                    <i class="bi bi-camera-fill text-lg"></i>
-                    <span>Ambil Foto</span>
-                </button>
-            </div>
+                <!-- Bottom Controls -->
+                <div class="relative z-10 flex items-center gap-6">
+                    <button 
+                        type="button" 
+                        @click="stopCamera" 
+                        class="h-12 px-6 rounded-full bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition border border-slate-600 shadow-xl cursor-pointer"
+                    >
+                        Batal
+                    </button>
+                    <button 
+                        type="button" 
+                        @click="captureCameraPhoto" 
+                        class="h-14 px-8 rounded-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-sm transition shadow-2xl flex items-center gap-2 cursor-pointer border-2 border-white/20"
+                    >
+                        <i class="bi bi-camera-fill text-lg"></i>
+                        <span>Ambil Foto</span>
+                    </button>
+                </div>
 
-        </div>
+            </div>
+        </Teleport>
 
     </AppLayout>
 </template>

@@ -650,11 +650,12 @@
     </div>
 
     <!-- 5. Universal Form Modal (Tambah / Edit) -->
-    <div 
-      v-if="openFormModal" 
-      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4"
-    >
-      <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <Teleport to="body">
+      <div 
+        v-if="openFormModal" 
+        class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4"
+      >
+        <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200 relative z-10">
         
         <!-- Header Modal -->
         <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
@@ -845,16 +846,78 @@
                   required 
                 />
               </div>
+
+              <!-- Input Khusus MAPEL (Kelompok, KKM, Urutan) -->
+              <div v-if="activeTab === 'mata_pelajaran'" class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">Kelompok Mapel</label>
+                  <select 
+                    v-model="formData.kelompok" 
+                    class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  >
+                    <option value="A">Kelompok A (Umum)</option>
+                    <option value="B">Kelompok B (Umum)</option>
+                    <option value="C">Kelompok C (Peminatan/Kejuruan)</option>
+                    <option value="MULOK">Muatan Lokal (Mulok)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">Urutan Tampil</label>
+                  <input 
+                    type="number" 
+                    v-model.number="formData.urutan" 
+                    min="1" 
+                    class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20" 
+                  />
+                </div>
+              </div>
+
+              <div v-if="activeTab === 'mata_pelajaran'">
+                <label class="block text-xs font-bold text-slate-700 mb-1">KKM / Kriteria Ketercapaian (KKTP)</label>
+                <input 
+                  type="number" 
+                  v-model.number="formData.kkm" 
+                  min="0" 
+                  max="100" 
+                  step="0.1" 
+                  placeholder="Contoh: 75" 
+                  class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20" 
+                />
+              </div>
             </template>
+
+            <!-- Deskripsi Tambahan (Opsional) -->
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Keterangan / Deskripsi</label>
+              <textarea 
+                v-model="formData.deskripsi" 
+                rows="2" 
+                placeholder="Catatan tambahan (opsional)..." 
+                class="w-full p-3 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              ></textarea>
+            </div>
+
+            <!-- Status Aktif Toggle -->
+            <div class="flex items-center gap-3 pt-2">
+              <input 
+                type="checkbox" 
+                id="modalIsActive" 
+                v-model="formData.is_active" 
+                class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" 
+              />
+              <label for="modalIsActive" class="text-xs font-bold text-slate-700 select-none cursor-pointer">
+                Data Aktif & Digunakan dalam Sistem
+              </label>
+            </div>
 
           </div>
 
-          <!-- Footer Modal -->
-          <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2.5">
+          <!-- Footer Modal Actions -->
+          <div class="px-6 py-4 bg-slate-50/80 border-t border-slate-100 flex items-center justify-end gap-2.5">
             <button 
               type="button" 
               @click="openFormModal = false" 
-              class="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold transition"
+              class="px-4 py-2 bg-white hover:bg-slate-100 text-slate-600 rounded-xl text-xs font-bold border border-slate-200 transition"
             >
               Batal
             </button>
@@ -871,6 +934,7 @@
 
       </div>
     </div>
+  </Teleport>
 
   </AppLayout>
 </template>

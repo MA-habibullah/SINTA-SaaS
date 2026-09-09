@@ -914,102 +914,117 @@ onUnmounted(() => {
         </div>
 
         <!-- MODAL CONFIGURE NETWORK INTERFACE -->
-        <div v-if="showNetworkModal" class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-            <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                
-                <!-- Modal Header -->
-                <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between text-white">
-                    <div>
-                        <h3 class="text-base font-bold flex items-center gap-2 m-0">
-                            <i class="bi bi-sliders"></i>
-                            Konfigurasi: {{ formNetwork.interface }}
-                        </h3>
-                        <p class="text-xs text-blue-100 mb-0 mt-0.5">Atur penugasan IP Address, Gateway, dan DNS adapter jaringan.</p>
-                    </div>
-                    <button type="button" @click="closeConfigModal" class="text-white/80 hover:text-white text-xl cursor-pointer">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
-                </div>
-
-                <!-- Modal Body -->
-                <form @submit.prevent="submitNetworkConfig" class="p-6 space-y-4">
+        <Teleport to="body">
+            <div v-if="showNetworkModal" class="fixed inset-0 z-[9999] overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+                <div class="relative z-10 bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                     
-                    <!-- DHCP / Static Selector -->
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Tipe Penugasan IP</label>
-                        <select 
-                            v-model="formNetwork.dhcp"
-                            class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-none transition"
-                        >
-                            <option :value="true">DHCP (Otomatis dari Router)</option>
-                            <option :value="false">Static IP (Manual)</option>
-                        </select>
-                    </div>
-
-                    <!-- DHCP Info Note -->
-                    <div v-if="formNetwork.dhcp" class="p-3 bg-blue-50 text-blue-700 rounded-xl text-xs flex gap-2 items-start border border-blue-100">
-                        <i class="bi bi-info-circle-fill shrink-0 mt-0.5 text-blue-600"></i>
-                        <span>Server akan meminta konfigurasi IP Address, Gateway, dan DNS secara otomatis dari router/DHCP Server.</span>
-                    </div>
-
-                    <!-- Static Fields Container -->
-                    <div v-else class="space-y-3.5 pt-2 border-t border-slate-100">
+                    <!-- Modal Header -->
+                    <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between text-white">
                         <div>
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">IPv4 Address & CIDR Prefix</label>
-                            <input 
-                                type="text" 
-                                v-model="formNetwork.ipv4" 
-                                placeholder="Contoh: 192.168.1.100/24"
-                                class="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-mono text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-none transition"
-                                required
-                            />
+                            <h3 class="text-base font-bold flex items-center gap-2 m-0">
+                                <i class="bi bi-sliders"></i>
+                                Konfigurasi: {{ formNetwork.interface }}
+                            </h3>
+                            <p class="text-xs text-blue-100 mb-0 mt-0.5">Atur penugasan IP Address, Gateway, dan DNS adapter jaringan.</p>
                         </div>
-
-                        <div>
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Default Gateway</label>
-                            <input 
-                                type="text" 
-                                v-model="formNetwork.gateway" 
-                                placeholder="Contoh: 192.168.1.1"
-                                class="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-mono text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-none transition"
-                            />
-                        </div>
-
-                        <div>
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">DNS Servers (Dipisah Koma)</label>
-                            <input 
-                                type="text" 
-                                v-model="formNetwork.dns" 
-                                placeholder="Contoh: 8.8.8.8, 8.8.4.4"
-                                class="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-mono text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-none transition"
-                            />
-                        </div>
-                    </div>
-
-                    <!-- Modal Actions -->
-                    <div class="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
-                        <button 
-                            type="button" 
-                            @click="closeConfigModal"
-                            class="h-9 px-4 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer"
-                        >
-                            Batal
-                        </button>
-                        <button 
-                            type="submit" 
-                            :disabled="formSubmitting"
-                            class="h-9 px-5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
-                        >
-                            <i v-if="formSubmitting" class="bi bi-arrow-repeat animate-spin"></i>
-                            <i v-else class="bi bi-check2-circle"></i>
-                            <span>{{ formSubmitting ? 'Menerapkan...' : 'Terapkan Konfigurasi' }}</span>
+                        <button type="button" @click="closeConfigModal" class="text-white/80 hover:text-white text-xl cursor-pointer">
+                            <i class="bi bi-x-lg"></i>
                         </button>
                     </div>
 
-                </form>
+                    <!-- Modal Body -->
+                    <form @submit.prevent="submitNetworkConfig" class="p-6 space-y-4">
+                        
+                        <!-- DHCP / Static Selector -->
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Tipe Penugasan IP</label>
+                            <select 
+                                v-model="formNetwork.dhcp"
+                                class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-none transition"
+                            >
+                                <option :value="true">DHCP (Otomatis dari Router)</option>
+                                <option :value="false">Static IP (Manual)</option>
+                            </select>
+                        </div>
 
+                        <!-- DHCP Info Note -->
+                        <div v-if="formNetwork.dhcp" class="p-3 bg-blue-50 text-blue-700 rounded-xl text-xs flex gap-2 items-start border border-blue-100">
+                            <i class="bi bi-info-circle-fill text-blue-500 shrink-0 mt-0.5"></i>
+                            <div class="text-[11px] leading-relaxed">
+                                IP, Subnet Mask, Gateway, dan DNS akan didapatkan secara dinamis dari DHCP Server jaringan lokal Anda.
+                            </div>
+                        </div>
+
+                        <!-- Static Fields -->
+                        <template v-else>
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">IP Address</label>
+                                <input 
+                                    type="text" 
+                                    v-model="formNetwork.ip"
+                                    placeholder="contoh: 192.168.1.100"
+                                    class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-mono text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-none transition"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Subnet Mask</label>
+                                <input 
+                                    type="text" 
+                                    v-model="formNetwork.netmask"
+                                    placeholder="contoh: 255.255.255.0"
+                                    class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-mono text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-none transition"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Default Gateway</label>
+                                <input 
+                                    type="text" 
+                                    v-model="formNetwork.gateway"
+                                    placeholder="contoh: 192.168.1.1"
+                                    class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-mono text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-none transition"
+                                />
+                            </div>
+
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">DNS Server (Primary)</label>
+                                <input 
+                                    type="text" 
+                                    v-model="formNetwork.dns"
+                                    placeholder="contoh: 8.8.8.8"
+                                    class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-mono text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-none transition"
+                                />
+                            </div>
+                        </template>
+
+                        <!-- Modal Actions -->
+                        <div class="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+                            <button 
+                                type="button" 
+                                @click="closeConfigModal"
+                                class="h-9 px-4 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer"
+                            >
+                                Batal
+                            </button>
+                            <button 
+                                type="submit" 
+                                :disabled="formSubmitting"
+                                class="h-9 px-5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                            >
+                                <i v-if="formSubmitting" class="bi bi-arrow-repeat animate-spin"></i>
+                                <i v-else class="bi bi-check2-circle"></i>
+                                <span>{{ formSubmitting ? 'Menerapkan...' : 'Terapkan Konfigurasi' }}</span>
+                            </button>
+                        </div>
+
+                    </form>
+
+                </div>
             </div>
-        </div>
+        </Teleport>
 
     </AppLayout>
 </template>

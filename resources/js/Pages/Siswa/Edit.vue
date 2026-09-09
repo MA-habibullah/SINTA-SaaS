@@ -2555,8 +2555,9 @@ const ukuranOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
       </form>
 
       <!-- Document Viewer Modal -->
-      <div v-if="showDocModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+      <Teleport to="body">
+        <div v-if="showDocModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden relative z-10">
           <div class="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
             <h3 class="text-xs font-bold text-slate-800 flex items-center gap-2">
               <i class="bi bi-file-earmark-text-fill text-blue-600"></i> {{ docModalTitle }}
@@ -2579,9 +2580,12 @@ const ukuranOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
           </div>
         </div>
       </div>
+      </Teleport>
+
       <!-- Comprehensive Step-by-Step Validation Modal Popup -->
-      <div v-if="showValidationModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-        <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[88vh] flex flex-col overflow-hidden">
+      <Teleport to="body">
+        <div v-if="showValidationModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[88vh] flex flex-col overflow-hidden relative z-10">
           <!-- Modal Header -->
           <div class="p-5 bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 text-white flex items-start justify-between gap-4 shadow-sm">
             <div class="flex items-center gap-3.5">
@@ -2707,6 +2711,7 @@ const ukuranOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
           </div>
         </div>
       </div>
+      </Teleport>
 
     </div>
   </AppLayout>

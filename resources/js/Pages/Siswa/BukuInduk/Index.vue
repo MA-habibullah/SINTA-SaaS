@@ -1958,8 +1958,9 @@ onMounted(() => {
             <!-- ═══════════════════════════════════════════════════════════════════ -->
             <!-- MODAL DETAIL SISWA (9 SUB-TAB)                                      -->
             <!-- ═══════════════════════════════════════════════════════════════════ -->
-            <div v-if="isDetailOpen" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-                <div class="bg-white rounded-3xl border border-slate-200/90 shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden animate-fade-in">
+            <Teleport to="body">
+                <div v-if="isDetailOpen" class="fixed inset-0 z-[9999] overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+                    <div class="bg-white rounded-3xl border border-slate-200/90 shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden animate-fade-in relative z-10">
                     
                     <!-- 1. Modal Header (Modern Profile Card Header) -->
                     <div class="p-4 sm:p-5 border-b border-slate-200/80 bg-gradient-to-r from-slate-50 via-white to-blue-50/30 flex items-center justify-between gap-3">
@@ -2530,225 +2531,238 @@ onMounted(() => {
                     </div>
                 </div>
             </div>
+            </Teleport>
 
             <!-- ═══════════════════════════════════════════════════════════════════ -->
             <!-- MODAL SALIN KURIKULUM                                               -->
             <!-- ═══════════════════════════════════════════════════════════════════ -->
-            <div v-if="isCopyModalOpen" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3">
-                <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md p-5 space-y-4 animate-fade-in">
-                    <div class="flex items-center justify-between border-b pb-3">
-                        <h3 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                            <i class="bi bi-files text-blue-600"></i> Salin Kurikulum dari Kelas Lain
-                        </h3>
-                        <button @click="isCopyModalOpen = false" class="text-slate-400 hover:text-slate-600"><i class="bi bi-x-lg"></i></button>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Pilih Kelas Sumber (Source)</label>
-                        <select v-model="copySourceKelasId" class="form-select form-select-sm text-xs rounded-xl border-slate-200 w-full">
-                            <option value="">-- Pilih Kelas Sumber --</option>
-                            <option v-for="k in kelasList.filter(k => k.id !== kurikulumParams.kelas_id)" :key="k.id" :value="k.id">{{ k.nama_kelas }}</option>
-                        </select>
-                        <p class="text-[11px] text-slate-500 mt-1">Seluruh kelompok & mapel kelas sumber akan disalin ke kelas target saat ini.</p>
-                    </div>
-                    <div class="flex justify-end gap-2 pt-2 border-t">
-                        <button @click="isCopyModalOpen = false" class="btn btn-sm btn-light border border-slate-200 rounded-xl px-3 text-xs">Batal</button>
-                        <button @click="submitCopyKurikulum" :disabled="!copySourceKelasId" class="btn btn-sm btn-primary rounded-xl px-4 text-xs font-bold shadow-xs">Salin Sekarang</button>
+            <Teleport to="body">
+                <div v-if="isCopyModalOpen" class="fixed inset-0 z-[9999] overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3">
+                    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md p-5 space-y-4 animate-fade-in relative z-10">
+                        <div class="flex items-center justify-between border-b pb-3">
+                            <h3 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                                <i class="bi bi-files text-blue-600"></i> Salin Kurikulum dari Kelas Lain
+                            </h3>
+                            <button @click="isCopyModalOpen = false" class="text-slate-400 hover:text-slate-600"><i class="bi bi-x-lg"></i></button>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Pilih Kelas Sumber (Source)</label>
+                            <select v-model="copySourceKelasId" class="form-select form-select-sm text-xs rounded-xl border-slate-200 w-full">
+                                <option value="">-- Pilih Kelas Sumber --</option>
+                                <option v-for="k in kelasList.filter(k => k.id !== kurikulumParams.kelas_id)" :key="k.id" :value="k.id">{{ k.nama_kelas }}</option>
+                            </select>
+                            <p class="text-[11px] text-slate-500 mt-1">Seluruh kelompok & mapel kelas sumber akan disalin ke kelas target saat ini.</p>
+                        </div>
+                        <div class="flex justify-end gap-2 pt-2 border-t">
+                            <button @click="isCopyModalOpen = false" class="btn btn-sm btn-light border border-slate-200 rounded-xl px-3 text-xs">Batal</button>
+                            <button @click="submitCopyKurikulum" :disabled="!copySourceKelasId" class="btn btn-sm btn-primary rounded-xl px-4 text-xs font-bold shadow-xs">Salin Sekarang</button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </Teleport>
 
             <!-- ═══════════════════════════════════════════════════════════════════ -->
             <!-- MODAL EDIT NILAI RAPOR SISWA                                        -->
             <!-- ═══════════════════════════════════════════════════════════════════ -->
-            <div v-if="isEditNilaiOpen" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3">
-                <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden animate-fade-in">
-                    <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                        <div>
-                            <h3 class="text-sm font-extrabold text-slate-900">Input Nilai Rapor Siswa</h3>
-                            <p class="text-[11px] text-slate-500 font-bold text-blue-700">{{ selectedStudentNilai?.nama_lengkap }} ({{ nilaiParams.tahun_ajaran }} - {{ nilaiParams.semester }})</p>
-                        </div>
-                        <button @click="isEditNilaiOpen = false" class="btn btn-sm btn-light border border-slate-200 rounded-xl p-2 text-slate-500"><i class="bi bi-x-lg"></i></button>
-                    </div>
-                    <div class="p-4 overflow-y-auto grow space-y-3">
-                        <div v-for="sub in nilaiSubjects" :key="sub.mapel_id" class="p-3 bg-slate-50/60 rounded-xl border border-slate-100 grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
-                            <div class="sm:col-span-5 font-extrabold text-xs text-slate-800">{{ sub.nama_mapel }}</div>
-                            <div class="sm:col-span-3">
-                                <input v-model="tempGrades[sub.mapel_id].nilai_akhir" @input="onNilaiInput(sub.mapel_id)" type="number" min="0" max="100" placeholder="Nilai (0-100)" class="form-control form-control-sm text-xs rounded-xl border-slate-200 text-center font-bold" />
+            <Teleport to="body">
+                <div v-if="isEditNilaiOpen" class="fixed inset-0 z-[9999] overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3">
+                    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden animate-fade-in relative z-10">
+                        <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                            <div>
+                                <h3 class="text-sm font-extrabold text-slate-900">Input Nilai Rapor Siswa</h3>
+                                <p class="text-[11px] text-slate-500 font-bold text-blue-700">{{ selectedStudentNilai?.nama_lengkap }} ({{ nilaiParams.tahun_ajaran }} - {{ nilaiParams.semester }})</p>
                             </div>
-                            <div class="sm:col-span-4 flex items-center gap-1.5">
-                                <span class="badge px-2 py-1 rounded-lg font-mono font-bold text-xs" :class="tempGrades[sub.mapel_id].predikat === 'A' ? 'bg-emerald-100 text-emerald-800' : (tempGrades[sub.mapel_id].predikat === 'B' ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700')">
-                                    {{ tempGrades[sub.mapel_id].predikat || '-' }}
-                                </span>
-                                <input v-model="tempGrades[sub.mapel_id].capaian" type="text" placeholder="Capaian kompetensi..." class="form-control form-control-sm text-xs rounded-xl border-slate-200 w-full" />
+                            <button @click="isEditNilaiOpen = false" class="btn btn-sm btn-light border border-slate-200 rounded-xl p-2 text-slate-500"><i class="bi bi-x-lg"></i></button>
+                        </div>
+                        <div class="p-4 overflow-y-auto grow space-y-3">
+                            <div v-for="sub in nilaiSubjects" :key="sub.mapel_id" class="p-3 bg-slate-50/60 rounded-xl border border-slate-100 grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                                <div class="sm:col-span-5 font-extrabold text-xs text-slate-800">{{ sub.nama_mapel }}</div>
+                                <div class="sm:col-span-3">
+                                    <input v-model="tempGrades[sub.mapel_id].nilai_akhir" @input="onNilaiInput(sub.mapel_id)" type="number" min="0" max="100" placeholder="Nilai (0-100)" class="form-control form-control-sm text-xs rounded-xl border-slate-200 text-center font-bold" />
+                                </div>
+                                <div class="sm:col-span-4 flex items-center gap-1.5">
+                                    <span class="badge px-2 py-1 rounded-lg font-mono font-bold text-xs" :class="tempGrades[sub.mapel_id].predikat === 'A' ? 'bg-emerald-100 text-emerald-800' : (tempGrades[sub.mapel_id].predikat === 'B' ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700')">
+                                        {{ tempGrades[sub.mapel_id].predikat || '-' }}
+                                    </span>
+                                    <input v-model="tempGrades[sub.mapel_id].capaian" type="text" placeholder="Capaian kompetensi..." class="form-control form-control-sm text-xs rounded-xl border-slate-200 w-full" />
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="p-3.5 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-2">
-                        <button @click="isEditNilaiOpen = false" class="btn btn-sm btn-light border border-slate-200 rounded-xl px-4 py-2 text-xs">Batal</button>
-                        <button @click="saveStudentGrades" class="btn btn-sm btn-primary rounded-xl px-4 py-2 text-xs font-bold shadow-xs">Simpan Nilai</button>
+                        <div class="p-3.5 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-2">
+                            <button @click="isEditNilaiOpen = false" class="btn btn-sm btn-light border border-slate-200 rounded-xl px-4 py-2 text-xs">Batal</button>
+                            <button @click="saveStudentGrades" class="btn btn-sm btn-primary rounded-xl px-4 py-2 text-xs font-bold shadow-xs">Simpan Nilai</button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </Teleport>
 
             <!-- ═══════════════════════════════════════════════════════════════════ -->
             <!-- MODAL RIWAYAT KEPALA SEKOLAH                                        -->
             <!-- ═══════════════════════════════════════════════════════════════════ -->
-            <div v-if="isModalKepsekOpen" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3">
-                <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md p-5 space-y-4 animate-fade-in">
-                    <div class="flex items-center justify-between border-b pb-3">
-                        <h3 class="text-sm font-extrabold text-slate-900">
-                            {{ kepsekForm.id ? 'Edit Riwayat Kepala Sekolah' : 'Tambah Riwayat Kepala Sekolah' }}
-                        </h3>
-                        <button @click="isModalKepsekOpen = false" class="text-slate-400 hover:text-slate-600"><i class="bi bi-x-lg"></i></button>
-                    </div>
-                    <div class="space-y-3 text-xs">
-                        <div>
-                            <label class="block font-bold text-slate-700 mb-1">Nama Kepala Sekolah *</label>
-                            <input v-model="kepsekForm.nama_kepsek" type="text" placeholder="Gelar & Nama Lengkap" class="form-control form-control-sm rounded-xl border-slate-200" />
+            <Teleport to="body">
+                <div v-if="isModalKepsekOpen" class="fixed inset-0 z-[9999] overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3">
+                    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md p-5 space-y-4 animate-fade-in relative z-10">
+                        <div class="flex items-center justify-between border-b pb-3">
+                            <h3 class="text-sm font-extrabold text-slate-900">
+                                {{ kepsekForm.id ? 'Edit Riwayat Kepala Sekolah' : 'Tambah Riwayat Kepala Sekolah' }}
+                            </h3>
+                            <button @click="isModalKepsekOpen = false" class="text-slate-400 hover:text-slate-600"><i class="bi bi-x-lg"></i></button>
                         </div>
-                        <div>
-                            <label class="block font-bold text-slate-700 mb-1">NIP Kepala Sekolah</label>
-                            <input v-model="kepsekForm.nip_kepsek" type="text" placeholder="NIP (opsional)" class="form-control form-control-sm rounded-xl border-slate-200 font-mono" />
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
+                        <div class="space-y-3 text-xs">
                             <div>
-                                <label class="block font-bold text-slate-700 mb-1">Tanggal Mulai *</label>
-                                <input v-model="kepsekForm.tanggal_mulai" type="date" class="form-control form-control-sm rounded-xl border-slate-200" />
+                                <label class="block font-bold text-slate-700 mb-1">Nama Kepala Sekolah *</label>
+                                <input v-model="kepsekForm.nama_kepsek" type="text" placeholder="Gelar & Nama Lengkap" class="form-control form-control-sm rounded-xl border-slate-200" />
                             </div>
                             <div>
-                                <label class="block font-bold text-slate-700 mb-1">Tanggal Selesai</label>
-                                <input v-model="kepsekForm.tanggal_selesai" type="date" class="form-control form-control-sm rounded-xl border-slate-200" />
+                                <label class="block font-bold text-slate-700 mb-1">NIP Kepala Sekolah</label>
+                                <input v-model="kepsekForm.nip_kepsek" type="text" placeholder="NIP (opsional)" class="form-control form-control-sm rounded-xl border-slate-200 font-mono" />
                             </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">Tanggal Mulai *</label>
+                                    <input v-model="kepsekForm.tanggal_mulai" type="date" class="form-control form-control-sm rounded-xl border-slate-200" />
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-slate-700 mb-1">Tanggal Selesai</label>
+                                    <input v-model="kepsekForm.tanggal_selesai" type="date" class="form-control form-control-sm rounded-xl border-slate-200" />
+                                </div>
+                            </div>
+                            <label class="flex items-center gap-2 cursor-pointer pt-1">
+                                <input v-model="kepsekForm.status_plt" type="checkbox" class="rounded border-slate-300 text-blue-600" />
+                                <span class="font-bold text-slate-800">Status Pejabat Sementara (Plt / Pjs)</span>
+                            </label>
                         </div>
-                        <label class="flex items-center gap-2 cursor-pointer pt-1">
-                            <input v-model="kepsekForm.status_plt" type="checkbox" class="rounded border-slate-300 text-blue-600" />
-                            <span class="font-bold text-slate-800">Status Pejabat Sementara (Plt / Pjs)</span>
-                        </label>
-                    </div>
-                    <div class="flex justify-end gap-2 pt-2 border-t">
-                        <button @click="isModalKepsekOpen = false" class="btn btn-sm btn-light border border-slate-200 rounded-xl px-3 text-xs">Batal</button>
-                        <button @click="saveKepsek" :disabled="!kepsekForm.nama_kepsek || !kepsekForm.tanggal_mulai" class="btn btn-sm btn-primary rounded-xl px-4 text-xs font-bold shadow-xs">Simpan</button>
+                        <div class="flex justify-end gap-2 pt-2 border-t">
+                            <button @click="isModalKepsekOpen = false" class="btn btn-sm btn-light border border-slate-200 rounded-xl px-3 text-xs">Batal</button>
+                            <button @click="saveKepsek" :disabled="!kepsekForm.nama_kepsek || !kepsekForm.tanggal_mulai" class="btn btn-sm btn-primary rounded-xl px-4 text-xs font-bold shadow-xs">Simpan</button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </Teleport>
 
             <!-- ═══════════════════════════════════════════════════════════════════ -->
             <!-- MODAL IMPOR NILAI RAPOR                                              -->
             <!-- ═══════════════════════════════════════════════════════════════════ -->
-            <div v-if="isImportNilaiOpen" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3">
-                <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg p-5 space-y-4 animate-fade-in">
-                    <div class="flex items-center justify-between border-b pb-3">
-                        <div>
-                            <h3 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                                <span class="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-xs shadow-2xs">
-                                    <i class="bi bi-file-earmark-spreadsheet-fill"></i>
-                                </span>
-                                Impor Nilai Rapor Massal (.XLSX)
-                            </h3>
-                            <p class="text-[11px] text-slate-500 mt-0.5">Kurikulum Aktif: <strong class="text-blue-600">{{ activeKurikulumName }}</strong></p>
-                        </div>
-                        <button @click="isImportNilaiOpen = false" class="text-slate-400 hover:text-slate-600"><i class="bi bi-x-lg"></i></button>
-                    </div>
-
-                    <div class="space-y-3 text-xs">
-                        <div class="p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-2xl space-y-2">
-                            <div class="font-bold text-blue-900 flex items-center gap-1.5">
-                                <i class="bi bi-info-circle-fill text-blue-600"></i> Panduan Pengisian Format Nilai Excel:
+            <Teleport to="body">
+                <div v-if="isImportNilaiOpen" class="fixed inset-0 z-[9999] overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3">
+                    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg p-5 space-y-4 animate-fade-in relative z-10">
+                        <div class="flex items-center justify-between border-b pb-3">
+                            <div>
+                                <h3 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                                    <span class="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-xs shadow-2xs">
+                                        <i class="bi bi-file-earmark-spreadsheet-fill"></i>
+                                    </span>
+                                    Impor Nilai Rapor Massal (.XLSX)
+                                </h3>
+                                <p class="text-[11px] text-slate-500 mt-0.5">Kurikulum Aktif: <strong class="text-blue-600">{{ activeKurikulumName }}</strong></p>
                             </div>
-                            <ol class="list-decimal list-inside space-y-1 text-slate-600 text-[11px]">
-                                <li>Pastikan mengunduh template format nilai terlebih dahulu melalui tombol di bawah.</li>
-                                <li>Isi kolom nilai (rentang 0–100) dan deskripsi capaian/predikat untuk setiap mata pelajaran.</li>
-                                <li>Jangan mengubah kolom <strong>Siswa ID</strong>, <strong>NISN</strong>, atau header kode mapel <strong>[Nilai_ID:...]</strong>.</li>
-                            </ol>
-                            <button @click="downloadNilaiTemplate" type="button" class="btn btn-xs btn-white border border-blue-200 text-blue-700 hover:bg-white rounded-lg px-3 py-1.5 font-bold shadow-2xs flex items-center gap-1.5">
-                                <i class="bi bi-file-earmark-excel-fill text-emerald-600"></i> Unduh Format Nilai Kelas Ini (.XLSX)
-                            </button>
+                            <button @click="isImportNilaiOpen = false" class="text-slate-400 hover:text-slate-600"><i class="bi bi-x-lg"></i></button>
                         </div>
 
-                        <div>
-                            <label class="block font-bold text-slate-700 mb-1.5 uppercase tracking-wider text-[10px]">Pilih File Excel (.xlsx / .xls / .csv) Hasil Pengisian *</label>
-                            <input type="file" @change="onNilaiFileChange" accept=".xlsx, .xls, .csv" class="w-full text-xs file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 border border-slate-200 rounded-2xl p-2 bg-slate-50/50 cursor-pointer" />
-                            <p v-if="importNilaiFile" class="text-[11px] text-emerald-600 font-bold mt-1.5 flex items-center gap-1">
-                                <i class="bi bi-check-circle-fill"></i> Berkas siap diunggah: {{ importNilaiFile.name }} ({{ (importNilaiFile.size / 1024).toFixed(1) }} KB)
-                            </p>
-                        </div>
-                    </div>
+                        <div class="space-y-3 text-xs">
+                            <div class="p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-2xl space-y-2">
+                                <div class="font-bold text-blue-900 flex items-center gap-1.5">
+                                    <i class="bi bi-info-circle-fill text-blue-600"></i> Panduan Pengisian Format Nilai Excel:
+                                </div>
+                                <ol class="list-decimal list-inside space-y-1 text-slate-600 text-[11px]">
+                                    <li>Pastikan mengunduh template format nilai terlebih dahulu melalui tombol di bawah.</li>
+                                    <li>Isi kolom nilai (rentang 0–100) dan deskripsi capaian/predikat untuk setiap mata pelajaran.</li>
+                                    <li>Jangan mengubah kolom <strong>Siswa ID</strong>, <strong>NISN</strong>, atau header kode mapel <strong>[Nilai_ID:...]</strong>.</li>
+                                </ol>
+                                <button @click="downloadNilaiTemplate" type="button" class="btn btn-xs btn-white border border-blue-200 text-blue-700 hover:bg-white rounded-lg px-3 py-1.5 font-bold shadow-2xs flex items-center gap-1.5">
+                                    <i class="bi bi-file-earmark-excel-fill text-emerald-600"></i> Unduh Format Nilai Kelas Ini (.XLSX)
+                                </button>
+                            </div>
 
-                    <div class="flex items-center justify-between pt-3 border-t">
-                        <span class="text-[11px] text-slate-400">Periode: {{ nilaiParams.tahun_ajaran }} ({{ nilaiParams.semester }})</span>
-                        <div class="flex gap-2">
-                            <button @click="isImportNilaiOpen = false" class="btn btn-sm btn-light border border-slate-200 rounded-xl px-3.5 text-xs font-bold">Batal</button>
-                            <button @click="submitImportNilai" :disabled="!importNilaiFile || isUploadingNilai" class="btn btn-sm btn-primary rounded-xl px-4 text-xs font-bold shadow-xs flex items-center gap-1.5 disabled:opacity-50">
-                                <span v-if="isUploadingNilai" class="spinner-border spinner-border-sm" role="status"></span>
-                                <i v-else class="bi bi-cloud-arrow-up-fill"></i>
-                                {{ isUploadingNilai ? 'Mengimpor Data...' : 'Mulai Impor Nilai' }}
-                            </button>
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1.5 uppercase tracking-wider text-[10px]">Pilih File Excel (.xlsx / .xls / .csv) Hasil Pengisian *</label>
+                                <input type="file" @change="onNilaiFileChange" accept=".xlsx, .xls, .csv" class="w-full text-xs file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 border border-slate-200 rounded-2xl p-2 bg-slate-50/50 cursor-pointer" />
+                                <p v-if="importNilaiFile" class="text-[11px] text-emerald-600 font-bold mt-1.5 flex items-center gap-1">
+                                    <i class="bi bi-check-circle-fill"></i> Berkas siap diunggah: {{ importNilaiFile.name }} ({{ (importNilaiFile.size / 1024).toFixed(1) }} KB)
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-3 border-t">
+                            <span class="text-[11px] text-slate-400">Periode: {{ nilaiParams.tahun_ajaran }} ({{ nilaiParams.semester }})</span>
+                            <div class="flex gap-2">
+                                <button @click="isImportNilaiOpen = false" class="btn btn-sm btn-light border border-slate-200 rounded-xl px-3.5 text-xs font-bold">Batal</button>
+                                <button @click="submitImportNilai" :disabled="!importNilaiFile || isUploadingNilai" class="btn btn-sm btn-primary rounded-xl px-4 text-xs font-bold shadow-xs flex items-center gap-1.5 disabled:opacity-50">
+                                    <span v-if="isUploadingNilai" class="spinner-border spinner-border-sm" role="status"></span>
+                                    <i v-else class="bi bi-cloud-arrow-up-fill"></i>
+                                    {{ isUploadingNilai ? 'Mengimpor Data...' : 'Mulai Impor Nilai' }}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </Teleport>
 
             <!-- ═══════════════════════════════════════════════════════════════════ -->
             <!-- MODAL PDF VIEWER                                                    -->
             <!-- ═══════════════════════════════════════════════════════════════════ -->
-            <div v-if="isPdfViewerOpen" class="fixed inset-0 z-50 overflow-hidden bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
-                <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden animate-fade-in">
-                    <div class="p-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                        <h3 class="text-xs font-extrabold text-slate-900 flex items-center gap-2">
-                            <i class="bi bi-file-earmark-pdf-fill text-rose-600"></i>
-                            {{ activePdfTitle }}
-                        </h3>
-                        <button @click="isPdfViewerOpen = false" class="btn btn-xs btn-light border border-slate-200 rounded-lg px-2.5 py-1 text-xs">
-                            <i class="bi bi-x-lg"></i>
-                        </button>
-                    </div>
-                    <div class="grow bg-slate-100">
-                        <iframe :src="activePdfUrl" class="w-full h-full border-0"></iframe>
+            <Teleport to="body">
+                <div v-if="isPdfViewerOpen" class="fixed inset-0 z-[9999] overflow-hidden bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
+                    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden animate-fade-in relative z-10">
+                        <div class="p-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                            <h3 class="text-xs font-extrabold text-slate-900 flex items-center gap-2">
+                                <i class="bi bi-file-earmark-pdf-fill text-rose-600"></i>
+                                {{ activePdfTitle }}
+                            </h3>
+                            <button @click="isPdfViewerOpen = false" class="btn btn-xs btn-light border border-slate-200 rounded-lg px-2.5 py-1 text-xs">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                        <div class="grow bg-slate-100">
+                            <iframe :src="activePdfUrl" class="w-full h-full border-0"></iframe>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </Teleport>
 
             <!-- ═══════════════════════════════════════════════════════════════════ -->
             <!-- INTERACTIVE CONFIRMATION MODAL POPUP                                -->
             <!-- ═══════════════════════════════════════════════════════════════════ -->
-            <div v-if="confirmModal.isOpen" class="fixed inset-0 z-[9990] overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-                <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md p-6 space-y-4 animate-fade-in text-center">
-                    <!-- Icon Circle -->
-                    <div class="mx-auto w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-xs"
-                         :class="confirmModal.type === 'danger' ? 'bg-rose-50 text-rose-600 border border-rose-200' : (confirmModal.type === 'warning' ? 'bg-amber-50 text-amber-600 border border-amber-200' : 'bg-blue-50 text-blue-600 border border-blue-200')">
-                        <i :class="confirmModal.type === 'danger' ? 'bi bi-trash3-fill' : (confirmModal.type === 'warning' ? 'bi bi-exclamation-triangle-fill' : 'bi bi-info-circle-fill')"></i>
-                    </div>
+            <Teleport to="body">
+                <div v-if="confirmModal.isOpen" class="fixed inset-0 z-[9999] overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+                    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md p-6 space-y-4 animate-fade-in text-center relative z-10">
+                        <!-- Icon Circle -->
+                        <div class="mx-auto w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-xs"
+                             :class="confirmModal.type === 'danger' ? 'bg-rose-50 text-rose-600 border border-rose-200' : (confirmModal.type === 'warning' ? 'bg-amber-50 text-amber-600 border border-amber-200' : 'bg-blue-50 text-blue-600 border border-blue-200')">
+                            <i :class="confirmModal.type === 'danger' ? 'bi bi-trash3-fill' : (confirmModal.type === 'warning' ? 'bi bi-exclamation-triangle-fill' : 'bi bi-info-circle-fill')"></i>
+                        </div>
 
-                    <div>
-                        <h3 class="text-base font-black text-slate-900 tracking-tight">
-                            {{ confirmModal.title }}
-                        </h3>
-                        <p class="text-xs text-slate-600 mt-1.5 leading-relaxed">
-                            {{ confirmModal.message }}
-                        </p>
-                        <p v-if="confirmModal.subMessage" class="text-[11px] font-bold text-rose-500 mt-1">
-                            {{ confirmModal.subMessage }}
-                        </p>
-                    </div>
+                        <div>
+                            <h3 class="text-base font-black text-slate-900 tracking-tight">
+                                {{ confirmModal.title }}
+                            </h3>
+                            <p class="text-xs text-slate-600 mt-1.5 leading-relaxed">
+                                {{ confirmModal.message }}
+                            </p>
+                            <p v-if="confirmModal.subMessage" class="text-[11px] font-bold text-rose-500 mt-1">
+                                {{ confirmModal.subMessage }}
+                            </p>
+                        </div>
 
-                    <div class="flex items-center justify-center gap-2.5 pt-2">
-                        <button type="button" 
-                                @click="closeConfirmModal" 
-                                :disabled="confirmModal.loading"
-                                class="btn btn-sm btn-light border border-slate-200/90 rounded-xl px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 transition">
-                            {{ confirmModal.cancelText }}
-                        </button>
-                        <button type="button" 
-                                @click="executeConfirmModalAction" 
-                                :disabled="confirmModal.loading"
-                                class="btn btn-sm rounded-xl px-5 py-2 text-xs font-bold shadow-xs transition flex items-center gap-1.5"
-                                :class="confirmModal.type === 'danger' ? 'btn-danger bg-rose-600 hover:bg-rose-700 text-white' : (confirmModal.type === 'warning' ? 'btn-warning bg-amber-500 hover:bg-amber-600 text-white' : 'btn-primary bg-blue-600 hover:bg-blue-700 text-white')">
-                            <div v-if="confirmModal.loading" class="spinner-border spinner-border-sm text-white" role="status"></div>
-                            <span>{{ confirmModal.loading ? 'Memproses...' : confirmModal.confirmText }}</span>
-                        </button>
+                        <div class="flex items-center justify-center gap-2.5 pt-2">
+                            <button type="button" 
+                                    @click="closeConfirmModal" 
+                                    :disabled="confirmModal.loading"
+                                    class="btn btn-sm btn-light border border-slate-200/90 rounded-xl px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 transition">
+                                {{ confirmModal.cancelText }}
+                            </button>
+                            <button type="button" 
+                                    @click="executeConfirmModalAction" 
+                                    :disabled="confirmModal.loading"
+                                    class="btn btn-sm rounded-xl px-5 py-2 text-xs font-bold shadow-xs transition flex items-center gap-1.5"
+                                    :class="confirmModal.type === 'danger' ? 'btn-danger bg-rose-600 hover:bg-rose-700 text-white' : (confirmModal.type === 'warning' ? 'btn-warning bg-amber-500 hover:bg-amber-600 text-white' : 'btn-primary bg-blue-600 hover:bg-blue-700 text-white')">
+                                <div v-if="confirmModal.loading" class="spinner-border spinner-border-sm text-white" role="status"></div>
+                                <span>{{ confirmModal.loading ? 'Memproses...' : confirmModal.confirmText }}</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </Teleport>
 
             <!-- ═══════════════════════════════════════════════════════════════════ -->
             <!-- FLOATING TOAST NOTIFICATION POPUP STACK                             -->

@@ -138,7 +138,7 @@
     <!-- 2. Main Content Wrapper — Clean Single Unified Scroll -->
     <div class="flex-grow flex flex-col min-w-0 h-screen overflow-hidden">
       <!-- Topbar Header -->
-      <header class="h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shrink-0 px-4 sm:px-6 lg:px-8 flex items-center justify-between shadow-2xs z-30">
+      <header class="h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shrink-0 px-4 sm:px-6 lg:px-8 flex items-center justify-between shadow-2xs relative z-10">
         <div class="flex items-center gap-3">
           <!-- Mobile Hamburger Toggle -->
           <button @click="mobileSidebarOpen = true" 
@@ -176,7 +176,7 @@
       </header>
 
       <!-- Main Body Container — Unified Scroll Area (Including Content and Footer) -->
-      <main class="flex-grow overflow-y-auto p-4 sm:p-6 lg:p-8 flex flex-col justify-between"
+      <main class="flex-grow overflow-y-auto p-4 sm:p-6 lg:p-8 flex flex-col justify-between relative z-20"
             style="scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;">
         <div class="max-w-7xl w-full mx-auto space-y-6 flex-grow">
           <!-- Page Dynamic Slot Content -->
