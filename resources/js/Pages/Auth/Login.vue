@@ -6,8 +6,8 @@
         <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-700 flex items-center justify-center text-white font-black text-2xl shadow-lg mb-4">
           S
         </div>
-        <h2 class="text-2xl font-black text-slate-800 tracking-tight">SINTA-SaaS</h2>
-        <p class="text-xs text-slate-500 mt-1">Sistem Informasi Nilai & Tata Kelola Akademik Multi-Tenant</p>
+        <h2 class="text-xl sm:text-2xl font-black text-slate-800 tracking-tight uppercase">SISTEM INTI AKADEMIK</h2>
+        <p class="text-xs text-slate-500 mt-1">Platform Tata Kelola Akademik & Multi-Tenant Sekolah</p>
       </div>
 
       <!-- Login Form -->

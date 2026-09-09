@@ -3,7 +3,7 @@
     <!-- Welcome Banner -->
     <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-3xl p-6 sm:p-8 text-white shadow-lg mb-8 relative overflow-hidden">
       <div class="relative z-10">
-        <h1 class="text-2xl sm:text-3xl font-black tracking-tight mb-2">Selamat Datang di Portal SINTA-SaaS</h1>
+        <h1 class="text-2xl sm:text-3xl font-black tracking-tight mb-2">Selamat Datang di Portal SISTEM INTI AKADEMIK</h1>
         <p class="text-blue-100 text-sm sm:text-base max-w-2xl">
           Sistem Tata Kelola Akademik, Kesiswaan, Keuangan, dan Operasional Sekolah Terintegrasi Multi-Tenant PostgreSQL.
         </p>

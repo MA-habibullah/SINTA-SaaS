@@ -25,9 +25,9 @@
           <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-700 flex items-center justify-center text-white font-black text-xl shadow-md shrink-0">
             S
           </div>
-          <div v-if="!isCollapsed" class="transition-opacity duration-200">
-            <h1 class="font-extrabold text-slate-800 text-base leading-tight tracking-tight">SINTA-SaaS</h1>
-            <p class="text-[11px] text-slate-400 font-medium truncate max-w-[150px]">
+          <div v-if="!isCollapsed" class="transition-opacity duration-200 overflow-hidden">
+            <h1 class="font-extrabold text-slate-800 text-xs leading-tight tracking-tight uppercase">SISTEM INTI AKADEMIK</h1>
+            <p class="text-[11px] text-slate-400 font-medium truncate max-w-[170px]">
               {{ tenantName || 'Sistem Sekolah' }}
             </p>
           </div>
@@ -182,9 +182,9 @@
           <slot />
         </div>
 
-        <!-- Standard Unified SINTA Footer -->
+        <!-- Standard Unified Footer -->
         <footer class="mt-12 py-6 text-center text-xs text-slate-400 border-t border-slate-200/70 shrink-0">
-          &copy; {{ new Date().getFullYear() }} SINTA-SaaS Enterprise — Multi-Tenant Multi-Schema PostgreSQL Platform
+          &copy; {{ new Date().getFullYear() }} SISTEM INTI AKADEMIK — Multi-Tenant Multi-Schema PostgreSQL Platform
         </footer>
       </main>
     </div>

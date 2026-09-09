@@ -3,7 +3,7 @@
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
       <div>
         <h1 class="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">Manajemen Sekolah Mitra (Tenants)</h1>
-        <p class="text-xs text-slate-500">Daftar lembaga pendidikan yang tergabung dalam platform SINTA-SaaS.</p>
+        <p class="text-xs text-slate-500">Daftar lembaga pendidikan yang tergabung dalam platform SISTEM INTI AKADEMIK.</p>
       </div>
       <button class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5">
         <i class="bi bi-plus-circle-fill"></i> Tambah Sekolah
