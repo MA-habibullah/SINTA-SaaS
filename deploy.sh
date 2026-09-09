@@ -1,68 +1,48 @@
 #!/bin/bash
-# =============================================================
-# deploy.sh — Script Deploy Otomatis SINTA-SaaS untuk VPS
+# ==============================================================================
+# deploy.sh — Script Deployment Otomatis SINTA-SaaS (Laravel 11 Modular + Vite)
 # Cara pakai: bash deploy.sh
-# =============================================================
+# ==============================================================================
 
-# Pengecekan Keamanan: Pastikan script berjalan sebagai root
-if [ "$EUID" -ne 0 ]; then
-  SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-  if [ -f "$SCRIPT_DIR/.deploy_pass" ]; then
-    echo "Meminta akses Administrator (sudo) menggunakan password tersembunyi..."
-    cat "$SCRIPT_DIR/.deploy_pass" | sudo -S bash "$0" "$@"
-    exit $?
-  else
-    echo "Meminta akses Administrator (sudo)..."
-    exec sudo "$0" "$@"
-  fi
-fi
+set -e
 
-APP_DIR="/var/www/SINTA-SaaS"
-DB_CONFIG="$APP_DIR/app/Config/Database.php"
-BACKUP_FILE="/root/Database.php.backup"
+echo "======================================================================"
+echo "  🚀 MEMULAI DEPLOYMENT SINTA-SAAS (LARAVEL 11 + VUE 3 + POSTGRESQL 16)"
+echo "======================================================================"
 
-echo "========================================"
-echo "  SINTA-SaaS Deploy Script"
-echo "========================================"
+# 1. Mode Pemeliharaan (Maintenance Mode)
+echo "🔒 [1/7] Mengaktifkan mode pemeliharaan aplikasi..."
+php artisan down --retry=60 || true
 
-# LANGKAH 1: Backup Database.php jika ada
-if [ -f "$DB_CONFIG" ]; then
-    cp "$DB_CONFIG" "$BACKUP_FILE"
-    echo "[OK] Database.php di-backup ke $BACKUP_FILE"
-else
-    echo "[WARN] Database.php tidak ditemukan, skip backup."
-fi
-
-# LANGKAH 2: Pull update terbaru dari GitHub
-echo ""
-echo "[INFO] Mengambil update dari GitHub..."
-cd "$APP_DIR" || exit 1
-git fetch origin
+# 2. Mengambil Pembaruan Kode dari Git
+echo "📥 [2/7] Mengambil pembaruan kode terbaru dari Git main..."
+git fetch origin main
 git reset --hard origin/main
-echo "[OK] Code berhasil diupdate ke versi terbaru."
 
-# LANGKAH 3: Restore Database.php dari backup
-if [ -f "$BACKUP_FILE" ]; then
-    mkdir -p "$APP_DIR/app/Config"
-    cp "$BACKUP_FILE" "$DB_CONFIG"
-    echo "[OK] Database.php berhasil di-restore."
-else
-    echo "[WARN] Backup Database.php tidak ada!"
-    echo "       Buat manual: nano $DB_CONFIG"
-fi
+# 3. Instalasi & Optimasi Dependensi Composer
+echo "📦 [3/7] Menginstal dependensi Composer (Production)..."
+composer install --no-dev --optimize-autoloader --no-interaction
 
-# LANGKAH 4: Set permission folder storage
-if [ -d "$APP_DIR/storage" ]; then
-    chmod -R 775 "$APP_DIR/storage"
-    echo "[OK] Permission storage diset."
-fi
+# 4. Migrasi Skema Database PostgreSQL 16
+echo "🗄️ [4/7] Menjalankan migrasi database PostgreSQL multi-schema..."
+php artisan migrate --force
 
-# LANGKAH 5: Jalankan migrasi otomatis
-echo ""
-echo "[INFO] Menjalankan migrasi database..."
-php "$APP_DIR/migrate.php"
+# 5. Kompilasi Aset Frontend Vite & Tailwind CSS
+echo "⚡ [5/7] Mengompilasi frontend aset Vite (Vue 3 / Tailwind CSS)..."
+npm ci --silent
+npm run build
 
-echo ""
-echo "========================================"
-echo "  Deploy selesai!"
-echo "========================================"
+# 6. Pembersihan & Pemanasan Cache Laravel
+echo "🧹 [6/7] Mengoptimasi konfigurasi, routing, dan view cache..."
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+php artisan event:cache
+
+# 7. Mengaktifkan Kembali Aplikasi (Live)
+echo "🔓 [7/7] Menonaktifkan mode pemeliharaan (Aplikasi Live)..."
+php artisan up
+
+echo "======================================================================"
+echo "  ✅ DEPLOYMENT BERHASIL! APLIKASI SINTA-SAAS SIAP DIGUNAKAN."
+echo "======================================================================"

@@ -5,6 +5,7 @@ use Inertia\Inertia;
 use Modules\Core\Http\Controllers\AuthController;
 use Modules\Core\Http\Controllers\UserController;
 use Modules\Core\Http\Controllers\TenantManagementController;
+use Modules\Core\Http\Controllers\TenantMenuController;
 use Modules\Core\Http\Controllers\SekolahIdentitasController;
 use Modules\Core\Http\Controllers\KonfigurasiAksesController;
 use Modules\Siswa\Http\Controllers\BukuIndukController;
@@ -29,6 +30,8 @@ use Modules\Absensi\Http\Controllers\PresensiController;
 use Modules\Kepegawaian\Http\Controllers\KepegawaianController;
 use Modules\Cms\Http\Controllers\CmsController;
 use Modules\Sistem\Http\Controllers\ActivityLogController;
+use Modules\Sistem\Http\Controllers\ActiveSessionController;
+use Modules\Sistem\Http\Controllers\QueueController;
 
 /*
 |--------------------------------------------------------------------------
@@ -122,20 +125,58 @@ Route::middleware(['auth', 'tenant.guard'])->group(function () {
     Route::get('/konfigurasi/akses', [KonfigurasiAksesController::class, 'index'])->name('menu.konfigurasi.akses');
     Route::post('/konfigurasi/akses', [KonfigurasiAksesController::class, 'store'])->name('menu.konfigurasi.akses.store');
     Route::get('/konfigurasi/akses/fetch', [KonfigurasiAksesController::class, 'fetch'])->name('menu.konfigurasi.akses.fetch');
-    Route::get('/utilitas/sesi-aktif', [ActivityLogController::class, 'index'])->name('menu.utilitas.sesi-aktif');
-    Route::get('/utilitas/antrean', [ActivityLogController::class, 'index'])->name('menu.utilitas.antrean');
-    Route::get('/super-admin/tenant-menus', [TenantManagementController::class, 'index'])->name('menu.super-admin.tenant-menus');
+    Route::get('/utilitas/sesi-aktif', [ActiveSessionController::class, 'index'])->name('menu.utilitas.sesi-aktif');
+    Route::get('/utilitas/sesi-aktif/data', [ActiveSessionController::class, 'fetchData'])->name('menu.utilitas.sesi-aktif.data');
+    Route::get('/utilitas/sesi-aktif/audit', [ActiveSessionController::class, 'fetchAudit'])->name('menu.utilitas.sesi-aktif.audit');
+    Route::post('/utilitas/sesi-aktif/retention', [ActiveSessionController::class, 'deleteRetention'])->name('menu.utilitas.sesi-aktif.retention');
+    Route::post('/utilitas/sesi-aktif/audit/retention', [ActiveSessionController::class, 'deleteAuditRetention'])->name('menu.utilitas.sesi-aktif.audit.retention');
+    Route::get('/utilitas/antrean', [QueueController::class, 'index'])->name('menu.utilitas.antrean');
+    Route::get('/utilitas/antrean/data', [QueueController::class, 'fetchData'])->name('menu.utilitas.antrean.data');
+    Route::post('/utilitas/antrean/dispatch', [QueueController::class, 'dispatchJob'])->name('menu.utilitas.antrean.dispatch');
+    Route::post('/utilitas/antrean/retry', [QueueController::class, 'retryJob'])->name('menu.utilitas.antrean.retry');
+    Route::post('/utilitas/antrean/delete', [QueueController::class, 'deleteJob'])->name('menu.utilitas.antrean.delete');
+    Route::post('/utilitas/antrean/run-worker', [QueueController::class, 'runWorker'])->name('menu.utilitas.antrean.run-worker');
+    Route::get('/super-admin/tenant-menus', [TenantMenuController::class, 'index'])->name('menu.super-admin.tenant-menus');
+    Route::get('/super-admin/tenant-menus/fetch', [TenantMenuController::class, 'fetch'])->name('menu.super-admin.tenant-menus.fetch');
+    Route::post('/super-admin/tenant-menus/save', [TenantMenuController::class, 'save'])->name('menu.super-admin.tenant-menus.save');
     Route::get('/super-admin/tenants', [TenantManagementController::class, 'index'])->name('menu.super-admin.tenants');
+    Route::post('/super-admin/tenants/simpan', [TenantManagementController::class, 'store'])->name('menu.super-admin.tenants.simpan');
+    Route::post('/super-admin/tenants/toggle-status', [TenantManagementController::class, 'toggleStatus'])->name('menu.super-admin.tenants.toggle-status');
+    Route::post('/super-admin/tenants/hapus', [TenantManagementController::class, 'destroy'])->name('menu.super-admin.tenants.hapus');
+    Route::delete('/super-admin/tenants/{id}', [TenantManagementController::class, 'destroy'])->name('menu.super-admin.tenants.destroy');
     Route::get('/utilitas/log-aktivitas', [ActivityLogController::class, 'index'])->name('menu.utilitas.log-aktivitas');
-    Route::get('/super-admin/error-monitor', [ActivityLogController::class, 'index'])->name('menu.super-admin.error-monitor');
-    Route::get('/super-admin/server-monitor', [ActivityLogController::class, 'index'])->name('menu.super-admin.server-monitor');
-    Route::get('/utility/document-scanner', [SarprasController::class, 'index'])->name('menu.utility.scanner');
+    Route::get('/utilitas/log-aktivitas/data', [ActivityLogController::class, 'fetchData'])->name('menu.utilitas.log-aktivitas.data');
+    Route::post('/utilitas/log-aktivitas/delete', [ActivityLogController::class, 'deleteLogs'])->name('menu.utilitas.log-aktivitas.delete');
+    
+    // Error Monitor Routes
+    Route::get('/super-admin/error-monitor', [\Modules\Sistem\Http\Controllers\ErrorMonitorController::class, 'index'])->name('menu.super-admin.error-monitor');
+    Route::get('/utilitas/error-monitor', [\Modules\Sistem\Http\Controllers\ErrorMonitorController::class, 'index'])->name('menu.utilitas.error-monitor');
+    Route::get('/utilitas/error-monitor/data', [\Modules\Sistem\Http\Controllers\ErrorMonitorController::class, 'fetchData'])->name('menu.utilitas.error-monitor.data');
+    Route::post('/utilitas/error-monitor/clear', [\Modules\Sistem\Http\Controllers\ErrorMonitorController::class, 'clearAll'])->name('menu.utilitas.error-monitor.clear');
+    Route::post('/utilitas/error-monitor/delete', [\Modules\Sistem\Http\Controllers\ErrorMonitorController::class, 'deleteOne'])->name('menu.utilitas.error-monitor.delete');
+
+    // Server & Resource Monitor Routes
+    Route::get('/super-admin/server-monitor', [\Modules\Sistem\Http\Controllers\ServerMonitorController::class, 'index'])->name('menu.super-admin.server-monitor');
+    Route::get('/utilitas/server-monitor', [\Modules\Sistem\Http\Controllers\ServerMonitorController::class, 'index'])->name('menu.utilitas.server-monitor');
+    Route::get('/utilitas/server-monitor/data', [\Modules\Sistem\Http\Controllers\ServerMonitorController::class, 'fetchData'])->name('menu.utilitas.server-monitor.data');
+    Route::post('/utilitas/server-monitor/save-network', [\Modules\Sistem\Http\Controllers\ServerMonitorController::class, 'saveNetworkConfig'])->name('menu.utilitas.server-monitor.save-network');
+    Route::post('/utilitas/server-monitor/update-server', [\Modules\Sistem\Http\Controllers\ServerMonitorController::class, 'updateServer'])->name('menu.utilitas.server-monitor.update-server');
+
+    // Document Scanner / AeroScan Routes
+    Route::get('/utility/document-scanner', [\Modules\Sistem\Http\Controllers\DocumentScannerController::class, 'index'])->name('menu.utility.scanner');
+    Route::get('/utilitas/document-scanner', [\Modules\Sistem\Http\Controllers\DocumentScannerController::class, 'index'])->name('menu.utilitas.scanner');
+    Route::get('/utilitas/pemindai-dokumen', [\Modules\Sistem\Http\Controllers\DocumentScannerController::class, 'index'])->name('menu.utilitas.pemindai');
+    Route::post('/utilitas/document-scanner/save-pdf', [\Modules\Sistem\Http\Controllers\DocumentScannerController::class, 'saveScannedPdf'])->name('menu.utilitas.scanner.save-pdf');
 
     // 3. Bimbingan Konseling & Layanan Khusus
-    Route::get('/bk/layanan', [BkController::class, 'index'])->name('menu.bk.layanan');
-    Route::get('/bk/kedisiplinan', [BkController::class, 'index'])->name('menu.bk.kedisiplinan');
+    Route::get('/bk/layanan', [BkController::class, 'layanan'])->name('menu.bk.layanan');
+    Route::get('/bk/kedisiplinan', [BkController::class, 'kedisiplinan'])->name('menu.bk.kedisiplinan');
     Route::get('/bk/akademik', [PdssController::class, 'index'])->name('menu.bk.akademik');
     Route::get('/bk/alumni', [TracerController::class, 'index'])->name('menu.bk.alumni');
+    Route::post('/bk/konseling', [BkController::class, 'storeKonseling'])->name('menu.bk.konseling.store');
+    Route::put('/bk/konseling/{id}', [BkController::class, 'updateKonseling'])->name('menu.bk.konseling.update');
+    Route::delete('/bk/konseling/{id}', [BkController::class, 'deleteKonseling'])->name('menu.bk.konseling.delete');
+    Route::patch('/bk/konseling/{id}/status', [BkController::class, 'updateStatusKonseling'])->name('menu.bk.konseling.status');
 
     // 4. Informasi & Kesiswaan
     Route::get('/informasi/pengumuman', [CmsController::class, 'index'])->name('menu.informasi.pengumuman');

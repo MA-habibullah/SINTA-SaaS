@@ -68,7 +68,7 @@
                ]"
                :title="isCollapsed ? menu.title : ''">
               <i :class="[menu.icon || 'bi bi-circle', 'text-base shrink-0', isUrlActive(menu.url) ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-600']"></i>
-              <span v-if="!isCollapsed" class="truncate flex-1 min-w-0">{{ menu.title }}</span>
+              <span v-if="!isCollapsed" class="truncate flex-1 min-w-0">{{ menu.title || menu.nama_menu }}</span>
             </a>
 
             <!-- Parent Menu with Submenus (Dropdown Collapsible) -->
@@ -81,10 +81,10 @@
                           ? 'bg-slate-100/80 text-blue-600 font-bold' 
                           : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900'
                       ]"
-                      :title="isCollapsed ? menu.title : ''">
+                      :title="isCollapsed ? (menu.title || menu.nama_menu) : ''">
                 <div class="flex items-center gap-3 truncate min-w-0 flex-1">
                   <i :class="[menu.icon || 'bi bi-folder', 'text-base shrink-0', isParentActive(menu) ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-600']"></i>
-                  <span v-if="!isCollapsed" class="truncate min-w-0">{{ menu.title }}</span>
+                  <span v-if="!isCollapsed" class="truncate min-w-0">{{ menu.title || menu.nama_menu }}</span>
                 </div>
                 <i v-if="!isCollapsed" 
                    :class="['bi bi-chevron-down text-[10px] transition-transform duration-200 text-slate-400 shrink-0 ml-1.5', (expandedMenus[menu.id] || isParentActive(menu)) ? 'rotate-180 text-blue-600' : '']"></i>
@@ -102,7 +102,7 @@
                          : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/60'
                      ]">
                     <i :class="[sub.icon || 'bi bi-dot', 'text-sm shrink-0', isUrlActive(sub.url) ? 'text-blue-600' : 'text-slate-400']"></i>
-                    <span class="truncate flex-1 min-w-0">{{ sub.title }}</span>
+                    <span class="truncate flex-1 min-w-0">{{ sub.title || sub.nama_menu }}</span>
                   </a>
                 </li>
               </ul>
