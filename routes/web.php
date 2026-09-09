@@ -177,6 +177,12 @@ Route::middleware(['auth', 'tenant.guard'])->group(function () {
     Route::put('/bk/konseling/{id}', [BkController::class, 'updateKonseling'])->name('menu.bk.konseling.update');
     Route::delete('/bk/konseling/{id}', [BkController::class, 'deleteKonseling'])->name('menu.bk.konseling.delete');
     Route::patch('/bk/konseling/{id}/status', [BkController::class, 'updateStatusKonseling'])->name('menu.bk.konseling.status');
+    Route::post('/bk/pelanggaran', [BkController::class, 'storePelanggaran'])->name('menu.bk.pelanggaran.store');
+    Route::put('/bk/pelanggaran/{id}', [BkController::class, 'updatePelanggaran'])->name('menu.bk.pelanggaran.update');
+    Route::delete('/bk/pelanggaran/{id}', [BkController::class, 'deletePelanggaran'])->name('menu.bk.pelanggaran.delete');
+    Route::post('/bk/master-pelanggaran', [BkController::class, 'storeMasterPelanggaran'])->name('menu.bk.master.store');
+    Route::put('/bk/master-pelanggaran/{id}', [BkController::class, 'updateMasterPelanggaran'])->name('menu.bk.master.update');
+    Route::delete('/bk/master-pelanggaran/{id}', [BkController::class, 'deleteMasterPelanggaran'])->name('menu.bk.master.delete');
 
     // 4. Informasi & Kesiswaan
     Route::get('/informasi/pengumuman', [CmsController::class, 'index'])->name('menu.informasi.pengumuman');

@@ -6,7 +6,7 @@ use Modules\Siswa\Http\Controllers\PpdbController;
 use Modules\Siswa\Http\Controllers\MutasiController;
 use Modules\Siswa\Http\Controllers\PrestasiController;
 
-Route::middleware(['auth', 'tenant.guard'])->prefix('siswa')->name('siswa.')->group(function () {
+Route::middleware(['web', 'auth', 'tenant.guard'])->prefix('siswa')->name('siswa.')->group(function () {
     // 1. Buku Induk Siswa
     Route::prefix('buku-induk')->name('buku-induk.')->group(function () {
         Route::get('/', [BukuIndukController::class, 'index'])->name('index');

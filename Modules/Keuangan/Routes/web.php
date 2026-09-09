@@ -6,7 +6,7 @@ use Modules\Keuangan\Http\Controllers\TagihanSiswaController;
 use Modules\Keuangan\Http\Controllers\PembayaranKasirController;
 use Modules\Keuangan\Http\Controllers\LaporanKeuanganController;
 
-Route::middleware(['auth', 'tenant.guard'])->prefix('keuangan')->name('keuangan.')->group(function () {
+Route::middleware(['web', 'auth', 'tenant.guard'])->prefix('keuangan')->name('keuangan.')->group(function () {
     // 1. Pos & Tarif Pembayaran
     Route::get('/pos-tarif', [PosTarifController::class, 'index'])->name('pos-tarif.index');
     Route::post('/pos', [PosTarifController::class, 'storePos'])->name('pos.store');

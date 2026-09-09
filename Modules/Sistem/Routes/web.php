@@ -8,7 +8,7 @@ use Modules\Sistem\Http\Controllers\ErrorMonitorController;
 use Modules\Sistem\Http\Controllers\ServerMonitorController;
 use Modules\Sistem\Http\Controllers\DocumentScannerController;
 
-Route::middleware(['auth', 'tenant.guard'])->group(function () {
+Route::middleware(['web', 'auth', 'tenant.guard'])->group(function () {
     Route::get('/sistem/activity-logs', [ActivityLogController::class, 'index'])->name('sistem.activity-logs');
     Route::get('/sistem/activity-logs/data', [ActivityLogController::class, 'fetchData'])->name('sistem.activity-logs.data');
     Route::post('/sistem/activity-logs/delete', [ActivityLogController::class, 'deleteLogs'])->name('sistem.activity-logs.delete');

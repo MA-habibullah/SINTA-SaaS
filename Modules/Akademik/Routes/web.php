@@ -5,7 +5,7 @@ use Modules\Akademik\Http\Controllers\AkademikMasterController;
 use Modules\Akademik\Http\Controllers\PenilaianController;
 use Modules\Akademik\Http\Controllers\RaporController;
 
-Route::middleware(['auth', 'tenant.guard'])->prefix('akademik')->name('akademik.')->group(function () {
+Route::middleware(['web', 'auth', 'tenant.guard'])->prefix('akademik')->name('akademik.')->group(function () {
     // 1. Master Data Akademik
     Route::get('/master', [AkademikMasterController::class, 'index'])->name('master.index');
     Route::get('/kelas', [AkademikMasterController::class, 'index'])->name('kelas.index');
