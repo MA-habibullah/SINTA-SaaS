@@ -118,6 +118,7 @@ class KonfigurasiAksesController extends Controller
                 'success'           => true,
                 'roles'             => $roles,
                 'menus'             => $orderedMenus,
+                'menu_list'         => $orderedMenus,
                 'access_map'        => $accessMap,
                 'target_tenant_id'  => $targetTenantId,
                 'is_super_admin'    => $isSuperAdmin,
@@ -127,7 +128,7 @@ class KonfigurasiAksesController extends Controller
 
         return Inertia::render('Core/Konfigurasi/Akses/Index', [
             'roles'             => $roles,
-            'menus'             => $orderedMenus,
+            'menuList'          => $orderedMenus,
             'accessMap'         => $accessMap,
             'tenantsList'       => $tenantsList,
             'selectedTenantId'  => $targetTenantId,

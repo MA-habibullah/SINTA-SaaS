@@ -8,6 +8,10 @@ const props = defineProps({
     type: Array,
     default: () => []
   },
+  menuList: {
+    type: Array,
+    default: () => []
+  },
   menus: {
     type: Array,
     default: () => []
@@ -40,6 +44,11 @@ const props = defineProps({
     type: Object,
     default: () => ({})
   }
+})
+
+// Active list of menus for RBAC matrix
+const availableMenuList = computed(() => {
+  return props.menuList && props.menuList.length > 0 ? props.menuList : (props.menus || [])
 })
 
 // Search & Filter
@@ -87,7 +96,7 @@ const handleCheckboxChange = (roleId, menu) => {
   if (!isChecked) {
     // If Parent is UNCHECKED -> Auto-uncheck all its children
     if (!menu.is_child) {
-      props.menus.forEach(m => {
+      availableMenuList.value.forEach(m => {
         if (m.parent_id === menu.id) {
           matrix[`${roleId}-${m.id}`] = false
         }
@@ -103,7 +112,7 @@ const handleCheckboxChange = (roleId, menu) => {
 
 // Bulk toggle for a specific role
 const toggleAllForRole = (roleId, grantAll = true) => {
-  props.menus.forEach(m => {
+  availableMenuList.value.forEach(m => {
     matrix[`${roleId}-${m.id}`] = grantAll
   })
 }
@@ -118,16 +127,17 @@ const displayedRoles = computed(() => {
 
 // Filtered menus based on search
 const filteredMenus = computed(() => {
+  const rawList = availableMenuList.value
   if (!searchQuery.value.trim()) {
-    return props.menus
+    return rawList
   }
   const q = searchQuery.value.toLowerCase().trim()
   
   // Find matching menu IDs
   const matchingIds = new Set()
-  props.menus.forEach(m => {
+  rawList.forEach(m => {
     if (
-      m.nama_menu.toLowerCase().includes(q) ||
+      (m.nama_menu && m.nama_menu.toLowerCase().includes(q)) ||
       (m.url && m.url.toLowerCase().includes(q))
     ) {
       matchingIds.add(m.id)
@@ -136,7 +146,7 @@ const filteredMenus = computed(() => {
   })
 
   // Return menus where item itself or parent matches
-  return props.menus.filter(m => matchingIds.has(m.id))
+  return rawList.filter(m => matchingIds.has(m.id))
 })
 
 // Target Tenant change handler
