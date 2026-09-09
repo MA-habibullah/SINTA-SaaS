@@ -1222,11 +1222,12 @@ onMounted(() => {
             </div>
 
             <!-- MODAL 1: CATAT / EDIT SESI KONSELING -->
-            <div
-                v-if="showModalRecord"
-                class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto"
-            >
-                <div class="bg-white rounded-3xl max-w-2xl w-full p-6 md:p-7 shadow-2xl border border-slate-100 my-8 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <Teleport to="body">
+                <div
+                    v-if="showModalRecord"
+                    class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto"
+                >
+                    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 md:p-7 shadow-2xl border border-slate-100 my-8 space-y-5 animate-in fade-in zoom-in-95 duration-200 relative z-10">
                     <div class="flex items-center justify-between border-b border-slate-100 pb-4">
                         <div class="flex items-center gap-2.5">
                             <span class="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl">
@@ -1448,13 +1449,15 @@ onMounted(() => {
                     </form>
                 </div>
             </div>
+            </Teleport>
 
             <!-- MODAL 2: DETAIL JURNAL KONSELING -->
-            <div
-                v-if="showModalDetail && detailKonseling"
-                class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto"
-            >
-                <div class="bg-white rounded-3xl max-w-xl w-full p-6 md:p-7 shadow-2xl border border-slate-100 my-8 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <Teleport to="body">
+                <div
+                    v-if="showModalDetail && detailKonseling"
+                    class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto"
+                >
+                    <div class="bg-white rounded-3xl max-w-xl w-full p-6 md:p-7 shadow-2xl border border-slate-100 my-8 space-y-5 animate-in fade-in zoom-in-95 duration-200 relative z-10">
                     <div class="flex items-center justify-between border-b border-slate-100 pb-4">
                         <div class="flex items-center gap-2.5">
                             <span class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl">
@@ -1573,13 +1576,15 @@ onMounted(() => {
                     </div>
                 </div>
             </div>
+            </Teleport>
 
             <!-- MODAL 3: CETAK BERITA ACARA / LEMBAR KONSELING SISWA RESMI -->
-            <div
-                v-if="showModalCetak && cetakData"
-                class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto"
-            >
-                <div class="bg-white rounded-3xl max-w-2xl w-full p-6 md:p-8 shadow-2xl border border-slate-100 my-8 space-y-6 animate-in fade-in zoom-in-95 duration-200">
+            <Teleport to="body">
+                <div
+                    v-if="showModalCetak && cetakData"
+                    class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto"
+                >
+                    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 md:p-8 shadow-2xl border border-slate-100 my-8 space-y-6 animate-in fade-in zoom-in-95 duration-200 relative z-10">
                     <!-- Actions at top of print preview -->
                     <div class="flex items-center justify-between border-b border-slate-200 pb-3 no-print">
                         <div class="flex items-center gap-2 text-slate-700 font-bold text-sm">
@@ -1711,6 +1716,7 @@ onMounted(() => {
                     </div>
                 </div>
             </div>
+            </Teleport>
         </div>
     </AppLayout>
 </template>

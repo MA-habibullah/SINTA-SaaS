@@ -3,7 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Bk\Http\Controllers\BkController;
 
-Route::middleware(['auth', 'tenant.guard'])->prefix('bk')->name('bk.')->group(function () {
+Route::middleware(['web', 'auth', 'tenant.guard'])->prefix('bk')->name('bk.')->group(function () {
     Route::get('/', [BkController::class, 'layanan'])->name('index');
     Route::get('/layanan', [BkController::class, 'layanan'])->name('layanan');
     Route::get('/kedisiplinan', [BkController::class, 'kedisiplinan'])->name('kedisiplinan');

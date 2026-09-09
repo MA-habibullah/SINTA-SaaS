@@ -38,6 +38,28 @@ class BkController extends Controller
     }
 
     /**
+     * Get list of Academic Years
+     */
+    protected function getTahunAjaranList()
+    {
+        $list = \Modules\Akademik\Entities\TahunAjaran::withoutTenant()
+            ->orderBy('nama_tahun_ajaran', 'desc')
+            ->get(['id', 'nama_tahun_ajaran', 'is_active']);
+
+        if ($list->isEmpty()) {
+            $list = collect([
+                (object)['id' => 'ta_2026', 'nama_tahun_ajaran' => '2026/2027', 'is_active' => true],
+                (object)['id' => 'ta_2025', 'nama_tahun_ajaran' => '2025/2026', 'is_active' => false],
+                (object)['id' => 'ta_2024', 'nama_tahun_ajaran' => '2024/2025', 'is_active' => false],
+                (object)['id' => 'ta_2023', 'nama_tahun_ajaran' => '2023/2024', 'is_active' => false],
+                (object)['id' => 'ta_2022', 'nama_tahun_ajaran' => '2022/2023', 'is_active' => false],
+            ]);
+        }
+
+        return $list;
+    }
+
+    /**
      * Display Kedisiplinan & Pelanggaran Siswa Page
      */
     public function kedisiplinan(Request $request): InertiaResponse|JsonResponse
@@ -47,6 +69,9 @@ class BkController extends Controller
 
         $tenants = [];
         $selectedTenantId = $request->input('tenant_id');
+
+        $tahunAjaranList = $this->getTahunAjaranList();
+        $selectedTahunAjaran = $request->input('tahun_ajaran', '');
 
         if ($isSuperAdmin) {
             $tenants = Tenant::select('id', 'nama_sekolah', 'npsn')
@@ -75,6 +100,17 @@ class BkController extends Controller
             $trendQuery = Pelanggaran::query();
             $masterQuery = MasterPelanggaran::query();
             $tenant = Tenant::find($tenantId);
+        }
+
+        // Academic Year Filter (e.g. '2025/2026' -> '2025-07-01' to '2026-06-30')
+        if ($request->filled('tahun_ajaran') && $selectedTahunAjaran !== 'all') {
+            if (preg_match('/^(\d{4})\/(\d{4})$/', $selectedTahunAjaran, $matches)) {
+                $taStartDate = "{$matches[1]}-07-01";
+                $taEndDate = "{$matches[2]}-06-30";
+                $query->whereBetween('tanggal_kejadian', [$taStartDate, $taEndDate]);
+                $pointsQuery->whereBetween('tanggal_kejadian', [$taStartDate, $taEndDate]);
+                $trendQuery->whereBetween('tanggal_kejadian', [$taStartDate, $taEndDate]);
+            }
         }
 
         // Query Pelanggaran with Search & Filters
@@ -232,28 +268,32 @@ class BkController extends Controller
 
         if ($request->wantsJson()) {
             return response()->json([
-                'success'         => true,
-                'pelanggaranList' => $pelanggaranList,
-                'masterList'      => $masterList,
-                'kpi'             => $kpi,
-                'topStudents'     => $topStudents,
-                'monthlyTrend'    => $monthlyTrend,
-                'tenantInfo'      => $tenantInfo,
-                'isSuperAdmin'    => $isSuperAdmin,
-                'tenants'         => $tenants,
+                'success'             => true,
+                'pelanggaranList'     => $pelanggaranList,
+                'masterList'          => $masterList,
+                'kpi'                 => $kpi,
+                'topStudents'         => $topStudents,
+                'monthlyTrend'        => $monthlyTrend,
+                'tenantInfo'          => $tenantInfo,
+                'isSuperAdmin'        => $isSuperAdmin,
+                'tenants'             => $tenants,
+                'tahunAjaranList'     => $tahunAjaranList,
+                'selectedTahunAjaran' => $selectedTahunAjaran,
             ]);
         }
 
         return Inertia::render('Bk/Kedisiplinan/Index', [
-            'pelanggaranList' => $pelanggaranList,
-            'masterList'      => $masterList,
-            'kpi'             => $kpi,
-            'topStudents'     => $topStudents,
-            'monthlyTrend'    => $monthlyTrend,
-            'tenantInfo'      => $tenantInfo,
-            'isSuperAdmin'    => $isSuperAdmin,
-            'tenants'         => $tenants,
-            'filters'         => $request->only(['search', 'kategori', 'status_pembinaan', 'start_date', 'end_date', 'per_page', 'tenant_id']),
+            'pelanggaranList'     => $pelanggaranList,
+            'masterList'          => $masterList,
+            'kpi'                 => $kpi,
+            'topStudents'         => $topStudents,
+            'monthlyTrend'        => $monthlyTrend,
+            'tenantInfo'          => $tenantInfo,
+            'isSuperAdmin'        => $isSuperAdmin,
+            'tenants'             => $tenants,
+            'tahunAjaranList'     => $tahunAjaranList,
+            'selectedTahunAjaran' => $selectedTahunAjaran,
+            'filters'             => $request->only(['search', 'kategori', 'status_pembinaan', 'start_date', 'end_date', 'per_page', 'tenant_id', 'tahun_ajaran']),
         ]);
     }
 
@@ -263,6 +303,32 @@ class BkController extends Controller
     public function index(Request $request): InertiaResponse|JsonResponse
     {
         return $this->kedisiplinan($request);
+    }
+
+    /**
+     * Pastikan response redirect selalu kembali ke halaman kanonikal yang tepat
+     * dengan fallback eksplisit agar tidak pernah terlempar ke /dashboard atau /login
+     */
+    private function redirectTarget(Request $request, string $status, string $message, string $fallbackPath = '/bk/kedisiplinan'): RedirectResponse|JsonResponse
+    {
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => $status === 'success',
+                'message' => $message,
+            ], $status === 'success' ? 200 : 400);
+        }
+
+        $referer = $request->header('referer');
+        if ($referer) {
+            $parsed = parse_url($referer);
+            $refererPath = $parsed['path'] ?? '';
+            // Hanya izinkan redirect ke referer jika valid dan berada di lingkup /bk
+            if (str_starts_with($refererPath, '/bk')) {
+                return redirect()->to($referer)->with($status, $message);
+            }
+        }
+
+        return redirect()->to($fallbackPath)->with($status, $message);
     }
 
     /**
@@ -279,44 +345,44 @@ class BkController extends Controller
             'tanggal_kejadian'     => 'required|date',
             'tindakan_hukuman'     => 'nullable|string',
             'petugas_pencatat'     => 'nullable|string|max:255',
+            'status_pembinaan'     => 'required|in:Belum Dibina,Dalam Pembinaan,Selesai',
             'keterangan'           => 'nullable|string',
-            'status_pembinaan'     => 'nullable|in:Belum Dibina,Dalam Pembinaan,Selesai',
-            'foto_bukti'           => 'nullable|image|max:3072',
+            'snapshot_nama_siswa'  => 'nullable|string|max:255',
+            'snapshot_nisn'        => 'nullable|string|max:50',
+            'snapshot_nis'         => 'nullable|string|max:50',
+            'snapshot_nama_kelas'  => 'nullable|string|max:100',
+            'foto_bukti'           => 'nullable|image|mimes:jpeg,png,jpg,webp|max:3072',
         ]);
 
-        // Student snapshot info
+        $user = $request->user() ?: Auth::user();
+        $targetTenantId = $user->tenant_id ?? '00000000-0000-0000-0000-000000000000';
+
+        // Auto snapshot student info
         $siswa = Siswa::withoutTenant()->find($validated['siswa_id']);
         if ($siswa) {
-            $validated['snapshot_nama_siswa'] = $siswa->nama_lengkap;
-            $validated['snapshot_nisn']       = $siswa->nisn;
-            $validated['snapshot_nis']        = $siswa->nis;
-            $validated['snapshot_nama_kelas'] = 'Kelas ' . ($siswa->tingkat ?? 'X');
-            if (empty($validated['tenant_id'])) {
-                $validated['tenant_id'] = $siswa->tenant_id;
-            }
+            $targetTenantId = $siswa->tenant_id ?? $targetTenantId;
+            $validated['snapshot_nama_siswa'] = !empty($validated['snapshot_nama_siswa']) ? $validated['snapshot_nama_siswa'] : $siswa->nama_lengkap;
+            $validated['snapshot_nisn'] = !empty($validated['snapshot_nisn']) ? $validated['snapshot_nisn'] : $siswa->nisn;
+            $validated['snapshot_nis'] = !empty($validated['snapshot_nis']) ? $validated['snapshot_nis'] : $siswa->nis;
+            $validated['snapshot_nama_kelas'] = !empty($validated['snapshot_nama_kelas']) ? $validated['snapshot_nama_kelas'] : ($siswa->kelas?->nama_kelas ?? 'Siswa Terdaftar');
         }
 
-        $validated['nama_pelanggaran_siswa'] = $validated['nama_pelanggaran'];
-        $validated['deskripsi'] = $validated['keterangan'] ?? $validated['nama_pelanggaran'];
-        $validated['status_pembinaan'] = $validated['status_pembinaan'] ?? 'Belum Dibina';
+        if (empty($validated['petugas_pencatat'])) {
+            $validated['petugas_pencatat'] = $user->nama ?? $user->name ?? 'Petugas BK';
+        }
 
-        // File upload handling
+        $validated['tenant_id'] = $targetTenantId;
+        $validated['is_active'] = true;
+        $validated['nama_pelanggaran_siswa'] = $validated['nama_pelanggaran'];
+
         if ($request->hasFile('foto_bukti')) {
-            $path = $request->file('foto_bukti')->store('pelanggaran', 'public');
-            $validated['foto_bukti'] = '/storage/' . $path;
+            $path = $request->file('foto_bukti')->store('bk/pelanggaran', 'public');
+            $validated['foto_bukti'] = $path;
         }
 
         $pelanggaran = Pelanggaran::create($validated);
 
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Laporan pelanggaran siswa berhasil dicatat.',
-                'data'    => $pelanggaran,
-            ], 201);
-        }
-
-        return back()->with('success', 'Laporan pelanggaran siswa berhasil dicatat.');
+        return $this->redirectTarget($request, 'success', 'Catatan pelanggaran berhasil disimpan.', '/bk/kedisiplinan');
     }
 
     /**
@@ -327,36 +393,30 @@ class BkController extends Controller
         $pelanggaran = Pelanggaran::withoutTenant()->findOrFail($id);
 
         $validated = $request->validate([
-            'nama_pelanggaran' => 'required|string|max:255',
-            'kategori'         => 'required|in:Ringan,Sedang,Berat,Khusus',
-            'poin_pelanggaran' => 'required|integer|min:1|max:100',
-            'tanggal_kejadian' => 'required|date',
-            'tindakan_hukuman' => 'nullable|string',
-            'petugas_pencatat' => 'nullable|string|max:255',
-            'keterangan'       => 'nullable|string',
-            'status_pembinaan' => 'required|in:Belum Dibina,Dalam Pembinaan,Selesai',
-            'foto_bukti'       => 'nullable|image|max:3072',
+            'nama_pelanggaran'     => 'required|string|max:255',
+            'kategori'             => 'required|in:Ringan,Sedang,Berat,Khusus',
+            'poin_pelanggaran'     => 'required|integer|min:1|max:100',
+            'tanggal_kejadian'     => 'required|date',
+            'tindakan_hukuman'     => 'nullable|string',
+            'petugas_pencatat'     => 'nullable|string|max:255',
+            'status_pembinaan'     => 'required|in:Belum Dibina,Dalam Pembinaan,Selesai',
+            'keterangan'           => 'nullable|string',
+            'foto_bukti'           => 'nullable|image|mimes:jpeg,png,jpg,webp|max:3072',
         ]);
 
         $validated['nama_pelanggaran_siswa'] = $validated['nama_pelanggaran'];
-        $validated['deskripsi'] = $validated['keterangan'] ?? $validated['nama_pelanggaran'];
 
         if ($request->hasFile('foto_bukti')) {
-            $path = $request->file('foto_bukti')->store('pelanggaran', 'public');
-            $validated['foto_bukti'] = '/storage/' . $path;
+            if ($pelanggaran->foto_bukti && Storage::disk('public')->exists($pelanggaran->foto_bukti)) {
+                Storage::disk('public')->delete($pelanggaran->foto_bukti);
+            }
+            $path = $request->file('foto_bukti')->store('bk/pelanggaran', 'public');
+            $validated['foto_bukti'] = $path;
         }
 
         $pelanggaran->update($validated);
 
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Data pelanggaran berhasil diperbarui.',
-                'data'    => $pelanggaran,
-            ]);
-        }
-
-        return back()->with('success', 'Data pelanggaran berhasil diperbarui.');
+        return $this->redirectTarget($request, 'success', 'Data pelanggaran berhasil diperbarui.', '/bk/kedisiplinan');
     }
 
     /**
@@ -367,14 +427,7 @@ class BkController extends Controller
         $pelanggaran = Pelanggaran::withoutTenant()->findOrFail($id);
         $pelanggaran->delete();
 
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Data pelanggaran berhasil dihapus.',
-            ]);
-        }
-
-        return back()->with('success', 'Data pelanggaran berhasil dihapus.');
+        return $this->redirectTarget($request, 'success', 'Data pelanggaran berhasil dihapus.', '/bk/kedisiplinan');
     }
 
     /**
@@ -394,15 +447,7 @@ class BkController extends Controller
 
         $master = MasterPelanggaran::create($validated);
 
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Aturan tata tertib berhasil disimpan.',
-                'data'    => $master,
-            ], 201);
-        }
-
-        return back()->with('success', 'Aturan tata tertib berhasil disimpan.');
+        return $this->redirectTarget($request, 'success', 'Aturan tata tertib berhasil disimpan.', '/bk/kedisiplinan');
     }
 
     /**
@@ -423,15 +468,7 @@ class BkController extends Controller
         $validated['nama_master_pelanggaran'] = $validated['nama_pelanggaran'];
         $master->update($validated);
 
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Aturan tata tertib berhasil diperbarui.',
-                'data'    => $master,
-            ]);
-        }
-
-        return back()->with('success', 'Aturan tata tertib berhasil diperbarui.');
+        return $this->redirectTarget($request, 'success', 'Aturan tata tertib berhasil diperbarui.', '/bk/kedisiplinan');
     }
 
     /**
@@ -442,14 +479,7 @@ class BkController extends Controller
         $master = MasterPelanggaran::withoutTenant()->findOrFail($id);
         $master->delete();
 
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Aturan tata tertib berhasil dihapus.',
-            ]);
-        }
-
-        return back()->with('success', 'Aturan tata tertib berhasil dihapus.');
+        return $this->redirectTarget($request, 'success', 'Aturan tata tertib berhasil dihapus.', '/bk/kedisiplinan');
     }
 
     /**
@@ -503,6 +533,9 @@ class BkController extends Controller
         $tenants = [];
         $selectedTenantId = $request->input('tenant_id');
 
+        $tahunAjaranList = $this->getTahunAjaranList();
+        $selectedTahunAjaran = $request->input('tahun_ajaran', '');
+
         if ($isSuperAdmin) {
             $tenants = Tenant::select('id', 'nama_sekolah', 'npsn')
                 ->orderBy('nama_sekolah', 'asc')
@@ -528,6 +561,18 @@ class BkController extends Controller
             $breakdownQuery = Konseling::query();
             $trendQuery = Konseling::query();
             $tenant = Tenant::find($tenantId);
+        }
+
+        // Academic Year Filter (e.g. '2025/2026' -> '2025-07-01' to '2026-06-30')
+        if ($request->filled('tahun_ajaran') && $selectedTahunAjaran !== 'all') {
+            if (preg_match('/^(\d{4})\/(\d{4})$/', $selectedTahunAjaran, $matches)) {
+                $taStartDate = "{$matches[1]}-07-01";
+                $taEndDate = "{$matches[2]}-06-30";
+                $query->whereBetween('tanggal_konseling', [$taStartDate, $taEndDate]);
+                $kpiQuery->whereBetween('tanggal_konseling', [$taStartDate, $taEndDate]);
+                $breakdownQuery->whereBetween('tanggal_konseling', [$taStartDate, $taEndDate]);
+                $trendQuery->whereBetween('tanggal_konseling', [$taStartDate, $taEndDate]);
+            }
         }
 
         $query->with('siswa')
@@ -626,26 +671,30 @@ class BkController extends Controller
 
         if ($request->wantsJson()) {
             return response()->json([
-                'success'           => true,
-                'konselingList'     => $konselingList,
-                'kpi'               => $kpi,
-                'kategoriBreakdown' => $kategoriBreakdown,
-                'monthlyTrend'      => $monthlyTrend,
-                'tenantInfo'        => $tenantInfo,
-                'isSuperAdmin'      => $isSuperAdmin,
-                'tenants'           => $tenants,
+                'success'             => true,
+                'konselingList'       => $konselingList,
+                'kpi'                 => $kpi,
+                'kategoriBreakdown'   => $kategoriBreakdown,
+                'monthlyTrend'        => $monthlyTrend,
+                'tenantInfo'          => $tenantInfo,
+                'isSuperAdmin'        => $isSuperAdmin,
+                'tenants'             => $tenants,
+                'tahunAjaranList'     => $tahunAjaranList,
+                'selectedTahunAjaran' => $selectedTahunAjaran,
             ]);
         }
 
         return Inertia::render('Bk/Layanan/Index', [
-            'konselingList'     => $konselingList,
-            'kpi'               => $kpi,
-            'kategoriBreakdown' => $kategoriBreakdown,
-            'monthlyTrend'      => $monthlyTrend,
-            'tenantInfo'        => $tenantInfo,
-            'isSuperAdmin'      => $isSuperAdmin,
-            'tenants'           => $tenants,
-            'filters'           => $request->only(['search', 'jenis_konseling', 'status_kasus', 'is_rahasia', 'start_date', 'end_date', 'per_page', 'tenant_id']),
+            'konselingList'       => $konselingList,
+            'kpi'                 => $kpi,
+            'kategoriBreakdown'   => $kategoriBreakdown,
+            'monthlyTrend'        => $monthlyTrend,
+            'tenantInfo'          => $tenantInfo,
+            'isSuperAdmin'        => $isSuperAdmin,
+            'tenants'             => $tenants,
+            'tahunAjaranList'     => $tahunAjaranList,
+            'selectedTahunAjaran' => $selectedTahunAjaran,
+            'filters'             => $request->only(['search', 'jenis_konseling', 'status_kasus', 'is_rahasia', 'start_date', 'end_date', 'per_page', 'tenant_id', 'tahun_ajaran']),
         ]);
     }
 
@@ -701,7 +750,7 @@ class BkController extends Controller
             ], 201);
         }
 
-        return back()->with('success', 'Sesi konseling berhasil disimpan.');
+        return $this->redirectTarget($request, 'success', 'Sesi konseling berhasil disimpan.', '/bk/layanan');
     }
 
     /**
@@ -736,15 +785,7 @@ class BkController extends Controller
 
         $konseling->update($validated);
 
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Data konseling berhasil diperbarui.',
-                'data'    => $konseling,
-            ]);
-        }
-
-        return back()->with('success', 'Data konseling berhasil diperbarui.');
+        return $this->redirectTarget($request, 'success', 'Data konseling berhasil diperbarui.', '/bk/layanan');
     }
 
     /**
@@ -755,14 +796,7 @@ class BkController extends Controller
         $konseling = Konseling::withoutTenant()->findOrFail($id);
         $konseling->delete();
 
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Catatan konseling berhasil dihapus.',
-            ]);
-        }
-
-        return back()->with('success', 'Catatan konseling berhasil dihapus.');
+        return $this->redirectTarget($request, 'success', 'Catatan konseling berhasil dihapus.', '/bk/layanan');
     }
 
     /**

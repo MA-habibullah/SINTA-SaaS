@@ -1142,8 +1142,9 @@ onMounted(() => {
             </div>
 
             <!-- MODAL CATAT / EDIT PELANGGARAN -->
-            <div v-if="showModalRecord" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-                <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <Teleport to="body">
+                <div v-if="showModalRecord" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto relative z-10">
                     <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                         <div class="flex items-center gap-2">
                             <div class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
@@ -1361,10 +1362,12 @@ onMounted(() => {
                     </form>
                 </div>
             </div>
+            </Teleport>
 
             <!-- MODAL KELOLA MASTER ATURAN -->
-            <div v-if="showModalMaster" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-                <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-4">
+            <Teleport to="body">
+                <div v-if="showModalMaster" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-4 relative z-10">
                     <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                         <div class="flex items-center gap-2">
                             <div class="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center font-bold">
@@ -1455,10 +1458,12 @@ onMounted(() => {
                     </form>
                 </div>
             </div>
+            </Teleport>
 
             <!-- MODAL DETAIL & KRONOLOGI PELANGGARAN -->
-            <div v-if="showModalDetail && detailStudent" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-                <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <Teleport to="body">
+                <div v-if="showModalDetail && detailStudent" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto relative z-10">
                     <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                         <div class="flex items-center gap-2">
                             <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
@@ -1551,11 +1556,13 @@ onMounted(() => {
                     </div>
                 </div>
             </div>
+            </Teleport>
         </div>
 
         <!-- MODAL CETAK SURAT PANGGILAN ORANG TUA -->
-        <div v-if="showModalCetak" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <Teleport to="body">
+            <div v-if="showModalCetak" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative z-10">
                 <div class="p-4 border-b border-slate-100 flex items-center justify-between no-print">
                     <div class="flex items-center gap-2">
                         <i class="bi bi-file-earmark-text-fill text-rose-600 text-lg"></i>
@@ -1658,6 +1665,7 @@ onMounted(() => {
                 </div>
             </div>
         </div>
+        </Teleport>
     </AppLayout>
 </template>
 
