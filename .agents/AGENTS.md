@@ -257,14 +257,19 @@ Seluruh file pengujian, percobaan (*testing*), skrip QA otomatis, atau pengeceka
 
 Dilarang keras menempatkan file pengujian sementara atau test suite di *root directory* atau direktori inti aplikasi (`app/`, `Modules/`, `routes/`, `database/`, `public/`). Seluruh kegiatan Quality Assurance (QA) wajib dipusatkan di folder `scratch/tests/` dan `scratch/pengujian/`.
 
-## Implementation Plans & Walkthroughs (Flexible Overhead Rule)
-Setiap kali pekerjaan diselesaikan, dokumen rencana (*implementation plan*) dan dokumen hasil (*walkthrough*) wajib dicatat ke dalam **satu file harian** di `C:\laragon\www\sinta\scratch\docs` **beserta jam eksekusi detail (WIB)**:
-- `YYYY-MM-DD_Implementation_Plans_Harian.md`
-- `YYYY-MM-DD_Walkthrough_Harian.md`
+## Implementation Plans & Walkthroughs (Wajib Otomatis Per Hari / Daily Automation Rule)
+Setiap kali pekerjaan dimulai dan diselesaikan, agen **WAJIB SECARA OTOMATIS** mengelola dan mencatat progres ke dalam **dua file dokumentasi harian** di `C:\laragon\www\sinta\scratch\docs` berdasarkan tanggal lokal sistem yang sedang berjalan (`YYYY-MM-DD`):
+- `C:\laragon\www\sinta\scratch\docs\YYYY-MM-DD_Implementation_Plans_Harian.md`
+- `C:\laragon\www\sinta\scratch\docs\YYYY-MM-DD_Walkthrough_Harian.md`
 
-**Ketentuan Format & Beban Dokumentasi:**
-1. **Fitur Baru / Refactoring Arsitektur Besar**: Wajib menyertakan seluruh konten rencana & walkthrough secara lengkap verbatim (termasuk kueri SQL, kode PHP/JS, tabel, jam eksekusi, dan verification plan).
-2. **Perbaikan Bug Kecil / Minor Tweaks**: Cukup gunakan format **Compact Log** (10-25 baris) yang mencakup: *Waktu (WIB) + Root Cause + Files Changed + Solution + Quick Verification Result*.
+**Prosedur Otomatisasi Harian Agen (MANDATORY WORKFLOW):**
+1. **Deteksi Tanggal Lokal**: Agen mendeteksi tanggal lokal sesi saat ini dari sistem metadata (format `YYYY-MM-DD`, contoh: `2026-09-09`).
+2. **Auto-Create File Baru**: Jika file harian untuk tanggal hari ini belum tersedia di `scratch/docs/`, agen **WAJIB LANGSUNG MEMBUAT** kedua file tersebut secara otomatis pada respons/tahapan pertama dengan header resmi harian.
+3. **Pemisahan Ketat Antar-Hari (No Cross-Day Leakage)**: Dilarang keras mencampur atau menuliskan log pekerjaan tanggal hari ini ke file hari kemarin/sebelumnya. Setiap hari memiliki berkas mandiri.
+4. **Append & Penomoran Tahap Real-Time**: Setiap pekerjaan yang dieksekusi wajib ditambahkan ke file harian dengan timestamp detail WIB (`## 🕒 [HH:MM - HH:MM WIB] Tahap X: ...`).
+5. **Beban Dokumentasi**:
+   - **Fitur Baru / Refactoring Besar**: Wajib menyertakan analisis, perubahan berkas, SQL/migrasi, test suite, dan hasil verifikasi secara lengkap verbatim.
+   - **Perbaikan Bug Kecil / Minor Tweaks**: Cukup gunakan format **Compact Log** (10-25 baris): *Waktu (WIB) + Root Cause + Files Changed + Solution + Quick Verification Result*.
 
 ## Automatic Code Syntax Check Rule (WAJIB)
 Setiap kali memodifikasi atau membuat berkas PHP baru, agen **WAJIB** secara otomatis menjalankan tes sintaks bebas error sebelum melaporkan pekerjaan selesai:
@@ -273,7 +278,26 @@ php -l <path_file_php>
 ```
 Pastikan output menunjukkan `No syntax errors detected`.
 
-## Database Migration Rules (Laravel 11 Standard)
+## Database Migration Rules & Pre-Migration Schema Inspection (WAJIB)
+
+### 1. Mandatory Pre-Migration & Database Schema Inspection Protocol
+Sebelum membuat migrasi baru, menambahkan kolom baru, membuat model Eloquent baru, atau memanggil kolom database pada kueri controller, agen **WAJIB** terlebih dahulu melakukan inspeksi struktur database riil:
+
+**Prosedur Wajib Inspeksi Database:**
+1. **Inspeksi Skema & Kolom Riil**: Selalu periksa keberadaan tabel dan kolom melalui `information_schema.columns` atau jalankan runner:
+   ```powershell
+   php scratch/pengujian/inspect_database_migrations_schema.php
+   ```
+2. **Dilarang Asumsi Kolom (Anti-Assumption Rule)**:
+   - Dilarang menebak nama kolom (contoh: mengasumsikan kolom `tingkat` di `siswa.siswa` padahal yang tersedia adalah relasi kelas atau kolom lain).
+   - Pastikan tipe data, batasan *nullability*, dan nilai default sesuai dengan skema PostgreSQL.
+3. **Pencegahan Redundansi & Duplikasi Migrasi**:
+   - Periksa daftar migrasi di `database/migrations/` dan tabel `migrations` untuk memastikan fitur/kolom tersebut belum pernah dibuat sebelumnya.
+   - Jika tabel sudah ada, gunakan `Schema::table('skema.nama_tabel', function (Blueprint $table) { ... })` dengan pemeriksaan `if (!Schema::hasColumn('skema.nama_tabel', 'nama_kolom'))`.
+4. **Sinkronisasi Model Eloquent ($fillable & $casts)**:
+   - Pastikan setiap properti di `$fillable`, `$casts`, dan parameter `select(...)` di Controller 100% cocok dengan kolom riil di PostgreSQL.
+
+### 2. Standar Format Migrasi Laravel 11 (Anonymous Class Migration)
 Setiap kali membuat file migrasi baru di folder `database/migrations/`, wajib menggunakan format **Anonymous Class Migration** resmi Laravel 11:
 
 ```php
@@ -301,6 +325,7 @@ return new class extends Migration
     }
 };
 ```
+
 
 ## Senior Security Auditor, OWASP ASVS L3 & Direct Remediation Protocol (WAJIB)
 Ketika melakukan analisis, audit keamanan, atau saat pengguna meminta perbaikan dan verifikasi, agen **WAJIB** bertindak sebagai **Senior Programmer & Database Security Auditor** dengan mematuhi protokol terpadu:
