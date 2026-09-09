@@ -6,6 +6,7 @@ use Modules\Core\Http\Controllers\AuthController;
 use Modules\Core\Http\Controllers\UserController;
 use Modules\Core\Http\Controllers\TenantManagementController;
 use Modules\Core\Http\Controllers\SekolahIdentitasController;
+use Modules\Core\Http\Controllers\KonfigurasiAksesController;
 use Modules\Siswa\Http\Controllers\BukuIndukController;
 use Modules\Siswa\Http\Controllers\PpdbController;
 use Modules\Siswa\Http\Controllers\MutasiController;
@@ -118,7 +119,9 @@ Route::middleware(['auth', 'tenant.guard'])->group(function () {
     // 2. Sistem & Utilitas
     Route::get('/sekolah/identitas', [SekolahIdentitasController::class, 'show'])->name('menu.sekolah.identitas');
     Route::match(['post', 'put'], '/sekolah/identitas', [SekolahIdentitasController::class, 'update'])->name('menu.sekolah.identitas.update');
-    Route::get('/konfigurasi/akses', [ActivityLogController::class, 'index'])->name('menu.konfigurasi.akses');
+    Route::get('/konfigurasi/akses', [KonfigurasiAksesController::class, 'index'])->name('menu.konfigurasi.akses');
+    Route::post('/konfigurasi/akses', [KonfigurasiAksesController::class, 'store'])->name('menu.konfigurasi.akses.store');
+    Route::get('/konfigurasi/akses/fetch', [KonfigurasiAksesController::class, 'fetch'])->name('menu.konfigurasi.akses.fetch');
     Route::get('/utilitas/sesi-aktif', [ActivityLogController::class, 'index'])->name('menu.utilitas.sesi-aktif');
     Route::get('/utilitas/antrean', [ActivityLogController::class, 'index'])->name('menu.utilitas.antrean');
     Route::get('/super-admin/tenant-menus', [TenantManagementController::class, 'index'])->name('menu.super-admin.tenant-menus');

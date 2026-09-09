@@ -5,6 +5,7 @@ use Modules\Core\Http\Controllers\AuthController;
 use Modules\Core\Http\Controllers\TenantManagementController;
 use Modules\Core\Http\Controllers\UserController;
 use Modules\Core\Http\Controllers\SekolahIdentitasController;
+use Modules\Core\Http\Controllers\KonfigurasiAksesController;
 
 // 1. Guest Routes (Login & Public Auth)
 Route::middleware('guest')->group(function () {
@@ -42,5 +43,12 @@ Route::middleware(['auth', 'tenant.guard'])->group(function () {
     Route::prefix('core/sekolah-identitas')->name('core.sekolah-identitas.')->group(function () {
         Route::get('/', [SekolahIdentitasController::class, 'show'])->name('show');
         Route::match(['post', 'put'], '/', [SekolahIdentitasController::class, 'update'])->name('update');
+    });
+
+    // Core - Konfigurasi Hak Akses (RBAC Matrix)
+    Route::prefix('core/konfigurasi-akses')->name('core.konfigurasi-akses.')->group(function () {
+        Route::get('/', [KonfigurasiAksesController::class, 'index'])->name('index');
+        Route::post('/', [KonfigurasiAksesController::class, 'store'])->name('store');
+        Route::get('/fetch', [KonfigurasiAksesController::class, 'fetch'])->name('fetch');
     });
 });
