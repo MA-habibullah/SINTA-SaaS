@@ -7,29 +7,26 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Core\Entities\User;
 use Modules\Core\Entities\Tenant;
 
-class ActivityLog extends BaseTenantModel
+class ActiveSession extends BaseTenantModel
 {
-    protected $table = 'sistem.activity_logs';
+    protected $table = 'sistem.active_sessions';
 
-    public $timestamps = false; // created_at managed by database/app
+    protected $keyType = 'string';
+    public $incrementing = false;
 
     protected $fillable = [
         'id',
         'tenant_id',
         'user_id',
-        'user_role',
-        'table_name',
-        'action', // INSERT, UPDATE, DELETE, LOGIN, LOGOUT, EXPORT, PRINT
-        'old_data',
-        'new_data',
         'ip_address',
-        'created_at',
+        'user_agent',
+        'tanggal_login',
+        'last_activity',
     ];
 
     protected $casts = [
-        'old_data'   => 'array',
-        'new_data'   => 'array',
-        'created_at' => 'datetime',
+        'tanggal_login' => 'datetime',
+        'last_activity' => 'datetime',
     ];
 
     public function user(): BelongsTo
