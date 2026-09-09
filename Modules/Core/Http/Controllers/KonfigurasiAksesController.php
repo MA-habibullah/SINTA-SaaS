@@ -229,7 +229,11 @@ class KonfigurasiAksesController extends Controller
             ]);
         }
 
-        return back()->with('success', 'Matriks hak akses menu berhasil disimpan dan diterapkan secara real-time.');
+        $redirectUrl = ($targetTenantId && $targetTenantId !== '00000000-0000-0000-0000-000000000000')
+            ? "/konfigurasi/akses?tenant_id={$targetTenantId}"
+            : "/konfigurasi/akses";
+
+        return redirect($redirectUrl)->with('success', 'Matriks hak akses menu berhasil disimpan dan diterapkan secara real-time.');
     }
 
     private function getAccessMapForTenant(?string $tenantId, ?bool &$isCustom = false): array

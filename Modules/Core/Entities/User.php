@@ -75,7 +75,10 @@ class User extends Authenticatable
 
     public function isSuperAdmin(): bool
     {
-        if ($this->role && $this->role->nama_role === 'super_admin') {
+        if (is_object($this->role) && isset($this->role->nama_role) && $this->role->nama_role === 'super_admin') {
+            return true;
+        }
+        if (is_string($this->role) && $this->role === 'super_admin') {
             return true;
         }
         return $this->roles()->where('nama_role', 'super_admin')->exists();
@@ -83,7 +86,10 @@ class User extends Authenticatable
 
     public function hasRole(string $roleName): bool
     {
-        if ($this->role && $this->role->nama_role === $roleName) {
+        if (is_object($this->role) && isset($this->role->nama_role) && $this->role->nama_role === $roleName) {
+            return true;
+        }
+        if (is_string($this->role) && $this->role === $roleName) {
             return true;
         }
         return $this->roles()->where('nama_role', $roleName)->exists();

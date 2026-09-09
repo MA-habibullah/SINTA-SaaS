@@ -61,6 +61,13 @@ class Tenant extends Model
         'max_staff_limit',
         'enable_bk',
         'enable_tracer',
+        'enable_ppdb',
+        'enable_perpustakaan',
+        'enable_keuangan',
+        'enable_pdss',
+        'enable_smk',
+        'enable_sarpras',
+        'enable_persuratan',
     ];
 
     protected $casts = [
@@ -70,6 +77,13 @@ class Tenant extends Model
         'max_staff_limit'     => 'integer',
         'enable_bk'           => 'integer',
         'enable_tracer'       => 'integer',
+        'enable_ppdb'         => 'integer',
+        'enable_perpustakaan' => 'integer',
+        'enable_keuangan'     => 'integer',
+        'enable_pdss'         => 'integer',
+        'enable_smk'          => 'integer',
+        'enable_sarpras'      => 'integer',
+        'enable_persuratan'   => 'integer',
         'created_at'          => 'datetime',
         'updated_at'          => 'datetime',
     ];

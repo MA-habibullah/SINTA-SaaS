@@ -83,11 +83,6 @@ onMounted(() => {
   initMatrix(props.accessMap)
 })
 
-// Watch for prop changes
-watch(() => props.accessMap, (newMap) => {
-  initMatrix(newMap)
-}, { deep: true })
-
 // Checkbox change handler with Parent-Child Cascading logic
 const handleCheckboxChange = (roleId, menu) => {
   const key = `${roleId}___${menu.id}`
@@ -150,7 +145,7 @@ const filteredMenus = computed(() => {
 })
 
 // Target Tenant change handler
-const handleTenantChange = async (e) => {
+const handleTenantChange = (e) => {
   const tId = e.target.value
   targetTenant.value = tId
   
@@ -159,27 +154,19 @@ const handleTenantChange = async (e) => {
     return
   }
 
-  isLoadingMatrix.value = true
-  try {
-    const res = await fetch(`/konfigurasi/akses/fetch?tenant_id=${tId}`)
-    const json = await res.json()
-    if (json.success) {
-      initMatrix(json.access_map)
-      isCustomTenant.value = !!json.is_custom
-      triggerToast(
-        json.is_custom 
-          ? 'Memuat konfigurasi khusus sekolah terpilih' 
-          : 'Memuat template hak akses default global', 
-        'success'
-      )
-    }
-  } catch (err) {
-    console.error('Gagal memuat matriks hak akses:', err)
-    triggerToast('Gagal memuat data akses sekolah.', 'error')
-  } finally {
-    isLoadingMatrix.value = false
-  }
+  router.visit(`/konfigurasi/akses?tenant_id=${tId}`, { preserveScroll: true })
 }
+
+// Watch for prop changes
+watch(() => props.accessMap, (newMap) => {
+  initMatrix(newMap)
+}, { deep: true })
+
+watch(() => props.selectedTenantId, (newTenant) => {
+  if (newTenant) {
+    targetTenant.value = newTenant
+  }
+})
 
 // Save Matrix
 const saveMatrix = () => {
@@ -209,11 +196,12 @@ const saveMatrix = () => {
     access: accessPayload
   }, {
     preserveScroll: true,
-    onSuccess: (res) => {
+    preserveState: true,
+    onSuccess: (page) => {
       isSubmitting.value = false
       triggerToast('Matriks hak akses menu berhasil disimpan & diterapkan secara real-time!', 'success')
-      if (res.props?.flash?.success) {
-        triggerToast(res.props.flash.success, 'success')
+      if (page.props?.accessMap) {
+        initMatrix(page.props.accessMap)
       }
     },
     onError: () => {
