@@ -11,6 +11,8 @@ const props = defineProps({
     tenantInfo: Object,
     isSuperAdmin: Boolean,
     tenants: Array,
+    tahunAjaranList: Array,
+    selectedTahunAjaran: String,
     filters: Object,
 })
 
@@ -22,12 +24,20 @@ const activeTab = ref('jurnal_konseling')
 // Filter State
 const search = ref(props.filters?.search || '')
 const tenantId = ref(props.filters?.tenant_id || '')
+const tahunAjaran = ref(props.filters?.tahun_ajaran || '')
 const jenisKonseling = ref(props.filters?.jenis_konseling || '')
 const statusKasus = ref(props.filters?.status_kasus || '')
 const isRahasia = ref(props.filters?.is_rahasia !== undefined && props.filters?.is_rahasia !== null ? String(props.filters?.is_rahasia) : '')
 const startDate = ref(props.filters?.start_date || '')
 const endDate = ref(props.filters?.end_date || '')
 const perPage = ref(props.filters?.per_page || 15)
+
+// Helper: dapatkan nama sekolah yang dipilih
+const getSelectedTenantName = () => {
+    if (!tenantId.value) return 'Semua Sekolah (Global)'
+    const t = (props.tenants || []).find(t => t.id === tenantId.value)
+    return t ? t.nama_sekolah : 'Sekolah Terpilih'
+}
 
 // Modals State
 const showModalRecord = ref(false)
@@ -69,6 +79,7 @@ const applyFilters = () => {
         {
             search: search.value || undefined,
             tenant_id: tenantId.value || undefined,
+            tahun_ajaran: tahunAjaran.value || undefined,
             jenis_konseling: jenisKonseling.value || undefined,
             status_kasus: statusKasus.value || undefined,
             is_rahasia: isRahasia.value !== '' ? isRahasia.value : undefined,
@@ -90,6 +101,7 @@ const handleSearchInput = () => {
 const resetFilters = () => {
     search.value = ''
     tenantId.value = ''
+    tahunAjaran.value = ''
     jenisKonseling.value = ''
     statusKasus.value = ''
     isRahasia.value = ''
@@ -415,7 +427,64 @@ onMounted(() => {
                 </div>
             </div>
 
-            <!-- Standardized 3-Way Horizontal Scroller NavTabs -->
+            <!-- ===== BANNER FILTER SEKOLAH (KHUSUS SUPER ADMIN) STANDAR BAKU ===== -->
+            <div v-if="isSuperAdmin" class="p-4 sm:px-5 rounded-2xl shadow-xs border border-blue-100 bg-gradient-to-r from-blue-50/90 to-slate-50 border-l-4 border-l-blue-600 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <i class="bi bi-buildings text-blue-600 text-lg"></i>
+                    <span class="font-bold text-slate-800 text-sm">Filter Sekolah</span>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-700 border border-blue-200">
+                        <i class="bi bi-funnel-fill me-1"></i> Aktif
+                    </span>
+
+                    <!-- Dropdown Pilih Sekolah -->
+                    <div class="my-1 md:my-0">
+                        <select
+                            v-model="tenantId"
+                            @change="applyFilters"
+                            id="layanan-tenant-selector"
+                            class="h-9 px-3 bg-white border border-blue-200 rounded-xl text-xs font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 min-w-[240px] cursor-pointer"
+                        >
+                            <option value="">-- Semua Sekolah (Global) --</option>
+                            <option v-for="t in tenants || []" :key="t.id" :value="t.id">
+                                {{ t.nama_sekolah }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- Dropdown Tahun Ajaran -->
+                    <div class="my-1 md:my-0">
+                        <select
+                            v-model="tahunAjaran"
+                            @change="applyFilters"
+                            id="layanan-tahun-ajaran-selector"
+                            class="h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+                        >
+                            <option value="">-- Semua Tahun Ajaran --</option>
+                            <option v-for="ta in tahunAjaranList || []" :key="ta.id" :value="ta.nama_tahun_ajaran">
+                                {{ ta.nama_tahun_ajaran }} {{ ta.is_active ? '(Aktif)' : '' }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- Tombol Reset -->
+                    <button
+                        v-if="tenantId || tahunAjaran"
+                        type="button"
+                        @click="() => { tenantId = ''; tahunAjaran = ''; applyFilters() }"
+                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 text-[11px] font-semibold border border-slate-200 transition"
+                        title="Reset Filter Sekolah"
+                    >
+                        <i class="bi bi-x-circle text-[10px]"></i> Reset
+                    </button>
+                </div>
+
+                <!-- Info Text -->
+                <div class="text-xs text-slate-500 font-medium whitespace-nowrap">
+                    Menampilkan data milik:
+                    <strong class="text-blue-700 font-bold ml-1">{{ getSelectedTenantName() }}</strong>
+                    <span class="text-slate-400 ml-1">(Super Admin)</span>
+                </div>
+            </div>
             <div class="bg-white rounded-2xl shadow-2xs border border-slate-200/80 p-2 relative">
                 <div class="flex items-center relative">
                     <!-- 1 Tombol Panah Kiri -->
@@ -584,23 +653,6 @@ onMounted(() => {
                     <!-- 1. Bagian Atas: Filter Bar Sesuai Standar Baku AGENTS.MD -->
                     <div class="p-3.5 bg-slate-50/70 border-b border-slate-200/80 overflow-x-auto no-scrollbar">
                         <form @submit.prevent="applyFilters" class="flex flex-row items-end gap-2.5 sm:gap-3 min-w-max">
-                            <!-- Super Admin Tenant Filter -->
-                            <div class="w-48 sm:w-56 shrink-0" v-if="isSuperAdmin">
-                                <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider whitespace-nowrap">
-                                    <i class="bi bi-buildings me-1 text-slate-500"></i> Sekolah (Tenant)
-                                </label>
-                                <select
-                                    v-model="tenantId"
-                                    @change="applyFilters"
-                                    class="w-full h-9 px-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-white text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
-                                >
-                                    <option value="">-- Semua Sekolah (Global) --</option>
-                                    <option v-for="t in tenants || []" :key="t.id" :value="t.id">
-                                        {{ t.nama_sekolah }}
-                                    </option>
-                                </select>
-                            </div>
-
                             <!-- Filter Jenis Konseling -->
                             <div class="w-36 sm:w-40 shrink-0">
                                 <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider whitespace-nowrap">Bidang Layanan</label>

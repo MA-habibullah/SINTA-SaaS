@@ -185,8 +185,8 @@ Route::middleware(['auth', 'tenant.guard'])->group(function () {
     Route::delete('/bk/master-pelanggaran/{id}', [BkController::class, 'deleteMasterPelanggaran'])->name('menu.bk.master.delete');
 
     // 4. Informasi & Kesiswaan
-    Route::get('/informasi/pengumuman', [CmsController::class, 'index'])->name('menu.informasi.pengumuman');
-    Route::get('/informasi/agenda', [CmsController::class, 'index'])->name('menu.informasi.agenda');
+    Route::get('/informasi/pengumuman', [CmsController::class, 'pengumuman'])->name('menu.informasi.pengumuman');
+    Route::get('/informasi/agenda', [CmsController::class, 'agenda'])->name('menu.informasi.agenda');
     Route::get('/kesiswaan/ekskul', [PrestasiController::class, 'index'])->name('menu.kesiswaan.ekskul');
 
     // 5. Perpustakaan

@@ -10,9 +10,10 @@ Saat merombak, membuat Model baru, membuat Controller, atau menambahkan fitur ba
   - `Routes/`: Definisi routing `web.php` dan `api.php`.
   - `Providers/`: Service provider modul `Modules\[NamaModul]\Providers\[NamaModul]ServiceProvider.php`.
 
-**2. Pendaftaran Modul & Service Provider di Laravel 11 (`bootstrap/providers.php`):**
+**2. Pendaftaran Modul, Routing & Kewajiban Middleware Group `'web'` (Anti-Session Drop & Dashboard Trap):**
 - Di Laravel 11, Service Provider didaftarkan secara eksplisit di `bootstrap/providers.php` (bukan di `config/app.php`).
 - Service Provider modul wajib me-load routing modul melalui `$this->loadRoutesFrom(__DIR__ . '/../Routes/web.php');`.
+- **Kewajiban Mutlak Middleware `'web'`**: Di Laravel 11, rute modular yang di-load via `loadRoutesFrom()` TIDAK otomatis mendapatkan middleware group `web`. Oleh karena itu, seluruh rute web modul di `Modules/[NamaModul]/Routes/web.php` **WAJIB** dibungkus dengan middleware group `'web'` (`Route::middleware(['web', 'auth', 'tenant.guard'])`). Kegagalan menyertakan `'web'` akan menyebabkan sesi hilang (`StartSession` tidak jalan) dan memicu pengguna terlempar ke Dashboard saat mutasi form POST/PUT/DELETE.
 
 **3. Pendefinisian Model Eloquent PostgreSQL Multi-Schema:**
 - Seluruh model modul wajib mewarisi `Modules\Core\Entities\BaseTenantModel` (kecuali tabel katalog master global).
@@ -876,5 +877,50 @@ Saat menampilkan tabel riwayat, log aktivitas, atau mutasi di dalam komponen dia
     </span>
     ```
 - Mencegah teks badge terhimpit (*squeezed*), turun baris (*wrapped*), atau terpotong pada viewport desktop maupun tablet.
+
+
+## Standarisasi Routing Modular & Anti-Dashboard Bouncing Trap (WAJIB DIPATUHI)
+Saat membuat modul baru, memodifikasi rute controller, atau menangani aksi mutasi data (POST / PUT / PATCH / DELETE) di seluruh modul SINTA SaaS, agen **WAJIB** menerapkan standar routing dan penanganan redirect berikut:
+
+### 1. Struktur Standar File `Modules/[NamaModul]/Routes/web.php`
+Seluruh rute web modul **WAJIB** dibungkus menggunakan middleware group `'web'` di tingkat paling luar sebelum middleware autentikasi dan isolasi tenant:
+
+```php
+<?php
+use Illuminate\Support\Facades\Route;
+use Modules\[NamaModul]\Http\Controllers\[NamaModul]Controller;
+
+Route::middleware(['web', 'auth', 'tenant.guard'])->group(function () {
+    // 1. Rute Navigasi View Halaman (Inertia)
+    Route::get('/[modul-path]', [[NamaModul]Controller::class, 'index'])->name('[modul].index');
+    
+    // 2. Rute Mutasi Data (POST / PUT / DELETE)
+    Route::post('/[modul-path]/simpan', [[NamaModul]Controller::class, 'store'])->name('[modul].store');
+    Route::put('/[modul-path]/{id}', [[NamaModul]Controller::class, 'update'])->name('[modul].update');
+    Route::delete('/[modul-path]/{id}', [[NamaModul]Controller::class, 'destroy'])->name('[modul].destroy');
+});
+```
+
+### 2. Mekanisme Anti-Session Drop & Anti-Dashboard Redirect Trap
+- **Akar Masalah di Laravel 11**: Rute modular yang di-load via `$this->loadRoutesFrom()` tidak otomatis mewarisi middleware `'web'`. Jika middleware `'web'` absen, `StartSession` tidak aktif sehingga request mutasi dianggap unauthenticated (`Auth::user() = null`), memicu lemparan `AuthenticationException` $\rightarrow$ redirect `/login` $\rightarrow$ ditangkap oleh middleware `guest` $\rightarrow$ memantul ke `/dashboard`.
+- **Standar Solusi**: Pastikan `'web'` selalu hadir dalam array middleware setiap rute modul.
+
+### 3. Standar Redirection Fallback di Controller
+- Hindari pemanggilan bare `return back()` tanpa jaminan ketersediaan header Referer.
+- Gunakan redirect eksplisit dengan fallback route/path yang aman:
+
+```php
+/**
+ * Helper redirect aman untuk menjaga navigasi tetap di halaman modul asal.
+ */
+protected function redirectTarget(Request $request, string $status, string $message, string $fallbackPath): RedirectResponse
+{
+    $referer = $request->header('referer');
+    if (!empty($referer) && filter_var($referer, FILTER_VALIDATE_URL)) {
+        return back()->with($status, $message);
+    }
+    return redirect($fallbackPath)->with($status, $message);
+}
+```
 
 

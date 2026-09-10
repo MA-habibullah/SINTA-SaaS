@@ -2,12 +2,20 @@
 
 namespace Modules\Pdss\Entities;
 
-use Modules\Core\Entities\BaseTenantModel;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Builder;
 
-class MasterKampusProdi extends BaseTenantModel
+class MasterKampusProdi extends Model
 {
+    use HasUuids;
+
     protected $table = 'pdss.master_kampus_prodi';
+
+    protected $keyType = 'string';
+    public $incrementing = false;
 
     protected $fillable = [
         'id',
@@ -35,8 +43,20 @@ class MasterKampusProdi extends BaseTenantModel
         'updated_at'             => 'datetime',
     ];
 
+    public static function withoutTenant(): Builder
+    {
+        return static::query();
+    }
+
     public function kampus(): BelongsTo
     {
         return $this->belongsTo(MasterKampus::class, 'kampus_id');
     }
+
+    public function riwayat(): HasMany
+    {
+        return $this->hasMany(KampusProdiRiwayat::class, 'prodi_id')->orderBy('tahun', 'desc');
+    }
 }
+
+
