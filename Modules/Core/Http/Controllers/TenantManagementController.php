@@ -39,11 +39,19 @@ class TenantManagementController extends Controller
                     $sub->where('nama_sekolah', 'ILIKE', "%{$search}%")
                         ->orWhere('npsn', 'ILIKE', "%{$search}%")
                         ->orWhere('subdomain', 'ILIKE', "%{$search}%")
+                        ->orWhere('pic_nama', 'ILIKE', "%{$search}%")
+                        ->orWhere('pic_email', 'ILIKE', "%{$search}%")
                         ->orWhere('custom_domain', 'ILIKE', "%{$search}%");
                 });
             })
             ->when($status !== '', function ($q) use ($status) {
-                $q->where('status', $status);
+                if ($status === 'pending') {
+                    $q->whereIn('status', ['pending', 'pending_approval', 'menunggu']);
+                } elseif ($status === 'trial') {
+                    $q->where('trial_ends_at', '>=', now());
+                } else {
+                    $q->where('status', $status);
+                }
             })
             ->when($paket !== '', function ($q) use ($paket) {
                 $q->where('paket_aktif', $paket);
@@ -51,54 +59,94 @@ class TenantManagementController extends Controller
             ->when($sinkronisasi !== '', function ($q) use ($sinkronisasi) {
                 $q->where('status_sinkronisasi', $sinkronisasi);
             })
-            ->orderByRaw("CASE WHEN id = '00000000-0000-0000-0000-000000000000' THEN 0 ELSE 1 END")
-            ->orderBy('nama_sekolah', 'asc');
+            ->orderByRaw("CASE WHEN status IN ('pending_approval', 'pending', 'menunggu') THEN 0 WHEN id = '00000000-0000-0000-0000-000000000000' THEN 1 ELSE 2 END")
+            ->orderBy('created_at', 'desc');
 
         // Statistik Keseluruhan
         $allTenants = Tenant::all();
         $stats = [
             'totalTenants'     => $allTenants->count(),
-            'activeTenants'    => $allTenants->where('status', 'active')->count(),
-            'suspendedTenants' => $allTenants->filter(fn($t) => in_array($t->status, ['suspended', 'inactive']))->count(),
+            'pendingTenants'   => $allTenants->filter(fn($t) => in_array(strtolower((string)$t->status), ['pending', 'pending_approval', 'menunggu'], true))->count(),
+            'activeTenants'    => $allTenants->filter(fn($t) => in_array(strtolower((string)$t->status), ['active', 'aktif'], true))->count(),
+            'trialTenants'     => $allTenants->filter(fn($t) => $t->trial_ends_at && $t->trial_ends_at->isFuture())->count(),
+            'suspendedTenants' => $allTenants->filter(fn($t) => in_array(strtolower((string)$t->status), ['suspended', 'inactive', 'nonaktif'], true))->count(),
+            'rejectedTenants'  => $allTenants->filter(fn($t) => in_array(strtolower((string)$t->status), ['rejected', 'ditolak'], true))->count(),
             'syncedTenants'    => $allTenants->where('status_sinkronisasi', 'Tersinkronisasi')->count(),
         ];
 
-        $tenantsList = $query->get()->map(function ($t) {
+        // Daftar Seluruh Menu Sistem untuk Matrix Akses
+        $menusList = Menu::select('id', 'nama_menu', 'url', 'icon', 'parent_id', 'urutan', 'is_active')
+            ->orderBy('urutan', 'asc')
+            ->get();
+
+        // Ambil pemetaan hak akses menu per tenant
+        $tenantIds = $query->pluck('id')->toArray();
+        $allMenuAccess = DB::table('core.tenant_menu_access')
+            ->whereIn('tenant_id', $tenantIds)
+            ->select('tenant_id', 'menu_id')
+            ->get()
+            ->groupBy('tenant_id');
+
+        $tenantsList = $query->get()->map(function ($t) use ($allMenuAccess) {
+            $allowedMenuIds = isset($allMenuAccess[$t->id]) 
+                ? $allMenuAccess[$t->id]->pluck('menu_id')->map(fn($id) => (string)$id)->toArray() 
+                : [];
+
             return [
-                'id'                  => (string)$t->id,
-                'nama_sekolah'        => $t->nama_sekolah,
-                'npsn'                => $t->npsn,
-                'subdomain'           => $t->subdomain,
-                'domain'              => $t->custom_domain ?: '',
-                'custom_domain'       => $t->custom_domain ?: '',
-                'paket_aktif'         => $t->paket_aktif ?: 'Premium SaaS',
-                'status_sinkronisasi' => $t->status_sinkronisasi ?: 'Tersinkronisasi',
-                'status'              => $t->status ?: 'active',
-                'storage_limit_mb'    => (int)($t->storage_limit_mb ?: 1024),
-                'max_siswa_limit'     => (int)($t->max_siswa_limit ?: 1000),
-                'max_staff_limit'     => (int)($t->max_staff_limit ?: 100),
-                'enable_bk'           => (int)($t->enable_bk ?? 1),
-                'enable_tracer'       => (int)($t->enable_tracer ?? 1),
-                'enable_ppdb'         => (int)($t->enable_ppdb ?? 1),
-                'enable_perpustakaan' => (int)($t->enable_perpustakaan ?? 1),
-                'enable_keuangan'     => (int)($t->enable_keuangan ?? 1),
-                'enable_pdss'         => (int)($t->enable_pdss ?? 1),
-                'enable_smk'          => (int)($t->enable_smk ?? 1),
-                'enable_sarpras'      => (int)($t->enable_sarpras ?? 1),
-                'enable_persuratan'   => (int)($t->enable_persuratan ?? 1),
-                'cms_landing_enabled' => (bool)($t->cms_landing_enabled ?? true),
-                'bentuk_pendidikan'   => $t->bentuk_pendidikan ?: 'SMA',
-                'status_sekolah'      => $t->status_sekolah ?: 'Negeri',
-                'created_at'          => $t->created_at ? $t->created_at->format('Y-m-d H:i:s') : null,
+                'id'                    => (string)$t->id,
+                'nama_sekolah'          => $t->nama_sekolah,
+                'npsn'                  => $t->npsn,
+                'subdomain'             => $t->subdomain,
+                'domain'                => $t->custom_domain ?: '',
+                'custom_domain'         => $t->custom_domain ?: '',
+                'paket_aktif'           => $t->paket_aktif ?: 'Premium SaaS',
+                'status_sinkronisasi'   => $t->status_sinkronisasi ?: 'Tersinkronisasi',
+                'status'                => $t->status ?: 'active',
+                'storage_limit_mb'      => (int)($t->storage_limit_mb ?: 1024),
+                'max_siswa_limit'       => (int)($t->max_siswa_limit ?: 1000),
+                'max_staff_limit'       => (int)($t->max_staff_limit ?: 100),
+                'enable_bk'             => (int)($t->enable_bk ?? 1),
+                'enable_tracer'         => (int)($t->enable_tracer ?? 1),
+                'enable_ppdb'           => (int)($t->enable_ppdb ?? 1),
+                'enable_perpustakaan'   => (int)($t->enable_perpustakaan ?? 1),
+                'enable_keuangan'       => (int)($t->enable_keuangan ?? 1),
+                'enable_pdss'           => (int)($t->enable_pdss ?? 1),
+                'enable_smk'            => (int)($t->enable_smk ?? 1),
+                'enable_sarpras'        => (int)($t->enable_sarpras ?? 1),
+                'enable_persuratan'     => (int)($t->enable_persuratan ?? 1),
+                'cms_landing_enabled'   => (bool)($t->cms_landing_enabled ?? true),
+                'bentuk_pendidikan'     => $t->bentuk_pendidikan ?: 'SMA',
+                'status_sekolah'        => $t->status_sekolah ?: 'Negeri',
+                'kabupaten_kota'        => $t->kabupaten_kota ?: '',
+                'provinsi'              => $t->provinsi ?: '',
+                'telepon'               => $t->telepon ?: '',
+                'email'                 => $t->email ?: '',
+                'pic_nama'              => $t->pic_nama ?: '',
+                'pic_jabatan'           => $t->pic_jabatan ?: '',
+                'pic_telepon'           => $t->pic_telepon ?: '',
+                'pic_email'             => $t->pic_email ?: '',
+                'trial_ends_at'         => $t->trial_ends_at ? $t->trial_ends_at->format('Y-m-d H:i:s') : null,
+                'trial_ends_at_human'   => $t->trial_ends_at ? $t->trial_ends_at->translatedFormat('d M Y') : null,
+                'trial_duration_months' => (int)($t->trial_duration_months ?: 3),
+                'subscription_type'     => $t->subscription_type ?: 'Free Trial',
+                'remaining_trial_days'  => $t->remainingTrialDays(),
+                'is_trial_active'       => $t->isTrialActive(),
+                'is_pending_approval'   => $t->isPendingApproval(),
+                'is_rejected'           => $t->isRejected(),
+                'rejection_reason'      => $t->rejection_reason ?: '',
+                'approved_at'           => $t->approved_at ? $t->approved_at->format('Y-m-d H:i:s') : null,
+                'allowed_menu_ids'      => $allowedMenuIds,
+                'created_at'            => $t->created_at ? $t->created_at->format('Y-m-d H:i:s') : null,
             ];
         });
 
         if ($request->wantsJson()) {
             return response()->json([
-                'success' => true,
-                'data'    => $tenantsList,
-                'stats'   => $stats,
-                'filters' => [
+                'success'     => true,
+                'data'        => $tenantsList,
+                'stats'       => $stats,
+                'menusList'   => $menusList,
+                'filters'     => [
                     'search'       => $search,
                     'status'       => $status,
                     'paket'        => $paket,
@@ -110,6 +158,7 @@ class TenantManagementController extends Controller
         return Inertia::render('Core/Tenant/Index', [
             'tenantsList' => $tenantsList,
             'stats'       => $stats,
+            'menusList'   => $menusList,
             'filters'     => [
                 'search'       => $search,
                 'status'       => $status,
@@ -349,6 +398,163 @@ class TenantManagementController extends Controller
             return response()->json([
                 'success' => false,
                 'error'   => 'Gagal menghapus sekolah: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Setujui Pendaftaran Sekolah Baru (Approve Tenant & Assign Free Trial + Menus)
+     * POST /super-admin/tenants/{id}/approve
+     */
+    public function approve(Request $request, string $id): JsonResponse|RedirectResponse
+    {
+        $user = Auth::user();
+        if (!$this->checkIsSuperAdmin($user)) {
+            return response()->json(['success' => false, 'error' => 'Akses ditolak.'], 403);
+        }
+
+        $tenant = Tenant::findOrFail($id);
+
+        $validated = $request->validate([
+            'trial_duration_months' => 'required|integer|min:1|max:36',
+            'custom_trial_ends_at'  => 'nullable|date',
+            'subscription_type'     => 'nullable|string|max:50',
+            'allowed_menus'         => 'nullable|array',
+            'allowed_menus.*'       => 'string',
+            'enable_bk'             => 'nullable|in:0,1,true,false',
+            'enable_tracer'         => 'nullable|in:0,1,true,false',
+            'enable_ppdb'           => 'nullable|in:0,1,true,false',
+            'enable_perpustakaan'   => 'nullable|in:0,1,true,false',
+            'enable_keuangan'       => 'nullable|in:0,1,true,false',
+            'enable_pdss'           => 'nullable|in:0,1,true,false',
+            'enable_smk'            => 'nullable|in:0,1,true,false',
+            'enable_sarpras'        => 'nullable|in:0,1,true,false',
+            'enable_persuratan'     => 'nullable|in:0,1,true,false',
+            'storage_limit_mb'      => 'nullable|integer|min:10',
+            'max_siswa_limit'       => 'nullable|integer|min:0',
+        ]);
+
+        $trialMonths = (int) $validated['trial_duration_months'];
+        $trialEndsAt = !empty($validated['custom_trial_ends_at'])
+            ? \Carbon\Carbon::parse($validated['custom_trial_ends_at'])
+            : now()->addMonths($trialMonths);
+
+        $subType = $validated['subscription_type'] ?? "Free Trial {$trialMonths} Bulan";
+
+        try {
+            DB::transaction(function () use ($tenant, $validated, $trialMonths, $trialEndsAt, $subType, $user) {
+                // 1. Update Status Tenant menjadi Active & Atur Masa Trial + Modul
+                $tenant->update([
+                    'status'                => 'active',
+                    'paket_aktif'           => $subType,
+                    'subscription_type'     => $subType,
+                    'trial_duration_months' => $trialMonths,
+                    'trial_ends_at'         => $trialEndsAt,
+                    'approved_at'           => now(),
+                    'approved_by'           => $user?->id,
+                    'rejection_reason'      => null,
+                    'storage_limit_mb'      => (int)($validated['storage_limit_mb'] ?? $tenant->storage_limit_mb ?? 1024),
+                    'max_siswa_limit'       => (int)($validated['max_siswa_limit'] ?? $tenant->max_siswa_limit ?? 1000),
+                    'enable_bk'             => in_array($validated['enable_bk'] ?? 1, [1, '1', true, 'true'], true) ? 1 : 0,
+                    'enable_tracer'         => in_array($validated['enable_tracer'] ?? 1, [1, '1', true, 'true'], true) ? 1 : 0,
+                    'enable_ppdb'           => in_array($validated['enable_ppdb'] ?? 1, [1, '1', true, 'true'], true) ? 1 : 0,
+                    'enable_perpustakaan'   => in_array($validated['enable_perpustakaan'] ?? 1, [1, '1', true, 'true'], true) ? 1 : 0,
+                    'enable_keuangan'       => in_array($validated['enable_keuangan'] ?? 1, [1, '1', true, 'true'], true) ? 1 : 0,
+                    'enable_pdss'           => in_array($validated['enable_pdss'] ?? 1, [1, '1', true, 'true'], true) ? 1 : 0,
+                    'enable_smk'            => in_array($validated['enable_smk'] ?? ($tenant->bentuk_pendidikan === 'SMK' ? 1 : 0), [1, '1', true, 'true'], true) ? 1 : 0,
+                    'enable_sarpras'        => in_array($validated['enable_sarpras'] ?? 1, [1, '1', true, 'true'], true) ? 1 : 0,
+                    'enable_persuratan'     => in_array($validated['enable_persuratan'] ?? 1, [1, '1', true, 'true'], true) ? 1 : 0,
+                ]);
+
+                // 2. Sinkronisasi Hak Akses Menu core.tenant_menu_access
+                $allowedMenus = $validated['allowed_menus'] ?? null;
+                if ($allowedMenus === null || empty($allowedMenus)) {
+                    // Default: berikan seluruh active menus
+                    $allowedMenus = Menu::where('is_active', true)->pluck('id')->toArray();
+                }
+
+                DB::table('core.tenant_menu_access')->where('tenant_id', $tenant->id)->delete();
+                $now = now();
+                $insertData = [];
+                foreach ($allowedMenus as $menuId) {
+                    $insertData[] = [
+                        'id'         => Str::uuid()->toString(),
+                        'tenant_id'  => $tenant->id,
+                        'menu_id'    => $menuId,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                }
+                foreach (array_chunk($insertData, 50) as $chunk) {
+                    DB::table('core.tenant_menu_access')->insert($chunk);
+                }
+
+                // 3. Aktifkan User Administrator Sekolah
+                User::where('tenant_id', $tenant->id)->update(['is_active' => true]);
+            });
+
+            $message = "Pendaftaran sekolah '{$tenant->nama_sekolah}' berhasil disetujui! Masa uji coba gratis ({$subType}) aktif hingga " . $trialEndsAt->translatedFormat('d F Y') . ".";
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                    'data'    => $tenant->fresh(),
+                ]);
+            }
+
+            return back()->with('success', $message);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'error'   => 'Gagal menyetujui pendaftaran sekolah: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Tolak Pendaftaran Sekolah Baru
+     * POST /super-admin/tenants/{id}/reject
+     */
+    public function reject(Request $request, string $id): JsonResponse|RedirectResponse
+    {
+        $user = Auth::user();
+        if (!$this->checkIsSuperAdmin($user)) {
+            return response()->json(['success' => false, 'error' => 'Akses ditolak.'], 403);
+        }
+
+        $tenant = Tenant::findOrFail($id);
+
+        $validated = $request->validate([
+            'rejection_reason' => 'required|string|max:1000',
+        ], [
+            'rejection_reason.required' => 'Alasan penolakan wajib diisi untuk pemberitahuan ke pihak sekolah.',
+        ]);
+
+        try {
+            $tenant->update([
+                'status'           => 'rejected',
+                'rejection_reason' => trim($validated['rejection_reason']),
+            ]);
+
+            // Nonaktifkan user terkait
+            User::where('tenant_id', $tenant->id)->update(['is_active' => false]);
+
+            $message = "Pendaftaran sekolah '{$tenant->nama_sekolah}' telah ditolak.";
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                    'data'    => $tenant,
+                ]);
+            }
+
+            return back()->with('success', $message);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'error'   => 'Gagal menolak pendaftaran sekolah: ' . $e->getMessage(),
             ], 500);
         }
     }

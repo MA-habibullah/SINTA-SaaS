@@ -4,6 +4,8 @@ namespace Modules\Cms\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -12,22 +14,66 @@ use Illuminate\Http\RedirectResponse;
 use Modules\Cms\Entities\Pengumuman;
 use Modules\Cms\Entities\KategoriPengumuman;
 use Modules\Cms\Entities\AgendaSekolah;
+use Modules\Cms\Entities\KategoriAgenda;
+use Modules\Core\Entities\Tenant;
 
 class CmsController extends Controller
 {
+    /**
+     * Helper to check if current user is Super Admin
+     */
+    private function checkIsSuperAdmin(): bool
+    {
+        $user = Auth::user();
+        if (!$user) return false;
+        
+        $userRole = is_object($user->role) ? ($user->role->nama_role ?? '') : ($user->role ?? '');
+        return ($user->isSuperAdmin() 
+            || $userRole === 'super_admin' 
+            || $user->tenant_id === '00000000-0000-0000-0000-000000000000' 
+            || session('role') === 'super_admin' 
+            || session('tenant_id') === '00000000-0000-0000-0000-000000000000');
+    }
+
     // ─────────────────────────────────────────
     // 1. PENGUMUMAN SEKOLAH (/informasi/pengumuman)
     // ─────────────────────────────────────────
     public function pengumuman(Request $request): InertiaResponse|JsonResponse
     {
+        $isSuperAdmin = $this->checkIsSuperAdmin();
+
         $perPage = (int) $request->input('per_page', 15);
         $search  = $request->input('search', '');
         $kategoriId = $request->input('kategori_id', '');
         $visibilitas = $request->input('visibilitas', '');
         $status = $request->input('status', '');
+        $selectedTenantId = $request->input('tenant_id', '');
 
-        $query = Pengumuman::with(['kategori', 'penulis'])
-            ->orderBy('created_at', 'desc');
+        $tenants = [];
+        if ($isSuperAdmin) {
+            $tenants = Tenant::select('id', 'nama_sekolah', 'npsn')
+                ->where('id', '!=', '00000000-0000-0000-0000-000000000000')
+                ->orderBy('nama_sekolah', 'asc')
+                ->get();
+
+            $query = Pengumuman::withoutTenant()->with(['tenant:id,nama_sekolah,npsn', 'kategori', 'penulis:id,nama_lengkap,username']);
+            $kategoriQuery = KategoriPengumuman::withoutTenant();
+            $statsQuery = Pengumuman::withoutTenant();
+
+            if ($request->filled('tenant_id') && $selectedTenantId !== 'all' && $selectedTenantId !== '') {
+                $query->where('sistem.pengumuman.tenant_id', $selectedTenantId);
+                $kategoriQuery->where(function ($kq) use ($selectedTenantId) {
+                    $kq->where('tenant_id', $selectedTenantId)->orWhereNull('tenant_id');
+                });
+                $statsQuery->where('tenant_id', $selectedTenantId);
+            }
+        } else {
+            $query = Pengumuman::with(['kategori', 'penulis:id,nama_lengkap,username']);
+            $kategoriQuery = KategoriPengumuman::query();
+            $statsQuery = Pengumuman::query();
+        }
+
+        $query->orderBy('created_at', 'desc');
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -48,20 +94,20 @@ class CmsController extends Controller
         $pengumumanList = $query->paginate($perPage)->withQueryString();
 
         // Master Kategori Pengumuman
-        $kategoriList = KategoriPengumuman::orderBy('nama_kategori')->get(['id', 'nama_kategori']);
+        $kategoriList = $kategoriQuery->orderBy('nama_kategori')->get(['id', 'nama_kategori', 'tenant_id']);
 
         // Ringkasan Statistik
         $stats = [
-            'total'     => Pengumuman::count(),
-            'aktif'     => Pengumuman::where('is_active', true)->count(),
-            'publik'    => Pengumuman::where('visibilitas', 'public')->count(),
-            'khusus'    => Pengumuman::where('visibilitas', '!=', 'public')->count(),
+            'total'     => (clone $statsQuery)->count(),
+            'aktif'     => (clone $statsQuery)->where('is_active', true)->count(),
+            'publik'    => (clone $statsQuery)->where('visibilitas', 'public')->count(),
+            'khusus'    => (clone $statsQuery)->where('visibilitas', '!=', 'public')->count(),
         ];
 
         if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'data'    => compact('pengumumanList', 'kategoriList', 'stats'),
+                'data'    => compact('pengumumanList', 'kategoriList', 'stats', 'tenants', 'isSuperAdmin'),
             ]);
         }
 
@@ -69,11 +115,14 @@ class CmsController extends Controller
             'pengumumanList' => $pengumumanList,
             'kategoriList'   => $kategoriList,
             'stats'          => $stats,
+            'tenants'        => $tenants,
+            'isSuperAdmin'   => $isSuperAdmin,
             'filters'        => [
                 'search'      => $search,
                 'kategori_id' => $kategoriId,
                 'visibilitas' => $visibilitas,
                 'status'      => $status,
+                'tenant_id'   => $selectedTenantId,
                 'per_page'    => $perPage,
             ],
         ]);
@@ -84,12 +133,39 @@ class CmsController extends Controller
     // ─────────────────────────────────────────
     public function agenda(Request $request): InertiaResponse|JsonResponse
     {
+        $isSuperAdmin = $this->checkIsSuperAdmin();
+
         $perPage = (int) $request->input('per_page', 12);
         $search  = $request->input('search', '');
         $kategori = $request->input('kategori', '');
         $status = $request->input('status', '');
+        $selectedTenantId = $request->input('tenant_id', '');
 
-        $query = AgendaSekolah::orderBy('created_at', 'desc');
+        $tenants = [];
+        if ($isSuperAdmin) {
+            $tenants = Tenant::select('id', 'nama_sekolah', 'npsn')
+                ->where('id', '!=', '00000000-0000-0000-0000-000000000000')
+                ->orderBy('nama_sekolah', 'asc')
+                ->get();
+
+            $query = AgendaSekolah::withoutTenant()->with('tenant:id,nama_sekolah,npsn');
+            $kategoriMasterQuery = KategoriAgenda::withoutTenant();
+            $statsQuery = AgendaSekolah::withoutTenant();
+
+            if ($request->filled('tenant_id') && $selectedTenantId !== 'all' && $selectedTenantId !== '') {
+                $query->where('sistem.agenda_sekolah.tenant_id', $selectedTenantId);
+                $kategoriMasterQuery->where(function ($kq) use ($selectedTenantId) {
+                    $kq->where('tenant_id', $selectedTenantId)->orWhereNull('tenant_id');
+                });
+                $statsQuery->where('tenant_id', $selectedTenantId);
+            }
+        } else {
+            $query = AgendaSekolah::query();
+            $kategoriMasterQuery = KategoriAgenda::query();
+            $statsQuery = AgendaSekolah::query();
+        }
+
+        $query->orderBy('created_at', 'desc');
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -107,16 +183,11 @@ class CmsController extends Controller
 
         $agendaList = $query->paginate($perPage)->withQueryString();
 
-        // Kategori Agenda (distinct)
-        $kategoriList = AgendaSekolah::select('kategori')
-            ->groupBy('kategori')
-            ->orderBy('kategori')
-            ->pluck('kategori')
-            ->filter()
-            ->values();
+        // Master Kategori Agenda
+        $kategoriList = $kategoriMasterQuery->orderBy('nama_kategori')->get(['id', 'nama_kategori', 'tenant_id']);
 
         // Ringkasan Statistik
-        $allAgendas = AgendaSekolah::all();
+        $allAgendas = $statsQuery->get();
         $totalCount = $allAgendas->count();
         $activeCount = $allAgendas->where('is_active', true)->count();
         
@@ -153,7 +224,7 @@ class CmsController extends Controller
         if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'data'    => compact('agendaList', 'kategoriList', 'stats'),
+                'data'    => compact('agendaList', 'kategoriList', 'stats', 'tenants', 'isSuperAdmin'),
             ]);
         }
 
@@ -161,11 +232,14 @@ class CmsController extends Controller
             'agendaList'   => $agendaList,
             'kategoriList' => $kategoriList,
             'stats'        => $stats,
+            'tenants'      => $tenants,
+            'isSuperAdmin' => $isSuperAdmin,
             'filters'      => [
-                'search'   => $search,
-                'kategori' => $kategori,
-                'status'   => $status,
-                'per_page' => $perPage,
+                'search'    => $search,
+                'kategori'  => $kategori,
+                'status'    => $status,
+                'tenant_id' => $selectedTenantId,
+                'per_page'  => $perPage,
             ],
         ]);
     }
@@ -183,25 +257,52 @@ class CmsController extends Controller
     // ─────────────────────────────────────────
     public function storePengumuman(Request $request): RedirectResponse|JsonResponse
     {
+        $user = Auth::user();
+        $isSuperAdmin = $this->checkIsSuperAdmin();
+
         $validated = $request->validate([
             'judul'        => 'required|string|max:255',
             'deskripsi'    => 'required|string',
             'kategori_id'  => 'nullable|uuid',
             'visibilitas'  => 'required|in:public,guru,siswa,orang_tua',
             'target_roles' => 'nullable|array',
+            'tenant_id'    => 'nullable|uuid',
             'is_active'    => 'boolean',
+            'lampiran'     => 'nullable|file|mimes:jpeg,png,jpg,webp,svg,pdf,doc,docx,xls,xlsx,ppt,pptx,zip,rar|max:10240',
         ]);
 
+        $tenantId = ($isSuperAdmin && !empty($validated['tenant_id']))
+            ? $validated['tenant_id']
+            : ($user?->tenant_id ?? session('tenant_id') ?? Tenant::where('id', '!=', '00000000-0000-0000-0000-000000000000')->value('id') ?? Tenant::first()?->id);
+
+        $lampiranUrl = null;
+        $lampiranNama = null;
+        $lampiranUkuran = null;
+        $lampiranTipe = null;
+
+        if ($request->hasFile('lampiran')) {
+            $file = $request->file('lampiran');
+            $storedPath = $file->store('cms/pengumuman', 'public');
+            $lampiranUrl = Storage::url($storedPath);
+            $lampiranNama = $file->getClientOriginalName();
+            $lampiranUkuran = $file->getSize();
+            $lampiranTipe = $file->getClientMimeType();
+        }
+
         $pengumuman = Pengumuman::create([
-            'id'           => (string) Str::uuid(),
-            'tenant_id'    => auth()->user()?->tenant_id,
-            'judul'        => $validated['judul'],
-            'deskripsi'    => $validated['deskripsi'],
-            'kategori_id'  => $validated['kategori_id'] ?? null,
-            'visibilitas'  => $validated['visibilitas'],
-            'target_roles' => !empty($validated['target_roles']) ? json_encode($validated['target_roles']) : null,
-            'is_active'    => $validated['is_active'] ?? true,
-            'created_by'   => auth()->id(),
+            'id'              => (string) Str::uuid(),
+            'tenant_id'       => $tenantId,
+            'judul'           => $validated['judul'],
+            'deskripsi'       => $validated['deskripsi'],
+            'kategori_id'     => $validated['kategori_id'] ?? null,
+            'visibilitas'     => $validated['visibilitas'],
+            'target_roles'    => !empty($validated['target_roles']) ? json_encode($validated['target_roles']) : null,
+            'lampiran_url'    => $lampiranUrl,
+            'lampiran_nama'   => $lampiranNama,
+            'lampiran_ukuran' => $lampiranUkuran,
+            'lampiran_tipe'   => $lampiranTipe,
+            'is_active'       => $validated['is_active'] ?? true,
+            'created_by'      => auth()->id(),
         ]);
 
         if ($request->wantsJson()) {
@@ -213,28 +314,67 @@ class CmsController extends Controller
 
     public function updatePengumuman(Request $request, string $id): RedirectResponse|JsonResponse
     {
-        $pengumuman = Pengumuman::findOrFail($id);
+        $user = Auth::user();
+        $isSuperAdmin = $this->checkIsSuperAdmin();
+
+        $pengumuman = ($isSuperAdmin ? Pengumuman::withoutTenant() : Pengumuman::query())->findOrFail($id);
 
         $validated = $request->validate([
-            'judul'        => 'required|string|max:255',
-            'deskripsi'    => 'required|string',
-            'kategori_id'  => 'nullable|uuid',
-            'visibilitas'  => 'required|in:public,guru,siswa,orang_tua',
-            'target_roles' => 'nullable|array',
-            'is_active'    => 'boolean',
+            'judul'           => 'required|string|max:255',
+            'deskripsi'       => 'required|string',
+            'kategori_id'     => 'nullable|uuid',
+            'visibilitas'     => 'required|in:public,guru,siswa,orang_tua',
+            'target_roles'    => 'nullable|array',
+            'tenant_id'       => 'nullable|uuid',
+            'is_active'       => 'boolean',
+            'lampiran'        => 'nullable|file|mimes:jpeg,png,jpg,webp,svg,pdf,doc,docx,xls,xlsx,ppt,pptx,zip,rar|max:10240',
+            'delete_lampiran' => 'nullable|string',
         ]);
 
-        $pengumuman->update([
+        $updateData = [
             'judul'        => $validated['judul'],
             'deskripsi'    => $validated['deskripsi'],
             'kategori_id'  => $validated['kategori_id'] ?? null,
             'visibilitas'  => $validated['visibilitas'],
             'target_roles' => !empty($validated['target_roles']) ? json_encode($validated['target_roles']) : null,
             'is_active'    => $validated['is_active'] ?? true,
-        ]);
+        ];
+
+        if ($isSuperAdmin && !empty($validated['tenant_id'])) {
+            $updateData['tenant_id'] = $validated['tenant_id'];
+        }
+
+        // Handle File Upload or File Deletion
+        if ($request->hasFile('lampiran')) {
+            if ($pengumuman->lampiran_url) {
+                $oldPath = str_replace('/storage/', '', $pengumuman->lampiran_url);
+                if (Storage::disk('public')->exists($oldPath)) {
+                    Storage::disk('public')->delete($oldPath);
+                }
+            }
+            $file = $request->file('lampiran');
+            $storedPath = $file->store('cms/pengumuman', 'public');
+            $updateData['lampiran_url'] = Storage::url($storedPath);
+            $updateData['lampiran_nama'] = $file->getClientOriginalName();
+            $updateData['lampiran_ukuran'] = $file->getSize();
+            $updateData['lampiran_tipe'] = $file->getClientMimeType();
+        } elseif ($request->input('delete_lampiran') === '1' || $request->input('delete_lampiran') === 'true') {
+            if ($pengumuman->lampiran_url) {
+                $oldPath = str_replace('/storage/', '', $pengumuman->lampiran_url);
+                if (Storage::disk('public')->exists($oldPath)) {
+                    Storage::disk('public')->delete($oldPath);
+                }
+            }
+            $updateData['lampiran_url'] = null;
+            $updateData['lampiran_nama'] = null;
+            $updateData['lampiran_ukuran'] = null;
+            $updateData['lampiran_tipe'] = null;
+        }
+
+        $pengumuman->update($updateData);
 
         if ($request->wantsJson()) {
-            return response()->json(['success' => true, 'message' => 'Pengumuman berhasil diperbarui.', 'data' => $pengumuman]);
+            return response()->json(['success' => true, 'message' => 'Pengumuman berhasil diperbarui.', 'data' => $pengumuman->fresh()]);
         }
 
         return back()->with('success', 'Pengumuman berhasil diperbarui.');
@@ -242,7 +382,17 @@ class CmsController extends Controller
 
     public function destroyPengumuman(Request $request, string $id): RedirectResponse|JsonResponse
     {
-        $pengumuman = Pengumuman::findOrFail($id);
+        $isSuperAdmin = $this->checkIsSuperAdmin();
+
+        $pengumuman = ($isSuperAdmin ? Pengumuman::withoutTenant() : Pengumuman::query())->findOrFail($id);
+        
+        if ($pengumuman->lampiran_url) {
+            $oldPath = str_replace('/storage/', '', $pengumuman->lampiran_url);
+            if (Storage::disk('public')->exists($oldPath)) {
+                Storage::disk('public')->delete($oldPath);
+            }
+        }
+
         $pengumuman->delete();
 
         if ($request->wantsJson()) {
@@ -257,13 +407,21 @@ class CmsController extends Controller
     // ─────────────────────────────────────────
     public function storeKategoriPengumuman(Request $request): RedirectResponse|JsonResponse
     {
+        $user = Auth::user();
+        $isSuperAdmin = $this->checkIsSuperAdmin();
+
         $validated = $request->validate([
             'nama_kategori' => 'required|string|max:100',
+            'tenant_id'     => 'nullable|uuid',
         ]);
+
+        $tenantId = ($isSuperAdmin && !empty($validated['tenant_id']))
+            ? $validated['tenant_id']
+            : ($user?->tenant_id ?? session('tenant_id') ?? Tenant::where('id', '!=', '00000000-0000-0000-0000-000000000000')->value('id') ?? Tenant::first()?->id);
 
         $kategori = KategoriPengumuman::create([
             'id'            => (string) Str::uuid(),
-            'tenant_id'     => auth()->user()?->tenant_id,
+            'tenant_id'     => $tenantId,
             'nama_kategori' => $validated['nama_kategori'],
         ]);
 
@@ -276,7 +434,9 @@ class CmsController extends Controller
 
     public function destroyKategoriPengumuman(Request $request, string $id): RedirectResponse|JsonResponse
     {
-        $kategori = KategoriPengumuman::findOrFail($id);
+        $isSuperAdmin = $this->checkIsSuperAdmin();
+
+        $kategori = ($isSuperAdmin ? KategoriPengumuman::withoutTenant() : KategoriPengumuman::query())->findOrFail($id);
         $kategori->delete();
 
         if ($request->wantsJson()) {
@@ -291,6 +451,9 @@ class CmsController extends Controller
     // ─────────────────────────────────────────
     public function storeAgenda(Request $request): RedirectResponse|JsonResponse
     {
+        $user = Auth::user();
+        $isSuperAdmin = $this->checkIsSuperAdmin();
+
         $validated = $request->validate([
             'nama_agenda_sekolah' => 'required|string|max:255',
             'kategori'            => 'required|string|max:100',
@@ -302,8 +465,24 @@ class CmsController extends Controller
             'lokasi'              => 'nullable|string|max:255',
             'penanggung_jawab'    => 'nullable|string|max:255',
             'visibilitas'         => 'nullable|string',
+            'tenant_id'           => 'nullable|uuid',
             'is_active'           => 'boolean',
+            'lampiran'            => 'nullable|file|mimes:jpeg,png,jpg,webp,svg,pdf,doc,docx,xls,xlsx,ppt,pptx,zip,rar|max:10240',
         ]);
+
+        $lampiranUrl = null;
+        $lampiranNama = null;
+        $lampiranUkuran = null;
+        $lampiranTipe = null;
+
+        if ($request->hasFile('lampiran')) {
+            $file = $request->file('lampiran');
+            $storedPath = $file->store('cms/agenda', 'public');
+            $lampiranUrl = Storage::url($storedPath);
+            $lampiranNama = $file->getClientOriginalName();
+            $lampiranUkuran = $file->getSize();
+            $lampiranTipe = $file->getClientMimeType();
+        }
 
         $deskripsiPayload = json_encode([
             'isi'              => $validated['isi'] ?? '',
@@ -314,15 +493,27 @@ class CmsController extends Controller
             'lokasi'           => $validated['lokasi'] ?? '',
             'penanggung_jawab' => $validated['penanggung_jawab'] ?? '',
             'visibilitas'      => $validated['visibilitas'] ?? 'public',
+            'lampiran_url'     => $lampiranUrl,
+            'lampiran_nama'    => $lampiranNama,
+            'lampiran_ukuran'  => $lampiranUkuran,
+            'lampiran_tipe'    => $lampiranTipe,
             'target_roles'     => [],
         ]);
 
+        $tenantId = ($isSuperAdmin && !empty($validated['tenant_id']))
+            ? $validated['tenant_id']
+            : ($user?->tenant_id ?? session('tenant_id') ?? Tenant::where('id', '!=', '00000000-0000-0000-0000-000000000000')->value('id') ?? Tenant::first()?->id);
+
         $agenda = AgendaSekolah::create([
             'id'                  => (string) Str::uuid(),
-            'tenant_id'           => auth()->user()?->tenant_id,
+            'tenant_id'           => $tenantId,
             'nama_agenda_sekolah' => $validated['nama_agenda_sekolah'],
             'kategori'            => $validated['kategori'],
             'deskripsi'           => $deskripsiPayload,
+            'lampiran_url'        => $lampiranUrl,
+            'lampiran_nama'       => $lampiranNama,
+            'lampiran_ukuran'     => $lampiranUkuran,
+            'lampiran_tipe'       => $lampiranTipe,
             'is_active'           => $validated['is_active'] ?? true,
         ]);
 
@@ -335,7 +526,10 @@ class CmsController extends Controller
 
     public function updateAgenda(Request $request, string $id): RedirectResponse|JsonResponse
     {
-        $agenda = AgendaSekolah::findOrFail($id);
+        $user = Auth::user();
+        $isSuperAdmin = $this->checkIsSuperAdmin();
+
+        $agenda = ($isSuperAdmin ? AgendaSekolah::withoutTenant() : AgendaSekolah::query())->findOrFail($id);
 
         $validated = $request->validate([
             'nama_agenda_sekolah' => 'required|string|max:255',
@@ -348,8 +542,43 @@ class CmsController extends Controller
             'lokasi'              => 'nullable|string|max:255',
             'penanggung_jawab'    => 'nullable|string|max:255',
             'visibilitas'         => 'nullable|string',
+            'tenant_id'           => 'nullable|uuid',
             'is_active'           => 'boolean',
+            'lampiran'            => 'nullable|file|mimes:jpeg,png,jpg,webp,svg,pdf,doc,docx,xls,xlsx,ppt,pptx,zip,rar|max:10240',
+            'delete_lampiran'     => 'nullable|string',
         ]);
+
+        $lampiranUrl = $agenda->lampiran_url;
+        $lampiranNama = $agenda->lampiran_nama;
+        $lampiranUkuran = $agenda->lampiran_ukuran;
+        $lampiranTipe = $agenda->lampiran_tipe;
+
+        // Handle File Upload or File Deletion
+        if ($request->hasFile('lampiran')) {
+            if ($lampiranUrl) {
+                $oldPath = str_replace('/storage/', '', $lampiranUrl);
+                if (Storage::disk('public')->exists($oldPath)) {
+                    Storage::disk('public')->delete($oldPath);
+                }
+            }
+            $file = $request->file('lampiran');
+            $storedPath = $file->store('cms/agenda', 'public');
+            $lampiranUrl = Storage::url($storedPath);
+            $lampiranNama = $file->getClientOriginalName();
+            $lampiranUkuran = $file->getSize();
+            $lampiranTipe = $file->getClientMimeType();
+        } elseif ($request->input('delete_lampiran') === '1' || $request->input('delete_lampiran') === 'true') {
+            if ($lampiranUrl) {
+                $oldPath = str_replace('/storage/', '', $lampiranUrl);
+                if (Storage::disk('public')->exists($oldPath)) {
+                    Storage::disk('public')->delete($oldPath);
+                }
+            }
+            $lampiranUrl = null;
+            $lampiranNama = null;
+            $lampiranUkuran = null;
+            $lampiranTipe = null;
+        }
 
         $deskripsiPayload = json_encode([
             'isi'              => $validated['isi'] ?? '',
@@ -360,18 +589,32 @@ class CmsController extends Controller
             'lokasi'           => $validated['lokasi'] ?? '',
             'penanggung_jawab' => $validated['penanggung_jawab'] ?? '',
             'visibilitas'      => $validated['visibilitas'] ?? 'public',
+            'lampiran_url'     => $lampiranUrl,
+            'lampiran_nama'    => $lampiranNama,
+            'lampiran_ukuran'  => $lampiranUkuran,
+            'lampiran_tipe'    => $lampiranTipe,
             'target_roles'     => [],
         ]);
 
-        $agenda->update([
+        $updateData = [
             'nama_agenda_sekolah' => $validated['nama_agenda_sekolah'],
             'kategori'            => $validated['kategori'],
             'deskripsi'           => $deskripsiPayload,
+            'lampiran_url'        => $lampiranUrl,
+            'lampiran_nama'       => $lampiranNama,
+            'lampiran_ukuran'     => $lampiranUkuran,
+            'lampiran_tipe'       => $lampiranTipe,
             'is_active'           => $validated['is_active'] ?? true,
-        ]);
+        ];
+
+        if ($isSuperAdmin && !empty($validated['tenant_id'])) {
+            $updateData['tenant_id'] = $validated['tenant_id'];
+        }
+
+        $agenda->update($updateData);
 
         if ($request->wantsJson()) {
-            return response()->json(['success' => true, 'message' => 'Agenda kegiatan berhasil diperbarui.', 'data' => $agenda]);
+            return response()->json(['success' => true, 'message' => 'Agenda kegiatan berhasil diperbarui.', 'data' => $agenda->fresh()]);
         }
 
         return back()->with('success', 'Agenda kegiatan berhasil diperbarui.');
@@ -379,7 +622,17 @@ class CmsController extends Controller
 
     public function destroyAgenda(Request $request, string $id): RedirectResponse|JsonResponse
     {
-        $agenda = AgendaSekolah::findOrFail($id);
+        $isSuperAdmin = $this->checkIsSuperAdmin();
+
+        $agenda = ($isSuperAdmin ? AgendaSekolah::withoutTenant() : AgendaSekolah::query())->findOrFail($id);
+
+        if ($agenda->lampiran_url) {
+            $oldPath = str_replace('/storage/', '', $agenda->lampiran_url);
+            if (Storage::disk('public')->exists($oldPath)) {
+                Storage::disk('public')->delete($oldPath);
+            }
+        }
+
         $agenda->delete();
 
         if ($request->wantsJson()) {
@@ -387,5 +640,49 @@ class CmsController extends Controller
         }
 
         return back()->with('success', 'Agenda kegiatan berhasil dihapus.');
+    }
+
+    // ─────────────────────────────────────────
+    // 7. CRUD KATEGORI AGENDA
+    // ─────────────────────────────────────────
+    public function storeKategoriAgenda(Request $request): RedirectResponse|JsonResponse
+    {
+        $user = Auth::user();
+        $isSuperAdmin = $this->checkIsSuperAdmin();
+
+        $validated = $request->validate([
+            'nama_kategori' => 'required|string|max:100',
+            'tenant_id'     => 'nullable|uuid',
+        ]);
+
+        $tenantId = ($isSuperAdmin && !empty($validated['tenant_id']))
+            ? $validated['tenant_id']
+            : ($user?->tenant_id ?? session('tenant_id') ?? Tenant::where('id', '!=', '00000000-0000-0000-0000-000000000000')->value('id') ?? Tenant::first()?->id);
+
+        $kategori = KategoriAgenda::create([
+            'id'            => (string) Str::uuid(),
+            'tenant_id'     => $tenantId,
+            'nama_kategori' => $validated['nama_kategori'],
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Kategori agenda berhasil ditambahkan.', 'data' => $kategori], 201);
+        }
+
+        return back()->with('success', 'Kategori agenda berhasil ditambahkan.');
+    }
+
+    public function destroyKategoriAgenda(Request $request, string $id): RedirectResponse|JsonResponse
+    {
+        $isSuperAdmin = $this->checkIsSuperAdmin();
+
+        $kategori = ($isSuperAdmin ? KategoriAgenda::withoutTenant() : KategoriAgenda::query())->findOrFail($id);
+        $kategori->delete();
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Kategori agenda berhasil dihapus.']);
+        }
+
+        return back()->with('success', 'Kategori agenda berhasil dihapus.');
     }
 }

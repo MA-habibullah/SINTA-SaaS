@@ -29,6 +29,7 @@ use Modules\Tracer\Http\Controllers\TracerController;
 use Modules\Absensi\Http\Controllers\PresensiController;
 use Modules\Kepegawaian\Http\Controllers\KepegawaianController;
 use Modules\Cms\Http\Controllers\CmsController;
+use Modules\Kesiswaan\Http\Controllers\EkskulController;
 use Modules\Sistem\Http\Controllers\ActivityLogController;
 use Modules\Sistem\Http\Controllers\ActiveSessionController;
 use Modules\Sistem\Http\Controllers\QueueController;
@@ -39,9 +40,14 @@ use Modules\Sistem\Http\Controllers\QueueController;
 |--------------------------------------------------------------------------
 */
 
-Route::get('/', function () {
-    return redirect()->route('login');
-});
+Route::get('/', [AuthController::class, 'showLandingPage'])->name('landing');
+Route::get('/landing', [AuthController::class, 'showLandingPage'])->name('landing.alias');
+Route::get('/daftar-sekolah', [AuthController::class, 'showRegisterForm'])->name('daftar-sekolah');
+Route::post('/daftar-sekolah', [AuthController::class, 'registerSchool'])->name('daftar-sekolah.submit');
+Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
+Route::get('/super-admin/login', [AuthController::class, 'showSuperAdminLoginForm'])->name('super-admin.login');
+Route::post('/super-admin/login', [AuthController::class, 'login'])->name('super-admin.login.submit');
 
 Route::get('/up', function () {
     return response()->json(['status' => 'healthy', 'timestamp' => now()->toIso8601String()]);
@@ -141,9 +147,18 @@ Route::middleware(['auth', 'tenant.guard'])->group(function () {
     Route::post('/super-admin/tenant-menus/save', [TenantMenuController::class, 'save'])->name('menu.super-admin.tenant-menus.save');
     Route::get('/super-admin/tenants', [TenantManagementController::class, 'index'])->name('menu.super-admin.tenants');
     Route::post('/super-admin/tenants/simpan', [TenantManagementController::class, 'store'])->name('menu.super-admin.tenants.simpan');
+    Route::post('/super-admin/tenants/{id}/approve', [TenantManagementController::class, 'approve'])->name('menu.super-admin.tenants.approve');
+    Route::post('/super-admin/tenants/{id}/reject', [TenantManagementController::class, 'reject'])->name('menu.super-admin.tenants.reject');
     Route::post('/super-admin/tenants/toggle-status', [TenantManagementController::class, 'toggleStatus'])->name('menu.super-admin.tenants.toggle-status');
     Route::post('/super-admin/tenants/hapus', [TenantManagementController::class, 'destroy'])->name('menu.super-admin.tenants.hapus');
     Route::delete('/super-admin/tenants/{id}', [TenantManagementController::class, 'destroy'])->name('menu.super-admin.tenants.destroy');
+
+    // Super Admin CMS Promosi & Landing Page Routes
+    Route::get('/super-admin/cms-promosi', [\Modules\Cms\Http\Controllers\CmsPromosiController::class, 'index'])->name('menu.super-admin.cms-promosi');
+    Route::post('/super-admin/cms-promosi', [\Modules\Cms\Http\Controllers\CmsPromosiController::class, 'store'])->name('menu.super-admin.cms-promosi.store');
+    Route::put('/super-admin/cms-promosi/{id}', [\Modules\Cms\Http\Controllers\CmsPromosiController::class, 'update'])->name('menu.super-admin.cms-promosi.update');
+    Route::post('/super-admin/cms-promosi/{id}/toggle', [\Modules\Cms\Http\Controllers\CmsPromosiController::class, 'toggle'])->name('menu.super-admin.cms-promosi.toggle');
+    Route::delete('/super-admin/cms-promosi/{id}', [\Modules\Cms\Http\Controllers\CmsPromosiController::class, 'destroy'])->name('menu.super-admin.cms-promosi.destroy');
     Route::get('/utilitas/log-aktivitas', [ActivityLogController::class, 'index'])->name('menu.utilitas.log-aktivitas');
     Route::get('/utilitas/log-aktivitas/data', [ActivityLogController::class, 'fetchData'])->name('menu.utilitas.log-aktivitas.data');
     Route::post('/utilitas/log-aktivitas/delete', [ActivityLogController::class, 'deleteLogs'])->name('menu.utilitas.log-aktivitas.delete');
@@ -186,15 +201,27 @@ Route::middleware(['auth', 'tenant.guard'])->group(function () {
 
     // 4. Informasi & Kesiswaan
     Route::get('/informasi/pengumuman', [CmsController::class, 'pengumuman'])->name('menu.informasi.pengumuman');
+    Route::post('/informasi/pengumuman', [CmsController::class, 'storePengumuman'])->name('menu.informasi.pengumuman.store');
+    Route::match(['post', 'put', 'patch'], '/informasi/pengumuman/{id}', [CmsController::class, 'updatePengumuman'])->name('menu.informasi.pengumuman.update');
+    Route::delete('/informasi/pengumuman/{id}', [CmsController::class, 'destroyPengumuman'])->name('menu.informasi.pengumuman.destroy');
+    Route::post('/informasi/kategori-pengumuman', [CmsController::class, 'storeKategoriPengumuman'])->name('menu.informasi.kategori.store');
+    Route::delete('/informasi/kategori-pengumuman/{id}', [CmsController::class, 'destroyKategoriPengumuman'])->name('menu.informasi.kategori.destroy');
+
     Route::get('/informasi/agenda', [CmsController::class, 'agenda'])->name('menu.informasi.agenda');
-    Route::get('/kesiswaan/ekskul', [PrestasiController::class, 'index'])->name('menu.kesiswaan.ekskul');
+    Route::post('/informasi/agenda', [CmsController::class, 'storeAgenda'])->name('menu.informasi.agenda.store');
+    Route::match(['post', 'put', 'patch'], '/informasi/agenda/{id}', [CmsController::class, 'updateAgenda'])->name('menu.informasi.agenda.update');
+    Route::delete('/informasi/agenda/{id}', [CmsController::class, 'destroyAgenda'])->name('menu.informasi.agenda.destroy');
+    Route::post('/informasi/kategori-agenda', [CmsController::class, 'storeKategoriAgenda'])->name('menu.informasi.kategori_agenda.store');
+    Route::delete('/informasi/kategori-agenda/{id}', [CmsController::class, 'destroyKategoriAgenda'])->name('menu.informasi.kategori_agenda.destroy');
+    
+    Route::get('/kesiswaan/ekskul', [EkskulController::class, 'index'])->name('menu.kesiswaan.ekskul');
 
     // 5. Perpustakaan
-    Route::get('/perpustakaan/katalog', [PerpustakaanController::class, 'index'])->name('menu.perpus.katalog');
-    Route::get('/perpustakaan/sirkulasi', [PerpustakaanController::class, 'index'])->name('menu.perpus.sirkulasi');
-    Route::get('/perpustakaan/anggota', [PerpustakaanController::class, 'index'])->name('menu.perpus.anggota');
-    Route::get('/perpustakaan/opac', [PerpustakaanController::class, 'index'])->name('menu.perpus.opac');
-    Route::get('/perpustakaan/riwayat-saya', [PerpustakaanController::class, 'index'])->name('menu.perpus.riwayat');
+    Route::get('/perpustakaan/katalog', [PerpustakaanController::class, 'katalog'])->name('menu.perpus.katalog');
+    Route::get('/perpustakaan/sirkulasi', [PerpustakaanController::class, 'sirkulasi'])->name('menu.perpus.sirkulasi');
+    Route::get('/perpustakaan/anggota', [PerpustakaanController::class, 'anggota'])->name('menu.perpus.anggota');
+    Route::get('/perpustakaan/opac', [PerpustakaanController::class, 'opac'])->name('menu.perpus.opac');
+    Route::get('/perpustakaan/riwayat-saya', [PerpustakaanController::class, 'riwayatSaya'])->name('menu.perpus.riwayat');
 
     // 6. Keuangan & Pembayaran
     Route::get('/keuangan/dashboard', [TagihanSiswaController::class, 'index'])->name('menu.keuangan.dashboard');

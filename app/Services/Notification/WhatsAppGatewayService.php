@@ -48,7 +48,7 @@ class WhatsAppGatewayService
     public function sendPaymentReceiptNotification(string $noHp, string $namaSiswa, string $namaPos, float $nominal, string $nomorTrx): bool
     {
         $nominalRupiah = 'Rp ' . number_format($nominal, 0, ',', '.');
-        $waktu = now()->translatedFormat('d F Y H:i');
+        $waktu = \Carbon\Carbon::now()->translatedFormat('d F Y H:i');
 
         $message = "📢 *KONFIRMASI PEMBAYARAN SINTA-SaaS*\n\n"
             . "Yth. Orang Tua/Wali Murid,\n"

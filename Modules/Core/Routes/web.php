@@ -7,10 +7,16 @@ use Modules\Core\Http\Controllers\UserController;
 use Modules\Core\Http\Controllers\SekolahIdentitasController;
 use Modules\Core\Http\Controllers\KonfigurasiAksesController;
 
-// 1. Guest Routes (Login & Public Auth)
+// 1. Guest Routes (Landing, Registration & Login)
 Route::middleware('guest')->group(function () {
+    Route::get('/', [AuthController::class, 'showLandingPage'])->name('landing');
+    Route::get('/landing', [AuthController::class, 'showLandingPage'])->name('landing.alias');
+    Route::get('/daftar-sekolah', [AuthController::class, 'showRegisterForm'])->name('daftar-sekolah');
+    Route::post('/daftar-sekolah', [AuthController::class, 'registerSchool'])->name('daftar-sekolah.submit');
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
+    Route::get('/super-admin/login', [AuthController::class, 'showSuperAdminLoginForm'])->name('super-admin.login');
+    Route::post('/super-admin/login', [AuthController::class, 'login'])->name('super-admin.login.submit');
 });
 
 // 2. Authenticated Central & Tenant Routes
@@ -27,6 +33,8 @@ Route::middleware(['auth', 'tenant.guard'])->group(function () {
     Route::prefix('core/tenants')->name('core.tenants.')->middleware('role:super_admin')->group(function () {
         Route::get('/', [TenantManagementController::class, 'index'])->name('index');
         Route::post('/', [TenantManagementController::class, 'store'])->name('store');
+        Route::post('/{id}/approve', [TenantManagementController::class, 'approve'])->name('approve');
+        Route::post('/{id}/reject', [TenantManagementController::class, 'reject'])->name('reject');
         Route::put('/{id}', [TenantManagementController::class, 'update'])->name('update');
         Route::delete('/{id}', [TenantManagementController::class, 'destroy'])->name('destroy');
     });

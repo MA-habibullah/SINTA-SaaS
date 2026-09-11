@@ -68,24 +68,37 @@ class Tenant extends Model
         'enable_smk',
         'enable_sarpras',
         'enable_persuratan',
+        'trial_ends_at',
+        'trial_duration_months',
+        'subscription_type',
+        'pic_nama',
+        'pic_jabatan',
+        'pic_telepon',
+        'pic_email',
+        'approved_at',
+        'approved_by',
+        'rejection_reason',
     ];
 
     protected $casts = [
-        'cms_landing_enabled' => 'boolean',
-        'storage_limit_mb'    => 'integer',
-        'max_siswa_limit'     => 'integer',
-        'max_staff_limit'     => 'integer',
-        'enable_bk'           => 'integer',
-        'enable_tracer'       => 'integer',
-        'enable_ppdb'         => 'integer',
-        'enable_perpustakaan' => 'integer',
-        'enable_keuangan'     => 'integer',
-        'enable_pdss'         => 'integer',
-        'enable_smk'          => 'integer',
-        'enable_sarpras'      => 'integer',
-        'enable_persuratan'   => 'integer',
-        'created_at'          => 'datetime',
-        'updated_at'          => 'datetime',
+        'cms_landing_enabled'   => 'boolean',
+        'storage_limit_mb'      => 'integer',
+        'max_siswa_limit'       => 'integer',
+        'max_staff_limit'       => 'integer',
+        'enable_bk'             => 'integer',
+        'enable_tracer'         => 'integer',
+        'enable_ppdb'           => 'integer',
+        'enable_perpustakaan'   => 'integer',
+        'enable_keuangan'       => 'integer',
+        'enable_pdss'           => 'integer',
+        'enable_smk'            => 'integer',
+        'enable_sarpras'        => 'integer',
+        'enable_persuratan'     => 'integer',
+        'trial_duration_months' => 'integer',
+        'trial_ends_at'         => 'datetime',
+        'approved_at'           => 'datetime',
+        'created_at'            => 'datetime',
+        'updated_at'            => 'datetime',
     ];
 
     public function users(): HasMany
@@ -95,6 +108,28 @@ class Tenant extends Model
 
     public function isActive(): bool
     {
-        return $this->status === 'aktif' || $this->status === 'active';
+        return in_array(strtolower((string)$this->status), ['aktif', 'active'], true);
+    }
+
+    public function isPendingApproval(): bool
+    {
+        return in_array(strtolower((string)$this->status), ['pending', 'pending_approval', 'menunggu'], true);
+    }
+
+    public function isRejected(): bool
+    {
+        return in_array(strtolower((string)$this->status), ['rejected', 'ditolak'], true);
+    }
+
+    public function isTrialActive(): bool
+    {
+        if (!$this->trial_ends_at) return false;
+        return $this->trial_ends_at->isFuture();
+    }
+
+    public function remainingTrialDays(): int
+    {
+        if (!$this->trial_ends_at) return 0;
+        return (int) max(0, ceil(now()->floatDiffInDays($this->trial_ends_at, false)));
     }
 }

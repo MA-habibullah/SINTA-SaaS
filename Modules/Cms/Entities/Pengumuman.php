@@ -21,14 +21,19 @@ class Pengumuman extends BaseTenantModel
         'visibilitas',   // 'public', 'guru', 'siswa', 'orang_tua'
         'target_roles',  // JSON array of roles
         'created_by',
+        'lampiran_url',
+        'lampiran_nama',
+        'lampiran_ukuran',
+        'lampiran_tipe',
         'is_active',
     ];
 
     protected $casts = [
-        'is_active'    => 'boolean',
-        'target_roles' => 'array',
-        'created_at'   => 'datetime',
-        'updated_at'   => 'datetime',
+        'is_active'       => 'boolean',
+        'target_roles'    => 'array',
+        'lampiran_ukuran' => 'integer',
+        'created_at'      => 'datetime',
+        'updated_at'      => 'datetime',
     ];
 
     public function kategori()

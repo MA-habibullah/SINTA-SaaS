@@ -4,32 +4,52 @@ namespace Modules\Kesiswaan\Entities;
 
 use Modules\Core\Entities\BaseTenantModel;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Siswa\Entities\Siswa;
 
 class PrestasiSiswa extends BaseTenantModel
 {
     protected $table = 'kesiswaan.prestasi_siswa';
 
+    protected $keyType = 'string';
+    public $incrementing = false;
+
     protected $fillable = [
         'id',
         'tenant_id',
-        'siswa_id',
+        'nama_prestasi_siswa',
+        'kategori',
+        'deskripsi',
+        'tahun_ajaran_id',
+        'semester',
+        'bidang_lomba',
         'nama_lomba',
-        'bidang', // Sains, Olahraga, Seni, Agama, Riset
-        'tingkat', // Sekolah, Kecamatan, Kabupaten/Kota, Provinsi, Nasional, Internasional
-        'peringkat_juara',
-        'tahun',
+        'nomor_sertifikat',
+        'juara',
+        'tingkat_kejuaraan',
+        'jenis_lomba',
+        'tempat_lomba',
+        'tanggal_lomba',
         'penyelenggara',
-        'sertifikat_file',
-        'keterangan',
+        'guru_pendamping',
+        'poin_prestasi',
+        'foto_bukti_prestasi',
+        'foto_siswa_prestasi',
+        'foto_kegiatan_lomba',
+        'surat_tugas_pdf',
+        'is_active',
     ];
 
     protected $casts = [
-        'tahun' => 'integer',
+        'tanggal_lomba' => 'date',
+        'poin_prestasi' => 'integer',
+        'is_active'     => 'boolean',
+        'created_at'    => 'datetime',
+        'updated_at'    => 'datetime',
     ];
 
-    public function siswa(): BelongsTo
+    public function anggota(): HasMany
     {
-        return $this->belongsTo(Siswa::class, 'siswa_id');
+        return $this->hasMany(PrestasiSiswaAnggota::class, 'id_prestasi');
     }
 }

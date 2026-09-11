@@ -1,9 +1,38 @@
 <template>
   <AppLayout>
+    <!-- Free Trial Notification Banner (If in Trial) -->
+    <div v-if="$page.props.auth?.tenant?.is_trial_active || $page.props.auth?.tenant?.trial_ends_at" class="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 rounded-3xl p-5 sm:p-6 text-white shadow-lg mb-6 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div class="relative z-10 flex items-start gap-3.5">
+        <div class="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-2xl shrink-0 text-yellow-300 shadow-inner">
+          <i class="bi bi-gift-fill"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-full bg-white/20 text-[10px] font-black uppercase tracking-wider">Free Trial Aktif</span>
+            <span class="text-xs text-white/80 font-medium">{{ $page.props.auth?.tenant?.subscription_type || 'Masa Percobaan Gratis' }}</span>
+          </div>
+          <h3 class="text-lg font-black mt-0.5">Masa Percobaan Sekolah Anda Sedang Berlangsung</h3>
+          <p class="text-xs text-emerald-100 mt-0.5">
+            Nikmati seluruh modul fitur SINTA SaaS tanpa batasan.
+            <span v-if="$page.props.auth?.tenant?.trial_ends_at" class="font-bold text-white">
+              (Berakhir pada: {{ new Date($page.props.auth?.tenant?.trial_ends_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) }})
+            </span>
+          </p>
+        </div>
+      </div>
+      <div class="relative z-10 shrink-0">
+        <a href="https://wa.me/6281234567890?text=Halo%20Admin%20SINTA,%20saya%20ingin%20konsultasi%20layanan%20SaaS" target="_blank"
+           class="px-4 py-2.5 rounded-xl bg-white text-teal-800 hover:bg-teal-50 font-bold text-xs shadow-md transition inline-flex items-center gap-1.5">
+          <i class="bi bi-whatsapp text-emerald-600"></i>
+          <span>Konsultasi / Perpanjang</span>
+        </a>
+      </div>
+    </div>
+
     <!-- Welcome Banner -->
     <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-3xl p-6 sm:p-8 text-white shadow-lg mb-8 relative overflow-hidden">
       <div class="relative z-10">
-        <h1 class="text-2xl sm:text-3xl font-black tracking-tight mb-2">Selamat Datang di Portal SISTEM INTI AKADEMIK</h1>
+        <h1 class="text-2xl sm:text-3xl font-black tracking-tight mb-2">Selamat Datang di Portal SINTA SAAS</h1>
         <p class="text-blue-100 text-sm sm:text-base max-w-2xl">
           Sistem Tata Kelola Akademik, Kesiswaan, Keuangan, dan Operasional Sekolah Terintegrasi Multi-Tenant PostgreSQL.
         </p>
