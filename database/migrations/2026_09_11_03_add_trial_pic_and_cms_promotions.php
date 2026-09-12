@@ -47,7 +47,7 @@ return new class extends Migration
             }
         });
 
-        // 2. Buat tabel cms.cms_promotions untuk Super Admin CMS Promosi & Landing Page SINTA SaaS
+        // 2. Buat tabel cms.cms_promotions untuk Super Admin CMS Promosi & Landing Page SINTA
         if (!Schema::hasTable('cms.cms_promotions')) {
             Schema::create('cms.cms_promotions', function (Blueprint $table) {
                 $table->uuid('id')->primary();
@@ -73,10 +73,10 @@ return new class extends Migration
                     'id'           => Str::uuid()->toString(),
                     'section_key'  => 'hero',
                     'title'        => 'Transformasi Digital Manajemen Sekolah Terpadu & Terintegrasi',
-                    'subtitle'     => 'SINTA SaaS adalah ekosistem digital all-in-one untuk tata kelola akademik, kesiswaan, keuangan, BK, perpustakaan, hingga rapor Kurikulum Merdeka. Nikmati uji coba gratis 3 bulan untuk sekolah Anda!',
+                    'subtitle'     => 'SINTA adalah ekosistem digital all-in-one untuk tata kelola akademik, kesiswaan, keuangan, BK, perpustakaan, hingga rapor Kurikulum Merdeka. Nikmati uji coba gratis 3 bulan untuk sekolah Anda!',
                     'content'      => 'Solusi cloud multi-tenant yang aman, cepat, dan sesuai regulasi Kemendikbudristek.',
                     'content_json' => json_encode(['highlight' => 'Gratis 3 Bulan Uji Coba Penuh', 'active_schools' => '500+ Sekolah Terdaftar']),
-                    'badge_text'   => 'Platform SaaS Sekolah #1 di Indonesia',
+                    'badge_text'   => 'Platform SINTA Sekolah #1 di Indonesia',
                     'image_url'    => null,
                     'icon_class'   => 'bi bi-stars',
                     'cta_text'     => 'Daftarkan Sekolah Anda (Free Trial)',
@@ -213,7 +213,7 @@ return new class extends Migration
                     'id'           => Str::uuid()->toString(),
                     'section_key'  => 'faq',
                     'title'        => 'Apakah data sekolah aman dan terisolasi?',
-                    'subtitle'     => 'Ya, SINTA SaaS menerapkan arsitektur Multi-Schema PostgreSQL dan isolasi tenant per sekolah sehingga data sekolah Anda terpisah secara aman dan terlindungi.',
+                    'subtitle'     => 'Ya, SINTA menerapkan arsitektur Multi-Schema PostgreSQL dan isolasi tenant per sekolah sehingga data sekolah Anda terpisah secara aman dan terlindungi.',
                     'content'      => null,
                     'content_json' => null,
                     'badge_text'   => 'Keamanan',

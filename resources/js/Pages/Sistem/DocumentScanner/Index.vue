@@ -755,7 +755,7 @@ const loadDemoDocument = () => {
     // Title & Texts
     ctx.fillStyle = '#0f172a'
     ctx.font = 'bold 36px sans-serif'
-    ctx.fillText('DOKUMEN RESMI SINTA-SAAS', -280, -500)
+    ctx.fillText('DOKUMEN RESMI SINTA', -280, -500)
 
     ctx.fillStyle = '#334155'
     ctx.font = '500 17px sans-serif'
@@ -769,12 +769,12 @@ const loadDemoDocument = () => {
         '- Ekstraksi teks multi-bahasa OCR (Bahasa Indonesia & Inggris)',
         '- Penggabungan multi-halaman PDF terstandarisasi',
         '',
-        'SINTA SaaS © 2026 - All Rights Reserved.'
+        'SINTA © 2026 - All Rights Reserved.'
     ]
 
     let textY = -400
     demoLines.forEach(line => {
-        if (line.includes('AeroScan') || line.includes('SINTA SaaS')) {
+        if (line.includes('AeroScan') || line.includes('SINTA')) {
             ctx.font = 'bold 18px sans-serif'
             ctx.fillStyle = '#1e293b'
         } else {

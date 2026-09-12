@@ -63,7 +63,7 @@ class TenantDemoSeeder extends Seeder
                 'tenant_id'     => '00000000-0000-0000-0000-000000000000',
                 'role_id'       => $rolesMap['super_admin'] ?? null,
                 'email'         => 'superadmin@sinta.id',
-                'nama_lengkap'  => 'Super Administrator SaaS',
+                'nama_lengkap'  => 'Super Administrator',
                 'password_hash' => $defaultPassword,
                 'is_active'     => true,
             ]

@@ -16,7 +16,7 @@
           <div>
             <div class="flex items-center gap-2">
               <span class="font-black text-xl tracking-tight text-white">SINTA</span>
-              <span class="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-bold border border-blue-500/30 tracking-wider">SAAS</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-bold border border-blue-500/30 tracking-wider"></span>
             </div>
             <span class="text-[11px] text-slate-400 block -mt-1 font-medium">Sistem Inti Akademik Terpadu</span>
           </div>
@@ -61,7 +61,7 @@
 
         <!-- Subtitle -->
         <p class="text-base sm:text-lg text-slate-400 font-normal leading-relaxed max-w-3xl mx-auto">
-          {{ heroItem?.subtitle || 'SINTA SaaS menghadirkan ekosistem tata kelola sekolah all-in-one: Rapor Kurikulum Merdeka, Buku Induk, Tagihan SPP Multi-Channel, PPDB, hingga BK & Presensi. Nikmati masa uji coba gratis 3 bulan penuh!' }}
+          {{ heroItem?.subtitle || 'SINTA menghadirkan ekosistem tata kelola sekolah all-in-one: Rapor Kurikulum Merdeka, Buku Induk, Tagihan SPP Multi-Channel, PPDB, hingga BK & Presensi. Nikmati masa uji coba gratis 3 bulan penuh!' }}
         </p>
 
         <!-- CTA Buttons -->
@@ -247,7 +247,7 @@
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-12 space-y-2">
           <h2 class="text-3xl font-black text-white tracking-tight">Pertanyaan yang Sering Diajukan (FAQ)</h2>
-          <p class="text-xs text-slate-400">Pahami alur aktivasi dan kemudahan implementasi SINTA SaaS di sekolah Anda.</p>
+          <p class="text-xs text-slate-400">Pahami alur aktivasi dan kemudahan implementasi SINTA di sekolah Anda.</p>
         </div>
 
         <div class="space-y-4">
@@ -291,7 +291,7 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div class="flex items-center gap-3">
           <div class="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-black text-sm">S</div>
-          <span class="font-bold text-slate-400">&copy; 2026 SINTA SaaS Platform Tata Kelola Sekolah</span>
+          <span class="font-bold text-slate-400">&copy; 2026 SINTA Platform Tata Kelola Sekolah</span>
         </div>
         <div class="flex items-center gap-6">
           <a href="#fitur" class="hover:text-slate-300 transition">Fitur</a>

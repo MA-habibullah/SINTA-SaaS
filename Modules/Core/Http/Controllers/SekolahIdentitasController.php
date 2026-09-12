@@ -35,7 +35,7 @@ class SekolahIdentitasController extends Controller
             $identitas = Tenant::where('id', '!=', '00000000-0000-0000-0000-000000000000')->first() 
                 ?? Tenant::first() 
                 ?? new Tenant([
-                    'nama_sekolah' => 'SINTA SaaS Partner School',
+                    'nama_sekolah' => 'SINTA Partner School',
                     'status' => 'aktif',
                 ]);
         }

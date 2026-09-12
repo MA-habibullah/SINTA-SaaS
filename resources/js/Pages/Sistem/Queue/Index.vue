@@ -282,7 +282,7 @@ onUnmounted(() => {
                         </div>
                         <div>
                             <h1 class="text-xl md:text-2xl font-bold tracking-tight text-white mb-1">Antrean Sistem & Background Jobs</h1>
-                            <p class="text-white/80 text-sm mb-0">Memantau tugas pemrosesan latar belakang secara real-time dan mengelola performa antrean multi-tenant SaaS platform.</p>
+                            <p class="text-white/80 text-sm mb-0">Memantau tugas pemrosesan latar belakang secara real-time dan mengelola performa antrean multi-tenant platform SINTA.</p>
                         </div>
                     </div>
 

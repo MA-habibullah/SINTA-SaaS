@@ -354,7 +354,7 @@ php scratch/tests/test_security_audit.php --target "C:\laragon\www\sinta" --mode
 ```
 
 ## Standardisasi Desain UI/UX Horizontal NavTabs & Scroller Engine (WAJIB)
-Saat membuat halaman baru atau merombak tata letak bilah navigasi tab (navtab / navpills) di seluruh modul SINTA SaaS, agen **WAJIB** menerapkan standar desain modern pill layout dan interaksi 3-way horizontal scroller di dalam `AppLayout.vue` dan Vue 3 components:
+Saat membuat halaman baru atau merombak tata letak bilah navigasi tab (navtab / navpills) di seluruh modul SINTA, agen **WAJIB** menerapkan standar desain modern pill layout dan interaksi 3-way horizontal scroller di dalam `AppLayout.vue` dan Vue 3 components:
 
 **1. Struktur Markup Standar (Modern Pill NavTab di Vue 3 / Inertia):**
 ```vue
@@ -402,7 +402,7 @@ Saat membuat halaman baru atau merombak tata letak bilah navigasi tab (navtab / 
   - Skrip event listener scroll wheel dan drag HANYA menangani event gerak dan **DILARANG** melakukan injeksi DOM `createElement` tambahan yang memicu tombol ganda.
 
 ## Standardisasi Desain UI/UX Popup Modal & Full-Screen Dark Backdrop (WAJIB DIPATUHI)
-Setiap kali membuat fitur baru, halaman baru, atau merombak komponen yang memuat jendela popup (modal dialog, modal form, modal konfirmasi, atau image/pdf viewer) di seluruh modul SINTA SaaS, agen **WAJIB** menerapkan standar arsitektur dan styling berikut agar tidak terjadi pemotongan layout atau kebocoran visual (*bleed-through*):
+Setiap kali membuat fitur baru, halaman baru, atau merombak komponen yang memuat jendela popup (modal dialog, modal form, modal konfirmasi, atau image/pdf viewer) di seluruh modul SINTA, agen **WAJIB** menerapkan standar arsitektur dan styling berikut agar tidak terjadi pemotongan layout atau kebocoran visual (*bleed-through*):
 
 **1. Kewajiban Mutlak Vue 3 `<Teleport to="body">`:**
 - **DILARANG KERAS** merender modal langsung di dalam pohon DOM anak halaman (`<main>` atau container fitur) tanpa teleportasi.
@@ -419,7 +419,7 @@ Setiap kali membuat fitur baru, halaman baru, atau merombak komponen yang memuat
 
 **3. Struktur Template Baku Popup Modal (Vue 3 / Inertia):**
 ```vue
-<!-- STANDAR BAKU MODAL VUE 3 TELEPORT SINTA SAAS -->
+<!-- STANDAR BAKU MODAL VUE 3 TELEPORT SINTA -->
 <Teleport to="body">
   <div v-if="showModal" class="fixed inset-0 z-[9999] overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
     
@@ -830,7 +830,7 @@ Saat merancang formulir filter atau parameter pencarian di dalam kartu (*card co
 - Super Admin yang mengganti pilihan sekolah pada banner global wajib secara otomatis memperbarui (*re-scope*) opsi kelas dan siswa yang tersedia tanpa kebocoran data sekolah lain (*Zero Cross-Tenant Leakage*).
 
 ## Standardisasi Unduhan & Ekspor Berkas Excel Wajib Format Murni .XLSX (WAJIB DIPATUHI)
-Saat membuat fitur ekspor data, unduh template, cetak laporan spreadsheet, atau impor massal di seluruh modul SINTA SaaS, agen **WAJIB** menerapkan standar format berikut tanpa pengecualian:
+Saat membuat fitur ekspor data, unduh template, cetak laporan spreadsheet, atau impor massal di seluruh modul SINTA, agen **WAJIB** menerapkan standar format berikut tanpa pengecualian:
 
 **1. Format Berkas & Ekstensi Resmi (.xlsx):**
 - Seluruh unduhan berkas yang berorientasi Excel **WAJIB** berformat biner murni **`.xlsx`** (*Office Open XML Spreadsheet*). Dilarang keras mengeluarkan file `.csv` mentah sebagai output utama ekspor Excel.
@@ -880,7 +880,7 @@ Saat menampilkan tabel riwayat, log aktivitas, atau mutasi di dalam komponen dia
 
 
 ## Standarisasi Routing Modular & Anti-Dashboard Bouncing Trap (WAJIB DIPATUHI)
-Saat membuat modul baru, memodifikasi rute controller, atau menangani aksi mutasi data (POST / PUT / PATCH / DELETE) di seluruh modul SINTA SaaS, agen **WAJIB** menerapkan standar routing dan penanganan redirect berikut:
+Saat membuat modul baru, memodifikasi rute controller, atau menangani aksi mutasi data (POST / PUT / PATCH / DELETE) di seluruh modul SINTA, agen **WAJIB** menerapkan standar routing dan penanganan redirect berikut:
 
 ### 1. Struktur Standar File `Modules/[NamaModul]/Routes/web.php`
 Seluruh rute web modul **WAJIB** dibungkus menggunakan middleware group `'web'` di tingkat paling luar sebelum middleware autentikasi dan isolasi tenant:

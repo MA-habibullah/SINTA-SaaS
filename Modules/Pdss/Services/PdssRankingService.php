@@ -466,7 +466,7 @@ class PdssRankingService
     }
 
     /**
-     * Ambil status tahapan 5-Step Workflow Sesuai Aturan Alur Baku PDSS SINTA SaaS
+     * Ambil status tahapan 5-Step Workflow Sesuai Aturan Alur Baku PDSS SINTA
      * Mendukung isolasi per tahun ajaran
      */
     public function getWorkflowStatus(?string $tenantId, bool $isSuperAdmin = false, ?string $tahunAjaranId = null): array

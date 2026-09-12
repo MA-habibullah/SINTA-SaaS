@@ -1,5 +1,5 @@
 ﻿# ╔════════════════════════════════════════════════════════════════╗
-# ║  SINTA SaaS - Security: Blokir akses langsung ke storage/app/public ║
+# ║  SINTA - Security: Blokir akses langsung ke storage/app/public ║
 # ║  Semua file wajib diakses terotorisasi melalui /api/v1/file/serve ║
 # ╚════════════════════════════════════════════════════════════════╝
 

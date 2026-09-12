@@ -29,7 +29,7 @@ return [
                 sub_portal_ppdb VARCHAR(100) NULL DEFAULT 'ppdb',
                 sub_portal_tracer VARCHAR(100) NULL DEFAULT 'tracer',
                 status VARCHAR(20) NULL DEFAULT 'active',
-                paket_aktif VARCHAR(50) NOT NULL DEFAULT 'Premium SaaS',
+                paket_aktif VARCHAR(50) NOT NULL DEFAULT 'Premium',
                 status_sinkronisasi VARCHAR(50) NOT NULL DEFAULT 'Tersinkronisasi',
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -167,7 +167,7 @@ return [
             );
 
             /* =========================================================
-               CORE TICKETING & PUSAT BANTUAN SAAS
+               CORE TICKETING & PUSAT BANTUAN
                ========================================================= */
             CREATE TABLE IF NOT EXISTS core.ticket_categories (
                 id SERIAL PRIMARY KEY,

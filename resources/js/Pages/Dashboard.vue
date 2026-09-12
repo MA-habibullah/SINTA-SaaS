@@ -13,7 +13,7 @@
           </div>
           <h3 class="text-lg font-black mt-0.5">Masa Percobaan Sekolah Anda Sedang Berlangsung</h3>
           <p class="text-xs text-emerald-100 mt-0.5">
-            Nikmati seluruh modul fitur SINTA SaaS tanpa batasan.
+            Nikmati seluruh modul fitur SINTA tanpa batasan.
             <span v-if="$page.props.auth?.tenant?.trial_ends_at" class="font-bold text-white">
               (Berakhir pada: {{ new Date($page.props.auth?.tenant?.trial_ends_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) }})
             </span>
@@ -21,7 +21,7 @@
         </div>
       </div>
       <div class="relative z-10 shrink-0">
-        <a href="https://wa.me/6281234567890?text=Halo%20Admin%20SINTA,%20saya%20ingin%20konsultasi%20layanan%20SaaS" target="_blank"
+        <a href="https://wa.me/6281234567890?text=Halo%20Admin%20SINTA,%20saya%20ingin%20konsultasi%20layanan%20SINTA" target="_blank"
            class="px-4 py-2.5 rounded-xl bg-white text-teal-800 hover:bg-teal-50 font-bold text-xs shadow-md transition inline-flex items-center gap-1.5">
           <i class="bi bi-whatsapp text-emerald-600"></i>
           <span>Konsultasi / Perpanjang</span>
@@ -32,7 +32,7 @@
     <!-- Welcome Banner -->
     <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-3xl p-6 sm:p-8 text-white shadow-lg mb-8 relative overflow-hidden">
       <div class="relative z-10">
-        <h1 class="text-2xl sm:text-3xl font-black tracking-tight mb-2">Selamat Datang di Portal SINTA SAAS</h1>
+        <h1 class="text-2xl sm:text-3xl font-black tracking-tight mb-2">Selamat Datang di Portal SINTA</h1>
         <p class="text-blue-100 text-sm sm:text-base max-w-2xl">
           Sistem Tata Kelola Akademik, Kesiswaan, Keuangan, dan Operasional Sekolah Terintegrasi Multi-Tenant PostgreSQL.
         </p>

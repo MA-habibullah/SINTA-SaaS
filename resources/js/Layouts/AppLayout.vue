@@ -12,7 +12,7 @@
          class="fixed inset-0 bg-slate-900/50 z-40 lg:hidden backdrop-blur-xs transition-opacity"
          @click="mobileSidebarOpen = false"></div>
 
-    <!-- 1. SINTA-SaaS Fixed Left Sidebar - Full Height Independent Scroll -->
+    <!-- 1. SINTA Fixed Left Sidebar - Full Height Independent Scroll -->
     <aside :class="[
       'h-screen flex-shrink-0 bg-white border-r-2 border-slate-200 flex flex-col transition-all duration-300 z-50 overflow-hidden select-none',
       'shadow-[2px_0_8px_rgba(15,23,42,0.06)]',
@@ -151,7 +151,7 @@
             <span class="inline-flex items-center gap-2 py-1.5 px-3 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200/80 shadow-2xs">
               <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
               <i class="bi bi-building text-emerald-600"></i>
-              <span class="truncate max-w-[200px] sm:max-w-xs">{{ tenantName || 'Pusat Kendali SaaS (Global)' }}</span>
+              <span class="truncate max-w-[200px] sm:max-w-xs">{{ tenantName || 'Pusat Kendali (Global)' }}</span>
             </span>
           </div>
         </div>

@@ -21,13 +21,13 @@ try {
     // 2. Buat Global Tenant (ID: e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12)
     echo "2. Membuat Global Tenant...\n";
     $tenantId = 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12';
-    $stmtTenant = $db->prepare("INSERT INTO core.tenants (id, nama_sekolah, npsn, subdomain, status) VALUES (?, 'Pusat Kendali SaaS (Global)', 'PLATFORM', 'admin', 'active')");
+    $stmtTenant = $db->prepare("INSERT INTO core.tenants (id, nama_sekolah, npsn, subdomain, status) VALUES (?, 'Pusat Kendali (Global)', 'PLATFORM', 'admin', 'active')");
     $stmtTenant->execute([$tenantId]);
 
     // 3. Buat Role Super Admin Platform (UUID v4 Acak Kriptografis)
     echo "3. Membuat Role Super Admin Platform...\n";
     $roleId = 'a1f87c2b-9e43-4b6e-8d91-3c5e7b2a9d01';
-    $stmtRole = $db->prepare("INSERT INTO core.roles (id, nama_role, deskripsi) VALUES (?, 'super_admin', 'Administrator tertinggi untuk manajemen platform SaaS')");
+    $stmtRole = $db->prepare("INSERT INTO core.roles (id, nama_role, deskripsi) VALUES (?, 'super_admin', 'Administrator tertinggi untuk manajemen platform SINTA')");
     $stmtRole->execute([$roleId]);
 
     // 4. Buat User Super Admin (UUID v4 Acak Kriptografis)

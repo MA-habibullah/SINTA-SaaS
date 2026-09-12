@@ -72,7 +72,7 @@
         </div>
       </div>
 
-      <!-- 3. Navigation Tabs Modern SINTA SaaS (9 NavTabs with 3-Way Horizontal Scroller) -->
+      <!-- 3. Navigation Tabs Modern SINTA (9 NavTabs with 3-Way Horizontal Scroller) -->
       <div class="bg-white rounded-2xl shadow-2xs border border-slate-200/80 p-2 relative">
         <div class="flex items-center relative">
           <!-- Tombol Panah Kiri -->

@@ -46,7 +46,7 @@ return [
     'composer' => [
         'vendor' => 'sinta',
         'author' => [
-            'name' => 'SINTA SaaS Team',
+            'name' => 'SINTA Team',
             'email' => 'dev@sinta.id',
         ],
     ],

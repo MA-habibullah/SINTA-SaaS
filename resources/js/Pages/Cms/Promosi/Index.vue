@@ -189,7 +189,7 @@
             <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
               <div>
                 <h3 class="text-lg font-black text-slate-900">{{ isEditing ? 'Edit Konten Promosi' : 'Tambah Konten Promosi Baru' }}</h3>
-                <p class="text-xs text-slate-500">Materi ini akan langsung dirender pada landing page publik SINTA SaaS.</p>
+                <p class="text-xs text-slate-500">Materi ini akan langsung dirender pada landing page publik SINTA.</p>
               </div>
               <button @click="showModal = false" class="text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold">
                 &times;

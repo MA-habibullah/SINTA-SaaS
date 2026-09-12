@@ -26,7 +26,7 @@ return [
         // Pastikan Role Baru Tersedia di core.roles
         $pdo->exec("
             INSERT INTO core.roles (id, nama_role, deskripsi, created_at, updated_at)
-            VALUES ('$newRoleId'::uuid, 'super_admin', 'Administrator tertinggi untuk manajemen platform SaaS', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            VALUES ('$newRoleId'::uuid, 'super_admin', 'Administrator tertinggi untuk manajemen platform SINTA', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             ON CONFLICT (id) DO NOTHING;
         ");
 

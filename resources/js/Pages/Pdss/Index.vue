@@ -225,7 +225,7 @@ const toggleWajibNasional = () => {
   showToast(`${count} Mata Pelajaran Wajib Nasional otomatis dicentang untuk 5 semester.`, 'success', 'Centang Otomatis')
 }
 
-// Filter Tenants: Hilangkan "Pusat Kendali SaaS (Global)" dari dropdown
+// Filter Tenants: Hilangkan "Pusat Kendali (Global)" dari dropdown
 const filteredTenants = computed(() => {
   if (!props.tenants) return []
   return props.tenants.filter(t => 
@@ -3779,7 +3779,7 @@ const toggleLockStep = (stepNumber, currentLockState) => {
 
           <!-- Footer Modal -->
           <div class="flex items-center justify-between pt-3 border-t border-slate-100 shrink-0">
-            <span class="text-2xs text-slate-400 font-medium">Data Terverifikasi Modul Akademik & PDSS SINTA SaaS</span>
+            <span class="text-2xs text-slate-400 font-medium">Data Terverifikasi Modul Akademik & PDSS SINTA</span>
             <button @click="modalViewNilai.show = false" type="button" class="px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition">
               Tutup
             </button>

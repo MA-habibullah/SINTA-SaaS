@@ -32,13 +32,13 @@ return [
             )
             SELECT 
                 '$newUuid'::uuid, 
-                COALESCE(nama_sekolah, 'Pusat Kendali SaaS (Global)'),
+                COALESCE(nama_sekolah, 'Pusat Kendali (Global)'),
                 'PLATFORM',
                 'admin',
                 custom_domain, cname_alias,
                 cms_landing_enabled, cms_hero_title, cms_hero_subtitle, cms_theme_color,
                 sub_portal_login_siswa, sub_portal_login_admin, sub_portal_perpus, sub_portal_pdss,
-                sub_portal_ppdb, sub_portal_tracer, COALESCE(status, 'active'), COALESCE(paket_aktif, 'Enterprise SaaS'), status_sinkronisasi,
+                sub_portal_ppdb, sub_portal_tracer, COALESCE(status, 'active'), COALESCE(paket_aktif, 'Enterprise'), status_sinkronisasi,
                 logo, sertifikat_akreditasi, bentuk_pendidikan, status_sekolah, kurikulum_terapan,
                 akreditasi, alamat, rt_rw, kode_pos, kelurahan, kecamatan, kabupaten_kota,
                 provinsi, telepon, email, website, nama_kepsek, pangkat_kepsek, nip_kepsek,
@@ -54,7 +54,7 @@ return [
         if ((int)$stmtCheck->fetchColumn() === 0) {
             $pdo->exec("
                 INSERT INTO core.tenants (id, nama_sekolah, npsn, subdomain, status, paket_aktif, storage_limit_mb, created_at, updated_at)
-                VALUES ('$newUuid'::uuid, 'Pusat Kendali SaaS (Global)', 'PLATFORM', 'admin', 'active', 'Enterprise SaaS', 10000, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                VALUES ('$newUuid'::uuid, 'Pusat Kendali (Global)', 'PLATFORM', 'admin', 'active', 'Enterprise', 10000, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 ON CONFLICT (id) DO NOTHING;
             ");
         }

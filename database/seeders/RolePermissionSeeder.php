@@ -10,9 +10,9 @@ class RolePermissionSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Daftar 18 Peran Utama SINTA-SaaS (core.roles)
+        // 1. Daftar 18 Peran Utama SINTA (core.roles)
         $roles = [
-            'super_admin'      => 'Administrator tertinggi untuk manajemen platform SaaS',
+            'super_admin'      => 'Administrator tertinggi untuk manajemen platform SINTA',
             'admin_sekolah'    => 'Administrator tingkat sekolah/tenant',
             'kepala_sekolah'   => 'Kepala Sekolah',
             'guru'             => 'Tenaga Pengajar',

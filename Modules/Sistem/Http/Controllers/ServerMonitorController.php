@@ -459,7 +459,7 @@ class ServerMonitorController extends Controller
                 'npsn'            => $t->npsn,
                 'subdomain'       => $t->subdomain,
                 'status'          => $t->status,
-                'paket_aktif'     => $t->paket_aktif ?: 'Standard SaaS',
+                'paket_aktif'     => $t->paket_aktif ?: 'Standard',
                 'total_staff'     => (int)$t->total_staff,
                 'total_siswa'     => (int)$t->total_siswa,
                 'total_users'     => (int)$t->total_staff + (int)$t->total_siswa,

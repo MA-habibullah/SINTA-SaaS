@@ -13,7 +13,7 @@
           </div>
           <div>
             <span class="font-black text-lg tracking-tight text-white flex items-center gap-1.5">
-              SINTA <span class="text-xs px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-400 font-bold border border-blue-500/30">SAAS</span>
+              SINTA <span class="text-xs px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-400 font-bold border border-blue-500/30"></span>
             </span>
             <span class="text-[11px] text-slate-400 block -mt-1 font-medium">Sistem Inti Tata Kelola Sekolah Terpadu</span>
           </div>
@@ -343,7 +343,7 @@
                     <div>
                       <span class="font-bold">Informasi Alur Verifikasi & Approval:</span>
                       <p class="mt-0.5 text-amber-800 leading-relaxed text-[11px]">
-                        Setelah formulir pendaftaran ini dikirimkan, permohonan akan diverifikasi oleh Super Admin SINTA SaaS di Pusat Kontrol. Anda dapat login ke portal menggunakan username di atas segera setelah verifikasi disetujui.
+                        Setelah formulir pendaftaran ini dikirimkan, permohonan akan diverifikasi oleh Super Admin SINTA di Pusat Kontrol. Anda dapat login ke portal menggunakan username di atas segera setelah verifikasi disetujui.
                       </p>
                     </div>
                   </div>
@@ -373,7 +373,7 @@
     <!-- Footer -->
     <footer class="relative z-10 border-t border-slate-800/80 bg-slate-950/80 py-6 text-center text-xs text-slate-500">
       <div class="max-w-7xl mx-auto px-4">
-        <p>&copy; 2026 SINTA SaaS &bull; Platform Tata Kelola Sekolah Terpadu & Terintegrasi Multi-Tenant</p>
+        <p>&copy; 2026 SINTA &bull; Platform Tata Kelola Sekolah Terpadu & Terintegrasi Multi-Tenant</p>
       </div>
     </footer>
   </div>

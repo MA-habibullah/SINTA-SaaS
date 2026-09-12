@@ -550,7 +550,7 @@ const copyTraceText = () => {
 
             </div>
 
-            <!-- Main Content: 3-Part Unified Box Card (Standar Baku SINTA SaaS) -->
+            <!-- Main Content: 3-Part Unified Box Card (Standar Baku SINTA) -->
             <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
                 
                 <!-- 1. Bagian 1: Filter Bar Atas (Standar Baku AGENTS.md) -->
@@ -727,7 +727,7 @@ const copyTraceText = () => {
                                     <div class="mt-1 flex items-center gap-1.5">
                                         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-medium border border-slate-200 truncate max-w-[240px]">
                                             <i class="bi bi-building shrink-0 text-slate-400"></i>
-                                            <span class="truncate">{{ err.nama_sekolah || 'Pusat Kendali SaaS (Global)' }}</span>
+                                            <span class="truncate">{{ err.nama_sekolah || 'Pusat Kendali (Global)' }}</span>
                                         </span>
                                     </div>
                                 </td>
@@ -908,7 +908,7 @@ const copyTraceText = () => {
                             <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-1">
                                 <span class="text-slate-400 font-semibold block text-[10px] uppercase">User Agent & Instansi</span>
                                 <div class="text-slate-800 font-semibold">
-                                    {{ selectedError.nama_sekolah || 'Pusat Kendali SaaS (Global)' }}
+                                    {{ selectedError.nama_sekolah || 'Pusat Kendali (Global)' }}
                                 </div>
                                 <div class="text-[10px] text-slate-500 truncate" :title="selectedError.user_agent">
                                     {{ selectedError.user_agent || '-' }}

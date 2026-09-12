@@ -50,7 +50,7 @@ class WhatsAppGatewayService
         $nominalRupiah = 'Rp ' . number_format($nominal, 0, ',', '.');
         $waktu = \Carbon\Carbon::now()->translatedFormat('d F Y H:i');
 
-        $message = "📢 *KONFIRMASI PEMBAYARAN SINTA-SaaS*\n\n"
+        $message = "📢 *KONFIRMASI PEMBAYARAN SINTA*\n\n"
             . "Yth. Orang Tua/Wali Murid,\n"
             . "Terima kasih, pembayaran untuk:\n"
             . "• *Nama Siswa*: {$namaSiswa}\n"

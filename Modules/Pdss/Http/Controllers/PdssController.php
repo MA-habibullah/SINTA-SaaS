@@ -180,7 +180,7 @@ class PdssController extends Controller
         if ($request->filled('tenant_id')) {
             $tenantId = ($selectedTenantId === 'all') ? null : $selectedTenantId;
         } elseif ($isSuperAdmin) {
-            // Hilangkan "Pusat Kendali SaaS (Global)" dari dropdown pilihan sekolah
+            // Hilangkan "Pusat Kendali (Global)" dari dropdown pilihan sekolah
             $tenants = Tenant::select('id', 'nama_sekolah', 'npsn')
                 ->where('npsn', '!=', 'PLATFORM')
                 ->where('id', '!=', '00000000-0000-0000-0000-000000000000')

@@ -461,7 +461,7 @@ const triggerToast = (msg, type = 'success') => {
               </div>
               <div class="flex justify-between items-center text-xs">
                 <span class="text-slate-500 font-medium">Paket Langganan</span>
-                <span class="text-blue-600 font-bold font-mono">{{ identitas?.paket_aktif || 'Enterprise SaaS' }}</span>
+                <span class="text-blue-600 font-bold font-mono">{{ identitas?.paket_aktif || 'Enterprise' }}</span>
               </div>
               <div class="flex justify-between items-center text-xs border-t border-slate-200/80 pt-2.5">
                 <span class="text-slate-500 font-medium">Sinkronisasi</span>
@@ -637,7 +637,7 @@ const triggerToast = (msg, type = 'success') => {
 
               <!-- Subdomain Platform -->
               <div class="sm:col-span-2 space-y-1.5">
-                <label class="block text-xs font-bold text-slate-700">Subdomain SaaS Platform</label>
+                <label class="block text-xs font-bold text-slate-700">Subdomain Platform</label>
                 <div class="flex items-center">
                   <span class="h-11 px-3.5 bg-slate-100 border border-r-0 border-slate-200 rounded-l-xl text-xs font-mono text-slate-500 flex items-center shrink-0">https://</span>
                   <input 
@@ -646,7 +646,7 @@ const triggerToast = (msg, type = 'success') => {
                     placeholder="nama-sekolah"
                     class="w-full h-11 px-3 border border-slate-200 text-slate-800 text-xs sm:text-sm font-mono focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition bg-white"
                   />
-                  <span class="h-11 px-3.5 bg-slate-100 border border-l-0 border-slate-200 rounded-r-xl text-xs font-mono text-slate-500 flex items-center shrink-0">.sinta-saas.id</span>
+                  <span class="h-11 px-3.5 bg-slate-100 border border-l-0 border-slate-200 rounded-r-xl text-xs font-mono text-slate-500 flex items-center shrink-0">.sinta.id</span>
                 </div>
               </div>
             </div>

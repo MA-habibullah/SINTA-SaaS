@@ -15,7 +15,7 @@
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           Master Stealth Gateway
         </div>
-        <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight">SINTA SAAS ROOT</h2>
+        <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight">SINTA ROOT</h2>
         <p class="text-xs text-slate-400 mt-1">Pusat Kendali & Otorisasi Platform Sentral</p>
       </div>
 
@@ -107,7 +107,7 @@
                 class="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-extrabold rounded-xl transition-all shadow-lg shadow-purple-600/30 hover:shadow-purple-600/50 disabled:opacity-50 flex items-center justify-center gap-2">
           <i class="bi bi-shield-check" v-if="!form.processing"></i>
           <span v-if="form.processing">Mengautentikasi Kredensial & Token...</span>
-          <span v-else>Buka Pusat Kendali SaaS</span>
+          <span v-else>Buka Pusat Kendali</span>
         </button>
       </form>
 

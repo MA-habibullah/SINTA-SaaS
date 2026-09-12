@@ -1,13 +1,13 @@
 #!/bin/bash
 # ==============================================================================
-# deploy.sh — Script Deployment Otomatis SINTA-SaaS (Laravel 11 Modular + Vite)
+# deploy.sh — Script Deployment Otomatis SINTA (Laravel 11 Modular + Vite)
 # Cara pakai: bash deploy.sh
 # ==============================================================================
 
 set -e
 
 echo "======================================================================"
-echo "  🚀 MEMULAI DEPLOYMENT SINTA-SAAS (LARAVEL 11 + VUE 3 + POSTGRESQL 16)"
+echo "  🚀 MEMULAI DEPLOYMENT SINTA (LARAVEL 11 + VUE 3 + POSTGRESQL 16)"
 echo "======================================================================"
 
 # 1. Mode Pemeliharaan (Maintenance Mode)
@@ -51,6 +51,6 @@ echo "🔓 [8/8] Menonaktifkan mode pemeliharaan (Aplikasi Live)..."
 php artisan up
 
 echo "======================================================================"
-echo "  ✅ DEPLOYMENT BERHASIL! APLIKASI SINTA-SAAS SIAP DIGUNAKAN."
+echo "  ✅ DEPLOYMENT BERHASIL! APLIKASI SINTA SIAP DIGUNAKAN."
 echo "======================================================================"
 

@@ -10,7 +10,7 @@
         <Link href="/" class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-700 text-white font-black text-2xl shadow-lg shadow-blue-500/30 mb-3 hover:scale-105 transition-transform">
           S
         </Link>
-        <h2 class="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">SINTA SAAS</h2>
+        <h2 class="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">SINTA</h2>
         <p class="text-xs text-slate-500 mt-1">Platform Tata Kelola Akademik & Multi-Tenant Sekolah</p>
       </div>
 

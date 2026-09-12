@@ -28,7 +28,7 @@
                 @endif
             </td>
             <td style="text-align: center;">
-                <div class="school-name">{{ $identitas?->nama_sekolah ?? 'SEKOLAH SINTA SAAS' }}</div>
+                <div class="school-name">{{ $identitas?->nama_sekolah ?? 'SEKOLAH SINTA' }}</div>
                 <div class="school-info">NPSN: {{ $identitas?->npsn ?? '-' }} | Alamat: {{ $identitas?->alamat ?? '-' }}</div>
                 <div class="school-info">Email: {{ $identitas?->email ?? '-' }} | Telp: {{ $identitas?->nomor_telepon ?? '-' }}</div>
             </td>

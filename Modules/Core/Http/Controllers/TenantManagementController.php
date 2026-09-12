@@ -18,7 +18,7 @@ use Modules\Core\Entities\User;
 class TenantManagementController extends Controller
 {
     /**
-     * Tampilkan Halaman Utama Kelola Sekolah (SaaS Tenant Management)
+     * Tampilkan Halaman Utama Kelola Sekolah (Tenant Management)
      * GET /super-admin/tenants
      */
     public function index(Request $request): InertiaResponse|JsonResponse
@@ -99,7 +99,7 @@ class TenantManagementController extends Controller
                 'subdomain'             => $t->subdomain,
                 'domain'                => $t->custom_domain ?: '',
                 'custom_domain'         => $t->custom_domain ?: '',
-                'paket_aktif'           => $t->paket_aktif ?: 'Premium SaaS',
+                'paket_aktif'           => $t->paket_aktif ?: 'Premium',
                 'status_sinkronisasi'   => $t->status_sinkronisasi ?: 'Tersinkronisasi',
                 'status'                => $t->status ?: 'active',
                 'storage_limit_mb'      => (int)($t->storage_limit_mb ?: 1024),
@@ -187,7 +187,7 @@ class TenantManagementController extends Controller
             'subdomain'           => 'required|string|max:100',
             'domain'              => 'nullable|string|max:255',
             'custom_domain'       => 'nullable|string|max:255',
-            'paket_aktif'         => 'required|string|in:Basic,Pro,Premium SaaS,Enterprise SaaS',
+            'paket_aktif'         => 'required|string|in:Basic,Pro,Premium,Enterprise',
             'status'              => 'required|string|in:active,inactive,suspended',
             'status_sinkronisasi' => 'required|string|in:Tersinkronisasi,Menunggu,Gagal',
             'storage_limit_mb'    => 'required|integer|min:10',
@@ -296,7 +296,7 @@ class TenantManagementController extends Controller
                     DB::table('core.tenant_menu_access')->insert($chunk);
                 }
 
-                $message = "Sekolah baru '{$tenant->nama_sekolah}' berhasil didaftarkan ke platform SaaS.";
+                $message = "Sekolah baru '{$tenant->nama_sekolah}' berhasil didaftarkan ke platform SINTA.";
             }
 
             if ($request->wantsJson() || $request->ajax() || $request->expectsJson() || $request->isJson()) {
@@ -338,7 +338,7 @@ class TenantManagementController extends Controller
         }
 
         if ($tenant->id === '00000000-0000-0000-0000-000000000000' && $validated['status'] !== 'active') {
-            return response()->json(['success' => false, 'error' => 'Tenant Pusat Kendali SaaS Global tidak dapat dinonaktifkan.'], 422);
+            return response()->json(['success' => false, 'error' => 'Tenant Pusat Kendali Global tidak dapat dinonaktifkan.'], 422);
         }
 
         $tenant->status = $validated['status'];
@@ -368,7 +368,7 @@ class TenantManagementController extends Controller
         }
 
         if ($targetId === '00000000-0000-0000-0000-000000000000') {
-            return response()->json(['success' => false, 'error' => 'Tenant Pusat Kendali SaaS Global tidak dapat dihapus.'], 422);
+            return response()->json(['success' => false, 'error' => 'Tenant Pusat Kendali Global tidak dapat dihapus.'], 422);
         }
 
         $tenant = Tenant::find($targetId);
@@ -389,7 +389,7 @@ class TenantManagementController extends Controller
             if ($request->wantsJson() || $request->ajax() || $request->expectsJson() || $request->isJson()) {
                 return response()->json([
                     'success' => true,
-                    'message' => "Sekolah '{$namaSekolah}' berhasil dihapus dari sistem SaaS.",
+                    'message' => "Sekolah '{$namaSekolah}' berhasil dihapus dari sistem SINTA.",
                 ]);
             }
 

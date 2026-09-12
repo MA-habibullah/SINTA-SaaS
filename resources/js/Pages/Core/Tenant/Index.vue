@@ -71,7 +71,7 @@ const form = ref({
     custom_domain: '',
     bentuk_pendidikan: 'SMA',
     status_sekolah: 'Negeri',
-    paket_aktif: 'Premium SaaS',
+    paket_aktif: 'Premium',
     status_sinkronisasi: 'Tersinkronisasi',
     status: 'active',
     storage_limit_mb: 1024,
@@ -229,8 +229,8 @@ const getInitials = (name) => {
 const getPaketBadge = (paket) => {
     if (!paket) return 'bg-slate-100 text-slate-700 border-slate-200'
     if (paket.includes('Free Trial') || paket.includes('Trial')) return 'bg-emerald-50 text-emerald-700 border-emerald-200'
-    if (paket === 'Enterprise SaaS') return 'bg-indigo-50 text-indigo-700 border-indigo-200'
-    if (paket === 'Premium SaaS') return 'bg-purple-50 text-purple-700 border-purple-200'
+    if (paket === 'Enterprise') return 'bg-indigo-50 text-indigo-700 border-indigo-200'
+    if (paket === 'Premium') return 'bg-purple-50 text-purple-700 border-purple-200'
     if (paket === 'Pro') return 'bg-blue-50 text-blue-700 border-blue-200'
     return 'bg-slate-100 text-slate-700 border-slate-200'
 }
@@ -300,7 +300,7 @@ const applyPackageDefaults = () => {
         form.value.enable_sarpras = 1
         form.value.enable_persuratan = 1
         form.value.cms_landing_enabled = true
-    } else if (paket === 'Premium SaaS') {
+    } else if (paket === 'Premium') {
         form.value.storage_limit_mb = 1024
         form.value.max_siswa_limit = 1000
         form.value.max_staff_limit = 100
@@ -313,7 +313,7 @@ const applyPackageDefaults = () => {
         form.value.enable_sarpras = 1
         form.value.enable_persuratan = 1
         form.value.cms_landing_enabled = true
-    } else if (paket === 'Enterprise SaaS') {
+    } else if (paket === 'Enterprise') {
         form.value.storage_limit_mb = 5120
         form.value.max_siswa_limit = 99999
         form.value.max_staff_limit = 999
@@ -343,7 +343,7 @@ const openAddModal = () => {
         custom_domain: '',
         bentuk_pendidikan: 'SMA',
         status_sekolah: 'Negeri',
-        paket_aktif: 'Premium SaaS',
+        paket_aktif: 'Premium',
         status_sinkronisasi: 'Tersinkronisasi',
         status: 'active',
         storage_limit_mb: 1024,
@@ -377,7 +377,7 @@ const openEditModal = (tenant) => {
         custom_domain: tenant.custom_domain || tenant.domain || '',
         bentuk_pendidikan: tenant.bentuk_pendidikan || 'SMA',
         status_sekolah: tenant.status_sekolah || 'Negeri',
-        paket_aktif: tenant.paket_aktif || 'Premium SaaS',
+        paket_aktif: tenant.paket_aktif || 'Premium',
         status_sinkronisasi: tenant.status_sinkronisasi || 'Tersinkronisasi',
         status: tenant.status || 'active',
         storage_limit_mb: tenant.storage_limit_mb ? parseInt(tenant.storage_limit_mb) : 1024,
@@ -584,7 +584,7 @@ const toggleActiveStatus = (tenant, targetStatus) => {
 // Delete Tenant
 const deleteTenant = (tenant) => {
     if (tenant.id === '00000000-0000-0000-0000-000000000000') {
-        showAlert('warning', 'Tidak Diizinkan', 'Tenant Pusat Kendali SaaS Global tidak dapat dihapus.')
+        showAlert('warning', 'Tidak Diizinkan', 'Tenant Pusat Kendali Global tidak dapat dihapus.')
         return
     }
 
@@ -619,7 +619,7 @@ const deleteTenant = (tenant) => {
 </script>
 
 <template>
-    <AppLayout title="Kelola Sekolah (SaaS Tenant Management)">
+    <AppLayout title="Kelola Sekolah (Tenant Management)">
         <div class="space-y-6">
             
             <!-- Page Header -->
@@ -800,8 +800,8 @@ const deleteTenant = (tenant) => {
                                 <option value="Free Trial 1 Bulan">Free Trial 1 Bulan</option>
                                 <option value="Basic">Basic Edition</option>
                                 <option value="Pro">Pro Edition</option>
-                                <option value="Premium SaaS">Premium SaaS</option>
-                                <option value="Enterprise SaaS">Enterprise SaaS</option>
+                                <option value="Premium">Premium</option>
+                                <option value="Enterprise">Enterprise</option>
                             </select>
                         </div>
 
@@ -1312,8 +1312,8 @@ const deleteTenant = (tenant) => {
                                 <select v-model="form.paket_aktif" @change="applyPackageDefaults" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-600 focus:outline-none focus:bg-white">
                                     <option value="Basic">Basic Edition</option>
                                     <option value="Pro">Pro Edition</option>
-                                    <option value="Premium SaaS">Premium SaaS</option>
-                                    <option value="Enterprise SaaS">Enterprise SaaS</option>
+                                    <option value="Premium">Premium</option>
+                                    <option value="Enterprise">Enterprise</option>
                                 </select>
                             </div>
 

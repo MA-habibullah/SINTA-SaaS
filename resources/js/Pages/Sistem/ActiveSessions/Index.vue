@@ -570,7 +570,7 @@ onMounted(() => {
           </div>
 
           <div class="text-[11px] text-slate-400 text-center">
-            <i class="bi bi-info-circle me-1"></i> SINTA SaaS Multi-Tenant Log Garbage Collector
+            <i class="bi bi-info-circle me-1"></i> SINTA Multi-Tenant Log Garbage Collector
           </div>
         </div>
       </div>

@@ -473,7 +473,7 @@
     @endforeach
 
     <div class="watermark-footer no-print">
-        Dokumen Resmi Identitas Peserta Didik SINTA SaaS • Dicetak pada {{ date('d-m-Y H:i:s') }}
+        Dokumen Resmi Identitas Peserta Didik SINTA • Dicetak pada {{ date('d-m-Y H:i:s') }}
     </div>
 </body>
 </html>

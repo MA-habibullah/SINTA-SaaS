@@ -97,7 +97,7 @@ class AuthController extends Controller
             // Pilihan Uji Coba Gratis
             'trial_duration_months' => ['nullable', 'integer', 'in:1,3,6'],
         ], [
-            'npsn.unique'            => 'NPSN ini sudah terdaftar pada sistem SINTA SaaS.',
+            'npsn.unique'            => 'NPSN ini sudah terdaftar pada sistem SINTA.',
             'subdomain.unique'       => 'Subdomain ini sudah digunakan sekolah lain. Silakan pilih subdomain lain.',
             'subdomain.regex'        => 'Subdomain hanya boleh berisi huruf kecil, angka, dan tanda hubung (-).',
             'admin_username.unique'  => 'Username administrator ini sudah digunakan.',
