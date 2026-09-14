@@ -11,7 +11,7 @@
 | Parameter Audit | Jumlah Teridentifikasi | Status Verifikasi |
 |---|---|---|
 | **Total Modul Mandiri Terdaftar** | **16 Modul** (`Core`, `Siswa`, `Akademik`, `Keuangan`, `Bk`, `Pdss`, `Tracer`, `Perpustakaan`, `Absensi`, `Kepegawaian`, `Kesiswaan`, `Persuratan`, `Sarpras`, `Smk`, `Cms`, `Sistem`) | 100% Terintegrasi |
-| **Total Berkas Antarmuka Vue 3 (SFC)** | **59 Halaman / View Components** | 100% Clean Build |
+| **Total Berkas Antarmuka Vue 3 (SFC)** | **56 Halaman / View Components** | 100% Clean Build |
 | **Total Item Menu Navigasi Database** | **55 Menu & Sub-Menu (`core.menus`)** | 100% Sinkron Dinamis |
 | **Total Endpoint Routing Aplikasi** | **492 Rute Web & API Terdaftar** | 100% Terverifikasi |
 | **Standar Keamanan Transmisi Data** | **AES-256-CBC with HMAC-SHA256 & Zero-SSR Exposure** | OWASP ASVS L3 Pass |
@@ -411,8 +411,7 @@ Struktur menu di bawah ini dimuat secara dinamis dari tabel master `core.menus` 
 
 ### 📁 3.5 Modul Bimbingan Konseling (BK)
 **Deskripsi**: Layanan konseling privat siswa, rekam jejak kedisiplinan (pelanggaran & apresiasi poin tata tertib), dan bimbingan karir.  
-**Komponen Halaman Vue 3 Terkait** (3 Berkas):
-- `resources/js/Pages/Bk/Index.vue`
+**Komponen Halaman Vue 3 Terkait** (2 Berkas):
 - `resources/js/Pages/Bk/Kedisiplinan/Index.vue`
 - `resources/js/Pages/Bk/Layanan/Index.vue`
 
@@ -498,9 +497,8 @@ Struktur menu di bawah ini dimuat secara dinamis dari tabel master `core.menus` 
 
 ### 📁 3.8 Modul Perpustakaan & INLISLite Engine
 **Deskripsi**: Katalog bibliografi buku, eksemplar & rak, sirkulasi peminjaman/pengembalian/denda, keanggotaan, OPAC publik, Kiosk presensi mandiri, survey IKM, dan loker.  
-**Komponen Halaman Vue 3 Terkait** (7 Berkas):
+**Komponen Halaman Vue 3 Terkait** (6 Berkas):
 - `resources/js/Pages/Perpustakaan/Anggota/Index.vue`
-- `resources/js/Pages/Perpustakaan/Index.vue`
 - `resources/js/Pages/Perpustakaan/Katalog/Index.vue`
 - `resources/js/Pages/Perpustakaan/Kiosk/Index.vue`
 - `resources/js/Pages/Perpustakaan/Opac/Index.vue`
@@ -685,9 +683,8 @@ Struktur menu di bawah ini dimuat secara dinamis dari tabel master `core.menus` 
 
 ### 📁 3.15 Modul CMS Informasi & Publikasi
 **Deskripsi**: Publikasi pengumuman sekolah, agenda/timeline kegiatan akademik, dan manajemen banner promosi landing page platform.  
-**Komponen Halaman Vue 3 Terkait** (4 Berkas):
+**Komponen Halaman Vue 3 Terkait** (3 Berkas):
 - `resources/js/Pages/Cms/Agenda/Index.vue`
-- `resources/js/Pages/Cms/Index.vue`
 - `resources/js/Pages/Cms/Pengumuman/Index.vue`
 - `resources/js/Pages/Cms/Promosi/Index.vue`
 
