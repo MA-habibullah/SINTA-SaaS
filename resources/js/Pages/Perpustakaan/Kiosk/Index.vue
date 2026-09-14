@@ -238,7 +238,7 @@ onUnmounted(() => {
                 </button>
 
                 <!-- Exit to Admin -->
-                <Link :href="route('perpustakaan.sirkulasi')" 
+                <Link href="/perpustakaan/sirkulasi" 
                       class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold flex items-center transition shadow-xs">
                     <i class="bi bi-box-arrow-left me-1.5"></i> Admin
                 </Link>

@@ -22,7 +22,7 @@ abstract class BaseTenantModel extends Model
         // 1. Global Scope: Otomatis filter data berdasarkan tenant_id aktif di session / context
         static::addGlobalScope('tenant_isolation', function (Builder $builder) {
             $tenantId = session('tenant_id') ?? (app()->bound('currentTenantId') ? app('currentTenantId') : null);
-            if (!empty($tenantId)) {
+            if (!empty($tenantId) && $tenantId !== '00000000-0000-0000-0000-000000000000') {
                 $builder->where($builder->getModel()->getTable() . '.tenant_id', $tenantId);
             }
         });
@@ -30,7 +30,7 @@ abstract class BaseTenantModel extends Model
         // 2. Event Creating: Otomatis isi tenant_id saat menyimpan record baru jika belum diset
         static::creating(function (Model $model) {
             $tenantId = session('tenant_id') ?? (app()->bound('currentTenantId') ? app('currentTenantId') : null);
-            if (empty($model->tenant_id) && !empty($tenantId)) {
+            if (empty($model->tenant_id) && !empty($tenantId) && $tenantId !== '00000000-0000-0000-0000-000000000000') {
                 $model->tenant_id = $tenantId;
             }
         });

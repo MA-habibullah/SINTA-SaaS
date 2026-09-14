@@ -28,6 +28,8 @@ use Modules\Smk\Http\Controllers\SmkController;
 use Modules\Tracer\Http\Controllers\TracerController;
 use Modules\Absensi\Http\Controllers\PresensiController;
 use Modules\Kepegawaian\Http\Controllers\KepegawaianController;
+use Modules\Kepegawaian\Http\Controllers\PembinaanController;
+use Modules\Kepegawaian\Http\Controllers\SurveiGuruController;
 use Modules\Cms\Http\Controllers\CmsController;
 use Modules\Kesiswaan\Http\Controllers\EkskulController;
 use Modules\Sistem\Http\Controllers\ActivityLogController;
@@ -231,9 +233,29 @@ Route::middleware(['auth', 'tenant.guard'])->group(function () {
 
     // 7. Kurikulum & Akademik
     Route::get('/akademik/jadwal', [AkademikMasterController::class, 'index'])->name('menu.akademik.jadwal');
+    Route::get('/akademik/jadwal/export', [AkademikMasterController::class, 'exportJadwal'])->name('menu.akademik.jadwal.export');
+    Route::get('/akademik/jadwal/template', [AkademikMasterController::class, 'downloadTemplateJadwal'])->name('menu.akademik.jadwal.template');
+    Route::post('/akademik/jadwal/import', [AkademikMasterController::class, 'importJadwal'])->name('menu.akademik.jadwal.import');
+    Route::post('/akademik/jadwal/copy', [AkademikMasterController::class, 'copyJadwal'])->name('menu.akademik.jadwal.copy');
 
-    // 8. Pembinaan & Bantuan
-    Route::get('/pembinaan', [BkController::class, 'index'])->name('menu.pembinaan');
+    // 8. Kepala Sekolah & Manajemen (Pembinaan GTK & Survei Guru)
+    Route::get('/kepala-sekolah/pembinaan', [PembinaanController::class, 'index'])->name('menu.kepala-sekolah.pembinaan');
+    Route::post('/kepala-sekolah/pembinaan', [PembinaanController::class, 'store'])->name('pembinaan.store');
+    Route::put('/kepala-sekolah/pembinaan/{id}', [PembinaanController::class, 'update'])->name('pembinaan.update');
+    Route::delete('/kepala-sekolah/pembinaan/{id}', [PembinaanController::class, 'destroy'])->name('pembinaan.destroy');
+    Route::get('/pembinaan', fn() => redirect('/kepala-sekolah/pembinaan'))->name('menu.pembinaan');
+
+    Route::get('/kepala-sekolah/survei-guru', [SurveiGuruController::class, 'index'])->name('menu.kepala-sekolah.survei-guru');
+    Route::post('/kepala-sekolah/survei-guru', [SurveiGuruController::class, 'store'])->name('survei-guru.store');
+    Route::get('/kepala-sekolah/survei-guru/student-status', [SurveiGuruController::class, 'getStudentSurveyStatus'])->name('survei-guru.student-status');
+    Route::post('/kepala-sekolah/survei-guru/submit-evaluasi', [SurveiGuruController::class, 'submitEvaluasi'])->name('survei-guru.submit');
+    Route::post('/kepala-sekolah/survei-guru/submit-evaluasi-siswa', [SurveiGuruController::class, 'submitEvaluasiSiswa'])->name('survei-guru.submit-siswa');
+    Route::get('/kepala-sekolah/survei-guru/refleksi/{guruId}', [SurveiGuruController::class, 'lembarRefleksi'])->name('survei-guru.refleksi');
+    Route::post('/kepala-sekolah/survei-guru/pertanyaan', [SurveiGuruController::class, 'storePertanyaan'])->name('survei-guru.pertanyaan.store');
+    Route::delete('/kepala-sekolah/survei-guru/pertanyaan/{id}', [SurveiGuruController::class, 'deletePertanyaan'])->name('survei-guru.pertanyaan.destroy');
+    Route::put('/kepala-sekolah/survei-guru/{id}', [SurveiGuruController::class, 'update'])->name('survei-guru.update');
+    Route::delete('/kepala-sekolah/survei-guru/{id}', [SurveiGuruController::class, 'destroy'])->name('survei-guru.destroy');
+
     Route::get('/bantuan', function () {
         return Inertia::render('Dashboard');
     })->name('menu.bantuan');

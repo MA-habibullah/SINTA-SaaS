@@ -25,6 +25,9 @@ const filterDdc = ref(props.filters?.ddc || '')
 const filterJenisBahan = ref(props.filters?.jenis_bahan || '')
 const selectedTenantId = ref(props.filters?.tenant_id || '')
 
+const perPageBuku = ref(Number(props.filters?.per_page) || 10)
+const perPageEksemplar = ref(Number(props.filters?.per_page_eksemplar) || 15)
+
 const getSelectedTenantName = () => {
   if (!selectedTenantId.value) return 'Semua Sekolah (Agregat Global)'
   const found = props.tenants?.find(t => t.id === selectedTenantId.value)
@@ -32,27 +35,112 @@ const getSelectedTenantName = () => {
 }
 
 const applyTenantFilter = () => {
+  applySearch(1)
+}
+
+const applySearch = (page = 1) => {
   router.get('/perpustakaan/katalog', {
     search: searchQuery.value || undefined,
     ddc: filterDdc.value || undefined,
     jenis_bahan: filterJenisBahan.value || undefined,
     tenant_id: selectedTenantId.value || undefined,
+    per_page: perPageBuku.value || undefined,
+    page: page > 1 ? page : undefined,
+    search_eksemplar: searchEksemplarQuery.value || undefined,
+    per_page_eksemplar: perPageEksemplar.value || undefined,
   }, {
     preserveState: true,
     preserveScroll: true,
   })
 }
 
-const applySearch = () => {
+const applyEksemplarSearch = (page = 1) => {
   router.get('/perpustakaan/katalog', {
     search: searchQuery.value || undefined,
     ddc: filterDdc.value || undefined,
     jenis_bahan: filterJenisBahan.value || undefined,
     tenant_id: selectedTenantId.value || undefined,
+    per_page: perPageBuku.value || undefined,
+    search_eksemplar: searchEksemplarQuery.value || undefined,
+    per_page_eksemplar: perPageEksemplar.value || undefined,
+    page_eksemplar: page > 1 ? page : undefined,
   }, {
     preserveState: true,
     preserveScroll: true,
   })
+}
+
+const goToPage = (url) => {
+  if (!url) return
+  router.visit(url, {
+    preserveState: true,
+    preserveScroll: true,
+  })
+}
+
+const getSmartPaginationLinks = (pagination) => {
+  if (!pagination?.links || pagination.links.length === 0) return []
+  const rawLinks = pagination.links
+  const prevLink = rawLinks[0]
+  const nextLink = rawLinks[rawLinks.length - 1]
+  const pageLinks = rawLinks.slice(1, -1)
+  const current = pagination.current_page || 1
+  const last = pagination.last_page || (pageLinks.length ? Number(pageLinks[pageLinks.length - 1].label) || 1 : 1)
+
+  const result = []
+  result.push({
+    ...prevLink,
+    isPrev: true,
+    isNext: false,
+    label: prevLink.label,
+  })
+
+  if (last <= 7) {
+    pageLinks.forEach(l => {
+      result.push({
+        ...l,
+        isPrev: false,
+        isNext: false,
+        label: l.label,
+      })
+    })
+  } else {
+    const pagesToShow = new Set([1, last])
+    for (let p = current - 1; p <= current + 1; p++) {
+      if (p >= 1 && p <= last) pagesToShow.add(p)
+    }
+    const sortedPages = Array.from(pagesToShow).sort((a, b) => a - b)
+    let prevPage = null
+    sortedPages.forEach(p => {
+      if (prevPage !== null && p - prevPage > 1) {
+        result.push({
+          label: '...',
+          url: null,
+          active: false,
+          isPrev: false,
+          isNext: false,
+        })
+      }
+      const foundRaw = pageLinks.find(l => l.label == p.toString())
+      result.push({
+        label: p.toString(),
+        url: foundRaw ? foundRaw.url : null,
+        active: p === current,
+        isPrev: false,
+        isNext: false,
+      })
+      prevPage = p
+    })
+  }
+
+  result.push({
+    ...nextLink,
+    isPrev: false,
+    isNext: true,
+    label: nextLink.label,
+  })
+
+  return result
 }
 
 // -------------------------------------------------------------
@@ -614,50 +702,146 @@ const deleteSerial = (id) => {
               </tbody>
             </table>
           </div>
+
+          <!-- Pagination Footer Buku (Table Mode) -->
+          <div v-if="bukuList?.total" class="px-4 py-3 bg-slate-50/50 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+            <div class="flex items-center gap-2">
+              <span>Tampilkan</span>
+              <select v-model="perPageBuku" @change="applySearch(1)" class="h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                <option :value="5">5</option>
+                <option :value="10">10</option>
+                <option :value="15">15</option>
+                <option :value="25">25</option>
+                <option :value="50">50</option>
+                <option :value="100">100</option>
+              </select>
+              <span>baris per halaman</span>
+              <span class="text-slate-300 hidden sm:inline">|</span>
+              <span class="whitespace-nowrap">
+                Menampilkan <span class="font-bold text-slate-800">{{ bukuList.from || 1 }}</span> s.d. <span class="font-bold text-slate-800">{{ bukuList.to || bukuList.total }}</span> dari <span class="font-bold text-slate-800">{{ bukuList.total }}</span> judul buku
+              </span>
+            </div>
+
+            <!-- Smart Windowing Pagination Links -->
+            <div v-if="bukuList.links && bukuList.links.length > 3" class="flex items-center gap-1 shrink-0 flex-wrap">
+              <template v-for="(link, i) in getSmartPaginationLinks(bukuList)" :key="i">
+                <button v-if="link.url && !link.active" 
+                        type="button"
+                        @click="goToPage(link.url)"
+                        class="min-w-[32px] h-8 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs"
+                        :title="link.isPrev ? 'Halaman Sebelumnya' : (link.isNext ? 'Halaman Berikutnya' : 'Halaman ' + link.label)">
+                  <i v-if="link.isPrev" class="bi bi-chevron-left text-xs"></i>
+                  <i v-else-if="link.isNext" class="bi bi-chevron-right text-xs"></i>
+                  <span v-else>{{ link.label }}</span>
+                </button>
+                <span v-else-if="link.active" 
+                      class="min-w-[32px] h-8 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center bg-blue-600 text-white shadow-xs">
+                  <i v-if="link.isPrev" class="bi bi-chevron-left text-xs"></i>
+                  <i v-else-if="link.isNext" class="bi bi-chevron-right text-xs"></i>
+                  <span v-else>{{ link.label }}</span>
+                </span>
+                <span v-else 
+                      class="min-w-[32px] h-8 px-2 text-xs font-bold flex items-center justify-center text-slate-400">
+                  <i v-if="link.isPrev" class="bi bi-chevron-left text-xs text-slate-300"></i>
+                  <i v-else-if="link.isNext" class="bi bi-chevron-right text-xs text-slate-300"></i>
+                  <span v-else>{{ link.label }}</span>
+                </span>
+              </template>
+            </div>
+          </div>
         </div>
 
         <!-- Mode Grid Card -->
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div v-for="buku in (bukuList?.data || [])" :key="buku.id" class="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-4 flex flex-col justify-between hover:shadow-md transition">
-            <div>
-              <div class="flex items-start gap-3 mb-3">
-                <div class="w-14 h-20 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center text-slate-400 shadow-2xs">
-                  <img v-if="buku.cover_url" :src="buku.cover_url" alt="Cover" class="w-full h-full object-cover" />
-                  <i v-else class="bi bi-book text-xl text-slate-400"></i>
+        <div v-else class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div v-for="buku in (bukuList?.data || [])" :key="buku.id" class="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-4 flex flex-col justify-between hover:shadow-md transition">
+              <div>
+                <div class="flex items-start gap-3 mb-3">
+                  <div class="w-14 h-20 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center text-slate-400 shadow-2xs">
+                    <img v-if="buku.cover_url" :src="buku.cover_url" alt="Cover" class="w-full h-full object-cover" />
+                    <i v-else class="bi bi-book text-xl text-slate-400"></i>
+                  </div>
+                  <div class="grow">
+                    <span class="inline-block px-2 py-0.5 rounded text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-100 mb-1">
+                      DDC {{ buku.nomor_klasifikasi_ddc || '000' }}
+                    </span>
+                    <h3 class="font-extrabold text-slate-800 text-xs line-clamp-2 leading-snug">{{ buku.judul_buku }}</h3>
+                    <div class="text-[11px] text-slate-500 mt-1">Penulis: {{ buku.pengarang }}</div>
+                  </div>
                 </div>
-                <div class="grow">
-                  <span class="inline-block px-2 py-0.5 rounded text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-100 mb-1">
-                    DDC {{ buku.nomor_klasifikasi_ddc || '000' }}
-                  </span>
-                  <h3 class="font-extrabold text-slate-800 text-xs line-clamp-2 leading-snug">{{ buku.judul_buku }}</h3>
-                  <div class="text-[11px] text-slate-500 mt-1">Penulis: {{ buku.pengarang }}</div>
+                <div class="space-y-1 text-[11px] text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Penerbit:</span>
+                    <span class="font-medium text-slate-700">{{ buku.penerbit || '-' }} ({{ buku.tahun_terbit }})</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Call Number:</span>
+                    <span class="font-mono font-bold text-blue-700">{{ buku.nomor_panggil || '-' }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Lokasi Rak:</span>
+                    <span class="font-bold text-slate-700">{{ buku.lokasi_rak || '-' }}</span>
+                  </div>
                 </div>
               </div>
-              <div class="space-y-1 text-[11px] text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                <div class="flex justify-between">
-                  <span class="text-slate-400">Penerbit:</span>
-                  <span class="font-medium text-slate-700">{{ buku.penerbit || '-' }} ({{ buku.tahun_terbit }})</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-slate-400">Call Number:</span>
-                  <span class="font-mono font-bold text-blue-700">{{ buku.nomor_panggil || '-' }}</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-slate-400">Lokasi Rak:</span>
-                  <span class="font-bold text-slate-700">{{ buku.lokasi_rak || '-' }}</span>
+
+              <div class="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+                <span class="font-black text-xs" :class="buku.jumlah_tersedia > 0 ? 'text-emerald-600' : 'text-rose-600'">
+                  {{ buku.jumlah_tersedia }} / {{ buku.jumlah_eksemplar }} Tersedia
+                </span>
+                <div class="flex items-center gap-1">
+                  <button @click="openModalEditBuku(buku)" class="p-1.5 text-slate-400 hover:text-blue-600 transition"><i class="bi bi-pencil-square"></i></button>
+                  <button @click="openModalEksemplar(buku)" class="p-1.5 text-slate-400 hover:text-indigo-600 transition"><i class="bi bi-upc"></i></button>
+                  <button @click="confirmDeleteBuku(buku.id)" class="p-1.5 text-slate-400 hover:text-rose-600 transition"><i class="bi bi-trash"></i></button>
                 </div>
               </div>
             </div>
+          </div>
 
-            <div class="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
-              <span class="font-black text-xs" :class="buku.jumlah_tersedia > 0 ? 'text-emerald-600' : 'text-rose-600'">
-                {{ buku.jumlah_tersedia }} / {{ buku.jumlah_eksemplar }} Tersedia
+          <!-- Pagination Footer Buku (Grid Mode) -->
+          <div v-if="bukuList?.total" class="p-4 bg-white rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+            <div class="flex items-center gap-2">
+              <span>Tampilkan</span>
+              <select v-model="perPageBuku" @change="applySearch(1)" class="h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                <option :value="5">5</option>
+                <option :value="10">10</option>
+                <option :value="15">15</option>
+                <option :value="25">25</option>
+                <option :value="50">50</option>
+                <option :value="100">100</option>
+              </select>
+              <span>baris per halaman</span>
+              <span class="text-slate-300 hidden sm:inline">|</span>
+              <span class="whitespace-nowrap">
+                Menampilkan <span class="font-bold text-slate-800">{{ bukuList.from || 1 }}</span> s.d. <span class="font-bold text-slate-800">{{ bukuList.to || bukuList.total }}</span> dari <span class="font-bold text-slate-800">{{ bukuList.total }}</span> judul buku
               </span>
-              <div class="flex items-center gap-1">
-                <button @click="openModalEditBuku(buku)" class="p-1.5 text-slate-400 hover:text-blue-600 transition"><i class="bi bi-pencil-square"></i></button>
-                <button @click="openModalEksemplar(buku)" class="p-1.5 text-slate-400 hover:text-indigo-600 transition"><i class="bi bi-upc"></i></button>
-                <button @click="confirmDeleteBuku(buku.id)" class="p-1.5 text-slate-400 hover:text-rose-600 transition"><i class="bi bi-trash"></i></button>
-              </div>
+            </div>
+
+            <!-- Smart Windowing Pagination Links -->
+            <div v-if="bukuList.links && bukuList.links.length > 3" class="flex items-center gap-1 shrink-0 flex-wrap">
+              <template v-for="(link, i) in getSmartPaginationLinks(bukuList)" :key="i">
+                <button v-if="link.url && !link.active" 
+                        type="button"
+                        @click="goToPage(link.url)"
+                        class="min-w-[32px] h-8 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs"
+                        :title="link.isPrev ? 'Halaman Sebelumnya' : (link.isNext ? 'Halaman Berikutnya' : 'Halaman ' + link.label)">
+                  <i v-if="link.isPrev" class="bi bi-chevron-left text-xs"></i>
+                  <i v-else-if="link.isNext" class="bi bi-chevron-right text-xs"></i>
+                  <span v-else>{{ link.label }}</span>
+                </button>
+                <span v-else-if="link.active" 
+                      class="min-w-[32px] h-8 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center bg-blue-600 text-white shadow-xs">
+                  <i v-if="link.isPrev" class="bi bi-chevron-left text-xs"></i>
+                  <i v-else-if="link.isNext" class="bi bi-chevron-right text-xs"></i>
+                  <span v-else>{{ link.label }}</span>
+                </span>
+                <span v-else 
+                      class="min-w-[32px] h-8 px-2 text-xs font-bold flex items-center justify-center text-slate-400">
+                  <i v-if="link.isPrev" class="bi bi-chevron-left text-xs text-slate-300"></i>
+                  <i v-else-if="link.isNext" class="bi bi-chevron-right text-xs text-slate-300"></i>
+                  <span v-else>{{ link.label }}</span>
+                </span>
+              </template>
             </div>
           </div>
         </div>
@@ -665,16 +849,21 @@ const deleteSerial = (id) => {
 
       <!-- TAB 2: EKSEMPLAR & BARCODE FISIK -->
       <div v-if="activeTab === 'eksemplar'" class="space-y-4">
-        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center justify-between gap-3">
+        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
           <div class="relative w-full md:w-80">
             <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400"><i class="bi bi-search"></i></span>
-            <input v-model="searchEksemplarQuery" type="text" placeholder="Cari barcode, nomor induk, judul..." class="w-full pl-9 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none" />
+            <input v-model="searchEksemplarQuery" @keyup.enter="applyEksemplarSearch(1)" type="text" placeholder="Cari barcode, nomor induk, judul..." class="w-full pl-9 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none" />
           </div>
 
-          <button @click="openModalCetakLabel(eksemplarList?.data)" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5">
-            <i class="bi bi-printer"></i>
-            <span>Cetak Stiker Barcode Halaman Ini</span>
-          </button>
+          <div class="flex items-center gap-2">
+            <button @click="applyEksemplarSearch(1)" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1">
+              <i class="bi bi-search"></i> Filter
+            </button>
+            <button @click="openModalCetakLabel(eksemplarList?.data)" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+              <i class="bi bi-printer"></i>
+              <span>Cetak Stiker Barcode Halaman Ini</span>
+            </button>
+          </div>
         </div>
 
         <div class="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
@@ -728,6 +917,54 @@ const deleteSerial = (id) => {
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- Pagination Footer Eksemplar -->
+          <div v-if="eksemplarList?.total" class="px-4 py-3 bg-slate-50/50 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+            <div class="flex items-center gap-2">
+              <span>Tampilkan</span>
+              <select v-model="perPageEksemplar" @change="applyEksemplarSearch(1)" class="h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                <option :value="5">5</option>
+                <option :value="10">10</option>
+                <option :value="15">15</option>
+                <option :value="20">20</option>
+                <option :value="25">25</option>
+                <option :value="50">50</option>
+                <option :value="100">100</option>
+              </select>
+              <span>baris per halaman</span>
+              <span class="text-slate-300 hidden sm:inline">|</span>
+              <span class="whitespace-nowrap">
+                Menampilkan <span class="font-bold text-slate-800">{{ eksemplarList.from || 1 }}</span> s.d. <span class="font-bold text-slate-800">{{ eksemplarList.to || eksemplarList.total }}</span> dari <span class="font-bold text-slate-800">{{ eksemplarList.total }}</span> eksemplar
+              </span>
+            </div>
+
+            <!-- Smart Windowing Pagination Links -->
+            <div v-if="eksemplarList.links && eksemplarList.links.length > 3" class="flex items-center gap-1 shrink-0 flex-wrap">
+              <template v-for="(link, i) in getSmartPaginationLinks(eksemplarList)" :key="i">
+                <button v-if="link.url && !link.active" 
+                        type="button"
+                        @click="goToPage(link.url)"
+                        class="min-w-[32px] h-8 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs"
+                        :title="link.isPrev ? 'Halaman Sebelumnya' : (link.isNext ? 'Halaman Berikutnya' : 'Halaman ' + link.label)">
+                  <i v-if="link.isPrev" class="bi bi-chevron-left text-xs"></i>
+                  <i v-else-if="link.isNext" class="bi bi-chevron-right text-xs"></i>
+                  <span v-else>{{ link.label }}</span>
+                </button>
+                <span v-else-if="link.active" 
+                      class="min-w-[32px] h-8 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center bg-blue-600 text-white shadow-xs">
+                  <i v-if="link.isPrev" class="bi bi-chevron-left text-xs"></i>
+                  <i v-else-if="link.isNext" class="bi bi-chevron-right text-xs"></i>
+                  <span v-else>{{ link.label }}</span>
+                </span>
+                <span v-else 
+                      class="min-w-[32px] h-8 px-2 text-xs font-bold flex items-center justify-center text-slate-400">
+                  <i v-if="link.isPrev" class="bi bi-chevron-left text-xs text-slate-300"></i>
+                  <i v-else-if="link.isNext" class="bi bi-chevron-right text-xs text-slate-300"></i>
+                  <span v-else>{{ link.label }}</span>
+                </span>
+              </template>
+            </div>
           </div>
         </div>
       </div>

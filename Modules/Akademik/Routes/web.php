@@ -12,6 +12,12 @@ Route::middleware(['web', 'auth', 'tenant.guard'])->prefix('akademik')->name('ak
     Route::post('/kelas', [AkademikMasterController::class, 'storeKelas'])->name('kelas.store');
     Route::get('/mapel', [AkademikMasterController::class, 'index'])->name('mapel.index');
     Route::post('/mapel', [AkademikMasterController::class, 'storeMapel'])->name('mapel.store');
+    Route::get('/jadwal', [AkademikMasterController::class, 'index'])->name('jadwal.index');
+    Route::post('/jadwal', [AkademikMasterController::class, 'store'])->name('jadwal.store');
+    Route::get('/jadwal/export', [AkademikMasterController::class, 'exportJadwal'])->name('jadwal.export');
+    Route::get('/jadwal/template', [AkademikMasterController::class, 'downloadTemplateJadwal'])->name('jadwal.template');
+    Route::post('/jadwal/import', [AkademikMasterController::class, 'importJadwal'])->name('jadwal.import');
+    Route::post('/jadwal/copy', [AkademikMasterController::class, 'copyJadwal'])->name('jadwal.copy');
 
     // 2. Lembar Penilaian Siswa
     Route::get('/penilaian', [PenilaianController::class, 'index'])->name('penilaian.index');

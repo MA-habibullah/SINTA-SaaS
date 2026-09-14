@@ -40,6 +40,32 @@
       <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
     </div>
 
+    <!-- Student Survey Banner (If Logged in as Siswa) -->
+    <div v-if="$page.props.auth?.user?.role?.nama_role === 'siswa'" class="bg-gradient-to-r from-indigo-700 via-purple-700 to-pink-700 rounded-3xl p-5 sm:p-6 text-white shadow-lg mb-8 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div class="relative z-10 flex items-start gap-3.5">
+        <div class="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-2xl shrink-0 text-yellow-300 shadow-inner">
+          <i class="bi bi-star-half"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-900 text-[10px] font-black uppercase tracking-wider">Evaluasi Semester Aktif</span>
+            <span class="text-xs text-indigo-200 font-medium">Survei Guru oleh Siswa</span>
+          </div>
+          <h3 class="text-lg font-black mt-0.5">Survei Kinerja & Kepuasan Mengajar Guru</h3>
+          <p class="text-xs text-indigo-100 mt-0.5 max-w-xl">
+            Berikan umpan balik yang jujur dan konstruktif untuk seluruh guru pengampu kelas Anda. Penilaian Anda 100% anonim dan rahasia.
+          </p>
+        </div>
+      </div>
+      <div class="relative z-10 shrink-0">
+        <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-student-survey-modal'))"
+           class="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-900 font-bold text-xs shadow-md transition inline-flex items-center gap-1.5 cursor-pointer">
+          <i class="bi bi-pencil-square text-slate-900"></i>
+          <span>Buka Form Survei Guru</span>
+        </button>
+      </div>
+    </div>
+
     <!-- Quick Stats Grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
       <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">

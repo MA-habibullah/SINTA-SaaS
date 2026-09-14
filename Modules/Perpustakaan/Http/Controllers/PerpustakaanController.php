@@ -52,6 +52,10 @@ class PerpustakaanController extends Controller
             return $tenantId;
         }
 
+        if ($user && !empty($user->tenant_id) && $user->tenant_id !== '00000000-0000-0000-0000-000000000000') {
+            return $user->tenant_id;
+        }
+
         $firstTenant = Tenant::whereIn('status', ['active', 'aktif'])
             ->where('id', '!=', '00000000-0000-0000-0000-000000000000')
             ->orderBy('nama_sekolah', 'asc')
@@ -101,7 +105,16 @@ class PerpustakaanController extends Controller
         }
 
         if ($request->filled('ddc')) {
-            $query->where('nomor_klasifikasi_ddc', 'LIKE', $request->query('ddc') . '%');
+            $ddcParam = trim((string) $request->query('ddc'));
+            if (preg_match('/^[0-9]00$/', $ddcParam)) {
+                $prefix = substr($ddcParam, 0, 1);
+                $query->where('nomor_klasifikasi_ddc', 'LIKE', $prefix . '%');
+            } elseif (preg_match('/^[0-9][0-9]0$/', $ddcParam)) {
+                $prefix = substr($ddcParam, 0, 2);
+                $query->where('nomor_klasifikasi_ddc', 'LIKE', $prefix . '%');
+            } else {
+                $query->where('nomor_klasifikasi_ddc', 'LIKE', $ddcParam . '%');
+            }
         }
 
         if ($request->filled('kategori')) {
@@ -116,7 +129,11 @@ class PerpustakaanController extends Controller
             $query->where('lokasi_rak', $request->query('lokasi_rak'));
         }
 
-        $bukuList = $query->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
+        $perPageBuku = (int) $request->query('per_page', 10);
+        if (!in_array($perPageBuku, [5, 10, 15, 25, 50, 100])) {
+            $perPageBuku = 10;
+        }
+        $bukuList = $query->orderBy('created_at', 'desc')->paginate($perPageBuku)->withQueryString();
 
         // Data Eksemplar
         $eksemplarQuery = $isSuperAdmin && empty($request->query('tenant_id'))
@@ -134,13 +151,17 @@ class PerpustakaanController extends Controller
                    });
             });
         }
-        $eksemplarList = $eksemplarQuery->orderBy('created_at', 'desc')->paginate(20)->withQueryString();
+        $perPageEks = (int) $request->query('per_page_eksemplar', 15);
+        if (!in_array($perPageEks, [5, 10, 15, 20, 25, 50, 100])) {
+            $perPageEks = 15;
+        }
+        $eksemplarList = $eksemplarQuery->orderBy('created_at', 'desc')->paginate($perPageEks)->withQueryString();
 
         // Master Rak, Usulan, Serial, DDC
         $rakList = LokasiRak::where('tenant_id', $activeTenantId)->orderBy('kode_rak', 'asc')->get();
         $usulanList = UsulanBuku::where('tenant_id', $activeTenantId)->orderBy('created_at', 'desc')->get();
         $serialList = SerialBerkala::where('tenant_id', $activeTenantId)->orderBy('created_at', 'desc')->get();
-        $ddcList = KategoriDdc::where('tenant_id', $activeTenantId)->orderBy('kode_ddc', 'asc')->get();
+        $ddcList = KategoriDdc::withoutTenant()->where('tenant_id', $activeTenantId)->orderBy('kode_ddc', 'asc')->get();
 
         // Inisialisasi Kategori DDC Standar jika kosong
         if ($ddcList->isEmpty()) {
@@ -157,18 +178,19 @@ class PerpustakaanController extends Controller
                 ['kode' => '900', 'nama' => 'Sejarah & Geografi', 'warna' => '#6366f1'],
             ];
             foreach ($defaultDdcs as $d) {
-                KategoriDdc::create([
-                    'id'                      => Str::uuid()->toString(),
-                    'tenant_id'               => $activeTenantId,
-                    'nama_perpus_kategori_ddc'=> $d['nama'],
-                    'kode_ddc'                => $d['kode'],
-                    'nama_klasifikasi'        => $d['nama'],
-                    'warna_label'             => $d['warna'],
-                    'deskripsi_ddc'           => "Klasifikasi DDC Standar {$d['kode']}",
-                    'is_active'               => true,
-                ]);
+                KategoriDdc::updateOrCreate(
+                    ['tenant_id' => $activeTenantId, 'kode_ddc' => $d['kode']],
+                    [
+                        'id'                      => Str::uuid()->toString(),
+                        'nama_perpus_kategori_ddc'=> $d['nama'],
+                        'nama_klasifikasi'        => $d['nama'],
+                        'warna_label'             => $d['warna'],
+                        'deskripsi_ddc'           => "Klasifikasi DDC Standar {$d['kode']}",
+                        'is_active'               => true,
+                    ]
+                );
             }
-            $ddcList = KategoriDdc::where('tenant_id', $activeTenantId)->orderBy('kode_ddc', 'asc')->get();
+            $ddcList = KategoriDdc::withoutTenant()->where('tenant_id', $activeTenantId)->orderBy('kode_ddc', 'asc')->get();
         }
 
         // Metrik Statistik
@@ -204,7 +226,7 @@ class PerpustakaanController extends Controller
             'tenants'        => $this->getTenantListForSuperAdmin(),
             'isSuperAdmin'   => $isSuperAdmin,
             'activeTenantId' => $activeTenantId,
-            'filters'        => $request->only(['search', 'ddc', 'kategori', 'jenis_bahan', 'lokasi_rak', 'tenant_id']),
+            'filters'        => $request->only(['search', 'ddc', 'kategori', 'jenis_bahan', 'lokasi_rak', 'tenant_id', 'per_page', 'page', 'search_eksemplar', 'per_page_eksemplar', 'page_eksemplar']),
         ]);
     }
 
@@ -623,13 +645,17 @@ class PerpustakaanController extends Controller
                   });
             });
         }
-        $sirkulasiAktif = $aktifQuery->orderBy('tanggal_harus_kembali', 'asc')->paginate(15, ['*'], 'p_aktif')->withQueryString();
+        $perPageAktif = (int) $request->query('per_page_aktif', 10);
+        if (!in_array($perPageAktif, [5, 10, 15, 25, 50, 100])) $perPageAktif = 10;
+        $sirkulasiAktif = $aktifQuery->orderBy('tanggal_harus_kembali', 'asc')->paginate($perPageAktif, ['*'], 'p_aktif')->withQueryString();
 
         // 2. Riwayat Sirkulasi Selesai
         $riwayatQuery = $isSuperAdmin && empty($request->query('tenant_id'))
             ? Sirkulasi::withoutTenant()->where('status_sirkulasi', '!=', 'Dipinjam')->with(['buku', 'eksemplar', 'tenant:id,nama_sekolah'])
             : Sirkulasi::where('tenant_id', $activeTenantId)->where('status_sirkulasi', '!=', 'Dipinjam')->with(['buku', 'eksemplar', 'tenant:id,nama_sekolah']);
-        $sirkulasiRiwayat = $riwayatQuery->orderBy('tanggal_kembali_aktual', 'desc')->paginate(15, ['*'], 'p_riwayat')->withQueryString();
+        $perPageRiwayat = (int) $request->query('per_page_riwayat', 10);
+        if (!in_array($perPageRiwayat, [5, 10, 15, 25, 50, 100])) $perPageRiwayat = 10;
+        $sirkulasiRiwayat = $riwayatQuery->orderBy('tanggal_kembali_aktual', 'desc')->paginate($perPageRiwayat, ['*'], 'p_riwayat')->withQueryString();
 
         // 3. Buku Paket Pelajaran
         $paketQuery = $isSuperAdmin && empty($request->query('tenant_id'))
@@ -649,13 +675,17 @@ class PerpustakaanController extends Controller
                    ->orWhere('denda_kerusakan', '>', 0)
                    ->orWhere('denda_kehilangan', '>', 0);
             })->with(['buku', 'eksemplar']);
-        $dendaList = $dendaQuery->orderBy('created_at', 'desc')->paginate(15, ['*'], 'p_denda')->withQueryString();
+        $perPageDenda = (int) $request->query('per_page_denda', 10);
+        if (!in_array($perPageDenda, [5, 10, 15, 25, 50, 100])) $perPageDenda = 10;
+        $dendaList = $dendaQuery->orderBy('created_at', 'desc')->paginate($perPageDenda, ['*'], 'p_denda')->withQueryString();
 
         // 5. Stock Opname Sessions
         $opnameList = Opname::where('tenant_id', $activeTenantId)->with('items')->orderBy('created_at', 'desc')->get();
 
         // 6. Baca di Tempat (In-House Reading Records)
-        $bacaList = BacaDiTempat::where('tenant_id', $activeTenantId)->with(['buku', 'eksemplar'])->orderBy('waktu_baca', 'desc')->paginate(15, ['*'], 'p_baca')->withQueryString();
+        $perPageBaca = (int) $request->query('per_page_baca', 10);
+        if (!in_array($perPageBaca, [5, 10, 15, 25, 50, 100])) $perPageBaca = 10;
+        $bacaList = BacaDiTempat::where('tenant_id', $activeTenantId)->with(['buku', 'eksemplar'])->orderBy('waktu_baca', 'desc')->paginate($perPageBaca, ['*'], 'p_baca')->withQueryString();
 
         // 7. Reservasi Online
         $reservasiList = Reservasi::where('tenant_id', $activeTenantId)->with(['buku', 'eksemplar'])->orderBy('tanggal_reservasi', 'desc')->get();
@@ -666,6 +696,13 @@ class PerpustakaanController extends Controller
             ->select('id', 'judul_buku', 'pengarang', 'jumlah_tersedia', 'kode_buku', 'nomor_panggil')
             ->orderBy('judul_buku', 'asc')
             ->get();
+
+        // Daftar Eksemplar Tersedia untuk Scan Barcode / Autocomplete Fisik
+        $eksemplarTersedia = Eksemplar::where('tenant_id', $activeTenantId)
+            ->where('status_kondisi', 'Tersedia')
+            ->with('buku:id,judul_buku,pengarang,nomor_panggil,jumlah_tersedia')
+            ->orderBy('barcode', 'asc')
+            ->get(['id', 'bibliografi_id', 'barcode', 'no_induk', 'lokasi_rak', 'status_kondisi', 'tipe_koleksi']);
 
         // 7. Loker Penitipan Barang
         $lokerList = Loker::where('tenant_id', $activeTenantId)
@@ -679,8 +716,12 @@ class PerpustakaanController extends Controller
             ->latest('created_at')
             ->get();
 
-        // Anggota Federasi Ringkas untuk Selector Peminjaman
-        $anggotaSelector = $this->getUnifiedMembersList($activeTenantId, 100);
+        // Anggota Federasi Lengkap untuk Selector Peminjaman
+        $anggotaSelector = Anggota::withoutTenant()
+            ->where('tenant_id', $activeTenantId)
+            ->where('is_active', true)
+            ->orderBy('nama_lengkap', 'asc')
+            ->get(['id', 'nama_lengkap', 'no_anggota', 'tipe_anggota', 'identitas_no', 'kelas_jurusan']);
 
         // Pengaturan Perpus
         $pengaturan = PengaturanPerpus::where('tenant_id', $activeTenantId)->first();
@@ -705,28 +746,29 @@ class PerpustakaanController extends Controller
         if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'data'    => compact('sirkulasiAktif', 'sirkulasiRiwayat', 'paketList', 'dendaList', 'opnameList', 'bacaList', 'reservasiList', 'lokerList', 'surveyList', 'stats'),
+                'data'    => compact('sirkulasiAktif', 'sirkulasiRiwayat', 'paketList', 'dendaList', 'opnameList', 'bacaList', 'reservasiList', 'lokerList', 'surveyList', 'stats', 'bukuTersedia', 'eksemplarTersedia', 'anggotaSelector'),
             ]);
         }
 
         return Inertia::render('Perpustakaan/Sirkulasi/Index', [
-            'sirkulasiAktif'   => $sirkulasiAktif,
-            'sirkulasiRiwayat' => $sirkulasiRiwayat,
-            'paketList'        => $paketList,
-            'dendaList'        => $dendaList,
-            'opnameList'       => $opnameList,
-            'bacaList'         => $bacaList,
-            'reservasiList'    => $reservasiList,
-            'lokerList'        => $lokerList,
-            'surveyList'       => $surveyList,
-            'bukuTersedia'     => $bukuTersedia,
-            'anggotaSelector'  => $anggotaSelector,
-            'pengaturan'       => $pengaturan,
-            'stats'            => $stats,
-            'tenants'          => $this->getTenantListForSuperAdmin(),
-            'isSuperAdmin'     => $isSuperAdmin,
-            'activeTenantId'   => $activeTenantId,
-            'filters'          => $request->only(['search', 'tenant_id']),
+            'sirkulasiAktif'    => $sirkulasiAktif,
+            'sirkulasiRiwayat'  => $sirkulasiRiwayat,
+            'paketList'         => $paketList,
+            'dendaList'         => $dendaList,
+            'opnameList'        => $opnameList,
+            'bacaList'          => $bacaList,
+            'reservasiList'     => $reservasiList,
+            'lokerList'         => $lokerList,
+            'surveyList'        => $surveyList,
+            'bukuTersedia'      => $bukuTersedia,
+            'eksemplarTersedia' => $eksemplarTersedia,
+            'anggotaSelector'   => $anggotaSelector,
+            'pengaturan'        => $pengaturan,
+            'stats'             => $stats,
+            'tenants'           => $this->getTenantListForSuperAdmin(),
+            'isSuperAdmin'      => $isSuperAdmin,
+            'activeTenantId'    => $activeTenantId,
+            'filters'           => $request->only(['search', 'tenant_id', 'per_page_aktif', 'p_aktif', 'per_page_riwayat', 'p_riwayat', 'per_page_denda', 'p_denda', 'per_page_baca', 'p_baca']),
         ]);
     }
 
@@ -736,7 +778,9 @@ class PerpustakaanController extends Controller
 
         $validated = $request->validate([
             'buku_id'          => ['required', 'uuid', 'exists:perpustakaan.perpus_bibliografi,id'],
-            'peminjam_type'    => ['required', 'string', 'in:Siswa,Guru,Tendik,Umum'],
+            'eksemplar_id'     => ['nullable', 'uuid'],
+            'barcode'          => ['nullable', 'string'],
+            'peminjam_type'    => ['required', 'string', 'in:Siswa,Guru,Tendik,Umum,Alumni'],
             'peminjam_id'      => ['required', 'string'],
             'nama_peminjam'    => ['required', 'string', 'max:255'],
             'nomor_identitas'  => ['nullable', 'string', 'max:100'],
@@ -755,11 +799,19 @@ class PerpustakaanController extends Controller
             $tglPinjam = Carbon::parse($validated['tanggal_pinjam']);
             $tglHarusKembali = $tglPinjam->copy()->addDays((int)$validated['durasi_hari']);
 
-            // Cari eksemplar sirkulasi tersedia
-            $eksemplar = Eksemplar::where('bibliografi_id', $buku->id)
-                ->where('status_kondisi', 'Tersedia')
-                ->where('tipe_koleksi', 'Sirkulasi')
-                ->first();
+            // Cari eksemplar spesifik atau sirkulasi tersedia
+            $eksemplar = null;
+            if (!empty($validated['eksemplar_id'])) {
+                $eksemplar = Eksemplar::where('id', $validated['eksemplar_id'])->where('status_kondisi', 'Tersedia')->first();
+            } elseif (!empty($validated['barcode'])) {
+                $eksemplar = Eksemplar::where('tenant_id', $tenantId)->where('barcode', trim($validated['barcode']))->where('status_kondisi', 'Tersedia')->first();
+            }
+            
+            if (!$eksemplar) {
+                $eksemplar = Eksemplar::where('bibliografi_id', $buku->id)
+                    ->where('status_kondisi', 'Tersedia')
+                    ->first();
+            }
 
             $nomorTransaksi = 'PINJAM/' . date('Ymd') . '/' . strtoupper(Str::random(5));
 
@@ -1166,13 +1218,61 @@ class PerpustakaanController extends Controller
         $isSuperAdmin = $user ? $user->isSuperAdmin() : false;
         $activeTenantId = $this->resolveActiveTenantId($request->query('tenant_id'));
 
-        $unifiedMembers = $this->getUnifiedMembersList($activeTenantId, 100, $request->query('search'), $request->query('kategori'));
+        $page = (int) $request->query('page', 1);
+        $perPageMembers = (int) $request->query('per_page', 15);
+        if (!in_array($perPageMembers, [5, 10, 15, 25, 50, 100])) $perPageMembers = 15;
+
+        $search = $request->query('search');
+        $kategori = $request->query('kategori');
+        $kelas = $request->query('kelas');
+        $status = $request->query('status');
+
+        $allMembers = $this->getUnifiedMembersList($activeTenantId, 1000, $search, $kategori, $kelas, $status);
+        $totalMembers = count($allMembers);
+        $slicedItems = array_slice($allMembers, max(0, ($page - 1) * $perPageMembers), $perPageMembers);
+        $unifiedMembers = new \Illuminate\Pagination\LengthAwarePaginator(
+            $slicedItems,
+            $totalMembers,
+            $perPageMembers,
+            $page,
+            [
+                'path'  => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
+
+        // Statistik Anggota Terinci
+        $anggotaBaseQuery = Anggota::withoutTenant()->where('tenant_id', $activeTenantId);
+        $statsAnggota = [
+            'total_anggota'     => (clone $anggotaBaseQuery)->count(),
+            'total_siswa_aktif' => (clone $anggotaBaseQuery)->where('tipe_anggota', 'Siswa')->where('is_active', true)->count(),
+            'total_guru_aktif'  => (clone $anggotaBaseQuery)->whereIn('tipe_anggota', ['Guru', 'Tendik'])->where('is_active', true)->count(),
+            'total_alumni'      => (clone $anggotaBaseQuery)->where(function ($q) {
+                $q->where('tipe_anggota', 'Alumni')
+                  ->orWhere('kelas_jurusan', 'ILIKE', '%Alumni%')
+                  ->orWhere('kelas_jurusan', 'ILIKE', '%Lulus%');
+            })->count(),
+            'total_non_aktif'   => (clone $anggotaBaseQuery)->where('is_active', false)->count(),
+        ];
+
+        // Daftar Rombel / Kelas untuk Filter Dropdown
+        $kelasList = Anggota::withoutTenant()
+            ->where('tenant_id', $activeTenantId)
+            ->whereNotNull('kelas_jurusan')
+            ->where('kelas_jurusan', '!=', '')
+            ->where('kelas_jurusan', '!=', '-')
+            ->distinct()
+            ->orderBy('kelas_jurusan', 'asc')
+            ->pluck('kelas_jurusan')
+            ->toArray();
 
         // Visitor Log / Buku Tamu
         $tamuQuery = $isSuperAdmin && empty($request->query('tenant_id'))
             ? BukuTamu::withoutTenant()
             : BukuTamu::where('tenant_id', $activeTenantId);
-        $bukuTamuList = $tamuQuery->orderBy('tanggal_kunjungan', 'desc')->paginate(20, ['*'], 'p_tamu')->withQueryString();
+        $perPageTamu = (int) $request->query('per_page_tamu', 15);
+        if (!in_array($perPageTamu, [5, 10, 15, 25, 50, 100])) $perPageTamu = 15;
+        $bukuTamuList = $tamuQuery->orderBy('tanggal_kunjungan', 'desc')->paginate($perPageTamu, ['*'], 'p_tamu')->withQueryString();
 
         // Visitor Stats
         $hariIni = Carbon::today()->toDateString();
@@ -1209,22 +1309,32 @@ class PerpustakaanController extends Controller
             ]);
         }
 
+        // Anggota Selector untuk Autocomplete Modal Presensi / Buku Tamu
+        $allMembersSelector = Anggota::withoutTenant()
+            ->where('tenant_id', $activeTenantId)
+            ->where('is_active', true)
+            ->orderBy('nama_lengkap', 'asc')
+            ->get(['id', 'nama_lengkap', 'no_anggota', 'tipe_anggota', 'identitas_no', 'kelas_jurusan']);
+
         if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'data'    => compact('unifiedMembers', 'bukuTamuList', 'statsTamu', 'pengaturan'),
+                'data'    => compact('unifiedMembers', 'statsAnggota', 'kelasList', 'bukuTamuList', 'statsTamu', 'pengaturan', 'allMembersSelector'),
             ]);
         }
 
         return Inertia::render('Perpustakaan/Anggota/Index', [
-            'members'        => $unifiedMembers,
-            'bukuTamuList'   => $bukuTamuList,
-            'statsTamu'      => $statsTamu,
-            'pengaturan'     => $pengaturan,
-            'tenants'        => $this->getTenantListForSuperAdmin(),
-            'isSuperAdmin'   => $isSuperAdmin,
-            'activeTenantId' => $activeTenantId,
-            'filters'        => $request->only(['search', 'kategori', 'tenant_id']),
+            'members'            => $unifiedMembers,
+            'statsAnggota'       => $statsAnggota,
+            'kelasList'          => $kelasList,
+            'bukuTamuList'       => $bukuTamuList,
+            'statsTamu'          => $statsTamu,
+            'pengaturan'         => $pengaturan,
+            'allMembersSelector' => $allMembersSelector,
+            'tenants'            => $this->getTenantListForSuperAdmin(),
+            'isSuperAdmin'       => $isSuperAdmin,
+            'activeTenantId'     => $activeTenantId,
+            'filters'            => $request->only(['search', 'kategori', 'kelas', 'status', 'tenant_id', 'per_page', 'page', 'per_page_tamu', 'p_tamu']),
         ]);
     }
 
@@ -1262,10 +1372,197 @@ class PerpustakaanController extends Controller
         return back()->with('success', "Anggota baru ({$noAnggota}) berhasil didaftarkan.");
     }
 
+    public function syncAnggotaFromMaster(Request $request): RedirectResponse|JsonResponse
+    {
+        $targetTenantId = $this->resolveActiveTenantId($request->input('tenant_id'));
+        $tenant = Tenant::find($targetTenantId);
+        $namaSekolah = $tenant ? $tenant->nama_sekolah : 'Sekolah Terpilih';
+        $scope = $request->input('scope', 'all'); // 'all' | 'siswa' | 'guru'
+
+        $createdCount = 0;
+        $updatedCount = 0;
+
+        DB::beginTransaction();
+        try {
+            // 1. Sinkronisasi Data Siswa (siswa.siswa)
+            if ($scope === 'all' || $scope === 'siswa') {
+                $siswas = Siswa::withoutTenant()->where('tenant_id', $targetTenantId)->get();
+                foreach ($siswas as $s) {
+                    $identitasNo = !empty($s->nisn) ? trim($s->nisn) : (!empty($s->nis) ? trim($s->nis) : (string) $s->id);
+                    $noAnggota = 'SIS-' . (!empty($s->nisn) ? trim($s->nisn) : (!empty($s->nis) ? trim($s->nis) : substr((string) $s->id, 0, 8)));
+                    
+                    // Deteksi Status Kelulusan / Keaktifan Siswa
+                    $statusSiswaRaw = strtolower(trim((string)($s->status_siswa ?? '')));
+                    $isLulus = in_array($statusSiswaRaw, ['lulus', 'alumni']);
+                    $isKeluar = in_array($statusSiswaRaw, ['keluar', 'pindah', 'drop out', 'do', 'non-aktif', 'nonaktif', 'mutasi']);
+
+                    $tipeAnggota = $isLulus ? 'Alumni' : 'Siswa';
+                    $isActive = !$isKeluar;
+                    $kelasNama = $isLulus
+                        ? ('Alumni' . (!empty($s->tahun_lulus) ? " ({$s->tahun_lulus})" : (!empty($s->kelas_saat_ini) ? " - {$s->kelas_saat_ini}" : '')))
+                        : ($s->kelas_saat_ini ?: 'Kelas Reguler');
+
+                    $existing = Anggota::withoutTenant()->where('tenant_id', $targetTenantId)
+                        ->where(function ($q) use ($s, $identitasNo, $noAnggota) {
+                            $q->where('identitas_no', $identitasNo)
+                              ->orWhere('no_anggota', $noAnggota)
+                              ->orWhere('id', (string) $s->id);
+                        })
+                        ->first();
+
+                    if ($existing) {
+                        $existing->update([
+                            'nama_perpus_anggota' => $s->nama_lengkap,
+                            'nama_lengkap'        => $s->nama_lengkap,
+                            'tipe_anggota'        => $tipeAnggota,
+                            'identitas_no'        => $identitasNo,
+                            'kelas_jurusan'       => $kelasNama,
+                            'jenis_kelamin'       => in_array(strtoupper($s->jenis_kelamin ?? 'L'), ['L', 'P']) ? strtoupper($s->jenis_kelamin) : 'L',
+                            'no_telepon'          => $s->no_hp ?: '-',
+                            'alamat'              => $s->alamat ?: '-',
+                            'foto_url'            => $s->foto_url ?? $existing->foto_url,
+                            'is_active'           => $isActive,
+                        ]);
+                        $updatedCount++;
+                    } else {
+                        Anggota::create([
+                            'id'                  => (string) $s->id,
+                            'tenant_id'           => $targetTenantId,
+                            'nama_perpus_anggota' => $s->nama_lengkap,
+                            'no_anggota'          => $noAnggota,
+                            'nama_lengkap'        => $s->nama_lengkap,
+                            'tipe_anggota'        => $tipeAnggota,
+                            'identitas_no'        => $identitasNo,
+                            'kelas_jurusan'       => $kelasNama,
+                            'jenis_kelamin'       => in_array(strtoupper($s->jenis_kelamin ?? 'L'), ['L', 'P']) ? strtoupper($s->jenis_kelamin) : 'L',
+                            'no_telepon'          => $s->no_hp ?: '-',
+                            'alamat'              => $s->alamat ?: '-',
+                            'foto_url'            => $s->foto_url ?? null,
+                            'is_active'           => $isActive,
+                        ]);
+                        $createdCount++;
+                    }
+                }
+            }
+
+            // 2. Sinkronisasi Data Guru & Pegawai (core.users)
+            if ($scope === 'all' || $scope === 'guru') {
+                $users = User::where('tenant_id', $targetTenantId)->with('role')->get();
+                foreach ($users as $u) {
+                    $tipe = ($u->role && in_array(strtolower($u->role->nama_role), ['guru', 'pendidik'])) || (!empty($u->jenis_gtk) && stripos($u->jenis_gtk, 'guru') !== false) ? 'Guru' : 'Tendik';
+                    $identitasNo = !empty($u->nip) ? trim($u->nip) : (!empty($u->nuptk) ? trim($u->nuptk) : trim($u->username));
+                    $noAnggota = ($tipe === 'Guru' ? 'GUR-' : 'STF-') . (!empty($u->nip) ? trim($u->nip) : trim($u->username));
+                    $jabatan = $tipe === 'Guru' ? ($u->jabatan_struktural ?: 'Dewan Guru') : ($u->jabatan_struktural ?: 'Tenaga Kependidikan');
+
+                    $existing = Anggota::withoutTenant()->where('tenant_id', $targetTenantId)
+                        ->where(function ($q) use ($u, $identitasNo, $noAnggota) {
+                            $q->where('identitas_no', $identitasNo)
+                              ->orWhere('no_anggota', $noAnggota)
+                              ->orWhere('id', (string) $u->id);
+                        })
+                        ->first();
+
+                    if ($existing) {
+                        $existing->update([
+                            'nama_perpus_anggota' => $u->nama_lengkap,
+                            'nama_lengkap'        => $u->nama_lengkap,
+                            'tipe_anggota'        => $tipe,
+                            'identitas_no'        => $identitasNo,
+                            'kelas_jurusan'       => $jabatan,
+                            'jenis_kelamin'       => in_array(strtoupper($u->jenis_kelamin ?? 'L'), ['L', 'P']) ? strtoupper($u->jenis_kelamin) : 'L',
+                            'no_telepon'          => $u->no_hp ?: ($u->email ?: '-'),
+                            'alamat'              => $u->alamat ?: '-',
+                            'is_active'           => true,
+                        ]);
+                        $updatedCount++;
+                    } else {
+                        Anggota::create([
+                            'id'                  => (string) $u->id,
+                            'tenant_id'           => $targetTenantId,
+                            'nama_perpus_anggota' => $u->nama_lengkap,
+                            'no_anggota'          => $noAnggota,
+                            'nama_lengkap'        => $u->nama_lengkap,
+                            'tipe_anggota'        => $tipe,
+                            'identitas_no'        => $identitasNo,
+                            'kelas_jurusan'       => $jabatan,
+                            'jenis_kelamin'       => in_array(strtoupper($u->jenis_kelamin ?? 'L'), ['L', 'P']) ? strtoupper($u->jenis_kelamin) : 'L',
+                            'no_telepon'          => $u->no_hp ?: ($u->email ?: '-'),
+                            'alamat'              => $u->alamat ?: '-',
+                            'foto_url'            => null,
+                            'is_active'           => true,
+                        ]);
+                        $createdCount++;
+                    }
+                }
+            }
+
+            DB::commit();
+
+            $totalProcessed = $createdCount + $updatedCount;
+            $msg = "Sinkronisasi berhasil: {$totalProcessed} anggota diproses ({$createdCount} data baru ditambahkan, {$updatedCount} data diperbarui, 0 data ganda) untuk {$namaSekolah}.";
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $msg,
+                    'created' => $createdCount,
+                    'updated' => $updatedCount,
+                    'total'   => $totalProcessed,
+                ]);
+            }
+
+            return back()->with('success', $msg);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            if ($request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Gagal sinkronisasi data anggota: ' . $e->getMessage()], 500);
+            }
+            return back()->with('error', 'Gagal sinkronisasi data anggota: ' . $e->getMessage());
+        }
+    }
+
+    public function updateAnggota(Request $request, string $id): RedirectResponse|JsonResponse
+    {
+        $anggota = Anggota::withoutTenant()->findOrFail($id);
+
+        $validated = $request->validate([
+            'nama_lengkap'  => ['required', 'string', 'max:255'],
+            'tipe_anggota'  => ['required', 'string', 'max:50'],
+            'identitas_no'  => ['nullable', 'string', 'max:100'],
+            'kelas_jurusan' => ['nullable', 'string', 'max:100'],
+            'jenis_kelamin' => ['required', 'string', 'in:L,P'],
+            'no_telepon'    => ['nullable', 'string', 'max:50'],
+            'alamat'        => ['nullable', 'string'],
+            'is_active'     => ['nullable', 'boolean'],
+        ]);
+
+        $anggota->update([
+            'nama_perpus_anggota' => $validated['nama_lengkap'],
+            'nama_lengkap'        => $validated['nama_lengkap'],
+            'tipe_anggota'        => $validated['tipe_anggota'],
+            'identitas_no'        => $validated['identitas_no'] ?? '-',
+            'kelas_jurusan'       => $validated['kelas_jurusan'] ?? '-',
+            'jenis_kelamin'       => $validated['jenis_kelamin'],
+            'no_telepon'          => $validated['no_telepon'] ?? '-',
+            'alamat'              => $validated['alamat'] ?? '-',
+            'is_active'           => $request->has('is_active') ? (bool) $request->input('is_active') : $anggota->is_active,
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => "Data anggota {$anggota->nama_lengkap} ({$anggota->no_anggota}) berhasil diperbarui.",
+                'data'    => $anggota,
+            ]);
+        }
+
+        return back()->with('success', "Data anggota {$anggota->nama_lengkap} ({$anggota->no_anggota}) berhasil diperbarui.");
+    }
+
     public function destroyAnggota(string $id): RedirectResponse|JsonResponse
     {
         Anggota::withoutTenant()->findOrFail($id)->delete();
-        return back()->with('success', 'Data anggota luar berhasil dihapus.');
+        return back()->with('success', 'Data anggota berhasil dihapus.');
     }
 
     public function cekBebasPustaka(Request $request, string $id): JsonResponse
@@ -1372,9 +1669,13 @@ class PerpustakaanController extends Controller
     // =========================================================================
     public function opac(Request $request): InertiaResponse|JsonResponse
     {
+        $user = Auth::user();
+        $isSuperAdmin = $user ? $user->isSuperAdmin() : false;
         $activeTenantId = $this->resolveActiveTenantId($request->query('tenant_id'));
 
-        $query = Buku::where('tenant_id', $activeTenantId)->where('status_opac', true)->where('is_quarantine', false);
+        $query = $isSuperAdmin && empty($request->query('tenant_id'))
+            ? Buku::withoutTenant()->where('status_opac', true)->where('is_quarantine', false)->with(['eksemplar', 'tenant:id,nama_sekolah,npsn'])
+            : Buku::where('tenant_id', $activeTenantId)->where('status_opac', true)->where('is_quarantine', false)->with(['eksemplar', 'tenant:id,nama_sekolah,npsn']);
 
         if ($request->filled('q')) {
             $q = trim($request->query('q'));
@@ -1385,12 +1686,22 @@ class PerpustakaanController extends Controller
                     ->orWhere('pengarang_tambahan', 'ILIKE', "%{$q}%")
                     ->orWhere('penerbit', 'ILIKE', "%{$q}%")
                     ->orWhere('subjek', 'ILIKE', "%{$q}%")
-                    ->orWhere('nomor_klasifikasi_ddc', 'ILIKE', "%{$q}%");
+                    ->orWhere('nomor_klasifikasi_ddc', 'ILIKE', "%{$q}%")
+                    ->orWhere('isbn', 'ILIKE', "%{$q}%");
             });
         }
 
         if ($request->filled('ddc')) {
-            $query->where('nomor_klasifikasi_ddc', 'LIKE', $request->query('ddc') . '%');
+            $ddcParam = trim((string) $request->query('ddc'));
+            if (preg_match('/^[0-9]00$/', $ddcParam)) {
+                $prefix = substr($ddcParam, 0, 1);
+                $query->where('nomor_klasifikasi_ddc', 'LIKE', $prefix . '%');
+            } elseif (preg_match('/^[0-9][0-9]0$/', $ddcParam)) {
+                $prefix = substr($ddcParam, 0, 2);
+                $query->where('nomor_klasifikasi_ddc', 'LIKE', $prefix . '%');
+            } else {
+                $query->where('nomor_klasifikasi_ddc', 'LIKE', $ddcParam . '%');
+            }
         }
 
         if ($request->filled('jenis_bahan')) {
@@ -1401,10 +1712,32 @@ class PerpustakaanController extends Controller
             $query->where('is_ebook', true);
         }
 
-        $bukuList = $query->orderBy('judul_buku', 'asc')->paginate(12)->withQueryString();
+        $perPage = (int)$request->query('per_page', 12);
+        if ($perPage <= 0 || $perPage > 100) {
+            $perPage = 12;
+        }
+
+        $bukuList = $query->orderBy('judul_buku', 'asc')->paginate($perPage)->withQueryString();
 
         $pengaturan = PengaturanPerpus::where('tenant_id', $activeTenantId)->first();
-        $ddcList = KategoriDdc::where('tenant_id', $activeTenantId)->orderBy('kode_ddc', 'asc')->get();
+        if (!$pengaturan && $isSuperAdmin) {
+            $pengaturan = PengaturanPerpus::withoutTenant()->first();
+        }
+
+        $ddcList = KategoriDdc::withoutTenant()
+            ->where('tenant_id', $activeTenantId)
+            ->orderBy('kode_ddc', 'asc')
+            ->get()
+            ->unique('kode_ddc')
+            ->values();
+
+        if ($ddcList->isEmpty()) {
+            $ddcList = KategoriDdc::withoutTenant()
+                ->orderBy('kode_ddc', 'asc')
+                ->get()
+                ->unique('kode_ddc')
+                ->values();
+        }
 
         if ($request->wantsJson()) {
             return response()->json(['success' => true, 'data' => $bukuList]);
@@ -1415,9 +1748,9 @@ class PerpustakaanController extends Controller
             'ddcList'        => $ddcList,
             'pengaturan'     => $pengaturan,
             'tenants'        => $this->getTenantListForSuperAdmin(),
-            'isSuperAdmin'   => Auth::user()?->isSuperAdmin() ?? false,
+            'isSuperAdmin'   => $isSuperAdmin,
             'activeTenantId' => $activeTenantId,
-            'filters'        => $request->only(['q', 'ddc', 'jenis_bahan', 'ebook_only', 'tenant_id']),
+            'filters'        => $request->only(['q', 'ddc', 'jenis_bahan', 'ebook_only', 'tenant_id', 'per_page', 'page']),
         ]);
     }
 
@@ -1435,30 +1768,57 @@ class PerpustakaanController extends Controller
         $username = $user->username;
         $namaLengkap = $user->nama_lengkap;
 
-        $circQuery = Sirkulasi::where('tenant_id', $tenantId)
-            ->where(function ($q) use ($user, $username, $namaLengkap) {
+        $circQuery = ($user->isSuperAdmin() && empty($tenantId))
+            ? Sirkulasi::withoutTenant()
+            : Sirkulasi::where('tenant_id', $tenantId);
+
+        $circQuery->where(function ($q) use ($user, $username, $namaLengkap) {
                 $q->where('peminjam_id', $user->id)
                   ->orWhere('nomor_identitas', $username)
                   ->orWhere('nama_peminjam', 'ILIKE', "%{$namaLengkap}%");
             })
             ->with(['buku', 'eksemplar']);
 
-        $pinjamanAktif = (clone $circQuery)->where('status_sirkulasi', 'Dipinjam')->orderBy('tanggal_harus_kembali', 'asc')->get();
-        $riwayatSelesai = (clone $circQuery)->where('status_sirkulasi', '!=', 'Dipinjam')->orderBy('tanggal_kembali_aktual', 'desc')->paginate(15);
+        $perPageAktif = (int)$request->query('per_page_aktif', 10);
+        if ($perPageAktif <= 0 || $perPageAktif > 100) {
+            $perPageAktif = 10;
+        }
+
+        $perPageRiwayat = (int)$request->query('per_page_riwayat', 10);
+        if ($perPageRiwayat <= 0 || $perPageRiwayat > 100) {
+            $perPageRiwayat = 10;
+        }
+
+        $pinjamanAktif = (clone $circQuery)->where('status_sirkulasi', 'Dipinjam')->orderBy('tanggal_harus_kembali', 'asc')->paginate($perPageAktif, ['*'], 'p_aktif')->withQueryString();
+        $riwayatSelesai = (clone $circQuery)->where('status_sirkulasi', '!=', 'Dipinjam')->orderBy('tanggal_kembali_aktual', 'desc')->paginate($perPageRiwayat, ['*'], 'p_riwayat')->withQueryString();
         $totalDenda = (clone $circQuery)->where('status_denda', 'Belum Lunas')->sum(DB::raw('denda_keterlambatan + denda_kerusakan + denda_kehilangan - denda_dibayar'));
 
         // Reservasi Aktif User
-        $reservasiSaya = Reservasi::where('tenant_id', $tenantId)
-            ->where(function ($rq) use ($user, $username, $namaLengkap) {
+        $resQuery = ($user->isSuperAdmin() && empty($tenantId))
+            ? Reservasi::withoutTenant()
+            : Reservasi::where('tenant_id', $tenantId);
+
+        $perPageReservasi = (int)$request->query('per_page_reservasi', 10);
+        if ($perPageReservasi <= 0 || $perPageReservasi > 100) {
+            $perPageReservasi = 10;
+        }
+
+        $reservasiSaya = $resQuery->where(function ($rq) use ($user, $username, $namaLengkap) {
                 $rq->where('peminjam_id', $user->id)
                    ->orWhere('nomor_identitas', $username)
                    ->orWhere('nama_peminjam', 'ILIKE', "%{$namaLengkap}%");
             })
             ->with('buku')
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate($perPageReservasi, ['*'], 'p_reservasi')
+            ->withQueryString();
 
-        $isBebasPustaka = ($pinjamanAktif->count() === 0 && $totalDenda <= 0);
+        $pengaturan = PengaturanPerpus::where('tenant_id', $tenantId)->first();
+        if (!$pengaturan) {
+            $pengaturan = PengaturanPerpus::withoutTenant()->first();
+        }
+
+        $isBebasPustaka = ($pinjamanAktif->total() === 0 && $totalDenda <= 0);
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -1473,23 +1833,125 @@ class PerpustakaanController extends Controller
             'reservasiSaya'  => $reservasiSaya,
             'totalDenda'     => max(0, $totalDenda),
             'isBebasPustaka' => $isBebasPustaka,
+            'pengaturan'     => $pengaturan,
             'userProfile'    => [
                 'id'           => $user->id,
                 'nama_lengkap' => $namaLengkap,
                 'username'     => $username,
                 'role'         => $user->role?->nama_role ?? 'Pengguna',
             ],
+            'filters'        => $request->only(['per_page_aktif', 'p_aktif', 'per_page_riwayat', 'p_riwayat', 'per_page_reservasi', 'p_reservasi']),
         ]);
     }
 
     // =========================================================================
     // HELPER AUTO-FEDERASI ANGGOTA (SISWA, GURU, UMUM)
     // =========================================================================
-    private function getUnifiedMembersList(string $tenantId, int $limit = 100, ?string $search = null, ?string $kategori = null): array
+    private function getUnifiedMembersList(string $tenantId, int $limit = 1000, ?string $search = null, ?string $kategori = null, ?string $kelas = null, ?string $status = null): array
     {
         $members = [];
 
-        // 1. Siswa
+        // 1. Cek apakah tabel perpustakaan.perpus_anggota sudah memiliki data tersinkron untuk tenant ini
+        $anggotaQuery = Anggota::withoutTenant()->where('tenant_id', $tenantId);
+
+        // Filter Kategori / Tipe Pemustaka
+        if (!empty($kategori)) {
+            $anggotaQuery->where('tipe_anggota', $kategori);
+        }
+
+        // Filter Rombel / Kelas
+        if (!empty($kelas)) {
+            $anggotaQuery->where('kelas_jurusan', $kelas);
+        }
+
+        // Filter Status Keanggotaan / Kelulusan
+        if (!empty($status)) {
+            if ($status === 'aktif') {
+                $anggotaQuery->where('is_active', true)->where('tipe_anggota', '!=', 'Alumni');
+            } elseif ($status === 'non-aktif') {
+                $anggotaQuery->where('is_active', false);
+            } elseif ($status === 'alumni' || $status === 'lulus') {
+                $anggotaQuery->where(function ($q) {
+                    $q->where('tipe_anggota', 'Alumni')
+                      ->orWhere('kelas_jurusan', 'ILIKE', '%Alumni%')
+                      ->orWhere('kelas_jurusan', 'ILIKE', '%Lulus%');
+                });
+            }
+        }
+
+        if (!empty($search)) {
+            $anggotaQuery->where(function ($q) use ($search) {
+                $q->where('nama_lengkap', 'ILIKE', "%{$search}%")
+                  ->orWhere('identitas_no', 'ILIKE', "%{$search}%")
+                  ->orWhere('no_anggota', 'ILIKE', "%{$search}%")
+                  ->orWhere('kelas_jurusan', 'ILIKE', "%{$search}%");
+            });
+        }
+
+        $anggotas = $anggotaQuery->orderBy('nama_lengkap', 'asc')->limit($limit)->get();
+
+        if ($anggotas->isNotEmpty()) {
+            $peminjamIds = $anggotas->pluck('id')->filter()->toArray();
+            $identitasList = $anggotas->pluck('identitas_no')->filter()->toArray();
+
+            $activeBorrows = Sirkulasi::where('tenant_id', $tenantId)
+                ->where('status_sirkulasi', 'Dipinjam')
+                ->where(function ($q) use ($peminjamIds, $identitasList) {
+                    $q->whereIn('peminjam_id', $peminjamIds)
+                      ->orWhereIn('nomor_identitas', $identitasList);
+                })
+                ->select('peminjam_id', 'nomor_identitas', DB::raw('count(*) as total'))
+                ->groupBy('peminjam_id', 'nomor_identitas')
+                ->get();
+
+            $activeBorrowMap = [];
+            foreach ($activeBorrows as $ab) {
+                if ($ab->peminjam_id) $activeBorrowMap[$ab->peminjam_id] = ($activeBorrowMap[$ab->peminjam_id] ?? 0) + $ab->total;
+                if ($ab->nomor_identitas) $activeBorrowMap[$ab->nomor_identitas] = ($activeBorrowMap[$ab->nomor_identitas] ?? 0) + $ab->total;
+            }
+
+            $unpaidFines = Sirkulasi::where('tenant_id', $tenantId)
+                ->where('status_denda', 'Belum Lunas')
+                ->where(function ($q) use ($peminjamIds, $identitasList) {
+                    $q->whereIn('peminjam_id', $peminjamIds)
+                      ->orWhereIn('nomor_identitas', $identitasList);
+                })
+                ->select('peminjam_id', 'nomor_identitas', DB::raw('SUM(denda_keterlambatan + denda_kerusakan + denda_kehilangan - denda_dibayar) as sisa_denda'))
+                ->groupBy('peminjam_id', 'nomor_identitas')
+                ->get();
+
+            $unpaidFineMap = [];
+            foreach ($unpaidFines as $uf) {
+                if ($uf->peminjam_id) $unpaidFineMap[$uf->peminjam_id] = ($unpaidFineMap[$uf->peminjam_id] ?? 0) + $uf->sisa_denda;
+                if ($uf->nomor_identitas) $unpaidFineMap[$uf->nomor_identitas] = ($unpaidFineMap[$uf->nomor_identitas] ?? 0) + $uf->sisa_denda;
+            }
+
+            foreach ($anggotas as $a) {
+                $pinjamAktif = $activeBorrowMap[$a->id] ?? ($activeBorrowMap[$a->identitas_no] ?? 0);
+                $denda = max(0, (float)($unpaidFineMap[$a->id] ?? ($unpaidFineMap[$a->identitas_no] ?? 0)));
+
+                $members[] = [
+                    'id'                   => $a->id,
+                    'no_anggota'           => $a->no_anggota ?: 'LIB-' . substr($a->id, 0, 8),
+                    'nama_lengkap'         => $a->nama_lengkap,
+                    'tipe_anggota'         => $a->tipe_anggota ?: 'Umum',
+                    'identitas_no'         => $a->identitas_no ?: '-',
+                    'kelas_jurusan'        => $a->kelas_jurusan ?: '-',
+                    'jenis_kelamin'        => $a->jenis_kelamin ?: 'L',
+                    'no_telepon'           => $a->no_telepon ?: '-',
+                    'alamat'               => $a->alamat ?: '-',
+                    'foto_url'             => $a->foto_url ?? null,
+                    'is_active'            => (bool) $a->is_active,
+                    'pinjam_aktif'         => $pinjamAktif,
+                    'total_denda'          => $denda,
+                    'status_bebas_pustaka' => ($pinjamAktif === 0 && $denda <= 0) ? 1 : 0,
+                ];
+            }
+
+            return $members;
+        }
+
+        // 2. Fallback Live Federation jika belum pernah ditarik/sinkron
         if (empty($kategori) || $kategori === 'Siswa') {
             $siswaQuery = Siswa::where('tenant_id', $tenantId)->select('id', 'nama_lengkap', 'nisn', 'nis', 'kelas_saat_ini', 'no_hp', 'alamat', 'foto_url');
             if (!empty($search)) {
@@ -1499,7 +1961,7 @@ class PerpustakaanController extends Controller
                       ->orWhere('nis', 'ILIKE', "%{$search}%");
                 });
             }
-            $siswas = $siswaQuery->limit(50)->get();
+            $siswas = $siswaQuery->limit(100)->get();
             foreach ($siswas as $s) {
                 $pinjamAktif = Sirkulasi::where('tenant_id', $tenantId)->where('peminjam_id', $s->id)->where('status_sirkulasi', 'Dipinjam')->count();
                 $denda = Sirkulasi::where('tenant_id', $tenantId)->where('peminjam_id', $s->id)->where('status_denda', 'Belum Lunas')->sum(DB::raw('denda_keterlambatan + denda_kerusakan + denda_kehilangan - denda_dibayar'));
@@ -1520,7 +1982,6 @@ class PerpustakaanController extends Controller
             }
         }
 
-        // 2. Guru & Tendik
         if (empty($kategori) || $kategori === 'Guru' || $kategori === 'Tendik') {
             $userQuery = User::where('tenant_id', $tenantId)->with('role');
             if (!empty($search)) {
@@ -1530,7 +1991,7 @@ class PerpustakaanController extends Controller
                       ->orWhere('email', 'ILIKE', "%{$search}%");
                 });
             }
-            $users = $userQuery->limit(30)->get();
+            $users = $userQuery->limit(50)->get();
             foreach ($users as $u) {
                 $tipe = ($u->role && in_array(strtolower($u->role->nama_role), ['guru', 'pendidik'])) ? 'Guru' : 'Tendik';
                 $pinjamAktif = Sirkulasi::where('tenant_id', $tenantId)->where('peminjam_id', $u->id)->where('status_sirkulasi', 'Dipinjam')->count();
@@ -1545,36 +2006,6 @@ class PerpustakaanController extends Controller
                     'kelas_jurusan'        => $tipe === 'Guru' ? 'Dewan Guru' : 'Tenaga Kependidikan',
                     'no_telepon'           => $u->no_hp ?: $u->email,
                     'foto_url'             => null,
-                    'pinjam_aktif'         => $pinjamAktif,
-                    'total_denda'          => max(0, $denda),
-                    'status_bebas_pustaka' => ($pinjamAktif === 0 && $denda <= 0) ? 1 : 0,
-                ];
-            }
-        }
-
-        // 3. Anggota Luar / Umum
-        if (empty($kategori) || in_array($kategori, ['Umum', 'Alumni', 'Tamu', 'Mitra'])) {
-            $anggotaQuery = Anggota::where('tenant_id', $tenantId);
-            if (!empty($search)) {
-                $anggotaQuery->where(function ($q) use ($search) {
-                    $q->where('nama_lengkap', 'ILIKE', "%{$search}%")
-                      ->orWhere('no_anggota', 'ILIKE', "%{$search}%");
-                });
-            }
-            $anggotas = $anggotaQuery->limit(30)->get();
-            foreach ($anggotas as $a) {
-                $pinjamAktif = Sirkulasi::where('tenant_id', $tenantId)->where('peminjam_id', $a->id)->where('status_sirkulasi', 'Dipinjam')->count();
-                $denda = Sirkulasi::where('tenant_id', $tenantId)->where('peminjam_id', $a->id)->where('status_denda', 'Belum Lunas')->sum(DB::raw('denda_keterlambatan + denda_kerusakan + denda_kehilangan - denda_dibayar'));
-
-                $members[] = [
-                    'id'                   => $a->id,
-                    'no_anggota'           => $a->no_anggota,
-                    'nama_lengkap'         => $a->nama_lengkap,
-                    'tipe_anggota'         => $a->tipe_anggota,
-                    'identitas_no'         => $a->identitas_no,
-                    'kelas_jurusan'        => $a->kelas_jurusan,
-                    'no_telepon'           => $a->no_telepon,
-                    'foto_url'             => $a->foto_url ?? null,
                     'pinjam_aktif'         => $pinjamAktif,
                     'total_denda'          => max(0, $denda),
                     'status_bebas_pustaka' => ($pinjamAktif === 0 && $denda <= 0) ? 1 : 0,

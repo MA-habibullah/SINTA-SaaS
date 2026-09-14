@@ -17,6 +17,7 @@ const searchQuery = ref(props.filters?.q || '')
 const selectedDdc = ref(props.filters?.ddc || '')
 const selectedJenisBahan = ref(props.filters?.jenis_bahan || '')
 const selectedTenantId = ref(props.filters?.tenant_id || '')
+const perPage = ref(Number(props.filters?.per_page) || 12)
 const viewMode = ref('grid') // 'grid' | 'table'
 
 const getSelectedTenantName = () => {
@@ -31,6 +32,7 @@ const applyTenantFilter = () => {
     ddc: selectedDdc.value || undefined,
     jenis_bahan: selectedJenisBahan.value || undefined,
     tenant_id: selectedTenantId.value || undefined,
+    per_page: perPage.value !== 12 ? perPage.value : undefined,
   }, {
     preserveState: true,
     preserveScroll: true,
@@ -43,6 +45,7 @@ const search = () => {
     ddc: selectedDdc.value || undefined,
     jenis_bahan: selectedJenisBahan.value || undefined,
     tenant_id: selectedTenantId.value || undefined,
+    per_page: perPage.value !== 12 ? perPage.value : undefined,
   }, {
     preserveState: true,
     replace: true,
@@ -52,6 +55,76 @@ const search = () => {
 const selectDdc = (kode) => {
   selectedDdc.value = selectedDdc.value === kode ? '' : kode
   search()
+}
+
+const uniqueDdcList = computed(() => {
+  if (!props.ddcList) return []
+  const seen = new Set()
+  const result = []
+  for (const d of props.ddcList) {
+    if (!seen.has(d.kode_ddc)) {
+      seen.add(d.kode_ddc)
+      result.push(d)
+    }
+  }
+  return result.slice(0, 10)
+})
+
+// -------------------------------------------------------------
+// SMART WINDOWING PAGINATION HELPER
+// -------------------------------------------------------------
+const goToPage = (url) => {
+  if (url) {
+    router.visit(url, { preserveState: true, preserveScroll: true })
+  }
+}
+
+const getSmartPaginationLinks = (paginator) => {
+  if (!paginator || !paginator.links) return []
+  const rawLinks = paginator.links
+  const current = paginator.current_page || 1
+  const last = paginator.last_page || 1
+
+  const prevLink = rawLinks[0]
+  const nextLink = rawLinks[rawLinks.length - 1]
+
+  if (last <= 7) {
+    return rawLinks
+  }
+
+  const result = [prevLink]
+  const pagesToShow = new Set([1, last, current - 1, current, current + 1])
+  if (current <= 3) {
+    pagesToShow.add(2)
+    pagesToShow.add(3)
+    pagesToShow.add(4)
+  }
+  if (current >= last - 2) {
+    pagesToShow.add(last - 1)
+    pagesToShow.add(last - 2)
+    pagesToShow.add(last - 3)
+  }
+
+  let lastPushedPage = 0
+  const sortedPages = Array.from(pagesToShow).filter(p => p >= 1 && p <= last).sort((a, b) => a - b)
+
+  for (const pageNum of sortedPages) {
+    if (lastPushedPage > 0 && pageNum - lastPushedPage > 1) {
+      result.push({ url: null, label: '...', active: false })
+    }
+    const matchingLink = rawLinks.find(l => l.label == pageNum)
+    if (matchingLink) {
+      result.push(matchingLink)
+    } else {
+      const urlTemplate = prevLink.url || nextLink.url || ''
+      const newUrl = urlTemplate ? urlTemplate.replace(/page=\d+/, `page=${pageNum}`) : `?page=${pageNum}`
+      result.push({ url: newUrl, label: String(pageNum), active: pageNum === current })
+    }
+    lastPushedPage = pageNum
+  }
+
+  result.push(nextLink)
+  return result
 }
 
 // -------------------------------------------------------------
@@ -176,36 +249,72 @@ const nextEbookPage = () => {
 
           <!-- DDC Quick Categories Badges -->
           <div class="flex flex-wrap items-center justify-center gap-1.5 pt-2">
-            <button v-for="d in (ddcList || [])" :key="d.id" @click="selectDdc(d.kode_ddc)" class="px-2.5 py-1 rounded-full text-[10px] font-bold transition border"
-                    :class="selectedDdc === d.kode_ddc ? 'bg-blue-500 text-white border-blue-400 shadow-xs' : 'bg-white/10 text-blue-200 border-white/10 hover:bg-white/20'">
+            <button type="button" @click="selectDdc('')" class="px-3 py-1 rounded-full text-[10px] font-bold transition border"
+                    :class="!selectedDdc ? 'bg-blue-500 text-white border-blue-400 shadow-xs' : 'bg-white/10 text-blue-200 border-white/10 hover:bg-white/20'">
+              <i class="bi bi-grid-fill me-1"></i> Semua Koleksi
+            </button>
+            <button v-for="d in uniqueDdcList" :key="d.kode_ddc" @click="selectDdc(d.kode_ddc)" class="px-2.5 py-1 rounded-full text-[10px] font-bold transition border"
+                    :class="selectedDdc === d.kode_ddc ? 'bg-blue-500 text-white border-blue-400 shadow-xs' : 'bg-white/10 text-blue-200 border-white/10 hover:bg-white/20'"
+                    :title="d.nama_klasifikasi">
               {{ d.kode_ddc }} {{ d.nama_klasifikasi }}
             </button>
           </div>
         </div>
       </div>
 
-      <!-- Main Content Grid -->
+      <!-- Main Content Container -->
       <div class="space-y-4">
         <!-- Filter Toolbar -->
         <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
           <div class="flex items-center gap-2 font-bold text-slate-700">
             <i class="bi bi-collection-fill text-blue-600"></i>
             <span>Ditemukan: <strong class="text-blue-700">{{ bukuList?.total || bukuList?.data?.length || 0 }}</strong> Judul Koleksi</span>
+            <span v-if="selectedDdc" class="ms-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[11px] font-extrabold border border-blue-100">
+              Filter DDC: {{ selectedDdc }}
+            </span>
           </div>
 
-          <div class="flex items-center gap-2">
-            <select v-model="selectedJenisBahan" @change="search" class="px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 font-medium">
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- Filter Super Admin Tenant -->
+            <div v-if="isSuperAdmin && (tenants || []).length > 0" class="flex items-center gap-1.5">
+              <select v-model="selectedTenantId" @change="applyTenantFilter" class="px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 font-medium text-xs">
+                <option value="">Semua Sekolah (Agregat Global)</option>
+                <option v-for="t in tenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
+              </select>
+            </div>
+
+            <!-- Filter Media -->
+            <select v-model="selectedJenisBahan" @change="search" class="px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 font-medium text-xs">
               <option value="">Semua Jenis Media</option>
               <option value="Buku Teks / Monograf">Buku Teks / Monograf</option>
               <option value="Modul Pembelajaran">Modul Pembelajaran</option>
               <option value="Karya Tulis / Skripsi">Karya Tulis / Skripsi</option>
               <option value="Terbitan Berkala">Terbitan Berkala</option>
             </select>
+
+            <!-- Per Page Selector -->
+            <select v-model="perPage" @change="search" class="px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 font-medium text-xs">
+              <option :value="8">8 per hal</option>
+              <option :value="12">12 per hal</option>
+              <option :value="24">24 per hal</option>
+              <option :value="48">48 per hal</option>
+              <option :value="96">96 per hal</option>
+            </select>
+
+            <!-- View Mode Switch -->
+            <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+              <button @click="viewMode = 'grid'" class="px-2.5 py-1 rounded-lg text-xs font-bold transition" :class="viewMode === 'grid' ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-500 hover:text-slate-800'">
+                <i class="bi bi-grid-fill"></i>
+              </button>
+              <button @click="viewMode = 'table'" class="px-2.5 py-1 rounded-lg text-xs font-bold transition" :class="viewMode === 'table' ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-500 hover:text-slate-800'">
+                <i class="bi bi-list-ul"></i>
+              </button>
+            </div>
           </div>
         </div>
 
-        <!-- Book Cards Grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- MODE 1: BOOK CARDS GRID -->
+        <div v-if="viewMode === 'grid' && (bukuList?.data || []).length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div v-for="buku in (bukuList?.data || [])" :key="buku.id" class="bg-white rounded-3xl border border-slate-200/80 shadow-2xs p-4 flex flex-col justify-between hover:shadow-lg hover:border-blue-300 transition duration-200 group">
             <div>
               <div class="flex gap-3 mb-3">
@@ -255,10 +364,94 @@ const nextEbookPage = () => {
           </div>
         </div>
 
-        <div v-if="!bukuList?.data?.length" class="text-center py-16 bg-white rounded-3xl border border-slate-200/80 p-8">
+        <!-- MODE 2: TABLE VIEW -->
+        <div v-else-if="viewMode === 'table' && (bukuList?.data || []).length > 0" class="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-50/80 text-slate-500 font-bold border-b border-slate-200/80">
+                  <th class="py-3 px-4 w-12 text-center">Cover</th>
+                  <th class="py-3 px-3">Judul Koleksi & Metadata</th>
+                  <th class="py-3 px-3">Pengarang & Penerbit</th>
+                  <th class="py-3 px-3">DDC & Rak</th>
+                  <th class="py-3 px-3 text-center">Ketersediaan</th>
+                  <th class="py-3 px-4 text-center">Aksi</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr v-for="buku in (bukuList?.data || [])" :key="buku.id" class="hover:bg-blue-50/30 transition">
+                  <td class="py-2.5 px-4 text-center">
+                    <div class="w-10 h-14 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden mx-auto flex items-center justify-center text-slate-400">
+                      <img v-if="buku.cover_url" :src="buku.cover_url" alt="Cover" class="w-full h-full object-cover" />
+                      <i v-else class="bi bi-book text-sm"></i>
+                    </div>
+                  </td>
+                  <td class="py-2.5 px-3">
+                    <div class="font-bold text-slate-800 text-xs hover:text-blue-600 cursor-pointer" @click="openDetail(buku)">{{ buku.judul_buku }}</div>
+                    <div class="text-[11px] text-slate-400 font-mono">ISBN: {{ buku.isbn || '-' }} &bull; Call: {{ buku.nomor_panggil || '-' }}</div>
+                  </td>
+                  <td class="py-2.5 px-3 text-slate-600">
+                    <div class="font-semibold">{{ buku.pengarang }}</div>
+                    <div class="text-[11px] text-slate-400">{{ buku.penerbit }} ({{ buku.tahun_terbit }})</div>
+                  </td>
+                  <td class="py-2.5 px-3">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-100">DDC {{ buku.nomor_klasifikasi_ddc || '000' }}</span>
+                    <div class="text-[11px] text-slate-500 mt-0.5">Rak: {{ buku.lokasi_rak || '-' }}</div>
+                  </td>
+                  <td class="py-2.5 px-3 text-center">
+                    <span class="px-2.5 py-1 rounded-full text-[11px] font-black" :class="buku.jumlah_tersedia > 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'">
+                      {{ buku.jumlah_tersedia }} / {{ buku.jumlah_eksemplar }}
+                    </span>
+                  </td>
+                  <td class="py-2.5 px-4 text-center">
+                    <div class="flex items-center justify-center gap-1">
+                      <button @click="openEbookReader(buku)" class="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs transition" title="Buka E-Book">
+                        <i class="bi bi-file-earmark-pdf-fill"></i>
+                      </button>
+                      <button @click="openDetail(buku)" class="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition shadow-2xs">
+                        Detail
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- EMPTY STATE -->
+        <div v-if="!bukuList?.data?.length" class="text-center py-16 bg-white rounded-3xl border border-slate-200/80 p-8 shadow-2xs">
           <i class="bi bi-search text-4xl text-slate-300 mb-2 block"></i>
           <h3 class="font-bold text-slate-700 text-sm">Tidak ditemukan pustaka yang cocok</h3>
           <p class="text-xs text-slate-400 mt-1">Coba gunakan kata kunci pencarian yang lebih umum atau pilih klasifikasi DDC lain.</p>
+        </div>
+
+        <!-- SMART WINDOWING PAGINATION FOOTER -->
+        <div v-if="bukuList?.data?.length" class="p-4 bg-white rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
+          <div class="text-slate-500 font-medium">
+            Menampilkan <strong class="text-slate-800">{{ bukuList.from || 0 }}</strong> s.d. <strong class="text-slate-800">{{ bukuList.to || 0 }}</strong> dari <strong class="text-blue-700">{{ bukuList.total || 0 }}</strong> koleksi buku
+          </div>
+
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <template v-for="(link, index) in getSmartPaginationLinks(bukuList)" :key="index">
+              <span v-if="link.label === '...'" class="px-2.5 py-1 text-slate-400 font-bold select-none text-xs">...</span>
+              <button v-else-if="link.url"
+                      type="button"
+                      @click="goToPage(link.url)"
+                      class="px-3 py-1.5 rounded-xl border text-xs font-bold transition flex items-center justify-center min-w-[34px] shadow-2xs"
+                      :class="link.active ? 'bg-blue-600 border-blue-600 text-white shadow-xs' : 'bg-white border-slate-200 text-slate-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200'">
+                <i v-if="link.label.includes('Previous') || link.label.includes('&laquo;') || link.label.includes('chevron-left')" class="bi bi-chevron-left"></i>
+                <i v-else-if="link.label.includes('Next') || link.label.includes('&raquo;') || link.label.includes('chevron-right')" class="bi bi-chevron-right"></i>
+                <span v-else>{{ link.label }}</span>
+              </button>
+              <span v-else
+                    class="px-3 py-1.5 rounded-xl border border-slate-100 bg-slate-50 text-slate-300 text-xs font-bold flex items-center justify-center min-w-[34px]">
+                <i v-if="link.label.includes('Previous') || link.label.includes('&laquo;') || link.label.includes('chevron-left')" class="bi bi-chevron-left"></i>
+                <i v-else-if="link.label.includes('Next') || link.label.includes('&raquo;') || link.label.includes('chevron-right')" class="bi bi-chevron-right"></i>
+                <span v-else>{{ link.label }}</span>
+              </span>
+            </template>
+          </div>
         </div>
       </div>
     </div>
@@ -296,7 +489,7 @@ const nextEbookPage = () => {
             </div>
 
             <!-- Action Button Baca Digital -->
-            <div class="flex items-center justify-between p-3 bg-emerald-50 border border-emerald-200 rounded-2xl">
+            <div v-if="selectedBuku?.is_ebook" class="flex items-center justify-between p-3 bg-emerald-50 border border-emerald-200 rounded-2xl">
               <div class="flex items-center gap-2">
                 <i class="bi bi-journal-richtext text-emerald-600 text-lg"></i>
                 <span class="font-bold text-emerald-900">Tersedia Versi Digital (E-Book)</span>

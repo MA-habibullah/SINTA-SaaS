@@ -189,12 +189,16 @@
         </footer>
       </main>
     </div>
+
+    <!-- Mandatory Student Teacher Survey Popup Modal (Auto-Reminder) -->
+    <MandatoryStudentSurveyModal />
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue';
 import { usePage, router, Head } from '@inertiajs/vue3';
+import MandatoryStudentSurveyModal from '@/Components/MandatoryStudentSurveyModal.vue';
 
 const props = defineProps({
   title: {

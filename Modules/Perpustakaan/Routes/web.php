@@ -58,6 +58,8 @@ Route::middleware(['web', 'auth', 'tenant.guard'])->prefix('perpustakaan')->name
     // 5. Anggota, Buku Tamu & Pengaturan
     Route::get('/anggota', [PerpustakaanController::class, 'anggota'])->name('anggota');
     Route::post('/anggota', [PerpustakaanController::class, 'storeAnggota'])->name('anggota.store');
+    Route::match(['post', 'put', 'patch'], '/anggota/{id}', [PerpustakaanController::class, 'updateAnggota'])->name('anggota.update');
+    Route::post('/anggota/sync-master', [PerpustakaanController::class, 'syncAnggotaFromMaster'])->name('anggota.sync-master');
     Route::delete('/anggota/{id}', [PerpustakaanController::class, 'destroyAnggota'])->name('anggota.destroy');
     Route::get('/anggota/bebas-pustaka/{id}', [PerpustakaanController::class, 'cekBebasPustaka'])->name('anggota.bebas-pustaka');
     Route::post('/buku-tamu', [PerpustakaanController::class, 'storeBukuTamu'])->name('buku-tamu.store');

@@ -14,6 +14,7 @@ const props = defineProps({
   lokerList: Array,
   surveyList: Array,
   bukuTersedia: Array,
+  eksemplarTersedia: Array,
   anggotaSelector: Array,
   stats: Object,
   pengaturan: Object,
@@ -27,6 +28,11 @@ const activeTab = ref('aktif') // 'aktif' | 'quick_return' | 'riwayat' | 'denda'
 const searchQuery = ref(props.filters?.search || '')
 const selectedTenantId = ref(props.filters?.tenant_id || '')
 
+const perPageAktif = ref(Number(props.filters?.per_page_aktif) || 10)
+const perPageRiwayat = ref(Number(props.filters?.per_page_riwayat) || 10)
+const perPageDenda = ref(Number(props.filters?.per_page_denda) || 10)
+const perPageBaca = ref(Number(props.filters?.per_page_baca) || 10)
+
 const getSelectedTenantName = () => {
   if (!selectedTenantId.value) return 'Semua Sekolah (Agregat Global)'
   const found = props.tenants?.find(t => t.id === selectedTenantId.value)
@@ -34,31 +40,160 @@ const getSelectedTenantName = () => {
 }
 
 const applyTenantFilter = () => {
+  applySearch(1)
+}
+
+const applySearch = (page = 1) => {
   router.get('/perpustakaan/sirkulasi', {
     search: searchQuery.value || undefined,
     tenant_id: selectedTenantId.value || undefined,
+    per_page_aktif: perPageAktif.value || undefined,
+    p_aktif: page > 1 ? page : undefined,
+    per_page_riwayat: perPageRiwayat.value || undefined,
+    per_page_denda: perPageDenda.value || undefined,
+    per_page_baca: perPageBaca.value || undefined,
   }, {
     preserveState: true,
     preserveScroll: true,
   })
 }
 
-const applySearch = () => {
+const applyRiwayatPage = (page = 1) => {
   router.get('/perpustakaan/sirkulasi', {
     search: searchQuery.value || undefined,
     tenant_id: selectedTenantId.value || undefined,
+    per_page_aktif: perPageAktif.value || undefined,
+    per_page_riwayat: perPageRiwayat.value || undefined,
+    p_riwayat: page > 1 ? page : undefined,
+    per_page_denda: perPageDenda.value || undefined,
+    per_page_baca: perPageBaca.value || undefined,
   }, {
     preserveState: true,
     preserveScroll: true,
   })
+}
+
+const applyDendaPage = (page = 1) => {
+  router.get('/perpustakaan/sirkulasi', {
+    search: searchQuery.value || undefined,
+    tenant_id: selectedTenantId.value || undefined,
+    per_page_aktif: perPageAktif.value || undefined,
+    per_page_riwayat: perPageRiwayat.value || undefined,
+    per_page_denda: perPageDenda.value || undefined,
+    p_denda: page > 1 ? page : undefined,
+    per_page_baca: perPageBaca.value || undefined,
+  }, {
+    preserveState: true,
+    preserveScroll: true,
+  })
+}
+
+const applyBacaPage = (page = 1) => {
+  router.get('/perpustakaan/sirkulasi', {
+    search: searchQuery.value || undefined,
+    tenant_id: selectedTenantId.value || undefined,
+    per_page_aktif: perPageAktif.value || undefined,
+    per_page_riwayat: perPageRiwayat.value || undefined,
+    per_page_denda: perPageDenda.value || undefined,
+    per_page_baca: perPageBaca.value || undefined,
+    p_baca: page > 1 ? page : undefined,
+  }, {
+    preserveState: true,
+    preserveScroll: true,
+  })
+}
+
+const goToPage = (url) => {
+  if (!url) return
+  router.visit(url, {
+    preserveState: true,
+    preserveScroll: true,
+  })
+}
+
+const getSmartPaginationLinks = (pagination) => {
+  if (!pagination?.links || pagination.links.length === 0) return []
+  const rawLinks = pagination.links
+  const prevLink = rawLinks[0]
+  const nextLink = rawLinks[rawLinks.length - 1]
+  const pageLinks = rawLinks.slice(1, -1)
+  const current = pagination.current_page || 1
+  const last = pagination.last_page || (pageLinks.length ? Number(pageLinks[pageLinks.length - 1].label) || 1 : 1)
+
+  const result = []
+  result.push({
+    ...prevLink,
+    isPrev: true,
+    isNext: false,
+    label: prevLink.label,
+  })
+
+  if (last <= 7) {
+    pageLinks.forEach(l => {
+      result.push({
+        ...l,
+        isPrev: false,
+        isNext: false,
+        label: l.label,
+      })
+    })
+  } else {
+    const pagesToShow = new Set([1, last])
+    for (let p = current - 1; p <= current + 1; p++) {
+      if (p >= 1 && p <= last) pagesToShow.add(p)
+    }
+    const sortedPages = Array.from(pagesToShow).sort((a, b) => a - b)
+    let prevPage = null
+    sortedPages.forEach(p => {
+      if (prevPage !== null && p - prevPage > 1) {
+        result.push({
+          label: '...',
+          url: null,
+          active: false,
+          isPrev: false,
+          isNext: false,
+        })
+      }
+      const foundRaw = pageLinks.find(l => l.label == p.toString())
+      result.push({
+        label: p.toString(),
+        url: foundRaw ? foundRaw.url : null,
+        active: p === current,
+        isPrev: false,
+        isNext: false,
+      })
+      prevPage = p
+    })
+  }
+
+  result.push({
+    ...nextLink,
+    isPrev: false,
+    isNext: true,
+    label: nextLink.label,
+  })
+
+  return result
 }
 
 // -------------------------------------------------------------
-// MODAL PEMINJAMAN BUKU BARU
+// MODAL PEMINJAMAN BUKU BARU & LIVE AUTOCOMPLETE
 // -------------------------------------------------------------
 const isModalPinjamOpen = ref(false)
+const memberSearchKeyword = ref('')
+const isMemberDropdownOpen = ref(false)
+const selectedMember = ref(null)
+const isManualPeminjamMode = ref(false)
+
+const bukuSearchKeyword = ref('')
+const isBukuDropdownOpen = ref(false)
+const selectedBuku = ref(null)
+const selectedEksemplar = ref(null)
+
 const formPinjam = useForm({
   buku_id: '',
+  eksemplar_id: '',
+  barcode: '',
   peminjam_type: 'Siswa',
   peminjam_id: '',
   nama_peminjam: '',
@@ -69,22 +204,158 @@ const formPinjam = useForm({
   catatan: '',
 })
 
-const onSelectMember = (event) => {
-  const selectedId = event.target.value
-  const found = (props.anggotaSelector || []).find(m => m.id === selectedId)
-  if (found) {
-    formPinjam.peminjam_id = found.id
-    formPinjam.nama_peminjam = found.nama_lengkap
-    formPinjam.nomor_identitas = found.identitas_no
-    formPinjam.peminjam_type = found.tipe_anggota || 'Siswa'
-    formPinjam.kelas_unit = found.kelas_jurusan || '-'
+// Filter Live Anggota
+const filteredMembers = computed(() => {
+  const list = props.anggotaSelector || []
+  if (!memberSearchKeyword.value || memberSearchKeyword.value.trim() === '') {
+    return list.slice(0, 15)
   }
+  const q = memberSearchKeyword.value.toLowerCase().trim()
+  return list.filter(m =>
+    (m.nama_lengkap && m.nama_lengkap.toLowerCase().includes(q)) ||
+    (m.identitas_no && m.identitas_no.toLowerCase().includes(q)) ||
+    (m.no_anggota && m.no_anggota.toLowerCase().includes(q)) ||
+    (m.kelas_jurusan && m.kelas_jurusan.toLowerCase().includes(q))
+  ).slice(0, 20)
+})
+
+const selectMember = (m) => {
+  selectedMember.value = m
+  formPinjam.peminjam_id = m.id
+  formPinjam.nama_peminjam = m.nama_lengkap
+  formPinjam.nomor_identitas = m.identitas_no || ''
+  formPinjam.peminjam_type = m.tipe_anggota || 'Siswa'
+  formPinjam.kelas_unit = m.kelas_jurusan || '-'
+  memberSearchKeyword.value = m.nama_lengkap
+  isMemberDropdownOpen.value = false
+  isManualPeminjamMode.value = false
+}
+
+const clearMemberSelection = () => {
+  selectedMember.value = null
+  memberSearchKeyword.value = ''
+  formPinjam.peminjam_id = ''
+  formPinjam.nama_peminjam = ''
+  formPinjam.nomor_identitas = ''
+  formPinjam.peminjam_type = 'Siswa'
+  formPinjam.kelas_unit = ''
+  isManualPeminjamMode.value = false
+}
+
+const toggleManualPeminjamMode = () => {
+  isManualPeminjamMode.value = !isManualPeminjamMode.value
+  selectedMember.value = null
+  if (isManualPeminjamMode.value) {
+    formPinjam.peminjam_id = 'MANUAL-' + Date.now()
+    formPinjam.peminjam_type = 'Umum'
+    formPinjam.kelas_unit = 'Umum / Tamu'
+  } else {
+    formPinjam.peminjam_id = ''
+    formPinjam.peminjam_type = 'Siswa'
+    formPinjam.kelas_unit = ''
+  }
+}
+
+// Filter Live Buku & Eksemplar
+const filteredBukuAndEksemplar = computed(() => {
+  const q = bukuSearchKeyword.value ? bukuSearchKeyword.value.toLowerCase().trim() : ''
+  const eksemplarList = props.eksemplarTersedia || []
+  const bukuList = props.bukuTersedia || []
+
+  if (!q) {
+    return eksemplarList.length > 0 ? eksemplarList.slice(0, 15) : bukuList.slice(0, 15)
+  }
+
+  // Cari di eksemplar fisik terlebih dahulu
+  const matchedEksemplar = eksemplarList.filter(e =>
+    (e.barcode && e.barcode.toLowerCase().includes(q)) ||
+    (e.buku?.judul_buku && e.buku.judul_buku.toLowerCase().includes(q)) ||
+    (e.buku?.pengarang && e.buku.pengarang.toLowerCase().includes(q)) ||
+    (e.buku?.nomor_panggil && e.buku.nomor_panggil.toLowerCase().includes(q))
+  )
+
+  if (matchedEksemplar.length > 0) {
+    return matchedEksemplar.slice(0, 20)
+  }
+
+  // Fallback cari di judul buku
+  return bukuList.filter(b =>
+    (b.judul_buku && b.judul_buku.toLowerCase().includes(q)) ||
+    (b.pengarang && b.pengarang.toLowerCase().includes(q)) ||
+    (b.kode_buku && b.kode_buku.toLowerCase().includes(q)) ||
+    (b.nomor_panggil && b.nomor_panggil.toLowerCase().includes(q))
+  ).slice(0, 20)
+})
+
+const selectBukuOrEksemplar = (item) => {
+  if (item.bibliografi_id || item.barcode) {
+    // Ini item eksemplar
+    selectedEksemplar.value = item
+    selectedBuku.value = item.buku || null
+    formPinjam.buku_id = item.bibliografi_id
+    formPinjam.eksemplar_id = item.id
+    formPinjam.barcode = item.barcode
+    bukuSearchKeyword.value = `${item.buku?.judul_buku || 'Buku'} (${item.barcode})`
+  } else {
+    // Ini item buku umum
+    selectedBuku.value = item
+    selectedEksemplar.value = null
+    formPinjam.buku_id = item.id
+    formPinjam.eksemplar_id = ''
+    formPinjam.barcode = ''
+    bukuSearchKeyword.value = item.judul_buku
+  }
+  isBukuDropdownOpen.value = false
+}
+
+const clearBukuSelection = () => {
+  selectedBuku.value = null
+  selectedEksemplar.value = null
+  bukuSearchKeyword.value = ''
+  formPinjam.buku_id = ''
+  formPinjam.eksemplar_id = ''
+  formPinjam.barcode = ''
+}
+
+const calculateDueDate = (startDate, days) => {
+  if (!startDate) return '-'
+  const d = new Date(startDate)
+  d.setDate(d.getDate() + Number(days || 7))
+  return d.toISOString().split('T')[0]
+}
+
+const getOverdueInfo = (tglDeadline, tarif = 1000) => {
+  if (!tglDeadline) return { isOverdue: false, days: 0, estDenda: 0 }
+  const today = new Date().toISOString().split('T')[0]
+  if (tglDeadline < today) {
+    const d1 = new Date(tglDeadline)
+    const d2 = new Date(today)
+    const diffTime = Math.abs(d2 - d1)
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return {
+      isOverdue: true,
+      days: diffDays,
+      estDenda: diffDays * Number(tarif || 1000),
+    }
+  }
+  return { isOverdue: false, days: 0, estDenda: 0 }
+}
+
+const openModalPinjam = () => {
+  clearMemberSelection()
+  clearBukuSelection()
+  formPinjam.tanggal_pinjam = new Date().toISOString().split('T')[0]
+  formPinjam.durasi_hari = 7
+  formPinjam.catatan = ''
+  isModalPinjamOpen.value = true
 }
 
 const submitPinjam = () => {
   formPinjam.post('/perpustakaan/sirkulasi/pinjam', {
     onSuccess: () => {
       isModalPinjamOpen.value = false
+      clearMemberSelection()
+      clearBukuSelection()
       formPinjam.reset()
       formPinjam.tanggal_pinjam = new Date().toISOString().split('T')[0]
       formPinjam.durasi_hari = 7
@@ -127,29 +398,45 @@ const submitKembali = () => {
 const quickReturnBarcode = ref('')
 const quickReturnLoading = ref(false)
 const quickReturnResult = ref(null)
+const quickReturnSessionLogs = ref([])
 
 const submitQuickReturn = () => {
   if (!quickReturnBarcode.value) return
+  const scanned = quickReturnBarcode.value.trim()
   quickReturnLoading.value = true
   router.post('/perpustakaan/sirkulasi/quick-return', {
-    barcode: quickReturnBarcode.value
+    barcode: scanned
   }, {
     preserveScroll: true,
     onSuccess: () => {
+      const msg = `Eksemplar ${scanned} berhasil dikembalikan dan stok direstorasi.`
       quickReturnResult.value = {
         success: true,
-        message: `Eksemplar ${quickReturnBarcode.value} berhasil dikembalikan!`,
-        time: new Date().toLocaleTimeString()
+        message: msg,
+        time: new Date().toLocaleTimeString('id-ID')
       }
+      quickReturnSessionLogs.value.unshift({
+        barcode: scanned,
+        status: 'Sukses (Kembali)',
+        time: new Date().toLocaleTimeString('id-ID'),
+        success: true
+      })
       quickReturnBarcode.value = ''
       quickReturnLoading.value = false
     },
     onError: (errors) => {
+      const errMsg = Object.values(errors).join(', ')
       quickReturnResult.value = {
         success: false,
-        message: Object.values(errors).join(', '),
-        time: new Date().toLocaleTimeString()
+        message: errMsg,
+        time: new Date().toLocaleTimeString('id-ID')
       }
+      quickReturnSessionLogs.value.unshift({
+        barcode: scanned,
+        status: 'Gagal: ' + errMsg,
+        time: new Date().toLocaleTimeString('id-ID'),
+        success: false
+      })
       quickReturnLoading.value = false
     }
   })
@@ -375,7 +662,7 @@ const deleteLoker = (id) => {
         </div>
 
         <div class="flex flex-wrap items-center gap-2.5">
-          <Link :href="route('perpustakaan.kiosk')" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs">
+          <Link href="/perpustakaan/kiosk" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs">
             <i class="bi bi-display"></i>
             <span>Anjungan Kiosk (Tablet)</span>
           </Link>
@@ -383,7 +670,7 @@ const deleteLoker = (id) => {
             <i class="bi bi-upc-scan"></i>
             <span>Quick Return (Scan Kilat)</span>
           </button>
-          <button @click="isModalPinjamOpen = true" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-xs shadow-blue-500/20">
+          <button @click="openModalPinjam" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-xs shadow-blue-500/20">
             <i class="bi bi-plus-circle-fill"></i>
             <span>Transaksi Pinjam Baru</span>
           </button>
@@ -569,8 +856,12 @@ const deleteLoker = (id) => {
         <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
           <div class="relative w-full md:w-80">
             <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400"><i class="bi bi-search"></i></span>
-            <input v-model="searchQuery" @keyup.enter="applySearch" type="text" placeholder="Cari nama peminjam, nomor transaksi, judul..." class="w-full pl-9 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none" />
+            <input v-model="searchQuery" @keyup.enter="applySearch(1)" type="text" placeholder="Cari nama peminjam, nomor transaksi, judul..." class="w-full pl-9 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none" />
           </div>
+          <button @click="openModalPinjam" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs shrink-0">
+            <i class="bi bi-plus-circle-fill"></i>
+            <span>+ Catat Pinjam Baru</span>
+          </button>
         </div>
 
         <div class="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
@@ -582,7 +873,7 @@ const deleteLoker = (id) => {
                   <th class="py-3.5 px-3">Peminjam</th>
                   <th class="py-3.5 px-3">Buku & Eksemplar</th>
                   <th class="py-3.5 px-3">Jatuh Tempo</th>
-                  <th class="py-3.5 px-3 text-center">Status</th>
+                  <th class="py-3.5 px-3 text-center">Status & Estimasi Denda</th>
                   <th class="py-3.5 px-4 text-center">Aksi Sirkulasi</th>
                 </tr>
               </thead>
@@ -594,24 +885,34 @@ const deleteLoker = (id) => {
                   </td>
                   <td class="py-3 px-3">
                     <div class="font-extrabold text-slate-800">{{ item.nama_peminjam }}</div>
-                    <div class="text-[10px] text-slate-400">{{ item.peminjam_type }} • {{ item.kelas_unit }}</div>
+                    <div class="text-[10px] text-slate-400 font-mono">{{ item.peminjam_type }} • {{ item.kelas_unit }}</div>
                   </td>
                   <td class="py-3 px-3">
                     <div class="font-bold text-blue-700">{{ item.buku?.judul_buku || '-' }}</div>
                     <div class="text-[10px] text-slate-400 font-mono">Barcode: {{ item.eksemplar?.barcode || '-' }}</div>
                   </td>
                   <td class="py-3 px-3 font-semibold text-slate-700">
-                    <div>{{ item.tanggal_harus_kembali }}</div>
+                    <div class="font-bold">{{ item.tanggal_harus_kembali }}</div>
                     <div v-if="item.jumlah_perpanjangan > 0" class="text-[10px] text-indigo-600 font-bold">Perpanjang: {{ item.jumlah_perpanjangan }}x</div>
                   </td>
                   <td class="py-3 px-3 text-center">
-                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200">
-                      Dipinjam
-                    </span>
+                    <div v-if="getOverdueInfo(item.tanggal_harus_kembali).isOverdue" class="inline-flex flex-col items-center gap-0.5">
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1">
+                        <i class="bi bi-clock-history"></i> Terlambat {{ getOverdueInfo(item.tanggal_harus_kembali).days }} Hari
+                      </span>
+                      <span class="text-[10px] font-black text-amber-700">
+                        Est: Rp {{ getOverdueInfo(item.tanggal_harus_kembali, item.tarif_denda_harian || 1000).estDenda.toLocaleString('id-ID') }}
+                      </span>
+                    </div>
+                    <div v-else class="inline-flex items-center">
+                      <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
+                        <i class="bi bi-check2-circle"></i> Dipinjam (Aktif)
+                      </span>
+                    </div>
                   </td>
                   <td class="py-3 px-4 text-center">
                     <div class="flex items-center justify-center gap-1.5">
-                      <button @click="openModalKembali(item)" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold transition flex items-center gap-1 shadow-2xs">
+                      <button @click="openModalKembali(item)" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold transition flex items-center gap-1 shadow-2xs" title="Proses Pengembalian">
                         <i class="bi bi-box-arrow-in-left"></i> Kembali
                       </button>
                       <button @click="perpanjangPinjam(item.id)" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Perpanjang 7 Hari">
@@ -625,6 +926,52 @@ const deleteLoker = (id) => {
                 </tr>
               </tbody>
             </table>
+          </div>
+          <!-- Pagination Footer Tab Aktif -->
+          <div v-if="sirkulasiAktif?.total" class="px-4 py-3 bg-slate-50/50 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+            <div class="flex items-center gap-2">
+              <span>Tampilkan</span>
+              <select v-model="perPageAktif" @change="applySearch(1)" class="h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                <option :value="5">5</option>
+                <option :value="10">10</option>
+                <option :value="15">15</option>
+                <option :value="25">25</option>
+                <option :value="50">50</option>
+                <option :value="100">100</option>
+              </select>
+              <span>baris per halaman</span>
+              <span class="text-slate-300 hidden sm:inline">|</span>
+              <span class="whitespace-nowrap">
+                Menampilkan <span class="font-bold text-slate-800">{{ sirkulasiAktif.from || 1 }}</span> s.d. <span class="font-bold text-slate-800">{{ sirkulasiAktif.to || sirkulasiAktif.total }}</span> dari <span class="font-bold text-slate-800">{{ sirkulasiAktif.total }}</span> transaksi
+              </span>
+            </div>
+
+            <!-- Smart Windowing Pagination Links -->
+            <div v-if="sirkulasiAktif.links && sirkulasiAktif.links.length > 3" class="flex items-center gap-1 shrink-0 flex-wrap">
+              <template v-for="(link, i) in getSmartPaginationLinks(sirkulasiAktif)" :key="i">
+                <button v-if="link.url && !link.active" 
+                        type="button"
+                        @click="goToPage(link.url)"
+                        class="min-w-[32px] h-8 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs"
+                        :title="link.isPrev ? 'Halaman Sebelumnya' : (link.isNext ? 'Halaman Berikutnya' : 'Halaman ' + link.label)">
+                  <i v-if="link.isPrev" class="bi bi-chevron-left text-xs"></i>
+                  <i v-else-if="link.isNext" class="bi bi-chevron-right text-xs"></i>
+                  <span v-else>{{ link.label }}</span>
+                </button>
+                <span v-else-if="link.active" 
+                      class="min-w-[32px] h-8 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center bg-blue-600 text-white shadow-xs">
+                  <i v-if="link.isPrev" class="bi bi-chevron-left text-xs"></i>
+                  <i v-else-if="link.isNext" class="bi bi-chevron-right text-xs"></i>
+                  <span v-else>{{ link.label }}</span>
+                </span>
+                <span v-else 
+                      class="min-w-[32px] h-8 px-2 text-xs font-bold flex items-center justify-center text-slate-400">
+                  <i v-if="link.isPrev" class="bi bi-chevron-left text-xs text-slate-300"></i>
+                  <i v-else-if="link.isNext" class="bi bi-chevron-right text-xs text-slate-300"></i>
+                  <span v-else>{{ link.label }}</span>
+                </span>
+              </template>
+            </div>
           </div>
         </div>
       </div>
@@ -651,6 +998,41 @@ const deleteLoker = (id) => {
               <i class="bi" :class="quickReturnResult.success ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill'"></i>
               <span>{{ quickReturnResult.message }} ({{ quickReturnResult.time }})</span>
             </div>
+          </div>
+        </div>
+
+        <!-- Session Scan History Table -->
+        <div v-if="quickReturnSessionLogs.length > 0" class="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-5 space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="font-bold text-slate-800 text-xs flex items-center gap-2">
+              <i class="bi bi-clock-history text-blue-600"></i>
+              <span>Log Pemindaian Sesi Berjalan ({{ quickReturnSessionLogs.length }} Scan)</span>
+            </h4>
+            <button @click="quickReturnSessionLogs = []" class="text-xs text-slate-400 hover:text-rose-600 transition">
+              Bersihkan Log
+            </button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-50 text-slate-500 font-bold border-b border-slate-200/80">
+                  <th class="py-2.5 px-3">Waktu</th>
+                  <th class="py-2.5 px-3">Barcode Buku</th>
+                  <th class="py-2.5 px-3">Status Pengembalian</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 font-medium">
+                <tr v-for="(log, idx) in quickReturnSessionLogs" :key="idx" class="hover:bg-slate-50">
+                  <td class="py-2 px-3 text-slate-400 font-mono">{{ log.time }}</td>
+                  <td class="py-2 px-3 font-mono font-bold text-slate-800">{{ log.barcode }}</td>
+                  <td class="py-2 px-3">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold" :class="log.success ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'">
+                      {{ log.status }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -694,6 +1076,53 @@ const deleteLoker = (id) => {
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- Pagination Footer Tab Riwayat -->
+          <div v-if="sirkulasiRiwayat?.total" class="px-4 py-3 bg-slate-50/50 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+            <div class="flex items-center gap-2">
+              <span>Tampilkan</span>
+              <select v-model="perPageRiwayat" @change="applyRiwayatPage(1)" class="h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                <option :value="5">5</option>
+                <option :value="10">10</option>
+                <option :value="15">15</option>
+                <option :value="25">25</option>
+                <option :value="50">50</option>
+                <option :value="100">100</option>
+              </select>
+              <span>baris per halaman</span>
+              <span class="text-slate-300 hidden sm:inline">|</span>
+              <span class="whitespace-nowrap">
+                Menampilkan <span class="font-bold text-slate-800">{{ sirkulasiRiwayat.from || 1 }}</span> s.d. <span class="font-bold text-slate-800">{{ sirkulasiRiwayat.to || sirkulasiRiwayat.total }}</span> dari <span class="font-bold text-slate-800">{{ sirkulasiRiwayat.total }}</span> riwayat
+              </span>
+            </div>
+
+            <!-- Smart Windowing Pagination Links -->
+            <div v-if="sirkulasiRiwayat.links && sirkulasiRiwayat.links.length > 3" class="flex items-center gap-1 shrink-0 flex-wrap">
+              <template v-for="(link, i) in getSmartPaginationLinks(sirkulasiRiwayat)" :key="i">
+                <button v-if="link.url && !link.active" 
+                        type="button"
+                        @click="goToPage(link.url)"
+                        class="min-w-[32px] h-8 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs"
+                        :title="link.isPrev ? 'Halaman Sebelumnya' : (link.isNext ? 'Halaman Berikutnya' : 'Halaman ' + link.label)">
+                  <i v-if="link.isPrev" class="bi bi-chevron-left text-xs"></i>
+                  <i v-else-if="link.isNext" class="bi bi-chevron-right text-xs"></i>
+                  <span v-else>{{ link.label }}</span>
+                </button>
+                <span v-else-if="link.active" 
+                      class="min-w-[32px] h-8 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center bg-blue-600 text-white shadow-xs">
+                  <i v-if="link.isPrev" class="bi bi-chevron-left text-xs"></i>
+                  <i v-else-if="link.isNext" class="bi bi-chevron-right text-xs"></i>
+                  <span v-else>{{ link.label }}</span>
+                </span>
+                <span v-else 
+                      class="min-w-[32px] h-8 px-2 text-xs font-bold flex items-center justify-center text-slate-400">
+                  <i v-if="link.isPrev" class="bi bi-chevron-left text-xs text-slate-300"></i>
+                  <i v-else-if="link.isNext" class="bi bi-chevron-right text-xs text-slate-300"></i>
+                  <span v-else>{{ link.label }}</span>
+                </span>
+              </template>
+            </div>
           </div>
         </div>
       </div>
@@ -749,6 +1178,53 @@ const deleteLoker = (id) => {
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- Pagination Footer Tab Denda -->
+          <div v-if="dendaList?.total" class="px-4 py-3 bg-slate-50/50 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+            <div class="flex items-center gap-2">
+              <span>Tampilkan</span>
+              <select v-model="perPageDenda" @change="applyDendaPage(1)" class="h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                <option :value="5">5</option>
+                <option :value="10">10</option>
+                <option :value="15">15</option>
+                <option :value="25">25</option>
+                <option :value="50">50</option>
+                <option :value="100">100</option>
+              </select>
+              <span>baris per halaman</span>
+              <span class="text-slate-300 hidden sm:inline">|</span>
+              <span class="whitespace-nowrap">
+                Menampilkan <span class="font-bold text-slate-800">{{ dendaList.from || 1 }}</span> s.d. <span class="font-bold text-slate-800">{{ dendaList.to || dendaList.total }}</span> dari <span class="font-bold text-slate-800">{{ dendaList.total }}</span> catatan denda
+              </span>
+            </div>
+
+            <!-- Smart Windowing Pagination Links -->
+            <div v-if="dendaList.links && dendaList.links.length > 3" class="flex items-center gap-1 shrink-0 flex-wrap">
+              <template v-for="(link, i) in getSmartPaginationLinks(dendaList)" :key="i">
+                <button v-if="link.url && !link.active" 
+                        type="button"
+                        @click="goToPage(link.url)"
+                        class="min-w-[32px] h-8 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs"
+                        :title="link.isPrev ? 'Halaman Sebelumnya' : (link.isNext ? 'Halaman Berikutnya' : 'Halaman ' + link.label)">
+                  <i v-if="link.isPrev" class="bi bi-chevron-left text-xs"></i>
+                  <i v-else-if="link.isNext" class="bi bi-chevron-right text-xs"></i>
+                  <span v-else>{{ link.label }}</span>
+                </button>
+                <span v-else-if="link.active" 
+                      class="min-w-[32px] h-8 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center bg-blue-600 text-white shadow-xs">
+                  <i v-if="link.isPrev" class="bi bi-chevron-left text-xs"></i>
+                  <i v-else-if="link.isNext" class="bi bi-chevron-right text-xs"></i>
+                  <span v-else>{{ link.label }}</span>
+                </span>
+                <span v-else 
+                      class="min-w-[32px] h-8 px-2 text-xs font-bold flex items-center justify-center text-slate-400">
+                  <i v-if="link.isPrev" class="bi bi-chevron-left text-xs text-slate-300"></i>
+                  <i v-else-if="link.isNext" class="bi bi-chevron-right text-xs text-slate-300"></i>
+                  <span v-else>{{ link.label }}</span>
+                </span>
+              </template>
+            </div>
           </div>
         </div>
       </div>
@@ -866,6 +1342,53 @@ const deleteLoker = (id) => {
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- Pagination Footer Tab Baca -->
+          <div v-if="bacaList?.total" class="px-4 py-3 bg-slate-50/50 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+            <div class="flex items-center gap-2">
+              <span>Tampilkan</span>
+              <select v-model="perPageBaca" @change="applyBacaPage(1)" class="h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                <option :value="5">5</option>
+                <option :value="10">10</option>
+                <option :value="15">15</option>
+                <option :value="25">25</option>
+                <option :value="50">50</option>
+                <option :value="100">100</option>
+              </select>
+              <span>baris per halaman</span>
+              <span class="text-slate-300 hidden sm:inline">|</span>
+              <span class="whitespace-nowrap">
+                Menampilkan <span class="font-bold text-slate-800">{{ bacaList.from || 1 }}</span> s.d. <span class="font-bold text-slate-800">{{ bacaList.to || bacaList.total }}</span> dari <span class="font-bold text-slate-800">{{ bacaList.total }}</span> pembacaan
+              </span>
+            </div>
+
+            <!-- Smart Windowing Pagination Links -->
+            <div v-if="bacaList.links && bacaList.links.length > 3" class="flex items-center gap-1 shrink-0 flex-wrap">
+              <template v-for="(link, i) in getSmartPaginationLinks(bacaList)" :key="i">
+                <button v-if="link.url && !link.active" 
+                        type="button"
+                        @click="goToPage(link.url)"
+                        class="min-w-[32px] h-8 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs"
+                        :title="link.isPrev ? 'Halaman Sebelumnya' : (link.isNext ? 'Halaman Berikutnya' : 'Halaman ' + link.label)">
+                  <i v-if="link.isPrev" class="bi bi-chevron-left text-xs"></i>
+                  <i v-else-if="link.isNext" class="bi bi-chevron-right text-xs"></i>
+                  <span v-else>{{ link.label }}</span>
+                </button>
+                <span v-else-if="link.active" 
+                      class="min-w-[32px] h-8 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center bg-blue-600 text-white shadow-xs">
+                  <i v-if="link.isPrev" class="bi bi-chevron-left text-xs"></i>
+                  <i v-else-if="link.isNext" class="bi bi-chevron-right text-xs"></i>
+                  <span v-else>{{ link.label }}</span>
+                </span>
+                <span v-else 
+                      class="min-w-[32px] h-8 px-2 text-xs font-bold flex items-center justify-center text-slate-400">
+                  <i v-if="link.isPrev" class="bi bi-chevron-left text-xs text-slate-300"></i>
+                  <i v-else-if="link.isNext" class="bi bi-chevron-right text-xs text-slate-300"></i>
+                  <span v-else>{{ link.label }}</span>
+                </span>
+              </template>
+            </div>
           </div>
         </div>
       </div>
@@ -990,7 +1513,7 @@ const deleteLoker = (id) => {
             </div>
             <p class="text-xs text-slate-500 mt-0.5">Hasil rekapitulasi penilaian kepuasan pengunjung melalui Kiosk dan formulir mandiri.</p>
           </div>
-          <Link :href="route('perpustakaan.kiosk')" class="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs">
+          <Link href="/perpustakaan/kiosk" class="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs">
             <i class="bi bi-tablet"></i> Buka Kiosk Survei
           </Link>
         </div>
@@ -1087,77 +1610,228 @@ const deleteLoker = (id) => {
       </div>
     </div>
 
-    <!-- ============================================================== -->
-    <!-- MODAL POPUP: TRANSAKSI PINJAM BUKU                             -->
-    <!-- ============================================================== -->
+    <!-- MODAL POPUP: TRANSAKSI PINJAM BUKU (LIVE SEARCH ANGGOTA & SCAN BARCODE) -->
     <Teleport to="body">
       <div v-if="isModalPinjamOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-        <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-xl w-full p-6 animate-in fade-in zoom-in-95 duration-200 text-xs">
-          <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-            <div>
-              <h3 class="text-base font-black text-slate-800">Transaksi Peminjaman Buku</h3>
-              <p class="text-xs text-slate-500">Perekaman peminjaman buku sirkulasi untuk pemustaka.</p>
+        <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-xs">
+          <!-- Header Modal -->
+          <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg font-bold shrink-0">
+                <i class="bi bi-journal-plus"></i>
+              </div>
+              <div>
+                <h3 class="text-base font-black text-slate-800">Transaksi Peminjaman Buku Sirkulasi</h3>
+                <p class="text-xs text-slate-500">Perekaman peminjaman buku berbasis scan barcode eksemplar fisik dan kartu anggota.</p>
+              </div>
             </div>
-            <button @click="isModalPinjamOpen = false" class="text-slate-400 hover:text-slate-600"><i class="bi bi-x-lg"></i></button>
+            <button @click="isModalPinjamOpen = false" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition">
+              <i class="bi bi-x-lg"></i>
+            </button>
           </div>
 
-          <form @submit.prevent="submitPinjam" class="space-y-3.5">
-            <div>
-              <label class="font-bold text-slate-700 block mb-1">Pilih Anggota / Siswa / Guru *</label>
-              <select @change="onSelectMember" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-medium">
-                <option value="">-- Pilih dari Direktori Anggota --</option>
-                <option v-for="m in anggotaSelector" :key="m.id" :value="m.id">
-                  {{ m.nama_lengkap }} ({{ m.identitas_no }}) - {{ m.tipe_anggota }}
-                </option>
-              </select>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="font-bold text-slate-700 block mb-1">Nama Peminjam *</label>
-                <input v-model="formPinjam.nama_peminjam" type="text" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-medium" />
+          <!-- Form Body -->
+          <form @submit.prevent="submitPinjam" class="p-6 overflow-y-auto space-y-4 grow">
+            <!-- SECTION 1: PEMINJAM -->
+            <div class="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="font-black text-slate-800 text-xs flex items-center gap-1.5">
+                  <i class="bi bi-person-badge-fill text-blue-600"></i> 1. Identitas Peminjam
+                </span>
+                <button type="button" @click="toggleManualPeminjamMode" class="text-blue-600 hover:underline text-[11px] font-bold">
+                  {{ isManualPeminjamMode ? '← Pilih dari Database Anggota' : 'Ketik Manual / Tamu Luar →' }}
+                </button>
               </div>
-              <div>
-                <label class="font-bold text-slate-700 block mb-1">Tipe Pemustaka</label>
-                <select v-model="formPinjam.peminjam_type" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-medium">
-                  <option value="Siswa">Siswa</option>
-                  <option value="Guru">Guru</option>
-                  <option value="Tendik">Tendik</option>
-                  <option value="Umum">Umum / Tamu</option>
-                </select>
+
+              <!-- Mode Database Anggota -->
+              <div v-if="!isManualPeminjamMode">
+                <!-- Card Peminjam Terpilih -->
+                <div v-if="selectedMember" class="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between gap-3">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                      {{ selectedMember.nama_lengkap ? selectedMember.nama_lengkap.charAt(0).toUpperCase() : 'A' }}
+                    </div>
+                    <div>
+                      <div class="font-black text-slate-800">{{ selectedMember.nama_lengkap }}</div>
+                      <div class="text-[10px] text-slate-500 font-mono">ID: {{ selectedMember.identitas_no || selectedMember.no_anggota }} • {{ selectedMember.tipe_anggota }} • {{ selectedMember.kelas_jurusan || '-' }}</div>
+                    </div>
+                  </div>
+                  <button type="button" @click="clearMemberSelection" class="px-2.5 py-1 text-[10px] font-bold bg-white text-rose-600 border border-rose-200 hover:bg-rose-50 rounded-lg transition shrink-0">
+                    Ganti
+                  </button>
+                </div>
+
+                <!-- Input Search Anggota -->
+                <div v-else class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <i class="bi bi-search"></i>
+                  </span>
+                  <input v-model="memberSearchKeyword" 
+                         @focus="isMemberDropdownOpen = true"
+                         type="text" 
+                         placeholder="Ketik nama siswa, guru, NISN, atau kelas..." 
+                         class="w-full pl-9 pr-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none" />
+
+                  <!-- Dropdown Hasil Pencarian Anggota -->
+                  <div v-if="isMemberDropdownOpen && filteredMembers.length > 0" 
+                       class="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-20 max-h-48 overflow-y-auto divide-y divide-slate-100">
+                    <div v-for="m in filteredMembers" 
+                         :key="m.id" 
+                         @click="selectMember(m)"
+                         class="p-2.5 hover:bg-blue-50/60 cursor-pointer transition flex items-center justify-between gap-2">
+                      <div class="flex items-center gap-2 min-w-0">
+                        <div class="w-6 h-6 rounded bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-[10px] shrink-0">
+                          {{ m.nama_lengkap ? m.nama_lengkap.charAt(0).toUpperCase() : 'A' }}
+                        </div>
+                        <div class="truncate">
+                          <div class="font-bold text-slate-800 truncate">{{ m.nama_lengkap }}</div>
+                          <div class="text-[10px] text-slate-400 font-mono">ID: {{ m.identitas_no || '-' }} • {{ m.kelas_jurusan || '-' }}</div>
+                        </div>
+                      </div>
+                      <span class="px-2 py-0.5 rounded text-[10px] font-bold shrink-0 bg-slate-100 text-slate-700">
+                        {{ m.tipe_anggota }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mode Manual Peminjam -->
+              <div v-else class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="font-bold text-slate-700 block mb-1">Nama Peminjam *</label>
+                  <input v-model="formPinjam.nama_peminjam" type="text" required placeholder="Nama lengkap peminjam..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none" />
+                </div>
+                <div>
+                  <label class="font-bold text-slate-700 block mb-1">Tipe Pemustaka</label>
+                  <select v-model="formPinjam.peminjam_type" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                    <option value="Siswa">Siswa</option>
+                    <option value="Guru">Guru</option>
+                    <option value="Tendik">Tendik</option>
+                    <option value="Alumni">Alumni</option>
+                    <option value="Umum">Umum / Tamu</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="font-bold text-slate-700 block mb-1">Nomor Identitas (NISN / NIP)</label>
+                  <input v-model="formPinjam.nomor_identitas" type="text" placeholder="NISN / NIP / KTP..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono focus:ring-2 focus:ring-blue-600 focus:outline-none" />
+                </div>
+                <div>
+                  <label class="font-bold text-slate-700 block mb-1">Kelas / Unit Kerja</label>
+                  <input v-model="formPinjam.kelas_unit" type="text" placeholder="Contoh: XII-RPL-1" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none" />
+                </div>
               </div>
             </div>
 
-            <div>
-              <label class="font-bold text-slate-700 block mb-1">Pilih Judul Buku Tersedia *</label>
-              <select v-model="formPinjam.buku_id" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-medium">
-                <option value="">-- Pilih Judul Buku --</option>
-                <option v-for="b in bukuTersedia" :key="b.id" :value="b.id">
-                  {{ b.judul_buku }} (Tersedia: {{ b.jumlah_tersedia }} kopi)
-                </option>
-              </select>
+            <!-- SECTION 2: BUKU & EKSEMPLAR -->
+            <div class="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-3">
+              <span class="font-black text-slate-800 text-xs flex items-center gap-1.5">
+                <i class="bi bi-book-half text-blue-600"></i> 2. Koleksi Buku / Barcode Eksemplar Fisik
+              </span>
+
+              <!-- Card Buku & Eksemplar Terpilih -->
+              <div v-if="selectedBuku || selectedEksemplar" class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
+                    <i class="bi bi-journal-bookmark-fill"></i>
+                  </div>
+                  <div>
+                    <div class="font-black text-slate-800">{{ selectedBuku?.judul_buku || selectedEksemplar?.buku?.judul_buku }}</div>
+                    <div class="text-[10px] text-slate-500 font-mono flex items-center gap-2">
+                      <span v-if="selectedEksemplar?.barcode" class="font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded">Barcode: {{ selectedEksemplar.barcode }}</span>
+                      <span v-if="selectedBuku?.pengarang || selectedEksemplar?.buku?.pengarang">Pengarang: {{ selectedBuku?.pengarang || selectedEksemplar?.buku?.pengarang }}</span>
+                      <span v-if="selectedBuku?.nomor_panggil || selectedEksemplar?.buku?.nomor_panggil">No. Panggil: {{ selectedBuku?.nomor_panggil || selectedEksemplar?.buku?.nomor_panggil }}</span>
+                    </div>
+                  </div>
+                </div>
+                <button type="button" @click="clearBukuSelection" class="px-2.5 py-1 text-[10px] font-bold bg-white text-rose-600 border border-rose-200 hover:bg-rose-50 rounded-lg transition shrink-0">
+                  Ganti
+                </button>
+              </div>
+
+              <!-- Input Search Buku / Scan Barcode -->
+              <div v-else class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <i class="bi bi-upc-scan"></i>
+                </span>
+                <input v-model="bukuSearchKeyword" 
+                       @focus="isBukuDropdownOpen = true"
+                       type="text" 
+                       placeholder="Pindai barcode stiker buku atau ketik judul/pengarang..." 
+                       class="w-full pl-9 pr-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none" />
+
+                <!-- Dropdown Hasil Pencarian Buku / Eksemplar -->
+                <div v-if="isBukuDropdownOpen && filteredBukuAndEksemplar.length > 0" 
+                     class="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-20 max-h-48 overflow-y-auto divide-y divide-slate-100">
+                  <div v-for="item in filteredBukuAndEksemplar" 
+                       :key="item.id" 
+                       @click="selectBukuOrEksemplar(item)"
+                       class="p-2.5 hover:bg-blue-50/60 cursor-pointer transition flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2 min-w-0">
+                      <div class="w-6 h-6 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-[10px] shrink-0">
+                        <i class="bi bi-book"></i>
+                      </div>
+                      <div class="truncate">
+                        <div class="font-bold text-slate-800 truncate">{{ item.judul_buku || item.buku?.judul_buku }}</div>
+                        <div class="text-[10px] text-slate-400 font-mono">
+                          <span v-if="item.barcode" class="text-blue-700 font-bold me-1.5">Barcode: {{ item.barcode }}</span>
+                          <span>{{ item.pengarang || item.buku?.pengarang || '-' }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold shrink-0 bg-emerald-50 text-emerald-700">
+                      Tersedia
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
+            <!-- SECTION 3: TANGGAL, DURASI & JATUH TEMPO -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label class="font-bold text-slate-700 block mb-1">Tanggal Pinjam *</label>
-                <input v-model="formPinjam.tanggal_pinjam" type="date" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-medium" />
+                <input v-model="formPinjam.tanggal_pinjam" type="date" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none" />
               </div>
               <div>
-                <label class="font-bold text-slate-700 block mb-1">Durasi Peminjaman (Hari) *</label>
-                <input v-model="formPinjam.durasi_hari" type="number" min="1" max="60" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-medium font-bold text-blue-700" />
+                <div class="flex items-center justify-between mb-1">
+                  <label class="font-bold text-slate-700">Durasi Pinjam (Hari) *</label>
+                  <span class="text-[11px] font-extrabold text-blue-700">
+                    Jatuh Tempo: {{ calculateDueDate(formPinjam.tanggal_pinjam, formPinjam.durasi_hari) }}
+                  </span>
+                </div>
+                <input v-model="formPinjam.durasi_hari" type="number" min="1" max="60" required class="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-white font-black text-blue-700 focus:ring-2 focus:ring-blue-600 focus:outline-none mb-1.5" />
+                
+                <!-- Quick Duration Shortcuts -->
+                <div class="flex items-center gap-1.5">
+                  <button v-for="d in [3, 7, 14, 30]" 
+                          :key="d" 
+                          type="button" 
+                          @click="formPinjam.durasi_hari = d"
+                          class="flex-1 py-1 rounded-lg text-[10px] font-bold border transition text-center"
+                          :class="formPinjam.durasi_hari === d ? 'bg-blue-600 text-white border-blue-600 shadow-2xs' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'">
+                    {{ d }} Hari
+                  </button>
+                </div>
               </div>
             </div>
 
+            <!-- SECTION 4: CATATAN -->
             <div>
-              <label class="font-bold text-slate-700 block mb-1">Catatan Transaksi</label>
-              <input v-model="formPinjam.catatan" type="text" placeholder="Catatan opsional..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-medium" />
+              <label class="font-bold text-slate-700 block mb-1">Catatan Tambahan (Opsional)</label>
+              <input v-model="formPinjam.catatan" type="text" placeholder="Contoh: Keperluan lomba karya ilmiah / referensi tugas akhir..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none" />
             </div>
 
+            <!-- Footer Modal -->
             <div class="pt-4 flex items-center justify-end gap-2 border-t border-slate-100">
-              <button type="button" @click="isModalPinjamOpen = false" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition">Batal</button>
-              <button type="submit" :disabled="formPinjam.processing" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition shadow-xs">
-                Proses Peminjaman
+              <button type="button" @click="isModalPinjamOpen = false" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition">
+                Batal
+              </button>
+              <button type="submit" 
+                      :disabled="formPinjam.processing || (!formPinjam.buku_id) || (!formPinjam.nama_peminjam)"
+                      class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold transition flex items-center gap-2 shadow-xs">
+                <i class="bi bi-check-circle-fill"></i>
+                <span>Proses Peminjaman</span>
               </button>
             </div>
           </form>
