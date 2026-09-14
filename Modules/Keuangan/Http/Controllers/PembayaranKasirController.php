@@ -8,110 +8,194 @@ use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Modules\Core\Entities\Tenant;
 use Modules\Keuangan\Entities\TagihanSiswa;
 use Modules\Keuangan\Entities\TransaksiPembayaran;
 use Modules\Keuangan\Entities\KasBank;
+use Modules\Keuangan\Entities\PengaturanKeuangan;
+use Modules\Keuangan\Entities\KeuanganAuditLog;
 use Modules\Siswa\Entities\Siswa;
 
 class PembayaranKasirController extends Controller
 {
-    /**
-     * Tampilan Kasir Pembayaran Siswa Real-time
-     */
     public function index(Request $request): InertiaResponse|JsonResponse
     {
-        $siswaId = $request->input('siswa_id');
-        $siswa = null;
-        $tagihanList = [];
+        $user = Auth::user();
+        $isSuperAdmin = $user ? $user->isSuperAdmin() : false;
+        $selectedTenantId = $request->query('tenant_id');
+        $tenantId = ($isSuperAdmin && !empty($selectedTenantId)) ? $selectedTenantId : (session('tenant_id') ?? $user?->tenant_id);
 
-        if (!empty($siswaId)) {
-            $siswa = Siswa::find($siswaId);
-            if ($siswa) {
-                $tagihanList = TagihanSiswa::with('pos')
-                    ->where('siswa_id', $siswaId)
-                    ->whereIn('status_pembayaran', ['Belum Bayar', 'Sebagian'])
-                    ->orderBy('created_at', 'asc')
-                    ->get();
-            }
-        }
+        $kasList = KasBank::when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))->where('is_active', true)->orderBy('created_at', 'asc')->get();
+        $kelasList = DB::table('akademik.kelas')->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))->where('is_active', true)->orderBy('nama_kelas', 'asc')->get(['id', 'nama_kelas', 'kode_kelas']);
+        $pengaturan = PengaturanKeuangan::where('tenant_id', $tenantId)->first();
+        $tenantsList = $isSuperAdmin ? Tenant::orderBy('nama_sekolah', 'asc')->get(['id', 'nama_sekolah']) : [];
 
-        $kasList = KasBank::where('is_active', true)->get();
+        $data = [
+            'kasList'          => $kasList,
+            'kelasList'        => $kelasList,
+            'pengaturan'       => $pengaturan,
+            'isSuperAdmin'     => $isSuperAdmin,
+            'tenantsList'      => $tenantsList,
+            'selectedTenantId' => $selectedTenantId,
+        ];
 
         if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'data' => compact('siswa', 'tagihanList', 'kasList'),
-            ]);
+            return response()->json(['success' => true, 'data' => $data]);
         }
 
-        return Inertia::render('Keuangan/Kasir/Index', [
-            'siswa'       => $siswa,
-            'tagihanList' => $tagihanList,
-            'kasList'     => $kasList,
+        return Inertia::render('Keuangan/Kasir/Index', $data);
+    }
+
+    /**
+     * API Ambil Tagihan Siswa Terpilih
+     */
+    public function getSiswaTagihan(Request $request, string $siswaId): JsonResponse
+    {
+        $siswa = Siswa::find($siswaId);
+
+        if (!$siswa) {
+            return response()->json(['success' => false, 'message' => 'Siswa tidak ditemukan.'], 404);
+        }
+
+        $tagihanList = TagihanSiswa::with('pos:id,nama_pos,tipe_periode')
+            ->where('siswa_id', $siswaId)
+            ->whereIn('status_pembayaran', ['Belum Bayar', 'Sebagian'])
+            ->orderBy('tahun', 'asc')
+            ->orderBy('bulan', 'asc')
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        $riwayatTransaksi = TransaksiPembayaran::with(['tagihan.pos', 'kas', 'kasir:id,nama_lengkap'])
+            ->where('siswa_id', $siswaId)
+            ->where('status_transaksi', 'SUCCESS')
+            ->orderBy('tanggal_bayar', 'desc')
+            ->limit(15)
+            ->get();
+
+        return response()->json([
+            'success'          => true,
+            'siswa'            => $siswa,
+            'tagihanList'      => $tagihanList,
+            'riwayatTransaksi' => $riwayatTransaksi,
         ]);
     }
 
     /**
-     * Proses Transaksi Pembayaran Kasir
+     * Proses Pembayaran Multi-Invoice Kasir Real-time
      */
     public function bayar(Request $request): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
-            'tagihan_id'        => 'required|uuid|exists:keuangan.tagihan_siswa,id',
-            'nominal_bayar'     => 'required|numeric|min:1000',
-            'metode_pembayaran' => 'required|string|in:Tunai,Transfer Bank,QRIS,Payment Gateway',
-            'kas_id'            => 'nullable|uuid|exists:keuangan.kas_bank,id',
+            'siswa_id'          => 'required|uuid|exists:siswa.siswa,id',
+            'metode_pembayaran' => 'required|string|in:Tunai,Transfer Bank,QRIS,Midtrans VA',
+            'kas_id'            => 'required|uuid|exists:keuangan.kas_bank,id',
             'catatan'           => 'nullable|string',
+            'items'             => 'required|array|min:1',
+            'items.*.tagihan_id'    => 'required|uuid|exists:keuangan.transaksi_spp_tagihan,id',
+            'items.*.nominal_bayar' => 'required|numeric|min:100',
         ]);
 
-        return DB::transaction(function () use ($validated, $request) {
-            $tagihan = TagihanSiswa::lockForUpdate()->findOrFail($validated['tagihan_id']);
-            $nominalBayar = (float)$validated['nominal_bayar'];
+        $user = Auth::user();
+        $tenantId = session('tenant_id') ?? $user?->tenant_id;
 
-            if ($nominalBayar > (float)$tagihan->sisa_tagihan) {
-                abort(422, 'Nominal bayar melebihi sisa tagihan (' . number_format($tagihan->sisa_tagihan, 0) . ').');
+        return DB::transaction(function () use ($validated, $user, $tenantId, $request) {
+            $createdTransactions = [];
+            $totalBayarSemua = 0;
+            $nomorTrxBase = 'TRX/' . date('Ymd') . '/' . strtoupper(Str::random(6));
+
+            foreach ($validated['items'] as $index => $item) {
+                $tagihan = TagihanSiswa::lockForUpdate()->findOrFail($item['tagihan_id']);
+                $nominalBayar = (float)$item['nominal_bayar'];
+
+                if ($nominalBayar > (float)$tagihan->sisa_tagihan) {
+                    abort(422, "Nominal bayar (Rp " . number_format($nominalBayar, 0, ',', '.') . ") melebihi sisa tagihan untuk pos {$tagihan->pos?->nama_pos} (Rp " . number_format($tagihan->sisa_tagihan, 0, ',', '.') . ").");
+                }
+
+                $nomorTrx = (count($validated['items']) > 1) ? "{$nomorTrxBase}-" . ($index + 1) : $nomorTrxBase;
+
+                // 1. Catat Transaksi Pembayaran
+                $trx = TransaksiPembayaran::create([
+                    'tenant_id'         => $tenantId,
+                    'nomor_transaksi'   => $nomorTrx,
+                    'tagihan_id'        => $tagihan->id,
+                    'siswa_id'          => $validated['siswa_id'],
+                    'nominal_bayar'     => $nominalBayar,
+                    'metode_pembayaran' => $validated['metode_pembayaran'],
+                    'kas_id'            => $validated['kas_id'],
+                    'user_id_kasir'     => $user?->id,
+                    'tanggal_bayar'     => now(),
+                    'status_transaksi'  => 'SUCCESS',
+                    'catatan'           => $validated['catatan'] ?? null,
+                ]);
+
+                // 2. Update Status dan Saldo Tagihan
+                $newTerbayar = (float)$tagihan->total_terbayar + $nominalBayar;
+                $newSisa = (float)$tagihan->total_tagihan - $newTerbayar;
+                $newStatus = ($newSisa <= 0) ? 'Lunas' : 'Sebagian';
+
+                $tagihan->update([
+                    'total_terbayar'    => $newTerbayar,
+                    'sisa_tagihan'      => max(0, $newSisa),
+                    'status_pembayaran' => $newStatus,
+                ]);
+
+                $createdTransactions[] = $trx->load(['tagihan.pos', 'kas', 'kasir:id,nama_lengkap', 'siswa.kelas']);
+                $totalBayarSemua += $nominalBayar;
             }
 
-            // 1. Simpan Transaksi Pembayaran
-            $transaksi = TransaksiPembayaran::create([
-                'tenant_id'         => session('tenant_id'),
-                'nomor_transaksi'   => 'TRX/' . date('Ymd') . '/' . rand(100000, 999999),
-                'tagihan_id'        => $tagihan->id,
-                'siswa_id'          => $tagihan->siswa_id,
-                'nominal_bayar'     => $nominalBayar,
-                'metode_pembayaran' => $validated['metode_pembayaran'],
-                'tanggal_bayar'     => now(),
-                'kas_id'            => $validated['kas_id'] ?? null,
-                'user_id_kasir'     => auth()->id(),
-                'catatan'           => $validated['catatan'] ?? null,
+            // 3. Update Saldo Kas/Bank
+            KasBank::where('id', $validated['kas_id'])->increment('saldo_saat_ini', $totalBayarSemua);
+
+            // 4. Catat Audit Log
+            KeuanganAuditLog::create([
+                'tenant_id'  => $tenantId,
+                'user_id'    => $user?->id,
+                'user_role'  => $user?->role?->nama_role ?? 'kasir',
+                'event_type' => 'PAYMENT_SPP',
+                'nominal'    => $totalBayarSemua,
+                'new_data'   => [
+                    'nomor_transaksi_base' => $nomorTrxBase,
+                    'jumlah_tagihan'       => count($validated['items']),
+                    'total_nominal'        => $totalBayarSemua,
+                    'metode'               => $validated['metode_pembayaran'],
+                    'kas_id'               => $validated['kas_id'],
+                    'siswa_id'             => $validated['siswa_id'],
+                ],
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'keterangan' => "Pembayaran Kasir: Rp " . number_format($totalBayarSemua, 0, ',', '.') . " ({$validated['metode_pembayaran']})",
             ]);
 
-            // 2. Update Status dan Sisa Tagihan
-            $newTerbayar = (float)$tagihan->total_terbayar + $nominalBayar;
-            $newSisa = (float)$tagihan->total_tagihan - $newTerbayar;
-            $status = ($newSisa <= 0) ? 'Lunas' : 'Sebagian';
+            $siswa = Siswa::with('kelas')->find($validated['siswa_id']);
+            $kas = KasBank::find($validated['kas_id']);
+            $pengaturan = PengaturanKeuangan::where('tenant_id', $tenantId)->first();
 
-            $tagihan->update([
-                'total_terbayar'    => $newTerbayar,
-                'sisa_tagihan'      => max(0, $newSisa),
-                'status_pembayaran' => $status,
-            ]);
-
-            // 3. Update Saldo Kas
-            if (!empty($validated['kas_id'])) {
-                KasBank::where('id', $validated['kas_id'])->increment('saldo_saat_ini', $nominalBayar);
-            }
+            $kuitansiPayload = [
+                'nomor_kuitansi'     => $nomorTrxBase,
+                'tanggal'            => now()->translatedFormat('d F Y H:i'),
+                'siswa'              => $siswa,
+                'kas'                => $kas,
+                'kasir'              => $user?->nama_lengkap,
+                'metode_pembayaran'  => $validated['metode_pembayaran'],
+                'catatan'            => $validated['catatan'] ?? '-',
+                'items'              => $createdTransactions,
+                'total_bayar'        => $totalBayarSemua,
+                'nama_bendahara'     => $pengaturan?->nama_bendahara ?? 'Bendahara',
+                'catatan_kuitansi'   => $pengaturan?->catatan_kuitansi ?? '',
+            ];
 
             if ($request->wantsJson()) {
                 return response()->json([
                     'success'   => true,
-                    'message'   => 'Pembayaran berhasil diproses.',
-                    'transaksi' => $transaksi,
+                    'message'   => 'Pembayaran berhasil diproses dan kuitansi telah siap dicetak.',
+                    'kuitansi'  => $kuitansiPayload,
                 ], 201);
             }
 
-            return back()->with('success', 'Pembayaran berhasil disimpan.');
+            return back()->with('success', 'Pembayaran kasir berhasil disimpan.');
         });
     }
 }

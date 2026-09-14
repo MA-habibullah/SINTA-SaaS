@@ -77,9 +77,11 @@ class PerpustakaanController extends Controller
         return [];
     }
 
-    // =========================================================================
-    // 1. KATALOG & INVENTORI BUKU (/perpustakaan/katalog)
-    // =========================================================================
+    public function index(Request $request): InertiaResponse|JsonResponse
+    {
+        return $this->katalog($request);
+    }
+
     public function katalog(Request $request): InertiaResponse|JsonResponse
     {
         $user = Auth::user();

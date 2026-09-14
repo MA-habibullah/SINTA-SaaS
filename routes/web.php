@@ -15,10 +15,13 @@ use Modules\Siswa\Http\Controllers\PrestasiController;
 use Modules\Akademik\Http\Controllers\AkademikMasterController;
 use Modules\Akademik\Http\Controllers\PenilaianController;
 use Modules\Akademik\Http\Controllers\RaporController;
-use Modules\Keuangan\Http\Controllers\TagihanSiswaController;
+use Modules\Keuangan\Http\Controllers\DashboardKeuanganController;
+use Modules\Keuangan\Http\Controllers\MasterKeuanganController;
 use Modules\Keuangan\Http\Controllers\PembayaranKasirController;
+use Modules\Keuangan\Http\Controllers\TagihanSiswaController;
 use Modules\Keuangan\Http\Controllers\LaporanKeuanganController;
-use Modules\Keuangan\Http\Controllers\PosTarifController;
+use Modules\Keuangan\Http\Controllers\TagihanSayaController;
+use Modules\Keuangan\Http\Controllers\KeuanganAuditLogController;
 use Modules\Bk\Http\Controllers\BkController;
 use Modules\Pdss\Http\Controllers\PdssController;
 use Modules\Perpustakaan\Http\Controllers\PerpustakaanController;
@@ -226,10 +229,13 @@ Route::middleware(['auth', 'tenant.guard'])->group(function () {
     Route::get('/perpustakaan/riwayat-saya', [PerpustakaanController::class, 'riwayatSaya'])->name('menu.perpus.riwayat');
 
     // 6. Keuangan & Pembayaran
-    Route::get('/keuangan/dashboard', [TagihanSiswaController::class, 'index'])->name('menu.keuangan.dashboard');
-    Route::get('/keuangan/master', [PosTarifController::class, 'index'])->name('menu.keuangan.master');
-    Route::get('/keuangan/tagihan-saya', [TagihanSiswaController::class, 'index'])->name('menu.keuangan.tagihan-saya');
-    Route::get('/keuangan/audit-log', [LaporanKeuanganController::class, 'index'])->name('menu.keuangan.audit-log');
+    Route::get('/keuangan/dashboard', [DashboardKeuanganController::class, 'index'])->name('menu.keuangan.dashboard');
+    Route::get('/keuangan/master', [MasterKeuanganController::class, 'index'])->name('menu.keuangan.master');
+    Route::get('/keuangan/kasir', [PembayaranKasirController::class, 'index'])->name('menu.keuangan.kasir');
+    Route::get('/keuangan/tagihan', [TagihanSiswaController::class, 'index'])->name('menu.keuangan.tagihan');
+    Route::get('/keuangan/laporan', [LaporanKeuanganController::class, 'index'])->name('menu.keuangan.laporan');
+    Route::get('/keuangan/tagihan-saya', [TagihanSayaController::class, 'index'])->name('menu.keuangan.tagihan-saya');
+    Route::get('/keuangan/audit-log', [KeuanganAuditLogController::class, 'index'])->name('menu.keuangan.audit-log');
 
     // 7. Kurikulum & Akademik
     Route::get('/akademik/jadwal', [AkademikMasterController::class, 'index'])->name('menu.akademik.jadwal');
@@ -255,8 +261,7 @@ Route::middleware(['auth', 'tenant.guard'])->group(function () {
     Route::delete('/kepala-sekolah/survei-guru/pertanyaan/{id}', [SurveiGuruController::class, 'deletePertanyaan'])->name('survei-guru.pertanyaan.destroy');
     Route::put('/kepala-sekolah/survei-guru/{id}', [SurveiGuruController::class, 'update'])->name('survei-guru.update');
     Route::delete('/kepala-sekolah/survei-guru/{id}', [SurveiGuruController::class, 'destroy'])->name('survei-guru.destroy');
-
-    Route::get('/bantuan', function () {
-        return Inertia::render('Dashboard');
-    })->name('menu.bantuan');
+    Route::get('/bantuan', [\Modules\Core\Http\Controllers\BantuanController::class, 'index'])->name('menu.bantuan');
 });
+
+

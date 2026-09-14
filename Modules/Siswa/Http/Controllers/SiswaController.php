@@ -32,7 +32,7 @@ class SiswaController extends Controller
             })
             ->orderBy('nama_lengkap', 'asc');
 
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() && !$request->header('X-Inertia')) {
             return response()->json([
                 'success' => true,
                 'data'    => $query->paginate(25),
@@ -51,7 +51,7 @@ class SiswaController extends Controller
     {
         $siswa = Siswa::create($request->validated());
 
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() && !$request->header('X-Inertia')) {
             return response()->json([
                 'success' => true,
                 'data'    => $siswa,
@@ -67,7 +67,7 @@ class SiswaController extends Controller
     {
         $siswa = Siswa::with(['kelas', 'mutasi'])->findOrFail($id);
 
-        if (request()->wantsJson()) {
+        if (request()->wantsJson() && !request()->header('X-Inertia')) {
             return response()->json([
                 'success' => true,
                 'data'    => $siswa,
@@ -85,7 +85,7 @@ class SiswaController extends Controller
         $siswa = Siswa::findOrFail($id);
         $siswa->update($request->validated());
 
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() && !$request->header('X-Inertia')) {
             return response()->json([
                 'success' => true,
                 'data'    => $siswa,
@@ -101,7 +101,7 @@ class SiswaController extends Controller
         $siswa = Siswa::findOrFail($id);
         $siswa->delete();
 
-        if (request()->wantsJson()) {
+        if (request()->wantsJson() && !request()->header('X-Inertia')) {
             return response()->json([
                 'success' => true,
                 'message' => 'Data siswa berhasil dihapus (Soft Delete).',

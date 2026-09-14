@@ -41,6 +41,58 @@ class PpdbController extends Controller
         ]);
     }
 
+    public function show(string $id): JsonResponse
+    {
+        $pendaftar = PpdbPendaftar::find($id);
+        if (!$pendaftar) {
+            return response()->json(['success' => false, 'message' => 'Data pendaftar PPDB tidak ditemukan.'], 404);
+        }
+        return response()->json(['success' => true, 'data' => $pendaftar]);
+    }
+
+    public function store(Request $request): JsonResponse|RedirectResponse
+    {
+        $validated = $request->validate([
+            'nama_lengkap'       => 'required|string|max:255',
+            'nisn'               => 'nullable|string|max:20',
+            'nik'                => 'nullable|string|max:20',
+            'jalur_pendaftaran'  => 'required|string|max:100',
+            'pilihan_jurusan_1'  => 'nullable|string|max:100',
+        ]);
+
+        $pendaftar = PpdbPendaftar::create($validated);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Pendaftaran PPDB berhasil.', 'data' => $pendaftar], 201);
+        }
+
+        return back()->with('success', 'Pendaftaran PPDB berhasil.');
+    }
+
+    public function update(Request $request, string $id): JsonResponse|RedirectResponse
+    {
+        $pendaftar = PpdbPendaftar::findOrFail($id);
+        $pendaftar->update($request->all());
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Data PPDB diperbarui.', 'data' => $pendaftar]);
+        }
+
+        return back()->with('success', 'Data PPDB diperbarui.');
+    }
+
+    public function destroy(string $id): JsonResponse|RedirectResponse
+    {
+        $pendaftar = PpdbPendaftar::findOrFail($id);
+        $pendaftar->delete();
+
+        if (request()->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Data PPDB berhasil dihapus.']);
+        }
+
+        return back()->with('success', 'Data PPDB berhasil dihapus.');
+    }
+
     public function verifikasi(Request $request, string $id): RedirectResponse|JsonResponse
     {
         $pendaftar = PpdbPendaftar::findOrFail($id);

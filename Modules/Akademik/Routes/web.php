@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Akademik\Http\Controllers\AkademikMasterController;
+use Modules\Akademik\Http\Controllers\JadwalPelajaranController;
 use Modules\Akademik\Http\Controllers\PenilaianController;
 use Modules\Akademik\Http\Controllers\RaporController;
 
@@ -12,12 +13,18 @@ Route::middleware(['web', 'auth', 'tenant.guard'])->prefix('akademik')->name('ak
     Route::post('/kelas', [AkademikMasterController::class, 'storeKelas'])->name('kelas.store');
     Route::get('/mapel', [AkademikMasterController::class, 'index'])->name('mapel.index');
     Route::post('/mapel', [AkademikMasterController::class, 'storeMapel'])->name('mapel.store');
-    Route::get('/jadwal', [AkademikMasterController::class, 'index'])->name('jadwal.index');
-    Route::post('/jadwal', [AkademikMasterController::class, 'store'])->name('jadwal.store');
-    Route::get('/jadwal/export', [AkademikMasterController::class, 'exportJadwal'])->name('jadwal.export');
-    Route::get('/jadwal/template', [AkademikMasterController::class, 'downloadTemplateJadwal'])->name('jadwal.template');
-    Route::post('/jadwal/import', [AkademikMasterController::class, 'importJadwal'])->name('jadwal.import');
-    Route::post('/jadwal/copy', [AkademikMasterController::class, 'copyJadwal'])->name('jadwal.copy');
+
+    // 2. Manajemen Jadwal Pelajaran (Matrix, Anti-Bentrok, Excel Import/Export)
+    Route::get('/jadwal', [JadwalPelajaranController::class, 'index'])->name('jadwal.index');
+    Route::post('/jadwal', [JadwalPelajaranController::class, 'store'])->name('jadwal.store');
+    Route::put('/jadwal/{id}', [JadwalPelajaranController::class, 'update'])->name('jadwal.update');
+    Route::delete('/jadwal/{id}', [JadwalPelajaranController::class, 'destroy'])->name('jadwal.destroy');
+    Route::post('/jadwal/check-conflict', [JadwalPelajaranController::class, 'checkConflict'])->name('jadwal.check-conflict');
+    Route::get('/jadwal/export', [JadwalPelajaranController::class, 'exportJadwal'])->name('jadwal.export');
+    Route::get('/jadwal/template', [JadwalPelajaranController::class, 'downloadTemplateJadwal'])->name('jadwal.template');
+    Route::post('/jadwal/preview-import', [JadwalPelajaranController::class, 'previewImport'])->name('jadwal.preview-import');
+    Route::post('/jadwal/import', [JadwalPelajaranController::class, 'importJadwal'])->name('jadwal.import');
+    Route::post('/jadwal/copy', [JadwalPelajaranController::class, 'copyJadwal'])->name('jadwal.copy');
 
     // 2. Lembar Penilaian Siswa
     Route::get('/penilaian', [PenilaianController::class, 'index'])->name('penilaian.index');

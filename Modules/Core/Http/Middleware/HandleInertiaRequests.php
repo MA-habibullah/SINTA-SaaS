@@ -37,7 +37,7 @@ class HandleInertiaRequests extends Middleware
                 ->first(['id', 'nama_sekolah', 'npsn', 'subdomain', 'logo']);
         }
 
-        return [
+        return \Modules\Core\Services\SecurityPayloadService::sanitize([
             ...parent::share($request),
             'auth' => [
                 'user' => $user ? [
@@ -58,7 +58,7 @@ class HandleInertiaRequests extends Middleware
                 'warning' => fn () => $request->session()->get('warning'),
                 'info'    => fn () => $request->session()->get('info'),
             ],
-            'csrf_token' => csrf_token(),
-        ];
+            'csrf_token' => $request->hasSession() ? $request->session()->token() : (function_exists('csrf_token') ? csrf_token() : null),
+        ]);
     }
 }

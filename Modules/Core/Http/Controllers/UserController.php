@@ -19,6 +19,7 @@ use Modules\Siswa\Entities\RiwayatKenaikanKelas;
 use Modules\Akademik\Entities\Kelas;
 use Modules\Akademik\Entities\Jenjang;
 use Modules\Akademik\Entities\TahunAjaran;
+use Modules\Core\Services\SecurityPayloadService;
 
 class UserController extends Controller
 {
@@ -132,12 +133,22 @@ class UserController extends Controller
                     });
                 })
                 ->when($filterJenjang, function ($q) use ($filterJenjang) {
-                    $jenjangObj = Jenjang::withoutTenant()->find($filterJenjang);
+                    $jenjangObj = null;
+                    if (\Illuminate\Support\Str::isUuid($filterJenjang)) {
+                        $jenjangObj = Jenjang::withoutTenant()->find($filterJenjang);
+                    } else {
+                        $jenjangObj = Jenjang::withoutTenant()
+                            ->where('nama_jenjang', 'ILIKE', "%{$filterJenjang}%")
+                            ->orWhere('kode_jenjang', 'ILIKE', "%{$filterJenjang}%")
+                            ->first();
+                    }
                     $namaJenjang = $jenjangObj ? $jenjangObj->nama_jenjang : $filterJenjang;
                     $classNames = Kelas::withoutTenant()
                         ->where(function ($sub) use ($filterJenjang, $namaJenjang) {
-                            $sub->where('id_jenjang', $filterJenjang)
-                                ->orWhere('nama_kelas', 'ILIKE', "%{$namaJenjang}%")
+                            if (\Illuminate\Support\Str::isUuid($filterJenjang)) {
+                                $sub->where('id_jenjang', $filterJenjang);
+                            }
+                            $sub->orWhere('nama_kelas', 'ILIKE', "%{$namaJenjang}%")
                                 ->orWhere('kategori', 'ILIKE', "%{$namaJenjang}%");
                         })
                         ->pluck('nama_kelas')
@@ -188,7 +199,26 @@ class UserController extends Controller
                     });
                 })
                 ->when($filterJenjang, function ($q) use ($filterJenjang) {
-                    $classNames = Kelas::where('id_jenjang', $filterJenjang)->orWhere('kategori', 'ILIKE', "%{$filterJenjang}%")->pluck('nama_kelas')->toArray();
+                    $jenjangObj = null;
+                    if (\Illuminate\Support\Str::isUuid($filterJenjang)) {
+                        $jenjangObj = Jenjang::withoutTenant()->find($filterJenjang);
+                    } else {
+                        $jenjangObj = Jenjang::withoutTenant()
+                            ->where('nama_jenjang', 'ILIKE', "%{$filterJenjang}%")
+                            ->orWhere('kode_jenjang', 'ILIKE', "%{$filterJenjang}%")
+                            ->first();
+                    }
+                    $namaJenjang = $jenjangObj ? $jenjangObj->nama_jenjang : $filterJenjang;
+                    $classNames = Kelas::withoutTenant()
+                        ->where(function ($sub) use ($filterJenjang, $namaJenjang) {
+                            if (\Illuminate\Support\Str::isUuid($filterJenjang)) {
+                                $sub->where('id_jenjang', $filterJenjang);
+                            }
+                            $sub->orWhere('nama_kelas', 'ILIKE', "%{$namaJenjang}%")
+                                ->orWhere('kategori', 'ILIKE', "%{$namaJenjang}%");
+                        })
+                        ->pluck('nama_kelas')
+                        ->toArray();
                     if (!empty($classNames)) {
                         $q->whereIn('kelas_saat_ini', $classNames);
                     }
@@ -351,7 +381,12 @@ class UserController extends Controller
             $initialSiswaList = [];
 
             if ($kelasAsalId) {
-                $kelasObj = ($isSuperAdmin ? Kelas::withoutTenant() : Kelas::query())->find($kelasAsalId);
+                $kelasObj = null;
+                if (\Illuminate\Support\Str::isUuid($kelasAsalId)) {
+                    $kelasObj = ($isSuperAdmin ? Kelas::withoutTenant() : Kelas::query())->find($kelasAsalId);
+                } else {
+                    $kelasObj = ($isSuperAdmin ? Kelas::withoutTenant() : Kelas::query())->where('nama_kelas', $kelasAsalId)->first();
+                }
                 $namaKelas = $kelasObj ? $kelasObj->nama_kelas : $kelasAsalId;
 
                 $initialSiswaList = ($isSuperAdmin ? Siswa::withoutTenant() : Siswa::query())
@@ -399,19 +434,46 @@ class UserController extends Controller
             });
         }
 
-        if ($request->wantsJson()) {
+        // Zero-SSR Data Exposure Protection (Anti-Scraping / View Source Zero Leakage)
+        $isInitialSsr = !$request->header('X-Inertia') && !$request->has('async');
+
+        if ($isInitialSsr) {
+            return Inertia::render('Core/User/Index', [
+                'activeTab'       => $activeTab,
+                'items'           => null,
+                'stats'           => null,
+                'tenants'         => $isSuperAdmin ? $tenants : [],
+                'kelasList'       => $kelasList,
+                'jenjangList'     => $jenjangList,
+                'tahunAjaranList' => $tahunAjaranList,
+                'isSuperAdmin'    => $isSuperAdmin,
+                'filters'         => [
+                    'search'    => $search,
+                    'tenant_id' => $filterTenantId,
+                    'jenjang'   => $filterJenjang,
+                    'kelas'     => $filterKelas,
+                    'status'    => $filterStatus,
+                    'trash'     => $trashMode,
+                    'per_page'  => $perPage,
+                ],
+            ]);
+        }
+
+        // 1. Explicit Async API Request (On-Demand Client Fetch via Axios)
+        if ($request->has('async') && !$request->header('X-Inertia')) {
             return response()->json([
                 'success' => true,
-                'data'    => $items,
+                'data'    => SecurityPayloadService::sanitize($items, $isSuperAdmin ? [] : ['tenant_id']),
                 'stats'   => $stats,
             ]);
         }
 
+        // 2. Inertia Web Response (SPA navigation)
         return Inertia::render('Core/User/Index', [
             'activeTab'       => $activeTab,
-            'items'           => $items,
+            'items'           => SecurityPayloadService::sanitize($items, $isSuperAdmin ? [] : ['tenant_id']),
             'stats'           => $stats,
-            'tenants'         => $tenants,
+            'tenants'         => $isSuperAdmin ? $tenants : [],
             'kelasList'       => $kelasList,
             'jenjangList'     => $jenjangList,
             'tahunAjaranList' => $tahunAjaranList,
@@ -564,6 +626,13 @@ class UserController extends Controller
 
     public function getRiwayatSiswa(string $id): JsonResponse
     {
+        if (!\Illuminate\Support\Str::isUuid($id)) {
+            return response()->json([
+                'success' => true,
+                'data'    => [],
+            ]);
+        }
+
         $riwayat = RiwayatKenaikanKelas::withoutTenant()
             ->where('siswa_id', $id)
             ->orderBy('created_at', 'desc')
@@ -607,19 +676,30 @@ class UserController extends Controller
         }
 
         // Cari nama kelas asal
-        $kelasAsal = ($isSuperAdmin ? Kelas::withoutTenant() : Kelas::query())->find($kelasAsalId);
+        $kelasAsal = null;
+        if (\Illuminate\Support\Str::isUuid($kelasAsalId)) {
+            $kelasAsal = ($isSuperAdmin ? Kelas::withoutTenant() : Kelas::query())->find($kelasAsalId);
+        } else {
+            $kelasAsal = ($isSuperAdmin ? Kelas::withoutTenant() : Kelas::query())->where('nama_kelas', $kelasAsalId)->first();
+        }
         $namaKelasAsal = $kelasAsal ? $kelasAsal->nama_kelas : $kelasAsalId;
 
         // Cari nama kelas tujuan jika ada
         $namaKelasTujuan = null;
         if ($kelasTujuanId) {
-            $kelasTujuan = ($isSuperAdmin ? Kelas::withoutTenant() : Kelas::query())->find($kelasTujuanId);
+            $kelasTujuan = null;
+            if (\Illuminate\Support\Str::isUuid($kelasTujuanId)) {
+                $kelasTujuan = ($isSuperAdmin ? Kelas::withoutTenant() : Kelas::query())->find($kelasTujuanId);
+            } else {
+                $kelasTujuan = ($isSuperAdmin ? Kelas::withoutTenant() : Kelas::query())->where('nama_kelas', $kelasTujuanId)->first();
+            }
             $namaKelasTujuan = $kelasTujuan ? $kelasTujuan->nama_kelas : $kelasTujuanId;
         }
 
         // Ambil siswa yang valid (hanya yang aktif & cocok tenant)
+        $validSiswaIds = array_filter((array) $siswaIds, fn($sid) => \Illuminate\Support\Str::isUuid($sid));
         $siswaQuery = ($isSuperAdmin ? Siswa::withoutTenant() : Siswa::query())
-            ->whereIn('id', $siswaIds)
+            ->whereIn('id', $validSiswaIds)
             ->where('is_active', true)
             ->where(function ($q) {
                 $q->where('status_siswa', 'ILIKE', 'aktif')
@@ -851,6 +931,14 @@ class UserController extends Controller
     {
         $tab = $request->input('tab', 'user');
 
+        if (!\Illuminate\Support\Str::isUuid($id)) {
+            $msg = 'ID data tidak valid.';
+            if ($request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 400);
+            }
+            return back()->with('error', $msg);
+        }
+
         if ($tab === 'siswa') {
             $siswa = Siswa::withoutTenant()->find($id);
             if ($siswa) {
@@ -875,6 +963,14 @@ class UserController extends Controller
     public function restore(Request $request, string $id): RedirectResponse|JsonResponse
     {
         $tab = $request->input('tab', 'user');
+
+        if (!\Illuminate\Support\Str::isUuid($id)) {
+            $msg = 'ID data tidak valid.';
+            if ($request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 400);
+            }
+            return back()->with('error', $msg);
+        }
 
         if ($tab === 'siswa') {
             Siswa::withoutTenant()->where('id', $id)->update(['is_active' => true]);

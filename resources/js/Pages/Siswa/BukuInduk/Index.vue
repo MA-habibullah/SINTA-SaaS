@@ -1,7 +1,9 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
+import SearchableSelect from '@/Components/SearchableSelect.vue'
+import { useMemorySecurity } from '@/Utils/cryptoSecurity.js'
 import axios from 'axios'
 
 const props = defineProps({
@@ -74,6 +76,42 @@ const filterKelas = ref(props.filters?.kelas_id || '')
 const filterStatus = ref(props.filters?.status || '')
 const perPage = ref(props.filters?.per_page || 10)
 
+const localSiswaList = ref(props.siswaList || null)
+const isFetchingSiswa = ref(false)
+
+const siswaList = computed(() => localSiswaList.value || props.siswaList || { data: [], total: 0 })
+
+const fetchSiswaAsync = async (page = 1) => {
+    isFetchingSiswa.value = true
+    try {
+        const res = await axios.get('/buku-induk', {
+            params: {
+                async: 1,
+                tab: 'buku_induk_siswa',
+                page: page,
+                search: search.value,
+                jenjang_id: filterJenjang.value,
+                kelas_id: filterKelas.value,
+                status: filterStatus.value,
+                tenant_id: selectedTenant.value,
+                per_page: perPage.value,
+            },
+            headers: { 'Accept': 'application/json' }
+        })
+        if (res.data?.success) {
+            localSiswaList.value = res.data.data
+        }
+    } catch (err) {
+        console.error('Async Buku Induk fetch error:', err)
+    } finally {
+        isFetchingSiswa.value = false
+    }
+}
+
+watch(() => props.siswaList, (newVal) => {
+    if (newVal) localSiswaList.value = newVal
+})
+
 let searchTimeout = null
 const debounceSearch = () => {
     clearTimeout(searchTimeout)
@@ -86,6 +124,92 @@ const filteredKelasList = computed(() => {
     if (!filterJenjang.value) return props.kelasList || []
     return (props.kelasList || []).filter(k => k.id_jenjang === filterJenjang.value || !k.id_jenjang)
 })
+
+// Option lists for SearchableSelect
+const tenantSelectOptions = computed(() => {
+    return (props.tenants || []).map(t => ({
+        id: t.id,
+        nama: t.nama_sekolah,
+        subLabel: t.npsn ? `NPSN: ${t.npsn}` : ''
+    }))
+})
+
+const jenjangSelectOptions = computed(() => {
+    return (props.jenjangList || []).map(j => ({
+        id: j.id,
+        nama: j.nama_jenjang || j.nama
+    }))
+})
+
+const kelasSelectOptions = computed(() => {
+    return (filteredKelasList.value || []).map(k => ({
+        id: k.id,
+        nama: k.nama_kelas,
+        subLabel: k.kategori ? `Kategori: ${k.kategori}` : ''
+    }))
+})
+
+const allKelasSelectOptions = computed(() => {
+    return (props.kelasList || []).map(k => ({
+        id: k.id,
+        nama: k.nama_kelas,
+        subLabel: k.kategori ? `Kategori: ${k.kategori}` : ''
+    }))
+})
+
+const statusSelectOptions = [
+    { id: 'Aktif', nama: 'Aktif' },
+    { id: 'Lulus', nama: 'Lulus' },
+    { id: 'Pindah', nama: 'Pindah' },
+    { id: 'Keluar', nama: 'Keluar' },
+]
+
+const perPageOptions = [
+    { id: 10, nama: '10 per hal' },
+    { id: 25, nama: '25 per hal' },
+    { id: 50, nama: '50 per hal' },
+    { id: 100, nama: '100 per hal' },
+]
+
+const tahunAjaranSelectOptions = computed(() => {
+    const list = (props.tahunAjaranList || []).map(ta => ({
+        id: ta.tahun_ajaran || ta.nama_tahun_ajaran || ta.id,
+        nama: ta.tahun_ajaran || ta.nama_tahun_ajaran
+    })).filter(t => t.id && t.nama)
+    if (list.length === 0) {
+        return [
+            { id: '2026/2027', nama: '2026/2027' },
+            { id: '2025/2026', nama: '2025/2026' },
+        ]
+    }
+    return list
+})
+
+const semesterSelectOptions = [
+    { id: '1', nama: 'Semester 1 (Ganjil)' },
+    { id: '2', nama: 'Semester 2 (Genap)' },
+]
+
+const kurikulumSelectOptions = computed(() => {
+    return (props.kurikulumList || []).map(k => ({
+        id: k.id,
+        nama: k.nama_kurikulum || k.nama
+    }))
+})
+
+const jenisDokumenAlumniOptions = [
+    { id: 'ijazah', nama: 'Ijazah Kelulusan' },
+    { id: 'skhun', nama: 'SKHUN / SHUN' },
+    { id: 'sertifikat', nama: 'Sertifikat Kompetensi / UKK' },
+    { id: 'surat_keterangan', nama: 'Surat Keterangan Lulus' },
+    { id: 'lainnya', nama: 'Dokumen Lainnya' },
+]
+
+const statusCetakOptions = [
+    { id: 'semua', nama: 'Semua Siswa' },
+    { id: 'lengkap', nama: 'Profil Lengkap' },
+    { id: 'belum_lengkap', nama: 'Belum Lengkap' },
+]
 
 const onJenjangChange = () => {
     if (filterKelas.value) {
@@ -987,6 +1111,20 @@ const scrollNav = (distance) => {
     }
 }
 
+useMemorySecurity([
+    localSiswaList,
+    search,
+    filterJenjang,
+    filterKelas,
+    filterStatus,
+    selectedTenant,
+    kurikulumParams,
+    nilaiParams,
+    cetakParams,
+    selectedAlumni,
+    alumniUploadForm,
+])
+
 onMounted(() => {
     const el = document.getElementById('navTabsBukuInduk')
     if (el) {
@@ -998,7 +1136,11 @@ onMounted(() => {
         }, { passive: false })
     }
 
-    if (currentTab.value === 'cetak_buku_induk') loadMatrixCetak()
+    if (currentTab.value === 'buku_induk_siswa') {
+        if (!props.siswaList || !props.siswaList.data) {
+            fetchSiswaAsync(1)
+        }
+    } else if (currentTab.value === 'cetak_buku_induk') loadMatrixCetak()
     else if (currentTab.value === 'riwayat_kepsek') loadRiwayatKepsek()
     else if (currentTab.value === 'arsip_alumni') loadAlumni(1)
     else if (currentTab.value === 'seting_kurikulum') loadKurikulum()
@@ -1040,15 +1182,15 @@ onMounted(() => {
                     </span>
 
                     <!-- Dropdown Filter Sekolah (Khusus Super Admin) -->
-                    <div class="my-1 md:my-0">
-                        <select 
+                    <div class="my-1 md:my-0 min-w-[240px]">
+                        <SearchableSelect 
                             v-model="selectedTenant" 
+                            :options="tenantSelectOptions"
+                            placeholder="-- Semua Sekolah (Global) --"
+                            search-placeholder="Cari nama sekolah..."
+                            allow-clear
                             @change="applyTenantFilter"
-                            class="h-9 px-3 bg-white border border-blue-200 rounded-xl text-xs font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 min-w-[220px]"
-                        >
-                            <option value="">-- Semua Sekolah (Global) --</option>
-                            <option v-for="t in tenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
-                        </select>
+                        />
                     </div>
                 </div>
 
@@ -1109,29 +1251,38 @@ onMounted(() => {
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <div>
                                     <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Jenjang Tingkat</label>
-                                    <select v-model="filterJenjang" @change="onJenjangChange" class="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-                                        <option value="">🎓 Semua Jenjang</option>
-                                        <option v-for="j in jenjangList" :key="j.id" :value="j.id">{{ j.nama_jenjang }}</option>
-                                    </select>
+                                    <SearchableSelect
+                                        v-model="filterJenjang"
+                                        :options="jenjangSelectOptions"
+                                        placeholder="Semua Jenjang"
+                                        search-placeholder="Cari jenjang..."
+                                        allow-clear
+                                        @change="onJenjangChange"
+                                    />
                                 </div>
 
                                 <div>
                                     <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Kelas / Rombel</label>
-                                    <select v-model="filterKelas" @change="applyFilter(1)" class="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-                                        <option value="">🏫 Semua Kelas</option>
-                                        <option v-for="k in filteredKelasList" :key="k.id" :value="k.id">{{ k.nama_kelas }}</option>
-                                    </select>
+                                    <SearchableSelect
+                                        v-model="filterKelas"
+                                        :options="kelasSelectOptions"
+                                        placeholder="Semua Kelas"
+                                        search-placeholder="Cari rombel..."
+                                        allow-clear
+                                        @change="applyFilter(1)"
+                                    />
                                 </div>
 
                                 <div>
                                     <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Status Siswa</label>
-                                    <select v-model="filterStatus" @change="applyFilter(1)" class="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-                                        <option value="">📋 Semua Status</option>
-                                        <option value="Aktif">Aktif</option>
-                                        <option value="Lulus">Lulus</option>
-                                        <option value="Pindah">Pindah</option>
-                                        <option value="Keluar">Keluar</option>
-                                    </select>
+                                    <SearchableSelect
+                                        v-model="filterStatus"
+                                        :options="statusSelectOptions"
+                                        placeholder="Semua Status"
+                                        search-placeholder="Cari status..."
+                                        allow-clear
+                                        @change="applyFilter(1)"
+                                    />
                                 </div>
                             </div>
 
@@ -1322,29 +1473,45 @@ onMounted(() => {
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                         <div>
                             <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Tahun Ajaran</label>
-                            <select v-model="kurikulumParams.tahun_ajaran" @change="loadKurikulum" class="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-                                <option v-for="t in tahunAjaranList" :key="t.id" :value="t.tahun_ajaran">{{ t.tahun_ajaran }}</option>
-                            </select>
+                            <SearchableSelect
+                                v-model="kurikulumParams.tahun_ajaran"
+                                :options="tahunAjaranSelectOptions"
+                                placeholder="Pilih Tahun Ajaran"
+                                search-placeholder="Cari tahun ajaran..."
+                                @change="loadKurikulum"
+                            />
                         </div>
                         <div>
                             <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Semester</label>
-                            <select v-model="kurikulumParams.semester" @change="loadKurikulum" class="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-                                <option value="Ganjil">Ganjil</option>
-                                <option value="Genap">Genap</option>
-                                <option value="Ujian Sekolah">Ujian Sekolah</option>
-                            </select>
+                            <SearchableSelect
+                                v-model="kurikulumParams.semester"
+                                :options="[
+                                    { id: 'Ganjil', nama: 'Ganjil' },
+                                    { id: 'Genap', nama: 'Genap' },
+                                    { id: 'Ujian Sekolah', nama: 'Ujian Sekolah' }
+                                ]"
+                                placeholder="Pilih Semester"
+                                @change="loadKurikulum"
+                            />
                         </div>
                         <div>
                             <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Kelas Fisik</label>
-                            <select v-model="kurikulumParams.kelas_id" @change="loadKurikulum" class="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-                                <option v-for="k in kelasList" :key="k.id" :value="k.id">{{ k.nama_kelas }}</option>
-                            </select>
+                            <SearchableSelect
+                                v-model="kurikulumParams.kelas_id"
+                                :options="allKelasSelectOptions"
+                                placeholder="Pilih Kelas"
+                                search-placeholder="Cari kelas..."
+                                @change="loadKurikulum"
+                            />
                         </div>
                         <div>
                             <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Kurikulum Aktif</label>
-                            <select v-model="kurikulumParams.kurikulum_id" class="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-                                <option v-for="c in kurikulumList" :key="c.id" :value="c.id">{{ c.nama_kurikulum }}</option>
-                            </select>
+                            <SearchableSelect
+                                v-model="kurikulumParams.kurikulum_id"
+                                :options="kurikulumSelectOptions"
+                                placeholder="Pilih Kurikulum"
+                                search-placeholder="Cari kurikulum..."
+                            />
                         </div>
                     </div>
 
@@ -1428,23 +1595,36 @@ onMounted(() => {
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         <div>
                             <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Tahun Ajaran</label>
-                            <select v-model="nilaiParams.tahun_ajaran" @change="loadNilaiRapor" class="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-                                <option v-for="t in tahunAjaranList" :key="t.id" :value="t.tahun_ajaran">{{ t.tahun_ajaran }}</option>
-                            </select>
+                            <SearchableSelect
+                                v-model="nilaiParams.tahun_ajaran"
+                                :options="tahunAjaranSelectOptions"
+                                placeholder="Pilih Tahun Ajaran"
+                                search-placeholder="Cari tahun ajaran..."
+                                @change="loadNilaiRapor"
+                            />
                         </div>
                         <div>
                             <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Semester</label>
-                            <select v-model="nilaiParams.semester" @change="loadNilaiRapor" class="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-                                <option value="Ganjil">Ganjil</option>
-                                <option value="Genap">Genap</option>
-                                <option value="Ujian Sekolah">Ujian Sekolah</option>
-                            </select>
+                            <SearchableSelect
+                                v-model="nilaiParams.semester"
+                                :options="[
+                                    { id: 'Ganjil', nama: 'Ganjil' },
+                                    { id: 'Genap', nama: 'Genap' },
+                                    { id: 'Ujian Sekolah', nama: 'Ujian Sekolah' }
+                                ]"
+                                placeholder="Pilih Semester"
+                                @change="loadNilaiRapor"
+                            />
                         </div>
                         <div>
                             <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Kelas Fisik</label>
-                            <select v-model="nilaiParams.kelas_id" @change="loadNilaiRapor" class="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-                                <option v-for="k in kelasList" :key="k.id" :value="k.id">{{ k.nama_kelas }}</option>
-                            </select>
+                            <SearchableSelect
+                                v-model="nilaiParams.kelas_id"
+                                :options="allKelasSelectOptions"
+                                placeholder="Pilih Kelas"
+                                search-placeholder="Cari kelas..."
+                                @change="loadNilaiRapor"
+                            />
                         </div>
                     </div>
 
@@ -1545,19 +1725,25 @@ onMounted(() => {
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                             <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Filter Kelas</label>
-                            <select v-model="cetakParams.kelas_id" @change="loadMatrixCetak" class="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-                                <option value="">-- Semua Kelas --</option>
-                                <option v-for="k in kelasList" :key="k.id" :value="k.id">{{ k.nama_kelas }}</option>
-                            </select>
+                            <SearchableSelect
+                                v-model="cetakParams.kelas_id"
+                                :options="allKelasSelectOptions"
+                                placeholder="Semua Kelas"
+                                search-placeholder="Cari kelas..."
+                                allow-clear
+                                @change="loadMatrixCetak"
+                            />
                         </div>
                         <div>
                             <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Status Siswa</label>
-                            <select v-model="cetakParams.status" @change="loadMatrixCetak" class="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-                                <option value="">-- Semua Status --</option>
-                                <option value="Aktif">Aktif</option>
-                                <option value="Lulus">Lulus</option>
-                                <option value="Pindah">Pindah</option>
-                            </select>
+                            <SearchableSelect
+                                v-model="cetakParams.status"
+                                :options="statusSelectOptions"
+                                placeholder="Semua Status"
+                                search-placeholder="Cari status..."
+                                allow-clear
+                                @change="loadMatrixCetak"
+                            />
                         </div>
                     </div>
 
@@ -1851,13 +2037,17 @@ onMounted(() => {
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
                                         <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Jenis Dokumen *</label>
-                                        <select v-model="alumniUploadForm.jenis_dokumen" class="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-2xs">
-                                            <option value="Ijazah">📜 Ijazah Kelulusan Resmi</option>
-                                            <option value="SKHUN">📄 SKHUN / Transkrip Nilai</option>
-                                            <option value="Buku Induk">📖 Lembar Buku Induk Lengkap</option>
-                                            <option value="Sertifikat/SKL">🎖️ Sertifikat / Surat Keterangan Lulus (SKL)</option>
-                                            <option value="Lainnya">📁 Berkas Dokumen Lainnya</option>
-                                        </select>
+                                        <SearchableSelect
+                                            v-model="alumniUploadForm.jenis_dokumen"
+                                            :options="[
+                                                { id: 'Ijazah', nama: '📜 Ijazah Kelulusan Resmi' },
+                                                { id: 'SKHUN', nama: '📄 SKHUN / Transkrip Nilai' },
+                                                { id: 'Buku Induk', nama: '📖 Lembar Buku Induk Lengkap' },
+                                                { id: 'Sertifikat/SKL', nama: '🎖️ Sertifikat / SKL' },
+                                                { id: 'Lainnya', nama: '📁 Berkas Dokumen Lainnya' },
+                                            ]"
+                                            placeholder="Pilih Jenis Dokumen"
+                                        />
                                     </div>
                                     <div>
                                         <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Keterangan / Catatan Dokumen</label>
@@ -2547,10 +2737,12 @@ onMounted(() => {
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Pilih Kelas Sumber (Source)</label>
-                            <select v-model="copySourceKelasId" class="form-select form-select-sm text-xs rounded-xl border-slate-200 w-full">
-                                <option value="">-- Pilih Kelas Sumber --</option>
-                                <option v-for="k in kelasList.filter(k => k.id !== kurikulumParams.kelas_id)" :key="k.id" :value="k.id">{{ k.nama_kelas }}</option>
-                            </select>
+                            <SearchableSelect
+                                v-model="copySourceKelasId"
+                                :options="(props.kelasList || []).filter(k => k.id !== kurikulumParams.kelas_id).map(k => ({ id: k.id, nama: k.nama_kelas }))"
+                                placeholder="-- Pilih Kelas Sumber --"
+                                search-placeholder="Cari kelas sumber..."
+                            />
                             <p class="text-[11px] text-slate-500 mt-1">Seluruh kelompok & mapel kelas sumber akan disalin ke kelas target saat ini.</p>
                         </div>
                         <div class="flex justify-end gap-2 pt-2 border-t">

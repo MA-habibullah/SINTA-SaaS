@@ -21,6 +21,7 @@ use Modules\Akademik\Entities\TahunAjaran;
 use Modules\Akademik\Entities\Angkatan;
 use Modules\Akademik\Entities\RefKurikulum;
 use Modules\Akademik\Entities\PemetaanMapel;
+use Modules\Core\Services\SecurityPayloadService;
 
 class AkademikMasterController extends Controller
 {
@@ -362,19 +363,56 @@ class AkademikMasterController extends Controller
             $jadwalStats['total_jp']     = (int) (clone $baseJadwalQuery)->sum('jam_pelajaran');
         }
 
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success'   => true,
-                'activeTab' => $activeTab,
-                'data'      => $items,
-                'tenants'   => $tenants,
+        // Zero-SSR Data Exposure Protection (Anti-Scraping / View Source Zero Leakage)
+        $isInitialSsr = !$request->header('X-Inertia') && !$request->has('async');
+
+        if ($isInitialSsr) {
+            return Inertia::render('Akademik/Master/Index', [
+                'activeTab'       => $activeTab,
+                'items'           => null,
+                'tenants'         => $isSuperAdmin ? $tenants : [],
+                'listJenjang'     => $listJenjang,
+                'listJurusan'     => $listJurusan,
+                'listKelas'       => $listKelas,
+                'listMapel'       => $listMapel,
+                'listGuru'        => $listGuru,
+                'listTahunAjaran' => $listTahunAjaran,
+                'listRuangan'     => $listRuangan,
+                'jadwalStats'     => $jadwalStats,
+                'isSuperAdmin'    => $isSuperAdmin,
+                'userRole'        => $user?->role?->nama_role ?? ($user?->isSuperAdmin() ? 'super_admin' : 'admin_sekolah'),
+                'filters'         => [
+                    'tab'          => $activeTab,
+                    'search'       => $search,
+                    'tenant_id'    => $filterTenantId,
+                    'jenjang_id'   => $request->input('jenjang_id', ''),
+                    'jurusan_id'   => $request->input('jurusan_id', ''),
+                    'tahun_ajaran' => $filterTahunAjaran,
+                    'semester'     => $filterSemester,
+                    'kelas_id'     => $filterKelasId,
+                    'hari'         => $filterHari,
+                    'ruangan'      => $filterRuangan,
+                    'trash'        => $trashMode,
+                    'per_page'     => $perPage,
+                ],
             ]);
         }
 
+        // 1. Explicit Async API Request (On-Demand Client Fetch via Axios)
+        if ($request->has('async') && !$request->header('X-Inertia')) {
+            return response()->json([
+                'success'   => true,
+                'activeTab' => $activeTab,
+                'data'      => SecurityPayloadService::sanitize($items, $isSuperAdmin ? [] : ['tenant_id']),
+                'tenants'   => $isSuperAdmin ? $tenants : [],
+            ]);
+        }
+
+        // 2. Inertia Web Response (SPA navigation)
         return Inertia::render('Akademik/Master/Index', [
             'activeTab'       => $activeTab,
-            'items'           => $items,
-            'tenants'         => $tenants,
+            'items'           => SecurityPayloadService::sanitize($items, $isSuperAdmin ? [] : ['tenant_id']),
+            'tenants'         => $isSuperAdmin ? $tenants : [],
             'listJenjang'     => $listJenjang,
             'listJurusan'     => $listJurusan,
             'listKelas'       => $listKelas,

@@ -1,7 +1,10 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
+import SearchableSelect from '@/Components/SearchableSelect.vue'
+import { useMemorySecurity } from '@/Utils/cryptoSecurity.js'
 import { Link, useForm, usePage, router } from '@inertiajs/vue3'
 import { ref, computed, onMounted, watch } from 'vue'
+import axios from 'axios'
 
 const props = defineProps({
   siswa: { type: Object, default: () => ({}) },
@@ -292,7 +295,41 @@ const onKecamatanChange = async () => {
   }
 }
 
-// Initialize geographic dropdowns if editing
+// Pemuatan data lengkap siswa secara On-Demand (Zero-SSR Data Exposure)
+const loadStudentDetailAsync = async (targetId) => {
+  if (!targetId) return
+  try {
+    const res = await fetch(`/siswa/${targetId}/edit?async=1`, {
+      headers: { 'Accept': 'application/json' }
+    })
+    const json = await res.json()
+    if (json?.success && json?.data) {
+      const data = json.data
+      Object.keys(data).forEach((key) => {
+        if (form[key] !== undefined) {
+          form[key] = data[key]
+        }
+      })
+      // Trigger pemuatan wilayah
+      if (form.id_provinsi) {
+        const resK = await fetch(`/wilayah/kota/${form.id_provinsi}`)
+        kotaList.value = await resK.json()
+      }
+      if (form.id_kota) {
+        const resKec = await fetch(`/wilayah/kecamatan/${form.id_kota}`)
+        kecamatanList.value = await resKec.json()
+      }
+      if (form.id_kecamatan) {
+        const resKel = await fetch(`/wilayah/kelurahan/${form.id_kecamatan}`)
+        kelurahanList.value = await resKel.json()
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load student detail async:', err)
+  }
+}
+
+// Initialize geographic dropdowns & asynchronous student data if editing
 onMounted(async () => {
   // Fetch initial all-cities list for birthplace
   try {
@@ -302,24 +339,30 @@ onMounted(async () => {
     console.error('Failed to load all kota:', e)
   }
 
-  // If editing and has id_provinsi
-  if (form.id_provinsi) {
-    try {
-      const resK = await fetch(`/wilayah/kota/${form.id_provinsi}`)
-      kotaList.value = await resK.json()
-    } catch (e) {}
-  }
-  if (form.id_kota) {
-    try {
-      const resKec = await fetch(`/wilayah/kecamatan/${form.id_kota}`)
-      kecamatanList.value = await resKec.json()
-    } catch (e) {}
-  }
-  if (form.id_kecamatan) {
-    try {
-      const resKel = await fetch(`/wilayah/kelurahan/${form.id_kecamatan}`)
-      kelurahanList.value = await resKel.json()
-    } catch (e) {}
+  // Jika mode edit dan data form masih kosong (Zero-SSR initial load)
+  const targetId = form.id || props.siswa?.id
+  if (!props.isCreate && targetId && !form.nama_lengkap) {
+    await loadStudentDetailAsync(targetId)
+  } else {
+    // If editing and has id_provinsi already loaded
+    if (form.id_provinsi) {
+      try {
+        const resK = await fetch(`/wilayah/kota/${form.id_provinsi}`)
+        kotaList.value = await resK.json()
+      } catch (e) {}
+    }
+    if (form.id_kota) {
+      try {
+        const resKec = await fetch(`/wilayah/kecamatan/${form.id_kota}`)
+        kecamatanList.value = await resKec.json()
+      } catch (e) {}
+    }
+    if (form.id_kecamatan) {
+      try {
+        const resKel = await fetch(`/wilayah/kelurahan/${form.id_kecamatan}`)
+        kelurahanList.value = await resKel.json()
+      } catch (e) {}
+    }
   }
 })
 
@@ -975,6 +1018,135 @@ const penghasilanOptions = [
   'Lebih dari Rp20.000.000',
 ]
 const ukuranOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
+
+// Standardized SearchableSelect Options
+const tenantSelectOptions = computed(() => (props.tenants || []).map(t => ({ id: t.id, nama: t.nama_sekolah, subLabel: t.npsn ? `NPSN: ${t.npsn}` : undefined })))
+const genderOptions = [{ id: 'L', nama: 'Laki-laki (L)' }, { id: 'P', nama: 'Perempuan (P)' }]
+const agamaSelectOptions = agamaOptions.map(a => ({ id: a, nama: a }))
+const kewarganegaraanOptions = [{ id: 'WNI', nama: 'Warga Negara Indonesia (WNI)' }, { id: 'WNA', nama: 'Warga Negara Asing (WNA)' }]
+const statusSiswaOptions = [{ id: 'Aktif', nama: 'Aktif' }, { id: 'Lulus', nama: 'Lulus' }, { id: 'Pindah', nama: 'Pindah / Mutasi Keluar' }]
+const angkatanOptions = computed(() => (props.academicOptions?.angkatan || []).map(a => ({ id: a.id, nama: String(a.tahun_angkatan) })))
+const tahunAjaranSelectOptions = computed(() => (props.academicOptions?.tahun_ajaran || []).map(ta => ({ id: ta.id, nama: ta.tahun_ajaran })))
+const jenjangSelectOptions = computed(() => (props.academicOptions?.jenjang || []).map(j => ({ id: j.id, nama: j.nama_jenjang })))
+const jurusanSelectOptions = computed(() => (filteredJurusan.value || []).map(jr => ({ id: jr.id, nama: jr.nama_jurusan })))
+const kelasSelectOptions = computed(() => (filteredKelas.value || []).map(k => ({ id: k.id, nama: k.nama_kelas, subLabel: k.kode_kelas ? `Kode: ${k.kode_kelas}` : undefined })))
+const pendidikanSelectOptions = computed(() => (props.academicOptions?.pendidikan || []).map(p => ({ id: p.id, nama: p.nama_pendidikan })))
+const ukuranSelectOptions = ukuranOptions.map(u => ({ id: u, nama: u }))
+
+const provinsiSelectOptions = computed(() => (props.provinces || []).map(p => ({ id: p.id_provinsi, nama: p.nama_provinsi })))
+const kotaSelectOptions = computed(() => (kotaList.value || []).map(c => ({ id: c.id_kota, nama: c.nama_kota })))
+const kecamatanSelectOptions = computed(() => (kecamatanList.value || []).map(d => ({ id: d.id_kecamatan, nama: d.nama_kecamatan })))
+const kelurahanSelectOptions = computed(() => (kelurahanList.value || []).map(k => ({ id: k.id_kelurahan, nama: k.nama_kelurahan })))
+const statusTinggalSelectOptions = statusTinggalOptions.map(st => ({ id: st, nama: st }))
+const tinggalDenganSelectOptions = tinggalDenganOptions.map(td => ({ id: td, nama: td }))
+
+const golonganDarahOptions = [{ id: 'A', nama: 'A' }, { id: 'B', nama: 'B' }, { id: 'AB', nama: 'AB' }, { id: 'O', nama: 'O' }]
+const transportasiSelectOptions = transportasiOptions.map(tr => ({ id: tr, nama: tr }))
+const statusAnakOptions = [
+  { id: 'Bukan Yatim/Piatu', nama: 'Lengkap (Bukan Yatim/Piatu)' },
+  { id: 'Yatim', nama: 'Yatim (Tidak Ada Ayah)' },
+  { id: 'Piatu', nama: 'Piatu (Tidak Ada Ibu)' },
+  { id: 'Yatim Piatu', nama: 'Yatim Piatu (Tidak Ada Orang Tua)' },
+]
+const alasanLayakOptions = [
+  { id: 'Siswa Miskin', nama: 'Siswa Miskin' },
+  { id: 'Daerah Konflik', nama: 'Daerah Konflik' },
+  { id: 'Dampak Bencana Alam', nama: 'Dampak Bencana Alam' },
+  { id: 'Kelainan Fisik', nama: 'Kelainan Fisik' },
+  { id: 'Keluarga Terpidana / Berada di LAPAS', nama: 'Keluarga Terpidana / Berada di LAPAS' },
+  { id: 'Pemegang PKH / KPS / KKS', nama: 'Pemegang PKH / KPS / KKS' },
+  { id: 'Pernah Drop Out', nama: 'Pernah Drop Out' },
+  { id: 'Tidak Ada', nama: 'Tidak Ada' },
+]
+
+const allKotaSelectOptions = computed(() => (allKotaList.value || []).map(c => ({ id: c.id_kota, nama: c.nama_kota })))
+const statusHidupOptions = [{ id: 'Hidup', nama: 'Masih Hidup' }, { id: 'Meninggal', nama: 'Wafat / Meninggal' }]
+const pendidikanOrtuOptions = pendidikanOptions.map(p => ({ id: p, nama: p }))
+const pekerjaanOrtuOptions = pekerjaanOptions.map(pk => ({ id: pk, nama: pk }))
+const penghasilanOrtuOptions = penghasilanOptions.map(ph => ({ id: ph, nama: ph }))
+
+const jenisPendaftaranOptions = [
+  { id: 'Siswa Baru', nama: 'Siswa Baru' },
+  { id: 'Pindahan', nama: 'Pindahan' },
+  { id: 'Kembali Sekolah', nama: 'Kembali Sekolah' },
+]
+const jalurDiterimaOptions = [
+  { id: 'Zonasi', nama: 'Zonasi' },
+  { id: 'Afirmasi', nama: 'Afirmasi' },
+  { id: 'Prestasi Akademik', nama: 'Prestasi Akademik' },
+  { id: 'Prestasi Non-akademik', nama: 'Prestasi Non-akademik' },
+  { id: 'Perpindahan Tugas', nama: 'Perpindahan Tugas Orang Tua / Wali' },
+  { id: 'Anak Guru / Tenaga Kependidikan', nama: 'Anak Guru / GTK' },
+  { id: 'Khusus', nama: 'Jalur Khusus / Kemitraan' },
+]
+const keluarKarenaOptions = [
+  { id: 'Lulus', nama: 'Lulus' },
+  { id: 'Mutasi', nama: 'Mutasi / Pindah Sekolah' },
+  { id: 'Mengundurkan Diri', nama: 'Mengundurkan Diri' },
+  { id: 'Putus Sekolah', nama: 'Putus Sekolah' },
+  { id: 'Dikeluarkan', nama: 'Dikeluarkan' },
+  { id: 'Wafat', nama: 'Wafat / Meninggal Dunia' },
+]
+const rencanaLulusOptions = [
+  { id: 'Kuliah', nama: 'Kuliah / Melanjutkan Studi' },
+  { id: 'Bekerja', nama: 'Bekerja' },
+  { id: 'Wirausaha', nama: 'Wirausaha' },
+  { id: 'Lainnya', nama: 'Lainnya' },
+]
+
+const isDataLoading = ref(false)
+
+const loadSiswaDataAsync = async () => {
+  if (props.isCreate || !props.siswa?.id) return
+  isDataLoading.value = true
+  try {
+    const res = await axios.get(`/siswa/${props.siswa.id}/edit`, {
+      params: { async: 1 },
+      headers: { 'Accept': 'application/json' }
+    })
+    if (res.data?.success && res.data?.data) {
+      const data = res.data.data
+      Object.keys(data).forEach(key => {
+        if (key in form) {
+          form[key] = data[key]
+        }
+      })
+      // Sync dates
+      if (data.tanggal_lahir) form.tanggal_lahir = String(data.tanggal_lahir).substring(0, 10)
+      if (data.tanggal_ijazah_sebelumnya) form.tanggal_ijazah_sebelumnya = String(data.tanggal_ijazah_sebelumnya).substring(0, 10)
+      if (data.tanggal_diterima) form.tanggal_diterima = String(data.tanggal_diterima).substring(0, 10)
+      if (data.ayah_tanggal_lahir) form.ayah_tanggal_lahir = String(data.ayah_tanggal_lahir).substring(0, 10)
+      if (data.ibu_tanggal_lahir) form.ibu_tanggal_lahir = String(data.ibu_tanggal_lahir).substring(0, 10)
+      if (data.wali_tanggal_lahir) form.wali_tanggal_lahir = String(data.wali_tanggal_lahir).substring(0, 10)
+      if (data.tanggal_meninggalkan_sekolah) form.tanggal_meninggalkan_sekolah = String(data.tanggal_meninggalkan_sekolah).substring(0, 10)
+
+      // Sync previews
+      if (data.foto_url) filePreviews.foto_url = data.foto_url
+      if (data.berkas_kk) existingDocs.berkas_kk = data.berkas_kk
+      if (data.berkas_akta_kelahiran) existingDocs.berkas_akta_kelahiran = data.berkas_akta_kelahiran
+      if (data.berkas_ijazah_smp) existingDocs.berkas_ijazah_smp = data.berkas_ijazah_smp
+      if (data.berkas_ijazah_sma) existingDocs.berkas_ijazah_sma = data.berkas_ijazah_sma
+      if (data.berkas_mutasi_masuk) existingDocs.berkas_mutasi_masuk = data.berkas_mutasi_masuk
+      if (data.berkas_mutasi_keluar) existingDocs.berkas_mutasi_keluar = data.berkas_mutasi_keluar
+      if (data.berkas_kip) existingDocs.berkas_kip = data.berkas_kip
+      if (data.berkas_pernyataan_baru) existingDocs.berkas_pernyataan_baru = data.berkas_pernyataan_baru
+      if (data.berkas_pernyataan_tka) existingDocs.berkas_pernyataan_tka = data.berkas_pernyataan_tka
+    }
+  } catch (err) {
+    console.error('Failed to load student data async:', err)
+  } finally {
+    isDataLoading.value = false
+  }
+}
+
+onMounted(() => {
+  if (!props.isCreate && (!props.siswa?.nama_lengkap || !props.siswa?.nisn)) {
+    loadSiswaDataAsync()
+  }
+})
+
+// OWASP ASVS L3 Memory Security Hygiene
+useMemorySecurity([form, filePreviews, existingDocs, clientErrors])
 </script>
 
 <template>
@@ -1142,11 +1314,13 @@ const ukuranOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
               <!-- Sekolah / Tenant (Super Admin Only) -->
               <div v-if="userRole === 'super_admin'" class="md:col-span-3">
                 <label class="block text-xs font-bold text-slate-700 mb-1">Sekolah / Tenant <span class="text-red-500">*</span></label>
-                <select v-model="form.tenant_id" :disabled="!isCreate"
-                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                  <option value="" disabled>-- Pilih Sekolah --</option>
-                  <option v-for="t in tenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.tenant_id" 
+                  :options="tenantSelectOptions"
+                  :disabled="!isCreate"
+                  placeholder="-- Pilih Sekolah --"
+                  search-placeholder="Cari sekolah..."
+                />
               </div>
 
               <!-- NIK -->
@@ -1202,30 +1376,32 @@ const ukuranOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
               <!-- Jenis Kelamin -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Jenis Kelamin <span class="text-red-500">*</span></label>
-                <select v-model="form.jenis_kelamin"
-                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                  <option value="L">Laki-laki (L)</option>
-                  <option value="P">Perempuan (P)</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.jenis_kelamin" 
+                  :options="genderOptions"
+                  placeholder="-- Pilih Jenis Kelamin --"
+                />
               </div>
 
               <!-- Agama -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Agama <span class="text-red-500">*</span></label>
-                <select v-model="form.agama"
-                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                  <option v-for="a in agamaOptions" :key="a" :value="a">{{ a }}</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.agama" 
+                  :options="agamaSelectOptions"
+                  placeholder="-- Pilih Agama --"
+                  search-placeholder="Cari agama..."
+                />
               </div>
 
               <!-- Kewarganegaraan -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Kewarganegaraan <span class="text-red-500">*</span></label>
-                <select v-model="form.kewarganegaraan"
-                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                  <option value="WNI">Warga Negara Indonesia (WNI)</option>
-                  <option value="WNA">Warga Negara Asing (WNA)</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.kewarganegaraan" 
+                  :options="kewarganegaraanOptions"
+                  placeholder="-- Pilih Kewarganegaraan --"
+                />
               </div>
 
               <!-- Bahasa Sehari-hari -->
@@ -1256,12 +1432,12 @@ const ukuranOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
               <!-- Status Siswa -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Status Siswa <span class="text-red-500">*</span></label>
-                <select v-model="form.status" :disabled="!['super_admin', 'operator_sekolah', 'admin_sekolah'].includes(userRole)"
-                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-blue-700 focus:bg-white focus:border-blue-600 outline-hidden">
-                  <option value="Aktif">Aktif</option>
-                  <option value="Lulus">Lulus</option>
-                  <option value="Pindah">Pindah / Mutasi Keluar</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.status" 
+                  :options="statusSiswaOptions"
+                  :disabled="!['super_admin', 'operator_sekolah', 'admin_sekolah'].includes(userRole)"
+                  placeholder="-- Pilih Status --"
+                />
               </div>
 
               <!-- Ubah Password (Optional) -->
@@ -1284,61 +1460,67 @@ const ukuranOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
               <!-- Angkatan -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Tahun Angkatan <span class="text-red-500">*</span></label>
-                <select v-model="form.id_angkatan"
-                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                  <option value="" disabled>-- Pilih Angkatan --</option>
-                  <option v-for="a in academicOptions.angkatan" :key="a.id" :value="a.id">{{ a.tahun_angkatan }}</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.id_angkatan" 
+                  :options="angkatanOptions"
+                  placeholder="-- Pilih Angkatan --"
+                  search-placeholder="Cari tahun angkatan..."
+                />
               </div>
 
               <!-- Tahun Ajaran -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Tahun Ajaran <span class="text-red-500">*</span></label>
-                <select v-model="form.id_tahun_ajaran"
-                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                  <option value="" disabled>-- Pilih Tahun Ajaran --</option>
-                  <option v-for="ta in academicOptions.tahun_ajaran" :key="ta.id" :value="ta.id">{{ ta.tahun_ajaran }}</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.id_tahun_ajaran" 
+                  :options="tahunAjaranSelectOptions"
+                  placeholder="-- Pilih Tahun Ajaran --"
+                  search-placeholder="Cari tahun ajaran..."
+                />
               </div>
 
               <!-- Jenjang -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Jenjang Pendidikan <span class="text-red-500">*</span></label>
-                <select v-model="form.id_jenjang"
-                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                  <option value="" disabled>-- Pilih Jenjang --</option>
-                  <option v-for="j in academicOptions.jenjang" :key="j.id" :value="j.id">{{ j.nama_jenjang }}</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.id_jenjang" 
+                  :options="jenjangSelectOptions"
+                  placeholder="-- Pilih Jenjang --"
+                  search-placeholder="Cari jenjang..."
+                />
               </div>
 
               <!-- Jurusan -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Jurusan / Peminatan <span class="text-red-500">*</span></label>
-                <select v-model="form.id_jurusan"
-                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                  <option value="" disabled>-- Pilih Jurusan --</option>
-                  <option v-for="jr in filteredJurusan" :key="jr.id" :value="jr.id">{{ jr.nama_jurusan }}</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.id_jurusan" 
+                  :options="jurusanSelectOptions"
+                  placeholder="-- Pilih Jurusan --"
+                  search-placeholder="Cari jurusan..."
+                />
               </div>
 
               <!-- Kelas / Rombel -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Rombel / Kelas <span class="text-red-500">*</span></label>
-                <select v-model="form.id_kelas"
-                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-blue-700 focus:bg-white focus:border-blue-600 outline-hidden">
-                  <option value="" disabled>-- Pilih Rombel --</option>
-                  <option v-for="k in filteredKelas" :key="k.id" :value="k.id">{{ k.nama_kelas }}</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.id_kelas" 
+                  :options="kelasSelectOptions"
+                  placeholder="-- Pilih Rombel --"
+                  search-placeholder="Cari kelas..."
+                />
               </div>
 
               <!-- Pendidikan Terakhir / Ditempuh -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Pendidikan Ditempuh <span class="text-red-500">*</span></label>
-                <select v-model="form.id_pendidikan"
-                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                  <option value="" disabled>-- Pilih Pendidikan --</option>
-                  <option v-for="p in academicOptions.pendidikan" :key="p.id" :value="p.id">{{ p.nama_pendidikan }}</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.id_pendidikan" 
+                  :options="pendidikanSelectOptions"
+                  placeholder="-- Pilih Pendidikan --"
+                  search-placeholder="Cari pendidikan..."
+                />
               </div>
 
             </div>
@@ -1377,20 +1559,20 @@ const ukuranOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
 
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Ukuran Seragam Sekolah</label>
-                <select v-model="form.ukuran_seragam_sekolah"
-                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold uppercase focus:bg-white focus:border-blue-600 outline-hidden">
-                  <option value="">-- Pilih Ukuran --</option>
-                  <option v-for="u in ukuranOptions" :key="u" :value="u">{{ u }}</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.ukuran_seragam_sekolah" 
+                  :options="ukuranSelectOptions"
+                  placeholder="-- Pilih Ukuran --"
+                />
               </div>
 
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Ukuran Seragam Olahraga</label>
-                <select v-model="form.ukuran_seragam_olahraga"
-                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold uppercase focus:bg-white focus:border-blue-600 outline-hidden">
-                  <option value="">-- Pilih Ukuran --</option>
-                  <option v-for="u in ukuranOptions" :key="u" :value="u">{{ u }}</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.ukuran_seragam_olahraga" 
+                  :options="ukuranSelectOptions"
+                  placeholder="-- Pilih Ukuran --"
+                />
               </div>
 
             </div>
@@ -1453,59 +1635,71 @@ const ukuranOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
               <!-- Cascading Dropdown: Provinsi -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Provinsi <span class="text-red-500">*</span></label>
-                <select v-model="form.id_provinsi" @change="onProvinsiChange"
-                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                  <option value="" disabled>-- Pilih Provinsi --</option>
-                  <option v-for="p in provinces" :key="p.id_provinsi" :value="p.id_provinsi">{{ p.nama_provinsi }}</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.id_provinsi" 
+                  :options="provinsiSelectOptions"
+                  placeholder="-- Pilih Provinsi --"
+                  search-placeholder="Cari provinsi..."
+                  @change="onProvinsiChange"
+                />
               </div>
 
               <!-- Cascading Dropdown: Kabupaten / Kota -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Kabupaten / Kota <span class="text-red-500">*</span></label>
-                <select v-model="form.id_kota" @change="onKotaChange" :disabled="loadingKota || !form.id_provinsi"
-                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                  <option value="" disabled>{{ loadingKota ? 'Memuat data kota...' : '-- Pilih Kota --' }}</option>
-                  <option v-for="c in kotaList" :key="c.id_kota" :value="c.id_kota">{{ c.nama_kota }}</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.id_kota" 
+                  :options="kotaSelectOptions"
+                  :disabled="loadingKota || !form.id_provinsi"
+                  :placeholder="loadingKota ? 'Memuat data kota...' : '-- Pilih Kota --'"
+                  search-placeholder="Cari kota / kabupaten..."
+                  @change="onKotaChange"
+                />
               </div>
 
               <!-- Cascading Dropdown: Kecamatan -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Kecamatan <span class="text-red-500">*</span></label>
-                <select v-model="form.id_kecamatan" @change="onKecamatanChange" :disabled="loadingKecamatan || !form.id_kota"
-                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                  <option value="" disabled>{{ loadingKecamatan ? 'Memuat kecamatan...' : '-- Pilih Kecamatan --' }}</option>
-                  <option v-for="d in kecamatanList" :key="d.id_kecamatan" :value="d.id_kecamatan">{{ d.nama_kecamatan }}</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.id_kecamatan" 
+                  :options="kecamatanSelectOptions"
+                  :disabled="loadingKecamatan || !form.id_kota"
+                  :placeholder="loadingKecamatan ? 'Memuat kecamatan...' : '-- Pilih Kecamatan --'"
+                  search-placeholder="Cari kecamatan..."
+                  @change="onKecamatanChange"
+                />
               </div>
 
               <!-- Cascading Dropdown: Kelurahan -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Kelurahan / Desa <span class="text-red-500">*</span></label>
-                <select v-model="form.id_kelurahan" :disabled="loadingKelurahan || !form.id_kecamatan"
-                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                  <option value="" disabled>{{ loadingKelurahan ? 'Memuat kelurahan...' : '-- Pilih Kelurahan --' }}</option>
-                  <option v-for="k in kelurahanList" :key="k.id_kelurahan" :value="k.id_kelurahan">{{ k.nama_kelurahan }}</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.id_kelurahan" 
+                  :options="kelurahanSelectOptions"
+                  :disabled="loadingKelurahan || !form.id_kecamatan"
+                  :placeholder="loadingKelurahan ? 'Memuat kelurahan...' : '-- Pilih Kelurahan --'"
+                  search-placeholder="Cari kelurahan..."
+                />
               </div>
 
               <!-- Status Tinggal -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Status Tempat Tinggal <span class="text-red-500">*</span></label>
-                <select v-model="form.status_tinggal"
-                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                  <option v-for="st in statusTinggalOptions" :key="st" :value="st">{{ st }}</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.status_tinggal" 
+                  :options="statusTinggalSelectOptions"
+                  placeholder="-- Pilih Status Tinggal --"
+                />
               </div>
 
               <!-- Tinggal Dengan -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Tinggal Bersama <span class="text-red-500">*</span></label>
-                <select v-model="form.tinggal_dengan"
-                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                  <option v-for="td in tinggalDenganOptions" :key="td" :value="td">{{ td }}</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.tinggal_dengan" 
+                  :options="tinggalDenganSelectOptions"
+                  placeholder="-- Pilih Tinggal Bersama --"
+                />
               </div>
 
               <!-- Email Siswa -->
@@ -1583,13 +1777,11 @@ const ukuranOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
               <!-- Golongan Darah -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Golongan Darah <span class="text-red-500">*</span></label>
-                <select v-model="form.golongan_darah"
-                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                  <option value="A">A</option>
-                  <option value="B">B</option>
-                  <option value="AB">AB</option>
-                  <option value="O">O</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.golongan_darah" 
+                  :options="golonganDarahOptions"
+                  placeholder="-- Pilih Golongan Darah --"
+                />
               </div>
 
               <!-- Anak Ke- -->
@@ -1616,10 +1808,11 @@ const ukuranOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
               <!-- Alat Transportasi -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Alat Transportasi <span class="text-red-500">*</span></label>
-                <select v-model="form.transportasi"
-                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                  <option v-for="tr in transportasiOptions" :key="tr" :value="tr">{{ tr }}</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.transportasi" 
+                  :options="transportasiSelectOptions"
+                  placeholder="-- Pilih Alat Transportasi --"
+                />
               </div>
 
               <!-- Riwayat Penyakit -->
@@ -1639,13 +1832,11 @@ const ukuranOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
               <!-- Status Anak (Yatim/Piatu) -->
               <div class="md:col-span-2">
                 <label class="block text-xs font-bold text-slate-700 mb-1">Status Anak (Yatim / Piatu)</label>
-                <select v-model="form.status_anak"
-                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                  <option value="Bukan Yatim/Piatu">Lengkap (Bukan Yatim/Piatu)</option>
-                  <option value="Yatim">Yatim (Tidak Ada Ayah)</option>
-                  <option value="Piatu">Piatu (Tidak Ada Ibu)</option>
-                  <option value="Yatim Piatu">Yatim Piatu (Tidak Ada Orang Tua)</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.status_anak" 
+                  :options="statusAnakOptions"
+                  placeholder="-- Pilih Status Anak --"
+                />
               </div>
 
             </div>
@@ -1707,18 +1898,11 @@ const ukuranOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
               <!-- Alasan Layak KIP (Muncul jika layak_kip === 1) -->
               <div v-if="form.layak_kip == 1" class="md:col-span-2">
                 <label class="block text-xs font-bold text-slate-700 mb-1">Alasan Layak KIP / PIP <span class="text-red-500">*</span></label>
-                <select v-model="form.alasan_layak"
-                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                  <option value="" disabled>-- Pilih Alasan --</option>
-                  <option value="Siswa Miskin">Siswa Miskin</option>
-                  <option value="Daerah Konflik">Daerah Konflik</option>
-                  <option value="Dampak Bencana Alam">Dampak Bencana Alam</option>
-                  <option value="Kelainan Fisik">Kelainan Fisik</option>
-                  <option value="Keluarga Terpidana / Berada di LAPAS">Keluarga Terpidana / Berada di LAPAS</option>
-                  <option value="Pemegang PKH / KPS / KKS">Pemegang PKH / KPS / KKS</option>
-                  <option value="Pernah Drop Out">Pernah Drop Out</option>
-                  <option value="Tidak Ada">Tidak Ada</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.alasan_layak" 
+                  :options="alasanLayakOptions"
+                  placeholder="-- Pilih Alasan --"
+                />
               </div>
 
             </div>
@@ -1817,11 +2001,12 @@ const ukuranOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">Tempat Lahir Ayah</label>
-              <select v-model="form.id_tempat_lahir_ayah"
-                      class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                <option value="">-- Pilih Kota --</option>
-                <option v-for="c in allKotaList" :key="c.id_kota" :value="c.id_kota">{{ c.nama_kota }}</option>
-              </select>
+              <SearchableSelect 
+                v-model="form.id_tempat_lahir_ayah" 
+                :options="allKotaSelectOptions"
+                placeholder="-- Pilih Kota --"
+                search-placeholder="Cari kota kelahiran..."
+              />
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">Tanggal Lahir Ayah</label>
@@ -1830,50 +2015,53 @@ const ukuranOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">Kewarganegaraan Ayah</label>
-              <select v-model="form.kewarganegaraan_ayah"
-                      class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                <option value="WNI">Warga Negara Indonesia (WNI)</option>
-                <option value="WNA">Warga Negara Asing (WNA)</option>
-              </select>
+              <SearchableSelect 
+                v-model="form.kewarganegaraan_ayah" 
+                :options="kewarganegaraanOptions"
+                placeholder="-- Pilih Kewarganegaraan --"
+              />
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">Status Hidup Ayah</label>
-              <select v-model="form.status_hidup_ayah"
-                      class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                <option value="Hidup">Masih Hidup</option>
-                <option value="Meninggal">Wafat / Meninggal</option>
-              </select>
+              <SearchableSelect 
+                v-model="form.status_hidup_ayah" 
+                :options="statusHidupOptions"
+                placeholder="-- Pilih Status Hidup --"
+              />
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">Pendidikan Terakhir Ayah</label>
-              <select v-model="form.pendidikan_ayah"
-                      class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                <option value="">-- Pilih Pendidikan --</option>
-                <option v-for="p in pendidikanOptions" :key="p" :value="p">{{ p }}</option>
-              </select>
+              <SearchableSelect 
+                v-model="form.pendidikan_ayah" 
+                :options="pendidikanOrtuOptions"
+                placeholder="-- Pilih Pendidikan --"
+                search-placeholder="Cari pendidikan..."
+              />
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">Pekerjaan Ayah</label>
-              <select v-model="form.pekerjaan_ayah"
-                      class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                <option value="">-- Pilih Pekerjaan --</option>
-                <option v-for="pk in pekerjaanOptions" :key="pk" :value="pk">{{ pk }}</option>
-              </select>
+              <SearchableSelect 
+                v-model="form.pekerjaan_ayah" 
+                :options="pekerjaanOrtuOptions"
+                placeholder="-- Pilih Pekerjaan --"
+                search-placeholder="Cari pekerjaan..."
+              />
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">Penghasilan Bulanan Ayah</label>
-              <select v-model="form.penghasilan_ayah"
-                      class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                <option value="">-- Pilih Penghasilan --</option>
-                <option v-for="ph in penghasilanOptions" :key="ph" :value="ph">{{ ph }}</option>
-              </select>
+              <SearchableSelect 
+                v-model="form.penghasilan_ayah" 
+                :options="penghasilanOrtuOptions"
+                placeholder="-- Pilih Penghasilan --"
+              />
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">Agama Ayah</label>
-              <select v-model="form.agama_ayah"
-                      class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                <option v-for="a in agamaOptions" :key="a" :value="a">{{ a }}</option>
-              </select>
+              <SearchableSelect 
+                v-model="form.agama_ayah" 
+                :options="agamaSelectOptions"
+                placeholder="-- Pilih Agama --"
+              />
             </div>
           </div>
 
@@ -1909,47 +2097,53 @@ const ukuranOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">Kewarganegaraan Ibu</label>
-              <select v-model="form.kewarganegaraan_ibu"
-                      class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                <option value="WNI">Warga Negara Indonesia (WNI)</option>
-                <option value="WNA">Warga Negara Asing (WNA)</option>
-              </select>
+              <SearchableSelect 
+                v-model="form.kewarganegaraan_ibu" 
+                :options="kewarganegaraanOptions"
+                placeholder="-- Pilih Kewarganegaraan --"
+              />
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">Status Hidup Ibu</label>
-              <select v-model="form.status_hidup_ibu"
-                      class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                <option value="Hidup">Masih Hidup</option>
-                <option value="Meninggal">Wafat / Meninggal</option>
-              </select>
+              <SearchableSelect 
+                v-model="form.status_hidup_ibu" 
+                :options="statusHidupOptions"
+                placeholder="-- Pilih Status Hidup --"
+              />
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">Pendidikan Terakhir Ibu <span class="text-red-500">*</span></label>
-              <select v-model="form.pendidikan_ibu"
-                      class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                <option v-for="p in pendidikanOptions" :key="p" :value="p">{{ p }}</option>
-              </select>
+              <SearchableSelect 
+                v-model="form.pendidikan_ibu" 
+                :options="pendidikanOrtuOptions"
+                placeholder="-- Pilih Pendidikan --"
+                search-placeholder="Cari pendidikan..."
+              />
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">Pekerjaan Ibu <span class="text-red-500">*</span></label>
-              <select v-model="form.pekerjaan_ibu"
-                      class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                <option v-for="pk in pekerjaanOptions" :key="pk" :value="pk">{{ pk }}</option>
-              </select>
+              <SearchableSelect 
+                v-model="form.pekerjaan_ibu" 
+                :options="pekerjaanOrtuOptions"
+                placeholder="-- Pilih Pekerjaan --"
+                search-placeholder="Cari pekerjaan..."
+              />
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">Penghasilan Bulanan Ibu <span class="text-red-500">*</span></label>
-              <select v-model="form.penghasilan_ibu"
-                      class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                <option v-for="ph in penghasilanOptions" :key="ph" :value="ph">{{ ph }}</option>
-              </select>
+              <SearchableSelect 
+                v-model="form.penghasilan_ibu" 
+                :options="penghasilanOrtuOptions"
+                placeholder="-- Pilih Penghasilan --"
+              />
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">Agama Ibu <span class="text-red-500">*</span></label>
-              <select v-model="form.agama_ibu"
-                      class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                <option v-for="a in agamaOptions" :key="a" :value="a">{{ a }}</option>
-              </select>
+              <SearchableSelect 
+                v-model="form.agama_ibu" 
+                :options="agamaSelectOptions"
+                placeholder="-- Pilih Agama --"
+              />
             </div>
           </div>
 
@@ -1982,11 +2176,12 @@ const ukuranOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">Pendidikan Terakhir Wali</label>
-              <select v-model="form.pendidikan_wali"
-                      class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                <option value="">-- Pilih --</option>
-                <option v-for="p in pendidikanOptions" :key="p" :value="p">{{ p }}</option>
-              </select>
+              <SearchableSelect 
+                v-model="form.pendidikan_wali" 
+                :options="pendidikanOrtuOptions"
+                placeholder="-- Pilih Pendidikan --"
+                search-placeholder="Cari pendidikan..."
+              />
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">Pekerjaan Wali</label>
@@ -1995,11 +2190,11 @@ const ukuranOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">Penghasilan Bulanan Wali</label>
-              <select v-model="form.penghasilan_wali"
-                      class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                <option value="">-- Pilih --</option>
-                <option v-for="ph in penghasilanOptions" :key="ph" :value="ph">{{ ph }}</option>
-              </select>
+              <SearchableSelect 
+                v-model="form.penghasilan_wali" 
+                :options="penghasilanOrtuOptions"
+                placeholder="-- Pilih Penghasilan --"
+              />
             </div>
           </div>
 
@@ -2025,27 +2220,21 @@ const ukuranOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
               <!-- Jenis Pendaftaran -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Jenis Pendaftaran <span class="text-red-500">*</span></label>
-                <select v-model="form.jenis_pendaftaran"
-                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                  <option value="Siswa Baru">Siswa Baru</option>
-                  <option value="Pindahan">Pindahan</option>
-                  <option value="Kembali Sekolah">Kembali Sekolah</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.jenis_pendaftaran" 
+                  :options="jenisPendaftaranOptions"
+                  placeholder="-- Pilih Jenis Pendaftaran --"
+                />
               </div>
 
               <!-- Jalur Diterima -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Jalur Pendaftaran / Diterima</label>
-                <select v-model="form.jalur_diterima"
-                        class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-blue-600 outline-hidden">
-                  <option value="Zonasi">Zonasi</option>
-                  <option value="Afirmasi">Afirmasi</option>
-                  <option value="Prestasi Akademik">Prestasi Akademik</option>
-                  <option value="Prestasi Non-akademik">Prestasi Non-akademik</option>
-                  <option value="Perpindahan Tugas">Perpindahan Tugas Orang Tua / Wali</option>
-                  <option value="Anak Guru / Tenaga Kependidikan">Anak Guru / GTK</option>
-                  <option value="Khusus">Jalur Khusus / Kemitraan</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.jalur_diterima" 
+                  :options="jalurDiterimaOptions"
+                  placeholder="-- Pilih Jalur Diterima --"
+                />
               </div>
 
               <!-- Tanggal Masuk -->
@@ -2109,16 +2298,11 @@ const ukuranOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Keluar Karena</label>
-                <select v-model="form.keluar_karena"
-                        class="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:border-amber-600 outline-hidden">
-                  <option value="">-- Pilih Alasan Keluar --</option>
-                  <option value="Lulus">Lulus</option>
-                  <option value="Mutasi">Mutasi / Pindah Sekolah</option>
-                  <option value="Mengundurkan Diri">Mengundurkan Diri</option>
-                  <option value="Putus Sekolah">Putus Sekolah</option>
-                  <option value="Dikeluarkan">Dikeluarkan</option>
-                  <option value="Wafat">Wafat / Meninggal Dunia</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.keluar_karena" 
+                  :options="keluarKarenaOptions"
+                  placeholder="-- Pilih Alasan Keluar --"
+                />
               </div>
 
               <div>
@@ -2162,14 +2346,11 @@ const ukuranOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
               </div>
               <div v-if="form.keluar_karena === 'Lulus'">
                 <label class="block text-xs font-bold text-slate-700 mb-1">Rencana Setelah Lulus</label>
-                <select v-model="form.keterangan_setelah_lulus"
-                        class="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-hidden">
-                  <option value="">-- Pilih Rencana --</option>
-                  <option value="Kuliah">Kuliah / Melanjutkan Studi</option>
-                  <option value="Bekerja">Bekerja</option>
-                  <option value="Wirausaha">Wirausaha</option>
-                  <option value="Lainnya">Lainnya</option>
-                </select>
+                <SearchableSelect 
+                  v-model="form.keterangan_setelah_lulus" 
+                  :options="rencanaLulusOptions"
+                  placeholder="-- Pilih Rencana --"
+                />
               </div>
 
               <div class="md:col-span-3">

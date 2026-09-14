@@ -6,6 +6,7 @@ use Modules\Core\Http\Controllers\TenantManagementController;
 use Modules\Core\Http\Controllers\UserController;
 use Modules\Core\Http\Controllers\SekolahIdentitasController;
 use Modules\Core\Http\Controllers\KonfigurasiAksesController;
+use Modules\Core\Http\Controllers\BantuanController;
 
 // 1. Guest Routes (Landing, Registration & Login)
 Route::middleware('guest')->group(function () {
@@ -59,4 +60,29 @@ Route::middleware(['auth', 'tenant.guard'])->group(function () {
         Route::post('/', [KonfigurasiAksesController::class, 'store'])->name('store');
         Route::get('/fetch', [KonfigurasiAksesController::class, 'fetch'])->name('fetch');
     });
+
+    // Core - Pusat Bantuan & Layanan Tiket
+    Route::prefix('bantuan')->name('core.bantuan.')->group(function () {
+        Route::get('/', [BantuanController::class, 'index'])->name('index');
+        Route::get('/tickets', [BantuanController::class, 'getTickets'])->name('tickets');
+        Route::get('/tickets/{id}', [BantuanController::class, 'getTicketDetail'])->name('ticket-detail');
+        Route::post('/tickets', [BantuanController::class, 'storeTicket'])->name('store-ticket');
+        Route::post('/tickets/{id}/reply', [BantuanController::class, 'replyTicket'])->name('reply-ticket');
+        Route::put('/tickets/{id}/status', [BantuanController::class, 'updateStatus'])->name('update-status');
+        Route::get('/faqs/search', [BantuanController::class, 'faqLookup'])->name('faq-search');
+        Route::get('/canned-responses', [BantuanController::class, 'getCannedResponses'])->name('canned-responses');
+        Route::post('/canned-responses', [BantuanController::class, 'storeCannedResponse'])->name('store-canned-response');
+        Route::delete('/canned-responses/{id}', [BantuanController::class, 'deleteCannedResponse'])->name('delete-canned-response');
+        Route::post('/faqs', [BantuanController::class, 'storeFaq'])->name('store-faq');
+        Route::delete('/faqs/{id}', [BantuanController::class, 'deleteFaq'])->name('delete-faq');
+        Route::get('/unread-count', [BantuanController::class, 'getUnreadCount'])->name('unread-count');
+
+        // Request & Usulan Fitur Baru
+        Route::get('/feature-requests', [BantuanController::class, 'getFeatureRequests'])->name('feature-requests');
+        Route::post('/feature-requests', [BantuanController::class, 'storeFeatureRequest'])->name('store-feature-request');
+        Route::post('/feature-requests/{id}/vote', [BantuanController::class, 'voteFeatureRequest'])->name('vote-feature-request');
+        Route::put('/feature-requests/{id}/status', [BantuanController::class, 'updateFeatureRequestStatus'])->name('update-feature-request-status');
+    });
 });
+
+

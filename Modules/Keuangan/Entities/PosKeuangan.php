@@ -13,18 +13,25 @@ class PosKeuangan extends BaseTenantModel
         'id',
         'tenant_id',
         'kode_pos',
-        'nama_pos', // e.g. 'SPP Bulanan', 'Uang Gedung / DSP', 'Seragam & Buku'
-        'tipe_pembayaran', // 'Bulanan', 'Bebas' (Sekali bayar/Cicilan)
+        'nama_pos',
+        'tipe_periode', // 'Bulanan', 'Bebas', 'Semester', 'Tahunan'
+        'urutan',
         'keterangan',
         'is_active',
     ];
 
     protected $casts = [
+        'urutan'    => 'integer',
         'is_active' => 'boolean',
     ];
 
     public function tarif(): HasMany
     {
-        return $this->hasMany(TarifPembayaran::class, 'pos_keuangan_id', 'id');
+        return $this->hasMany(TarifPembayaran::class, 'pos_id', 'id');
+    }
+
+    public function tagihan(): HasMany
+    {
+        return $this->hasMany(TagihanSiswa::class, 'pos_id', 'id');
     }
 }

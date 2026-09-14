@@ -14,26 +14,34 @@ class TagihanSiswa extends BaseTenantModel
     protected $fillable = [
         'id',
         'tenant_id',
-        'siswa_id',
-        'pos_keuangan_id',
-        'tahun_ajaran_id',
-        'bulan', // 1 - 12 (untuk SPP bulanan)
-        'tahun',
         'nomor_tagihan',
+        'siswa_id',
+        'pos_id',
+        'tahun_ajaran_id',
+        'bulan', // 1 - 12 (untuk tagihan bulanan)
+        'tahun',
+        'nominal_tarif_dasar',
+        'nominal_potongan',
         'total_tagihan',
         'total_terbayar',
         'sisa_tagihan',
-        'status_pembayaran', // 'Belum Bayar', 'Sebagian', 'Lunas'
+        'status_pembayaran', // 'Belum Bayar', 'Sebagian', 'Lunas', 'Batal'
         'tanggal_jatuh_tempo',
+        'snap_token',
+        'payment_url',
+        'is_active',
     ];
 
     protected $casts = [
-        'bulan'          => 'integer',
-        'tahun'          => 'integer',
-        'total_tagihan'  => 'decimal:2',
-        'total_terbayar' => 'decimal:2',
-        'sisa_tagihan'   => 'decimal:2',
+        'bulan'               => 'integer',
+        'tahun'               => 'integer',
+        'nominal_tarif_dasar' => 'decimal:2',
+        'nominal_potongan'    => 'decimal:2',
+        'total_tagihan'       => 'decimal:2',
+        'total_terbayar'      => 'decimal:2',
+        'sisa_tagihan'        => 'decimal:2',
         'tanggal_jatuh_tempo' => 'date',
+        'is_active'           => 'boolean',
     ];
 
     public function siswa(): BelongsTo
@@ -43,7 +51,7 @@ class TagihanSiswa extends BaseTenantModel
 
     public function pos(): BelongsTo
     {
-        return $this->belongsTo(PosKeuangan::class, 'pos_keuangan_id', 'id');
+        return $this->belongsTo(PosKeuangan::class, 'pos_id', 'id');
     }
 
     public function transaksi(): HasMany

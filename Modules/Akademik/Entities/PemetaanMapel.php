@@ -25,10 +25,13 @@ class PemetaanMapel extends BaseTenantModel
         'guru_id',
         'kkm',
         'jam_pelajaran',
+        'jam_ke',
         'hari',
         'jam_mulai',
         'jam_selesai',
         'ruangan',
+        'warna_label',
+        'catatan',
     ];
 
     protected $casts = [

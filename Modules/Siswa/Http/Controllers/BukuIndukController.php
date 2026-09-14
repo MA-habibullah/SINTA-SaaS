@@ -25,6 +25,7 @@ use Modules\Akademik\Entities\TahunAjaran;
 use Modules\Akademik\Entities\Angkatan;
 use Modules\Akademik\Entities\RefKurikulum;
 use Modules\Akademik\Entities\MataPelajaran;
+use Modules\Core\Services\SecurityPayloadService;
 
 class BukuIndukController extends Controller
 {
@@ -174,11 +175,39 @@ class BukuIndukController extends Controller
             ->orderBy('nama_mata_pelajaran', 'asc')
             ->get(['id', 'id as kode_mapel', 'nama_mata_pelajaran as nama_mapel']);
 
-        if ($request->wantsJson()) {
+        // Zero-SSR Data Exposure Protection (Anti-Scraping / View Source Zero Leakage)
+        $isInitialSsr = !$request->header('X-Inertia') && !$request->has('async');
+
+        if ($isInitialSsr) {
+            return Inertia::render('Siswa/BukuInduk/Index', [
+                'activeTab'       => $activeTab,
+                'siswaList'       => null,
+                'tenants'         => $isSuperAdmin ? $tenants : [],
+                'kelasList'       => $kelasList,
+                'jenjangList'     => $jenjangList,
+                'tahunAjaranList' => $tahunAjaranList,
+                'kurikulumList'   => $kurikulumList,
+                'bankMapel'       => $bankMapel,
+                'isSuperAdmin'    => $isSuperAdmin,
+                'userRole'        => $user?->role?->nama_role ?? ($isSuperAdmin ? 'super_admin' : 'admin_sekolah'),
+                'filters'         => [
+                    'tab'        => $activeTab,
+                    'search'     => $search,
+                    'jenjang_id' => $filterJenjang,
+                    'kelas_id'   => $filterKelas,
+                    'status'     => $filterStatus,
+                    'tenant_id'  => $filterTenantId,
+                    'per_page'   => $perPage,
+                ],
+            ]);
+        }
+
+        // 1. Explicit Async API Request (On-Demand Client Fetch via Axios)
+        if ($request->has('async') && !$request->header('X-Inertia')) {
             return response()->json([
                 'success'         => true,
-                'data'            => $siswaPaginated,
-                'tenants'         => $tenants,
+                'data'            => SecurityPayloadService::sanitize($siswaPaginated, $isSuperAdmin ? [] : ['tenant_id']),
+                'tenants'         => $isSuperAdmin ? $tenants : [],
                 'kelasList'       => $kelasList,
                 'jenjangList'     => $jenjangList,
                 'tahunAjaranList' => $tahunAjaranList,
@@ -187,10 +216,11 @@ class BukuIndukController extends Controller
             ]);
         }
 
+        // 2. Inertia Web Response (SPA navigation)
         return Inertia::render('Siswa/BukuInduk/Index', [
             'activeTab'       => $activeTab,
-            'siswaList'       => $siswaPaginated,
-            'tenants'         => $tenants,
+            'siswaList'       => SecurityPayloadService::sanitize($siswaPaginated, $isSuperAdmin ? [] : ['tenant_id']),
+            'tenants'         => $isSuperAdmin ? $tenants : [],
             'kelasList'       => $kelasList,
             'jenjangList'     => $jenjangList,
             'tahunAjaranList' => $tahunAjaranList,
@@ -358,7 +388,7 @@ class BukuIndukController extends Controller
 
         return response()->json([
             'success' => true,
-            'data'    => $siswaData,
+            'data'    => SecurityPayloadService::sanitize($siswaData),
         ]);
     }
 
@@ -1715,6 +1745,9 @@ class BukuIndukController extends Controller
      */
     public function edit(Request $request, ?string $id = null): InertiaResponse|JsonResponse
     {
+        $user = auth()->user();
+        $isSuperAdmin = $user && ($user->isSuperAdmin() || in_array($user->role?->nama_role ?? '', ['super_admin', 'superadmin', 'admin']));
+
         $targetId = $id ?? $request->query('id');
         $siswa = Siswa::withoutTenant()->findOrFail($targetId);
 
@@ -1726,7 +1759,7 @@ class BukuIndukController extends Controller
 
         $academicOptions = $this->getAcademicOptions($siswa->tenant_id);
         $provinces = DB::table('core.provinsi')->orderBy('nama_provinsi', 'asc')->get(['id_provinsi', 'nama_provinsi']);
-        $tenants = DB::table('core.tenants')->orderBy('nama_sekolah')->get(['id', 'nama_sekolah']);
+        $tenants = $isSuperAdmin ? DB::table('core.tenants')->orderBy('nama_sekolah')->get(['id', 'nama_sekolah']) : [];
 
         // Format Orang Tua
         $ayah = $ortuList->firstWhere('hubungan', 'Ayah');
@@ -1917,15 +1950,31 @@ class BukuIndukController extends Controller
             'berkas_pernyataan_tka'    => $docMap['berkas_pernyataan_tka'] ?? '',
         ];
 
-        if ($request->wantsJson()) {
-            return response()->json(['success' => true, 'data' => $flattened]);
+        // Zero-SSR Data Exposure Protection (Anti-Scraping / View Source Zero Leakage)
+        $isInitialSsr = !$request->header('X-Inertia') && !$request->has('async');
+
+        if ($isInitialSsr) {
+            return Inertia::render('Siswa/Edit', [
+                'siswa'           => ['id' => $targetId],
+                'academicOptions' => $academicOptions,
+                'provinces'       => $provinces,
+                'tenants'         => $isSuperAdmin ? $tenants : [],
+                'isCreate'        => false,
+                'userRole'        => auth()->user()?->role_name ?? 'admin_sekolah',
+            ]);
         }
 
+        // 1. Explicit Async API Request (On-Demand Client Fetch via Axios)
+        if ($request->has('async') && !$request->header('X-Inertia')) {
+            return response()->json(['success' => true, 'data' => SecurityPayloadService::sanitize($flattened, $isSuperAdmin ? [] : ['tenant_id'])]);
+        }
+
+        // 2. Inertia Web Response (SPA navigation)
         return Inertia::render('Siswa/Edit', [
-            'siswa'           => $flattened,
+            'siswa'           => SecurityPayloadService::sanitize($flattened, $isSuperAdmin ? [] : ['tenant_id']),
             'academicOptions' => $academicOptions,
             'provinces'       => $provinces,
-            'tenants'         => $tenants,
+            'tenants'         => $isSuperAdmin ? $tenants : [],
             'isCreate'        => false,
             'userRole'        => auth()->user()?->role_name ?? 'admin_sekolah',
         ]);

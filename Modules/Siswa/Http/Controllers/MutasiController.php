@@ -16,10 +16,25 @@ class MutasiController extends Controller
     public function index(Request $request): InertiaResponse|JsonResponse
     {
         $query = SiswaMutasi::with('siswa')
-            ->when($request->jenis, function ($q, $jenis) {
-                $q->where('jenis_mutasi', $jenis);
+            ->where(function($q) {
+                $q->whereNotNull('tanggal_keluar')
+                  ->orWhereNotNull('keluar_karena')
+                  ->orWhereNotNull('sekolah_asal_mutasi')
+                  ->orWhere('jenis_pendaftaran', 'ILIKE', '%pindah%');
             })
-            ->orderBy('tanggal_mutasi', 'desc');
+            ->when($request->jenis === 'masuk', function ($q) {
+                $q->where(function($sub) {
+                    $sub->whereNotNull('sekolah_asal_mutasi')
+                        ->orWhere('jenis_pendaftaran', 'ILIKE', '%pindah%');
+                });
+            })
+            ->when($request->jenis === 'keluar', function ($q) {
+                $q->where(function($sub) {
+                    $sub->whereNotNull('tanggal_keluar')
+                        ->orWhereNotNull('keluar_karena');
+                });
+            })
+            ->orderBy('created_at', 'desc');
 
         if ($request->wantsJson()) {
             return response()->json(['success' => true, 'data' => $query->paginate(20)]);

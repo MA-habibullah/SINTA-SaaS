@@ -105,15 +105,14 @@
           </span>
 
           <!-- Dropdown Filter Sekolah (Khusus Super Admin) -->
-          <div class="my-1 md:my-0">
-            <select 
+          <div class="my-1 md:my-0 w-64">
+            <SearchableSelect 
               v-model="filterTenantId" 
+              :options="tenantOptions"
+              placeholder="-- Semua Sekolah (Global) --"
+              search-placeholder="Cari nama sekolah..."
               @change="applyTenantFilter" 
-              class="h-9 px-3 bg-white border border-blue-200 rounded-xl text-xs font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 min-w-[220px]"
-            >
-              <option value="">-- Semua Sekolah (Global) --</option>
-              <option v-for="t in tenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
-            </select>
+            />
           </div>
         </div>
 
@@ -260,58 +259,75 @@
           <form @submit.prevent="fetchData" class="flex flex-row items-end gap-2.5 sm:gap-3 min-w-max">
             
             <!-- Filter Jenjang (Khusus Tab Kelas) -->
-            <div class="w-36 sm:w-40 shrink-0" v-if="activeTab === 'kelas'">
+            <div class="w-44 shrink-0" v-if="activeTab === 'kelas'">
               <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider whitespace-nowrap">Tingkat Jenjang</label>
-              <select v-model="filterJenjang" @change="fetchData" class="w-full h-9 px-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-white text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition">
-                <option value="">-- Semua Jenjang --</option>
-                <option v-for="j in listJenjang" :key="j.id" :value="j.id">{{ j.nama_jenjang || j.nama }}</option>
-              </select>
+              <SearchableSelect 
+                v-model="filterJenjang" 
+                :options="jenjangOptions"
+                placeholder="-- Semua Jenjang --"
+                search-placeholder="Cari jenjang..."
+                @change="fetchData" 
+              />
             </div>
 
             <!-- Filter Jurusan (Khusus Tab Kelas) -->
-            <div class="w-36 sm:w-40 shrink-0" v-if="activeTab === 'kelas'">
+            <div class="w-44 shrink-0" v-if="activeTab === 'kelas'">
               <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider whitespace-nowrap">Jurusan</label>
-              <select v-model="filterJurusan" @change="fetchData" class="w-full h-9 px-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-white text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition">
-                <option value="">-- Semua Jurusan --</option>
-                <option v-for="j in listJurusan" :key="j.id" :value="j.id">{{ j.nama_jurusan || j.nama }}</option>
-              </select>
+              <SearchableSelect 
+                v-model="filterJurusan" 
+                :options="jurusanOptions"
+                placeholder="-- Semua Jurusan --"
+                search-placeholder="Cari jurusan..."
+                @change="fetchData" 
+              />
             </div>
 
             <!-- Filter Tahun Ajaran (Khusus Tab Pemetaan Mapel / Jadwal) -->
-            <div class="w-36 sm:w-40 shrink-0" v-if="activeTab === 'pemetaan_mapel'">
+            <div class="w-40 shrink-0" v-if="activeTab === 'pemetaan_mapel'">
               <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider whitespace-nowrap">Tahun Ajaran</label>
-              <select v-model="filterTahunAjaran" @change="fetchData" class="w-full h-9 px-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-white text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition font-mono">
-                <option value="">-- Semua TA --</option>
-                <option v-for="ta in (listTahunAjaran || [])" :key="ta.id" :value="ta.nama">{{ ta.nama }}</option>
-              </select>
+              <SearchableSelect 
+                v-model="filterTahunAjaran" 
+                :options="tahunAjaranOptions"
+                placeholder="-- Semua TA --"
+                search-placeholder="Cari TA..."
+                @change="fetchData" 
+              />
             </div>
 
             <!-- Filter Semester (Khusus Tab Pemetaan Mapel / Jadwal) -->
-            <div class="w-32 sm:w-36 shrink-0" v-if="activeTab === 'pemetaan_mapel'">
+            <div class="w-36 shrink-0" v-if="activeTab === 'pemetaan_mapel'">
               <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider whitespace-nowrap">Semester</label>
-              <select v-model="filterSemester" @change="fetchData" class="w-full h-9 px-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-white text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition">
-                <option value="">-- Semua Semester --</option>
-                <option value="Ganjil">Ganjil</option>
-                <option value="Genap">Genap</option>
-              </select>
+              <SearchableSelect 
+                v-model="filterSemester" 
+                :options="semesterOptions"
+                placeholder="-- Semua Semester --"
+                search-placeholder="Cari semester..."
+                @change="fetchData" 
+              />
             </div>
 
             <!-- Filter Kelas (Khusus Tab Pemetaan Mapel / Jadwal) -->
-            <div class="w-36 sm:w-40 shrink-0" v-if="activeTab === 'pemetaan_mapel'">
+            <div class="w-44 shrink-0" v-if="activeTab === 'pemetaan_mapel'">
               <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider whitespace-nowrap">Kelas / Rombel</label>
-              <select v-model="filterKelas" @change="fetchData" class="w-full h-9 px-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-white text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition">
-                <option value="">-- Semua Kelas --</option>
-                <option v-for="k in listKelas" :key="k.id" :value="k.id">{{ k.nama_kelas }}</option>
-              </select>
+              <SearchableSelect 
+                v-model="filterKelas" 
+                :options="kelasOptions"
+                placeholder="-- Semua Kelas --"
+                search-placeholder="Cari kelas..."
+                @change="fetchData" 
+              />
             </div>
 
             <!-- Filter Ruangan (Khusus Tab Pemetaan Mapel / Jadwal) -->
-            <div class="w-36 sm:w-40 shrink-0" v-if="activeTab === 'pemetaan_mapel'">
+            <div class="w-40 shrink-0" v-if="activeTab === 'pemetaan_mapel'">
               <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider whitespace-nowrap">Ruangan / Lab</label>
-              <select v-model="filterRuangan" @change="fetchData" class="w-full h-9 px-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-white text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition">
-                <option value="">-- Semua Ruangan --</option>
-                <option v-for="r in (listRuangan || [])" :key="r" :value="r">{{ r }}</option>
-              </select>
+              <SearchableSelect 
+                v-model="filterRuangan" 
+                :options="ruanganOptions"
+                placeholder="-- Semua Ruangan --"
+                search-placeholder="Cari ruangan..."
+                @change="fetchData" 
+              />
             </div>
 
             <!-- Search Input (Proposional w-64 s.d. w-80) -->
@@ -884,13 +900,14 @@
           <!-- Info Tampilkan Baris -->
           <div class="flex flex-wrap items-center justify-center md:justify-start gap-2 text-xs text-slate-500 font-medium shrink-0">
             <span>Tampilkan</span>
-            <select v-model="perPage" @change="fetchData" class="h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-              <option :value="10">10</option>
-              <option :value="15">15</option>
-              <option :value="25">25</option>
-              <option :value="50">50</option>
-              <option :value="100">100</option>
-            </select>
+            <div class="w-20">
+              <SearchableSelect 
+                v-model="perPage" 
+                :options="perPageOptions"
+                placeholder="10"
+                @change="fetchData" 
+              />
+            </div>
             <span class="whitespace-nowrap">baris per halaman</span>
             <span class="text-slate-300 hidden sm:inline">|</span>
             <span class="whitespace-nowrap">
@@ -972,16 +989,14 @@
               <label class="block text-xs font-bold text-slate-700 mb-1">
                 Sekolah / Tenant <span class="text-rose-500">*</span>
               </label>
-              <select 
+              <SearchableSelect 
                 v-model="formData.tenant_id" 
+                :options="tenantOptions"
                 :disabled="isEditMode" 
+                placeholder="-- Pilih Sekolah --"
+                search-placeholder="Cari sekolah..."
                 @change="onModalTenantChange"
-                class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                required
-              >
-                <option value="" disabled>-- Pilih Sekolah --</option>
-                <option v-for="t in tenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
-              </select>
+              />
             </div>
 
             <!-- Form Khusus KELAS -->
@@ -990,28 +1005,24 @@
                 <label class="block text-xs font-bold text-slate-700 mb-1">
                   Bentuk Pendidikan / Jenjang <span class="text-rose-500">*</span>
                 </label>
-                <select 
+                <SearchableSelect 
                   v-model="formData.id_jenjang" 
-                  class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                  required
-                >
-                  <option value="" disabled>-- Pilih Bentuk Pendidikan (SMA/SMK/SMP/SD) --</option>
-                  <option v-for="j in listJenjang" :key="j.id" :value="j.id">{{ j.nama_jenjang || j.nama }}</option>
-                </select>
+                  :options="jenjangOptions"
+                  placeholder="-- Pilih Bentuk Pendidikan (SMA/SMK/SMP/SD) --"
+                  search-placeholder="Cari jenjang..."
+                />
               </div>
 
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">
                   Jurusan / Program Keahlian <span class="text-rose-500">*</span>
                 </label>
-                <select 
+                <SearchableSelect 
                   v-model="formData.id_jurusan" 
-                  class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                  required
-                >
-                  <option value="" disabled>-- Pilih Jurusan (IPA/IPS/TKJ/RPL/Umum) --</option>
-                  <option v-for="j in listJurusan" :key="j.id" :value="j.id">{{ j.nama_jurusan || j.nama }}</option>
-                </select>
+                  :options="jurusanOptions"
+                  placeholder="-- Pilih Jurusan (IPA/IPS/TKJ/RPL/Umum) --"
+                  search-placeholder="Cari jurusan..."
+                />
               </div>
 
               <div>
@@ -1081,66 +1092,56 @@
                 <label class="block text-xs font-bold text-slate-700 mb-1">
                   Kelas / Rombongan Belajar <span class="text-rose-500">*</span>
                 </label>
-                <select 
+                <SearchableSelect 
                   v-model="formData.kelas_id" 
-                  class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                  required
-                >
-                  <option value="" disabled>-- Pilih Kelas --</option>
-                  <option v-for="k in listKelas" :key="k.id" :value="k.id">{{ k.nama_kelas }} ({{ k.kode_kelas }})</option>
-                </select>
+                  :options="kelasOptions"
+                  placeholder="-- Pilih Kelas --"
+                  search-placeholder="Cari kelas..."
+                />
               </div>
 
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">
                   Mata Pelajaran <span class="text-rose-500">*</span>
                 </label>
-                <select 
+                <SearchableSelect 
                   v-model="formData.mapel_id" 
-                  class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                  required
-                >
-                  <option value="" disabled>-- Pilih Mata Pelajaran --</option>
-                  <option v-for="m in listMapel" :key="m.id" :value="m.id">{{ m.nama_mata_pelajaran }}</option>
-                </select>
+                  :options="mapelOptions"
+                  placeholder="-- Pilih Mata Pelajaran --"
+                  search-placeholder="Cari mata pelajaran..."
+                />
               </div>
 
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">
                   Guru Pengampu <span class="text-rose-500">*</span>
                 </label>
-                <select 
+                <SearchableSelect 
                   v-model="formData.guru_id" 
-                  class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                  required
-                >
-                  <option value="" disabled>-- Pilih Guru Pengampu --</option>
-                  <option v-for="g in listGuru" :key="g.id" :value="g.id">{{ g.nama_lengkap }} ({{ g.email }})</option>
-                </select>
+                  :options="guruOptions"
+                  placeholder="-- Pilih Guru Pengampu --"
+                  search-placeholder="Cari guru..."
+                />
               </div>
 
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-xs font-bold text-slate-700 mb-1">Tahun Ajaran <span class="text-rose-500">*</span></label>
-                  <select 
+                  <SearchableSelect 
                     v-model="formData.tahun_ajaran" 
-                    class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-mono" 
-                    required
-                  >
-                    <option value="" disabled>-- Pilih Tahun Ajaran --</option>
-                    <option v-for="ta in (listTahunAjaran || [])" :key="ta.id" :value="ta.nama">{{ ta.nama }}</option>
-                  </select>
+                    :options="tahunAjaranOptions"
+                    placeholder="-- Pilih Tahun Ajaran --"
+                    search-placeholder="Cari TA..."
+                  />
                 </div>
                 <div>
                   <label class="block text-xs font-bold text-slate-700 mb-1">Semester <span class="text-rose-500">*</span></label>
-                  <select 
+                  <SearchableSelect 
                     v-model="formData.semester" 
-                    class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                    required
-                  >
-                    <option value="Ganjil">Ganjil</option>
-                    <option value="Genap">Genap</option>
-                  </select>
+                    :options="semesterOptions"
+                    placeholder="-- Pilih Semester --"
+                    search-placeholder="Cari semester..."
+                  />
                 </div>
               </div>
 
@@ -1173,18 +1174,12 @@
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-xs font-bold text-slate-700 mb-1">Hari Pelajaran</label>
-                  <select 
+                  <SearchableSelect 
                     v-model="formData.hari" 
-                    class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                  >
-                    <option value="">-- Pilih Hari (Opsional) --</option>
-                    <option value="Senin">Senin</option>
-                    <option value="Selasa">Selasa</option>
-                    <option value="Rabu">Rabu</option>
-                    <option value="Kamis">Kamis</option>
-                    <option value="Jumat">Jumat</option>
-                    <option value="Sabtu">Sabtu</option>
-                  </select>
+                    :options="hariOptions"
+                    placeholder="-- Pilih Hari (Opsional) --"
+                    search-placeholder="Cari hari..."
+                  />
                 </div>
                 <div>
                   <label class="block text-xs font-bold text-slate-700 mb-1">Ruang Kelas / Lab</label>
@@ -1238,15 +1233,12 @@
                 <label class="block text-xs font-bold text-slate-700 mb-1">
                   Tipe Penilaian / Rapor <span class="text-rose-500">*</span>
                 </label>
-                <select 
+                <SearchableSelect 
                   v-model="formData.tipe_penilaian" 
-                  class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                  required
-                >
-                  <option value="sederhana">Sederhana (Merdeka - Nilai Akhir & Deskripsi Capaian)</option>
-                  <option value="klasik">Klasik (KTSP - Kognitif, Psikomotorik, Afektif)</option>
-                  <option value="kompleks">Kompleks (K-13 - Pengetahuan KI-3 & Keterampilan KI-4)</option>
-                </select>
+                  :options="tipePenilaianOptions"
+                  placeholder="-- Pilih Tipe Penilaian --"
+                  search-placeholder="Cari tipe..."
+                />
               </div>
             </template>
 
@@ -1282,15 +1274,12 @@
               <div v-if="activeTab === 'mata_pelajaran'" class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-xs font-bold text-slate-700 mb-1">Kelompok Mapel</label>
-                  <select 
+                  <SearchableSelect 
                     v-model="formData.kelompok" 
-                    class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                  >
-                    <option value="A">Kelompok A (Umum)</option>
-                    <option value="B">Kelompok B (Umum)</option>
-                    <option value="C">Kelompok C (Peminatan/Kejuruan)</option>
-                    <option value="MULOK">Muatan Lokal (Mulok)</option>
-                  </select>
+                    :options="kelompokMapelOptions"
+                    placeholder="-- Pilih Kelompok --"
+                    search-placeholder="Cari kelompok..."
+                  />
                 </div>
                 <div>
                   <label class="block text-xs font-bold text-slate-700 mb-1">Urutan Tampil</label>
@@ -1434,25 +1423,22 @@
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Tahun Ajaran Target</label>
-                <select 
+                <SearchableSelect 
                   v-model="importTargetTA" 
-                  class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-mono"
-                >
-                  <option value="">-- Ikuti Baris File CSV --</option>
-                  <option v-for="ta in (listTahunAjaran || [])" :key="ta.id" :value="ta.nama">{{ ta.nama }}</option>
-                </select>
+                  :options="tahunAjaranOptions"
+                  placeholder="-- Ikuti Baris File CSV --"
+                  search-placeholder="Cari TA..."
+                />
                 <p class="text-[10px] text-slate-400 mt-0.5">Pilih untuk mengunci tahun ajaran seluruh baris</p>
               </div>
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Semester Target</label>
-                <select 
+                <SearchableSelect 
                   v-model="importTargetSem" 
-                  class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                >
-                  <option value="">-- Ikuti File --</option>
-                  <option value="Ganjil">Ganjil</option>
-                  <option value="Genap">Genap</option>
-                </select>
+                  :options="semesterOptions"
+                  placeholder="-- Ikuti File --"
+                  search-placeholder="Cari semester..."
+                />
               </div>
             </div>
 
@@ -1538,20 +1524,21 @@
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-[10px] font-bold text-slate-500 mb-1">Tahun Ajaran Asal</label>
-                  <select 
+                  <SearchableSelect 
                     v-model="copyFromTA" 
-                    class="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 font-mono" 
-                    required
-                  >
-                    <option v-for="ta in (listTahunAjaran || [])" :key="ta.id" :value="ta.nama">{{ ta.nama }}</option>
-                  </select>
+                    :options="tahunAjaranOptions"
+                    placeholder="Pilih TA Asal"
+                    search-placeholder="Cari TA..."
+                  />
                 </div>
                 <div>
                   <label class="block text-[10px] font-bold text-slate-500 mb-1">Semester Asal</label>
-                  <select v-model="copyFromSem" class="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800" required>
-                    <option value="Ganjil">Ganjil</option>
-                    <option value="Genap">Genap</option>
-                  </select>
+                  <SearchableSelect 
+                    v-model="copyFromSem" 
+                    :options="semesterOptions"
+                    placeholder="Pilih Semester Asal"
+                    search-placeholder="Cari semester..."
+                  />
                 </div>
               </div>
             </div>
@@ -1565,20 +1552,21 @@
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-[10px] font-bold text-slate-500 mb-1">Tahun Ajaran Baru</label>
-                  <select 
+                  <SearchableSelect 
                     v-model="copyToTA" 
-                    class="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 font-mono" 
-                    required
-                  >
-                    <option v-for="ta in (listTahunAjaran || [])" :key="ta.id" :value="ta.nama">{{ ta.nama }}</option>
-                  </select>
+                    :options="tahunAjaranOptions"
+                    placeholder="Pilih TA Baru"
+                    search-placeholder="Cari TA..."
+                  />
                 </div>
                 <div>
                   <label class="block text-[10px] font-bold text-slate-500 mb-1">Semester Baru</label>
-                  <select v-model="copyToSem" class="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800" required>
-                    <option value="Ganjil">Ganjil</option>
-                    <option value="Genap">Genap</option>
-                  </select>
+                  <SearchableSelect 
+                    v-model="copyToSem" 
+                    :options="semesterOptions"
+                    placeholder="Pilih Semester Baru"
+                    search-placeholder="Cari semester..."
+                  />
                 </div>
               </div>
             </div>
@@ -1779,7 +1767,9 @@
 
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { ref, reactive } from 'vue';
+import SearchableSelect from '@/Components/SearchableSelect.vue';
+import { useMemorySecurity } from '@/Utils/cryptoSecurity.js';
+import { ref, reactive, computed, watch, onMounted } from 'vue';
 import { router } from '@inertiajs/vue3';
 import axios from 'axios';
 
@@ -1799,6 +1789,109 @@ const props = defineProps({
   userRole: String,
   filters: Object,
 });
+
+const localItems = ref(props.items || null);
+const isFetching = ref(false);
+
+const items = computed(() => localItems.value || props.items || { data: [], total: 0 });
+
+// Computed Select Options for Standardized SearchableSelect
+const tenantOptions = computed(() => {
+  return (props.tenants || []).map(t => ({
+    id: t.id,
+    nama: t.nama_sekolah,
+    subLabel: t.npsn ? `NPSN: ${t.npsn}` : undefined,
+  }));
+});
+
+const jenjangOptions = computed(() => {
+  return (props.listJenjang || []).map(j => ({
+    id: j.id,
+    nama: j.nama_jenjang || j.nama,
+    subLabel: j.kode_jenjang || j.kode || undefined,
+  }));
+});
+
+const jurusanOptions = computed(() => {
+  return (props.listJurusan || []).map(j => ({
+    id: j.id,
+    nama: j.nama_jurusan || j.nama,
+    subLabel: j.kategori || j.kode || undefined,
+  }));
+});
+
+const tahunAjaranOptions = computed(() => {
+  return (props.listTahunAjaran || []).map(ta => ({
+    id: ta.nama,
+    nama: ta.nama,
+  }));
+});
+
+const semesterOptions = [
+  { id: 'Ganjil', nama: 'Ganjil' },
+  { id: 'Genap', nama: 'Genap' },
+];
+
+const kelasOptions = computed(() => {
+  return (props.listKelas || []).map(k => ({
+    id: k.id,
+    nama: k.nama_kelas,
+    subLabel: k.kode_kelas ? `Kode: ${k.kode_kelas}` : undefined,
+  }));
+});
+
+const mapelOptions = computed(() => {
+  return (props.listMapel || []).map(m => ({
+    id: m.id,
+    nama: m.nama_mata_pelajaran || m.nama,
+    subLabel: m.kategori ? `Kategori: ${m.kategori}` : undefined,
+  }));
+});
+
+const guruOptions = computed(() => {
+  return (props.listGuru || []).map(g => ({
+    id: g.id,
+    nama: g.nama_lengkap || g.nama,
+    subLabel: g.email || undefined,
+  }));
+});
+
+const ruanganOptions = computed(() => {
+  return (props.listRuangan || []).map(r => ({
+    id: r,
+    nama: r,
+  }));
+});
+
+const tipePenilaianOptions = [
+  { id: 'sederhana', nama: 'Sederhana (Merdeka - Nilai Akhir & Capaian)' },
+  { id: 'klasik', nama: 'Klasik (KTSP - Kognitif, Psikomotorik, Afektif)' },
+  { id: 'kompleks', nama: 'Kompleks (K-13 - KI-3 & KI-4)' },
+];
+
+const kelompokMapelOptions = [
+  { id: 'A', nama: 'Kelompok A (Umum)' },
+  { id: 'B', nama: 'Kelompok B (Umum)' },
+  { id: 'C', nama: 'Kelompok C (Peminatan/Kejuruan)' },
+  { id: 'MULOK', nama: 'Muatan Lokal (Mulok)' },
+];
+
+const hariOptions = [
+  { id: 'Senin', nama: 'Senin' },
+  { id: 'Selasa', nama: 'Selasa' },
+  { id: 'Rabu', nama: 'Rabu' },
+  { id: 'Kamis', nama: 'Kamis' },
+  { id: 'Jumat', nama: 'Jumat' },
+  { id: 'Sabtu', nama: 'Sabtu' },
+];
+
+const perPageOptions = [
+  { id: 10, nama: '10' },
+  { id: 15, nama: '15' },
+  { id: 25, nama: '25' },
+  { id: 50, nama: '50' },
+  { id: 100, nama: '100' },
+];
 
 // 10 Master Tabs
 const tabs = [
@@ -1826,6 +1919,43 @@ const filterRuangan = ref(props.filters?.ruangan || '');
 const searchQuery = ref(props.filters?.search || '');
 const trashMode = ref(props.filters?.trash || false);
 const perPage = ref(props.filters?.per_page || 10);
+
+const fetchDataAsync = async () => {
+  isFetching.value = true;
+  try {
+    const res = await axios.get('/master-data', {
+      params: {
+        async: 1,
+        tab: activeTab.value,
+        search: searchQuery.value,
+        tenant_id: filterTenantId.value,
+        jenjang_id: filterJenjang.value,
+        jurusan_id: filterJurusan.value,
+        tahun_ajaran: filterTahunAjaran.value,
+        semester: filterSemester.value,
+        kelas_id: filterKelas.value,
+        hari: filterHari.value,
+        ruangan: filterRuangan.value,
+        trash: trashMode.value ? 1 : 0,
+        per_page: perPage.value,
+      },
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+    if (res.data?.success) {
+      localItems.value = res.data.data;
+    }
+  } catch (err) {
+    console.error('Failed to load async master-data:', err);
+  } finally {
+    isFetching.value = false;
+  }
+};
+
+watch(() => props.items, (newVal) => {
+  if (newVal) localItems.value = newVal;
+});
 
 // Modal states
 const openFormModal = ref(false);
@@ -2440,6 +2570,29 @@ const exportToExcelSheetJS = () => {
 
   window.XLSX.writeFile(workbook, filename);
 };
+
+useMemorySecurity([
+  localItems,
+  formData,
+  importTargetTA,
+  importTargetSem,
+  searchQuery,
+  filterTenantId,
+  filterJenjang,
+  filterJurusan,
+  filterTahunAjaran,
+  filterSemester,
+  filterKelas,
+  filterHari,
+  filterRuangan,
+  selectedDetailJadwal,
+]);
+
+onMounted(() => {
+  if (!props.items || !props.items.data) {
+    fetchDataAsync();
+  }
+});
 </script>
 
 <style scoped>

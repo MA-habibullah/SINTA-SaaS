@@ -95,13 +95,15 @@
           </span>
 
           <!-- Dropdown Filter Sekolah (Khusus Super Admin) -->
-          <div v-if="isSuperAdmin" class="my-1 md:my-0">
-            <select v-model="filterTenantId" 
-                    @change="applyFilters"
-                    class="h-9 px-3 bg-white border border-blue-200 rounded-xl text-xs font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 min-w-[220px]">
-              <option value="">-- Semua Sekolah (Global) --</option>
-              <option v-for="t in tenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
-            </select>
+          <div v-if="isSuperAdmin" class="my-1 md:my-0 min-w-[240px]">
+            <SearchableSelect 
+              v-model="filterTenantId" 
+              :options="tenantSelectOptions"
+              placeholder="-- Semua Sekolah (Global) --"
+              search-placeholder="Cari nama sekolah..."
+              allow-clear
+              @change="applyFilters"
+            />
           </div>
         </div>
 
@@ -217,33 +219,41 @@
           <form @submit.prevent="applyFilters" class="flex flex-row items-end gap-2.5 sm:gap-3 min-w-max">
             
             <!-- Filter Jenjang (Khusus Siswa & Mutasi) -->
-            <div class="w-36 sm:w-40 shrink-0" v-if="activeTab === 'siswa' || activeTab === 'mutasi'">
+            <div class="w-40 sm:w-44 shrink-0" v-if="activeTab === 'siswa' || activeTab === 'mutasi'">
               <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider whitespace-nowrap">Tingkat Jenjang</label>
-              <select v-model="filterJenjang" @change="applyFilters" class="w-full h-9 px-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-white text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition">
-                <option value="">-- Semua Jenjang --</option>
-                <option v-for="j in jenjangList" :key="j.id" :value="j.id">{{ j.nama || j.nama_jenjang }}</option>
-              </select>
+              <SearchableSelect
+                v-model="filterJenjang"
+                :options="jenjangSelectOptions"
+                placeholder="Semua Jenjang"
+                search-placeholder="Cari jenjang..."
+                allow-clear
+                @change="applyFilters"
+              />
             </div>
 
             <!-- Filter Kelas / Rombel -->
-            <div class="w-36 sm:w-40 shrink-0" v-if="activeTab === 'siswa' || activeTab === 'mutasi'">
+            <div class="w-40 sm:w-44 shrink-0" v-if="activeTab === 'siswa' || activeTab === 'mutasi'">
               <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider whitespace-nowrap">Kelas / Rombel</label>
-              <select v-model="filterKelas" @change="applyFilters" class="w-full h-9 px-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-white text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition">
-                <option value="">-- Semua Kelas --</option>
-                <option v-for="k in filteredKelasList" :key="k.id" :value="k.id">{{ k.nama_kelas }}</option>
-              </select>
+              <SearchableSelect
+                v-model="filterKelas"
+                :options="kelasSelectOptions"
+                placeholder="Semua Kelas"
+                search-placeholder="Cari rombel..."
+                allow-clear
+                @change="applyFilters"
+              />
             </div>
 
             <!-- Filter Status Siswa -->
-            <div class="w-32 sm:w-36 shrink-0" v-if="activeTab === 'siswa'">
+            <div class="w-36 sm:w-40 shrink-0" v-if="activeTab === 'siswa'">
               <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider whitespace-nowrap">Status Siswa</label>
-              <select v-model="filterStatus" @change="applyFilters" class="w-full h-9 px-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-white text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition">
-                <option value="">-- Semua Status --</option>
-                <option value="Aktif">Aktif</option>
-                <option value="Lulus">Lulus</option>
-                <option value="Pindah">Pindah</option>
-                <option value="Non-Aktif">Non-Aktif / Arsip</option>
-              </select>
+              <SearchableSelect
+                v-model="filterStatus"
+                :options="statusSelectOptions"
+                placeholder="Semua Status"
+                search-placeholder="Cari status..."
+                @change="applyFilters"
+              />
             </div>
 
             <!-- Search Input (Proposional w-72 s.d. w-84) -->
@@ -826,15 +836,13 @@
               <label class="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1">
                 <i class="bi bi-door-open-fill text-blue-600"></i> Rombel / Kelas Asal <span class="text-rose-500">*</span>
               </label>
-              <select v-model="promoteForm.kelas_asal_id" 
-                      @change="onKelasAsalChange" 
-                      required 
-                      class="w-full h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 outline-none transition">
-                <option value="">-- Pilih Kelas Asal Siswa --</option>
-                <option v-for="k in filteredKelasList" :key="k.id" :value="k.id">
-                  {{ k.kategori ? `[${k.kategori}] ` : '' }}{{ k.nama_kelas }}
-                </option>
-              </select>
+              <SearchableSelect
+                v-model="promoteForm.kelas_asal_id"
+                :options="kelasSelectOptions"
+                placeholder="-- Pilih Kelas Asal Siswa --"
+                search-placeholder="Cari rombel asal..."
+                @change="onKelasAsalChange"
+              />
             </div>
 
             <!-- Kelas Tujuan (Muncul untuk Promote, Pindah, Retain) -->
@@ -842,15 +850,13 @@
               <label class="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1">
                 <i class="bi bi-door-closed-fill text-emerald-600"></i> Rombel / Kelas Tujuan <span class="text-rose-500">*</span>
               </label>
-              <select v-model="promoteForm.kelas_tujuan_id" 
-                      required 
-                      :disabled="!promoteForm.kelas_asal_id"
-                      class="w-full h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 outline-none disabled:opacity-50 transition">
-                <option value="">-- Pilih Kelas Tujuan --</option>
-                <option v-for="k in filteredKelasList.filter(k => promoteForm.mode !== 'promote' || k.id !== promoteForm.kelas_asal_id)" :key="k.id" :value="k.id">
-                  {{ k.kategori ? `[${k.kategori}] ` : '' }}{{ k.nama_kelas }}
-                </option>
-              </select>
+              <SearchableSelect
+                v-model="promoteForm.kelas_tujuan_id"
+                :options="kelasSelectOptions.filter(k => promoteForm.mode !== 'promote' || k.id !== promoteForm.kelas_asal_id)"
+                :disabled="!promoteForm.kelas_asal_id"
+                placeholder="-- Pilih Kelas Tujuan --"
+                search-placeholder="Cari rombel tujuan..."
+              />
             </div>
 
             <!-- Tahun Ajaran -->
@@ -858,13 +864,12 @@
               <label class="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1">
                 <i class="bi bi-calendar3 text-slate-500"></i> Tahun Ajaran Target <span class="text-rose-500">*</span>
               </label>
-              <select v-model="promoteForm.tahun_ajaran" required class="w-full h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:bg-white focus:border-blue-600 outline-none transition">
-                <option v-for="ta in (tahunAjaranList || []).filter(t => t.tahun_ajaran || t.nama_tahun_ajaran)" :key="ta.id" :value="ta.tahun_ajaran || ta.nama_tahun_ajaran">
-                  {{ ta.tahun_ajaran || ta.nama_tahun_ajaran }}
-                </option>
-                <option v-if="!tahunAjaranList || tahunAjaranList.length === 0" value="2026/2027">2026/2027</option>
-                <option v-if="!tahunAjaranList || tahunAjaranList.length === 0" value="2027/2028">2027/2028</option>
-              </select>
+              <SearchableSelect
+                v-model="promoteForm.tahun_ajaran"
+                :options="tahunAjaranSelectOptions"
+                placeholder="-- Pilih Tahun Ajaran Baru --"
+                search-placeholder="Cari tahun ajaran..."
+              />
             </div>
           </div>
 
@@ -1101,22 +1106,26 @@
               <!-- Filter Kelas -->
               <div>
                 <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Rombel / Kelas <span class="text-rose-500">*</span></label>
-                <select v-model="filterKelas" @change="applyFilters" class="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-                  <option value="">-- Pilih Kelas / Rombel --</option>
-                  <option v-for="k in filteredKelasList" :key="k.id" :value="k.id">{{ k.nama_kelas }}</option>
-                </select>
+                <SearchableSelect
+                  v-model="filterKelas"
+                  :options="kelasSelectOptions"
+                  placeholder="-- Pilih Kelas / Rombel --"
+                  search-placeholder="Cari rombel..."
+                  allow-clear
+                  @change="applyFilters"
+                />
               </div>
 
               <!-- Filter Status Siswa -->
               <div>
                 <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Status Siswa</label>
-                <select v-model="filterStatus" @change="applyFilters" class="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-                  <option value="">Semua Status</option>
-                  <option value="Aktif">Aktif</option>
-                  <option value="Lulus">Lulus (Alumni)</option>
-                  <option value="Pindah">Pindah</option>
-                  <option value="Non-Aktif">Non-Aktif</option>
-                </select>
+                <SearchableSelect
+                  v-model="filterStatus"
+                  :options="statusSelectOptions"
+                  placeholder="Semua Status"
+                  search-placeholder="Cari status..."
+                  @change="applyFilters"
+                />
               </div>
 
               <!-- Tempat Tanda Tangan -->
@@ -1393,17 +1402,20 @@
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Jenis Kelamin *</label>
-                <select v-model="quickAddForm.jenis_kelamin" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
-                  <option value="L">Laki-laki (L)</option>
-                  <option value="P">Perempuan (P)</option>
-                </select>
+                <SearchableSelect
+                  v-model="quickAddForm.jenis_kelamin"
+                  :options="[{ id: 'L', nama: 'Laki-laki (L)' }, { id: 'P', nama: 'Perempuan (P)' }]"
+                  placeholder="Pilih Jenis Kelamin"
+                />
               </div>
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Rombel / Kelas</label>
-                <select v-model="quickAddForm.kelas_saat_ini" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
-                  <option value="">- Pilih Kelas -</option>
-                  <option v-for="k in kelasList" :key="k.id" :value="k.nama_kelas">{{ k.nama_kelas }}</option>
-                </select>
+                <SearchableSelect
+                  v-model="quickAddForm.kelas_saat_ini"
+                  :options="kelasSelectOptions"
+                  placeholder="Pilih Kelas / Rombel"
+                  search-placeholder="Cari kelas..."
+                />
               </div>
             </div>
 
@@ -1463,17 +1475,12 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">Peran Akses Utama (Role) *</label>
-              <select v-model="userForm.role" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-                <option value="guru">Guru / Tenaga Pendidik</option>
-                <option value="karyawan">Karyawan / Tenaga Kependidikan (TU)</option>
-                <option value="operator_sekolah">Operator Sekolah</option>
-                <option value="admin_sekolah">Admin Sekolah</option>
-                <option value="keuangan">Staff Keuangan & Kasir</option>
-                <option value="perpustakaan">Staff Perpustakaan</option>
-                <option value="sarpras">Staff Sarana Prasarana</option>
-                <option value="bk">Guru BK</option>
-                <option value="super_admin">Super Administrator</option>
-              </select>
+              <SearchableSelect
+                v-model="userForm.role"
+                :options="roleSelectOptions"
+                placeholder="Pilih Hak Akses / Role"
+                search-placeholder="Cari peran..."
+              />
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">Nomor WhatsApp / HP</label>
@@ -1730,6 +1737,8 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { router, Link } from '@inertiajs/vue3';
 import axios from 'axios';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import SearchableSelect from '@/Components/SearchableSelect.vue';
+import { useMemorySecurity } from '@/Utils/cryptoSecurity.js';
 
 const props = defineProps({
   activeTab: { type: String, default: 'siswa' },
@@ -1744,6 +1753,12 @@ const props = defineProps({
 });
 
 const flashMessage = ref('');
+const localItems = ref(props.items || null);
+const localStats = ref(props.stats || null);
+const isFetching = ref(false);
+
+const items = computed(() => localItems.value || props.items || { data: [], total: 0 });
+const stats = computed(() => localStats.value || props.stats || {});
 
 const tabList = [
   { id: 'siswa', name: 'Siswa', icon: 'bi bi-mortarboard' },
@@ -1762,6 +1777,43 @@ const filterKelas = ref(props.filters?.kelas || '');
 const filterStatus = ref(props.filters?.status || 'Aktif');
 const perPage = ref(Number(props.filters?.per_page) || 15);
 
+const fetchDataAsync = async () => {
+  isFetching.value = true;
+  try {
+    const res = await axios.get('/pengguna', {
+      params: {
+        async: 1,
+        tab: props.activeTab,
+        search: searchQuery.value,
+        tenant_id: filterTenantId.value,
+        jenjang: filterJenjang.value,
+        kelas: filterKelas.value,
+        status: filterStatus.value,
+        per_page: perPage.value,
+        trash: props.filters?.trash ? 1 : 0,
+      },
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+    if (res.data?.success) {
+      localItems.value = res.data.data;
+      localStats.value = res.data.stats;
+    }
+  } catch (err) {
+    console.error('Async user data fetch error:', err);
+  } finally {
+    isFetching.value = false;
+  }
+};
+
+watch(() => props.items, (newVal) => {
+  if (newVal) localItems.value = newVal;
+});
+watch(() => props.stats, (newVal) => {
+  if (newVal) localStats.value = newVal;
+});
+
 // Computed Reactive Kelas List berdasarkan Tenant yang dipilih
 const filteredKelasList = computed(() => {
   if (!props.kelasList || props.kelasList.length === 0) return [];
@@ -1771,6 +1823,71 @@ const filteredKelasList = computed(() => {
   }
   return props.kelasList;
 });
+
+// SearchableSelect Helper Options
+const tenantSelectOptions = computed(() => {
+  return (props.tenants || []).map(t => ({
+    id: t.id,
+    nama: t.nama_sekolah,
+    subLabel: t.npsn ? `NPSN: ${t.npsn}` : ''
+  }));
+});
+
+const jenjangSelectOptions = computed(() => {
+  return (props.jenjangList || []).map(j => ({
+    id: j.id,
+    nama: j.nama || j.nama_jenjang
+  }));
+});
+
+const kelasSelectOptions = computed(() => {
+  return filteredKelasList.value.map(k => ({
+    id: k.id,
+    nama: k.nama_kelas,
+    subLabel: k.kategori ? `Kategori: ${k.kategori}` : ''
+  }));
+});
+
+const statusSelectOptions = [
+  { id: 'Aktif', nama: 'Aktif' },
+  { id: 'Lulus', nama: 'Lulus' },
+  { id: 'Pindah', nama: 'Pindah' },
+  { id: 'Non-Aktif', nama: 'Non-Aktif / Arsip' },
+];
+
+const perPageOptions = [
+  { id: 10, nama: '10 per hal' },
+  { id: 15, nama: '15 per hal' },
+  { id: 25, nama: '25 per hal' },
+  { id: 50, nama: '50 per hal' },
+  { id: 100, nama: '100 per hal' },
+];
+
+const tahunAjaranSelectOptions = computed(() => {
+  const list = (props.tahunAjaranList || []).map(ta => ({
+    id: ta.tahun_ajaran || ta.nama_tahun_ajaran,
+    nama: ta.tahun_ajaran || ta.nama_tahun_ajaran
+  })).filter(t => t.id);
+  if (list.length === 0) {
+    return [
+      { id: '2026/2027', nama: '2026/2027' },
+      { id: '2027/2028', nama: '2027/2028' },
+    ];
+  }
+  return list;
+});
+
+const roleSelectOptions = [
+  { id: 'guru', nama: 'Guru / Tenaga Pendidik', subLabel: 'Akses Penilaian & Presensi' },
+  { id: 'karyawan', nama: 'Karyawan / Tenaga Kependidikan (TU)', subLabel: 'Administrasi Sekolah' },
+  { id: 'operator_sekolah', nama: 'Operator Sekolah', subLabel: 'Kelola Data Pokok' },
+  { id: 'admin_sekolah', nama: 'Admin Sekolah', subLabel: 'Akses Penuh Tenant' },
+  { id: 'keuangan', nama: 'Staff Keuangan & Kasir', subLabel: 'Transaksi & Tagihan' },
+  { id: 'perpustakaan', nama: 'Staff Perpustakaan', subLabel: 'Katalog & Sirkulasi' },
+  { id: 'sarpras', nama: 'Staff Sarana Prasarana', subLabel: 'Inventaris & Sarana' },
+  { id: 'bk', nama: 'Guru BK', subLabel: 'Bimbingan Konseling' },
+  { id: 'super_admin', nama: 'Super Administrator', subLabel: 'Akses Platform Sentral' },
+];
 
 // Parameter Penandatanganan Rapot
 const printTempat = ref(props.filters?.tempat || 'Jakarta');
@@ -2330,7 +2447,25 @@ const submitPromote = () => {
   });
 };
 
+useMemorySecurity([
+  localItems,
+  localStats,
+  searchQuery,
+  filterTenantId,
+  filterJenjang,
+  filterKelas,
+  filterStatus,
+  userForm,
+  quickAddForm,
+  promoteForm,
+  listRiwayatSiswa,
+  promoteListSiswa,
+]);
+
 onMounted(() => {
+  if (!props.items || !props.items.data) {
+    fetchDataAsync();
+  }
   if (props.activeTab === 'naikkan_kelas' && promoteForm.value.kelas_asal_id) {
     onKelasAsalChange();
   }

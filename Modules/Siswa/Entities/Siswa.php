@@ -5,6 +5,8 @@ namespace Modules\Siswa\Entities;
 use Modules\Core\Entities\BaseTenantModel;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Modules\Kesiswaan\Entities\PrestasiSiswa;
 
 class Siswa extends BaseTenantModel
 {
@@ -233,9 +235,9 @@ class Siswa extends BaseTenantModel
         return $this->hasMany(SiswaMutasi::class, 'siswa_id', 'id');
     }
 
-    public function prestasi(): HasMany
+    public function prestasi(): BelongsToMany
     {
-        return $this->hasMany(SiswaPrestasi::class, 'siswa_id', 'id');
+        return $this->belongsToMany(PrestasiSiswa::class, 'kesiswaan.prestasi_siswa_anggota', 'id_siswa', 'id_prestasi');
     }
 
     public function riwayatKenaikanKelas(): HasMany

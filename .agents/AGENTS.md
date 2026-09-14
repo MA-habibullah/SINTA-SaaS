@@ -56,10 +56,100 @@ Saat merombak, membuat Model baru, membuat Controller, atau menambahkan fitur ba
 Saat menulis, memodifikasi, atau membenahi program, agen wajib selalu menerapkan langkah-langkah keamanan data krusial:
 - **Multi-Tenant Data Isolation**: Wajib terisolasi per `tenant_id` secara otomatis melalui `BaseTenantModel` dan `TenantRouteGuard`.
 - **Tenant Storage Limit**: Seluruh fitur upload berkas wajib melewati middleware `TenantStorageGuard` untuk mencegah penyalahgunaan kuota penyimpanan.
-- **Pencegahan Kebocoran Kredensial**: Hapus data sensitif (hash password, token, session keys) di sisi server sebelum dikirimkan ke frontend props/JSON.
+- **Pencegahan Kebocoran Kredensial**: Hapus data sensitif (hash password, token, session keys, PIN, OTP, CVV, server secret keys) di sisi server via `SecurityPayloadService::sanitize()` sebelum dikirimkan ke frontend props/JSON.
 - **Dukungan Password Hashing Multi-Format**: Gunakan `password_verify($password, $user->password_hash)` agar kompatibel secara transparan dengan hash lama (Argon2id) maupun baru (Bcrypt).
 - **Anti-XSS & Anti-Injection**: Gunakan Eloquent Parameter Binding atau Prepared Statements. Dilarang menggabungkan raw SQL string secara langsung.
 - **CSRF Protection**: Seluruh mutasi data via HTTP POST, PUT, DELETE wajib terlindungi oleh Laravel CSRF middleware.
+- **Anti-IDOR & Tenant Session Isolation**: Isolasi tenant wajib mengacu pada sesi otentikasi server (`auth()->user()->tenant_id`), bukan mempercayai input `tenant_id` dari klien bebas (kecuali user adalah `super_admin`). Dilarang membiarkan user biasa memanipulasi `tenant_id` untuk membobol atau melihat data sekolah lain.
+
+
+## Standardisasi Data Protection, Anti-Scraping, Payload Encryption & Anti-DOM Leakage (OWASP ASVS L3 & Zero-Trust)
+Agen WAJIB mematuhi prinsip *Zero-Trust Data Protection* dan mitigasi inspeksi browser pada seluruh modul SINTA:
+
+**1. Proteksi Penyembunyian ID Sekolah (`tenant_id`), Nilai Siswa, Rekam Medis & Data Sensitif:**
+- **Penyembunyian ID Sekolah (`tenant_id`) & Metadata Internal**:
+  - `tenant_id` (UUID sekolah) adalah pengenal arsitektur internal database multi-tenant dan **DILARANG KERAS** diekspos secara terbuka di view source, atribut DOM, atau props bagi non-superadmin.
+  - Untuk pengguna tingkat sekolah (`admin_sekolah`, `guru`, `keuangan`, `siswa`, `bk`), server **TIDAK BOLEH** mengirimkan daftar seluruh tenant/sekolah lain (`tenants`) atau mengekspos identifier internal sekolah.
+  - Seluruh isolasi data sekolah wajib dikunci otomatis di level ORM (`BaseTenantModel`) dan session guard.
+- **Penyembunyian & Proteksi Nilai Rapor / Transkrip Akademik**:
+  - Data nilai siswa, catatan akademik, dan transkrip rapor **DILARANG KERAS** dicetak ke dalam dokumen HTML statis (SSR View Source).
+  - Pemuatan nilai rapor wajib menggunakan model *On-Demand Client Fetch* atau terenkripsi via `SecurityPayloadService::wrapEncryptedResponse()`.
+  - Mutasi nilai wajib memvalidasi kepemilikan guru/kelas pengajar bersangkutan di server guna mencegah *Grade Tampering Injection*.
+- **Proteksi Data Pribadi (PII), Rekam Medis BK & Keuangan**:
+  - NIK, Nomor KK, Rekam Medis BK, Gaji Orang Tua, dan kontak pribadi siswa/guru tidak boleh dicetak mentah di SSR.
+
+**2. Proteksi Pelepasan Data di SSR / View Source (Ctrl + U & Save HTML):**
+- **Mengapa Data Bisa Terbaca di View Source pada Inertia Standar?** Secara default, Inertia.js menyematkan seluruh props yang dikirim dari controller ke dalam atribut HTML `<div id="app" data-page="{...}">`. Akibatnya, saat pengguna melakukan *Right Click -> View Page Source* (`Ctrl + U`) atau *Save Page As HTML*, data mentah database tercetak dalam dokumen HTML statis.
+- **Pilar Pencegahan Kebocoran Data SINTA:**
+  1. **Pembersihan Otomatis Atribut DOM `data-page`**:
+     Pada [resources/js/app.js](file:///C:/laragon/www/sinta/resources/js/app.js), elemen root `<div id="app">` **WAJIB** menghapus atribut `data-page` (`el.removeAttribute('data-page')` & `delete el.dataset.page`) seketika saat hidrasi Vue selesai terpasang (`.mount(el)`). Ini mencegah ekstraksi payload melalui inspeksi objek DOM browser (`document.getElementById('app').dataset.page`).
+  2. **Model Pemuatan Data On-Demand (Zero-SSR Data Exposure)**:
+     Untuk halaman dengan data sensitif (pengguna, buku induk, keuangan, master data, nilai rapor):
+     - **Initial HTTP GET Route**: Controller HANYA me-render kerangka/shell UI dengan props minimal (master filter katalog & user context), TANPA memuat rekaman database langsung ke SSR props.
+     - **Asynchronous Client Loading**: Komponen Vue memuat data bisnis aktual secara asinkronus pada hook `onMounted()` menggunakan Axios API terenkripsi / tersanitasi.
+     - **Hasil**: Dokumen HTML mentah di View Source (`Ctrl + U`) 100% bersih dari data rekaman database, mencegah web scraping offline dan ekstraksi data via HTML snapshot.
+
+**3. Enkripsi Payload API & Transmisi Data Sensitif (AES-256-CBC with HMAC):**
+- Untuk transaksi dan endpoint bernilai tinggi / sensitif (Keuangan, Gaji/Honor, Rekam Medis BK, NIK/KK, Kredensial Pengguna), payload ditransmisikan menggunakan envelope enkripsi `SecurityPayloadService::wrapEncryptedResponse($data)` / `SecurityPayloadService::encrypt($data)` berbasis AES-256-CBC dan HMAC-SHA256.
+- Dekripsi dilakukan secara instan di sisi klien melalui `decryptPayload()` di [resources/js/Utils/cryptoSecurity.js](file:///C:/laragon/www/sinta/resources/js/Utils/cryptoSecurity.js) menggunakan Web Crypto API (`crypto.subtle`) hanya di level *runtime memory*.
+- **Larangan Persistensi**: Dilarang menyimpan payload yang didekripsi ke dalam objek global `window`, `localStorage`, atau `sessionStorage`.
+
+**4. Anti-DOM Leakage & Memory Hygiene (useMemorySecurity):**
+- **DILARANG KERAS** menyematkan data sensitif sebagai atribut HTML DOM (misal: `<tr data-nik="..." data-gaji="..." data-pin="..." data-tenant="...">`).
+- Komponen Vue 3 yang menangani data sensitif wajib menerapkan composable `useMemorySecurity([stateRef1, stateRef2])` untuk mengosongkan (*garbage collect*) state memori browser seketika saat komponen dilepas (*unmounted*).
+- Setiap halaman dilindungi oleh `installAntiInspectionGuard()` yang bekerja secara senyap (*silent protection*) untuk membersihkan variabel global `window.__INITIAL_STATE__` tanpa mencetak banner peringatan di konsol pengembang.
+
+**5. Sanitasi Data Server-Side (SecurityPayloadService::sanitize):**
+- Seluruh controller yang mengirimkan data ke frontend (baik via Inertia Props maupun JSON API) **WAJIB** menyaring data melalui `SecurityPayloadService::sanitize($data)` untuk memastikan field sensitif (password hash, secret token, session ID) tidak pernah keluar dari server.
+
+**6. Standardisasi Clean URL In-Memory State & Larangan URL Query Bloat (`tenant_id` & Filter Leakage):**
+- **Larangan Mutlak Menempelkan `tenant_id` pada URL Address Bar**:
+  - `tenant_id` (UUID sekolah) **DILARANG KERAS** dimasukkan sebagai query parameter di URL browser (`?tenant_id=...`), routing web publik, ataupun link navigasi bagi pengguna tingkat sekolah (`admin_sekolah`, `guru`, `keuangan`, `siswa`, `bk`).
+  - Isolasi data sekolah wajib sepenuhnya mengacu pada sesi otentikasi server (`auth()->user()->tenant_id`).
+- **Standardisasi Clean URL In-Memory State**:
+  - Filter pencarian, pagination, tab switching, dan parameter dropdown di halaman web harus dikelola murni di dalam *Client Reactive Memory State* via Axios API On-Demand (`axios.get('/endpoint?async=1', { params })`), BUKAN dengan me-reload seluruh parameter ke address bar browser via `router.get('/endpoint?param1=&param2=...')`.
+  - Dilarang menumpuk query string kosong atau parameter berlebih di URL (misal: `&jenjang=&kelas=&search=&trash=0`).
+  - Alamat URL yang ditampilkan di browser wajib tetap bersih, rapi, dan ringkas (contoh: `http://sinta.test:8080/pengguna` atau `http://sinta.test:8080/pengguna?tab=guru`).
+- **Pencegahan Kebocoran Informasi (Privacy & Information Leakage Mitigation)**:
+  - Mencegah kebocoran data sensitif yang tersimpan di *Browser Navigation History*, *Proxy / VPN Cache*, serta *Web Server Access Logs* (`access.log`).
+  - Mencegah serangan *Insecure Direct Object Reference* (IDOR) dan *Parameter Tampering* di address bar.
+
+**7. Pengujian Keamanan Mandiri via CLI (CLI Data Protection Runner):**
+Setiap kali melakukan perubahan sistem keamanan atau refactoring data, agen **WAJIB** menjalankan pengujian keamanan data otomatis:
+```powershell
+php scratch/pengujian/test_data_protection_and_encryption.php
+```
+Standar kelulusan: **5/5 Tests PASS (100% Pass)**.
+
+
+## Standardisasi UI/UX Searchable Select & Live Filter Dropdown (WAJIB DI SELURUH MODUL)
+Dalam seluruh antarmuka SINTA (baik fitur yang sudah ada maupun modul baru yang akan dibangun), agen **DILARANG KERAS** menggunakan elemen dropdown bawaan HTML (`<select>`). Seluruh dropdown wajib diganti menggunakan komponen terstandarisasi [SearchableSelect.vue](file:///C:/laragon/www/sinta/resources/js/Components/SearchableSelect.vue):
+
+**1. Fitur Mutlak SearchableSelect:**
+- 🔍 **Live Keyword Search**: Kotak pencarian otomatis muncul saat dropdown dibuka, menyaring pilihan secara real-time berdasarkan label utama maupun sub-label (seperti NPSN, kode jurusan, email guru).
+- ⌨️ **Navigasi Keyboard Penuh**: Mendukung tombol panah ↑ / ↓ untuk menyorot pilihan, tombol `Enter` untuk memilih, dan `Escape` untuk menutup popup dropdown.
+- 🎯 **Auto-Focus Cerdas**: Kursor otomatis aktif pada kotak pencarian saat dropdown dibuka.
+- 🏢 **Multi-Tenant & Filter Support**: Mendukung pemfilteran sekolah (*Tenant Switcher*) bagi Super Admin serta *Cascading Dropdown* (pilihan bertingkat seperti Provinsi ➔ Kota ➔ Kecamatan ➔ Kelurahan) dengan pembersihan nilai anak otomatis.
+
+**2. Format Data Opsi Terstandarisasi:**
+Komponen menerima properti `options` berupa array of objects:
+```javascript
+const options = [
+  { id: 'uuid-atau-kode', nama: 'Label Utama', subLabel: 'Keterangan Tambahan (Opsional)' },
+  // ...
+]
+```
+
+**3. Contoh Penggunaan di Vue 3:**
+```vue
+<SearchableSelect 
+  v-model="form.id_kelas" 
+  :options="kelasOptions"
+  placeholder="-- Pilih Rombel / Kelas --"
+  search-placeholder="Cari kelas atau rombel..."
+  @change="handleKelasChange"
+/>
+```
 
 
 ## Modern Architecture & Zero Data Leakage (Inertia.js + Vue 3)
@@ -67,7 +157,7 @@ Saat merancang antarmuka pengguna atau memodifikasi modul yang ada, agen WAJIB m
 
 **1. Larangan Mutlak Server-Side Data Injection:**
 - **DILARANG KERAS** mencetak data mentah dari database langsung menggunakan PHP `json_encode` di dalam tag skrip HTML (`<script> const listData = <?= json_encode($data) ?>; </script>`).
-- Seluruh transmisi data sensitif **WAJIB** melalui Inertia Props atau Axios API yang diproses secara asinkronus di sisi klien.
+- Seluruh transmisi data sensitif **WAJIB** melalui Inertia Props yang disanitasi atau Axios API terenkripsi yang diproses di runtime memory sisi klien.
 
 **2. Standarisasi Komponen Halaman Vue 3 (Inertia SFC):**
 - Komponen halaman berlokasi di `resources/js/Pages/[Modul]/[SubFeature]/Index.vue`.
@@ -79,12 +169,18 @@ Saat merancang antarmuka pengguna atau memodifikasi modul yang ada, agen WAJIB m
 ```vue
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
+import SearchableSelect from '@/Components/SearchableSelect.vue'
+import { useMemorySecurity } from '@/Utils/cryptoSecurity.js'
 import { Link, useForm } from '@inertiajs/vue3'
+import { ref } from 'vue'
 
-defineProps({
+const props = defineProps({
     items: Object,
     filters: Object,
 })
+
+const formData = ref({})
+useMemorySecurity([formData])
 </script>
 
 <template>
@@ -922,5 +1018,80 @@ protected function redirectTarget(Request $request, string $status, string $mess
     return redirect($fallbackPath)->with($status, $message);
 }
 ```
+
+
+## Standardisasi Desain UI/UX Reusable SearchableSelect & Live Filter Dropdown (WAJIB UNIVERSAL DIPATUHI)
+Saat membuat fitur baru, halaman baru, modal dialog, formulir input, atau filter tabel di **SELURUH MODUL APLIKASI SINTA (baik 16 modul yang sudah ada maupun SELURUH modul dan fitur baru yang akan dibangun di masa mendatang)**, agen **WAJIB MUTLAK** menggunakan komponen **`SearchableSelect.vue`** (`resources/js/Components/SearchableSelect.vue`) pada setiap dropdown pilihan.
+
+**🚫 LARANGAN MUTLAK (ANTI-NATIVE SELECT RULE):**
+- **DILARANG KERAS** menggunakan tag HTML native `<select>` standar tanpa fitur pencarian.
+- Setiap elemen dropdown **WAJIB** memiliki kotak pencarian instan (*live keyword search*), navigasi keyboard, dan auto-focus agar memudahkan pengguna dalam mencari dan memilih opsi ribuan data dengan cepat.
+
+### 1. Fitur & Keunggulan Komponen `SearchableSelect.vue`:
+1. **Live Keyword Search (Pencarian Instan)**:
+   - Kotak input pencarian otomatis muncul di bagian atas daftar pilihan saat dropdown dibuka.
+   - Menyaring data secara real-time saat pengguna mengetik, baik mencocokkan **Label Utama** (nama kategori, nama kelas, nama mapel, role, nama siswa, dll.) maupun **Sub-Label / Keterangan** (SLA, jenjang, kode jurusan, wali kelas, NISN, dll.).
+2. **Dukungan Penuh Navigasi Keyboard**:
+   - **Panah Atas / Bawah (`↑` / `↓`)**: Menyorot (*highlight*) pilihan berikutnya/sebelumnya.
+   - **`Enter`**: Memilih opsi yang sedang disorot.
+   - **`Escape (Esc)`**: Menutup popup dropdown seketika.
+3. **Auto-Focus Cerdas**:
+   - Kursor otomatis fokus pada kotak pencarian saat dropdown dibuka, sehingga pengguna dapat langsung mengetik tanpa klik kedua kali.
+4. **Tombol Reset / Clear Selection (`allowClear`)**:
+   - Dilengkapi tombol silang `(X)` untuk mereset pilihan kembali ke kondisi default/kosong.
+5. **Penutupan Otomatis (*Click Outside Handler*)**:
+   - Popup otomatis tertutup jika pengguna mengklik area di luar kontrol dropdown.
+
+### 2. Standar Penggunaan Komponen di Halaman Vue 3 (Inertia SFC):
+```vue
+<script setup>
+import SearchableSelect from '@/Components/SearchableSelect.vue'
+import { ref } from 'vue'
+
+// Data opsi bisa berupa Array of Objects atau Array Primitif (String/Number)
+const opsiKelas = [
+  { id: 'X-IPA-1', label: 'Kelas X IPA 1', subLabel: 'Wali Kelas: Budi Santoso, S.Pd' },
+  { id: 'X-IPA-2', label: 'Kelas X IPA 2', subLabel: 'Wali Kelas: Siti Aminah, M.Pd' },
+  { id: 'XI-IPS-1', label: 'Kelas XI IPS 1', subLabel: 'Wali Kelas: Bambang, S.Kom' },
+]
+
+const kelasTerpilih = ref('')
+</script>
+
+<template>
+  <div>
+    <label class="block text-xs font-bold text-slate-700 mb-1">Pilih Kelas / Rombel</label>
+    <SearchableSelect
+      v-model="kelasTerpilih"
+      :options="opsiKelas"
+      placeholder="-- Pilih Kelas Siswa --"
+      search-placeholder="Ketik nama kelas atau nama wali kelas..."
+      :allow-clear="true"
+    />
+  </div>
+</template>
+```
+
+### 3. Matriks Kewajiban Universal di Seluruh Modul (Eksisting & Fitur Masa Depan):
+Seluruh dropdown di bawah ini dan seluruh fitur baru yang akan dikembangkan **WAJIB** menerapkan `SearchableSelect`:
+- **Modul Keuangan**: Pemilihan Siswa, Kelas/Rombel, Pos Pembayaran, Jenis Tarif, Rekening Kas/Bank, Keringanan/Beasiswa, Metode Pembayaran, Filter Bulan/Tahun.
+- **Modul Siswa / Buku Induk**: Pemilihan Kelas (Rombel), Jurusan/Program Keahlian, Agama, Jalur Masuk, Status Siswa, Filter Angkatan.
+- **Modul Akademik**: Pemilihan Tahun Ajaran, Semester, Mata Pelajaran, Guru Pengampu, Kurikulum, Jenis Penilaian, Kategori Ekskul.
+- **Modul Perpustakaan**: Pemilihan Kategori DDC, Lokasi Rak Buku, Jenis Koleksi, Status Sirkulasi, Anggota Peminjam.
+- **Modul Bimbingan Konseling (BK)**: Pemilihan Siswa, Jenis Pelanggaran, Bentuk Pembinaan, Guru BK, Status Penanganan.
+- **Modul Absensi / Presensi**: Pemilihan Kelas, Sesi Jadwal, Status Kehadiran (*Hadir, Izin, Sakit, Alpa*).
+- **Modul Kepegawaian & GTK**: Pemilihan Jabatan, Status Kepegawaian, Unit Kerja, Jenis Supervisi.
+- **Modul Persuratan**: Pemilihan Kode Klasifikasi Surat, Sifat Surat, Instansi Pengirim, Penerima Disposisi.
+- **Modul Sarana & Prasarana (Sarpras)**: Pemilihan Ruangan/Gedung, Kategori Barang Modal, Kondisi Aset, Penanggung Jawab.
+- **Modul Kesiswaan**: Pemilihan Ekskul, Pembina, Siswa Anggota, Tingkat Prestasi.
+- **Modul PDSS & SNPMB**: Pemilihan Kampus/PTN, Program Studi SNBP/SNBT, Jalur Masuk.
+- **Modul Tracer Study**: Pemilihan Status Alumni, Kampus Kuliah, Bidang Industri Kerja.
+- **Modul SMK & PKL**: Pemilihan Mitra DUDI, Guru Pembimbing PKL, Skema Sertifikasi UKK.
+- **Modul CMS Portal Sekolah**: Pemilihan Kategori Berita/Artikel, Visibilitas Galeri, Banner Section.
+- **Modul Sistem & Keamanan**: Pemilihan User Role, Tenant/Sekolah, Scope Permission, Filter Log.
+- **Modul Core & Bantuan**: Pemilihan Kategori Tiket SLA, Modul Terkait (16 Modul), Urgensi Bisnis, Template Canned Responses.
+- **SELURUH MODUL & FITUR BARU LAINNYA**: Wajib menggunakan `SearchableSelect` tanpa pengecualian!
+
+
 
 
