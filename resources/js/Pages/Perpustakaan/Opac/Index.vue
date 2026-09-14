@@ -119,6 +119,29 @@ const submitBooking = () => {
     }
   })
 }
+
+// -------------------------------------------------------------
+// E-BOOK DIGITAL FLIPBOOK READER DENGAN DYNAMIC WATERMARK
+// -------------------------------------------------------------
+const isModalEbookOpen = ref(false)
+const ebookZoom = ref(100)
+const ebookPage = ref(1)
+const ebookTotalPages = ref(24)
+
+const openEbookReader = (buku) => {
+  selectedBuku.value = buku
+  ebookPage.value = 1
+  ebookZoom.value = 100
+  isModalEbookOpen.value = true
+}
+
+const prevEbookPage = () => {
+  if (ebookPage.value > 1) ebookPage.value--
+}
+
+const nextEbookPage = () => {
+  if (ebookPage.value < ebookTotalPages.value) ebookPage.value++
+}
 </script>
 
 <template>
@@ -218,6 +241,9 @@ const submitBooking = () => {
               </span>
 
               <div class="flex items-center gap-1.5">
+                <button @click="openEbookReader(buku)" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-black transition flex items-center gap-1" title="Buka Pembaca E-Book Digital">
+                  <i class="bi bi-file-earmark-pdf-fill"></i> E-Book
+                </button>
                 <button v-if="buku.jumlah_tersedia <= 0" @click="openBooking(buku)" class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-[10px] font-black transition" title="Pesan / Booking Judul Ini">
                   Booking
                 </button>
@@ -267,6 +293,17 @@ const submitBooking = () => {
                 <div class="text-slate-600">Penulis: <strong>{{ selectedBuku?.pengarang }}</strong> <span v-if="selectedBuku?.pengarang_tambahan">({{ selectedBuku.pengarang_tambahan }})</span></div>
                 <div class="font-mono text-slate-500 text-[10px]">ISBN: {{ selectedBuku?.isbn || '-' }} • Call No: <strong class="text-blue-700">{{ selectedBuku?.nomor_panggil || '-' }}</strong></div>
               </div>
+            </div>
+
+            <!-- Action Button Baca Digital -->
+            <div class="flex items-center justify-between p-3 bg-emerald-50 border border-emerald-200 rounded-2xl">
+              <div class="flex items-center gap-2">
+                <i class="bi bi-journal-richtext text-emerald-600 text-lg"></i>
+                <span class="font-bold text-emerald-900">Tersedia Versi Digital (E-Book)</span>
+              </div>
+              <button @click="openEbookReader(selectedBuku)" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center gap-1.5 shadow-2xs transition">
+                <i class="bi bi-book-half"></i> Buka Pembaca E-Book
+              </button>
             </div>
 
             <!-- Rincian Metadata Tabel -->
@@ -346,6 +383,86 @@ const submitBooking = () => {
               <button type="submit" class="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold">Pesan Sekarang</button>
             </div>
           </form>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Modal E-Book Flipbook Reader dengan Dynamic Watermark -->
+    <Teleport to="body">
+      <div v-if="isModalEbookOpen" class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-200">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl w-full max-w-5xl h-[92vh] flex flex-col overflow-hidden text-slate-100">
+          <!-- Reader Top Toolbar -->
+          <div class="px-4 py-3 bg-slate-950 border-b border-slate-800 flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center text-sm font-bold">
+                <i class="bi bi-book"></i>
+              </div>
+              <div>
+                <h3 class="text-xs font-bold text-white truncate max-w-xs sm:max-w-md">{{ selectedBuku?.judul_buku }}</h3>
+                <p class="text-3xs text-slate-400">Pembaca Digital E-Book &bull; Mode Aman</p>
+              </div>
+            </div>
+
+            <!-- Controls: Zoom & Page Navigation -->
+            <div class="flex items-center gap-2 text-xs">
+              <div class="flex items-center bg-slate-800 rounded-xl px-2 py-1 gap-1.5 border border-slate-700">
+                <button @click="prevEbookPage" :disabled="ebookPage <= 1" class="w-6 h-6 rounded text-slate-300 hover:text-white disabled:opacity-40"><i class="bi bi-chevron-left"></i></button>
+                <span class="font-mono text-2xs px-1 text-emerald-400">Hal {{ ebookPage }} / {{ ebookTotalPages }}</span>
+                <button @click="nextEbookPage" :disabled="ebookPage >= ebookTotalPages" class="w-6 h-6 rounded text-slate-300 hover:text-white disabled:opacity-40"><i class="bi bi-chevron-right"></i></button>
+              </div>
+
+              <div class="hidden sm:flex items-center bg-slate-800 rounded-xl px-2 py-1 gap-1 border border-slate-700 text-2xs font-mono">
+                <button @click="ebookZoom = Math.max(75, ebookZoom - 15)" class="px-1.5 hover:text-white">-</button>
+                <span>{{ ebookZoom }}%</span>
+                <button @click="ebookZoom = Math.min(150, ebookZoom + 15)" class="px-1.5 hover:text-white">+</button>
+              </div>
+
+              <button @click="isModalEbookOpen = false" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center transition">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Flipbook Reading Canvas with Dynamic Watermark Overlay -->
+          <div class="flex-1 bg-slate-950 p-4 overflow-auto flex items-center justify-center relative select-none">
+            
+            <!-- Dynamic Anti-Leak Watermark Grid -->
+            <div class="absolute inset-0 pointer-events-none z-20 flex flex-wrap items-center justify-around opacity-15 overflow-hidden font-mono text-2xs text-slate-400 rotate-[-25deg] leading-relaxed p-8">
+              <div v-for="w in 24" :key="w" class="p-4">
+                {{ $page.props.auth?.user?.nama_lengkap || 'Pemustaka SINTA' }} &bull; SINTA Digital Library
+              </div>
+            </div>
+
+            <!-- Mock Page Sheet Viewer -->
+            <div class="bg-white text-slate-900 rounded-xl shadow-2xl p-8 sm:p-12 transition-all max-w-2xl w-full min-h-[500px] border border-slate-200 flex flex-col justify-between"
+                 :style="{ transform: `scale(${ebookZoom / 100})`, transformOrigin: 'center top' }">
+              
+              <div class="space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-200 pb-3 text-2xs text-slate-400 font-mono">
+                  <span>{{ selectedBuku?.judul_buku }}</span>
+                  <span>Bab I &bull; Halaman {{ ebookPage }}</span>
+                </div>
+
+                <div class="space-y-3 text-xs leading-relaxed text-slate-700">
+                  <h4 class="text-base font-black text-slate-900">{{ ebookPage === 1 ? 'PENGANTAR DAN PENDAHULUAN' : `BAGIAN ${ebookPage}: PENDALAMAN MATERI LITERASI` }}</h4>
+                  <p>
+                    Koleksi buku digital ini diterbitkan secara resmi melalui sistem otomasi perpustakaan sekolah terintegrasi. Pemustaka dapat mempelajari materi esensial, referensi kurikulum nasional, dan pengetahuan ilmiah secara mandiri.
+                  </p>
+                  <p v-if="selectedBuku?.sinopsis">
+                    {{ selectedBuku.sinopsis }}
+                  </p>
+                  <p>
+                    Setiap peminjaman dan pembacaan daring dilindungi oleh hak cipta dan regulasi literasi digital sekolah. Dilarang mendistribusikan atau menggandakan naskah tanpa izin pustakawan.
+                  </p>
+                </div>
+              </div>
+
+              <div class="pt-6 border-t border-slate-200 flex items-center justify-between text-2xs text-slate-400 font-mono">
+                <span>Perpustakaan Digital SINTA</span>
+                <span>{{ ebookPage }} / {{ ebookTotalPages }}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </Teleport>
