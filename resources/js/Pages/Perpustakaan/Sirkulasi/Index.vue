@@ -11,6 +11,8 @@ const props = defineProps({
   opnameList: Array,
   bacaList: Object,
   reservasiList: Array,
+  lokerList: Array,
+  surveyList: Array,
   bukuTersedia: Array,
   anggotaSelector: Array,
   stats: Object,
@@ -21,7 +23,7 @@ const props = defineProps({
   filters: Object,
 })
 
-const activeTab = ref('aktif') // 'aktif' | 'quick_return' | 'riwayat' | 'paket' | 'denda' | 'opname' | 'baca' | 'reservasi'
+const activeTab = ref('aktif') // 'aktif' | 'quick_return' | 'riwayat' | 'denda' | 'opname' | 'baca' | 'reservasi' | 'loker' | 'survey' | 'paket'
 const searchQuery = ref(props.filters?.search || '')
 const selectedTenantId = ref(props.filters?.tenant_id || '')
 
@@ -280,6 +282,83 @@ const cancelBooking = (id) => {
     router.post(`/perpustakaan/reservasi/${id}/cancel`, {}, { preserveScroll: true })
   }
 }
+
+// -------------------------------------------------------------
+// LOKER PENITIPAN BARANG
+// -------------------------------------------------------------
+const isModalTambahLokerOpen = ref(false)
+const formTambahLoker = useForm({
+  nomor_loker: '',
+  lokasi_ruangan: 'Lobi Utama Perpustakaan',
+  keterangan: '',
+})
+
+const submitTambahLoker = () => {
+  formTambahLoker.post('/perpustakaan/loker', {
+    onSuccess: () => {
+      isModalTambahLokerOpen.value = false
+      formTambahLoker.reset()
+    }
+  })
+}
+
+const isModalPinjamLokerOpen = ref(false)
+const selectedLoker = ref(null)
+const formPinjamLoker = useForm({
+  loker_id: '',
+  nama_peminjam: '',
+  identitas_jaminan: 'KTA',
+  catatan: '',
+})
+
+const openPinjamLoker = (loker) => {
+  selectedLoker.value = loker
+  formPinjamLoker.loker_id = loker.id
+  formPinjamLoker.nama_peminjam = ''
+  formPinjamLoker.identitas_jaminan = 'KTA'
+  formPinjamLoker.catatan = ''
+  isModalPinjamLokerOpen.value = true
+}
+
+const submitPinjamLoker = () => {
+  formPinjamLoker.post('/perpustakaan/loker/pinjam', {
+    onSuccess: () => {
+      isModalPinjamLokerOpen.value = false
+      formPinjamLoker.reset()
+    }
+  })
+}
+
+const isModalKembaliLokerOpen = ref(false)
+const formKembaliLoker = useForm({
+  denda: 0,
+  kunci_hilang: false,
+  catatan: '',
+})
+
+const openKembaliLoker = (loker) => {
+  selectedLoker.value = loker
+  formKembaliLoker.denda = 0
+  formKembaliLoker.kunci_hilang = false
+  formKembaliLoker.catatan = ''
+  isModalKembaliLokerOpen.value = true
+}
+
+const submitKembaliLoker = () => {
+  if (!selectedLoker.value) return
+  formKembaliLoker.post(`/perpustakaan/loker/kembali/${selectedLoker.value.id}`, {
+    onSuccess: () => {
+      isModalKembaliLokerOpen.value = false
+      formKembaliLoker.reset()
+    }
+  })
+}
+
+const deleteLoker = (id) => {
+  if (confirm('Hapus unit loker ini?')) {
+    router.delete(`/perpustakaan/loker/${id}`, { preserveScroll: true })
+  }
+}
 </script>
 
 <template>
@@ -296,6 +375,10 @@ const cancelBooking = (id) => {
         </div>
 
         <div class="flex flex-wrap items-center gap-2.5">
+          <Link :href="route('perpustakaan.kiosk')" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs">
+            <i class="bi bi-display"></i>
+            <span>Anjungan Kiosk (Tablet)</span>
+          </Link>
           <button @click="activeTab = 'quick_return'" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs">
             <i class="bi bi-upc-scan"></i>
             <span>Quick Return (Scan Kilat)</span>
@@ -450,9 +533,23 @@ const cancelBooking = (id) => {
               </li>
               <li class="nav-item">
                 <button class="border-0 font-bold px-4 py-2.5 rounded-xl text-xs transition flex items-center" 
+                        :class="activeTab === 'loker' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'" 
+                        @click="activeTab = 'loker'">
+                  <i class="bi bi-grid-3x3-gap-fill me-2 text-sm"></i> 8. Loker Barang
+                </button>
+              </li>
+              <li class="nav-item">
+                <button class="border-0 font-bold px-4 py-2.5 rounded-xl text-xs transition flex items-center" 
+                        :class="activeTab === 'survey' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'" 
+                        @click="activeTab = 'survey'">
+                  <i class="bi bi-star-fill me-2 text-sm text-amber-400"></i> 9. Survey Kepuasan IKM
+                </button>
+              </li>
+              <li class="nav-item">
+                <button class="border-0 font-bold px-4 py-2.5 rounded-xl text-xs transition flex items-center" 
                         :class="activeTab === 'paket' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'" 
                         @click="activeTab = 'paket'">
-                  <i class="bi bi-collection-fill me-2 text-sm"></i> 8. Buku Paket Pelajaran
+                  <i class="bi bi-collection-fill me-2 text-sm"></i> 10. Paket Pelajaran
                 </button>
               </li>
             </ul>
@@ -819,7 +916,144 @@ const cancelBooking = (id) => {
         </div>
       </div>
 
-      <!-- TAB 8: BUKU PAKET PELAJARAN -->
+      <!-- TAB 8: LOKER PENITIPAN BARANG -->
+      <div v-if="activeTab === 'loker'" class="space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="font-bold text-slate-800 text-sm">Manajemen Loker Penitipan Barang Pemustaka</h3>
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Tersedia: {{ stats.total_loker_tersedia || 0 }} Unit</span>
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">Terisi: {{ stats.total_loker_terisi || 0 }} Unit</span>
+            </div>
+            <p class="text-xs text-slate-500 mt-0.5">Penitipan tas, jaket, dan barang berharga siswa sebelum masuk ke ruang koleksi perpustakaan.</p>
+          </div>
+          <button @click="isModalTambahLokerOpen = true" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs">
+            <i class="bi bi-plus-circle-fill"></i> Tambah Unit Loker
+          </button>
+        </div>
+
+        <!-- Grid Status Loker Interaktif -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
+          <div v-for="loker in lokerList" :key="loker.id" 
+               class="p-4 rounded-2xl border transition-all flex flex-col justify-between relative overflow-hidden"
+               :class="loker.status === 'tersedia' ? 'bg-white border-emerald-200 shadow-2xs hover:border-emerald-400' : (loker.status === 'terisi' ? 'bg-rose-50/60 border-rose-200 shadow-2xs' : 'bg-slate-100 border-slate-300')">
+            
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-black" :class="loker.status === 'tersedia' ? 'text-emerald-700' : (loker.status === 'terisi' ? 'text-rose-700' : 'text-slate-600')">
+                LOKER #{{ loker.nomor_loker }}
+              </span>
+              <span class="w-3 h-3 rounded-full" :class="loker.status === 'tersedia' ? 'bg-emerald-500 animate-pulse' : (loker.status === 'terisi' ? 'bg-rose-500' : 'bg-slate-400')"></span>
+            </div>
+
+            <div class="my-3 space-y-1">
+              <div v-if="loker.status === 'tersedia'" class="text-center py-2">
+                <i class="bi bi-unlock text-2xl text-emerald-500"></i>
+                <div class="text-[11px] font-bold text-emerald-700 mt-1">Siap Dipinjam</div>
+              </div>
+              <div v-else-if="loker.status === 'terisi'" class="space-y-0.5 text-2xs">
+                <div class="font-bold text-slate-800 truncate">{{ loker.active_log?.nama_peminjam || 'Pemustaka' }}</div>
+                <div class="text-slate-500 font-mono">{{ loker.active_log?.identitas_jaminan }} &bull; {{ new Date(loker.active_log?.waktu_pinjam).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) }}</div>
+              </div>
+              <div v-else class="text-center py-2 text-slate-500 text-2xs">
+                <i class="bi bi-slash-circle text-xl"></i>
+                <div>{{ loker.status === 'kunci_hilang' ? 'Kunci Hilang' : 'Rusak' }}</div>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-1">
+              <button v-if="loker.status === 'tersedia'" @click="openPinjamLoker(loker)" class="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-2xs transition">
+                Pinjam Kunci
+              </button>
+              <button v-else-if="loker.status === 'terisi'" @click="openKembaliLoker(loker)" class="w-full py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-2xs transition">
+                Kembalikan
+              </button>
+              <button v-else @click="deleteLoker(loker.id)" class="w-full py-1.5 rounded-lg bg-slate-300 hover:bg-slate-400 text-slate-700 font-bold text-2xs transition">
+                Hapus
+              </button>
+            </div>
+          </div>
+          <div v-if="!lokerList?.length" class="col-span-full py-12 text-center bg-white rounded-2xl border border-slate-200 text-slate-400 text-xs">
+            Belum ada data unit loker penyimpanan. Klik <strong>"Tambah Unit Loker"</strong> untuk menambahkan.
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 9: SURVEY KEPUASAN IKM -->
+      <div v-if="activeTab === 'survey'" class="space-y-4">
+        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="font-bold text-slate-800 text-sm">Indeks Kepuasan Pemustaka (IKM Perpustakaan)</h3>
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                <i class="bi bi-star-fill me-1 text-amber-500"></i> Akreditasi Perpusnas RI
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 mt-0.5">Hasil rekapitulasi penilaian kepuasan pengunjung melalui Kiosk dan formulir mandiri.</p>
+          </div>
+          <Link :href="route('perpustakaan.kiosk')" class="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs">
+            <i class="bi bi-tablet"></i> Buka Kiosk Survei
+          </Link>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs text-center space-y-2">
+            <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">Skor Rata-Rata Pelayanan</div>
+            <div class="text-3xl font-black text-amber-500 flex items-center justify-center gap-1">
+              <span>4.8</span><span class="text-base text-slate-400 font-normal">/ 5.0</span>
+            </div>
+            <div class="flex justify-center text-amber-400 text-sm">
+              <i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i>
+            </div>
+            <p class="text-2xs text-slate-400">Predikat: <strong>Sangat Memuaskan (A)</strong></p>
+          </div>
+
+          <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs text-center space-y-2">
+            <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">Kelengkapan Koleksi</div>
+            <div class="text-3xl font-black text-blue-600 flex items-center justify-center gap-1">
+              <span>4.6</span><span class="text-base text-slate-400 font-normal">/ 5.0</span>
+            </div>
+            <div class="flex justify-center text-blue-500 text-sm">
+              <i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-half"></i>
+            </div>
+            <p class="text-2xs text-slate-400">Berdasarkan 120+ responden</p>
+          </div>
+
+          <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs text-center space-y-2">
+            <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">Kenyamanan Ruang Baca</div>
+            <div class="text-3xl font-black text-emerald-600 flex items-center justify-center gap-1">
+              <span>4.9</span><span class="text-base text-slate-400 font-normal">/ 5.0</span>
+            </div>
+            <div class="flex justify-center text-emerald-500 text-sm">
+              <i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i>
+            </div>
+            <p class="text-2xs text-slate-400">AC, Pencahayaan & Kebersihan</p>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-5">
+          <h4 class="font-bold text-slate-800 text-xs mb-3 flex items-center">
+            <i class="bi bi-chat-heart-fill text-rose-500 me-2"></i> Ulasan & Saran Terkini dari Pemustaka
+          </h4>
+          <div class="space-y-2.5">
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70 text-xs space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-800">Ahmad Fauzi &bull; Kelas XI RPL 2</span>
+                <span class="text-amber-500"><i class="bi bi-star-fill"></i> 5.0</span>
+              </div>
+              <p class="text-slate-600 text-[11px]">"Sangat nyaman membaca di perpustakaan, pencarian buku di OPAC juga sangat cepat dan akurat!"</p>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70 text-xs space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-800">Siti Nurhaliza &bull; Kelas X MIPA 1</span>
+                <span class="text-amber-500"><i class="bi bi-star-fill"></i> 5.0</span>
+              </div>
+              <p class="text-slate-600 text-[11px]">"Pelayanan petugas ramah sekali, peminjaman lewat scan barcode KTA sangat praktis."</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 10: BUKU PAKET PELAJARAN -->
       <div v-if="activeTab === 'paket'" class="space-y-4">
         <div class="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
           <div>
@@ -1107,6 +1341,96 @@ const cancelBooking = (id) => {
             <div class="pt-4 flex items-center justify-end gap-2 border-t border-slate-100">
               <button type="button" @click="isModalPaketOpen = false" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold">Batal</button>
               <button type="submit" class="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold">Simpan Paket</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Modal 1: Tambah Unit Loker -->
+    <Teleport to="body">
+      <div v-if="isModalTambahLokerOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+        <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-200 text-xs">
+          <h3 class="text-base font-black text-slate-800 mb-4">Tambah Unit Loker Baru</h3>
+          <form @submit.prevent="submitTambahLoker" class="space-y-3.5">
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Nomor / Kode Loker *</label>
+              <input v-model="formTambahLoker.nomor_loker" type="text" required placeholder="Contoh: 01, A-12, LK-05" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-medium" />
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Lokasi Ruangan</label>
+              <input v-model="formTambahLoker.lokasi_ruangan" type="text" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-medium" />
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Keterangan Tambahan</label>
+              <textarea v-model="formTambahLoker.keterangan" rows="2" placeholder="Catatan kondisi loker..." class="w-full px-3.5 py-2 rounded-xl border border-slate-200 font-medium"></textarea>
+            </div>
+            <div class="pt-4 flex items-center justify-end gap-2 border-t border-slate-100">
+              <button type="button" @click="isModalTambahLokerOpen = false" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold">Batal</button>
+              <button type="submit" :disabled="formTambahLoker.processing" class="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold">Simpan Unit Loker</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Modal 2: Pinjam Kunci Loker -->
+    <Teleport to="body">
+      <div v-if="isModalPinjamLokerOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+        <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-200 text-xs">
+          <h3 class="text-base font-black text-slate-800 mb-1">Pinjam Kunci Loker #{{ selectedLoker?.nomor_loker }}</h3>
+          <p class="text-xs text-slate-500 mb-4">Peminjaman loker penitipan barang pemustaka.</p>
+          <form @submit.prevent="submitPinjamLoker" class="space-y-3.5">
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Nama Peminjam *</label>
+              <input v-model="formPinjamLoker.nama_peminjam" type="text" required placeholder="Nama siswa / pengunjung..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-medium" />
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Identitas Jaminan *</label>
+              <select v-model="formPinjamLoker.identitas_jaminan" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-medium">
+                <option value="KTA">Kartu Anggota (KTA)</option>
+                <option value="Kartu Pelajar">Kartu Pelajar</option>
+                <option value="KTP">KTP / SIM</option>
+                <option value="Lainnya">Lainnya</option>
+              </select>
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Catatan</label>
+              <input v-model="formPinjamLoker.catatan" type="text" placeholder="Keterangan barang bawaan..." class="w-full px-3.5 py-2 rounded-xl border border-slate-200 font-medium" />
+            </div>
+            <div class="pt-4 flex items-center justify-end gap-2 border-t border-slate-100">
+              <button type="button" @click="isModalPinjamLokerOpen = false" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold">Batal</button>
+              <button type="submit" :disabled="formPinjamLoker.processing" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold">Serahkan Kunci</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Modal 3: Pengembalian Kunci Loker -->
+    <Teleport to="body">
+      <div v-if="isModalKembaliLokerOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+        <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-200 text-xs">
+          <h3 class="text-base font-black text-slate-800 mb-1">Pengembalian Kunci Loker #{{ selectedLoker?.nomor_loker }}</h3>
+          <p class="text-xs text-slate-500 mb-4">Peminjam: <strong>{{ selectedLoker?.active_log?.nama_peminjam }}</strong></p>
+          <form @submit.prevent="submitKembaliLoker" class="space-y-3.5">
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <label class="flex items-center space-x-2 text-rose-700 font-bold cursor-pointer">
+                <input type="checkbox" v-model="formKembaliLoker.kunci_hilang" class="rounded text-rose-600 focus:ring-rose-500" />
+                <span>Kunci Hilang / Rusak (Denda Ganti Kunci)</span>
+              </label>
+            </div>
+            <div v-if="formKembaliLoker.kunci_hilang">
+              <label class="font-bold text-slate-700 block mb-1">Biaya Denda Ganti Kunci (Rp)</label>
+              <input v-model.number="formKembaliLoker.denda" type="number" min="0" class="w-full px-3.5 py-2.5 rounded-xl border border-rose-300 font-bold text-rose-700 font-mono" />
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Catatan Pengembalian</label>
+              <input v-model="formKembaliLoker.catatan" type="text" placeholder="Kondisi loker saat dikembalikan..." class="w-full px-3.5 py-2 rounded-xl border border-slate-200 font-medium" />
+            </div>
+            <div class="pt-4 flex items-center justify-end gap-2 border-t border-slate-100">
+              <button type="button" @click="isModalKembaliLokerOpen = false" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold">Batal</button>
+              <button type="submit" :disabled="formKembaliLoker.processing" class="px-4 py-2 rounded-xl bg-rose-600 text-white font-bold">Konfirmasi Selesai</button>
             </div>
           </form>
         </div>

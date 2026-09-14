@@ -36,7 +36,7 @@ Route::middleware(['web', 'auth', 'tenant.guard'])->prefix('perpustakaan')->name
     Route::post('/sirkulasi/bayar-denda/{id}', [PerpustakaanController::class, 'bayarDenda'])->name('sirkulasi.bayar-denda');
     Route::post('/sirkulasi/distribusi-paket', [PerpustakaanController::class, 'distribusiBukuPaket'])->name('sirkulasi.distribusi-paket');
 
-    // 3. Stock Opname & Baca di Tempat & Reservasi
+    // 3. Stock Opname, Baca di Tempat, Reservasi
     Route::post('/opname', [PerpustakaanController::class, 'storeOpname'])->name('opname.store');
     Route::post('/opname/scan', [PerpustakaanController::class, 'scanOpnameItem'])->name('opname.scan');
     Route::post('/opname/{id}/close', [PerpustakaanController::class, 'closeOpname'])->name('opname.close');
@@ -48,7 +48,14 @@ Route::middleware(['web', 'auth', 'tenant.guard'])->prefix('perpustakaan')->name
     Route::post('/reservasi', [PerpustakaanController::class, 'storeReservasi'])->name('reservasi.store');
     Route::post('/reservasi/{id}/cancel', [PerpustakaanController::class, 'cancelReservasi'])->name('reservasi.cancel');
 
-    // 4. Anggota & Buku Tamu
+    // 4. Loker Penitipan Barang
+    Route::post('/loker', [PerpustakaanController::class, 'storeLoker'])->name('loker.store');
+    Route::match(['post', 'put'], '/loker/{id}', [PerpustakaanController::class, 'updateLoker'])->name('loker.update');
+    Route::delete('/loker/{id}', [PerpustakaanController::class, 'destroyLoker'])->name('loker.destroy');
+    Route::post('/loker/pinjam', [PerpustakaanController::class, 'pinjamLoker'])->name('loker.pinjam');
+    Route::post('/loker/kembali/{id}', [PerpustakaanController::class, 'kembaliLoker'])->name('loker.kembali');
+
+    // 5. Anggota, Buku Tamu & Pengaturan
     Route::get('/anggota', [PerpustakaanController::class, 'anggota'])->name('anggota');
     Route::post('/anggota', [PerpustakaanController::class, 'storeAnggota'])->name('anggota.store');
     Route::delete('/anggota/{id}', [PerpustakaanController::class, 'destroyAnggota'])->name('anggota.destroy');
@@ -56,7 +63,16 @@ Route::middleware(['web', 'auth', 'tenant.guard'])->prefix('perpustakaan')->name
     Route::post('/buku-tamu', [PerpustakaanController::class, 'storeBukuTamu'])->name('buku-tamu.store');
     Route::post('/pengaturan', [PerpustakaanController::class, 'updatePengaturan'])->name('pengaturan.update');
 
-    // 5. OPAC & Riwayat Saya
+    // 6. Anjungan Kiosk Presensi Mandiri (Tablet Touchscreen)
+    Route::get('/kiosk', [PerpustakaanController::class, 'kiosk'])->name('kiosk');
+    Route::post('/kiosk/scan-kta', [PerpustakaanController::class, 'scanKioskKta'])->name('kiosk.scan-kta');
+    Route::post('/kiosk/rombongan', [PerpustakaanController::class, 'storeKioskRombongan'])->name('kiosk.rombongan');
+
+    // 7. Survey Indeks Kepuasan Pemustaka (IKM)
+    Route::post('/survey', [PerpustakaanController::class, 'storeSurvey'])->name('survey.store');
+    Route::post('/survey/respon', [PerpustakaanController::class, 'storeResponSurvey'])->name('survey.respon');
+
+    // 8. OPAC & Riwayat Saya
     Route::get('/opac', [PerpustakaanController::class, 'opac'])->name('opac');
     Route::get('/riwayat-saya', [PerpustakaanController::class, 'riwayatSaya'])->name('riwayat-saya');
 });

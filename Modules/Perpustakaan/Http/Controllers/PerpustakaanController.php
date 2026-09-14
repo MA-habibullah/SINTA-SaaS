@@ -32,6 +32,11 @@ use Modules\Perpustakaan\Entities\BacaDiTempat;
 use Modules\Perpustakaan\Entities\Opname;
 use Modules\Perpustakaan\Entities\OpnameItem;
 use Modules\Perpustakaan\Entities\KategoriDdc;
+use Modules\Perpustakaan\Entities\Loker;
+use Modules\Perpustakaan\Entities\LokerLog;
+use Modules\Perpustakaan\Entities\Survey;
+use Modules\Perpustakaan\Entities\SurveyPertanyaan;
+use Modules\Perpustakaan\Entities\SurveyRespon;
 
 class PerpustakaanController extends Controller
 {
@@ -662,6 +667,18 @@ class PerpustakaanController extends Controller
             ->orderBy('judul_buku', 'asc')
             ->get();
 
+        // 7. Loker Penitipan Barang
+        $lokerList = Loker::where('tenant_id', $activeTenantId)
+            ->with(['activeLog'])
+            ->orderBy('nomor_loker', 'asc')
+            ->get();
+
+        // 8. Survey IKM
+        $surveyList = Survey::where('tenant_id', $activeTenantId)
+            ->with(['pertanyaans', 'respons'])
+            ->latest('created_at')
+            ->get();
+
         // Anggota Federasi Ringkas untuk Selector Peminjaman
         $anggotaSelector = $this->getUnifiedMembersList($activeTenantId, 100);
 
@@ -681,12 +698,14 @@ class PerpustakaanController extends Controller
             'total_denda_lunas'     => $totalDendaTerkumpul,
             'total_baca_hari_ini'   => BacaDiTempat::where('tenant_id', $activeTenantId)->whereDate('waktu_baca', Carbon::today())->count(),
             'total_reservasi_antre' => Reservasi::where('tenant_id', $activeTenantId)->where('status_reservasi', 'Menunggu')->count(),
+            'total_loker_terisi'    => Loker::where('tenant_id', $activeTenantId)->where('status', 'terisi')->count(),
+            'total_loker_tersedia'  => Loker::where('tenant_id', $activeTenantId)->where('status', 'tersedia')->count(),
         ];
 
         if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'data'    => compact('sirkulasiAktif', 'sirkulasiRiwayat', 'paketList', 'dendaList', 'opnameList', 'bacaList', 'reservasiList', 'stats'),
+                'data'    => compact('sirkulasiAktif', 'sirkulasiRiwayat', 'paketList', 'dendaList', 'opnameList', 'bacaList', 'reservasiList', 'lokerList', 'surveyList', 'stats'),
             ]);
         }
 
@@ -698,6 +717,8 @@ class PerpustakaanController extends Controller
             'opnameList'       => $opnameList,
             'bacaList'         => $bacaList,
             'reservasiList'    => $reservasiList,
+            'lokerList'        => $lokerList,
+            'surveyList'       => $surveyList,
             'bukuTersedia'     => $bukuTersedia,
             'anggotaSelector'  => $anggotaSelector,
             'pengaturan'       => $pengaturan,
@@ -1562,5 +1583,381 @@ class PerpustakaanController extends Controller
         }
 
         return array_slice($members, 0, $limit);
+    }
+
+    // =========================================================================
+    // 6. ANJUNGAN KIOSK PRESENSI MANDIRI (/perpustakaan/kiosk)
+    // =========================================================================
+    public function kiosk(Request $request): InertiaResponse|JsonResponse
+    {
+        $tenantId = $this->resolveActiveTenantId($request->query('tenant_id'));
+        $tenant = Tenant::find($tenantId);
+
+        $todayVisitors = BukuTamu::where('tenant_id', $tenantId)
+            ->whereDate('tanggal_kunjungan', Carbon::today())
+            ->latest('created_at')
+            ->limit(20)
+            ->get();
+
+        $stats = [
+            'total_hari_ini'  => BukuTamu::where('tenant_id', $tenantId)->whereDate('tanggal_kunjungan', Carbon::today())->count(),
+            'total_siswa'     => BukuTamu::where('tenant_id', $tenantId)->whereDate('tanggal_kunjungan', Carbon::today())->where('tipe_pengunjung', 'Siswa')->count(),
+            'total_guru'      => BukuTamu::where('tenant_id', $tenantId)->whereDate('tanggal_kunjungan', Carbon::today())->whereIn('tipe_pengunjung', ['Guru', 'Tendik'])->count(),
+            'total_rombongan' => BukuTamu::where('tenant_id', $tenantId)->whereDate('tanggal_kunjungan', Carbon::today())->where('keperluan', 'ILIKE', '%Rombongan%')->count(),
+        ];
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'data'    => compact('todayVisitors', 'stats', 'tenant'),
+            ]);
+        }
+
+        return Inertia::render('Perpustakaan/Kiosk/Index', [
+            'todayVisitors' => $todayVisitors,
+            'stats'         => $stats,
+            'tenant'        => $tenant,
+            'activeTenantId'=> $tenantId,
+        ]);
+    }
+
+    public function scanKioskKta(Request $request): JsonResponse
+    {
+        $tenantId = $this->resolveActiveTenantId($request->input('tenant_id'));
+        $barcode = trim($request->input('barcode', ''));
+
+        if (empty($barcode)) {
+            return response()->json(['success' => false, 'message' => 'Barcode / NISN tidak boleh kosong.'], 422);
+        }
+
+        // Cari di Siswa
+        $siswa = Siswa::where('tenant_id', $tenantId)
+            ->where(function ($q) use ($barcode) {
+                $q->where('nisn', $barcode)
+                  ->orWhere('nis', $barcode)
+                  ->orWhere('nik', $barcode);
+            })
+            ->first();
+
+        if ($siswa) {
+            $visitor = BukuTamu::create([
+                'id'                   => Str::uuid()->toString(),
+                'tenant_id'            => $tenantId,
+                'nama_perpus_buku_tamu'=> "Kunjungan Siswa: {$siswa->nama_lengkap}",
+                'nama_pengunjung'      => $siswa->nama_lengkap,
+                'tipe_pengunjung'      => 'Siswa',
+                'identitas_no'         => $siswa->nisn ?: $siswa->nis,
+                'kelas_instansi'       => 'Siswa SINTA',
+                'keperluan'            => 'Membaca / Literasi Mandiri (Kiosk Scan)',
+                'tanggal_kunjungan'    => Carbon::today()->toDateString(),
+            ]);
+
+            return response()->json([
+                'success'      => true,
+                'message'      => "Selamat datang, {$siswa->nama_lengkap}!",
+                'audio_speech' => "Selamat datang di perpustakaan, {$siswa->nama_lengkap}.",
+                'data'         => [
+                    'nama'      => $siswa->nama_lengkap,
+                    'tipe'      => 'Siswa',
+                    'identitas' => $siswa->nisn ?: $siswa->nis,
+                    'waktu'     => now()->format('H:i:s'),
+                ],
+            ]);
+        }
+
+        // Cari di Guru / User
+        $user = User::where('tenant_id', $tenantId)
+            ->where(function ($q) use ($barcode) {
+                $q->where('username', $barcode)
+                  ->orWhere('email', $barcode);
+            })
+            ->first();
+
+        if ($user) {
+            $visitor = BukuTamu::create([
+                'id'                   => Str::uuid()->toString(),
+                'tenant_id'            => $tenantId,
+                'nama_perpus_buku_tamu'=> "Kunjungan Guru/Staf: {$user->nama_lengkap}",
+                'nama_pengunjung'      => $user->nama_lengkap,
+                'tipe_pengunjung'      => 'Guru',
+                'identitas_no'         => $user->username,
+                'kelas_instansi'       => 'Tenaga Pendidik SINTA',
+                'keperluan'            => 'Kunjungan Literasi Guru (Kiosk Scan)',
+                'tanggal_kunjungan'    => Carbon::today()->toDateString(),
+            ]);
+
+            return response()->json([
+                'success'      => true,
+                'message'      => "Selamat datang Bapak/Ibu, {$user->nama_lengkap}!",
+                'audio_speech' => "Selamat datang di perpustakaan, Bapak Ibu {$user->nama_lengkap}.",
+                'data'         => [
+                    'nama'      => $user->nama_lengkap,
+                    'tipe'      => 'Guru',
+                    'identitas' => $user->username,
+                    'waktu'     => now()->format('H:i:s'),
+                ],
+            ]);
+        }
+
+        // Cari di Anggota Umum
+        $anggota = Anggota::where('tenant_id', $tenantId)
+            ->where(function ($q) use ($barcode) {
+                $q->where('no_anggota', $barcode)
+                  ->orWhere('identitas_no', $barcode);
+            })
+            ->first();
+
+        if ($anggota) {
+            $visitor = BukuTamu::create([
+                'id'                   => Str::uuid()->toString(),
+                'tenant_id'            => $tenantId,
+                'nama_perpus_buku_tamu'=> "Kunjungan Pemustaka: {$anggota->nama_lengkap}",
+                'nama_pengunjung'      => $anggota->nama_lengkap,
+                'tipe_pengunjung'      => $anggota->tipe_anggota,
+                'identitas_no'         => $anggota->no_anggota,
+                'kelas_instansi'       => $anggota->kelas_jurusan ?: 'Anggota Terdaftar',
+                'keperluan'            => 'Kunjungan Perpustakaan (Kiosk Scan)',
+                'tanggal_kunjungan'    => Carbon::today()->toDateString(),
+            ]);
+
+            return response()->json([
+                'success'      => true,
+                'message'      => "Selamat datang, {$anggota->nama_lengkap}!",
+                'audio_speech' => "Selamat datang di perpustakaan, {$anggota->nama_lengkap}.",
+                'data'         => [
+                    'nama'      => $anggota->nama_lengkap,
+                    'tipe'      => $anggota->tipe_anggota,
+                    'identitas' => $anggota->no_anggota,
+                    'waktu'     => now()->format('H:i:s'),
+                ],
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => "Nomor ID / Barcode '{$barcode}' tidak ditemukan dalam database anggota.",
+        ], 404);
+    }
+
+    public function storeKioskRombongan(Request $request): RedirectResponse|JsonResponse
+    {
+        $tenantId = $this->resolveActiveTenantId($request->input('tenant_id'));
+
+        $validated = $request->validate([
+            'nama_rombongan'  => ['required', 'string', 'max:255'],
+            'jumlah_peserta'  => ['required', 'integer', 'min:1', 'max:500'],
+            'ketua_pendamping'=> ['required', 'string', 'max:255'],
+            'asal_instansi'   => ['nullable', 'string', 'max:255'],
+            'keperluan'       => ['required', 'string', 'max:500'],
+        ]);
+
+        $bukuTamu = BukuTamu::create([
+            'id'                   => Str::uuid()->toString(),
+            'tenant_id'            => $tenantId,
+            'nama_perpus_buku_tamu'=> "Rombongan: {$validated['nama_rombongan']} ({$validated['jumlah_peserta']} Orang)",
+            'nama_pengunjung'      => "{$validated['nama_rombongan']} (PJ: {$validated['ketua_pendamping']})",
+            'tipe_pengunjung'      => 'Rombongan',
+            'identitas_no'         => "JML: {$validated['jumlah_peserta']} Orang",
+            'kelas_instansi'       => $validated['asal_instansi'] ?? 'Internal Sekolah',
+            'keperluan'            => "Rombongan: {$validated['keperluan']}",
+            'tanggal_kunjungan'    => Carbon::today()->toDateString(),
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Presensi rombongan berhasil direkam.',
+                'data'    => $bukuTamu,
+            ], 201);
+        }
+
+        return back()->with('success', 'Presensi rombongan berhasil direkam ke buku tamu.');
+    }
+
+    // =========================================================================
+    // 7. LOKER PENITIPAN BARANG
+    // =========================================================================
+    public function storeLoker(Request $request): RedirectResponse|JsonResponse
+    {
+        $tenantId = $this->resolveActiveTenantId($request->input('tenant_id'));
+
+        $validated = $request->validate([
+            'nomor_loker'    => ['required', 'string', 'max:50'],
+            'lokasi_ruangan' => ['nullable', 'string', 'max:100'],
+            'keterangan'     => ['nullable', 'string'],
+        ]);
+
+        $loker = Loker::create([
+            'id'             => Str::uuid()->toString(),
+            'tenant_id'      => $tenantId,
+            'nomor_loker'    => $validated['nomor_loker'],
+            'lokasi_ruangan' => $validated['lokasi_ruangan'] ?? 'Lobi Utama Perpustakaan',
+            'status'         => 'tersedia',
+            'keterangan'     => $validated['keterangan'] ?? null,
+            'is_active'      => true,
+        ]);
+
+        return back()->with('success', "Loker nomor {$validated['nomor_loker']} berhasil ditambahkan.");
+    }
+
+    public function updateLoker(Request $request, string $id): RedirectResponse|JsonResponse
+    {
+        $validated = $request->validate([
+            'nomor_loker'    => ['required', 'string', 'max:50'],
+            'lokasi_ruangan' => ['nullable', 'string', 'max:100'],
+            'status'         => ['required', 'string', 'in:tersedia,terisi,rusak,kunci_hilang'],
+            'keterangan'     => ['nullable', 'string'],
+        ]);
+
+        $loker = Loker::withoutTenant()->findOrFail($id);
+        $loker->update($validated);
+
+        return back()->with('success', 'Data loker berhasil diperbarui.');
+    }
+
+    public function destroyLoker(string $id): RedirectResponse|JsonResponse
+    {
+        $loker = Loker::withoutTenant()->findOrFail($id);
+        if ($loker->status === 'terisi') {
+            return back()->with('error', 'Loker sedang terisi kunci, tidak dapat dihapus.');
+        }
+        $loker->delete();
+        return back()->with('success', 'Loker berhasil dihapus.');
+    }
+
+    public function pinjamLoker(Request $request): RedirectResponse|JsonResponse
+    {
+        $tenantId = $this->resolveActiveTenantId($request->input('tenant_id'));
+
+        $validated = $request->validate([
+            'loker_id'          => ['required', 'uuid', 'exists:perpustakaan.perpus_loker,id'],
+            'nama_peminjam'     => ['required', 'string', 'max:255'],
+            'identitas_jaminan' => ['required', 'string', 'in:KTA,Kartu Pelajar,KTP,Lainnya'],
+            'catatan'           => ['nullable', 'string'],
+        ]);
+
+        return DB::transaction(function () use ($validated, $tenantId) {
+            $loker = Loker::lockForUpdate()->findOrFail($validated['loker_id']);
+            if ($loker->status !== 'tersedia') {
+                abort(422, 'Loker tidak dalam status tersedia.');
+            }
+
+            $log = LokerLog::create([
+                'id'                => Str::uuid()->toString(),
+                'tenant_id'         => $tenantId,
+                'loker_id'          => $loker->id,
+                'nama_peminjam'     => $validated['nama_peminjam'],
+                'identitas_jaminan' => $validated['identitas_jaminan'],
+                'waktu_pinjam'      => now(),
+                'status_pinjam'     => 'dipinjam',
+                'denda'             => 0,
+                'petugas_id'        => Auth::id(),
+                'catatan'           => $validated['catatan'] ?? null,
+            ]);
+
+            $loker->status = 'terisi';
+            $loker->save();
+
+            return back()->with('success', "Kunci loker {$loker->nomor_loker} berhasil dipinjamkan ke {$validated['nama_peminjam']}.");
+        });
+    }
+
+    public function kembaliLoker(Request $request, string $id): RedirectResponse|JsonResponse
+    {
+        return DB::transaction(function () use ($id, $request) {
+            $loker = Loker::lockForUpdate()->findOrFail($id);
+            $activeLog = LokerLog::where('loker_id', $loker->id)->where('status_pinjam', 'dipinjam')->latest('waktu_pinjam')->first();
+
+            $denda = (float) $request->input('denda', 0);
+            $statusPinjam = $request->input('kunci_hilang') ? 'pelanggaran' : 'kembali';
+
+            if ($activeLog) {
+                $activeLog->update([
+                    'waktu_kembali' => now(),
+                    'status_pinjam' => $statusPinjam,
+                    'denda'         => $denda,
+                    'catatan'       => $request->input('catatan', $activeLog->catatan),
+                ]);
+            }
+
+            $loker->status = $request->input('kunci_hilang') ? 'kunci_hilang' : 'tersedia';
+            $loker->save();
+
+            return back()->with('success', "Kunci loker {$loker->nomor_loker} telah dikembalikan.");
+        });
+    }
+
+    // =========================================================================
+    // 8. SURVEY IKM / KEPUASAN PEMUSTAKA
+    // =========================================================================
+    public function storeSurvey(Request $request): RedirectResponse|JsonResponse
+    {
+        $tenantId = $this->resolveActiveTenantId($request->input('tenant_id'));
+
+        $validated = $request->validate([
+            'judul_survey'  => ['required', 'string', 'max:255'],
+            'deskripsi'     => ['nullable', 'string'],
+            'tanggal_buka'  => ['required', 'date'],
+            'tanggal_tutup' => ['nullable', 'date', 'after_or_equal:tanggal_buka'],
+            'pertanyaan'    => ['required', 'array', 'min:1'],
+            'pertanyaan.*'  => ['required', 'string', 'max:500'],
+        ]);
+
+        return DB::transaction(function () use ($validated, $tenantId) {
+            $survey = Survey::create([
+                'id'           => Str::uuid()->toString(),
+                'tenant_id'    => $tenantId,
+                'judul_survey' => $validated['judul_survey'],
+                'deskripsi'    => $validated['deskripsi'] ?? null,
+                'tanggal_buka' => $validated['tanggal_buka'],
+                'tanggal_tutup'=> $validated['tanggal_tutup'] ?? null,
+                'is_active'    => true,
+            ]);
+
+            foreach ($validated['pertanyaan'] as $idx => $teksPertanyaan) {
+                SurveyPertanyaan::create([
+                    'id'             => Str::uuid()->toString(),
+                    'tenant_id'      => $tenantId,
+                    'survey_id'      => $survey->id,
+                    'urutan'         => $idx + 1,
+                    'pertanyaan'     => $teksPertanyaan,
+                    'tipe_pertanyaan'=> 'skala_likert',
+                    'is_active'      => true,
+                ]);
+            }
+
+            return back()->with('success', 'Survey Indeks Kepuasan Pemustaka berhasil dibuat.');
+        });
+    }
+
+    public function storeResponSurvey(Request $request): RedirectResponse|JsonResponse
+    {
+        $tenantId = $this->resolveActiveTenantId($request->input('tenant_id'));
+
+        $validated = $request->validate([
+            'survey_id'       => ['required', 'uuid', 'exists:perpustakaan.perpus_survey,id'],
+            'nama_responden'  => ['nullable', 'string', 'max:255'],
+            'skor'            => ['required', 'array'],
+            'skor.*'          => ['required', 'integer', 'min:1', 'max:5'],
+            'saran_masukan'   => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        return DB::transaction(function () use ($validated, $tenantId) {
+            foreach ($validated['skor'] as $pertanyaanId => $nilai) {
+                SurveyRespon::create([
+                    'id'             => Str::uuid()->toString(),
+                    'tenant_id'      => $tenantId,
+                    'survey_id'      => $validated['survey_id'],
+                    'pertanyaan_id'  => $pertanyaanId,
+                    'anggota_id'     => Auth::id(),
+                    'nama_responden' => $validated['nama_responden'] ?? (Auth::user()?->nama_lengkap ?: 'Anonim'),
+                    'skor_nilai'     => $nilai,
+                    'jawaban_teks'   => $validated['saran_masukan'] ?? null,
+                    'created_at'     => now(),
+                ]);
+            }
+
+            return back()->with('success', 'Terima kasih atas partisipasi dan penilaian Anda terhadap layanan perpustakaan!');
+        });
     }
 }
