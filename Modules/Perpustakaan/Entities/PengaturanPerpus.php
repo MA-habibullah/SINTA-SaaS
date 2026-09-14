@@ -22,6 +22,11 @@ class PengaturanPerpus extends BaseTenantModel
         'max_hari_pinjam_guru',
         'max_buku_pinjam_siswa',
         'max_buku_pinjam_guru',
+        'toleransi_keterlambatan',
+        'max_perpanjangan_siswa',
+        'max_perpanjangan_guru',
+        'hitung_libur_denda',
+        'format_nomor_surat_bebas',
         'opac_aktif',
         'syarat_bebas_pustaka',
         'kategori',
@@ -30,15 +35,19 @@ class PengaturanPerpus extends BaseTenantModel
     ];
 
     protected $casts = [
-        'tarif_denda_per_hari'  => 'decimal:2',
-        'max_hari_pinjam_siswa' => 'integer',
-        'max_hari_pinjam_guru'  => 'integer',
-        'max_buku_pinjam_siswa' => 'integer',
-        'max_buku_pinjam_guru'  => 'integer',
-        'opac_aktif'            => 'boolean',
-        'is_active'             => 'boolean',
-        'created_at'            => 'datetime',
-        'updated_at'            => 'datetime',
+        'tarif_denda_per_hari'    => 'decimal:2',
+        'max_hari_pinjam_siswa'   => 'integer',
+        'max_hari_pinjam_guru'    => 'integer',
+        'max_buku_pinjam_siswa'   => 'integer',
+        'max_buku_pinjam_guru'    => 'integer',
+        'toleransi_keterlambatan' => 'integer',
+        'max_perpanjangan_siswa'  => 'integer',
+        'max_perpanjangan_guru'   => 'integer',
+        'hitung_libur_denda'      => 'boolean',
+        'opac_aktif'              => 'boolean',
+        'is_active'               => 'boolean',
+        'created_at'              => 'datetime',
+        'updated_at'              => 'datetime',
     ];
 
     public function tenant(): BelongsTo

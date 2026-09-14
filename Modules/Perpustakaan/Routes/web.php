@@ -13,11 +13,13 @@ Route::middleware(['web', 'auth', 'tenant.guard'])->prefix('perpustakaan')->name
     Route::delete('/katalog/{id}', [PerpustakaanController::class, 'destroyBuku'])->name('katalog.destroy');
     Route::post('/katalog/{id}/toggle-status', [PerpustakaanController::class, 'toggleStatusBuku'])->name('katalog.toggle-status');
     
-    // Eksemplar, Rak, Usulan, Serial
+    // Eksemplar, Rak, Usulan, Serial, DDC
     Route::post('/eksemplar', [PerpustakaanController::class, 'storeEksemplar'])->name('eksemplar.store');
     Route::delete('/eksemplar/{id}', [PerpustakaanController::class, 'destroyEksemplar'])->name('eksemplar.destroy');
     Route::post('/master-rak', [PerpustakaanController::class, 'storeRak'])->name('rak.store');
     Route::delete('/master-rak/{id}', [PerpustakaanController::class, 'destroyRak'])->name('rak.destroy');
+    Route::post('/master-ddc', [PerpustakaanController::class, 'storeDdc'])->name('ddc.store');
+    Route::delete('/master-ddc/{id}', [PerpustakaanController::class, 'destroyDdc'])->name('ddc.destroy');
     Route::post('/usulan-buku', [PerpustakaanController::class, 'storeUsulan'])->name('usulan.store');
     Route::patch('/usulan-buku/{id}', [PerpustakaanController::class, 'updateStatusUsulan'])->name('usulan.update');
     Route::post('/serial-berkala', [PerpustakaanController::class, 'storeSerial'])->name('serial.store');
@@ -29,11 +31,24 @@ Route::middleware(['web', 'auth', 'tenant.guard'])->prefix('perpustakaan')->name
     Route::post('/pinjam', [PerpustakaanController::class, 'pinjamBuku'])->name('pinjam.store');
     Route::match(['post', 'put'], '/sirkulasi/kembali/{id}', [PerpustakaanController::class, 'kembalikanBuku'])->name('sirkulasi.kembali');
     Route::match(['post', 'put'], '/kembali/{id}', [PerpustakaanController::class, 'kembalikanBuku'])->name('kembali.update');
+    Route::post('/sirkulasi/quick-return', [PerpustakaanController::class, 'quickReturn'])->name('sirkulasi.quick-return');
     Route::post('/sirkulasi/perpanjang/{id}', [PerpustakaanController::class, 'perpanjangBuku'])->name('sirkulasi.perpanjang');
     Route::post('/sirkulasi/bayar-denda/{id}', [PerpustakaanController::class, 'bayarDenda'])->name('sirkulasi.bayar-denda');
     Route::post('/sirkulasi/distribusi-paket', [PerpustakaanController::class, 'distribusiBukuPaket'])->name('sirkulasi.distribusi-paket');
 
-    // 3. Anggota & Buku Tamu
+    // 3. Stock Opname & Baca di Tempat & Reservasi
+    Route::post('/opname', [PerpustakaanController::class, 'storeOpname'])->name('opname.store');
+    Route::post('/opname/scan', [PerpustakaanController::class, 'scanOpnameItem'])->name('opname.scan');
+    Route::post('/opname/{id}/close', [PerpustakaanController::class, 'closeOpname'])->name('opname.close');
+    Route::delete('/opname/{id}', [PerpustakaanController::class, 'destroyOpname'])->name('opname.destroy');
+
+    Route::post('/baca-di-tempat', [PerpustakaanController::class, 'storeBacaDiTempat'])->name('baca-di-tempat.store');
+    Route::delete('/baca-di-tempat/{id}', [PerpustakaanController::class, 'destroyBacaDiTempat'])->name('baca-di-tempat.destroy');
+
+    Route::post('/reservasi', [PerpustakaanController::class, 'storeReservasi'])->name('reservasi.store');
+    Route::post('/reservasi/{id}/cancel', [PerpustakaanController::class, 'cancelReservasi'])->name('reservasi.cancel');
+
+    // 4. Anggota & Buku Tamu
     Route::get('/anggota', [PerpustakaanController::class, 'anggota'])->name('anggota');
     Route::post('/anggota', [PerpustakaanController::class, 'storeAnggota'])->name('anggota.store');
     Route::delete('/anggota/{id}', [PerpustakaanController::class, 'destroyAnggota'])->name('anggota.destroy');
@@ -41,7 +56,7 @@ Route::middleware(['web', 'auth', 'tenant.guard'])->prefix('perpustakaan')->name
     Route::post('/buku-tamu', [PerpustakaanController::class, 'storeBukuTamu'])->name('buku-tamu.store');
     Route::post('/pengaturan', [PerpustakaanController::class, 'updatePengaturan'])->name('pengaturan.update');
 
-    // 4. OPAC & Riwayat Saya
+    // 5. OPAC & Riwayat Saya
     Route::get('/opac', [PerpustakaanController::class, 'opac'])->name('opac');
     Route::get('/riwayat-saya', [PerpustakaanController::class, 'riwayatSaya'])->name('riwayat-saya');
 });

@@ -18,12 +18,17 @@ class Buku extends BaseTenantModel
         'kode_buku',
         'isbn',
         'judul_buku',
+        'anak_judul',
         'pengarang',
+        'pengarang_tambahan',
         'penerbit',
         'kota_terbit',
         'tahun_terbit',
+        'edisi',
+        'jenis_bahan',
         'halaman',
         'dimensi',
+        'deskripsi_fisik',
         'bahasa',
         'nomor_klasifikasi_ddc',
         'nomor_panggil',
@@ -37,6 +42,7 @@ class Buku extends BaseTenantModel
         'ebook_url',
         'is_ebook',
         'status_opac',
+        'is_quarantine',
         'deskripsi',
         'is_active',
     ];
@@ -48,6 +54,7 @@ class Buku extends BaseTenantModel
         'jumlah_tersedia'  => 'integer',
         'is_ebook'         => 'boolean',
         'status_opac'      => 'boolean',
+        'is_quarantine'    => 'boolean',
         'is_active'        => 'boolean',
         'created_at'       => 'datetime',
         'updated_at'       => 'datetime',
@@ -61,6 +68,16 @@ class Buku extends BaseTenantModel
     public function sirkulasi(): HasMany
     {
         return $this->hasMany(Sirkulasi::class, 'buku_id');
+    }
+
+    public function reservasi(): HasMany
+    {
+        return $this->hasMany(Reservasi::class, 'buku_id');
+    }
+
+    public function bacaDiTempat(): HasMany
+    {
+        return $this->hasMany(BacaDiTempat::class, 'buku_id');
     }
 
     public function tenant(): BelongsTo
