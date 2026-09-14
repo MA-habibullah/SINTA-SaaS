@@ -21,7 +21,7 @@
         </div>
       </div>
       <div class="relative z-10 shrink-0">
-        <a href="https://wa.me/6281234567890?text=Halo%20Admin%20SINTA,%20saya%20ingin%20konsultasi%20layanan%20SINTA" target="_blank"
+        <a href="https://wa.me/6281388884043?text=Halo%20Admin%20SINTA,%20saya%20ingin%20konsultasi%20layanan%20SINTA" target="_blank"
            class="px-4 py-2.5 rounded-xl bg-white text-teal-800 hover:bg-teal-50 font-bold text-xs shadow-md transition inline-flex items-center gap-1.5">
           <i class="bi bi-whatsapp text-emerald-600"></i>
           <span>Konsultasi / Perpanjang</span>

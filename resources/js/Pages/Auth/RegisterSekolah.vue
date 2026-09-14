@@ -37,7 +37,7 @@
         <div class="lg:col-span-4 space-y-6 hidden lg:block">
           <div class="p-6 rounded-3xl bg-slate-800/60 border border-slate-700/70 shadow-xl backdrop-blur-sm">
             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold mb-4">
-              <i class="bi bi-gift-fill"></i> Free Trial 3 Bulan Penuh
+              <i class="bi bi-gift-fill"></i> Free Trial 1 Bulan Penuh
             </div>
             <h3 class="text-xl font-black text-white leading-tight">
               Transformasi Digital Sekolah Dimulai di Sini

@@ -125,7 +125,7 @@
         <Link href="/daftar-sekolah" 
               class="mt-2.5 inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition">
           <i class="bi bi-gift-fill text-emerald-600"></i>
-          <span>Daftarkan Sekolah (Coba Gratis 3 Bulan)</span>
+          <span>Daftarkan Sekolah (Coba Gratis 1 Bulan)</span>
         </Link>
       </div>
     </div>
