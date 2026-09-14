@@ -742,6 +742,5 @@ const savePengaturan = () => {
         </div>
       </div>
     </Teleport>
-  </div>
-</AppLayout>
+  </AppLayout>
 </template>
