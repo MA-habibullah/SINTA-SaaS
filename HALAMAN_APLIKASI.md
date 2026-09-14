@@ -853,7 +853,21 @@ Endpoint di bawah melayani pemuatan data asinkronus on-demand (*Client Reactive 
 
 ---
 
-## 📑 6. Panduan Pengembang & Kepatuhan Arsitektur
+## ⚠️ 7. Hasil Audit Komponen & Halaman Tak Terpakai (Orphan / Deprecated Views)
+
+Berdasarkan hasil pemindaian silang antara berkas antarmuka Vue 3 SFC di `resources/js/Pages/` terhadap seluruh Controller, Route Handler, dan Menu Database, ditemukan **3 berkas halaman lama (legacy / prototype)** yang **tidak lagi dipanggil** oleh sistem karena telah digantikan oleh halaman sub-fitur modular yang lebih spesifik:
+
+| No | Berkas Halaman Vue | Status Saat Ini | Alasan & Halaman Pengganti Aktif |
+|---|---|---|---|
+| 1 | `resources/js/Pages/Bk/Index.vue` | ⚠️ **Tidak Digunakan (Deprecated Wrapper)** | Modul Bimbingan Konseling kini menggunakan sub-halaman modular terpisah: [Bk/Kedisiplinan/Index.vue](file:///c:/laragon/www/sinta/resources/js/Pages/Bk/Kedisiplinan/Index.vue) (untuk Kedisiplinan & Poin Pelanggaran) dan [Bk/Layanan/Index.vue](file:///c:/laragon/www/sinta/resources/js/Pages/Bk/Layanan/Index.vue) (untuk Konseling Siswa). |
+| 2 | `resources/js/Pages/Cms/Index.vue` | ⚠️ **Tidak Digunakan (Legacy Monolith)** | Awalnya merupakan prototype satu halaman untuk seluruh CMS. Kini telah dipecah menjadi 3 sub-modul independen: [Cms/Pengumuman/Index.vue](file:///c:/laragon/www/sinta/resources/js/Pages/Cms/Pengumuman/Index.vue), [Cms/Agenda/Index.vue](file:///c:/laragon/www/sinta/resources/js/Pages/Cms/Agenda/Index.vue), dan [Cms/Promosi/Index.vue](file:///c:/laragon/www/sinta/resources/js/Pages/Cms/Promosi/Index.vue). |
+| 3 | `resources/js/Pages/Perpustakaan/Index.vue` | ⚠️ **Tidak Digunakan (Legacy Monolith)** | Awalnya merupakan prototype lama perpustakaan. Kini seluruh operasional perpustakaan menggunakan modul mandiri berbasis standar INLISLite: [Perpustakaan/Katalog/Index.vue](file:///c:/laragon/www/sinta/resources/js/Pages/Perpustakaan/Katalog/Index.vue), [Perpustakaan/Sirkulasi/Index.vue](file:///c:/laragon/www/sinta/resources/js/Pages/Perpustakaan/Sirkulasi/Index.vue), [Perpustakaan/Anggota/Index.vue](file:///c:/laragon/www/sinta/resources/js/Pages/Perpustakaan/Anggota/Index.vue), [Perpustakaan/Opac/Index.vue](file:///c:/laragon/www/sinta/resources/js/Pages/Perpustakaan/Opac/Index.vue), [Perpustakaan/Kiosk/Index.vue](file:///c:/laragon/www/sinta/resources/js/Pages/Perpustakaan/Kiosk/Index.vue), dan [Perpustakaan/RiwayatSaya/Index.vue](file:///c:/laragon/www/sinta/resources/js/Pages/Perpustakaan/RiwayatSaya/Index.vue). |
+
+> 💡 **Rekomendasi Pemeliharaan Kode**: Ketiga berkas di atas aman untuk dihapus (*cleanup*) atau diarsipkan guna menjaga kerapian arsitektur proyek.
+
+---
+
+## 📑 8. Panduan Pengembang & Kepatuhan Arsitektur
 Setiap kali membuat halaman baru atau memperluas fitur modul di SINTA, pengembang wajib mematuhi standar yang tercantum pada [C:\laragon\www\sinta\.agents\AGENTS.md](file:///c:/laragon/www/sinta/.agents/AGENTS.md):
 1. **Laravel 11 Modular**: Seluruh rute web wajib dibungkus `Route::middleware(['web', 'auth', 'tenant.guard'])`.
 2. **Zero-SSR Data Exposure**: Initial HTTP GET hanya me-render shell UI, data sensitif dimuat secara asinkronus via `onMounted()`.

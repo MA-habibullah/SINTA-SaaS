@@ -40,7 +40,7 @@ class SiswaController extends Controller
             ]);
         }
 
-        return Inertia::render('Siswa/BukuInduk', [
+        return Inertia::render('Siswa/BukuInduk/Index', [
             'title'     => 'Buku Induk Siswa Digital',
             'siswaList' => $query->paginate(25)->withQueryString(),
             'filters'   => $request->only(['search', 'kelas_id', 'status_aktif']),
@@ -74,7 +74,7 @@ class SiswaController extends Controller
             ]);
         }
 
-        return Inertia::render('Siswa/Detail', [
+        return Inertia::render('Siswa/BukuInduk/Show', [
             'title' => 'Detail Siswa - ' . $siswa->nama_lengkap,
             'siswa' => $siswa,
         ]);
