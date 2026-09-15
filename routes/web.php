@@ -162,6 +162,7 @@ Route::middleware(['auth', 'tenant.guard'])->group(function () {
     // Super Admin CMS Promosi & Landing Page Routes
     Route::get('/super-admin/cms-promosi', [\Modules\Cms\Http\Controllers\CmsPromosiController::class, 'index'])->name('menu.super-admin.cms-promosi');
     Route::post('/super-admin/cms-promosi', [\Modules\Cms\Http\Controllers\CmsPromosiController::class, 'store'])->name('menu.super-admin.cms-promosi.store');
+    Route::post('/super-admin/cms-promosi/reorder', [\Modules\Cms\Http\Controllers\CmsPromosiController::class, 'reorder'])->name('menu.super-admin.cms-promosi.reorder');
     Route::put('/super-admin/cms-promosi/{id}', [\Modules\Cms\Http\Controllers\CmsPromosiController::class, 'update'])->name('menu.super-admin.cms-promosi.update');
     Route::post('/super-admin/cms-promosi/{id}/toggle', [\Modules\Cms\Http\Controllers\CmsPromosiController::class, 'toggle'])->name('menu.super-admin.cms-promosi.toggle');
     Route::delete('/super-admin/cms-promosi/{id}', [\Modules\Cms\Http\Controllers\CmsPromosiController::class, 'destroy'])->name('menu.super-admin.cms-promosi.destroy');

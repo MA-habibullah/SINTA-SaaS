@@ -3,40 +3,37 @@
 
     <!-- BACKGROUND GLOW EFFECTS -->
     <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[450px] bg-gradient-to-b from-blue-600/20 via-indigo-600/10 to-transparent blur-[140px] pointer-events-none -z-10"></div>
-    <div class="absolute top-[40%] right-[-200px] w-[600px] h-[600px] bg-purple-600/10 blur-[160px] pointer-events-none -z-10"></div>
-    <div class="absolute top-[75%] left-[-200px] w-[600px] h-[600px] bg-blue-600/10 blur-[160px] pointer-events-none -z-10"></div>
+    <div class="absolute top-[35%] right-[-200px] w-[600px] h-[600px] bg-purple-600/10 blur-[160px] pointer-events-none -z-10"></div>
+    <div class="absolute top-[65%] left-[-200px] w-[600px] h-[600px] bg-blue-600/10 blur-[160px] pointer-events-none -z-10"></div>
 
     <!-- NAVBAR HEADER -->
     <header class="relative z-30 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-lg sticky top-0">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
         
-        <!-- Logo Brand (Shrink 0) -->
+        <!-- Logo Brand -->
         <Link href="/" class="flex items-center gap-3 shrink-0 group">
           <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 group-hover:scale-105 transition transform">
             <i class="bi bi-mortarboard-fill text-lg"></i>
           </div>
           <div class="flex items-center gap-2">
             <span class="text-xl font-black text-white tracking-tight">SINTA</span>
+            <span class="hidden sm:inline-block px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-extrabold tracking-wider">
+              SaaS v2.0
+            </span>
           </div>
         </Link>
 
-        <!-- Desktop Navigation Links (Visible on lg and above) -->
-        <nav class="hidden lg:flex items-center gap-6 xl:gap-8 text-xs font-bold text-slate-300 shrink-0">
-          <a href="#fitur" class="px-2.5 py-1.5 rounded-lg hover:text-white hover:bg-slate-900 transition flex items-center gap-1.5">
-            <i class="bi bi-grid-fill text-blue-400"></i>
-            <span>Fitur Unggulan</span>
-          </a>
-          <a href="#kalkulator" class="px-2.5 py-1.5 rounded-lg hover:text-white hover:bg-slate-900 transition flex items-center gap-1.5">
-            <i class="bi bi-calculator-fill text-emerald-400"></i>
-            <span>Simulasi Biaya</span>
-          </a>
-          <a href="#paket" class="px-2.5 py-1.5 rounded-lg hover:text-white hover:bg-slate-900 transition flex items-center gap-1.5">
-            <i class="bi bi-box-seam-fill text-indigo-400"></i>
-            <span>Paket & Harga</span>
-          </a>
-          <a href="#faq" class="px-2.5 py-1.5 rounded-lg hover:text-white hover:bg-slate-900 transition flex items-center gap-1.5">
-            <i class="bi bi-question-circle text-amber-400"></i>
-            <span>FAQ</span>
+        <!-- Desktop Navigation Links (Dynamic from CMS) -->
+        <nav class="hidden lg:flex items-center gap-5 xl:gap-7 text-xs font-bold text-slate-300 shrink-0">
+          <a v-for="(nav, nIdx) in navMenuItems" :key="nIdx" 
+             :href="nav.cta_link || nav.content || '#'"
+             :target="nav.content_json?.target || '_self'"
+             class="px-2.5 py-1.5 rounded-lg hover:text-white hover:bg-slate-900 transition flex items-center gap-1.5 group">
+            <i :class="['bi', nav.icon_class || 'bi-circle-fill text-[8px]', 'text-blue-400 group-hover:text-blue-300 transition']"></i>
+            <span>{{ nav.title }}</span>
+            <span v-if="nav.badge_text" class="px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[9px] font-extrabold border border-blue-500/30">
+              {{ nav.badge_text }}
+            </span>
           </a>
         </nav>
 
@@ -95,40 +92,20 @@
 
           <!-- Drawer Navigation Links -->
           <nav class="space-y-1.5 py-6">
-            <a href="#fitur" 
+            <a v-for="(nav, nIdx) in navMenuItems" :key="nIdx"
+               :href="nav.cta_link || nav.content || '#'"
+               :target="nav.content_json?.target || '_self'"
                @click="mobileMenuOpen = false"
-               class="flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition">
-              <div class="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
-                <i class="bi bi-grid-fill"></i>
+               class="flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition">
+              <div class="flex items-center gap-3">
+                <div class="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
+                  <i :class="['bi', nav.icon_class || 'bi-link-45deg']"></i>
+                </div>
+                <span>{{ nav.title }}</span>
               </div>
-              <span>Fitur Unggulan</span>
-            </a>
-
-            <a href="#kalkulator" 
-               @click="mobileMenuOpen = false"
-               class="flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition">
-              <div class="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
-                <i class="bi bi-calculator-fill"></i>
-              </div>
-              <span>Simulasi Biaya & RKAS</span>
-            </a>
-
-            <a href="#paket" 
-               @click="mobileMenuOpen = false"
-               class="flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition">
-              <div class="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400">
-                <i class="bi bi-box-seam-fill"></i>
-              </div>
-              <span>Pilihan Paket & Harga</span>
-            </a>
-
-            <a href="#faq" 
-               @click="mobileMenuOpen = false"
-               class="flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition">
-              <div class="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400">
-                <i class="bi bi-question-circle"></i>
-              </div>
-              <span>Tanya Jawab (FAQ)</span>
+              <span v-if="nav.badge_text" class="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[9px] font-extrabold border border-blue-500/30">
+                {{ nav.badge_text }}
+              </span>
             </a>
           </nav>
         </div>
@@ -164,7 +141,7 @@
         <!-- Hero Badge -->
         <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-500/30 text-blue-400 text-xs font-bold shadow-xs">
           <i class="bi bi-stars text-amber-400"></i>
-          <span>{{ heroItem?.badge_text || 'Platform Manajemen Sekolah Multi-Tenant #1' }}</span>
+          <span>{{ heroItem?.badge_text || 'Platform Tata Kelola Sekolah Terpadu #1' }}</span>
         </div>
 
         <!-- Main Title -->
@@ -174,7 +151,7 @@
 
         <!-- Subtitle -->
         <p class="text-base sm:text-lg text-slate-400 font-normal leading-relaxed max-w-3xl mx-auto">
-          {{ heroItem?.subtitle || 'SINTA menghadirkan ekosistem tata kelola sekolah all-in-one: Rapor Kurikulum Merdeka, Buku Induk, Tagihan SPP Multi-Channel, PPDB, hingga BK & Presensi. Nikmati masa uji coba gratis 1 bulan penuh!' }}
+          {{ heroItem?.subtitle || 'SINTA menghadirkan ekosistem tata kelola sekolah all-in-one: Rapor Kurikulum Merdeka, Buku Induk Siswa, Tagihan SPP Multi-Channel Midtrans, Presensi Geofencing GPS, hingga BK & Perpustakaan. Coba gratis 1 bulan!' }}
         </p>
 
         <!-- CTA Buttons -->
@@ -182,7 +159,7 @@
           <Link href="/daftar-sekolah" 
                 class="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-800 text-white font-extrabold text-sm shadow-xl shadow-blue-500/30 transition-all transform hover:-translate-y-1 flex items-center justify-center gap-2.5">
             <i class="bi bi-rocket-takeoff-fill text-yellow-300 text-base"></i>
-            <span>{{ heroItem?.cta_text || 'Daftarkan Sekolah Anda (Free Trial 1 Bulan)' }}</span>
+            <span>{{ heroItem?.cta_text || 'Daftarkan Sekolah (Free Trial 1 Bulan)' }}</span>
           </Link>
           <a href="#kalkulator" 
              class="w-full sm:w-auto px-7 py-4 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 hover:text-white font-bold text-sm border border-slate-700/80 transition flex items-center justify-center gap-2">
@@ -199,7 +176,7 @@
           </div>
           <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xs text-center">
             <span class="block text-2xl font-black text-emerald-400 tracking-tight">1 Bulan</span>
-            <span class="text-xs text-slate-400 font-medium">Free Trial Bebas Biaya</span>
+            <span class="text-xs text-slate-400 font-medium">Free Trial Tanpa Syarat</span>
           </div>
           <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xs text-center">
             <span class="block text-2xl font-black text-blue-400 tracking-tight">Multi-Schema</span>
@@ -214,18 +191,88 @@
       </div>
     </section>
 
-    <!-- FITUR UNGGULAN SECTION -->
-    <section id="fitur" class="relative z-10 py-20 border-t border-slate-800/60 bg-slate-900/20">
+    <!-- SECTION: KEUNTUNGAN APLIKASI (BENEFITS & ADVANTAGES) -->
+    <section id="keuntungan" class="relative z-10 py-24 border-t border-slate-800/80 bg-slate-950/60">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         <div class="text-center max-w-3xl mx-auto mb-16 space-y-3">
-          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-bold">
+          <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-400 text-xs font-bold shadow-xs">
+            <i class="bi bi-shield-check"></i> Mengapa Sekolah Memilih SINTA?
+          </div>
+          <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight">
+            Keunggulan & Keuntungan Arsitektur SINTA
+          </h2>
+          <p class="text-sm text-slate-400 leading-relaxed">
+            Dirancang dengan standar enterprise untuk menjamin kecepatan operasional, privasi data tingkat tinggi, dan efisiensi anggaran sekolah.
+          </p>
+        </div>
+
+        <!-- Cards Grid Keuntungan -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div v-for="(benefit, bIdx) in benefitItems" :key="bIdx"
+               class="p-7 rounded-3xl bg-slate-900/90 border border-slate-800/90 hover:border-slate-700 hover:bg-slate-900 transition-all duration-300 group shadow-xl flex flex-col justify-between relative overflow-hidden">
+            
+            <!-- Top Subtle Glow -->
+            <div class="absolute -top-12 -right-12 w-28 h-28 bg-purple-600/10 rounded-full blur-2xl pointer-events-none group-hover:bg-purple-600/20 transition"></div>
+
+            <div>
+              <!-- Icon & Badge Header -->
+              <div class="flex items-center justify-between gap-3 mb-5">
+                <div class="w-13 h-13 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 group-hover:bg-purple-600 group-hover:text-white transition transform group-hover:scale-105 shadow-md">
+                  <i :class="['bi', benefit.icon_class || 'bi-shield-check', 'text-2xl']"></i>
+                </div>
+                <span v-if="benefit.badge_text" class="px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-300 text-[10px] font-extrabold uppercase tracking-wider border border-purple-500/20">
+                  {{ benefit.badge_text }}
+                </span>
+              </div>
+
+              <!-- Title -->
+              <h3 class="text-lg font-black text-white mb-2 group-hover:text-purple-300 transition leading-snug">
+                {{ benefit.title }}
+              </h3>
+
+              <!-- Subtitle & Content -->
+              <p class="text-xs text-slate-400 leading-relaxed">
+                {{ benefit.subtitle || benefit.content }}
+              </p>
+
+              <!-- Highlights Checklist -->
+              <div v-if="benefit.content_json?.highlights && benefit.content_json.highlights.length > 0" 
+                   class="mt-4 pt-4 border-t border-slate-800/80 space-y-2">
+                <div v-for="(h, hIdx) in benefit.content_json.highlights" :key="hIdx" 
+                     class="text-xs text-slate-300 flex items-center gap-2">
+                  <i class="bi bi-check-circle-fill text-emerald-400 text-xs shrink-0"></i>
+                  <span class="font-medium">{{ h }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Optional Card Footer CTA -->
+            <div v-if="benefit.cta_text && benefit.cta_link" class="mt-6 pt-4 border-t border-slate-800/60">
+              <a :href="benefit.cta_link" class="text-xs font-bold text-purple-400 hover:text-purple-300 flex items-center gap-1.5 transition">
+                <span>{{ benefit.cta_text }}</span>
+                <i class="bi bi-arrow-right"></i>
+              </a>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SECTION: FITUR UNGGULAN (16 MODUL TERPADU) -->
+    <section id="fitur" class="relative z-10 py-24 border-t border-slate-800/60 bg-slate-900/20">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <div class="text-center max-w-3xl mx-auto mb-16 space-y-3">
+          <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-bold shadow-xs">
             <i class="bi bi-grid-fill"></i> Arsitektur Modul Komprehensif
           </div>
           <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight">
             16 Modul Terpadu untuk Seluruh Kebutuhan Sekolah
           </h2>
-          <p class="text-sm text-slate-400">
+          <p class="text-sm text-slate-400 leading-relaxed">
             Hilangkan sistem yang terpisah-pisah. Seluruh data akademik, kesiswaan, keuangan, dan presensi terpusat dalam satu database.
           </p>
         </div>
@@ -300,142 +347,108 @@
         <div class="max-w-4xl mx-auto rounded-3xl bg-slate-900/90 border border-slate-800 shadow-2xl p-6 sm:p-10">
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             
-            <!-- LEFT: SLIDERS & CONFIG -->
-            <div class="lg:col-span-7 space-y-8">
+            <!-- Sliders Inputs (7 cols) -->
+            <div class="lg:col-span-7 space-y-6">
               
-              <!-- Slider Siswa -->
-              <div class="space-y-3">
-                <div class="flex items-center justify-between">
+              <!-- Student Slider -->
+              <div>
+                <div class="flex items-center justify-between mb-2">
                   <label class="text-xs font-bold text-slate-300 flex items-center gap-2">
-                    <i class="bi bi-people-fill text-blue-400"></i>
-                    <span>Jumlah Siswa Aktif</span>
+                    <i class="bi bi-people-fill text-blue-400"></i> Jumlah Siswa
                   </label>
-                  <div class="flex items-center gap-2">
-                    <input type="number" 
-                           v-model.number="studentCount" 
-                           min="20" max="3000" step="10"
-                           class="w-24 h-9 bg-slate-800 border border-slate-700 rounded-xl px-2.5 text-right font-black text-sm text-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    <span class="text-xs font-semibold text-slate-400">Siswa</span>
-                  </div>
+                  <span class="px-3 py-1 rounded-xl bg-blue-600/20 border border-blue-500/30 text-blue-300 text-xs font-black">
+                    {{ studentCount }} Siswa
+                  </span>
                 </div>
-
-                <input type="range" 
-                       v-model.number="studentCount" 
-                       min="20" max="2000" step="10"
-                       class="w-full h-2.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-600" />
-
-                <div class="flex items-center justify-between text-[10px] text-slate-500 font-semibold">
-                  <span>20 Siswa</span>
+                <input v-model.number="studentCount" type="range" min="30" max="2500" step="10" 
+                       class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+                <div class="flex justify-between text-[10px] text-slate-500 mt-1 font-semibold">
+                  <span>30 Siswa</span>
                   <span>500 Siswa</span>
                   <span>1.000 Siswa</span>
-                  <span>2.000+ Siswa</span>
+                  <span>2.500+ Siswa</span>
                 </div>
               </div>
 
-              <!-- Slider Guru & Staf -->
-              <div class="space-y-3">
-                <div class="flex items-center justify-between">
-                  <div>
-                    <label class="text-xs font-bold text-slate-300 flex items-center gap-2">
-                      <i class="bi bi-person-workspace text-indigo-400"></i>
-                      <span>Jumlah Guru & Tenaga Kependidikan</span>
-                    </label>
-                    <span class="text-[11px] text-slate-400">
-                      (Termasuk kuota gratis: <strong class="text-emerald-400">{{ freeTeacherQuota }} Guru</strong>)
-                    </span>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <input type="number" 
-                           v-model.number="teacherCount" 
-                           min="1" max="250" step="1"
-                           class="w-20 h-9 bg-slate-800 border border-slate-700 rounded-xl px-2.5 text-right font-black text-sm text-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-                    <span class="text-xs font-semibold text-slate-400">Guru</span>
-                  </div>
+              <!-- Teacher Slider -->
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <label class="text-xs font-bold text-slate-300 flex items-center gap-2">
+                    <i class="bi bi-person-badge-fill text-indigo-400"></i> Jumlah Guru & Tenaga Kependidikan
+                  </label>
+                  <span class="px-3 py-1 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-xs font-black">
+                    {{ teacherCount }} Akun Guru
+                  </span>
                 </div>
-
-                <input type="range" 
-                       v-model.number="teacherCount" 
-                       min="1" max="150" step="1"
-                       class="w-full h-2.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
-
-                <div class="flex items-center justify-between text-[10px] text-slate-500 font-semibold">
-                  <span>1 Guru</span>
+                <input v-model.number="teacherCount" type="range" min="5" max="150" step="1" 
+                       class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500" />
+                <div class="flex justify-between text-[10px] text-slate-500 mt-1 font-semibold">
+                  <span>5 Guru</span>
                   <span>50 Guru</span>
                   <span>100 Guru</span>
-                  <span>150+ Guru</span>
+                  <span>150 Guru</span>
                 </div>
               </div>
 
-              <!-- Breakdown Note -->
-              <div class="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 text-xs space-y-2">
-                <div class="flex items-center justify-between text-slate-400">
-                  <span>Tarif Volume Siswa (Tier {{ (studentCount || 0) <= 150 ? '1' : ((studentCount || 0) <= 500 ? '2' : ((studentCount || 0) <= 1000 ? '3' : '4')) }}):</span>
-                  <span class="font-bold text-slate-200">Rp {{ formatRupiah(studentTierRate) }} / siswa / bln</span>
+              <!-- Tier Information Box -->
+              <div class="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 text-xs text-slate-400 space-y-1.5">
+                <div class="flex items-center justify-between text-[11px]">
+                  <span>Tier Tarif Per Siswa:</span>
+                  <span class="font-bold text-white">Rp {{ formatRupiah(studentTierRate) }} / siswa / bln</span>
                 </div>
-                <div class="flex items-center justify-between text-slate-400">
-                  <span>Rasio Guru Gratis (1 per 20 siswa):</span>
-                  <span class="font-bold text-emerald-400">{{ freeTeacherQuota }} Guru Bebas Biaya</span>
+                <div class="flex items-center justify-between text-[11px]">
+                  <span>Kuota Guru Gratis Termasuk:</span>
+                  <span class="font-bold text-emerald-400">{{ freeTeacherQuota }} Guru</span>
                 </div>
-                <div v-if="extraTeachers > 0" class="flex items-center justify-between text-slate-400">
-                  <span>Add-on Guru Ekstra ({{ extraTeachers }} Guru &times; Rp 10.000):</span>
-                  <span class="font-bold text-amber-400">+Rp {{ formatRupiah(extraTeachers * 10000) }} / bln</span>
+                <div v-if="extraTeachers > 0" class="flex items-center justify-between text-[11px] text-amber-400">
+                  <span>Tambahan Guru ({{ extraTeachers }} akun):</span>
+                  <span class="font-bold">+Rp {{ formatRupiah(extraTeachers * 10000) }} / bln</span>
                 </div>
               </div>
 
             </div>
 
-            <!-- RIGHT: SUMMARY CARD -->
-            <div class="lg:col-span-5 p-6 sm:p-7 rounded-3xl bg-gradient-to-b from-blue-950/70 via-slate-950 to-slate-950 border-2 border-blue-500/40 shadow-xl flex flex-col justify-between space-y-6">
+            <!-- Price Output Box (5 cols) -->
+            <div class="lg:col-span-5 p-6 rounded-3xl bg-gradient-to-b from-blue-900/40 via-indigo-950/40 to-slate-950 border border-blue-500/30 text-center space-y-4 shadow-xl">
               
+              <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300 text-[10px] font-extrabold uppercase tracking-wider">
+                Estimasi Biaya Investasi
+              </div>
+
               <div>
-                <div class="flex items-center justify-between gap-2 mb-2">
-                  <span class="text-[11px] font-extrabold text-blue-400 uppercase tracking-wider">Estimasi Investasi Sekolah</span>
-                  <span v-if="discountRate > 0" class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-black">
-                    Diskon {{ Math.round(discountRate * 100) }}% Aktif
-                  </span>
+                <div class="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                  Rp {{ formatRupiah(effectiveMonthlyPrice) }}
                 </div>
-
-                <div class="my-4">
-                  <div class="flex items-baseline gap-1.5">
-                    <span class="text-3xl sm:text-4xl font-black text-white tracking-tight">Rp {{ formatRupiah(effectiveMonthlyPrice) }}</span>
-                    <span class="text-xs text-slate-400 font-semibold">/ bulan</span>
-                  </div>
-                  <p class="text-xs text-slate-400 mt-1">
-                    Tagihan per periode: <strong class="text-slate-200">Rp {{ formatRupiah(totalPeriodPrice) }}</strong> 
-                    <span class="text-slate-400">({{ billingCycle === 'annual' ? 'Per 1 Tahun' : (billingCycle === 'semester' ? 'Per 6 Bulan' : 'Per Bulan') }})</span>
-                  </p>
+                <div class="text-xs text-slate-400 mt-1">
+                  per bulan (disetarakan)
                 </div>
-
-                <!-- Per Student Impact Indicator -->
-                <div class="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 text-xs space-y-1 mb-2">
-                  <div class="flex items-center justify-between">
-                    <span class="text-slate-400">Beban per Siswa:</span>
-                    <span class="font-black text-emerald-400 text-sm">Rp {{ formatRupiah(pricePerStudentMonthly) }} / anak / bln</span>
-                  </div>
-                  <p class="text-[10px] text-slate-400 leading-tight">
-                    *Sangat efisien dibebankan pada komponen iuran SPP atau anggaran operasional BOS sekolah.
-                  </p>
-                </div>
-
-                <div v-if="totalSavings > 0" class="text-center">
-                  <span class="text-[11px] font-bold text-amber-400">
-                    🎉 Sekolah Anda Menghemat Rp {{ formatRupiah(totalSavings) }} pada siklus ini!
-                  </span>
+                <div class="text-[11px] text-blue-400 font-bold mt-1">
+                  Hanya ~Rp {{ formatRupiah(pricePerStudentMonthly) }} / siswa / bulan
                 </div>
               </div>
 
-              <!-- ACTION BUTTONS -->
-              <div class="space-y-2.5 pt-2">
+              <div class="pt-2 pb-1 border-t border-slate-800 text-xs text-slate-400 space-y-1">
+                <div class="flex justify-between">
+                  <span>Total Tagihan Periode:</span>
+                  <span class="font-extrabold text-white">Rp {{ formatRupiah(totalPeriodPrice) }}</span>
+                </div>
+                <div v-if="totalSavings > 0" class="flex justify-between text-emerald-400 font-bold">
+                  <span>Hemat Periode Ini:</span>
+                  <span>Rp {{ formatRupiah(totalSavings) }}</span>
+                </div>
+              </div>
+
+              <div class="space-y-2 pt-2">
                 <Link href="/daftar-sekolah" 
-                      class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs text-center shadow-lg shadow-blue-500/25 transition flex items-center justify-center gap-2">
-                  <i class="bi bi-rocket-takeoff-fill text-yellow-300"></i>
-                  <span>Mulai Free Trial 1 Bulan</span>
+                      class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs shadow-lg shadow-blue-500/30 transition flex items-center justify-center gap-2">
+                  <i class="bi bi-gift-fill text-yellow-300"></i>
+                  <span>Daftar Free Trial 1 Bulan</span>
                 </Link>
 
-                <a :href="whatsappProposalUrl" target="_blank" 
-                   class="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white font-bold text-xs text-center border border-slate-700/80 transition flex items-center justify-center gap-2">
-                  <i class="bi bi-file-earmark-pdf-fill text-red-400"></i>
-                  <span>Minta Proposal Resmi via WhatsApp</span>
+                <a :href="whatsappProposalUrl" target="_blank"
+                   class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs border border-slate-700 transition flex items-center justify-center gap-2">
+                  <i class="bi bi-whatsapp text-emerald-400"></i>
+                  <span>Minta Dokumen Proposal (PDF)</span>
                 </a>
               </div>
 
@@ -447,106 +460,86 @@
       </div>
     </section>
 
-    <!-- 3 CARDS PRICING SECTION -->
+    <!-- STANDARD PRICING PACKAGES -->
     <section id="paket" class="relative z-10 py-24 border-t border-slate-800/60 bg-slate-900/30">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         <div class="text-center max-w-3xl mx-auto mb-16 space-y-3">
           <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-bold">
-            <i class="bi bi-box-seam-fill"></i> Pilihan Paket Standar
+            <i class="bi bi-box-seam-fill"></i> Pilihan Paket Berlangganan
           </div>
           <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight">
-            Pilihan Paket Terpadu Sesuai Skala Sekolah Anda
+            Paket Transparan Sesuai Skala Sekolah Anda
           </h2>
           <p class="text-sm text-slate-400">
-            Seluruh paket mencakup hak akses multi-peran (Kepala Sekolah, Guru, Staf TU, Siswa, & Orang Tua) dan update sistem gratis selamanya.
+            Seluruh paket mendapatkan masa uji coba gratis (Free Trial) 1 bulan penuh tanpa komitmen kontrak.
           </p>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          
-          <div v-for="(card, cIdx) in standardCards" :key="cIdx" 
-               :class="['p-8 rounded-3xl transition-all duration-200 flex flex-col justify-between relative',
-                        card.isPopular ? 'bg-gradient-to-b from-blue-950/80 via-slate-900 to-slate-950 border-2 border-blue-500/80 shadow-2xl shadow-blue-500/20 transform lg:-translate-y-2' :
-                                         'bg-slate-900/90 border border-slate-800 hover:border-slate-700 shadow-xl']">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
+          <div v-for="(card, cIdx) in standardCards" :key="cIdx"
+               :class="['p-8 rounded-3xl flex flex-col justify-between transition-all duration-300 relative',
+                        card.isPopular ? 'bg-slate-900/90 border-2 border-blue-500/80 shadow-2xl shadow-blue-500/10 ring-1 ring-blue-500/30' : 'bg-slate-900/60 border border-slate-800 hover:border-slate-700']">
             
-            <!-- POPULAR BADGE -->
-            <div v-if="card.isPopular" class="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-[10px] uppercase tracking-wider shadow-md">
-              Paling Direkomendasikan
+            <div v-if="card.isPopular" class="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-[10px] tracking-wider uppercase shadow-md">
+              Paling Populer
             </div>
 
             <div>
-              <div class="flex items-center justify-between gap-2 mb-2">
-                <span class="text-xs font-bold text-blue-400 uppercase tracking-wider">{{ card.name }}</span>
-                <span :class="['px-2.5 py-0.5 rounded-full text-[10px] font-bold border', card.badgeClass]">
+              <div class="flex items-center justify-between mb-4">
+                <span :class="['px-3 py-1 rounded-full text-xs font-bold border', card.badgeClass]">
                   {{ card.badge }}
                 </span>
               </div>
 
-              <h3 class="text-2xl font-black text-white">{{ card.name }}</h3>
-              <p class="text-xs text-slate-400 mt-1">{{ card.subtitle }}</p>
+              <h3 class="text-2xl font-black text-white mb-1">{{ card.name }}</h3>
+              <p class="text-xs text-slate-400 mb-6">{{ card.subtitle }}</p>
 
-              <!-- Price Tag -->
-              <div class="my-6 p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80">
-                <div v-if="typeof card.price === 'number'">
-                  <div class="flex items-baseline gap-1">
-                    <span class="text-3xl sm:text-4xl font-black text-white tracking-tight">Rp {{ formatRupiah(card.price) }}</span>
-                    <span class="text-xs text-slate-400 font-medium">/ bulan</span>
-                  </div>
-                  <div class="flex items-center gap-2 mt-1">
-                    <span v-if="card.rawPrice && card.rawPrice > card.price" class="text-xs text-slate-500 line-through">
-                      Rp {{ formatRupiah(card.rawPrice) }}/bln
-                    </span>
-                    <span v-if="discountRate > 0" class="text-[11px] text-emerald-400 font-bold">
-                      (Siklus {{ billingCycle === 'annual' ? 'Tahunan' : 'Semesteran' }})
-                    </span>
-                  </div>
+              <div class="mb-6 pb-6 border-b border-slate-800">
+                <div v-if="card.price !== 'Kustom'" class="flex items-baseline gap-2">
+                  <span class="text-3xl font-black text-white">Rp {{ formatRupiah(card.price) }}</span>
+                  <span class="text-xs text-slate-400">/ bulan</span>
                 </div>
-                <div v-else>
-                  <span class="text-3xl font-black text-white tracking-tight">{{ card.price }}</span>
-                  <span class="block text-xs text-slate-400 mt-1">Sesuai Kebutuhan & Multi-Tenant Yayasan</span>
+                <div v-else class="text-3xl font-black text-white">
+                  Kustom / MoU
                 </div>
               </div>
 
-              <!-- Feature Checklists -->
-              <div class="space-y-3 py-4 border-t border-slate-800 text-xs text-slate-300">
-                <div v-for="(feat, fIdx) in card.features" :key="fIdx" class="flex items-start gap-2.5">
-                  <i class="bi bi-check2-circle text-emerald-400 text-base font-bold shrink-0 mt-0.5"></i>
-                  <span class="leading-relaxed">{{ feat }}</span>
-                </div>
-              </div>
+              <ul class="space-y-3 mb-8">
+                <li v-for="(feat, fIdx) in card.features" :key="fIdx" class="text-xs text-slate-300 flex items-start gap-2.5">
+                  <i class="bi bi-check-circle-fill text-emerald-400 text-sm shrink-0 mt-0.5"></i>
+                  <span>{{ feat }}</span>
+                </li>
+              </ul>
             </div>
 
-            <!-- CTA Button -->
-            <div class="mt-8">
-              <a v-if="card.ctaLink.startsWith('http')" :href="card.ctaLink" target="_blank" 
-                 :class="['w-full py-3.5 px-6 rounded-2xl text-xs font-black text-center transition block', card.btnClass]">
-                {{ card.ctaText }}
-              </a>
-              <Link v-else :href="card.ctaLink" 
-                    :class="['w-full py-3.5 px-6 rounded-2xl text-xs font-black text-center transition block', card.btnClass]">
-                {{ card.ctaText }}
-              </Link>
-            </div>
+            <Link :href="card.ctaLink" 
+                  :class="['w-full py-3.5 px-4 rounded-xl text-xs font-extrabold text-center transition flex items-center justify-center gap-2', card.btnClass]">
+              <span>{{ card.ctaText }}</span>
+            </Link>
 
           </div>
-
         </div>
 
       </div>
     </section>
 
     <!-- FAQ SECTION -->
-    <section id="faq" class="relative z-10 py-20 border-t border-slate-800/60 bg-slate-900/20">
+    <section id="faq" class="relative z-10 py-24 border-t border-slate-800/60 bg-slate-950">
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-12 space-y-2">
-          <h2 class="text-3xl font-black text-white tracking-tight">Pertanyaan yang Sering Diajukan (FAQ)</h2>
-          <p class="text-xs text-slate-400">Pahami alur aktivasi dan kemudahan implementasi SINTA di sekolah Anda.</p>
+        
+        <div class="text-center mb-16 space-y-3">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold">
+            <i class="bi bi-question-circle"></i> Tanya Jawab
+          </div>
+          <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight">
+            Pertanyaan yang Sering Diajukan (FAQ)
+          </h2>
         </div>
 
         <div class="space-y-4">
-          <div v-for="(faq, idx) in faqItems" :key="idx" 
-               class="p-5 rounded-2xl bg-slate-900/90 border border-slate-800">
+          <div v-for="(faq, fIdx) in faqItems" :key="fIdx" 
+               class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 transition">
             <h4 class="text-sm font-bold text-white flex items-center gap-2">
               <i class="bi bi-question-circle text-blue-400"></i>
               <span>{{ faq.title }}</span>
@@ -587,10 +580,12 @@
           <div class="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-black text-sm">S</div>
           <span class="font-bold text-slate-400">&copy; 2026 SINTA Platform Tata Kelola Sekolah</span>
         </div>
-        <div class="flex items-center gap-6">
-          <a href="#fitur" class="hover:text-slate-300 transition">Fitur</a>
-          <a href="#kalkulator" class="hover:text-slate-300 transition">Simulasi Biaya</a>
-          <a href="#paket" class="hover:text-slate-300 transition">Harga & Trial</a>
+        <div class="flex items-center gap-6 flex-wrap">
+          <a v-for="(nav, nIdx) in navMenuItems" :key="nIdx" 
+             :href="nav.cta_link || nav.content || '#'"
+             class="hover:text-slate-300 transition">
+            {{ nav.title }}
+          </a>
           <Link href="/login" class="hover:text-slate-300 transition">Login Portal</Link>
           <Link href="/daftar-sekolah" class="text-blue-400 hover:text-blue-300 font-bold transition">Daftar Free Trial</Link>
         </div>
@@ -776,10 +771,76 @@ const standardCards = computed(() => {
   ];
 });
 
+// Dynamic Navbar from CMS
+const navMenuItems = computed(() => {
+  if (props.promotions?.nav_menu && props.promotions.nav_menu.length > 0) {
+    return props.promotions.nav_menu;
+  }
+  return [
+    { title: 'Fitur Unggulan', cta_link: '#fitur', icon_class: 'bi bi-grid-fill', badge_text: null },
+    { title: 'Keuntungan Aplikasi', cta_link: '#keuntungan', icon_class: 'bi bi-shield-check', badge_text: 'Keunggulan' },
+    { title: 'Simulasi Biaya', cta_link: '#kalkulator', icon_class: 'bi bi-calculator-fill', badge_text: null },
+    { title: 'Paket & Harga', cta_link: '#paket', icon_class: 'bi bi-box-seam-fill', badge_text: null },
+    { title: 'FAQ', cta_link: '#faq', icon_class: 'bi bi-question-circle', badge_text: null },
+  ];
+});
+
 const heroItem = computed(() => {
   return props.promotions?.hero?.[0] || null;
 });
 
+// Dynamic Benefits from CMS
+const benefitItems = computed(() => {
+  if (props.promotions?.benefits && props.promotions.benefits.length > 0) {
+    return props.promotions.benefits;
+  }
+  return [
+    {
+      title: 'Isolasi Skema Database Multi-Tenant',
+      subtitle: 'Privasi data sekolah terjamin 100%. Setiap sekolah memiliki skema PostgreSQL mandiri yang terisolasi total.',
+      badge_text: 'Keamanan Data',
+      icon_class: 'bi-shield-lock-fill',
+      content_json: { highlights: ['Dedicated Schema PostgreSQL 16', 'Zero Cross-Tenant Leakage', 'Enkripsi AES-256 HMAC'] }
+    },
+    {
+      title: 'Otomasi Rapor Kurikulum Merdeka & K13',
+      subtitle: 'Hitung capaian pembelajaran otomatis, generate deskripsi nilai dinamis, dan cetak lembar rapor PDF resmi dalam hitungan detik.',
+      badge_text: 'Kurikulum & Rapor',
+      icon_class: 'bi-award-fill',
+      content_json: { highlights: ['Format Resmi Kemendikbud', 'Cetak Massal PDF Multi-Page', 'Ekspor Buku Ledger Excel'] }
+    },
+    {
+      title: 'Kasir SPP Kilat & Multi-Channel Payment',
+      subtitle: 'Terima pembayaran SPP melalui Kasir POS cepat atau transfer online otomatis via QRIS & Virtual Account Midtrans.',
+      badge_text: 'Keuangan Terpadu',
+      icon_class: 'bi-wallet2',
+      content_json: { highlights: ['Kasir POS Struk Thermal', 'Midtrans QRIS & VA Otomatis', 'Auto Notifikasi WhatsApp'] }
+    },
+    {
+      title: 'Presensi Siswa & GTK Berbasis GPS Geofencing',
+      subtitle: 'Presensi mandiri presisi tinggi dengan validasi radius lokasi sekolah, proteksi Anti-Fake GPS, dan jurnal mengajar KBM.',
+      badge_text: 'Presensi Anti-Fraud',
+      icon_class: 'bi-geo-alt-fill',
+      content_json: { highlights: ['Geofencing Radius Presisi', 'Anti-Fake GPS & Mock Shield', 'Auto Compress Bukti < 500 KB'] }
+    },
+    {
+      title: 'Hemat Biaya Infrastruktur & Bebas Pemeliharaan',
+      subtitle: 'Sekolah tidak perlu membeli server mahal. Semua sistem dan backup dikelola otomatis di cloud SINTA.',
+      badge_text: 'Efisiensi Anggaran',
+      icon_class: 'bi-cloud-check-fill',
+      content_json: { highlights: ['100% Cloud Managed', 'Auto Backup Harian', 'Akses Cepat Semua Perangkat'] }
+    },
+    {
+      title: 'Keamanan Standar OWASP & Zero Data Leakage',
+      subtitle: 'Arsitektur Zero-SSR Client Hydration memastikan data sensitif seperti NIK dan nilai tidak bocor pada View Source browser.',
+      badge_text: 'Enterprise Security',
+      icon_class: 'bi-cpu-fill',
+      content_json: { highlights: ['Zero SSR Data Exposure', 'OWASP ASVS L3 Compliance', 'Memory Security Sanitizer'] }
+    },
+  ];
+});
+
+// Dynamic Features from CMS
 const featureItems = computed(() => {
   if (props.promotions?.features && props.promotions.features.length > 0) {
     return props.promotions.features;

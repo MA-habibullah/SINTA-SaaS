@@ -32,6 +32,7 @@ Route::middleware(['web', 'auth', 'tenant.guard'])->prefix('cms')->name('cms.')-
     Route::prefix('promosi')->name('promosi.')->group(function () {
         Route::get('/', [CmsPromosiController::class, 'index'])->name('index');
         Route::post('/', [CmsPromosiController::class, 'store'])->name('store');
+        Route::post('/reorder', [CmsPromosiController::class, 'reorder'])->name('reorder');
         Route::put('/{id}', [CmsPromosiController::class, 'update'])->name('update');
         Route::post('/{id}/toggle', [CmsPromosiController::class, 'toggle'])->name('toggle');
         Route::delete('/{id}', [CmsPromosiController::class, 'destroy'])->name('destroy');

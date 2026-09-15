@@ -7,11 +7,12 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use Modules\Cms\Entities\CmsPromotion;
-use Modules\Core\Entities\Tenant;
+use Modules\Core\Services\SecurityPayloadService;
 
 class CmsPromosiController extends Controller
 {
@@ -46,37 +47,57 @@ class CmsPromosiController extends Controller
             ->get();
 
         $grouped = [
+            'nav_menu'     => $promotions->where('section_key', 'nav_menu')->values(),
             'hero'         => $promotions->where('section_key', 'hero')->values(),
-            'pricing'      => $promotions->where('section_key', 'pricing')->values(),
             'features'     => $promotions->where('section_key', 'features')->values(),
+            'benefits'     => $promotions->where('section_key', 'benefits')->values(),
+            'pricing'      => $promotions->where('section_key', 'pricing')->values(),
             'faq'          => $promotions->where('section_key', 'faq')->values(),
             'testimonials' => $promotions->where('section_key', 'testimonials')->values(),
             'contact'      => $promotions->where('section_key', 'contact')->values(),
             'cta'          => $promotions->where('section_key', 'cta')->values(),
+            'stats'        => $promotions->where('section_key', 'stats')->values(),
         ];
 
         $stats = [
-            'totalItems'  => $promotions->count(),
-            'activeItems' => $promotions->where('is_active', true)->count(),
-            'heroCount'   => $grouped['hero']->count(),
-            'pricingCount'=> $grouped['pricing']->count(),
-            'featureCount'=> $grouped['features']->count(),
-            'faqCount'    => $grouped['faq']->count(),
+            'totalItems'    => $promotions->count(),
+            'activeItems'   => $promotions->where('is_active', true)->count(),
+            'navCount'      => $grouped['nav_menu']->count(),
+            'heroCount'     => $grouped['hero']->count(),
+            'featureCount'  => $grouped['features']->count(),
+            'benefitsCount' => $grouped['benefits']->count(),
+            'pricingCount'  => $grouped['pricing']->count(),
+            'faqCount'      => $grouped['faq']->count(),
+        ];
+
+        // Daftar kategori section untuk dropdown SearchableSelect
+        $sectionCategories = [
+            ['id' => 'nav_menu',     'nama' => 'Menu Navigasi Header',      'subLabel' => 'Menu & Tautan pada Bar Navigasi Publik'],
+            ['id' => 'hero',         'nama' => 'Hero Banner Utama',         'subLabel' => 'Headline, Subtitle, & Tombol CTA Utama'],
+            ['id' => 'features',     'nama' => 'Fitur Unggulan (Modul)',    'subLabel' => 'Showcase 16 Modul Aplikasi SINTA'],
+            ['id' => 'benefits',     'nama' => 'Keuntungan Aplikasi',       'subLabel' => 'Keunggulan Arsitektur & Manfaat Sekolah'],
+            ['id' => 'pricing',      'nama' => 'Paket & Free Trial',        'subLabel' => 'Paket Berlangganan & Penawaran Trial'],
+            ['id' => 'faq',          'nama' => 'FAQ (Tanya Jawab)',         'subLabel' => 'Pertanyaan yang Sering Diajukan'],
+            ['id' => 'testimonials', 'nama' => 'Testimoni Sekolah',        'subLabel' => 'Ulasan & Pengalaman Kepala Sekolah/Guru'],
+            ['id' => 'cta',          'nama' => 'Promotional CTA Banner',    'subLabel' => 'Banner Ajakan Daftar di Bawah Halaman'],
+            ['id' => 'contact',      'nama' => 'Kontak & Bantuan',          'subLabel' => 'Informasi Kontak Sales & Helpdesk'],
         ];
 
         if ($request->wantsJson()) {
             return response()->json([
-                'success'    => true,
-                'data'       => $promotions,
-                'grouped'    => $grouped,
-                'stats'      => $stats,
+                'success'           => true,
+                'data'              => SecurityPayloadService::sanitize($promotions),
+                'grouped'           => SecurityPayloadService::sanitize($grouped),
+                'stats'             => $stats,
+                'sectionCategories' => $sectionCategories,
             ]);
         }
 
         return Inertia::render('Cms/Promosi/Index', [
-            'promotions' => $promotions,
-            'grouped'    => $grouped,
-            'stats'      => $stats,
+            'promotions'        => SecurityPayloadService::sanitize($promotions),
+            'grouped'           => SecurityPayloadService::sanitize($grouped),
+            'stats'             => $stats,
+            'sectionCategories' => $sectionCategories,
         ]);
     }
 
@@ -91,11 +112,11 @@ class CmsPromosiController extends Controller
         }
 
         $validated = $request->validate([
-            'section_key'  => 'required|string|in:hero,pricing,features,faq,testimonials,contact,cta',
+            'section_key'  => 'required|string|in:nav_menu,hero,features,benefits,pricing,faq,testimonials,contact,cta,stats',
             'title'        => 'required|string|max:255',
             'subtitle'     => 'nullable|string',
             'content'      => 'nullable|string',
-            'content_json' => 'nullable|array',
+            'content_json' => 'nullable',
             'badge_text'   => 'nullable|string|max:100',
             'icon_class'   => 'nullable|string|max:100',
             'image_url'    => 'nullable|string',
@@ -105,15 +126,23 @@ class CmsPromosiController extends Controller
             'order_num'    => 'nullable|integer|min:0',
         ]);
 
+        $contentJson = $validated['content_json'] ?? null;
+        if (is_string($contentJson)) {
+            $decoded = json_decode($contentJson, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $contentJson = $decoded;
+            }
+        }
+
         $item = CmsPromotion::create([
             'id'           => Str::uuid()->toString(),
             'section_key'  => $validated['section_key'],
             'title'        => trim($validated['title']),
             'subtitle'     => $validated['subtitle'] ?? null,
             'content'      => $validated['content'] ?? null,
-            'content_json' => $validated['content_json'] ?? null,
+            'content_json' => $contentJson,
             'badge_text'   => $validated['badge_text'] ?? null,
-            'icon_class'   => $validated['icon_class'] ?? 'bi bi-star',
+            'icon_class'   => $validated['icon_class'] ?? 'bi bi-stars',
             'image_url'    => $validated['image_url'] ?? null,
             'cta_text'     => $validated['cta_text'] ?? null,
             'cta_link'     => $validated['cta_link'] ?? null,
@@ -124,12 +153,12 @@ class CmsPromosiController extends Controller
         if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Konten promosi berhasil ditambahkan.',
+                'message' => 'Konten promosi landing page berhasil ditambahkan.',
                 'data'    => $item,
             ], 201);
         }
 
-        return back()->with('success', 'Konten promosi berhasil ditambahkan.');
+        return back()->with('success', 'Konten promosi landing page berhasil ditambahkan.');
     }
 
     /**
@@ -145,11 +174,11 @@ class CmsPromosiController extends Controller
         $item = CmsPromotion::findOrFail($id);
 
         $validated = $request->validate([
-            'section_key'  => 'required|string|in:hero,pricing,features,faq,testimonials,contact,cta',
+            'section_key'  => 'required|string|in:nav_menu,hero,features,benefits,pricing,faq,testimonials,contact,cta,stats',
             'title'        => 'required|string|max:255',
             'subtitle'     => 'nullable|string',
             'content'      => 'nullable|string',
-            'content_json' => 'nullable|array',
+            'content_json' => 'nullable',
             'badge_text'   => 'nullable|string|max:100',
             'icon_class'   => 'nullable|string|max:100',
             'image_url'    => 'nullable|string',
@@ -159,30 +188,66 @@ class CmsPromosiController extends Controller
             'order_num'    => 'nullable|integer|min:0',
         ]);
 
+        $contentJson = $validated['content_json'] ?? null;
+        if (is_string($contentJson)) {
+            $decoded = json_decode($contentJson, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $contentJson = $decoded;
+            }
+        }
+
         $item->update([
             'section_key'  => $validated['section_key'],
             'title'        => trim($validated['title']),
             'subtitle'     => $validated['subtitle'] ?? null,
             'content'      => $validated['content'] ?? null,
-            'content_json' => $validated['content_json'] ?? null,
+            'content_json' => $contentJson ?? $item->content_json,
             'badge_text'   => $validated['badge_text'] ?? null,
             'icon_class'   => $validated['icon_class'] ?? $item->icon_class,
             'image_url'    => $validated['image_url'] ?? null,
             'cta_text'     => $validated['cta_text'] ?? null,
             'cta_link'     => $validated['cta_link'] ?? null,
-            'is_active'    => $validated['is_active'] ?? $item->is_active,
-            'order_num'    => (int) ($validated['order_num'] ?? $item->order_num),
+            'is_active'    => isset($validated['is_active']) ? (bool)$validated['is_active'] : $item->is_active,
+            'order_num'    => isset($validated['order_num']) ? (int)$validated['order_num'] : $item->order_num,
         ]);
 
         if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Konten promosi berhasil diperbarui.',
+                'message' => 'Konten promosi landing page berhasil diperbarui.',
                 'data'    => $item,
             ]);
         }
 
-        return back()->with('success', 'Konten promosi berhasil diperbarui.');
+        return back()->with('success', 'Konten promosi landing page berhasil diperbarui.');
+    }
+
+    /**
+     * Urutkan Item Konten Promosi (Reorder)
+     * POST /super-admin/cms-promosi/reorder
+     */
+    public function reorder(Request $request): JsonResponse
+    {
+        if (!$this->checkIsSuperAdmin()) {
+            return response()->json(['success' => false, 'error' => 'Akses ditolak.'], 403);
+        }
+
+        $validated = $request->validate([
+            'items'         => 'required|array',
+            'items.*.id'    => 'required|uuid',
+            'items.*.order' => 'required|integer|min:0',
+        ]);
+
+        DB::transaction(function () use ($validated) {
+            foreach ($validated['items'] as $it) {
+                CmsPromotion::where('id', $it['id'])->update(['order_num' => $it['order']]);
+            }
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Urutan konten landing page berhasil diperbarui.',
+        ]);
     }
 
     /**
