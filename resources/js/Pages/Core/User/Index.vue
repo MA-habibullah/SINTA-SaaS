@@ -211,12 +211,11 @@
 
       <!-- 5. Main Unified Datatable Card Box (Pencarian + Tabel Data + Pagination Terpadu dalam 1 Box) -->
       <div v-if="activeTab !== 'naikkan_kelas' && activeTab !== 'profile_rapot'" 
-           class="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+           class="bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
         
-        <!-- Header Card: Filter & Pencarian Bar -->
         <!-- Header Card: Filter & Pencarian Bar (Proposional & Profesional) -->
-        <div class="p-3.5 bg-slate-50/70 border-b border-slate-200/80 overflow-x-auto no-scrollbar">
-          <form @submit.prevent="applyFilters" class="flex flex-row items-end gap-2.5 sm:gap-3 min-w-max">
+        <div class="p-3.5 bg-slate-50/70 border-b border-slate-200/80">
+          <form @submit.prevent="applyFilters" class="flex flex-wrap items-end gap-2.5 sm:gap-3">
             
             <!-- Filter Jenjang (Khusus Siswa & Mutasi) -->
             <div class="w-40 sm:w-44 shrink-0" v-if="activeTab === 'siswa' || activeTab === 'mutasi'">
@@ -1755,6 +1754,10 @@ const props = defineProps({
 const flashMessage = ref('');
 const localItems = ref(props.items || null);
 const localStats = ref(props.stats || null);
+const localKelasList = ref(props.kelasList || []);
+const localJenjangList = ref(props.jenjangList || []);
+const localTahunAjaranList = ref(props.tahunAjaranList || []);
+const localTenants = ref(props.tenants || []);
 const isFetching = ref(false);
 
 const items = computed(() => localItems.value || props.items || { data: [], total: 0 });
@@ -1799,6 +1802,10 @@ const fetchDataAsync = async () => {
     if (res.data?.success) {
       localItems.value = res.data.data;
       localStats.value = res.data.stats;
+      if (res.data.kelasList) localKelasList.value = res.data.kelasList;
+      if (res.data.jenjangList) localJenjangList.value = res.data.jenjangList;
+      if (res.data.tahunAjaranList) localTahunAjaranList.value = res.data.tahunAjaranList;
+      if (res.data.tenants) localTenants.value = res.data.tenants;
     }
   } catch (err) {
     console.error('Async user data fetch error:', err);
@@ -1816,17 +1823,19 @@ watch(() => props.stats, (newVal) => {
 
 // Computed Reactive Kelas List berdasarkan Tenant yang dipilih
 const filteredKelasList = computed(() => {
-  if (!props.kelasList || props.kelasList.length === 0) return [];
-  const distinctTenants = new Set(props.kelasList.map(k => k.tenant_id).filter(Boolean));
+  const currentKelasList = localKelasList.value.length > 0 ? localKelasList.value : (props.kelasList || []);
+  if (currentKelasList.length === 0) return [];
+  const distinctTenants = new Set(currentKelasList.map(k => k.tenant_id).filter(Boolean));
   if (props.isSuperAdmin && filterTenantId.value && distinctTenants.size > 1) {
-    return props.kelasList.filter(k => k.tenant_id === filterTenantId.value);
+    return currentKelasList.filter(k => k.tenant_id === filterTenantId.value);
   }
-  return props.kelasList;
+  return currentKelasList;
 });
 
 // SearchableSelect Helper Options
 const tenantSelectOptions = computed(() => {
-  return (props.tenants || []).map(t => ({
+  const list = localTenants.value.length > 0 ? localTenants.value : (props.tenants || []);
+  return list.map(t => ({
     id: t.id,
     nama: t.nama_sekolah,
     subLabel: t.npsn ? `NPSN: ${t.npsn}` : ''
@@ -1834,9 +1843,18 @@ const tenantSelectOptions = computed(() => {
 });
 
 const jenjangSelectOptions = computed(() => {
-  return (props.jenjangList || []).map(j => ({
+  const list = localJenjangList.value.length > 0 ? localJenjangList.value : (props.jenjangList || []);
+  return list.map(j => ({
     id: j.id,
     nama: j.nama || j.nama_jenjang
+  }));
+});
+
+const tahunAjaranSelectOptions = computed(() => {
+  const list = localTahunAjaranList.value.length > 0 ? localTahunAjaranList.value : (props.tahunAjaranList || []);
+  return list.map(ta => ({
+    id: ta.nama_tahun_ajaran || ta.tahun_ajaran || ta.id,
+    nama: ta.nama_tahun_ajaran || ta.tahun_ajaran || ta.id,
   }));
 });
 
@@ -1862,20 +1880,6 @@ const perPageOptions = [
   { id: 50, nama: '50 per hal' },
   { id: 100, nama: '100 per hal' },
 ];
-
-const tahunAjaranSelectOptions = computed(() => {
-  const list = (props.tahunAjaranList || []).map(ta => ({
-    id: ta.tahun_ajaran || ta.nama_tahun_ajaran,
-    nama: ta.tahun_ajaran || ta.nama_tahun_ajaran
-  })).filter(t => t.id);
-  if (list.length === 0) {
-    return [
-      { id: '2026/2027', nama: '2026/2027' },
-      { id: '2027/2028', nama: '2027/2028' },
-    ];
-  }
-  return list;
-});
 
 const roleSelectOptions = [
   { id: 'guru', nama: 'Guru / Tenaga Pendidik', subLabel: 'Akses Penilaian & Presensi' },
@@ -2463,7 +2467,7 @@ useMemorySecurity([
 ]);
 
 onMounted(() => {
-  if (!props.items || !props.items.data) {
+  if (!props.items || !props.items.data || localKelasList.value.length === 0) {
     fetchDataAsync();
   }
   if (props.activeTab === 'naikkan_kelas' && promoteForm.value.kelas_asal_id) {

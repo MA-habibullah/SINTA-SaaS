@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Modules\Core\Entities\Tenant;
+use Modules\Core\Services\SecurityPayloadService;
 
 class KonfigurasiAksesController extends Controller
 {
@@ -19,19 +20,35 @@ class KonfigurasiAksesController extends Controller
         $userRoleName = is_object($user?->role) ? ($user->role->nama_role ?? 'admin_sekolah') : ($user?->role ?? 'admin_sekolah');
         $isSuperAdmin = ($user && ($userRoleName === 'super_admin' || $user->tenant_id === '00000000-0000-0000-0000-000000000000'));
 
+        $targetTenantId = null;
+        if ($isSuperAdmin && $request->filled('tenant_id')) {
+            $targetTenantId = $request->input('tenant_id');
+        } else {
+            $targetTenantId = session('tenant_id') ?? $user?->tenant_id ?? '00000000-0000-0000-0000-000000000000';
+        }
+
+        // 1. Zero-SSR Data Exposure Protection (Anti-Scraping / View Source Zero Leakage)
+        $isInitialSsr = !$request->header('X-Inertia') && !$request->has('async');
+        if ($isInitialSsr) {
+            return Inertia::render('Core/Konfigurasi/Akses/Index', [
+                'roles'            => null,
+                'menuList'         => null,
+                'accessMap'        => null,
+                'tenantsList'      => null,
+                'selectedTenantId' => $targetTenantId,
+                'selectedTenant'   => null,
+                'userRole'         => $userRoleName,
+                'isSuperAdmin'     => $isSuperAdmin,
+            ]);
+        }
+
+        // 2. Load record data for Async API / Inertia SPA navigation
         $tenantsList = [];
         if ($isSuperAdmin) {
             $tenantsList = Tenant::select('id', 'nama_sekolah', 'npsn', 'status', 'bentuk_pendidikan')
                 ->where('id', '!=', '00000000-0000-0000-0000-000000000000')
                 ->orderBy('nama_sekolah', 'asc')
                 ->get();
-        }
-
-        $targetTenantId = null;
-        if ($isSuperAdmin && $request->filled('tenant_id')) {
-            $targetTenantId = $request->input('tenant_id');
-        } else {
-            $targetTenantId = session('tenant_id') ?? $user?->tenant_id ?? '00000000-0000-0000-0000-000000000000';
         }
 
         // Roles priority list
@@ -113,26 +130,33 @@ class KonfigurasiAksesController extends Controller
             $selectedTenant = Tenant::find($targetTenantId);
         }
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        $sanitizedRoles = SecurityPayloadService::sanitize($roles);
+        $sanitizedMenus = SecurityPayloadService::sanitize($orderedMenus);
+        $sanitizedTenantsList = $isSuperAdmin ? SecurityPayloadService::sanitize($tenantsList) : [];
+        $sanitizedTenant = $selectedTenant ? SecurityPayloadService::sanitize($selectedTenant, $isSuperAdmin ? [] : ['tenant_id']) : null;
+
+        if (($request->has('async') || $request->wantsJson()) && !$request->header('X-Inertia')) {
             return response()->json([
                 'success'           => true,
-                'roles'             => $roles,
-                'menus'             => $orderedMenus,
-                'menu_list'         => $orderedMenus,
+                'roles'             => $sanitizedRoles,
+                'menus'             => $sanitizedMenus,
+                'menu_list'         => $sanitizedMenus,
                 'access_map'        => $accessMap,
                 'target_tenant_id'  => $targetTenantId,
+                'selected_tenant'   => $sanitizedTenant,
                 'is_super_admin'    => $isSuperAdmin,
-                'tenants'           => $tenantsList,
+                'tenants'           => $sanitizedTenantsList,
+                'userRole'          => $userRoleName,
             ]);
         }
 
         return Inertia::render('Core/Konfigurasi/Akses/Index', [
-            'roles'             => $roles,
-            'menuList'          => $orderedMenus,
+            'roles'             => $sanitizedRoles,
+            'menuList'          => $sanitizedMenus,
             'accessMap'         => $accessMap,
-            'tenantsList'       => $tenantsList,
+            'tenantsList'       => $sanitizedTenantsList,
             'selectedTenantId'  => $targetTenantId,
-            'selectedTenant'    => $selectedTenant,
+            'selectedTenant'    => $sanitizedTenant,
             'userRole'          => $userRoleName,
             'isSuperAdmin'      => $isSuperAdmin,
             'flash' => [

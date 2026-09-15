@@ -14,6 +14,7 @@ use Modules\Core\Entities\Tenant;
 use Modules\Core\Entities\Menu;
 use Modules\Core\Entities\TenantMenuAccess;
 use Modules\Core\Entities\User;
+use Modules\Core\Services\SecurityPayloadService;
 
 class TenantMenuController extends Controller
 {
@@ -26,6 +27,17 @@ class TenantMenuController extends Controller
         $user = Auth::user();
         if (!$this->checkIsSuperAdmin($user)) {
             abort(403, 'Akses ditolak. Anda tidak memiliki wewenang Super Admin untuk mengelola fitur tenant.');
+        }
+
+        $isInitialSsr = !$request->header('X-Inertia') && !$request->has('async');
+
+        if ($isInitialSsr) {
+            return Inertia::render('Core/TenantMenus/Index', [
+                'tenantsList'      => null,
+                'menuList'         => null,
+                'selectedTenantId' => '',
+                'checkedMenuIds'   => null,
+            ]);
         }
 
         $tenants = Tenant::select('id', 'nama_sekolah', 'npsn', 'subdomain')
@@ -49,14 +61,14 @@ class TenantMenuController extends Controller
                 ->toArray();
         }
 
-        if ($request->wantsJson()) {
-            return response()->json([
+        if (($request->has('async') || $request->wantsJson()) && !$request->header('X-Inertia')) {
+            return response()->json(SecurityPayloadService::sanitize([
                 'success'          => true,
                 'tenants'          => $tenants,
                 'menus'            => $menus,
                 'selectedTenantId' => $selectedTenantId,
                 'checkedMenuIds'   => $checkedMenuIds,
-            ]);
+            ]));
         }
 
         return Inertia::render('Core/TenantMenus/Index', [
@@ -96,12 +108,12 @@ class TenantMenuController extends Controller
                 ->toArray();
         }
 
-        return response()->json([
+        return response()->json(SecurityPayloadService::sanitize([
             'success'        => true,
             'tenants'        => $tenants,
             'menus'          => $menus,
             'checkedMenuIds' => $checkedMenuIds,
-        ]);
+        ]));
     }
 
     /**

@@ -14,6 +14,7 @@ use Inertia\Response as InertiaResponse;
 use Modules\Core\Entities\Tenant;
 use Modules\Core\Entities\Menu;
 use Modules\Core\Entities\User;
+use Modules\Core\Services\SecurityPayloadService;
 
 class TenantManagementController extends Controller
 {
@@ -61,6 +62,22 @@ class TenantManagementController extends Controller
             })
             ->orderByRaw("CASE WHEN status IN ('pending_approval', 'pending', 'menunggu') THEN 0 WHEN id = '00000000-0000-0000-0000-000000000000' THEN 1 ELSE 2 END")
             ->orderBy('created_at', 'desc');
+
+        $isInitialSsr = !$request->header('X-Inertia') && !$request->has('async');
+
+        if ($isInitialSsr) {
+            return Inertia::render('Core/Tenant/Index', [
+                'tenantsList' => null,
+                'stats'       => null,
+                'menusList'   => null,
+                'filters'     => [
+                    'search'       => $search,
+                    'status'       => $status,
+                    'paket'        => $paket,
+                    'sinkronisasi' => $sinkronisasi,
+                ],
+            ]);
+        }
 
         // Statistik Keseluruhan
         $allTenants = Tenant::all();
@@ -140,8 +157,8 @@ class TenantManagementController extends Controller
             ];
         });
 
-        if ($request->wantsJson()) {
-            return response()->json([
+        if (($request->has('async') || $request->wantsJson()) && !$request->header('X-Inertia')) {
+            return response()->json(SecurityPayloadService::sanitize([
                 'success'     => true,
                 'data'        => $tenantsList,
                 'stats'       => $stats,
@@ -152,7 +169,7 @@ class TenantManagementController extends Controller
                     'paket'        => $paket,
                     'sinkronisasi' => $sinkronisasi,
                 ],
-            ]);
+            ]));
         }
 
         return Inertia::render('Core/Tenant/Index', [

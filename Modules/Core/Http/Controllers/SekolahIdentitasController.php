@@ -9,6 +9,7 @@ use Inertia\Response as InertiaResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Modules\Core\Entities\Tenant;
+use Modules\Core\Services\SecurityPayloadService;
 use Illuminate\Support\Facades\Storage;
 
 class SekolahIdentitasController extends Controller
@@ -26,6 +27,18 @@ class SekolahIdentitasController extends Controller
             $selectedTenantId = session('tenant_id') ?? $user?->tenant_id;
         }
 
+        // 1. Zero-SSR Data Exposure Protection (Anti-Scraping / View Source Zero Leakage)
+        $isInitialSsr = !$request->header('X-Inertia') && !$request->has('async');
+        if ($isInitialSsr) {
+            return Inertia::render('Core/SekolahIdentitas/Show', [
+                'identitas'    => null,
+                'tenantsList'  => null,
+                'userRole'     => $userRoleName,
+                'isSuperAdmin' => $isSuperAdmin,
+            ]);
+        }
+
+        // 2. Load record data for Async API / Inertia SPA navigation
         $identitas = null;
         if ($selectedTenantId) {
             $identitas = Tenant::find($selectedTenantId);
@@ -48,23 +61,29 @@ class SekolahIdentitasController extends Controller
                 ->get();
         }
 
-        // Return plain JSON ONLY for explicit non-Inertia API/Postman/Axios requests
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        $sanitizedIdentitas = SecurityPayloadService::sanitize($identitas, $isSuperAdmin ? [] : ['tenant_id']);
+        $sanitizedTenantsList = $isSuperAdmin ? SecurityPayloadService::sanitize($tenantsList) : [];
+
+        // 3. On-Demand Async API Endpoint (Axios Client Hydration)
+        if (($request->has('async') || $request->wantsJson()) && !$request->header('X-Inertia')) {
             return response()->json([
-                'success' => true,
-                'data' => $identitas,
-                'tenantsList' => $tenantsList,
-                'userRole' => $userRoleName
+                'success'      => true,
+                'data'         => $sanitizedIdentitas,
+                'tenantsList'  => $sanitizedTenantsList,
+                'userRole'     => $userRoleName,
+                'isSuperAdmin' => $isSuperAdmin,
             ]);
         }
 
+        // 4. Inertia SPA Response
         return Inertia::render('Core/SekolahIdentitas/Show', [
-            'identitas' => $identitas,
-            'tenantsList' => $tenantsList,
-            'userRole' => $userRoleName,
-            'flash' => [
+            'identitas'    => $sanitizedIdentitas,
+            'tenantsList'  => $sanitizedTenantsList,
+            'userRole'     => $userRoleName,
+            'isSuperAdmin' => $isSuperAdmin,
+            'flash'        => [
                 'success' => session('success'),
-                'error' => session('error'),
+                'error'   => session('error'),
             ]
         ]);
     }
@@ -159,10 +178,11 @@ class SekolahIdentitasController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Identitas dan profil sekolah berhasil diperbarui.',
-                'data' => $tenant->fresh(),
+                'data'    => SecurityPayloadService::sanitize($tenant->fresh(), $isSuperAdmin ? [] : ['tenant_id']),
             ]);
         }
 
         return back()->with('success', 'Identitas dan profil sekolah berhasil diperbarui.');
     }
 }
+

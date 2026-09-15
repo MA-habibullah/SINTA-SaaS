@@ -1,28 +1,27 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted } from 'vue'
-import { router, usePage } from '@inertiajs/vue3'
+import { usePage } from '@inertiajs/vue3'
+import axios from 'axios'
 import AppLayout from '@/Layouts/AppLayout.vue'
+import SearchableSelect from '@/Components/SearchableSelect.vue'
+import { useMemorySecurity } from '@/Utils/cryptoSecurity.js'
 
 const props = defineProps({
   roles: {
     type: Array,
-    default: () => []
+    default: null
   },
   menuList: {
     type: Array,
-    default: () => []
-  },
-  menus: {
-    type: Array,
-    default: () => []
+    default: null
   },
   accessMap: {
     type: Object,
-    default: () => ({})
+    default: null
   },
   tenantsList: {
     type: Array,
-    default: () => []
+    default: null
   },
   selectedTenantId: {
     type: String,
@@ -46,83 +45,91 @@ const props = defineProps({
   }
 })
 
-// Active list of menus for RBAC matrix
-const availableMenuList = computed(() => {
-  return props.menuList && props.menuList.length > 0 ? props.menuList : (props.menus || [])
-})
+const page = usePage()
+
+// Client reactive state for Zero-SSR Pure Client Hydration
+const localRoles = ref(props.roles || [])
+const localMenuList = ref(props.menuList || [])
+const localTenantsList = ref(props.tenantsList || [])
+const targetTenant = ref(props.selectedTenantId || '00000000-0000-0000-0000-000000000000')
+const isLoading = ref(!props.roles)
+const isSubmitting = ref(false)
 
 // Search & Filter
 const searchQuery = ref('')
 const selectedRoleFilter = ref('all')
-const targetTenant = ref(props.selectedTenantId || '00000000-0000-0000-0000-000000000000')
 
-// Matrix access state: { 'roleId-menuId': boolean }
+// Matrix access state: { 'roleId___menuId': boolean }
 const matrix = reactive({})
-const isCustomTenant = ref(false)
-const isLoadingMatrix = ref(false)
-const isSubmitting = ref(false)
+
+// Memory security: automatic garbage collection on unmount
+useMemorySecurity([matrix, localRoles, localMenuList, localTenantsList])
 
 // Toast
 const showToast = ref(false)
 const toastMessage = ref('')
 const toastType = ref('success')
 
-// Initialize matrix from props
-const initMatrix = (mapData) => {
-  // Clear old keys
-  Object.keys(matrix).forEach(key => delete matrix[key])
-  
-  if (mapData) {
-    Object.keys(mapData).forEach(key => {
-      matrix[key] = !!mapData[key]
+// Format helper
+const formatRoleName = (name) => {
+  if (!name) return ''
+  return name.replace(/_/g, ' ').toUpperCase()
+}
+
+// SearchableSelect Options for Tenants
+const tenantOptions = computed(() => {
+  const list = [
+    {
+      id: '00000000-0000-0000-0000-000000000000',
+      nama: '⭐ — Global Default Template (Seluruh Sekolah) —',
+      subLabel: 'Template Hak Akses Bawaan Global'
+    }
+  ]
+  if (localTenantsList.value && localTenantsList.value.length > 0) {
+    localTenantsList.value.forEach(t => {
+      list.push({
+        id: t.id,
+        nama: t.nama_sekolah,
+        subLabel: t.npsn ? `NPSN: ${t.npsn} | ${t.bentuk_pendidikan || '-'}` : (t.bentuk_pendidikan || '')
+      })
     })
   }
-}
-
-onMounted(() => {
-  initMatrix(props.accessMap)
+  return list
 })
 
-// Checkbox change handler with Parent-Child Cascading logic
-const handleCheckboxChange = (roleId, menu) => {
-  const key = `${roleId}___${menu.id}`
-  const isChecked = !!matrix[key]
-
-  if (!isChecked) {
-    // If Parent is UNCHECKED -> Auto-uncheck all its children
-    if (!menu.is_child) {
-      availableMenuList.value.forEach(m => {
-        if (m.parent_id === menu.id) {
-          matrix[`${roleId}___${m.id}`] = false
-        }
-      })
-    }
-  } else {
-    // If Child is CHECKED -> Auto-check its parent
-    if (menu.is_child && menu.parent_id) {
-      matrix[`${roleId}___${menu.parent_id}`] = true
-    }
-  }
-}
-
-// Bulk toggle for a specific role
-const toggleAllForRole = (roleId, grantAll = true) => {
-  availableMenuList.value.forEach(m => {
-    matrix[`${roleId}___${m.id}`] = grantAll
+// SearchableSelect Options for Role Filter
+const roleFilterOptions = computed(() => {
+  const options = [
+    { id: 'all', nama: `Semua Peran (${localRoles.value.length} Role)`, subLabel: 'Tampilkan semua kolom role' }
+  ]
+  localRoles.value.forEach(r => {
+    options.push({
+      id: r.id,
+      nama: formatRoleName(r.nama_role),
+      subLabel: r.deskripsi || ''
+    })
   })
-}
+  return options
+})
+
+// Super Admin computed check
+const isSuperAdminComputed = computed(() => {
+  if (props.isSuperAdmin) return true
+  const roleName = typeof props.userRole === 'object' ? props.userRole?.nama_role : props.userRole
+  return roleName === 'super_admin' || (localTenantsList.value && localTenantsList.value.length > 0)
+})
 
 // Filtered roles based on dropdown filter
 const displayedRoles = computed(() => {
   if (selectedRoleFilter.value === 'all') {
-    return props.roles
+    return localRoles.value
   }
-  return props.roles.filter(r => r.id === selectedRoleFilter.value)
+  return localRoles.value.filter(r => r.id === selectedRoleFilter.value)
 })
 
 // Filtered menus based on search
 const filteredMenus = computed(() => {
-  const rawList = availableMenuList.value
+  const rawList = localMenuList.value
   if (!searchQuery.value.trim()) {
     return rawList
   }
@@ -144,37 +151,101 @@ const filteredMenus = computed(() => {
   return rawList.filter(m => matchingIds.has(m.id))
 })
 
-// Target Tenant change handler
-const handleTenantChange = (e) => {
-  const tId = e.target.value
-  targetTenant.value = tId
+// Initialize matrix from mapData
+const initMatrix = (mapData) => {
+  // Clear old keys
+  Object.keys(matrix).forEach(key => delete matrix[key])
   
-  if (!tId || tId === '00000000-0000-0000-0000-000000000000') {
-    router.visit('/konfigurasi/akses', { preserveScroll: true })
-    return
+  if (mapData) {
+    Object.keys(mapData).forEach(key => {
+      matrix[key] = !!mapData[key]
+    })
   }
+}
 
-  router.visit(`/konfigurasi/akses?tenant_id=${tId}`, { preserveScroll: true })
+// On-Demand Client Fetch (Zero-SSR Data Hydration)
+const loadMatrixDataAsync = async (tenantId = null) => {
+  isLoading.value = true
+  try {
+    const activeTenantId = tenantId !== null ? tenantId : targetTenant.value
+    const params = {
+      async: 1,
+      tenant_id: activeTenantId
+    }
+    const res = await axios.get('/konfigurasi/akses', { params })
+    if (res.data && res.data.success) {
+      localRoles.value = res.data.roles || []
+      localMenuList.value = res.data.menus || res.data.menu_list || []
+      if (res.data.tenants && res.data.tenants.length > 0) {
+        localTenantsList.value = res.data.tenants
+      }
+      targetTenant.value = res.data.target_tenant_id || activeTenantId
+      initMatrix(res.data.access_map || {})
+    }
+  } catch (err) {
+    console.error('Gagal memuat matriks hak akses:', err)
+    triggerToast('Gagal memuat konfigurasi hak akses dari server.', 'error')
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// In-Memory Target Tenant change handler
+const handleTenantChange = (newTenantId) => {
+  targetTenant.value = newTenantId || '00000000-0000-0000-0000-000000000000'
+  loadMatrixDataAsync(targetTenant.value)
+}
+
+// Checkbox change handler with Parent-Child Cascading logic
+const handleCheckboxChange = (roleId, menu) => {
+  const key = `${roleId}___${menu.id}`
+  const isChecked = !!matrix[key]
+
+  if (!isChecked) {
+    // If Parent is UNCHECKED -> Auto-uncheck all its children
+    if (!menu.is_child) {
+      localMenuList.value.forEach(m => {
+        if (m.parent_id === menu.id) {
+          matrix[`${roleId}___${m.id}`] = false
+        }
+      })
+    }
+  } else {
+    // If Child is CHECKED -> Auto-check its parent
+    if (menu.is_child && menu.parent_id) {
+      matrix[`${roleId}___${menu.parent_id}`] = true
+    }
+  }
+}
+
+// Bulk toggle for a specific role
+const toggleAllForRole = (roleId, grantAll = true) => {
+  localMenuList.value.forEach(m => {
+    matrix[`${roleId}___${m.id}`] = grantAll
+  })
 }
 
 // Watch for prop changes
 watch(() => props.accessMap, (newMap) => {
-  initMatrix(newMap)
+  if (newMap) initMatrix(newMap)
 }, { deep: true })
 
-watch(() => props.selectedTenantId, (newTenant) => {
-  if (newTenant) {
-    targetTenant.value = newTenant
+onMounted(() => {
+  if (!props.roles || props.roles.length === 0) {
+    loadMatrixDataAsync()
+  } else {
+    initMatrix(props.accessMap)
+    isLoading.value = false
   }
 })
 
-// Save Matrix
-const saveMatrix = () => {
+// Save Matrix (In-Memory Axios Submission)
+const saveMatrix = async () => {
   isSubmitting.value = true
 
   // Construct access payload: { roleId: [menuId1, menuId2, ...] }
   const accessPayload = {}
-  props.roles.forEach(r => {
+  localRoles.value.forEach(r => {
     accessPayload[r.id] = []
   })
 
@@ -191,24 +262,28 @@ const saveMatrix = () => {
     }
   })
 
-  router.post('/konfigurasi/akses', {
-    target_tenant_id: targetTenant.value,
-    access: accessPayload
-  }, {
-    preserveScroll: true,
-    preserveState: true,
-    onSuccess: (page) => {
-      isSubmitting.value = false
-      triggerToast('Matriks hak akses menu berhasil disimpan & diterapkan secara real-time!', 'success')
-      if (page.props?.accessMap) {
-        initMatrix(page.props.accessMap)
+  try {
+    const res = await axios.post('/konfigurasi/akses', {
+      target_tenant_id: targetTenant.value,
+      access: accessPayload
+    }, {
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
       }
-    },
-    onError: () => {
-      isSubmitting.value = false
-      triggerToast('Gagal menyimpan matriks hak akses.', 'error')
+    })
+
+    if (res.data && res.data.success) {
+      triggerToast(res.data.message || 'Matriks hak akses menu berhasil disimpan & diterapkan secara real-time!', 'success')
+    } else {
+      triggerToast('Matriks hak akses berhasil diperbarui.', 'success')
     }
-  })
+  } catch (err) {
+    console.error('Gagal menyimpan matriks hak akses:', err)
+    triggerToast(err.response?.data?.message || 'Gagal menyimpan matriks hak akses.', 'error')
+  } finally {
+    isSubmitting.value = false
+  }
 }
 
 const triggerToast = (msg, type = 'success') => {
@@ -218,11 +293,6 @@ const triggerToast = (msg, type = 'success') => {
   setTimeout(() => {
     showToast.value = false
   }, 4000)
-}
-
-const formatRoleName = (name) => {
-  if (!name) return ''
-  return name.replace(/_/g, ' ').toUpperCase()
 }
 </script>
 
@@ -246,7 +316,7 @@ const formatRoleName = (name) => {
         >
           <i class="bi" :class="toastType === 'success' ? 'bi-check-circle-fill text-lg' : 'bi-exclamation-triangle-fill text-lg'"></i>
           <span>{{ toastMessage }}</span>
-          <button @click="showToast = false" class="text-white/80 hover:text-white ml-2 text-xs">
+          <button @click="showToast = false" class="text-white/80 hover:text-white ml-2 text-xs cursor-pointer">
             <i class="bi bi-x-lg"></i>
           </button>
         </div>
@@ -268,7 +338,7 @@ const formatRoleName = (name) => {
           <button 
             type="button" 
             @click="saveMatrix" 
-            :disabled="isSubmitting"
+            :disabled="isSubmitting || isLoading"
             class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-500/20 transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
           >
             <span v-if="isSubmitting" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
@@ -278,8 +348,8 @@ const formatRoleName = (name) => {
         </div>
       </div>
 
-      <!-- Super Admin Target Tenant Switcher -->
-      <div v-if="isSuperAdmin && tenantsList && tenantsList.length > 0" class="bg-white rounded-3xl p-5 shadow-2xs border border-slate-200/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <!-- Super Admin Target Tenant Switcher (SearchableSelect with Live Search) -->
+      <div v-if="isSuperAdminComputed && localTenantsList && localTenantsList.length > 0" class="bg-white rounded-3xl p-5 shadow-2xs border border-slate-200/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div class="flex items-center gap-3.5">
           <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-700 text-white flex items-center justify-center font-bold text-lg shadow-sm shrink-0">
             <i class="bi bi-buildings"></i>
@@ -287,7 +357,7 @@ const formatRoleName = (name) => {
           <div>
             <div class="flex items-center gap-2">
               <h4 class="text-sm font-bold text-slate-800">Target Otorisasi Lembaga / Sekolah</h4>
-              <span v-if="isLoadingMatrix" class="text-[11px] text-blue-600 font-semibold flex items-center gap-1">
+              <span v-if="isLoading" class="text-[11px] text-blue-600 font-semibold flex items-center gap-1">
                 <span class="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></span>
                 Memuat...
               </span>
@@ -299,18 +369,14 @@ const formatRoleName = (name) => {
         </div>
 
         <div class="w-full md:w-96 shrink-0">
-          <select 
-            :value="targetTenant" 
+          <SearchableSelect
+            v-model="targetTenant"
+            :options="tenantOptions"
+            placeholder="-- Pilih Target Otorisasi Sekolah --"
+            search-placeholder="Cari nama sekolah / NPSN..."
             @change="handleTenantChange"
-            class="w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white focus:bg-white text-slate-800 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition cursor-pointer"
-          >
-            <option value="00000000-0000-0000-0000-000000000000">
-              ⭐ — Global Default Template (Seluruh Sekolah) —
-            </option>
-            <option v-for="t in tenantsList" :key="t.id" :value="t.id">
-              {{ t.nama_sekolah }} (NPSN: {{ t.npsn || '-' }})
-            </option>
-          </select>
+            custom-class="w-full"
+          />
         </div>
       </div>
 
@@ -326,9 +392,9 @@ const formatRoleName = (name) => {
         </div>
       </div>
 
-      <!-- Filter & Search Toolbar -->
+      <!-- Filter & Search Toolbar (Live Keyword Search & SearchableSelect Filter) -->
       <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
-        <!-- Search input -->
+        <!-- Live Search input for menus -->
         <div class="relative w-full sm:w-80">
           <i class="bi bi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
           <input 
@@ -339,23 +405,29 @@ const formatRoleName = (name) => {
           />
         </div>
 
-        <!-- Filter by Role dropdown -->
-        <div class="flex items-center gap-2 w-full sm:w-auto">
+        <!-- Filter by Role dropdown using SearchableSelect -->
+        <div class="flex items-center gap-2.5 w-full sm:w-auto">
           <span class="text-xs text-slate-500 font-bold whitespace-nowrap">Filter Role:</span>
-          <select 
-            v-model="selectedRoleFilter"
-            class="h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-          >
-            <option value="all">Semua Peran ({{ roles.length }} Role)</option>
-            <option v-for="r in roles" :key="r.id" :value="r.id">
-              {{ formatRoleName(r.nama_role) }}
-            </option>
-          </select>
+          <div class="w-full sm:w-64">
+            <SearchableSelect
+              v-model="selectedRoleFilter"
+              :options="roleFilterOptions"
+              placeholder="-- Pilih Role --"
+              search-placeholder="Cari role..."
+              custom-class="w-full"
+            />
+          </div>
         </div>
       </div>
 
+      <!-- Loading Skeleton View -->
+      <div v-if="isLoading" class="space-y-4 animate-pulse">
+        <div class="h-14 bg-slate-200 rounded-2xl"></div>
+        <div class="h-96 bg-slate-200 rounded-3xl"></div>
+      </div>
+
       <!-- RBAC Matrix Table Container -->
-      <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+      <div v-else class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="overflow-x-auto" style="max-height: 680px;">
           <table class="w-full text-left text-xs text-slate-700 border-collapse">
             <!-- Table Header -->
@@ -380,14 +452,14 @@ const formatRoleName = (name) => {
                       <button 
                         type="button" 
                         @click="toggleAllForRole(role.id, true)" 
-                        class="hover:text-blue-600 underline font-semibold"
+                        class="hover:text-blue-600 underline font-semibold cursor-pointer"
                         title="Centang Semua Menu untuk Role Ini"
                       >Semua</button>
                       <span>|</span>
                       <button 
                         type="button" 
                         @click="toggleAllForRole(role.id, false)" 
-                        class="hover:text-red-600 underline font-semibold"
+                        class="hover:text-red-600 underline font-semibold cursor-pointer"
                         title="Cabut Semua Izin untuk Role Ini"
                       >Batal</button>
                     </div>
@@ -479,7 +551,7 @@ const formatRoleName = (name) => {
             <button 
               type="button" 
               @click="saveMatrix" 
-              :disabled="isSubmitting"
+              :disabled="isSubmitting || isLoading"
               class="w-full sm:w-auto px-8 h-11 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-600/35 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <span v-if="isSubmitting" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>

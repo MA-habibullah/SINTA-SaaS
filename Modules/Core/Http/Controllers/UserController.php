@@ -442,10 +442,10 @@ class UserController extends Controller
                 'activeTab'       => $activeTab,
                 'items'           => null,
                 'stats'           => null,
-                'tenants'         => $isSuperAdmin ? $tenants : [],
-                'kelasList'       => $kelasList,
-                'jenjangList'     => $jenjangList,
-                'tahunAjaranList' => $tahunAjaranList,
+                'tenants'         => null,
+                'kelasList'       => null,
+                'jenjangList'     => null,
+                'tahunAjaranList' => null,
                 'isSuperAdmin'    => $isSuperAdmin,
                 'filters'         => [
                     'search'    => $search,
@@ -462,9 +462,13 @@ class UserController extends Controller
         // 1. Explicit Async API Request (On-Demand Client Fetch via Axios)
         if ($request->has('async') && !$request->header('X-Inertia')) {
             return response()->json([
-                'success' => true,
-                'data'    => SecurityPayloadService::sanitize($items, $isSuperAdmin ? [] : ['tenant_id']),
-                'stats'   => $stats,
+                'success'         => true,
+                'data'            => SecurityPayloadService::sanitize($items, $isSuperAdmin ? [] : ['tenant_id']),
+                'stats'           => $stats,
+                'tenants'         => $isSuperAdmin ? $tenants : [],
+                'kelasList'       => $kelasList,
+                'jenjangList'     => $jenjangList,
+                'tahunAjaranList' => $tahunAjaranList,
             ]);
         }
 

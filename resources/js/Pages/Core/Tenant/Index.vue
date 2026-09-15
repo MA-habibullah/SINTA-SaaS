@@ -1,33 +1,27 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
+import SearchableSelect from '@/Components/SearchableSelect.vue'
+import { useMemorySecurity } from '@/Utils/cryptoSecurity.js'
 import axios from 'axios'
 
 const props = defineProps({
     tenantsList: {
         type: Array,
-        default: () => []
+        default: null
     },
     tenants: {
         type: Object,
-        default: () => ({ data: [] })
+        default: null
     },
     stats: {
         type: Object,
-        default: () => ({
-            totalTenants: 0,
-            pendingTenants: 0,
-            activeTenants: 0,
-            trialTenants: 0,
-            suspendedTenants: 0,
-            rejectedTenants: 0,
-            syncedTenants: 0
-        })
+        default: null
     },
     menusList: {
         type: Array,
-        default: () => []
+        default: null
     },
     filters: {
         type: Object,
@@ -35,12 +29,24 @@ const props = defineProps({
     }
 })
 
-// Normalisasi Data Tenants
+// Normalisasi Data Tenants & Metadata
 const localTenants = ref(
     props.tenantsList && props.tenantsList.length > 0 
         ? [...props.tenantsList] 
         : (props.tenants?.data ? [...props.tenants.data] : [])
 )
+
+const localStats = ref(props.stats || {
+    totalTenants: 0,
+    pendingTenants: 0,
+    activeTenants: 0,
+    trialTenants: 0,
+    suspendedTenants: 0,
+    rejectedTenants: 0,
+    syncedTenants: 0
+})
+
+const localMenusList = ref(props.menusList && props.menusList.length > 0 ? [...props.menusList] : [])
 
 // Active Tab Filter (Semua, Menunggu Persetujuan, Aktif, Trial, Nonaktif, Ditolak)
 const activeFilterTab = ref('all')
@@ -88,6 +94,50 @@ const form = ref({
     enable_persuratan: 1,
     cms_landing_enabled: true
 })
+
+// Memory Security Garbage Collector
+useMemorySecurity([localTenants, form, localStats, localMenusList])
+
+// Options for SearchableSelect
+const filterPaketOptions = [
+    { id: '', nama: '-- Semua Paket --' },
+    { id: 'Free Trial 3 Bulan', nama: 'Free Trial 3 Bulan' },
+    { id: 'Free Trial 1 Bulan', nama: 'Free Trial 1 Bulan' },
+    { id: 'Basic', nama: 'Basic Edition' },
+    { id: 'Pro', nama: 'Pro Edition' },
+    { id: 'Premium', nama: 'Premium' },
+    { id: 'Enterprise', nama: 'Enterprise' }
+]
+
+const filterStatusOptions = [
+    { id: '', nama: '-- Semua Status --' },
+    { id: 'pending_approval', nama: 'Pending Approval' },
+    { id: 'active', nama: 'Active (Aktif)' },
+    { id: 'inactive', nama: 'Inactive (Nonaktif)' },
+    { id: 'suspended', nama: 'Suspended' },
+    { id: 'rejected', nama: 'Rejected (Ditolak)' }
+]
+
+const perPageOptions = [
+    { id: 10, nama: '10' },
+    { id: 15, nama: '15' },
+    { id: 20, nama: '20' },
+    { id: 25, nama: '25' },
+    { id: 50, nama: '50' }
+]
+
+const modalPaketOptions = [
+    { id: 'Basic', nama: 'Basic Edition' },
+    { id: 'Pro', nama: 'Pro Edition' },
+    { id: 'Premium', nama: 'Premium' },
+    { id: 'Enterprise', nama: 'Enterprise' }
+]
+
+const modalStatusOptions = [
+    { id: 'active', nama: 'Active (Aktif)' },
+    { id: 'inactive', nama: 'Inactive (Nonaktif)' },
+    { id: 'suspended', nama: 'Suspended' }
+]
 
 // ==========================================
 // APPROVAL & REJECT MODAL STATE
@@ -149,7 +199,7 @@ const showAlert = (icon, title, text) => {
 
 // Computed: Grouped Menus for Interactive Approval Matrix
 const categorizedMenus = computed(() => {
-    const list = props.menusList || []
+    const list = localMenusList.value || []
     const parents = list.filter(m => !m.parent_id)
     return parents.map(p => ({
         ...p,
@@ -208,13 +258,13 @@ const goToPage = (page) => {
 }
 
 // Statistics Computed
-const totalTenantsCount = computed(() => props.stats?.totalTenants || localTenants.value.length)
-const pendingTenantsCount = computed(() => props.stats?.pendingTenants || localTenants.value.filter(t => ['pending', 'pending_approval', 'menunggu'].includes(String(t.status).toLowerCase())).length)
-const activeTenantsCount = computed(() => props.stats?.activeTenants || localTenants.value.filter(t => ['active', 'aktif'].includes(String(t.status).toLowerCase())).length)
-const trialTenantsCount = computed(() => props.stats?.trialTenants || localTenants.value.filter(t => t.trial_ends_at && new Date(t.trial_ends_at) > new Date()).length)
-const suspendedTenantsCount = computed(() => props.stats?.suspendedTenants || localTenants.value.filter(t => ['suspended', 'inactive', 'nonaktif'].includes(String(t.status).toLowerCase())).length)
-const rejectedTenantsCount = computed(() => props.stats?.rejectedTenants || localTenants.value.filter(t => ['rejected', 'ditolak'].includes(String(t.status).toLowerCase())).length)
-const syncedTenantsCount = computed(() => props.stats?.syncedTenants || localTenants.value.filter(t => t.status_sinkronisasi === 'Tersinkronisasi').length)
+const totalTenantsCount = computed(() => localStats.value?.totalTenants || localTenants.value.length)
+const pendingTenantsCount = computed(() => localStats.value?.pendingTenants || localTenants.value.filter(t => ['pending', 'pending_approval', 'menunggu'].includes(String(t.status).toLowerCase())).length)
+const activeTenantsCount = computed(() => localStats.value?.activeTenants || localTenants.value.filter(t => ['active', 'aktif'].includes(String(t.status).toLowerCase())).length)
+const trialTenantsCount = computed(() => localStats.value?.trialTenants || localTenants.value.filter(t => t.trial_ends_at && new Date(t.trial_ends_at) > new Date()).length)
+const suspendedTenantsCount = computed(() => localStats.value?.suspendedTenants || localTenants.value.filter(t => ['suspended', 'inactive', 'nonaktif'].includes(String(t.status).toLowerCase())).length)
+const rejectedTenantsCount = computed(() => localStats.value?.rejectedTenants || localTenants.value.filter(t => ['rejected', 'ditolak'].includes(String(t.status).toLowerCase())).length)
+const syncedTenantsCount = computed(() => localStats.value?.syncedTenants || localTenants.value.filter(t => t.status_sinkronisasi === 'Tersinkronisasi').length)
 
 // UI Helpers
 const getInitials = (name) => {
@@ -397,19 +447,31 @@ const openEditModal = (tenant) => {
     showModal.value = true
 }
 
-// Fetch Tenants from API
+// Fetch Tenants from API (Zero-SSR Hydration)
 const fetchTenants = async () => {
     try {
-        const response = await axios.get('/super-admin/tenants', {
+        const response = await axios.get('/super-admin/tenants?async=1', {
             headers: { 'Accept': 'application/json' }
         })
         if (response.data && response.data.success) {
             localTenants.value = response.data.data || []
+            if (response.data.stats) {
+                localStats.value = response.data.stats
+            }
+            if (response.data.menusList) {
+                localMenusList.value = response.data.menusList
+            }
         }
     } catch (err) {
         console.error('Failed to fetch tenants:', err)
     }
 }
+
+onMounted(() => {
+    if (!props.tenantsList || props.tenantsList.length === 0 || !props.stats) {
+        fetchTenants()
+    }
+})
 
 // Submit Form CRUD
 const submitForm = async () => {
@@ -788,38 +850,27 @@ const deleteTenant = (tenant) => {
                     <form @submit.prevent="currentPage = 1" class="flex flex-row items-end gap-2.5 sm:gap-3 min-w-max">
                         
                         <!-- Filter Paket -->
-                        <div class="w-36 sm:w-44 shrink-0">
+                        <div class="w-44 sm:w-48 shrink-0">
                             <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider whitespace-nowrap">Paket Langganan</label>
-                            <select 
+                            <SearchableSelect 
                                 v-model="filterPaket"
+                                :options="filterPaketOptions"
+                                placeholder="-- Semua Paket --"
+                                search-placeholder="Cari paket..."
                                 @change="currentPage = 1"
-                                class="w-full h-9 px-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-white text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition font-sans"
-                            >
-                                <option value="">-- Semua Paket --</option>
-                                <option value="Free Trial 3 Bulan">Free Trial 3 Bulan</option>
-                                <option value="Free Trial 1 Bulan">Free Trial 1 Bulan</option>
-                                <option value="Basic">Basic Edition</option>
-                                <option value="Pro">Pro Edition</option>
-                                <option value="Premium">Premium</option>
-                                <option value="Enterprise">Enterprise</option>
-                            </select>
+                            />
                         </div>
 
                         <!-- Filter Status Akses -->
-                        <div class="w-36 sm:w-40 shrink-0">
+                        <div class="w-44 sm:w-48 shrink-0">
                             <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider whitespace-nowrap">Status Akses</label>
-                            <select 
+                            <SearchableSelect 
                                 v-model="filterStatus"
+                                :options="filterStatusOptions"
+                                placeholder="-- Semua Status --"
+                                search-placeholder="Cari status..."
                                 @change="currentPage = 1"
-                                class="w-full h-9 px-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-white text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
-                            >
-                                <option value="">-- Semua Status --</option>
-                                <option value="pending_approval">Pending Approval</option>
-                                <option value="active">Active (Aktif)</option>
-                                <option value="inactive">Inactive (Nonaktif)</option>
-                                <option value="suspended">Suspended</option>
-                                <option value="rejected">Rejected (Ditolak)</option>
-                            </select>
+                            />
                         </div>
 
                         <!-- Search Box Input -->
@@ -831,7 +882,7 @@ const deleteTenant = (tenant) => {
                                     v-model="searchQuery" 
                                     @input="currentPage = 1"
                                     placeholder="Ketik kata kunci pencarian..." 
-                                    class="w-full h-9 pl-9 pr-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-white text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
+                                    class="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-white text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-2xs"
                                 >
                                 <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                             </div>
@@ -842,7 +893,7 @@ const deleteTenant = (tenant) => {
                             <button 
                                 type="button" 
                                 @click="searchQuery = ''; filterStatus = ''; filterPaket = ''; filterSinkronisasi = ''; activeFilterTab = 'all'; currentPage = 1;"
-                                class="h-9 px-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-xs font-bold text-slate-600 transition flex items-center gap-1.5 shadow-2xs"
+                                class="h-10 px-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-xs font-bold text-slate-600 transition flex items-center gap-1.5 shadow-2xs"
                                 title="Reset Seluruh Filter"
                             >
                                 <i class="bi bi-arrow-counterclockwise"></i>
@@ -1037,17 +1088,15 @@ const deleteTenant = (tenant) => {
                     
                     <div class="flex flex-wrap items-center justify-center md:justify-start gap-2 text-xs text-slate-500 font-medium shrink-0">
                         <span>Tampilkan</span>
-                        <select 
-                            v-model="perPage" 
-                            @change="currentPage = 1" 
-                            class="h-8 px-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                        >
-                            <option :value="10">10</option>
-                            <option :value="15">15</option>
-                            <option :value="20">20</option>
-                            <option :value="25">25</option>
-                            <option :value="50">50</option>
-                        </select>
+                        <div class="w-20 shrink-0">
+                            <SearchableSelect 
+                                v-model="perPage" 
+                                :options="perPageOptions"
+                                placeholder="15"
+                                search-placeholder="Cari..."
+                                @change="currentPage = 1"
+                            />
+                        </div>
                         <span>baris per halaman</span>
                         <span class="text-slate-300 hidden sm:inline">|</span>
                         <span>
@@ -1309,21 +1358,23 @@ const deleteTenant = (tenant) => {
 
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Paket Langganan</label>
-                                <select v-model="form.paket_aktif" @change="applyPackageDefaults" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-600 focus:outline-none focus:bg-white">
-                                    <option value="Basic">Basic Edition</option>
-                                    <option value="Pro">Pro Edition</option>
-                                    <option value="Premium">Premium</option>
-                                    <option value="Enterprise">Enterprise</option>
-                                </select>
+                                <SearchableSelect 
+                                    v-model="form.paket_aktif" 
+                                    :options="modalPaketOptions"
+                                    placeholder="-- Pilih Paket --"
+                                    search-placeholder="Cari paket..."
+                                    @change="applyPackageDefaults"
+                                />
                             </div>
 
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Status Akses</label>
-                                <select v-model="form.status" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-600 focus:outline-none focus:bg-white">
-                                    <option value="active">Active (Aktif)</option>
-                                    <option value="inactive">Inactive (Nonaktif)</option>
-                                    <option value="suspended">Suspended</option>
-                                </select>
+                                <SearchableSelect 
+                                    v-model="form.status" 
+                                    :options="modalStatusOptions"
+                                    placeholder="-- Pilih Status --"
+                                    search-placeholder="Cari status..."
+                                />
                             </div>
                         </div>
 

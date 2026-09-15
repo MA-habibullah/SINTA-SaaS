@@ -1,25 +1,27 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
+import SearchableSelect from '@/Components/SearchableSelect.vue'
+import { useMemorySecurity } from '@/Utils/cryptoSecurity.js'
 import axios from 'axios'
 
 const props = defineProps({
     tenantsList: {
         type: Array,
-        default: () => []
+        default: null
     },
     tenants: {
         type: Array,
-        default: () => []
+        default: null
     },
     menuList: {
         type: Array,
-        default: () => []
+        default: null
     },
     menus: {
         type: Array,
-        default: () => []
+        default: null
     },
     selectedTenantId: {
         type: String,
@@ -27,20 +29,31 @@ const props = defineProps({
     },
     checkedMenuIds: {
         type: Array,
-        default: () => []
+        default: null
     }
 })
 
-// Normalized Props Data
-const tenantsData = computed(() => props.tenantsList.length > 0 ? props.tenantsList : (props.tenants || []))
-const menusData = computed(() => props.menuList.length > 0 ? props.menuList : (props.menus || []))
+// Normalized Props Data in Reactive State
+const localTenants = ref(props.tenantsList || props.tenants || [])
+const localMenus = ref(props.menuList || props.menus || [])
+const selectedTenantId = ref(props.selectedTenantId || '')
+const checkedMenuIds = ref(props.checkedMenuIds ? [...props.checkedMenuIds] : [])
 
-// State
-const selectedTenantId = ref(props.selectedTenantId || (tenantsData.value.length > 0 ? tenantsData.value[0].id : ''))
-const checkedMenuIds = ref([...props.checkedMenuIds])
 const searchQuery = ref('')
 const isLoading = ref(false)
 const isSaving = ref(false)
+
+// Memory Security Garbage Collector
+useMemorySecurity([checkedMenuIds, localTenants, localMenus])
+
+// Options for SearchableSelect
+const tenantSelectOptions = computed(() => {
+    return localTenants.value.map(t => ({
+        id: t.id,
+        nama: t.nama_sekolah,
+        subLabel: `NPSN: ${t.npsn || '-'} — Subdomain: ${t.subdomain || '-'}`
+    }))
+})
 
 // Toast / Modal Notification Helper
 const notify = (icon, title, text) => {
@@ -73,12 +86,12 @@ const showModal = (icon, title, text) => {
 
 // Computed: Active selected tenant object
 const selectedTenant = computed(() => {
-    return tenantsData.value.find(t => t.id === selectedTenantId.value) || null
+    return localTenants.value.find(t => t.id === selectedTenantId.value) || null
 })
 
 // Computed: Formatted & Hierarchically Ordered Menus
 const formattedMenus = computed(() => {
-    const parents = menusData.value.filter(m => !m.parent_id)
+    const parents = localMenus.value.filter(m => !m.parent_id)
     const result = []
     
     parents.forEach(parent => {
@@ -90,7 +103,7 @@ const formattedMenus = computed(() => {
             iconClass: (parent.icon || 'bi bi-folder-fill') + ' text-indigo-600 me-2'
         })
         
-        const children = menusData.value.filter(m => m.parent_id === parent.id)
+        const children = localMenus.value.filter(m => m.parent_id === parent.id)
         children.forEach(child => {
             result.push({
                 ...child,
@@ -118,6 +131,28 @@ const isChecked = (menuId) => {
     return checkedMenuIds.value.includes(menuId)
 }
 
+// Fetch Initial Data (Zero-SSR Hydration)
+const fetchInitialData = async () => {
+    isLoading.value = true
+    try {
+        const response = await axios.get('/super-admin/tenant-menus?async=1')
+        if (response.data && response.data.success) {
+            localTenants.value = response.data.tenants || []
+            localMenus.value = response.data.menus || []
+            if (response.data.selectedTenantId) {
+                selectedTenantId.value = response.data.selectedTenantId
+            } else if (localTenants.value.length > 0 && !selectedTenantId.value) {
+                selectedTenantId.value = localTenants.value[0].id
+            }
+            checkedMenuIds.value = response.data.checkedMenuIds || []
+        }
+    } catch (err) {
+        console.error('Failed to load initial tenant menus:', err)
+    } finally {
+        isLoading.value = false
+    }
+}
+
 // Fetch tenant mapping when tenant dropdown changes
 const handleTenantChange = async () => {
     if (!selectedTenantId.value) {
@@ -133,6 +168,8 @@ const handleTenantChange = async () => {
         
         if (response.data && response.data.success) {
             checkedMenuIds.value = response.data.checkedMenuIds || []
+            if (response.data.tenants) localTenants.value = response.data.tenants
+            if (response.data.menus) localMenus.value = response.data.menus
         }
     } catch (err) {
         console.error('Failed to fetch tenant menu access:', err)
@@ -148,7 +185,7 @@ const handleCheckboxChange = (menu) => {
     
     if (!menu.parent_id) {
         // Jika parent di-uncheck, uncheck seluruh children-nya
-        const children = menusData.value.filter(m => m.parent_id === menu.id)
+        const children = localMenus.value.filter(m => m.parent_id === menu.id)
         if (!checked) {
             children.forEach(child => {
                 const idx = checkedMenuIds.value.indexOf(child.id)
@@ -167,7 +204,7 @@ const handleCheckboxChange = (menu) => {
 
 // Check all menus
 const checkAll = () => {
-    checkedMenuIds.value = menusData.value.map(m => m.id)
+    checkedMenuIds.value = localMenus.value.map(m => m.id)
 }
 
 // Uncheck all menus
@@ -200,6 +237,12 @@ const saveAccess = async () => {
         isSaving.value = false
     }
 }
+
+onMounted(() => {
+    if (!props.tenantsList || props.tenantsList.length === 0 || !props.menuList || props.menuList.length === 0) {
+        fetchInitialData()
+    }
+})
 </script>
 
 <template>
@@ -230,21 +273,17 @@ const saveAccess = async () => {
             <div class="bg-white rounded-3xl p-6 shadow-xs border border-slate-200/80">
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div class="w-full md:w-2/3">
-                        <label for="tenantSelect" class="block text-xs font-bold text-slate-700 mb-2">
+                        <label class="block text-xs font-bold text-slate-700 mb-2">
                             <i class="bi bi-buildings text-indigo-600 me-2"></i>Pilih Instansi Sekolah (Tenant)
                         </label>
-                        <select 
-                            id="tenantSelect" 
+                        <SearchableSelect 
                             v-model="selectedTenantId" 
-                            @change="handleTenantChange"
+                            :options="tenantSelectOptions"
+                            placeholder="-- Pilih Sekolah / Tenant --"
+                            search-placeholder="Cari sekolah, NPSN, atau subdomain..."
                             :disabled="isLoading"
-                            class="w-full h-11 px-4 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:outline-none transition"
-                        >
-                            <option value="">-- Pilih Sekolah / Tenant --</option>
-                            <option v-for="t in tenantsData" :key="t.id" :value="t.id">
-                                {{ t.nama_sekolah }} (NPSN: {{ t.npsn || '-' }} — Subdomain: {{ t.subdomain || '-' }})
-                            </option>
-                        </select>
+                            @change="handleTenantChange"
+                        />
                     </div>
 
                     <div v-if="selectedTenant" class="flex md:justify-end items-center gap-2">
@@ -254,7 +293,7 @@ const saveAccess = async () => {
                         </span>
                         <span class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 shadow-2xs font-mono">
                             <i class="bi bi-check-circle-fill"></i>
-                            <span>{{ checkedMenuIds.length }} / {{ menusData.length }} Fitur Aktif</span>
+                            <span>{{ checkedMenuIds.length }} / {{ localMenus.length }} Fitur Aktif</span>
                         </span>
                     </div>
                 </div>
@@ -373,7 +412,7 @@ const saveAccess = async () => {
                 <!-- Footer Action -->
                 <div class="flex justify-between items-center pt-2">
                     <div class="text-xs font-semibold text-slate-500">
-                        Total <strong class="text-slate-800 font-mono">{{ checkedMenuIds.length }}</strong> dari <strong class="text-slate-800 font-mono">{{ menusData.length }}</strong> fitur aktif untuk sekolah ini.
+                        Total <strong class="text-slate-800 font-mono">{{ checkedMenuIds.length }}</strong> dari <strong class="text-slate-800 font-mono">{{ localMenus.length }}</strong> fitur aktif untuk sekolah ini.
                     </div>
                     <button 
                         type="button" 
