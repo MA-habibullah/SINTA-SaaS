@@ -1,50 +1,84 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { router, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import SearchableSelect from '@/Components/SearchableSelect.vue'
+import { useMemorySecurity } from '@/Utils/cryptoSecurity.js'
+import axios from 'axios'
 
 const props = defineProps({
     isSuperAdmin: Boolean,
     selectedTenantId: String,
     tenantsList: { type: Array, default: () => [] },
-    stats: { type: Object, default: () => ({}) },
+    stats: { type: Object, default: () => null },
     activeTahunAjaran: { type: String, default: '2026/2027' },
     activeSemester: { type: String, default: 'Ganjil' },
-    tahunAjaranList: { type: Array, default: () => [] },
-    kelasList: { type: Array, default: () => [] },
-    mapelList: { type: Array, default: () => [] },
-    guruList: { type: Array, default: () => [] },
-    ruangList: { type: Array, default: () => [] },
+    tahunAjaranList: { type: Array, default: () => null },
+    kelasList: { type: Array, default: () => null },
+    mapelList: { type: Array, default: () => null },
+    guruList: { type: Array, default: () => null },
+    ruangList: { type: Array, default: () => null },
     daysList: { type: Array, default: () => ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'] },
-    standardTimeSlots: { type: Array, default: () => [] },
-    jadwalTable: { type: Object, default: () => ({ data: [] }) },
-    matrixItems: { type: Array, default: () => [] },
-    allPeriodJadwals: { type: Array, default: () => [] },
-    bebanGuruList: { type: Array, default: () => [] },
-    ruangUtilList: { type: Array, default: () => [] },
-    conflictList: { type: Array, default: () => [] },
-    filters: { type: Object, default: () => ({}) },
+    standardTimeSlots: { type: Array, default: () => null },
+    jadwalTable: { type: Object, default: () => null },
+    matrixItems: { type: Array, default: () => null },
+    allPeriodJadwals: { type: Array, default: () => null },
+    bebanGuruList: { type: Array, default: () => null },
+    ruangUtilList: { type: Array, default: () => null },
+    conflictList: { type: Array, default: () => null },
+    filters: { type: Object, default: () => null },
 })
 
+// Local State for Zero-SSR Pure Client Hydration
+const localStats = ref(props.stats || { total_jadwal: 0, total_guru: 0, total_ruang: 0, total_jp: 0, total_bentrok: 0 })
+const localTahunAjaranList = ref(props.tahunAjaranList || ['2026/2027', '2025/2026', '2024/2025'])
+const localKelasList = ref(props.kelasList || [])
+const localMapelList = ref(props.mapelList || [])
+const localGuruList = ref(props.guruList || [])
+const localRuangList = ref(props.ruangList || [])
+const localDaysList = ref(props.daysList || ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'])
+const localStandardTimeSlots = ref(props.standardTimeSlots || [
+    { jam_ke: '1', label: 'Jam Ke-1' },
+    { jam_ke: '2', label: 'Jam Ke-2' },
+    { jam_ke: '3', label: 'Jam Ke-3' },
+    { jam_ke: '4', label: 'Jam Ke-4' },
+    { jam_ke: '5', label: 'Jam Ke-5' },
+    { jam_ke: '6', label: 'Jam Ke-6' },
+    { jam_ke: '7', label: 'Jam Ke-7' },
+    { jam_ke: '8', label: 'Jam Ke-8' },
+    { jam_ke: '9', label: 'Jam Ke-9' },
+    { jam_ke: '10', label: 'Jam Ke-10' },
+])
+const localJadwalTable = ref(props.jadwalTable || { data: [], current_page: 1, last_page: 1, total: 0, per_page: 25 })
+const localMatrixItems = ref(props.matrixItems || [])
+const localAllPeriodJadwals = ref(props.allPeriodJadwals || [])
+const localBebanGuruList = ref(props.bebanGuruList || [])
+const localRuangUtilList = ref(props.ruangUtilList || [])
+const localConflictList = ref(props.conflictList || [])
+const localTenantsList = ref(props.tenantsList || [])
+const isLoadingData = ref(false)
+
+// Memory Security Garbage Collector
+useMemorySecurity([localJadwalTable, localMatrixItems, localAllPeriodJadwals, localBebanGuruList, localRuangUtilList, localConflictList])
+
 // Active Tab
-const activeTab = ref(props.filters.view_mode || 'grid') // 'grid' | 'table' | 'beban_guru' | 'ruang_matrix' | 'conflict'
+const activeTab = ref(props.filters?.view_mode || 'grid') // 'grid' | 'table' | 'beban_guru' | 'ruang_matrix' | 'conflict'
 
 // Grid Focus Mode: 'kelas' | 'guru' | 'ruangan'
 const gridFocus = ref('kelas')
-const selectedFocusKelas = ref(props.filters.kelas_id || (props.kelasList[0]?.id || ''))
-const selectedFocusGuru = ref(props.filters.guru_id || (props.guruList[0]?.id || ''))
-const selectedFocusRuang = ref(props.filters.ruangan || (props.ruangList[0] || ''))
+const selectedFocusKelas = ref(props.filters?.kelas_id || '')
+const selectedFocusGuru = ref(props.filters?.guru_id || '')
+const selectedFocusRuang = ref(props.filters?.ruangan || '')
 
 // Filter States
 const currentTenantId = ref(props.selectedTenantId || '')
-const currentTahunAjaran = ref(props.activeTahunAjaran)
-const currentSemester = ref(props.activeSemester)
-const currentKelasId = ref(props.filters.kelas_id || '')
-const currentGuruId = ref(props.filters.guru_id || '')
-const currentHari = ref(props.filters.hari || '')
-const currentRuangan = ref(props.filters.ruangan || '')
-const searchQuery = ref(props.filters.search || '')
+const currentTahunAjaran = ref(props.activeTahunAjaran || '2026/2027')
+const currentSemester = ref(props.activeSemester || 'Ganjil')
+const currentKelasId = ref(props.filters?.kelas_id || '')
+const currentGuruId = ref(props.filters?.guru_id || '')
+const currentHari = ref(props.filters?.hari || '')
+const currentRuangan = ref(props.filters?.ruangan || '')
+const searchQuery = ref(props.filters?.search || '')
 
 // Modals State
 const isModalFormOpen = ref(false)
@@ -60,8 +94,8 @@ const liveConflictWarnings = ref([])
 // Form Input / Edit
 const form = useForm({
     tenant_id: props.selectedTenantId || '',
-    tahun_ajaran: props.activeTahunAjaran,
-    semester: props.activeSemester,
+    tahun_ajaran: props.activeTahunAjaran || '2026/2027',
+    semester: props.activeSemester || 'Ganjil',
     kelas_id: '',
     mapel_id: '',
     guru_id: '',
@@ -80,9 +114,9 @@ const form = useForm({
 // Form Copy
 const formCopy = useForm({
     tenant_id: props.selectedTenantId || '',
-    from_tahun_ajaran: props.activeTahunAjaran,
-    from_semester: props.activeSemester,
-    to_tahun_ajaran: props.activeTahunAjaran,
+    from_tahun_ajaran: props.activeTahunAjaran || '2026/2027',
+    from_semester: props.activeSemester || 'Ganjil',
+    to_tahun_ajaran: props.activeTahunAjaran || '2026/2027',
     to_semester: props.activeSemester === 'Ganjil' ? 'Genap' : 'Ganjil',
 })
 
@@ -115,107 +149,158 @@ const colorPalette = [
 
 // Preset Time Slots Shortcut
 const presetSlots = [
-    { label: 'Jam 1-2 (07:00 - 08:30)', jam_ke: '1-2', mulai: '07:00', selesai: '08:30', jp: 2 },
-    { label: 'Jam 3-4 (08:30 - 10:00)', jam_ke: '3-4', mulai: '08:30', selesai: '10:00', jp: 2 },
-    { label: 'Jam 5-6 (10:15 - 11:45)', jam_ke: '5-6', mulai: '10:15', selesai: '11:45', jp: 2 },
-    { label: 'Jam 7-8 (12:30 - 14:00)', jam_ke: '7-8', mulai: '12:30', selesai: '14:00', jp: 2 },
-    { label: 'Jam 9-10 (14:00 - 15:30)', jam_ke: '9-10', mulai: '14:00', selesai: '15:30', jp: 2 },
+    { label: 'Jam 1-2 (2 JP)', jam_ke: '1-2', mulai: '07:00', selesai: '08:30', jp: 2 },
+    { label: 'Jam 3-4 (2 JP)', jam_ke: '3-4', mulai: '08:30', selesai: '10:00', jp: 2 },
+    { label: 'Jam 5-6 (2 JP)', jam_ke: '5-6', mulai: '10:15', selesai: '11:45', jp: 2 },
+    { label: 'Jam 7-8 (2 JP)', jam_ke: '7-8', mulai: '12:30', selesai: '14:00', jp: 2 },
+    { label: 'Jam 9-10 (2 JP)', jam_ke: '9-10', mulai: '14:00', selesai: '15:30', jp: 2 },
 ]
 
 // Dropdown Options Helpers
 const tenantOptions = computed(() => {
-    const list = [{ value: '', label: 'Semua Sekolah / Tenant Default' }]
-    props.tenantsList.forEach(t => {
-        list.push({ value: t.id, label: t.nama + (t.npsn ? ` (NPSN: ${t.npsn})` : '') })
+    const list = [{ id: '', nama: 'Semua Sekolah / Tenant Default' }]
+    localTenantsList.value.forEach(t => {
+        list.push({ id: t.id, nama: t.nama_sekolah || t.nama || 'Sekolah', subLabel: t.npsn ? `NPSN: ${t.npsn}` : '' })
     })
     return list
 })
 
 const tahunAjaranOptions = computed(() => {
-    return props.tahunAjaranList.map(ta => ({ value: ta, label: `Tahun Ajaran ${ta}` }))
+    return localTahunAjaranList.value.map(ta => ({ id: ta, nama: `Tahun Ajaran ${ta}` }))
 })
 
 const semesterOptions = [
-    { value: 'Ganjil', label: 'Semester Ganjil' },
-    { value: 'Genap', label: 'Semester Genap' },
+    { id: 'Ganjil', nama: 'Semester Ganjil' },
+    { id: 'Genap', nama: 'Semester Genap' },
 ]
 
 const kelasOptions = computed(() => {
-    const list = [{ value: '', label: 'Semua Kelas (Rombel)' }]
-    props.kelasList.forEach(k => {
-        list.push({ value: k.id, label: k.nama_kelas + (k.tingkat ? ` (Tingkat ${k.tingkat})` : '') })
+    const list = [{ id: '', nama: 'Semua Kelas (Rombel)' }]
+    localKelasList.value.forEach(k => {
+        list.push({ id: k.id, nama: k.nama_kelas, subLabel: k.tingkat ? `Tingkat ${k.tingkat}` : '' })
     })
     return list
 })
 
 const kelasFormOptions = computed(() => {
-    return props.kelasList.map(k => ({ value: k.id, label: k.nama_kelas + (k.tingkat ? ` (Tingkat ${k.tingkat})` : '') }))
+    return localKelasList.value.map(k => ({ id: k.id, nama: k.nama_kelas, subLabel: k.tingkat ? `Tingkat ${k.tingkat}` : '' }))
 })
 
 const mapelOptions = computed(() => {
-    return props.mapelList.map(m => ({ value: m.id, label: m.nama_mata_pelajaran + (m.kategori ? ` [${m.kategori}]` : '') }))
+    return localMapelList.value.map(m => ({ id: m.id, nama: m.nama_mata_pelajaran, subLabel: m.kategori ? `Kategori: ${m.kategori}` : '' }))
 })
 
 const guruOptions = computed(() => {
-    const list = [{ value: '', label: 'Semua Guru Pengampu' }]
-    props.guruList.forEach(g => {
-        list.push({ value: g.id, label: g.nama_lengkap + (g.nip ? ` - NIP. ${g.nip}` : '') })
+    const list = [{ id: '', nama: 'Semua Guru Pengampu' }]
+    localGuruList.value.forEach(g => {
+        list.push({ id: g.id, nama: g.nama_lengkap, subLabel: g.nip ? `NIP: ${g.nip}` : '' })
     })
     return list
 })
 
 const guruFormOptions = computed(() => {
-    const list = [{ value: '', label: '-- Belum Ditentukan / Guru Pengganti --' }]
-    props.guruList.forEach(g => {
-        list.push({ value: g.id, label: g.nama_lengkap + (g.nip ? ` - NIP. ${g.nip}` : '') })
+    const list = [{ id: '', nama: '-- Belum Ditentukan / Guru Pengganti --' }]
+    localGuruList.value.forEach(g => {
+        list.push({ id: g.id, nama: g.nama_lengkap, subLabel: g.nip ? `NIP: ${g.nip}` : '' })
     })
     return list
 })
 
 const hariOptions = [
-    { value: '', label: 'Semua Hari' },
-    { value: 'Senin', label: 'Senin' },
-    { value: 'Selasa', label: 'Selasa' },
-    { value: 'Rabu', label: 'Rabu' },
-    { value: 'Kamis', label: 'Kamis' },
-    { value: 'Jumat', label: 'Jumat' },
-    { value: 'Sabtu', label: 'Sabtu' },
+    { id: '', nama: 'Semua Hari' },
+    { id: 'Senin', nama: 'Senin' },
+    { id: 'Selasa', nama: 'Selasa' },
+    { id: 'Rabu', nama: 'Rabu' },
+    { id: 'Kamis', nama: 'Kamis' },
+    { id: 'Jumat', nama: 'Jumat' },
+    { id: 'Sabtu', nama: 'Sabtu' },
 ]
 
 const hariFormOptions = [
-    { value: 'Senin', label: 'Senin' },
-    { value: 'Selasa', label: 'Selasa' },
-    { value: 'Rabu', label: 'Rabu' },
-    { value: 'Kamis', label: 'Kamis' },
-    { value: 'Jumat', label: 'Jumat' },
-    { value: 'Sabtu', label: 'Sabtu' },
+    { id: 'Senin', nama: 'Senin' },
+    { id: 'Selasa', nama: 'Selasa' },
+    { id: 'Rabu', nama: 'Rabu' },
+    { id: 'Kamis', nama: 'Kamis' },
+    { id: 'Jumat', nama: 'Jumat' },
+    { id: 'Sabtu', nama: 'Sabtu' },
 ]
 
 const ruangOptions = computed(() => {
-    const list = [{ value: '', label: 'Semua Ruangan' }]
-    props.ruangList.forEach(r => {
-        list.push({ value: r, label: r })
+    const list = [{ id: '', nama: 'Semua Ruangan' }]
+    localRuangList.value.forEach(r => {
+        list.push({ id: r, nama: r })
     })
     return list
 })
 
 const ruangFormOptions = computed(() => {
-    return props.ruangList.map(r => ({ value: r, label: r }))
+    const list = [
+        { id: '', nama: '-- Tidak Memilih (Gunakan Ruang Kelas) --', subLabel: 'Otomatis default ke ruang kelas siswa' }
+    ]
+    localRuangList.value.forEach(r => {
+        list.push({ id: r, nama: r })
+    })
+    return list
 })
 
-// Filter Handler
+// Async In-Memory Data Fetching (Zero-SSR & Clean URL)
+async function fetchDataAsync(page = 1) {
+    isLoadingData.value = true
+    try {
+        const params = {
+            tenant_id: currentTenantId.value || undefined,
+            tahun_ajaran: currentTahunAjaran.value,
+            semester: currentSemester.value,
+            kelas_id: currentKelasId.value || undefined,
+            guru_id: currentGuruId.value || undefined,
+            hari: currentHari.value || undefined,
+            ruangan: currentRuangan.value || undefined,
+            search: searchQuery.value || undefined,
+            view_mode: activeTab.value,
+            page: page,
+        }
+
+        const res = await axios.get('/akademik/jadwal?async=1', { params })
+        if (res.data?.success && res.data.data) {
+            const d = res.data.data
+            localStats.value = d.stats || localStats.value
+            localTahunAjaranList.value = d.tahunAjaranList || localTahunAjaranList.value
+            localKelasList.value = d.kelasList || localKelasList.value
+            localMapelList.value = d.mapelList || localMapelList.value
+            localGuruList.value = d.guruList || localGuruList.value
+            localRuangList.value = d.ruangList || localRuangList.value
+            localDaysList.value = d.daysList || localDaysList.value
+            localStandardTimeSlots.value = d.standardTimeSlots || localStandardTimeSlots.value
+            localJadwalTable.value = d.jadwalTable || localJadwalTable.value
+            localMatrixItems.value = d.matrixItems || localMatrixItems.value
+            localAllPeriodJadwals.value = d.allPeriodJadwals || localAllPeriodJadwals.value
+            localBebanGuruList.value = d.bebanGuruList || localBebanGuruList.value
+            localRuangUtilList.value = d.ruangUtilList || localRuangUtilList.value
+            localConflictList.value = d.conflictList || localConflictList.value
+            if (d.tenantsList && d.tenantsList.length > 0) {
+                localTenantsList.value = d.tenantsList
+            }
+
+            if (!selectedFocusKelas.value && localKelasList.value.length > 0) {
+                selectedFocusKelas.value = localKelasList.value[0].id
+            }
+            if (!selectedFocusGuru.value && localGuruList.value.length > 0) {
+                selectedFocusGuru.value = localGuruList.value[0].id
+            }
+            if (!selectedFocusRuang.value && localRuangList.value.length > 0) {
+                selectedFocusRuang.value = localRuangList.value[0]
+            }
+        }
+    } catch (err) {
+        console.error('Failed to load jadwal data:', err)
+    } finally {
+        isLoadingData.value = false
+    }
+}
+
+// Filter Handlers
 function applyFilter() {
-    router.get('/akademik/jadwal', {
-        tenant_id: currentTenantId.value || undefined,
-        tahun_ajaran: currentTahunAjaran.value,
-        semester: currentSemester.value,
-        kelas_id: currentKelasId.value || undefined,
-        guru_id: currentGuruId.value || undefined,
-        hari: currentHari.value || undefined,
-        ruangan: currentRuangan.value || undefined,
-        search: searchQuery.value || undefined,
-        view_mode: activeTab.value,
-    }, { preserveState: true, preserveScroll: true })
+    fetchDataAsync(1)
 }
 
 function switchTenant(tId) {
@@ -225,12 +310,17 @@ function switchTenant(tId) {
 
 function switchTab(tab) {
     activeTab.value = tab
-    applyFilter()
+    fetchDataAsync(1)
 }
 
-// Matrix Cell Data Resolution
+onMounted(() => {
+    fetchDataAsync(1)
+})
+
+// Matrix Cell Data Resolution (Matched by jam_ke slot & day)
 function getCellSchedules(day, slot) {
-    return props.allPeriodJadwals.filter(item => {
+    if (!localAllPeriodJadwals.value) return []
+    return localAllPeriodJadwals.value.filter(item => {
         if (item.hari !== day) return false
 
         // Match focus view
@@ -242,19 +332,36 @@ function getCellSchedules(day, slot) {
             if (item.ruangan !== selectedFocusRuang.value) return false
         }
 
-        // Match time slot overlap
-        const itemStart = (item.jam_mulai || '').substring(0, 5)
-        const itemEnd = (item.jam_selesai || '').substring(0, 5)
-        const slotStart = (slot.jam_mulai || '').substring(0, 5)
-        const slotEnd = (slot.jam_selesai || '').substring(0, 5)
+        const slotKe = parseInt(slot.jam_ke, 10)
+        const itemKeStr = String(item.jam_ke || '').trim()
 
-        // Exact jam_ke match or time overlap
-        if (item.jam_ke && slot.jam_ke && item.jam_ke.includes(slot.jam_ke)) {
-            return true
+        // 1. Match by jam_ke (e.g. "1", "1-2", "3-4", "1-3")
+        if (itemKeStr && !isNaN(slotKe)) {
+            const rangeParts = itemKeStr.split('-').map(s => parseInt(s.trim(), 10))
+            if (rangeParts.length === 2 && !isNaN(rangeParts[0]) && !isNaN(rangeParts[1])) {
+                if (slotKe >= rangeParts[0] && slotKe <= rangeParts[1]) {
+                    return true
+                }
+            } else if (rangeParts.length === 1 && !isNaN(rangeParts[0])) {
+                if (slotKe === rangeParts[0]) {
+                    return true
+                }
+            }
+            if (itemKeStr === String(slot.jam_ke)) {
+                return true
+            }
         }
 
-        if (itemStart && itemEnd && slotStart && slotEnd) {
-            return (itemStart < slotEnd) && (itemEnd > slotStart)
+        // 2. Fallback matching by time slot if jam_ke is not filled
+        if (!itemKeStr && slot.jam_mulai && slot.jam_selesai) {
+            const itemStart = (item.jam_mulai || '').substring(0, 5)
+            const itemEnd = (item.jam_selesai || '').substring(0, 5)
+            const slotStart = (slot.jam_mulai || '').substring(0, 5)
+            const slotEnd = (slot.jam_selesai || '').substring(0, 5)
+
+            if (itemStart && itemEnd && slotStart && slotEnd) {
+                return (itemStart < slotEnd) && (itemEnd > slotStart)
+            }
         }
 
         return false
@@ -270,17 +377,17 @@ function openCreateFromSlot(day, slot) {
     form.tahun_ajaran = currentTahunAjaran.value
     form.semester = currentSemester.value
     form.hari = day
-    form.jam_ke = slot.jam_ke || '1-2'
-    form.jam_mulai = slot.jam_mulai || '07:00'
-    form.jam_selesai = slot.jam_selesai || '08:30'
+    form.jam_ke = slot.jam_ke || '1'
+    form.jam_mulai = '07:00'
+    form.jam_selesai = '08:30'
     form.jam_pelajaran = 2
     form.kkm = 75
     form.warna_label = '#3b82f6'
 
     if (gridFocus.value === 'kelas' && selectedFocusKelas.value) {
         form.kelas_id = selectedFocusKelas.value
-    } else if (props.kelasList.length > 0) {
-        form.kelas_id = props.kelasList[0].id
+    } else if (localKelasList.value.length > 0) {
+        form.kelas_id = localKelasList.value[0].id
     }
 
     if (gridFocus.value === 'guru' && selectedFocusGuru.value) {
@@ -289,12 +396,12 @@ function openCreateFromSlot(day, slot) {
 
     if (gridFocus.value === 'ruangan' && selectedFocusRuang.value) {
         form.ruangan = selectedFocusRuang.value
-    } else if (props.ruangList.length > 0) {
-        form.ruangan = props.ruangList[0]
+    } else {
+        form.ruangan = ''
     }
 
-    if (props.mapelList.length > 0) {
-        form.mapel_id = props.mapelList[0].id
+    if (localMapelList.value.length > 0) {
+        form.mapel_id = localMapelList.value[0].id
     }
 
     liveConflictWarnings.value = []
@@ -316,7 +423,7 @@ function openEditModal(item) {
     form.jam_ke = item.jam_ke || '1-2'
     form.jam_mulai = item.jam_mulai || '07:00'
     form.jam_selesai = item.jam_selesai || '08:30'
-    form.ruangan = item.ruangan || 'R. 101'
+    form.ruangan = item.ruangan || ''
     form.jam_pelajaran = item.jam_pelajaran || 2
     form.kkm = item.kkm || 75
     form.warna_label = item.warna_label || '#3b82f6'
@@ -336,10 +443,10 @@ function openCreateModal() {
     form.tenant_id = currentTenantId.value || props.selectedTenantId || ''
     form.tahun_ajaran = currentTahunAjaran.value
     form.semester = currentSemester.value
-    form.kelas_id = props.kelasList[0]?.id || ''
-    form.mapel_id = props.mapelList[0]?.id || ''
-    form.guru_id = props.guruList[0]?.id || ''
-    form.ruangan = props.ruangList[0] || 'R. 101'
+    form.kelas_id = localKelasList.value[0]?.id || ''
+    form.mapel_id = localMapelList.value[0]?.id || ''
+    form.guru_id = localGuruList.value[0]?.id || ''
+    form.ruangan = ''
     form.hari = 'Senin'
     form.jam_ke = '1-2'
     form.jam_mulai = '07:00'
@@ -372,7 +479,7 @@ async function checkConflictLive() {
 
     isCheckingConflict.value = true
     try {
-        const res = await window.axios.post('/akademik/jadwal/check-conflict', {
+        const res = await axios.post('/akademik/jadwal/check-conflict', {
             id: isEditing.value ? editId.value : null,
             tenant_id: form.tenant_id || currentTenantId.value,
             tahun_ajaran: form.tahun_ajaran,
@@ -402,6 +509,7 @@ function submitScheduleForm() {
             preserveScroll: true,
             onSuccess: () => {
                 isModalFormOpen.value = false
+                fetchDataAsync(1)
             },
         })
     } else {
@@ -409,6 +517,7 @@ function submitScheduleForm() {
             preserveScroll: true,
             onSuccess: () => {
                 isModalFormOpen.value = false
+                fetchDataAsync(1)
             },
         })
     }
@@ -416,8 +525,13 @@ function submitScheduleForm() {
 
 // Delete Schedule
 function deleteSchedule(item) {
-    if (confirm(`Apakah Anda yakin ingin menghapus jadwal "${item.nama_pemetaan_mapel}" pada hari ${item.hari}?`)) {
-        router.delete(`/akademik/jadwal/${item.id}`, { preserveScroll: true })
+    if (confirm(`Apakah Anda yakin ingin menghapus jadwal "${item.nama_pemetaan_mapel || item.mapel?.nama_mata_pelajaran}" pada hari ${item.hari}?`)) {
+        router.delete(`/akademik/jadwal/${item.id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                fetchDataAsync(1)
+            },
+        })
     }
 }
 
@@ -427,8 +541,21 @@ function submitCopySchedule() {
         preserveScroll: true,
         onSuccess: () => {
             isModalCopyOpen.value = false
+            fetchDataAsync(1)
         },
     })
+}
+
+// Handle Pagination Click
+function handlePageChange(linkUrl) {
+    if (!linkUrl) return
+    try {
+        const urlObj = new URL(linkUrl, window.location.origin)
+        const page = urlObj.searchParams.get('page') || 1
+        fetchDataAsync(page)
+    } catch (e) {
+        fetchDataAsync(1)
+    }
 }
 
 // Handle Import File Change
@@ -637,7 +764,7 @@ function triggerDownloadTemplate() {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Jadwal</p>
-                            <h3 class="text-2xl font-black text-slate-900 mt-1">{{ stats.total_jadwal || 0 }}</h3>
+                            <h3 class="text-2xl font-black text-slate-900 mt-1">{{ localStats.total_jadwal || 0 }}</h3>
                             <span class="text-2xs text-slate-400 font-medium">Sesi aktif per minggu</span>
                         </div>
                         <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
@@ -651,7 +778,7 @@ function triggerDownloadTemplate() {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Guru Terjadwal</p>
-                            <h3 class="text-2xl font-black text-slate-900 mt-1">{{ stats.total_guru || 0 }}</h3>
+                            <h3 class="text-2xl font-black text-slate-900 mt-1">{{ localStats.total_guru || 0 }}</h3>
                             <span class="text-2xs text-slate-400 font-medium">Pengampu aktif</span>
                         </div>
                         <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
@@ -665,7 +792,7 @@ function triggerDownloadTemplate() {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Beban JP</p>
-                            <h3 class="text-2xl font-black text-slate-900 mt-1">{{ stats.total_jp || 0 }}</h3>
+                            <h3 class="text-2xl font-black text-slate-900 mt-1">{{ localStats.total_jp || 0 }}</h3>
                             <span class="text-2xs text-slate-400 font-medium">Jam Pelajaran / Pekan</span>
                         </div>
                         <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
@@ -679,7 +806,7 @@ function triggerDownloadTemplate() {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Ruang & Lab</p>
-                            <h3 class="text-2xl font-black text-slate-900 mt-1">{{ stats.total_ruang || 0 }}</h3>
+                            <h3 class="text-2xl font-black text-slate-900 mt-1">{{ localStats.total_ruang || 0 }}</h3>
                             <span class="text-2xs text-slate-400 font-medium">Ruang kelas aktif</span>
                         </div>
                         <div class="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center shrink-0">
@@ -690,22 +817,22 @@ function triggerDownloadTemplate() {
 
                 <!-- Card 5: Potensi Bentrok (Collision Warning) -->
                 <div class="col-span-2 lg:col-span-1 rounded-2xl p-4 border shadow-2xs relative overflow-hidden transition"
-                     :class="(stats.total_bentrok || 0) > 0 ? 'bg-rose-50 border-rose-200 text-rose-900' : 'bg-white border-slate-200/80 text-slate-900'">
+                     :class="(localStats.total_bentrok || 0) > 0 ? 'bg-rose-50 border-rose-200 text-rose-900' : 'bg-white border-slate-200/80 text-slate-900'">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-wider" :class="(stats.total_bentrok || 0) > 0 ? 'text-rose-600 font-bold' : 'text-slate-500'">
+                            <p class="text-xs font-semibold uppercase tracking-wider" :class="(localStats.total_bentrok || 0) > 0 ? 'text-rose-600 font-bold' : 'text-slate-500'">
                                 Audit Bentrok
                             </p>
-                            <h3 class="text-2xl font-black mt-1" :class="(stats.total_bentrok || 0) > 0 ? 'text-rose-700' : 'text-slate-900'">
-                                {{ stats.total_bentrok || 0 }}
+                            <h3 class="text-2xl font-black mt-1" :class="(localStats.total_bentrok || 0) > 0 ? 'text-rose-700' : 'text-slate-900'">
+                                {{ localStats.total_bentrok || 0 }}
                             </h3>
-                            <span class="text-2xs font-medium" :class="(stats.total_bentrok || 0) > 0 ? 'text-rose-600 font-bold' : 'text-slate-400'">
-                                {{ (stats.total_bentrok || 0) > 0 ? '⚠️ Butuh Perbaikan Segera' : '✅ 100% Jadwal Bersih' }}
+                            <span class="text-2xs font-medium" :class="(localStats.total_bentrok || 0) > 0 ? 'text-rose-600 font-bold' : 'text-slate-400'">
+                                {{ (localStats.total_bentrok || 0) > 0 ? '⚠️ Butuh Perbaikan Segera' : '✅ 100% Jadwal Bersih' }}
                             </span>
                         </div>
                         <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                             :class="(stats.total_bentrok || 0) > 0 ? 'bg-rose-100 text-rose-700 animate-pulse' : 'bg-slate-100 text-slate-500'">
-                            <i class="bi" :class="(stats.total_bentrok || 0) > 0 ? 'bi-exclamation-triangle-fill text-xl' : 'bi-shield-check text-xl'"></i>
+                             :class="(localStats.total_bentrok || 0) > 0 ? 'bg-rose-100 text-rose-700 animate-pulse' : 'bg-slate-100 text-slate-500'">
+                            <i class="bi" :class="(localStats.total_bentrok || 0) > 0 ? 'bi-exclamation-triangle-fill text-xl' : 'bi-shield-check text-xl'"></i>
                         </div>
                     </div>
                 </div>
@@ -887,8 +1014,8 @@ function triggerDownloadTemplate() {
                                 >
                                     <i class="bi bi-exclamation-triangle me-2 text-sm"></i>
                                     Deteksi Bentrok Jadwal
-                                    <span v-if="(stats.total_bentrok || 0) > 0" class="ms-1.5 px-2 py-0.5 rounded-full text-2xs bg-white text-rose-700 font-black">
-                                        {{ stats.total_bentrok }}
+                                    <span v-if="(localStats.total_bentrok || 0) > 0" class="ms-1.5 px-2 py-0.5 rounded-full text-2xs bg-white text-rose-700 font-black">
+                                        {{ localStats.total_bentrok }}
                                     </span>
                                 </button>
                             </li>
@@ -974,11 +1101,11 @@ function triggerDownloadTemplate() {
                             <!-- Table Head (Days) -->
                             <thead>
                                 <tr class="bg-slate-50/90 border-b border-slate-200/80 text-slate-700">
-                                    <th class="py-3.5 px-4 font-bold uppercase tracking-wider text-center w-36 border-r border-slate-200/80">
-                                        Jam / Waktu
+                                    <th class="py-3.5 px-4 font-bold uppercase tracking-wider text-center w-28 border-r border-slate-200/80">
+                                        Jam Ke
                                     </th>
                                     <th
-                                        v-for="day in daysList"
+                                        v-for="day in localDaysList"
                                         :key="day"
                                         class="py-3.5 px-4 font-bold uppercase tracking-wider text-center border-r border-slate-200/80 last:border-r-0"
                                         :class="day === 'Jumat' ? 'bg-blue-50/30' : ''"
@@ -990,20 +1117,17 @@ function triggerDownloadTemplate() {
 
                             <!-- Table Body (Time Slots Rows) -->
                             <tbody class="divide-y divide-slate-100">
-                                <tr v-for="slot in standardTimeSlots" :key="slot.jam_ke" class="hover:bg-slate-50/50 transition">
-                                    <!-- Time Column -->
-                                    <td class="py-3 px-3 text-center bg-slate-50/70 border-r border-slate-200/80 align-top">
-                                        <div class="font-extrabold text-slate-800 text-xs">
+                                <tr v-for="slot in localStandardTimeSlots" :key="slot.jam_ke" class="hover:bg-slate-50/50 transition">
+                                    <!-- Time Slot Column -->
+                                    <td class="py-4 px-3 text-center bg-slate-50/70 border-r border-slate-200/80 align-top">
+                                        <div class="inline-flex items-center justify-center px-2.5 py-1 bg-white border border-slate-200/80 rounded-lg shadow-xs font-extrabold text-slate-800 text-xs">
                                             Jam Ke-{{ slot.jam_ke }}
-                                        </div>
-                                        <div class="text-2xs font-semibold text-slate-500 mt-0.5">
-                                            {{ slot.jam_mulai }} - {{ slot.jam_selesai }}
                                         </div>
                                     </td>
 
                                     <!-- Day Columns -->
                                     <td
-                                        v-for="day in daysList"
+                                        v-for="day in localDaysList"
                                         :key="day"
                                         class="p-2 border-r border-slate-100 last:border-r-0 align-top h-24 min-w-[140px]"
                                         :class="day === 'Jumat' ? 'bg-blue-50/10' : ''"
@@ -1037,6 +1161,10 @@ function triggerDownloadTemplate() {
                                                     <div v-if="gridFocus !== 'guru'" class="flex items-center space-x-1">
                                                         <i class="bi bi-person"></i>
                                                         <span class="truncate">{{ jadwal.guru?.nama_lengkap || 'Guru Belum Ditentukan' }}</span>
+                                                    </div>
+                                                    <div v-if="jadwal.jam_mulai && jadwal.jam_selesai" class="flex items-center space-x-1 opacity-90">
+                                                        <i class="bi bi-clock"></i>
+                                                        <span>{{ jadwal.jam_mulai.substring(0, 5) }} - {{ jadwal.jam_selesai.substring(0, 5) }}</span>
                                                     </div>
                                                     <div class="flex items-center justify-between text-3xs pt-1 border-t border-white/20 mt-1">
                                                         <span class="bg-black/20 px-1.5 py-0.5 rounded-md font-semibold truncate max-w-[70px]">
@@ -1110,9 +1238,9 @@ function triggerDownloadTemplate() {
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 font-medium">
-                                <tr v-for="(item, idx) in jadwalTable.data" :key="item.id" class="hover:bg-slate-50/80 transition">
+                                <tr v-for="(item, idx) in localJadwalTable.data" :key="item.id" class="hover:bg-slate-50/80 transition">
                                     <td class="py-3 px-4 text-center text-slate-400 font-bold">
-                                        {{ (jadwalTable.current_page - 1) * jadwalTable.per_page + idx + 1 }}
+                                        {{ (localJadwalTable.current_page - 1) * localJadwalTable.per_page + idx + 1 }}
                                     </td>
                                     <td class="py-3 px-4">
                                         <div class="flex items-center space-x-2">
@@ -1182,7 +1310,7 @@ function triggerDownloadTemplate() {
                                     </td>
                                 </tr>
 
-                                <tr v-if="!jadwalTable.data || jadwalTable.data.length === 0">
+                                <tr v-if="!localJadwalTable.data || localJadwalTable.data.length === 0">
                                     <td colspan="10" class="py-12 text-center text-slate-400 font-medium">
                                         <i class="bi bi-calendar-x text-3xl block mb-2 text-slate-300"></i>
                                         Tidak ada data jadwal pelajaran yang sesuai dengan filter pencarian.
@@ -1193,19 +1321,19 @@ function triggerDownloadTemplate() {
                     </div>
 
                     <!-- Pagination Footer -->
-                    <div v-if="jadwalTable.links && jadwalTable.links.length > 3" class="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50">
+                    <div v-if="localJadwalTable.links && localJadwalTable.links.length > 3" class="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50">
                         <div class="text-xs text-slate-500 font-medium">
-                            Menampilkan <span class="font-bold text-slate-800">{{ jadwalTable.from || 0 }}</span> s.d. <span class="font-bold text-slate-800">{{ jadwalTable.to || 0 }}</span> dari <span class="font-bold text-slate-800">{{ jadwalTable.total || 0 }}</span> jadwal
+                            Menampilkan <span class="font-bold text-slate-800">{{ localJadwalTable.from || 0 }}</span> s.d. <span class="font-bold text-slate-800">{{ localJadwalTable.to || 0 }}</span> dari <span class="font-bold text-slate-800">{{ localJadwalTable.total || 0 }}</span> jadwal
                         </div>
 
                         <div class="flex items-center space-x-1">
-                            <template v-for="(link, lIdx) in jadwalTable.links" :key="lIdx">
+                            <template v-for="(link, lIdx) in localJadwalTable.links" :key="lIdx">
                                 <button
                                     v-if="link.url"
                                     type="button"
                                     class="px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer"
                                     :class="link.active ? 'bg-blue-600 text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'"
-                                    @click="router.visit(link.url, { preserveScroll: true, preserveState: true })"
+                                    @click="handlePageChange(link.url)"
                                     v-html="link.label"
                                 >
                                 </button>
@@ -1239,7 +1367,7 @@ function triggerDownloadTemplate() {
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 font-medium">
-                                <tr v-for="(b, idx) in bebanGuruList" :key="b.guru_id" class="hover:bg-slate-50/80 transition">
+                                <tr v-for="(b, idx) in localBebanGuruList" :key="b.guru_id" class="hover:bg-slate-50/80 transition">
                                     <td class="py-3 px-4 text-center text-slate-400 font-bold">{{ idx + 1 }}</td>
                                     <td class="py-3 px-4">
                                         <span class="font-bold text-slate-900 block text-xs">{{ b.nama_guru }}</span>
@@ -1306,7 +1434,7 @@ function triggerDownloadTemplate() {
 
                     <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
                         <div
-                            v-for="r in ruangUtilList"
+                            v-for="r in localRuangUtilList"
                             :key="r.nama_ruangan"
                             class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs hover:shadow-xs transition"
                         >
@@ -1352,15 +1480,15 @@ function triggerDownloadTemplate() {
                             </div>
                         </div>
                         <span class="px-3 py-1 rounded-full text-xs font-bold"
-                              :class="conflictList.length > 0 ? 'bg-rose-100 text-rose-700 border border-rose-200' : 'bg-emerald-100 text-emerald-700 border border-emerald-200'">
-                            {{ conflictList.length }} Potensi Bentrok Ditemukan
+                              :class="localConflictList.length > 0 ? 'bg-rose-100 text-rose-700 border border-rose-200' : 'bg-emerald-100 text-emerald-700 border border-emerald-200'">
+                            {{ localConflictList.length }} Potensi Bentrok Ditemukan
                         </span>
                     </div>
 
                     <!-- Collision Cards List -->
-                    <div v-if="conflictList.length > 0" class="space-y-3 mt-4">
+                    <div v-if="localConflictList.length > 0" class="space-y-3 mt-4">
                         <div
-                            v-for="(cf, cIdx) in conflictList"
+                            v-for="(cf, cIdx) in localConflictList"
                             :key="cIdx"
                             class="bg-rose-50/60 rounded-2xl p-4 border border-rose-200/80 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
                         >
@@ -1403,7 +1531,7 @@ function triggerDownloadTemplate() {
                         </div>
                         <h4 class="text-base font-extrabold text-slate-800">Tidak Ditemukan Bentrok Jadwal!</h4>
                         <p class="text-xs text-slate-500 max-w-md mx-auto mt-1">
-                            Seluruh jadwal guru, alokasi ruangan kelas, dan mata pelajaran pada semester {{ activeSemester }} TA {{ activeTahunAjaran }} telah 100% tervalidasi bebas bentrok.
+                            Seluruh jadwal guru, alokasi ruangan kelas, dan mata pelajaran pada semester {{ currentSemester }} TA {{ currentTahunAjaran }} telah 100% tervalidasi bebas bentrok.
                         </p>
                     </div>
                 </div>
@@ -1478,20 +1606,26 @@ function triggerDownloadTemplate() {
                         <!-- Grid Row 2: Guru Pengampu & Ruangan -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Guru Pengampu</label>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">
+                                    Guru Pengampu <span class="text-2xs font-normal text-slate-400">(Opsional)</span>
+                                </label>
                                 <SearchableSelect
                                     v-model="form.guru_id"
                                     :options="guruFormOptions"
                                     placeholder="Pilih Guru..."
+                                    :allow-clear="true"
                                     @change="checkConflictLive"
                                 />
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Ruangan / Lab</label>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">
+                                    Ruangan / Lab <span class="text-2xs font-normal text-slate-400">(Opsional)</span>
+                                </label>
                                 <SearchableSelect
                                     v-model="form.ruangan"
                                     :options="ruangFormOptions"
-                                    placeholder="Pilih Ruang..."
+                                    placeholder="Default Ruang Kelas (Otomatis)..."
+                                    :allow-clear="true"
                                     @change="checkConflictLive"
                                 />
                             </div>
@@ -1661,8 +1795,10 @@ function triggerDownloadTemplate() {
                         <div class="bg-emerald-50 rounded-2xl p-4 border border-emerald-200 flex items-start space-x-3">
                             <i class="bi bi-info-circle-fill text-emerald-600 text-lg shrink-0 mt-0.5"></i>
                             <div class="text-xs text-emerald-800 space-y-1">
-                                <p class="font-bold">Panduan Penggunaan Fitur Import Excel:</p>
-                                <p>Pastikan nama kelas, nama mata pelajaran, dan nama guru pada file Excel sesuai dengan master data sekolah di SINTA. Gunakan template resmi di bawah ini agar format kolom valid.</p>
+                                <p class="font-bold">Panduan Penggunaan Fitur Import Excel Multi-Sheet:</p>
+                                <p>1. Template Excel resmi SINTA dilengkapi 2 Sheet: <b>Sheet 1 (Template Jadwal)</b> untuk pengisian jadwal dan <b>Sheet 2 (Referensi Master Data)</b> sebagai daftar rujukan ID dan Nama resmi.</p>
+                                <p>2. Anda bebas menginputkan data Kelas, Mata Pelajaran, dan Guru menggunakan <b>NAMA LENGKAP</b> maupun <b>ID (UUID / Kode)</b>.</p>
+                                <p>3. Kolom KKM dan Kelompok Mapel tidak perlu diisi manual karena otomatis terhubung dengan master kurikulum.</p>
                             </div>
                         </div>
 

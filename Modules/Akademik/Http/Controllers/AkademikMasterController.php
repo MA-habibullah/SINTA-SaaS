@@ -370,15 +370,15 @@ class AkademikMasterController extends Controller
             return Inertia::render('Akademik/Master/Index', [
                 'activeTab'       => $activeTab,
                 'items'           => null,
-                'tenants'         => $isSuperAdmin ? $tenants : [],
-                'listJenjang'     => $listJenjang,
-                'listJurusan'     => $listJurusan,
-                'listKelas'       => $listKelas,
-                'listMapel'       => $listMapel,
-                'listGuru'        => $listGuru,
-                'listTahunAjaran' => $listTahunAjaran,
-                'listRuangan'     => $listRuangan,
-                'jadwalStats'     => $jadwalStats,
+                'tenants'         => null,
+                'listJenjang'     => null,
+                'listJurusan'     => null,
+                'listKelas'       => null,
+                'listMapel'       => null,
+                'listGuru'        => null,
+                'listTahunAjaran' => null,
+                'listRuangan'     => null,
+                'jadwalStats'     => null,
                 'isSuperAdmin'    => $isSuperAdmin,
                 'userRole'        => $user?->role?->nama_role ?? ($user?->isSuperAdmin() ? 'super_admin' : 'admin_sekolah'),
                 'filters'         => [
@@ -401,10 +401,18 @@ class AkademikMasterController extends Controller
         // 1. Explicit Async API Request (On-Demand Client Fetch via Axios)
         if ($request->has('async') && !$request->header('X-Inertia')) {
             return response()->json([
-                'success'   => true,
-                'activeTab' => $activeTab,
-                'data'      => SecurityPayloadService::sanitize($items, $isSuperAdmin ? [] : ['tenant_id']),
-                'tenants'   => $isSuperAdmin ? $tenants : [],
+                'success'         => true,
+                'activeTab'       => $activeTab,
+                'data'            => SecurityPayloadService::sanitize($items, $isSuperAdmin ? [] : ['tenant_id']),
+                'tenants'         => $isSuperAdmin ? $tenants : [],
+                'listJenjang'     => $listJenjang,
+                'listJurusan'     => $listJurusan,
+                'listKelas'       => $listKelas,
+                'listMapel'       => $listMapel,
+                'listGuru'        => $listGuru,
+                'listTahunAjaran' => $listTahunAjaran,
+                'listRuangan'     => $listRuangan,
+                'jadwalStats'     => $jadwalStats,
             ]);
         }
 

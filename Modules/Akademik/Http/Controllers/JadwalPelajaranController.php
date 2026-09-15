@@ -16,6 +16,7 @@ use Modules\Akademik\Entities\PemetaanMapel;
 use Modules\Akademik\Entities\TahunAjaran;
 use Modules\Core\Entities\Tenant;
 use Modules\Core\Entities\User;
+use Modules\Core\Services\SecurityPayloadService;
 use Shuchkin\SimpleXLSX;
 use Shuchkin\SimpleXLSXGen;
 
@@ -45,8 +46,35 @@ class JadwalPelajaranController extends Controller
         $isSuperAdmin = $user && ($user->isSuperAdmin() || in_array($user->role?->nama_role ?? '', ['super_admin', 'superadmin', 'admin']));
         $tenantId = $this->resolveTenantId($request);
 
+        $isInitialSsr = !$request->header('X-Inertia') && !$request->has('async');
+
+        if ($isInitialSsr) {
+            return Inertia::render('Akademik/Jadwal/Index', [
+                'isSuperAdmin'      => $isSuperAdmin,
+                'selectedTenantId'  => $tenantId,
+                'tenantsList'       => null,
+                'stats'             => null,
+                'activeTahunAjaran' => '2026/2027',
+                'activeSemester'    => 'Ganjil',
+                'tahunAjaranList'   => null,
+                'kelasList'         => null,
+                'mapelList'         => null,
+                'guruList'          => null,
+                'ruangList'         => null,
+                'daysList'          => null,
+                'standardTimeSlots' => null,
+                'jadwalTable'       => null,
+                'matrixItems'       => null,
+                'allPeriodJadwals'  => null,
+                'bebanGuruList'     => null,
+                'ruangUtilList'     => null,
+                'conflictList'      => null,
+                'filters'           => null,
+            ]);
+        }
+
         // List Tenancy for Superadmin Switcher
-        $tenantsList = $isSuperAdmin ? Tenant::orderBy('nama')->get(['id', 'nama', 'npsn']) : [];
+        $tenantsList = $isSuperAdmin ? Tenant::orderBy('nama_sekolah')->get(['id', 'nama_sekolah', 'npsn']) : [];
 
         // Reference Data Filter
         $tahunAjaranList = TahunAjaran::withoutTenant()
@@ -248,19 +276,14 @@ class JadwalPelajaranController extends Controller
             $matrixItems = $matrixItems->where('ruangan', $filterRuangan)->values();
         }
 
-        // Standard Schedule Time Slots for Timetable Matrix (e.g. 10 Standard School Slots)
-        $standardTimeSlots = [
-            ['jam_ke' => '1', 'jam_mulai' => '07:00', 'jam_selesai' => '07:45', 'label' => 'Jam 1 (07:00 - 07:45)'],
-            ['jam_ke' => '2', 'jam_mulai' => '07:45', 'jam_selesai' => '08:30', 'label' => 'Jam 2 (07:45 - 08:30)'],
-            ['jam_ke' => '3', 'jam_mulai' => '08:30', 'jam_selesai' => '09:15', 'label' => 'Jam 3 (08:30 - 09:15)'],
-            ['jam_ke' => '4', 'jam_mulai' => '09:30', 'jam_selesai' => '10:15', 'label' => 'Jam 4 (09:30 - 10:15)'],
-            ['jam_ke' => '5', 'jam_mulai' => '10:15', 'jam_selesai' => '11:00', 'label' => 'Jam 5 (10:15 - 11:00)'],
-            ['jam_ke' => '6', 'jam_mulai' => '11:00', 'jam_selesai' => '11:45', 'label' => 'Jam 6 (11:00 - 11:45)'],
-            ['jam_ke' => '7', 'jam_mulai' => '12:30', 'jam_selesai' => '13:15', 'label' => 'Jam 7 (12:30 - 13:15)'],
-            ['jam_ke' => '8', 'jam_mulai' => '13:15', 'jam_selesai' => '14:00', 'label' => 'Jam 8 (13:15 - 14:00)'],
-            ['jam_ke' => '9', 'jam_mulai' => '14:00', 'jam_selesai' => '14:45', 'label' => 'Jam 9 (14:00 - 14:45)'],
-            ['jam_ke' => '10', 'jam_mulai' => '14:45', 'jam_selesai' => '15:30', 'label' => 'Jam 10 (14:45 - 15:30)'],
-        ];
+        // Standard Schedule Slots for Timetable Matrix (Jam Ke-1 s/d Jam Ke-10)
+        $standardTimeSlots = [];
+        for ($i = 1; $i <= 10; $i++) {
+            $standardTimeSlots[] = [
+                'jam_ke' => (string)$i,
+                'label'  => 'Jam Ke-' . $i,
+            ];
+        }
 
         // Standard Days
         $daysList = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
@@ -299,8 +322,8 @@ class JadwalPelajaranController extends Controller
             ],
         ];
 
-        if ($request->wantsJson()) {
-            return response()->json(['success' => true, 'data' => $props]);
+        if (($request->has('async') || $request->wantsJson()) && !$request->header('X-Inertia')) {
+            return response()->json(SecurityPayloadService::sanitize(['success' => true, 'data' => $props]));
         }
 
         return Inertia::render('Akademik/Jadwal/Index', $props);
@@ -350,7 +373,7 @@ class JadwalPelajaranController extends Controller
 
         if (!empty($conflicts) && !$forceOverride) {
             $msg = 'Terdeteksi bentrok jadwal: ' . implode(' | ', $conflicts);
-            if ($request->wantsJson()) {
+            if ($request->wantsJson() && !$request->header('X-Inertia')) {
                 return response()->json([
                     'success'   => false,
                     'is_conflict' => true,
@@ -366,6 +389,7 @@ class JadwalPelajaranController extends Controller
         $kelas = Kelas::withoutTenant()->find($validated['kelas_id']);
         $namaMapel = $mapel?->nama_mata_pelajaran ?? 'Mata Pelajaran';
         $namaKelas = $kelas?->nama_kelas ?? 'Kelas';
+        $ruangan = !empty($validated['ruangan']) ? $validated['ruangan'] : $namaKelas;
 
         $jadwal = PemetaanMapel::create([
             'id'                  => (string)Str::uuid(),
@@ -381,7 +405,7 @@ class JadwalPelajaranController extends Controller
             'jam_ke'              => $validated['jam_ke'] ?? null,
             'jam_mulai'           => $validated['jam_mulai'],
             'jam_selesai'         => $validated['jam_selesai'],
-            'ruangan'             => $validated['ruangan'] ?? null,
+            'ruangan'             => $ruangan,
             'kkm'                 => $validated['kkm'] ?? 75,
             'jam_pelajaran'       => $validated['jam_pelajaran'] ?? 2,
             'warna_label'         => $validated['warna_label'] ?? '#3b82f6',
@@ -389,7 +413,7 @@ class JadwalPelajaranController extends Controller
             'is_active'           => true,
         ]);
 
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() && !$request->header('X-Inertia')) {
             return response()->json([
                 'success' => true,
                 'message' => "Jadwal pelajaran {$namaMapel} ({$namaKelas}) hari {$validated['hari']} berhasil disimpan.",
@@ -430,10 +454,10 @@ class JadwalPelajaranController extends Controller
 
         $forceOverride = $request->boolean('force_override', false);
 
-        // Run Conflict Check (exclude current schedule ID)
+        // Run Conflict Check
         $conflicts = $this->checkScheduleConflict(
             $tenantId,
-            $jadwal->id,
+            $id,
             $validated['tahun_ajaran'],
             $validated['semester'],
             $validated['hari'],
@@ -446,7 +470,7 @@ class JadwalPelajaranController extends Controller
 
         if (!empty($conflicts) && !$forceOverride) {
             $msg = 'Terdeteksi bentrok jadwal: ' . implode(' | ', $conflicts);
-            if ($request->wantsJson()) {
+            if ($request->wantsJson() && !$request->header('X-Inertia')) {
                 return response()->json([
                     'success'     => false,
                     'is_conflict' => true,
@@ -461,6 +485,7 @@ class JadwalPelajaranController extends Controller
         $kelas = Kelas::withoutTenant()->find($validated['kelas_id']);
         $namaMapel = $mapel?->nama_mata_pelajaran ?? 'Mata Pelajaran';
         $namaKelas = $kelas?->nama_kelas ?? 'Kelas';
+        $ruangan = !empty($validated['ruangan']) ? $validated['ruangan'] : $namaKelas;
 
         $jadwal->update([
             'nama_pemetaan_mapel' => "{$namaMapel} - {$namaKelas} ({$validated['hari']})",
@@ -474,14 +499,14 @@ class JadwalPelajaranController extends Controller
             'jam_ke'              => $validated['jam_ke'] ?? null,
             'jam_mulai'           => $validated['jam_mulai'],
             'jam_selesai'         => $validated['jam_selesai'],
-            'ruangan'             => $validated['ruangan'] ?? null,
+            'ruangan'             => $ruangan,
             'kkm'                 => $validated['kkm'] ?? $jadwal->kkm,
             'jam_pelajaran'       => $validated['jam_pelajaran'] ?? $jadwal->jam_pelajaran,
             'warna_label'         => $validated['warna_label'] ?? $jadwal->warna_label,
             'catatan'             => $validated['catatan'] ?? null,
         ]);
 
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() && !$request->header('X-Inertia')) {
             return response()->json([
                 'success' => true,
                 'message' => "Jadwal pelajaran {$namaMapel} ({$namaKelas}) berhasil diperbarui.",
@@ -505,7 +530,7 @@ class JadwalPelajaranController extends Controller
         $jadwalName = $jadwal->nama_pemetaan_mapel;
         $jadwal->delete();
 
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() && !$request->header('X-Inertia')) {
             return response()->json([
                 'success' => true,
                 'message' => "Jadwal pelajaran {$jadwalName} berhasil dihapus.",
@@ -560,48 +585,72 @@ class JadwalPelajaranController extends Controller
     }
 
     /**
-     * Download Excel (.xlsx) Template for Batch Schedule Import
+     * Download Excel (.xlsx) Template for Batch Schedule Import (Multi-Sheet with Master References)
      */
     public function downloadTemplateJadwal(Request $request)
     {
         $tenantId = $this->resolveTenantId($request);
 
-        // Fetch valid Kelas, Mapel, Guru, Ruangan references to include as guidance
+        // 1. Fetch Master Data for Reference Sheet
+        $tahunAjaranList = TahunAjaran::withoutTenant()
+            ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+            ->orderBy('nama_tahun_ajaran', 'desc')
+            ->get(['id', 'nama_tahun_ajaran']);
+
         $kelasList = Kelas::withoutTenant()
             ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
-            ->pluck('nama_kelas')->toArray();
+            ->orderBy('nama_kelas', 'asc')
+            ->get(['id', 'kode_kelas', 'nama_kelas', 'kategori']);
+
         $mapelList = MataPelajaran::withoutTenant()
             ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
-            ->pluck('nama_mata_pelajaran')->toArray();
+            ->orderBy('nama_mata_pelajaran', 'asc')
+            ->get(['id', 'nama_mata_pelajaran', 'kategori']);
+
         $guruList = User::query()
             ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
-            ->pluck('nama_lengkap')->toArray();
+            ->where('is_active', true)
+            ->whereHas('role', function($q) {
+                $q->whereIn('nama_role', ['guru', 'wali_kelas', 'guru_bk', 'waka_kurikulum', 'admin_sekolah', 'super_admin']);
+            })
+            ->orderBy('nama_lengkap', 'asc')
+            ->get(['id', 'nama_lengkap', 'nip', 'email']);
 
-        $sampleKelas = $kelasList[0] ?? 'X IPA 1';
-        $sampleMapel1 = $mapelList[0] ?? 'Matematika Wajib';
-        $sampleMapel2 = $mapelList[1] ?? 'Bahasa Indonesia';
-        $sampleGuru1 = $guruList[0] ?? 'Budi Santoso, M.Pd';
-        $sampleGuru2 = $guruList[1] ?? 'Siti Aminah, S.Pd';
+        $ruangList = PemetaanMapel::withoutTenant()
+            ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+            ->whereNotNull('ruangan')
+            ->where('ruangan', '!=', '')
+            ->distinct()
+            ->pluck('ruangan')
+            ->toArray();
+        if (empty($ruangList)) {
+            $ruangList = ['R. 101', 'R. 102', 'Lab Komputer 1', 'Lab Komputer 2', 'Lab IPA', 'Lab Bahasa', 'Aula Utama', 'Lapangan Olahraga'];
+        }
 
-        $data = [
+        $sampleKelas = $kelasList->first()?->nama_kelas ?? 'X IPA 1';
+        $sampleMapel1 = $mapelList[0]->nama_mata_pelajaran ?? 'Matematika Wajib';
+        $sampleMapel2 = $mapelList[1]->nama_mata_pelajaran ?? 'Bahasa Indonesia';
+        $sampleGuru1 = $guruList->first()?->nama_lengkap ?? 'Budi Santoso, M.Pd';
+        $sampleGuru2 = $guruList[1]->nama_lengkap ?? 'Siti Aminah, S.Pd';
+
+        // SHEET 1: Form Template Pengisian Jadwal (Tanpa KKM dan Tanpa Kelompok Mapel)
+        $sheet1Data = [
             // Row 1: Header Titles
             [
                 '<b>Tahun Ajaran</b>',
                 '<b>Semester</b>',
-                '<b>Nama Kelas</b>',
-                '<b>Nama Mata Pelajaran</b>',
-                '<b>Nama Guru Pengampu</b>',
+                '<b>Kelas (Nama / ID)</b>',
+                '<b>Mata Pelajaran (Nama / ID)</b>',
+                '<b>Guru Pengampu (Nama / NIP / ID)</b>',
                 '<b>Hari</b>',
                 '<b>Jam Ke</b>',
                 '<b>Jam Mulai</b>',
                 '<b>Jam Selesai</b>',
-                '<b>Ruangan</b>',
+                '<b>Ruangan / Lab</b>',
                 '<b>Jam Pelajaran (JP)</b>',
-                '<b>KKM</b>',
-                '<b>Kelompok Mapel</b>',
                 '<b>Catatan</b>',
             ],
-            // Row 2: Sample 1
+            // Row 2: Sample 1 (Pengisian via Nama)
             [
                 '2026/2027',
                 'Ganjil',
@@ -614,11 +663,9 @@ class JadwalPelajaranController extends Controller
                 '08:30',
                 'R. 101',
                 2,
-                75,
-                'Kelompok A (Umum)',
-                'Jadwal reguler',
+                'Jadwal reguler jam ke-1 dan 2',
             ],
-            // Row 3: Sample 2
+            // Row 3: Sample 2 (Pengisian via Nama)
             [
                 '2026/2027',
                 'Ganjil',
@@ -631,30 +678,76 @@ class JadwalPelajaranController extends Controller
                 '10:00',
                 'R. 101',
                 2,
-                75,
-                'Kelompok A (Umum)',
-                'Jadwal reguler',
+                'Jadwal reguler jam ke-3 dan 4',
             ],
-            // Row 4: Sample 3 (Selasa)
+            // Row 4: Sample 3 (Pengisian via ID UUID)
             [
                 '2026/2027',
                 'Ganjil',
-                $sampleKelas,
-                $sampleMapel1,
-                $sampleGuru1,
+                $kelasList->first()?->id ?? $sampleKelas,
+                $mapelList[0]->id ?? $sampleMapel1,
+                $guruList->first()?->id ?? $sampleGuru1,
                 'Selasa',
                 '1-2',
                 '07:00',
                 '08:30',
                 'Lab Komputer 1',
                 2,
-                75,
-                'Kelompok B (Kejuruan/Pilihan)',
-                'Praktikum Lab',
+                'Praktikum komputer (contoh input menggunakan ID UUID)',
             ],
         ];
 
-        $xlsx = SimpleXLSXGen::fromArray($data);
+        // SHEET 2: Referensi Master ID & Nama (Lengkap & Terstruktur)
+        $sheet2Data = [
+            ['<center><b>PANDUAN REFERENSI MASTER DATA UNTUK IMPORT JADWAL PELAJARAN</b></center>'],
+            ['<i>Catatan: Anda dapat mengisi kolom Kelas, Mata Pelajaran, dan Guru pada Template menggunakan NAMA LENGKAP maupun ID (UUID/Kode) yang tertera di bawah:</i>'],
+            [''],
+
+            // 1. Tahun Ajaran
+            ['<b>1. REFERENSI TAHUN AJARAN</b>'],
+            ['<b>ID / Nama Tahun Ajaran</b>', '<b>Keterangan</b>'],
+        ];
+
+        if ($tahunAjaranList->isNotEmpty()) {
+            foreach ($tahunAjaranList as $ta) {
+                $sheet2Data[] = [$ta->nama_tahun_ajaran, 'Tahun Ajaran Terdaftar'];
+            }
+        } else {
+            $sheet2Data[] = ['2026/2027', 'Default Tahun Ajaran Aktif'];
+            $sheet2Data[] = ['2025/2026', 'Tahun Ajaran Lalu'];
+        }
+
+        $sheet2Data[] = [''];
+        $sheet2Data[] = ['<b>2. REFERENSI KELAS (ROMBEL)</b>'];
+        $sheet2Data[] = ['<b>ID Kelas (UUID)</b>', '<b>Kode Kelas</b>', '<b>Nama Kelas</b>', '<b>Kategori / Tingkat</b>'];
+        foreach ($kelasList as $k) {
+            $sheet2Data[] = [(string)$k->id, $k->kode_kelas ?? '-', $k->nama_kelas, $k->kategori ? (string)$k->kategori : '-'];
+        }
+
+        $sheet2Data[] = [''];
+        $sheet2Data[] = ['<b>3. REFERENSI MATA PELAJARAN</b>'];
+        $sheet2Data[] = ['<b>ID Mapel (UUID)</b>', '<b>Nama Mata Pelajaran</b>', '<b>Kategori Mapel</b>'];
+        foreach ($mapelList as $m) {
+            $sheet2Data[] = [(string)$m->id, $m->nama_mata_pelajaran, $m->kategori ?? 'Kelompok A'];
+        }
+
+        $sheet2Data[] = [''];
+        $sheet2Data[] = ['<b>4. REFERENSI GURU PENGAMPU</b>'];
+        $sheet2Data[] = ['<b>ID Guru (UUID)</b>', '<b>Nama Lengkap Guru</b>', '<b>NIP</b>', '<b>Email</b>'];
+        foreach ($guruList as $g) {
+            $sheet2Data[] = [(string)$g->id, $g->nama_lengkap, $g->nip ?? '-', $g->email ?? '-'];
+        }
+
+        $sheet2Data[] = [''];
+        $sheet2Data[] = ['<b>5. REFERENSI RUANGAN / LAB</b>'];
+        $sheet2Data[] = ['<b>Nama Ruangan</b>', '<b>Keterangan</b>'];
+        foreach ($ruangList as $r) {
+            $sheet2Data[] = [$r, 'Ruang / Laboratorium Sekolah'];
+        }
+
+        $xlsx = SimpleXLSXGen::fromArray($sheet1Data, 'Template Jadwal')
+            ->addSheet($sheet2Data, 'Referensi Master Data');
+
         $filename = 'Template_Import_Jadwal_Pelajaran_SINTA.xlsx';
 
         return response((string)$xlsx, 200, [
@@ -679,7 +772,7 @@ class JadwalPelajaranController extends Controller
         $rows = [];
         if ($extension === 'xlsx' || $extension === 'xls') {
             if ($xlsx = SimpleXLSX::parse($file->getRealPath())) {
-                $rows = $xlsx->rows();
+                $rows = $xlsx->rows(); // Reads first sheet (Template Jadwal)
             } else {
                 return response()->json([
                     'success' => false,
@@ -706,14 +799,17 @@ class JadwalPelajaranController extends Controller
         $header = array_map('trim', array_map('strip_tags', $rows[0]));
         $dataRows = array_slice($rows, 1);
 
-        // Preload maps for fast resolution
+        // Preload maps for fast resolution by Name, Code, or UUID ID
         $kelasList = Kelas::withoutTenant()
             ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
-            ->get(['id', 'nama_kelas']);
+            ->get(['id', 'nama_kelas', 'kode_kelas']);
         $kelasMap = [];
         foreach ($kelasList as $k) {
             $kelasMap[strtolower(trim($k->nama_kelas))] = $k->id;
-            $kelasMap[$k->id] = $k->id;
+            $kelasMap[strtolower(trim($k->id))] = $k->id;
+            if ($k->kode_kelas) {
+                $kelasMap[strtolower(trim($k->kode_kelas))] = $k->id;
+            }
         }
 
         $mapelList = MataPelajaran::withoutTenant()
@@ -722,16 +818,30 @@ class JadwalPelajaranController extends Controller
         $mapelMap = [];
         foreach ($mapelList as $m) {
             $mapelMap[strtolower(trim($m->nama_mata_pelajaran))] = $m;
+            $mapelMap[strtolower(trim($m->id))] = $m;
         }
 
         $guruList = User::query()
             ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
-            ->get(['id', 'nama_lengkap', 'nip']);
+            ->get(['id', 'nama_lengkap', 'nip', 'email']);
         $guruMap = [];
         foreach ($guruList as $g) {
             $guruMap[strtolower(trim($g->nama_lengkap))] = $g->id;
+            $guruMap[strtolower(trim($g->id))] = $g->id;
             if ($g->nip) {
                 $guruMap[trim($g->nip)] = $g->id;
+            }
+            if ($g->email) {
+                $guruMap[strtolower(trim($g->email))] = $g->id;
+            }
+        }
+
+        // Detect if uploaded format has old KKM/Kelompok columns (14 cols) or new streamlined format (12 cols)
+        $hasLegacyColumns = false;
+        foreach ($header as $hCol) {
+            if (stripos($hCol, 'KKM') !== false || stripos($hCol, 'Kelompok') !== false) {
+                $hasLegacyColumns = true;
+                break;
             }
         }
 
@@ -757,11 +867,14 @@ class JadwalPelajaranController extends Controller
             $jamSelesai = trim((string)($row[8] ?? '08:30'));
             $ruangan = trim((string)($row[9] ?? ''));
             $jamPelajaran = (int)($row[10] ?? 2) ?: 2;
-            $kkm = (float)($row[11] ?? 75) ?: 75;
-            $kelompokMapel = trim((string)($row[12] ?? 'Kelompok A (Umum)'));
-            $catatan = trim((string)($row[13] ?? ''));
+            
+            if ($hasLegacyColumns) {
+                $catatan = trim((string)($row[13] ?? $row[11] ?? ''));
+            } else {
+                $catatan = trim((string)($row[11] ?? ''));
+            }
 
-            // Format validation
+            // Format validation & mapping
             $errors = [];
             $kelasId = $kelasMap[strtolower($rawKelas)] ?? null;
             if (!$kelasId) {
@@ -832,8 +945,6 @@ class JadwalPelajaranController extends Controller
                 'jam_selesai'    => $jamSelesai,
                 'ruangan'        => $ruangan,
                 'jam_pelajaran'  => $jamPelajaran,
-                'kkm'            => $kkm,
-                'kelompok_mapel' => $kelompokMapel ?: ($mapelObj?->kategori ?? 'Kelompok A (Umum)'),
                 'catatan'        => $catatan,
                 'errors'         => $errors,
                 'conflicts'      => $conflicts,
@@ -870,7 +981,6 @@ class JadwalPelajaranController extends Controller
             'rows.*.jam_selesai'  => 'required|string',
             'rows.*.ruangan'      => 'nullable|string',
             'rows.*.jam_pelajaran'=> 'nullable|integer',
-            'rows.*.kkm'          => 'nullable|numeric',
             'rows.*.catatan'      => 'nullable|string',
             'skip_conflicts'      => 'nullable|boolean',
         ]);
@@ -908,6 +1018,7 @@ class JadwalPelajaranController extends Controller
                 $kelas = Kelas::withoutTenant()->find($item['kelas_id']);
                 $namaMapel = $mapel?->nama_mata_pelajaran ?? 'Mata Pelajaran';
                 $namaKelas = $kelas?->nama_kelas ?? 'Kelas';
+                $ruangan = !empty($item['ruangan']) ? $item['ruangan'] : $namaKelas;
 
                 PemetaanMapel::create([
                     'id'                  => (string)Str::uuid(),
@@ -923,8 +1034,8 @@ class JadwalPelajaranController extends Controller
                     'jam_ke'              => $item['jam_ke'] ?? null,
                     'jam_mulai'           => $item['jam_mulai'],
                     'jam_selesai'         => $item['jam_selesai'],
-                    'ruangan'             => $item['ruangan'] ?? null,
-                    'kkm'                 => $item['kkm'] ?? 75,
+                    'ruangan'             => $ruangan,
+                    'kkm'                 => 75,
                     'jam_pelajaran'       => $item['jam_pelajaran'] ?? 2,
                     'warna_label'         => '#3b82f6',
                     'catatan'             => $item['catatan'] ?? null,
@@ -941,7 +1052,7 @@ class JadwalPelajaranController extends Controller
                 $msg .= " ({$skippedCount} jadwal dilewati karena terdeteksi bentrok).";
             }
 
-            if ($request->wantsJson()) {
+            if ($request->wantsJson() && !$request->header('X-Inertia')) {
                 return response()->json([
                     'success'        => true,
                     'message'        => $msg,
@@ -953,7 +1064,7 @@ class JadwalPelajaranController extends Controller
             return back()->with('success', $msg);
         } catch (\Exception $e) {
             DB::rollBack();
-            if ($request->wantsJson()) {
+            if ($request->wantsJson() && !$request->header('X-Inertia')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Gagal memproses import data jadwal: ' . $e->getMessage(),
@@ -1000,14 +1111,14 @@ class JadwalPelajaranController extends Controller
             ->get();
 
         $tenantObj = $tenantId ? Tenant::find($tenantId) : null;
-        $namaSekolah = $tenantObj?->nama ?? 'SINTA SaaS Academic';
+        $namaSekolah = $tenantObj?->nama_sekolah ?? $tenantObj?->nama ?? 'SINTA SaaS Academic';
 
         $data = [
             // Title Header
             ['<center><b>JADWAL PELAJARAN ' . strtoupper($namaSekolah) . '</b></center>'],
             ['<center><b>Tahun Ajaran: ' . ($tahunAjaran ?: 'Semua') . ' | Semester: ' . ($semester ?: 'Semua') . '</b></center>'],
             [''], // Empty row separator
-            // Table Header
+            // Table Header (Tanpa KKM dan Tanpa Kelompok Mapel)
             [
                 '<b>No</b>',
                 '<b>Hari</b>',
@@ -1017,10 +1128,8 @@ class JadwalPelajaranController extends Controller
                 '<b>Mata Pelajaran</b>',
                 '<b>Guru Pengampu</b>',
                 '<b>NIP Guru</b>',
-                '<b>Ruangan</b>',
-                '<b>JP</b>',
-                '<b>KKM</b>',
-                '<b>Kelompok</b>',
+                '<b>Ruangan / Lab</b>',
+                '<b>Beban (JP)</b>',
                 '<b>Catatan</b>',
             ],
         ];
@@ -1036,14 +1145,12 @@ class JadwalPelajaranController extends Controller
                 $row->guru?->nama_lengkap ?? 'Belum Ditentukan',
                 $row->guru?->nip ?? '-',
                 $row->ruangan ?? '-',
-                $row->jam_pelajaran ?? 2,
-                $row->kkm ?? 75,
-                $row->kelompok_id ?? 'Kelompok A (Umum)',
+                (int)($row->jam_pelajaran ?? 2),
                 $row->catatan ?? '-',
             ];
         }
 
-        $xlsx = SimpleXLSXGen::fromArray($data);
+        $xlsx = SimpleXLSXGen::fromArray($data, 'Jadwal Pelajaran');
         $cleanTa = $tahunAjaran ? str_replace('/', '-', $tahunAjaran) : 'Semua';
         $filename = "Jadwal_Pelajaran_{$cleanTa}_{$semester}.xlsx";
 
@@ -1076,7 +1183,7 @@ class JadwalPelajaranController extends Controller
 
         if ($sourceSchedules->isEmpty()) {
             $msg = "Tidak ditemukan data jadwal pada periode sumber ({$validated['from_tahun_ajaran']} - {$validated['from_semester']}).";
-            if ($request->wantsJson()) {
+            if ($request->wantsJson() && !$request->header('X-Inertia')) {
                 return response()->json(['success' => false, 'message' => $msg], 422);
             }
             return back()->with('error', $msg);
@@ -1113,14 +1220,14 @@ class JadwalPelajaranController extends Controller
             DB::commit();
 
             $msg = "Berhasil menyalin {$copiedCount} jadwal pelajaran dari {$validated['from_tahun_ajaran']} ({$validated['from_semester']}) ke {$validated['to_tahun_ajaran']} ({$validated['to_semester']}).";
-            if ($request->wantsJson()) {
+            if ($request->wantsJson() && !$request->header('X-Inertia')) {
                 return response()->json(['success' => true, 'message' => $msg, 'copied_count' => $copiedCount]);
             }
 
             return back()->with('success', $msg);
         } catch (\Exception $e) {
             DB::rollBack();
-            if ($request->wantsJson()) {
+            if ($request->wantsJson() && !$request->header('X-Inertia')) {
                 return response()->json(['success' => false, 'message' => 'Gagal menyalin jadwal: ' . $e->getMessage()], 500);
             }
             return back()->with('error', 'Gagal menyalin jadwal: ' . $e->getMessage());

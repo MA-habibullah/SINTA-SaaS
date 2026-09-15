@@ -33,5 +33,9 @@ Route::middleware(['web', 'auth', 'tenant.guard'])->prefix('akademik')->name('ak
     // 3. Rapor & Pencetakan PDF
     Route::get('/rapor', [RaporController::class, 'index'])->name('rapor.index');
     Route::get('/rapor/preview-html/{siswaId}', [RaporController::class, 'previewHtml'])->name('rapor.preview-html');
+    Route::get('/rapor/preview-identitas/{siswaId}', [RaporController::class, 'previewIdentitas'])->name('rapor.preview-identitas');
+    Route::get('/rapor/preview-kelas', [RaporController::class, 'previewHtmlKelas'])->name('rapor.preview-kelas');
+    Route::get('/rapor/preview-identitas-kelas', [RaporController::class, 'previewIdentitasKelas'])->name('rapor.preview-identitas-kelas');
+    Route::get('/rapor/ledger', [RaporController::class, 'exportLedger'])->name('rapor.ledger');
     Route::post('/rapor/bulk-queue', [RaporController::class, 'bulkQueue'])->name('rapor.bulk-queue');
 });

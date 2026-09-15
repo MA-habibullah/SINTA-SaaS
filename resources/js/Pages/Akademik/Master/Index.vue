@@ -1791,13 +1791,23 @@ const props = defineProps({
 });
 
 const localItems = ref(props.items || null);
+const localTenants = ref(props.tenants || []);
+const localListJenjang = ref(props.listJenjang || []);
+const localListJurusan = ref(props.listJurusan || []);
+const localListKelas = ref(props.listKelas || []);
+const localListMapel = ref(props.listMapel || []);
+const localListGuru = ref(props.listGuru || []);
+const localListTahunAjaran = ref(props.listTahunAjaran || []);
+const localListRuangan = ref(props.listRuangan || []);
+const localJadwalStats = ref(props.jadwalStats || {});
 const isFetching = ref(false);
 
 const items = computed(() => localItems.value || props.items || { data: [], total: 0 });
 
 // Computed Select Options for Standardized SearchableSelect
 const tenantOptions = computed(() => {
-  return (props.tenants || []).map(t => ({
+  const list = localTenants.value.length > 0 ? localTenants.value : (props.tenants || []);
+  return list.map(t => ({
     id: t.id,
     nama: t.nama_sekolah,
     subLabel: t.npsn ? `NPSN: ${t.npsn}` : undefined,
@@ -1805,7 +1815,8 @@ const tenantOptions = computed(() => {
 });
 
 const jenjangOptions = computed(() => {
-  return (props.listJenjang || []).map(j => ({
+  const list = localListJenjang.value.length > 0 ? localListJenjang.value : (props.listJenjang || []);
+  return list.map(j => ({
     id: j.id,
     nama: j.nama_jenjang || j.nama,
     subLabel: j.kode_jenjang || j.kode || undefined,
@@ -1813,7 +1824,8 @@ const jenjangOptions = computed(() => {
 });
 
 const jurusanOptions = computed(() => {
-  return (props.listJurusan || []).map(j => ({
+  const list = localListJurusan.value.length > 0 ? localListJurusan.value : (props.listJurusan || []);
+  return list.map(j => ({
     id: j.id,
     nama: j.nama_jurusan || j.nama,
     subLabel: j.kategori || j.kode || undefined,
@@ -1821,7 +1833,8 @@ const jurusanOptions = computed(() => {
 });
 
 const tahunAjaranOptions = computed(() => {
-  return (props.listTahunAjaran || []).map(ta => ({
+  const list = localListTahunAjaran.value.length > 0 ? localListTahunAjaran.value : (props.listTahunAjaran || []);
+  return list.map(ta => ({
     id: ta.nama,
     nama: ta.nama,
   }));
@@ -1833,7 +1846,8 @@ const semesterOptions = [
 ];
 
 const kelasOptions = computed(() => {
-  return (props.listKelas || []).map(k => ({
+  const list = localListKelas.value.length > 0 ? localListKelas.value : (props.listKelas || []);
+  return list.map(k => ({
     id: k.id,
     nama: k.nama_kelas,
     subLabel: k.kode_kelas ? `Kode: ${k.kode_kelas}` : undefined,
@@ -1841,7 +1855,8 @@ const kelasOptions = computed(() => {
 });
 
 const mapelOptions = computed(() => {
-  return (props.listMapel || []).map(m => ({
+  const list = localListMapel.value.length > 0 ? localListMapel.value : (props.listMapel || []);
+  return list.map(m => ({
     id: m.id,
     nama: m.nama_mata_pelajaran || m.nama,
     subLabel: m.kategori ? `Kategori: ${m.kategori}` : undefined,
@@ -1849,7 +1864,8 @@ const mapelOptions = computed(() => {
 });
 
 const guruOptions = computed(() => {
-  return (props.listGuru || []).map(g => ({
+  const list = localListGuru.value.length > 0 ? localListGuru.value : (props.listGuru || []);
+  return list.map(g => ({
     id: g.id,
     nama: g.nama_lengkap || g.nama,
     subLabel: g.email || undefined,
@@ -1857,7 +1873,8 @@ const guruOptions = computed(() => {
 });
 
 const ruanganOptions = computed(() => {
-  return (props.listRuangan || []).map(r => ({
+  const list = localListRuangan.value.length > 0 ? localListRuangan.value : (props.listRuangan || []);
+  return list.map(r => ({
     id: r,
     nama: r,
   }));
@@ -1945,6 +1962,15 @@ const fetchDataAsync = async () => {
     });
     if (res.data?.success) {
       localItems.value = res.data.data;
+      if (res.data.tenants) localTenants.value = res.data.tenants;
+      if (res.data.listJenjang) localListJenjang.value = res.data.listJenjang;
+      if (res.data.listJurusan) localListJurusan.value = res.data.listJurusan;
+      if (res.data.listKelas) localListKelas.value = res.data.listKelas;
+      if (res.data.listMapel) localListMapel.value = res.data.listMapel;
+      if (res.data.listGuru) localListGuru.value = res.data.listGuru;
+      if (res.data.listTahunAjaran) localListTahunAjaran.value = res.data.listTahunAjaran;
+      if (res.data.listRuangan) localListRuangan.value = res.data.listRuangan;
+      if (res.data.jadwalStats) localJadwalStats.value = res.data.jadwalStats;
     }
   } catch (err) {
     console.error('Failed to load async master-data:', err);
@@ -2589,7 +2615,7 @@ useMemorySecurity([
 ]);
 
 onMounted(() => {
-  if (!props.items || !props.items.data) {
+  if (!props.items || !props.items.data || localListJenjang.value.length === 0) {
     fetchDataAsync();
   }
 });
