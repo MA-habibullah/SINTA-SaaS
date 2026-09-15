@@ -77,6 +77,12 @@ const filterStatus = ref(props.filters?.status || '')
 const perPage = ref(props.filters?.per_page || 10)
 
 const localSiswaList = ref(props.siswaList || null)
+const localTenants = ref(props.tenants || [])
+const localKelasList = ref(props.kelasList || [])
+const localJenjangList = ref(props.jenjangList || [])
+const localTahunAjaranList = ref(props.tahunAjaranList || [])
+const localKurikulumList = ref(props.kurikulumList || [])
+const localBankMapel = ref(props.bankMapel || [])
 const isFetchingSiswa = ref(false)
 
 const siswaList = computed(() => localSiswaList.value || props.siswaList || { data: [], total: 0 })
@@ -100,6 +106,12 @@ const fetchSiswaAsync = async (page = 1) => {
         })
         if (res.data?.success) {
             localSiswaList.value = res.data.data
+            if (res.data.tenants) localTenants.value = res.data.tenants
+            if (res.data.kelasList) localKelasList.value = res.data.kelasList
+            if (res.data.jenjangList) localJenjangList.value = res.data.jenjangList
+            if (res.data.tahunAjaranList) localTahunAjaranList.value = res.data.tahunAjaranList
+            if (res.data.kurikulumList) localKurikulumList.value = res.data.kurikulumList
+            if (res.data.bankMapel) localBankMapel.value = res.data.bankMapel
         }
     } catch (err) {
         console.error('Async Buku Induk fetch error:', err)
@@ -121,13 +133,15 @@ const debounceSearch = () => {
 }
 
 const filteredKelasList = computed(() => {
-    if (!filterJenjang.value) return props.kelasList || []
-    return (props.kelasList || []).filter(k => k.id_jenjang === filterJenjang.value || !k.id_jenjang)
+    const list = localKelasList.value.length > 0 ? localKelasList.value : (props.kelasList || [])
+    if (!filterJenjang.value) return list
+    return list.filter(k => k.id_jenjang === filterJenjang.value || !k.id_jenjang)
 })
 
 // Option lists for SearchableSelect
 const tenantSelectOptions = computed(() => {
-    return (props.tenants || []).map(t => ({
+    const list = localTenants.value.length > 0 ? localTenants.value : (props.tenants || [])
+    return list.map(t => ({
         id: t.id,
         nama: t.nama_sekolah,
         subLabel: t.npsn ? `NPSN: ${t.npsn}` : ''
@@ -135,7 +149,8 @@ const tenantSelectOptions = computed(() => {
 })
 
 const jenjangSelectOptions = computed(() => {
-    return (props.jenjangList || []).map(j => ({
+    const list = localJenjangList.value.length > 0 ? localJenjangList.value : (props.jenjangList || [])
+    return list.map(j => ({
         id: j.id,
         nama: j.nama_jenjang || j.nama
     }))
@@ -150,7 +165,8 @@ const kelasSelectOptions = computed(() => {
 })
 
 const allKelasSelectOptions = computed(() => {
-    return (props.kelasList || []).map(k => ({
+    const list = localKelasList.value.length > 0 ? localKelasList.value : (props.kelasList || [])
+    return list.map(k => ({
         id: k.id,
         nama: k.nama_kelas,
         subLabel: k.kategori ? `Kategori: ${k.kategori}` : ''
@@ -172,7 +188,8 @@ const perPageOptions = [
 ]
 
 const tahunAjaranSelectOptions = computed(() => {
-    const list = (props.tahunAjaranList || []).map(ta => ({
+    const raw = localTahunAjaranList.value.length > 0 ? localTahunAjaranList.value : (props.tahunAjaranList || [])
+    const list = raw.map(ta => ({
         id: ta.tahun_ajaran || ta.nama_tahun_ajaran || ta.id,
         nama: ta.tahun_ajaran || ta.nama_tahun_ajaran
     })).filter(t => t.id && t.nama)
@@ -191,7 +208,8 @@ const semesterSelectOptions = [
 ]
 
 const kurikulumSelectOptions = computed(() => {
-    return (props.kurikulumList || []).map(k => ({
+    const list = localKurikulumList.value.length > 0 ? localKurikulumList.value : (props.kurikulumList || [])
+    return list.map(k => ({
         id: k.id,
         nama: k.nama_kurikulum || k.nama
     }))

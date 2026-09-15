@@ -182,12 +182,12 @@ class BukuIndukController extends Controller
             return Inertia::render('Siswa/BukuInduk/Index', [
                 'activeTab'       => $activeTab,
                 'siswaList'       => null,
-                'tenants'         => $isSuperAdmin ? $tenants : [],
-                'kelasList'       => $kelasList,
-                'jenjangList'     => $jenjangList,
-                'tahunAjaranList' => $tahunAjaranList,
-                'kurikulumList'   => $kurikulumList,
-                'bankMapel'       => $bankMapel,
+                'tenants'         => null,
+                'kelasList'       => null,
+                'jenjangList'     => null,
+                'tahunAjaranList' => null,
+                'kurikulumList'   => null,
+                'bankMapel'       => null,
                 'isSuperAdmin'    => $isSuperAdmin,
                 'userRole'        => $user?->role?->nama_role ?? ($isSuperAdmin ? 'super_admin' : 'admin_sekolah'),
                 'filters'         => [
@@ -1730,11 +1730,35 @@ class BukuIndukController extends Controller
             'berkas_pernyataan_tka'    => '',
         ];
 
+        // Zero-SSR Data Exposure Protection (Anti-Scraping / View Source Zero Leakage)
+        $isInitialSsr = !$request->header('X-Inertia') && !$request->has('async');
+
+        if ($isInitialSsr) {
+            return Inertia::render('Siswa/Edit', [
+                'siswa'           => ['id' => null],
+                'academicOptions' => null,
+                'provinces'       => null,
+                'tenants'         => null,
+                'isCreate'        => true,
+                'userRole'        => auth()->user()?->role_name ?? 'admin_sekolah',
+            ]);
+        }
+
+        if ($request->has('async') && !$request->header('X-Inertia')) {
+            return response()->json([
+                'success'         => true,
+                'data'            => $blankSiswa,
+                'academicOptions' => $academicOptions,
+                'provinces'       => $provinces,
+                'tenants'         => $isSuperAdmin ? $tenants : [],
+            ]);
+        }
+
         return Inertia::render('Siswa/Edit', [
             'siswa'           => $blankSiswa,
             'academicOptions' => $academicOptions,
             'provinces'       => $provinces,
-            'tenants'         => $tenants,
+            'tenants'         => $isSuperAdmin ? $tenants : [],
             'isCreate'        => true,
             'userRole'        => auth()->user()?->role_name ?? 'admin_sekolah',
         ]);
@@ -1956,9 +1980,9 @@ class BukuIndukController extends Controller
         if ($isInitialSsr) {
             return Inertia::render('Siswa/Edit', [
                 'siswa'           => ['id' => $targetId],
-                'academicOptions' => $academicOptions,
-                'provinces'       => $provinces,
-                'tenants'         => $isSuperAdmin ? $tenants : [],
+                'academicOptions' => null,
+                'provinces'       => null,
+                'tenants'         => null,
                 'isCreate'        => false,
                 'userRole'        => auth()->user()?->role_name ?? 'admin_sekolah',
             ]);
@@ -1966,7 +1990,13 @@ class BukuIndukController extends Controller
 
         // 1. Explicit Async API Request (On-Demand Client Fetch via Axios)
         if ($request->has('async') && !$request->header('X-Inertia')) {
-            return response()->json(['success' => true, 'data' => SecurityPayloadService::sanitize($flattened, $isSuperAdmin ? [] : ['tenant_id'])]);
+            return response()->json([
+                'success'         => true,
+                'data'            => SecurityPayloadService::sanitize($flattened, $isSuperAdmin ? [] : ['tenant_id']),
+                'academicOptions' => $academicOptions,
+                'provinces'       => $provinces,
+                'tenants'         => $isSuperAdmin ? $tenants : [],
+            ]);
         }
 
         // 2. Inertia Web Response (SPA navigation)

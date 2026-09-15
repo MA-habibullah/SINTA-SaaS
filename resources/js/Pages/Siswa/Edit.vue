@@ -15,6 +15,11 @@ const props = defineProps({
   userRole: { type: String, default: 'admin_sekolah' },
 })
 
+// Local reactive master options (Zero-SSR Data Exposure Protection)
+const localAcademicOptions = ref(props.academicOptions || {})
+const localProvinces = ref(props.provinces || [])
+const localTenants = ref(props.tenants || [])
+
 const page = usePage()
 const flashSuccess = computed(() => page.props.flash?.success)
 
@@ -220,8 +225,8 @@ const existingDocs = ref({
 
 // Reactive filtered Jurusan based on Jenjang
 const filteredJurusan = computed(() => {
-  const allJurusan = props.academicOptions?.jurusan || []
-  const allKelas = props.academicOptions?.kelas || []
+  const allJurusan = localAcademicOptions.value?.jurusan || []
+  const allKelas = localAcademicOptions.value?.kelas || []
   if (!form.id_jenjang) return allJurusan
   const allowedJurusanIds = allKelas
     .filter(k => String(k.id_jenjang) === String(form.id_jenjang))
@@ -232,7 +237,7 @@ const filteredJurusan = computed(() => {
 
 // Reactive filtered Kelas based on Jenjang & Jurusan
 const filteredKelas = computed(() => {
-  const allKelas = props.academicOptions?.kelas || []
+  const allKelas = localAcademicOptions.value?.kelas || []
   if (!form.id_jenjang) return allKelas
   return allKelas.filter(k => {
     const matchJenjang = String(k.id_jenjang) === String(form.id_jenjang)
@@ -295,14 +300,28 @@ const onKecamatanChange = async () => {
   }
 }
 
-// Pemuatan data lengkap siswa secara On-Demand (Zero-SSR Data Exposure)
+// Pemuatan data lengkap siswa & katalog master secara On-Demand (Zero-SSR Data Exposure)
+const isDataLoading = ref(false)
+
 const loadStudentDetailAsync = async (targetId) => {
-  if (!targetId) return
+  const finalId = targetId || form.id || props.siswa?.id
+  const url = props.isCreate ? '/siswa/create' : `/siswa/${finalId}/edit`
+  isDataLoading.value = true
   try {
-    const res = await fetch(`/siswa/${targetId}/edit?async=1`, {
+    const res = await axios.get(url, {
+      params: { async: 1 },
       headers: { 'Accept': 'application/json' }
     })
-    const json = await res.json()
+    const json = res.data
+    if (json?.academicOptions) {
+      localAcademicOptions.value = json.academicOptions
+    }
+    if (json?.provinces) {
+      localProvinces.value = json.provinces
+    }
+    if (json?.tenants) {
+      localTenants.value = json.tenants
+    }
     if (json?.success && json?.data) {
       const data = json.data
       Object.keys(data).forEach((key) => {
@@ -310,26 +329,59 @@ const loadStudentDetailAsync = async (targetId) => {
           form[key] = data[key]
         }
       })
+      // Sync dates
+      if (data.tanggal_lahir) form.tanggal_lahir = String(data.tanggal_lahir).substring(0, 10)
+      if (data.tanggal_ijazah_sebelumnya) form.tanggal_ijazah_sebelumnya = String(data.tanggal_ijazah_sebelumnya).substring(0, 10)
+      if (data.tanggal_diterima) form.tanggal_diterima = String(data.tanggal_diterima).substring(0, 10)
+      if (data.tanggal_masuk) form.tanggal_masuk = String(data.tanggal_masuk).substring(0, 10)
+      if (data.tanggal_keluar) form.tanggal_keluar = String(data.tanggal_keluar).substring(0, 10)
+      if (data.ayah_tanggal_lahir) form.ayah_tanggal_lahir = String(data.ayah_tanggal_lahir).substring(0, 10)
+      if (data.ibu_tanggal_lahir) form.ibu_tanggal_lahir = String(data.ibu_tanggal_lahir).substring(0, 10)
+      if (data.wali_tanggal_lahir) form.wali_tanggal_lahir = String(data.wali_tanggal_lahir).substring(0, 10)
+      if (data.tanggal_meninggalkan_sekolah) form.tanggal_meninggalkan_sekolah = String(data.tanggal_meninggalkan_sekolah).substring(0, 10)
+
+      // Sync previews
+      if (data.foto_url) filePreviews.value.foto_url = data.foto_url
+      if (data.berkas_kk) existingDocs.value.berkas_kk = data.berkas_kk
+      if (data.berkas_akta) existingDocs.value.berkas_akta = data.berkas_akta
+      if (data.berkas_akta_kelahiran) existingDocs.value.berkas_akta_kelahiran = data.berkas_akta_kelahiran
+      if (data.berkas_ijazah_sd) existingDocs.value.berkas_ijazah_sd = data.berkas_ijazah_sd
+      if (data.berkas_ijazah_smp) existingDocs.value.berkas_ijazah_smp = data.berkas_ijazah_smp
+      if (data.berkas_ijazah_sma) existingDocs.value.berkas_ijazah_sma = data.berkas_ijazah_sma
+      if (data.berkas_mutasi_masuk) existingDocs.value.berkas_mutasi_masuk = data.berkas_mutasi_masuk
+      if (data.berkas_mutasi_keluar) existingDocs.value.berkas_mutasi_keluar = data.berkas_mutasi_keluar
+      if (data.berkas_kip) existingDocs.value.berkas_kip = data.berkas_kip
+      if (data.berkas_pernyataan_baru) existingDocs.value.berkas_pernyataan_baru = data.berkas_pernyataan_baru
+      if (data.berkas_pernyataan_tka) existingDocs.value.berkas_pernyataan_tka = data.berkas_pernyataan_tka
+
       // Trigger pemuatan wilayah
       if (form.id_provinsi) {
-        const resK = await fetch(`/wilayah/kota/${form.id_provinsi}`)
-        kotaList.value = await resK.json()
+        try {
+          const resK = await fetch(`/wilayah/kota/${form.id_provinsi}`)
+          kotaList.value = await resK.json()
+        } catch (e) {}
       }
       if (form.id_kota) {
-        const resKec = await fetch(`/wilayah/kecamatan/${form.id_kota}`)
-        kecamatanList.value = await resKec.json()
+        try {
+          const resKec = await fetch(`/wilayah/kecamatan/${form.id_kota}`)
+          kecamatanList.value = await resKec.json()
+        } catch (e) {}
       }
       if (form.id_kecamatan) {
-        const resKel = await fetch(`/wilayah/kelurahan/${form.id_kecamatan}`)
-        kelurahanList.value = await resKel.json()
+        try {
+          const resKel = await fetch(`/wilayah/kelurahan/${form.id_kecamatan}`)
+          kelurahanList.value = await resKel.json()
+        } catch (e) {}
       }
     }
   } catch (err) {
     console.error('Failed to load student detail async:', err)
+  } finally {
+    isDataLoading.value = false
   }
 }
 
-// Initialize geographic dropdowns & asynchronous student data if editing
+// Initialize geographic dropdowns & asynchronous student data
 onMounted(async () => {
   // Fetch initial all-cities list for birthplace
   try {
@@ -339,9 +391,10 @@ onMounted(async () => {
     console.error('Failed to load all kota:', e)
   }
 
-  // Jika mode edit dan data form masih kosong (Zero-SSR initial load)
   const targetId = form.id || props.siswa?.id
-  if (!props.isCreate && targetId && !form.nama_lengkap) {
+  const hasOptions = localAcademicOptions.value && Object.keys(localAcademicOptions.value).length > 0
+
+  if (!hasOptions || (!props.isCreate && targetId && !form.nama_lengkap)) {
     await loadStudentDetailAsync(targetId)
   } else {
     // If editing and has id_provinsi already loaded
@@ -1020,20 +1073,20 @@ const penghasilanOptions = [
 const ukuranOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
 
 // Standardized SearchableSelect Options
-const tenantSelectOptions = computed(() => (props.tenants || []).map(t => ({ id: t.id, nama: t.nama_sekolah, subLabel: t.npsn ? `NPSN: ${t.npsn}` : undefined })))
+const tenantSelectOptions = computed(() => (localTenants.value || []).map(t => ({ id: t.id, nama: t.nama_sekolah, subLabel: t.npsn ? `NPSN: ${t.npsn}` : undefined })))
 const genderOptions = [{ id: 'L', nama: 'Laki-laki (L)' }, { id: 'P', nama: 'Perempuan (P)' }]
 const agamaSelectOptions = agamaOptions.map(a => ({ id: a, nama: a }))
 const kewarganegaraanOptions = [{ id: 'WNI', nama: 'Warga Negara Indonesia (WNI)' }, { id: 'WNA', nama: 'Warga Negara Asing (WNA)' }]
 const statusSiswaOptions = [{ id: 'Aktif', nama: 'Aktif' }, { id: 'Lulus', nama: 'Lulus' }, { id: 'Pindah', nama: 'Pindah / Mutasi Keluar' }]
-const angkatanOptions = computed(() => (props.academicOptions?.angkatan || []).map(a => ({ id: a.id, nama: String(a.tahun_angkatan) })))
-const tahunAjaranSelectOptions = computed(() => (props.academicOptions?.tahun_ajaran || []).map(ta => ({ id: ta.id, nama: ta.tahun_ajaran })))
-const jenjangSelectOptions = computed(() => (props.academicOptions?.jenjang || []).map(j => ({ id: j.id, nama: j.nama_jenjang })))
+const angkatanOptions = computed(() => (localAcademicOptions.value?.angkatan || []).map(a => ({ id: a.id, nama: String(a.tahun_angkatan) })))
+const tahunAjaranSelectOptions = computed(() => (localAcademicOptions.value?.tahun_ajaran || []).map(ta => ({ id: ta.id, nama: ta.tahun_ajaran })))
+const jenjangSelectOptions = computed(() => (localAcademicOptions.value?.jenjang || []).map(j => ({ id: j.id, nama: j.nama_jenjang })))
 const jurusanSelectOptions = computed(() => (filteredJurusan.value || []).map(jr => ({ id: jr.id, nama: jr.nama_jurusan })))
 const kelasSelectOptions = computed(() => (filteredKelas.value || []).map(k => ({ id: k.id, nama: k.nama_kelas, subLabel: k.kode_kelas ? `Kode: ${k.kode_kelas}` : undefined })))
-const pendidikanSelectOptions = computed(() => (props.academicOptions?.pendidikan || []).map(p => ({ id: p.id, nama: p.nama_pendidikan })))
+const pendidikanSelectOptions = computed(() => (localAcademicOptions.value?.pendidikan || []).map(p => ({ id: p.id, nama: p.nama_pendidikan })))
 const ukuranSelectOptions = ukuranOptions.map(u => ({ id: u, nama: u }))
 
-const provinsiSelectOptions = computed(() => (props.provinces || []).map(p => ({ id: p.id_provinsi, nama: p.nama_provinsi })))
+const provinsiSelectOptions = computed(() => (localProvinces.value || []).map(p => ({ id: p.id_provinsi, nama: p.nama_provinsi })))
 const kotaSelectOptions = computed(() => (kotaList.value || []).map(c => ({ id: c.id_kota, nama: c.nama_kota })))
 const kecamatanSelectOptions = computed(() => (kecamatanList.value || []).map(d => ({ id: d.id_kecamatan, nama: d.nama_kecamatan })))
 const kelurahanSelectOptions = computed(() => (kelurahanList.value || []).map(k => ({ id: k.id_kelurahan, nama: k.nama_kelurahan })))
@@ -1093,57 +1146,6 @@ const rencanaLulusOptions = [
   { id: 'Wirausaha', nama: 'Wirausaha' },
   { id: 'Lainnya', nama: 'Lainnya' },
 ]
-
-const isDataLoading = ref(false)
-
-const loadSiswaDataAsync = async () => {
-  if (props.isCreate || !props.siswa?.id) return
-  isDataLoading.value = true
-  try {
-    const res = await axios.get(`/siswa/${props.siswa.id}/edit`, {
-      params: { async: 1 },
-      headers: { 'Accept': 'application/json' }
-    })
-    if (res.data?.success && res.data?.data) {
-      const data = res.data.data
-      Object.keys(data).forEach(key => {
-        if (key in form) {
-          form[key] = data[key]
-        }
-      })
-      // Sync dates
-      if (data.tanggal_lahir) form.tanggal_lahir = String(data.tanggal_lahir).substring(0, 10)
-      if (data.tanggal_ijazah_sebelumnya) form.tanggal_ijazah_sebelumnya = String(data.tanggal_ijazah_sebelumnya).substring(0, 10)
-      if (data.tanggal_diterima) form.tanggal_diterima = String(data.tanggal_diterima).substring(0, 10)
-      if (data.ayah_tanggal_lahir) form.ayah_tanggal_lahir = String(data.ayah_tanggal_lahir).substring(0, 10)
-      if (data.ibu_tanggal_lahir) form.ibu_tanggal_lahir = String(data.ibu_tanggal_lahir).substring(0, 10)
-      if (data.wali_tanggal_lahir) form.wali_tanggal_lahir = String(data.wali_tanggal_lahir).substring(0, 10)
-      if (data.tanggal_meninggalkan_sekolah) form.tanggal_meninggalkan_sekolah = String(data.tanggal_meninggalkan_sekolah).substring(0, 10)
-
-      // Sync previews
-      if (data.foto_url) filePreviews.foto_url = data.foto_url
-      if (data.berkas_kk) existingDocs.berkas_kk = data.berkas_kk
-      if (data.berkas_akta_kelahiran) existingDocs.berkas_akta_kelahiran = data.berkas_akta_kelahiran
-      if (data.berkas_ijazah_smp) existingDocs.berkas_ijazah_smp = data.berkas_ijazah_smp
-      if (data.berkas_ijazah_sma) existingDocs.berkas_ijazah_sma = data.berkas_ijazah_sma
-      if (data.berkas_mutasi_masuk) existingDocs.berkas_mutasi_masuk = data.berkas_mutasi_masuk
-      if (data.berkas_mutasi_keluar) existingDocs.berkas_mutasi_keluar = data.berkas_mutasi_keluar
-      if (data.berkas_kip) existingDocs.berkas_kip = data.berkas_kip
-      if (data.berkas_pernyataan_baru) existingDocs.berkas_pernyataan_baru = data.berkas_pernyataan_baru
-      if (data.berkas_pernyataan_tka) existingDocs.berkas_pernyataan_tka = data.berkas_pernyataan_tka
-    }
-  } catch (err) {
-    console.error('Failed to load student data async:', err)
-  } finally {
-    isDataLoading.value = false
-  }
-}
-
-onMounted(() => {
-  if (!props.isCreate && (!props.siswa?.nama_lengkap || !props.siswa?.nisn)) {
-    loadSiswaDataAsync()
-  }
-})
 
 // OWASP ASVS L3 Memory Security Hygiene
 useMemorySecurity([form, filePreviews, existingDocs, clientErrors])
