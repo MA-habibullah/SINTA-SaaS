@@ -3,8 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Tracer\Http\Controllers\TracerController;
 
-// Rute Tunggal Resmi: /bk/alumni
-Route::middleware(['web', 'auth', 'tenant.guard'])->prefix('bk/alumni')->name('tracer.')->group(function () {
+// 1. Rute Kanonikal Utama: /alumni/tracer-study
+Route::middleware(['web', 'auth', 'tenant.guard'])->prefix('alumni/tracer-study')->name('tracer.')->group(function () {
     Route::get('/', [TracerController::class, 'index'])->name('index');
     Route::get('/export-excel', [TracerController::class, 'exportExcel'])->name('export.excel');
     Route::get('/api/siswa-alumni', [TracerController::class, 'searchSiswaAlumni'])->name('api.siswa');
@@ -21,7 +21,8 @@ Route::middleware(['web', 'auth', 'tenant.guard'])->prefix('bk/alumni')->name('t
     Route::delete('/pekerjaan/{id}', [TracerController::class, 'destroyPekerjaan'])->name('pekerjaan.destroy');
 });
 
-// Auto-Redirect dari legacy /tracer ke URL tunggal /bk/alumni
+// 2. Backward-Compatible Aliases & Redirects (/bk/alumni, /tracer)
 Route::middleware(['web', 'auth', 'tenant.guard'])->group(function () {
-    Route::redirect('/tracer', '/bk/alumni', 301);
+    Route::get('/bk/alumni', fn() => redirect('/alumni/tracer-study'));
+    Route::get('/tracer', fn() => redirect('/alumni/tracer-study'));
 });

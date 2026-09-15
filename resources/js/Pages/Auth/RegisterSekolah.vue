@@ -84,7 +84,7 @@
                 <!-- Step 1 Indicator -->
                 <div class="relative z-10 flex flex-col items-center">
                   <button type="button" @click="currentStep = 1"
-                          :class="['w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-all',
+                          :class="['w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-all cursor-pointer',
                                    currentStep === 1 ? 'bg-blue-600 text-white shadow-md shadow-blue-500/40 ring-4 ring-blue-100' : 
                                    (currentStep > 1 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 border border-slate-300')]">
                     <i v-if="currentStep > 1" class="bi bi-check-lg text-sm"></i>
@@ -96,7 +96,7 @@
                 <!-- Step 2 Indicator -->
                 <div class="relative z-10 flex flex-col items-center">
                   <button type="button" @click="validateStep1() && (currentStep = 2)"
-                          :class="['w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-all',
+                          :class="['w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-all cursor-pointer',
                                    currentStep === 2 ? 'bg-blue-600 text-white shadow-md shadow-blue-500/40 ring-4 ring-blue-100' : 
                                    (currentStep > 2 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 border border-slate-300')]">
                     <i v-if="currentStep > 2" class="bi bi-check-lg text-sm"></i>
@@ -108,7 +108,7 @@
                 <!-- Step 3 Indicator -->
                 <div class="relative z-10 flex flex-col items-center">
                   <button type="button" @click="validateStep1() && validateStep2() && (currentStep = 3)"
-                          :class="['w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-all',
+                          :class="['w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-all cursor-pointer',
                                    currentStep === 3 ? 'bg-blue-600 text-white shadow-md shadow-blue-500/40 ring-4 ring-blue-100' : 'bg-slate-100 text-slate-500 border border-slate-300']">
                     <span>3</span>
                   </button>
@@ -128,7 +128,7 @@
               </ul>
             </div>
 
-            <form @submit.prevent="submitRegistration">
+            <form @submit.prevent="submitRegistration" novalidate>
               <!-- ============================================== -->
               <!-- STEP 1: IDENTITAS SEKOLAH                      -->
               <!-- ============================================== -->
@@ -142,7 +142,7 @@
                   <!-- Nama Sekolah -->
                   <div class="md:col-span-2">
                     <label class="block text-xs font-bold text-slate-700 mb-1">Nama Resmi Sekolah <span class="text-red-500">*</span></label>
-                    <input v-model="form.nama_sekolah" type="text" required placeholder="Contoh: SMA Negeri 1 Unggulan"
+                    <input v-model="form.nama_sekolah" name="nama_sekolah" type="text" placeholder="Contoh: SMA Negeri 1 Unggulan"
                            @input="autoGenerateSubdomain"
                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none focus:bg-white transition" />
                     <span v-if="form.errors.nama_sekolah" class="text-xs text-red-500 font-semibold mt-1 block">{{ form.errors.nama_sekolah }}</span>
@@ -151,7 +151,7 @@
                   <!-- NPSN -->
                   <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">NPSN (Nomor Pokok Sekolah Nasional) <span class="text-red-500">*</span></label>
-                    <input v-model="form.npsn" type="text" required maxlength="20" placeholder="8 digit NPSN, misal: 20109988"
+                    <input v-model="form.npsn" name="npsn" type="text" maxlength="20" placeholder="8 digit NPSN, misal: 20109988"
                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none focus:bg-white transition" />
                     <span v-if="form.errors.npsn" class="text-xs text-red-500 font-semibold mt-1 block">{{ form.errors.npsn }}</span>
                   </div>
@@ -159,30 +159,32 @@
                   <!-- Bentuk Pendidikan -->
                   <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Bentuk Pendidikan <span class="text-red-500">*</span></label>
-                    <select v-model="form.bentuk_pendidikan" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none focus:bg-white transition">
-                      <option value="SMA">SMA (Sekolah Menengah Atas)</option>
-                      <option value="SMK">SMK (Sekolah Menengah Kejuruan)</option>
-                      <option value="SMP">SMP (Sekolah Menengah Pertama)</option>
-                      <option value="SD">SD (Sekolah Dasar)</option>
-                      <option value="Madrasah">Madrasah (MA / MTs / MI)</option>
-                      <option value="Lainnya">Lainnya / Lembaga Kursus</option>
-                    </select>
+                    <SearchableSelect
+                      v-model="form.bentuk_pendidikan"
+                      :options="bentukPendidikanOptions"
+                      placeholder="-- Pilih Bentuk Pendidikan --"
+                      search-placeholder="Cari bentuk pendidikan..."
+                    />
+                    <span v-if="form.errors.bentuk_pendidikan" class="text-xs text-red-500 font-semibold mt-1 block">{{ form.errors.bentuk_pendidikan }}</span>
                   </div>
 
                   <!-- Status Sekolah -->
                   <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Status Sekolah <span class="text-red-500">*</span></label>
-                    <select v-model="form.status_sekolah" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none focus:bg-white transition">
-                      <option value="Negeri">Negeri</option>
-                      <option value="Swasta">Swasta / Yayasan</option>
-                    </select>
+                    <SearchableSelect
+                      v-model="form.status_sekolah"
+                      :options="statusSekolahOptions"
+                      placeholder="-- Pilih Status Sekolah --"
+                      search-placeholder="Cari status sekolah..."
+                    />
+                    <span v-if="form.errors.status_sekolah" class="text-xs text-red-500 font-semibold mt-1 block">{{ form.errors.status_sekolah }}</span>
                   </div>
 
                   <!-- Subdomain Tenant -->
                   <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Pilihan Subdomain Tenant <span class="text-red-500">*</span></label>
                     <div class="flex items-center">
-                      <input v-model="form.subdomain" type="text" required placeholder="sman1unggul"
+                      <input v-model="form.subdomain" name="subdomain" type="text" placeholder="sman1unggul"
                              class="grow px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-l-xl text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none focus:bg-white transition" />
                       <span class="px-3 py-2.5 bg-slate-100 border border-l-0 border-slate-200 rounded-r-xl text-xs text-slate-500 font-bold">.sinta.id</span>
                     </div>
@@ -192,14 +194,14 @@
                   <!-- Kabupaten / Kota -->
                   <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Kabupaten / Kota</label>
-                    <input v-model="form.kabupaten_kota" type="text" placeholder="Contoh: Kota Surabaya"
+                    <input v-model="form.kabupaten_kota" name="kabupaten_kota" type="text" placeholder="Contoh: Kota Surabaya"
                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none focus:bg-white transition" />
                   </div>
 
                   <!-- Provinsi -->
                   <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Provinsi</label>
-                    <input v-model="form.provinsi" type="text" placeholder="Contoh: Jawa Timur"
+                    <input v-model="form.provinsi" name="provinsi" type="text" placeholder="Contoh: Jawa Timur"
                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none focus:bg-white transition" />
                   </div>
                 </div>
@@ -207,7 +209,7 @@
                 <!-- Navigation Buttons -->
                 <div class="flex justify-end pt-6 border-t border-slate-100">
                   <button type="button" @click="goToStep2"
-                          class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition shadow-md flex items-center gap-2">
+                          class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition shadow-md flex items-center gap-2 cursor-pointer">
                     <span>Lanjut ke Kontak PIC</span>
                     <i class="bi bi-arrow-right"></i>
                   </button>
@@ -227,7 +229,7 @@
                   <!-- Nama PIC -->
                   <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap PIC / Pendaftar <span class="text-red-500">*</span></label>
-                    <input v-model="form.pic_nama" type="text" required placeholder="Nama lengkap beserta gelar..."
+                    <input v-model="form.pic_nama" name="pic_nama" type="text" placeholder="Nama lengkap beserta gelar..."
                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none focus:bg-white transition" />
                     <span v-if="form.errors.pic_nama" class="text-xs text-red-500 font-semibold mt-1 block">{{ form.errors.pic_nama }}</span>
                   </div>
@@ -235,7 +237,7 @@
                   <!-- Jabatan PIC -->
                   <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Jabatan di Sekolah <span class="text-red-500">*</span></label>
-                    <input v-model="form.pic_jabatan" type="text" required placeholder="Contoh: Kepala Sekolah / Wakakur / Operator IT"
+                    <input v-model="form.pic_jabatan" name="pic_jabatan" type="text" placeholder="Contoh: Kepala Sekolah / Wakakur / Operator IT"
                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none focus:bg-white transition" />
                     <span v-if="form.errors.pic_jabatan" class="text-xs text-red-500 font-semibold mt-1 block">{{ form.errors.pic_jabatan }}</span>
                   </div>
@@ -243,7 +245,7 @@
                   <!-- No Telepon / WA -->
                   <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Nomor WhatsApp Aktif <span class="text-red-500">*</span></label>
-                    <input v-model="form.pic_telepon" type="tel" required placeholder="Contoh: 081234567890"
+                    <input v-model="form.pic_telepon" name="pic_telepon" type="tel" placeholder="Contoh: 081234567890"
                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none focus:bg-white transition" />
                     <span v-if="form.errors.pic_telepon" class="text-xs text-red-500 font-semibold mt-1 block">{{ form.errors.pic_telepon }}</span>
                   </div>
@@ -251,7 +253,7 @@
                   <!-- Email PIC -->
                   <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Email Resmi / Aktif <span class="text-red-500">*</span></label>
-                    <input v-model="form.pic_email" type="email" required placeholder="pic.sekolah@gmail.com"
+                    <input v-model="form.pic_email" name="pic_email" type="email" placeholder="pic.sekolah@gmail.com"
                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none focus:bg-white transition" />
                     <span v-if="form.errors.pic_email" class="text-xs text-red-500 font-semibold mt-1 block">{{ form.errors.pic_email }}</span>
                   </div>
@@ -260,12 +262,12 @@
                 <!-- Navigation Buttons -->
                 <div class="flex justify-between pt-6 border-t border-slate-100">
                   <button type="button" @click="currentStep = 1"
-                          class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-2">
+                          class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-2 cursor-pointer">
                     <i class="bi bi-arrow-left"></i>
                     <span>Kembali</span>
                   </button>
                   <button type="button" @click="goToStep3"
-                          class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition shadow-md flex items-center gap-2">
+                          class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition shadow-md flex items-center gap-2 cursor-pointer">
                     <span>Lanjut ke Akun & Trial</span>
                     <i class="bi bi-arrow-right"></i>
                   </button>
@@ -288,7 +290,7 @@
                     <!-- Option 3 Bulan -->
                     <label :class="['cursor-pointer p-4 rounded-2xl border-2 transition-all flex items-start gap-3.5',
                                    form.trial_duration_months === 3 ? 'border-blue-600 bg-blue-50/50 shadow-xs' : 'border-slate-200 hover:border-slate-300 bg-white']">
-                      <input type="radio" v-model="form.trial_duration_months" :value="3" class="mt-1 text-blue-600 focus:ring-blue-500" />
+                      <input type="radio" name="trial_duration_months" v-model="form.trial_duration_months" :value="3" class="mt-1 text-blue-600 focus:ring-blue-500" />
                       <div>
                         <div class="flex items-center gap-2">
                           <span class="font-bold text-xs text-slate-900">3 Bulan Gratis (Rekomendasi)</span>
@@ -301,7 +303,7 @@
                     <!-- Option 1 Bulan -->
                     <label :class="['cursor-pointer p-4 rounded-2xl border-2 transition-all flex items-start gap-3.5',
                                    form.trial_duration_months === 1 ? 'border-blue-600 bg-blue-50/50 shadow-xs' : 'border-slate-200 hover:border-slate-300 bg-white']">
-                      <input type="radio" v-model="form.trial_duration_months" :value="1" class="mt-1 text-blue-600 focus:ring-blue-500" />
+                      <input type="radio" name="trial_duration_months" v-model="form.trial_duration_months" :value="1" class="mt-1 text-blue-600 focus:ring-blue-500" />
                       <div>
                         <span class="font-bold text-xs text-slate-900">1 Bulan Gratis</span>
                         <p class="text-[11px] text-slate-500 mt-0.5">Uji coba cepat modul pokok akademik, buku induk, dan keuangan sekolah.</p>
@@ -314,7 +316,7 @@
                   <!-- Nama Admin -->
                   <div class="md:col-span-2">
                     <label class="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap Administrator Sekolah <span class="text-red-500">*</span></label>
-                    <input v-model="form.admin_nama" type="text" required placeholder="Nama lengkap admin sekolah..."
+                    <input v-model="form.admin_nama" name="admin_nama" type="text" placeholder="Nama lengkap admin sekolah..."
                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none focus:bg-white transition" />
                     <span v-if="form.errors.admin_nama" class="text-xs text-red-500 font-semibold mt-1 block">{{ form.errors.admin_nama }}</span>
                   </div>
@@ -322,7 +324,7 @@
                   <!-- Username Admin -->
                   <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Username Login <span class="text-red-500">*</span></label>
-                    <input v-model="form.admin_username" type="text" required placeholder="admin_sekolah"
+                    <input v-model="form.admin_username" name="admin_username" type="text" placeholder="admin_sekolah"
                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none focus:bg-white transition" />
                     <span v-if="form.errors.admin_username" class="text-xs text-red-500 font-semibold mt-1 block">{{ form.errors.admin_username }}</span>
                   </div>
@@ -330,7 +332,7 @@
                   <!-- Password Admin -->
                   <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Kata Sandi (Password) <span class="text-red-500">*</span></label>
-                    <input v-model="form.admin_password" type="password" required placeholder="Minimal 6 karakter"
+                    <input v-model="form.admin_password" name="admin_password" type="password" placeholder="Minimal 6 karakter"
                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none focus:bg-white transition" />
                     <span v-if="form.errors.admin_password" class="text-xs text-red-500 font-semibold mt-1 block">{{ form.errors.admin_password }}</span>
                   </div>
@@ -352,12 +354,12 @@
                 <!-- Navigation Buttons -->
                 <div class="flex justify-between pt-6 border-t border-slate-100">
                   <button type="button" @click="currentStep = 2"
-                          class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-2">
+                          class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-2 cursor-pointer">
                     <i class="bi bi-arrow-left"></i>
                     <span>Kembali</span>
                   </button>
                   <button type="submit" :disabled="form.processing"
-                          class="px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black rounded-xl transition shadow-lg shadow-emerald-600/30 disabled:opacity-50 flex items-center gap-2">
+                          class="px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black rounded-xl transition shadow-lg shadow-emerald-600/30 disabled:opacity-50 flex items-center gap-2 cursor-pointer">
                     <span v-if="form.processing">Mengirimkan Pendaftaran...</span>
                     <span v-else>Kirimkan Pendaftaran Sekolah</span>
                     <i class="bi bi-send-fill font-bold"></i>
@@ -382,6 +384,7 @@
 <script setup>
 import { ref } from 'vue';
 import { Link, useForm } from '@inertiajs/vue3';
+import SearchableSelect from '@/Components/SearchableSelect.vue';
 
 const props = defineProps({
   defaultTrial: {
@@ -395,6 +398,20 @@ const props = defineProps({
 });
 
 const currentStep = ref(1);
+
+const bentukPendidikanOptions = [
+  { id: 'SMA', nama: 'SMA (Sekolah Menengah Atas)' },
+  { id: 'SMK', nama: 'SMK (Sekolah Menengah Kejuruan)' },
+  { id: 'SMP', nama: 'SMP (Sekolah Menengah Pertama)' },
+  { id: 'SD', nama: 'SD (Sekolah Dasar)' },
+  { id: 'Madrasah', nama: 'Madrasah (MA / MTs / MI)' },
+  { id: 'Lainnya', nama: 'Lainnya / Lembaga Kursus' },
+];
+
+const statusSekolahOptions = [
+  { id: 'Negeri', nama: 'Negeri' },
+  { id: 'Swasta', nama: 'Swasta / Yayasan' },
+];
 
 const form = useForm({
   // Identitas Sekolah
@@ -466,7 +483,31 @@ const goToStep3 = () => {
   }
 };
 
+const validateStep3 = () => {
+  if (!form.admin_nama || !form.admin_username || !form.admin_password) {
+    alert('Mohon lengkapi Nama Admin, Username, dan Kata Sandi.');
+    return false;
+  }
+  if (form.admin_password.length < 6) {
+    alert('Kata Sandi minimal 6 karakter.');
+    return false;
+  }
+  return true;
+};
+
 const submitRegistration = () => {
+  if (!validateStep1()) {
+    currentStep.value = 1;
+    return;
+  }
+  if (!validateStep2()) {
+    currentStep.value = 2;
+    return;
+  }
+  if (!validateStep3()) {
+    currentStep.value = 3;
+    return;
+  }
   form.post('/daftar-sekolah');
 };
 </script>

@@ -3,7 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Pdss\Http\Controllers\PdssController;
 
-Route::middleware(['web', 'auth', 'tenant.guard'])->prefix('pdss')->name('pdss.')->group(function () {
+// 1. Rute Kanonikal Utama: /akademik/pdss
+Route::middleware(['web', 'auth', 'tenant.guard'])->prefix('akademik/pdss')->name('pdss.')->group(function () {
     Route::get('/', [PdssController::class, 'index'])->name('index');
     Route::get('/kesiapan', [PdssController::class, 'index'])->name('kesiapan');
     Route::get('/search-prodi', [PdssController::class, 'searchProdi'])->name('search.prodi');
@@ -36,5 +37,11 @@ Route::middleware(['web', 'auth', 'tenant.guard'])->prefix('pdss')->name('pdss.'
     Route::post('/salin-simulasi', [PdssController::class, 'salinSimulasi'])->name('simulasi.salin');
     Route::post('/kunci-permanen-simulasi', [PdssController::class, 'kunciPermanenSimulasi'])->name('simulasi.permanen');
     Route::post('/lock-step', [PdssController::class, 'lockStep'])->name('lock');
+});
+
+// 2. Backward-Compatible Aliases & Redirects (/pdss, /bk/akademik)
+Route::middleware(['web', 'auth', 'tenant.guard'])->group(function () {
+    Route::get('/pdss', fn() => redirect('/akademik/pdss'));
+    Route::get('/bk/akademik', fn() => redirect('/akademik/pdss'));
 });
 

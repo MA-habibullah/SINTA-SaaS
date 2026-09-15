@@ -71,6 +71,11 @@ class Tenant extends Model
         'trial_ends_at',
         'trial_duration_months',
         'subscription_type',
+        'subscription_expires_at',
+        'subscription_price',
+        'billing_cycle',
+        'is_locked',
+        'lock_reason',
         'pic_nama',
         'pic_jabatan',
         'pic_telepon',
@@ -81,24 +86,27 @@ class Tenant extends Model
     ];
 
     protected $casts = [
-        'cms_landing_enabled'   => 'boolean',
-        'storage_limit_mb'      => 'integer',
-        'max_siswa_limit'       => 'integer',
-        'max_staff_limit'       => 'integer',
-        'enable_bk'             => 'integer',
-        'enable_tracer'         => 'integer',
-        'enable_ppdb'           => 'integer',
-        'enable_perpustakaan'   => 'integer',
-        'enable_keuangan'       => 'integer',
-        'enable_pdss'           => 'integer',
-        'enable_smk'            => 'integer',
-        'enable_sarpras'        => 'integer',
-        'enable_persuratan'     => 'integer',
-        'trial_duration_months' => 'integer',
-        'trial_ends_at'         => 'datetime',
-        'approved_at'           => 'datetime',
-        'created_at'            => 'datetime',
-        'updated_at'            => 'datetime',
+        'cms_landing_enabled'     => 'boolean',
+        'is_locked'               => 'boolean',
+        'storage_limit_mb'        => 'integer',
+        'max_siswa_limit'         => 'integer',
+        'max_staff_limit'         => 'integer',
+        'subscription_price'      => 'float',
+        'enable_bk'               => 'integer',
+        'enable_tracer'           => 'integer',
+        'enable_ppdb'             => 'integer',
+        'enable_perpustakaan'     => 'integer',
+        'enable_keuangan'         => 'integer',
+        'enable_pdss'             => 'integer',
+        'enable_smk'              => 'integer',
+        'enable_sarpras'          => 'integer',
+        'enable_persuratan'       => 'integer',
+        'trial_duration_months'   => 'integer',
+        'trial_ends_at'           => 'datetime',
+        'subscription_expires_at' => 'datetime',
+        'approved_at'             => 'datetime',
+        'created_at'              => 'datetime',
+        'updated_at'              => 'datetime',
     ];
 
     public function users(): HasMany
@@ -106,9 +114,14 @@ class Tenant extends Model
         return $this->hasMany(User::class, 'tenant_id', 'id');
     }
 
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(TenantSubscriptionInvoice::class, 'tenant_id', 'id');
+    }
+
     public function isActive(): bool
     {
-        return in_array(strtolower((string)$this->status), ['aktif', 'active'], true);
+        return in_array(strtolower((string)$this->status), ['approved', 'aktif', 'active'], true);
     }
 
     public function isPendingApproval(): bool
@@ -127,9 +140,69 @@ class Tenant extends Model
         return $this->trial_ends_at->isFuture();
     }
 
+    public function getSubscriptionPlanAttribute(): ?string
+    {
+        return $this->attributes['paket_aktif'] ?? $this->attributes['subscription_type'] ?? 'Professional SaaS';
+    }
+
+    public function setSubscriptionPlanAttribute(?string $value): void
+    {
+        $this->attributes['paket_aktif'] = $value;
+        $this->attributes['subscription_type'] = $value;
+    }
+
+    public function getNameAttribute(): ?string
+    {
+        return $this->attributes['nama_sekolah'] ?? 'Sekolah';
+    }
+
     public function remainingTrialDays(): int
     {
         if (!$this->trial_ends_at) return 0;
         return (int) max(0, ceil(now()->floatDiffInDays($this->trial_ends_at, false)));
+    }
+
+    public function isSubscriptionActive(): bool
+    {
+        if ($this->is_locked) {
+            return false;
+        }
+        if ($this->id === '00000000-0000-0000-0000-000000000000') {
+            return true; // Root platform owner is always active
+        }
+        if ($this->isTrialActive()) {
+            return true;
+        }
+        if (!$this->subscription_expires_at) {
+            return true;
+        }
+        return $this->subscription_expires_at->isFuture();
+    }
+
+    public function remainingSubscriptionSeconds(): int
+    {
+        if ($this->id === '00000000-0000-0000-0000-000000000000') {
+            return 315360000; // 10 years
+        }
+        $target = $this->subscription_expires_at ?? ($this->isTrialActive() ? $this->trial_ends_at : null);
+        if (!$target) {
+            return 0;
+        }
+        return max(0, (int)$target->diffInSeconds(now(), false) * -1);
+    }
+
+    public function remainingSubscriptionDays(): int
+    {
+        return (int)ceil($this->remainingSubscriptionSeconds() / 86400);
+    }
+
+    public function isSubscriptionExpiringSoon(): bool
+    {
+        return $this->remainingSubscriptionDays() <= 30;
+    }
+
+    public function isSubscriptionCritical(): bool
+    {
+        return $this->remainingSubscriptionDays() <= 10;
     }
 }

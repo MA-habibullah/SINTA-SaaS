@@ -7,6 +7,7 @@ use Modules\Core\Http\Controllers\UserController;
 use Modules\Core\Http\Controllers\TenantManagementController;
 use Modules\Core\Http\Controllers\TenantMenuController;
 use Modules\Core\Http\Controllers\SekolahIdentitasController;
+use Modules\Core\Http\Controllers\SekolahBillingController;
 use Modules\Core\Http\Controllers\KonfigurasiAksesController;
 use Modules\Siswa\Http\Controllers\BukuIndukController;
 use Modules\Siswa\Http\Controllers\PpdbController;
@@ -61,6 +62,13 @@ Route::get('/up', function () {
 
 // Authenticated Canonical Menu Route Aliases
 Route::middleware(['auth', 'tenant.guard'])->group(function () {
+    // 0. Role-Specific Dashboards & Fallback Generic Dashboard
+    Route::get('/dashboard', [\Modules\Core\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/super-admin/dashboard', [\Modules\Core\Http\Controllers\DashboardController::class, 'index'])->name('dashboard.super-admin');
+    Route::get('/admin/dashboard', [\Modules\Core\Http\Controllers\DashboardController::class, 'index'])->name('dashboard.admin');
+    Route::get('/siswa/dashboard', [\Modules\Core\Http\Controllers\DashboardController::class, 'index'])->name('dashboard.siswa');
+    Route::get('/guru/dashboard', [\Modules\Core\Http\Controllers\DashboardController::class, 'index'])->name('dashboard.guru');
+
     // 1. Data Pokok & Siswa (Manajemen Pengguna Sentral)
     Route::get('/pengguna', [UserController::class, 'index'])->name('menu.pengguna');
     Route::post('/pengguna', [UserController::class, 'store'])->name('menu.pengguna.store');
@@ -134,6 +142,10 @@ Route::middleware(['auth', 'tenant.guard'])->group(function () {
     // 2. Sistem & Utilitas
     Route::get('/sekolah/identitas', [SekolahIdentitasController::class, 'show'])->name('menu.sekolah.identitas');
     Route::match(['post', 'put'], '/sekolah/identitas', [SekolahIdentitasController::class, 'update'])->name('menu.sekolah.identitas.update');
+    Route::get('/sekolah/billing', [SekolahBillingController::class, 'index'])->name('menu.sekolah.billing');
+    Route::post('/sekolah/billing/pay/{id}', [SekolahBillingController::class, 'submitPayment'])->name('menu.sekolah.billing.pay');
+    Route::get('/sekolah/billing/invoice/{id}/download', [SekolahBillingController::class, 'downloadInvoice'])->name('menu.sekolah.billing.invoice.download');
+    Route::get('/subscription-expired', [SekolahBillingController::class, 'subscriptionExpired'])->name('subscription.expired');
     Route::get('/konfigurasi/akses', [KonfigurasiAksesController::class, 'index'])->name('menu.konfigurasi.akses');
     Route::post('/konfigurasi/akses', [KonfigurasiAksesController::class, 'store'])->name('menu.konfigurasi.akses.store');
     Route::get('/konfigurasi/akses/fetch', [KonfigurasiAksesController::class, 'fetch'])->name('menu.konfigurasi.akses.fetch');
@@ -193,8 +205,11 @@ Route::middleware(['auth', 'tenant.guard'])->group(function () {
     // 3. Bimbingan Konseling & Layanan Khusus
     Route::get('/bk/layanan', [BkController::class, 'layanan'])->name('menu.bk.layanan');
     Route::get('/bk/kedisiplinan', [BkController::class, 'kedisiplinan'])->name('menu.bk.kedisiplinan');
-    Route::get('/bk/akademik', [PdssController::class, 'index'])->name('menu.bk.akademik');
-    Route::get('/bk/alumni', [TracerController::class, 'index'])->name('menu.bk.alumni');
+    Route::get('/bk/konseling-saya', [BkController::class, 'layanan'])->name('menu.bk.konseling-saya');
+    Route::get('/bk/akademik', fn() => redirect('/akademik/pdss'));
+    Route::get('/bk/alumni', fn() => redirect('/alumni/tracer-study'));
+    Route::get('/alumni/tracer-study', [TracerController::class, 'index'])->name('menu.alumni.tracer-study');
+    Route::get('/akademik/pdss', [PdssController::class, 'index'])->name('menu.akademik.pdss');
     Route::post('/bk/konseling', [BkController::class, 'storeKonseling'])->name('menu.bk.konseling.store');
     Route::put('/bk/konseling/{id}', [BkController::class, 'updateKonseling'])->name('menu.bk.konseling.update');
     Route::delete('/bk/konseling/{id}', [BkController::class, 'deleteKonseling'])->name('menu.bk.konseling.delete');
@@ -205,6 +220,9 @@ Route::middleware(['auth', 'tenant.guard'])->group(function () {
     Route::post('/bk/master-pelanggaran', [BkController::class, 'storeMasterPelanggaran'])->name('menu.bk.master.store');
     Route::put('/bk/master-pelanggaran/{id}', [BkController::class, 'updateMasterPelanggaran'])->name('menu.bk.master.update');
     Route::delete('/bk/master-pelanggaran/{id}', [BkController::class, 'deleteMasterPelanggaran'])->name('menu.bk.master.delete');
+
+    // Presensi & Absensi Mandiri
+    Route::get('/absensi/mandiri', [PresensiController::class, 'index'])->name('menu.absensi.mandiri');
 
     // 4. Informasi & Kesiswaan
     Route::get('/informasi/pengumuman', [CmsController::class, 'pengumuman'])->name('menu.informasi.pengumuman');
@@ -239,7 +257,9 @@ Route::middleware(['auth', 'tenant.guard'])->group(function () {
     Route::get('/keuangan/tagihan-saya', [TagihanSayaController::class, 'index'])->name('menu.keuangan.tagihan-saya');
     Route::get('/keuangan/audit-log', [KeuanganAuditLogController::class, 'index'])->name('menu.keuangan.audit-log');
 
-    // 7. Kurikulum & Akademik (Manajemen Jadwal Pelajaran Matrix & Anti-Bentrok)
+    // 7. Kurikulum & Akademik (Manajemen Jadwal Pelajaran Matrix, Rapor & Portal Siswa)
+    Route::get('/akademik/rapor', [RaporController::class, 'index'])->name('menu.akademik.rapor');
+    Route::get('/akademik/rapor-saya', [RaporController::class, 'index'])->name('menu.akademik.rapor-saya');
     Route::get('/akademik/jadwal', [JadwalPelajaranController::class, 'index'])->name('menu.akademik.jadwal');
     Route::post('/akademik/jadwal', [JadwalPelajaranController::class, 'store'])->name('menu.akademik.jadwal.store');
     Route::put('/akademik/jadwal/{id}', [JadwalPelajaranController::class, 'update'])->name('menu.akademik.jadwal.update');

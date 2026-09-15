@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use Illuminate\Http\RedirectResponse;
@@ -520,15 +521,15 @@ class UserController extends Controller
             $msg = 'Data siswa ' . $item->nama_lengkap . ' berhasil ditambahkan.';
         } else {
             $validated = $request->validate([
-                'nama_lengkap' => 'required|string|max:255',
-                'username'     => 'required|string|max:100|unique:core.users,username',
-                'email'        => 'required|email|max:255|unique:core.users,email',
-                'password'     => 'required|string|min:6',
-                'role_id'      => 'nullable|string',
-                'no_hp'        => 'nullable|string|max:20',
-                'nip'          => 'nullable|string|max:50',
-                'jenis_gtk'    => 'nullable|string|max:100',
-                'tenant_id'    => 'nullable|uuid',
+                'nama_lengkap' => ['required', 'string', 'max:255'],
+                'username'     => ['required', 'string', 'max:100', Rule::unique(User::class, 'username')],
+                'email'        => ['required', 'email', 'max:255', Rule::unique(User::class, 'email')],
+                'password'     => ['required', 'string', 'min:6'],
+                'role_id'      => ['nullable', 'string'],
+                'no_hp'        => ['nullable', 'string', 'max:20'],
+                'nip'          => ['nullable', 'string', 'max:50'],
+                'jenis_gtk'    => ['nullable', 'string', 'max:100'],
+                'tenant_id'    => ['nullable', 'uuid'],
             ]);
 
             $validated['id'] = (string) Str::uuid();

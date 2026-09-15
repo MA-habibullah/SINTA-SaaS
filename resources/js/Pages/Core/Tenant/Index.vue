@@ -912,7 +912,7 @@ const deleteTenant = (tenant) => {
                                 <th class="py-3 px-4 text-center w-12">#</th>
                                 <th class="py-3 px-4 min-w-[240px]">Sekolah & Kontak PIC</th>
                                 <th class="py-3 px-4 min-w-[180px]">Subdomain / URL</th>
-                                <th class="py-3 px-3.5 min-w-[140px]">Paket & Trial</th>
+                                <th class="py-3 px-3.5 min-w-[210px]">Paket & Periode Akses</th>
                                 <th class="py-3 px-3.5 min-w-[120px]">Status Akses</th>
                                 <th class="py-3 px-4 text-center sticky right-0 bg-slate-50/80 shadow-[-4px_0_6px_rgba(15,23,42,0.04)] w-56">Aksi & Approval</th>
                             </tr>
@@ -975,23 +975,47 @@ const deleteTenant = (tenant) => {
                                     </div>
                                 </td>
 
-                                <!-- Paket & Masa Trial -->
-                                <td class="py-3.5 px-3.5 whitespace-nowrap">
-                                    <div class="space-y-1">
-                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-xl text-[11px] font-bold border shadow-2xs" :class="getPaketBadge(tenant.paket_aktif)">
-                                            <i class="bi bi-gift-fill text-yellow-500" v-if="tenant.is_trial_active || tenant.paket_aktif?.includes('Trial')"></i>
-                                            <i class="bi bi-gem text-xs" v-else></i>
-                                            {{ tenant.paket_aktif }}
-                                        </span>
-                                        <!-- Trial Countdown Info -->
-                                        <div v-if="tenant.trial_ends_at" class="text-[10px] font-semibold text-slate-500">
-                                            <span v-if="tenant.remaining_trial_days > 0" class="text-emerald-600 font-bold">
-                                                Tersisa {{ tenant.remaining_trial_days }} hari
+                                <!-- Paket & Periode Akses (Waktu Mulai & Berakhir) -->
+                                <td class="py-3.5 px-3.5">
+                                    <div class="space-y-1.5">
+                                        <!-- Header Paket & Badge Sisa Hari -->
+                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-xl text-[10px] font-bold border shadow-2xs" :class="getPaketBadge(tenant.paket_aktif)">
+                                                <i class="bi bi-gift-fill text-yellow-500" v-if="tenant.is_trial_active || tenant.paket_aktif?.includes('Trial')"></i>
+                                                <i class="bi bi-gem text-[10px]" v-else></i>
+                                                {{ tenant.paket_aktif }}
                                             </span>
-                                            <span v-else class="text-rose-600 font-bold">
-                                                Trial Berakhir
+
+                                            <!-- Sisa Waktu Tag -->
+                                            <span v-if="tenant.id === '00000000-0000-0000-0000-000000000000'" class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                                <i class="bi bi-infinity"></i> Lifetime
                                             </span>
-                                            <span class="text-slate-400 block font-normal">s.d. {{ tenant.trial_ends_at_human }}</span>
+                                            <span v-else-if="tenant.sisa_hari !== null && tenant.sisa_hari > 0" class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                <i class="bi bi-clock-history"></i> {{ tenant.sisa_hari }} hr
+                                            </span>
+                                            <span v-else-if="tenant.is_expired" class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                                <i class="bi bi-exclamation-triangle-fill"></i> Habis
+                                            </span>
+                                        </div>
+
+                                        <!-- Tanggal Waktu Mulai & Berakhir -->
+                                        <div class="bg-slate-50/90 rounded-xl p-2 border border-slate-200/70 text-[11px] space-y-1 min-w-[190px]">
+                                            <div class="flex items-center justify-between gap-2">
+                                                <span class="text-slate-400 font-semibold text-[10px] flex items-center gap-1">
+                                                    <i class="bi bi-calendar-check text-emerald-500"></i> Mulai:
+                                                </span>
+                                                <span class="font-mono text-slate-700 font-semibold text-[10px]" :title="tenant.waktu_mulai_full">
+                                                    {{ tenant.waktu_mulai_full || tenant.waktu_mulai }}
+                                                </span>
+                                            </div>
+                                            <div class="flex items-center justify-between gap-2 pt-0.5 border-t border-slate-200/50">
+                                                <span class="text-slate-400 font-semibold text-[10px] flex items-center gap-1">
+                                                    <i class="bi bi-calendar-x text-rose-500"></i> Berakhir:
+                                                </span>
+                                                <span class="font-mono font-bold text-[10px]" :class="tenant.is_expired ? 'text-rose-600' : 'text-slate-800'" :title="tenant.waktu_berakhir_full">
+                                                    {{ tenant.waktu_berakhir_full || tenant.waktu_berakhir }}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
                                 </td>
@@ -1158,7 +1182,7 @@ const deleteTenant = (tenant) => {
                     </div>
 
                     <!-- School & PIC Profile Snippet -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200/80 mb-6 text-xs">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200/80 mb-6 text-xs">
                         <div>
                             <span class="text-slate-400 font-semibold block text-[11px]">Identitas Instansi</span>
                             <div class="font-bold text-slate-800 mt-0.5">{{ selectedTenantForApproval?.nama_sekolah }}</div>
@@ -1170,6 +1194,14 @@ const deleteTenant = (tenant) => {
                             <div class="font-bold text-slate-800 mt-0.5">{{ selectedTenantForApproval?.pic_nama || 'Belum diisi' }} ({{ selectedTenantForApproval?.pic_jabatan || '-' }})</div>
                             <div class="text-slate-600 mt-0.5"><i class="bi bi-whatsapp text-emerald-600"></i> {{ selectedTenantForApproval?.pic_telepon || '-' }}</div>
                             <div class="text-slate-600 mt-0.5"><i class="bi bi-envelope"></i> {{ selectedTenantForApproval?.pic_email || '-' }}</div>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 font-semibold block text-[11px]">Periode Akses / Waktu</span>
+                            <div class="text-slate-700 mt-0.5"><i class="bi bi-calendar-check text-emerald-500"></i> Mulai: <strong>{{ selectedTenantForApproval?.waktu_mulai_full || '-' }}</strong></div>
+                            <div class="text-slate-700 mt-0.5"><i class="bi bi-calendar-x text-rose-500"></i> Berakhir: <strong>{{ selectedTenantForApproval?.waktu_berakhir_full || '-' }}</strong></div>
+                            <div v-if="selectedTenantForApproval?.sisa_hari !== null" class="mt-1 text-[11px] font-bold text-blue-600">
+                                Sisa Waktu: {{ selectedTenantForApproval?.sisa_hari }} hari
+                            </div>
                         </div>
                     </div>
 

@@ -22,15 +22,17 @@ class KeuanganAuditLogController extends Controller
     {
         $user = Auth::user();
         $isSuperAdmin = $user ? $user->isSuperAdmin() : false;
+        $roleName = strtolower($user?->role?->nama_role ?? '');
+        $isSchoolStaff = in_array($roleName, ['admin', 'admin_sekolah', 'kepala_sekolah', 'keuangan', 'staf_keuangan', 'bendahara']);
 
-        if (!$isSuperAdmin) {
+        if (!$isSuperAdmin && !$isSchoolStaff) {
             if ($request->wantsJson()) {
-                return response()->json(['success' => false, 'message' => 'Akses Terbatas: Halaman Audit Trail Keuangan hanya dapat diakses oleh Super Administrator.'], 403);
+                return response()->json(['success' => false, 'message' => 'Akses Terbatas: Halaman Audit Trail Keuangan hanya dapat diakses oleh Bagian Keuangan dan Administrator.'], 403);
             }
-            abort(403, 'Akses Ditolak: Halaman Audit Trail Keuangan khusus untuk Super Administrator.');
+            abort(403, 'Akses Ditolak: Halaman Audit Trail Keuangan khusus untuk Bagian Keuangan dan Administrator.');
         }
 
-        $selectedTenantId = $request->query('tenant_id');
+        $selectedTenantId = $isSuperAdmin ? $request->query('tenant_id') : null;
         $tenantId = $selectedTenantId ?: (session('tenant_id') ?? $user?->tenant_id);
 
         $eventType = $request->query('event_type');
@@ -40,8 +42,8 @@ class KeuanganAuditLogController extends Controller
 
         $query = KeuanganAuditLog::with('user:id,nama_lengkap,username,email');
 
-        if (!empty($selectedTenantId)) {
-            $query->where('tenant_id', $selectedTenantId);
+        if (!empty($tenantId) && $tenantId !== '00000000-0000-0000-0000-000000000000') {
+            $query->where('tenant_id', $tenantId);
         }
 
         if (!empty($eventType)) {

@@ -37,4 +37,28 @@ class CmsPromotion extends Model
         'created_at'   => 'datetime',
         'updated_at'   => 'datetime',
     ];
+
+    /**
+     * Dapatkan data promosi CMS yang telah dikelompokkan berdasarkan section_key untuk Landing Page
+     */
+    public static function getGroupedForLanding(): array
+    {
+        $promotions = static::where('is_active', true)
+            ->orderBy('order_num', 'asc')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return [
+            'nav_menu'     => $promotions->where('section_key', 'nav_menu')->values(),
+            'hero'         => $promotions->where('section_key', 'hero')->values(),
+            'features'     => $promotions->where('section_key', 'features')->values(),
+            'benefits'     => $promotions->where('section_key', 'benefits')->values(),
+            'pricing'      => $promotions->where('section_key', 'pricing')->values(),
+            'faq'          => $promotions->where('section_key', 'faq')->values(),
+            'testimonials' => $promotions->where('section_key', 'testimonials')->values(),
+            'contact'      => $promotions->where('section_key', 'contact')->values(),
+            'cta'          => $promotions->where('section_key', 'cta')->values(),
+            'stats'        => $promotions->where('section_key', 'stats')->values(),
+        ];
+    }
 }

@@ -18,14 +18,16 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             \Modules\Core\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
+            \App\Http\Middleware\TenantSubscriptionLockoutGuard::class,
         ]);
 
         $middleware->alias([
-            'tenant.guard'   => \Modules\Core\Http\Middleware\TenantRouteGuard::class,
-            'storage.guard'  => \Modules\Core\Http\Middleware\TenantStorageGuard::class,
-            'role'           => \Spatie\Permission\Middleware\RoleMiddleware::class,
-            'permission'     => \Spatie\Permission\Middleware\PermissionMiddleware::class,
-            'role_or_perm'   => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            'tenant.guard'         => \Modules\Core\Http\Middleware\TenantRouteGuard::class,
+            'subscription.lockout' => \App\Http\Middleware\TenantSubscriptionLockoutGuard::class,
+            'storage.guard'        => \Modules\Core\Http\Middleware\TenantStorageGuard::class,
+            'role'                 => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'permission'           => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'role_or_perm'         => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

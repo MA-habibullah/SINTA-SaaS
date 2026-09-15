@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
             WilayahSeeder::class,
             KodeKlasifikasiSuratSeeder::class,
             SnpmbDataSeeder::class,
+            MenuSeeder::class,
         ]);
     }
 }

@@ -144,16 +144,52 @@ class TenantManagementController extends Controller
                 'pic_email'             => $t->pic_email ?: '',
                 'trial_ends_at'         => $t->trial_ends_at ? $t->trial_ends_at->format('Y-m-d H:i:s') : null,
                 'trial_ends_at_human'   => $t->trial_ends_at ? $t->trial_ends_at->translatedFormat('d M Y') : null,
+                'trial_ends_at_full'    => $t->trial_ends_at ? $t->trial_ends_at->translatedFormat('d M Y, H:i') . ' WIB' : null,
+                'subscription_expires_at'       => $t->subscription_expires_at ? $t->subscription_expires_at->format('Y-m-d H:i:s') : null,
+                'subscription_expires_at_human' => $t->subscription_expires_at ? $t->subscription_expires_at->translatedFormat('d M Y') : null,
+                'subscription_expires_at_full'  => $t->subscription_expires_at ? $t->subscription_expires_at->translatedFormat('d M Y, H:i') . ' WIB' : null,
                 'trial_duration_months' => (int)($t->trial_duration_months ?: 3),
-                'subscription_type'     => $t->subscription_type ?: 'Free Trial',
+                'subscription_type'     => $t->subscription_type ?: ($t->paket_aktif ?: 'Free Trial'),
                 'remaining_trial_days'  => $t->remainingTrialDays(),
+                'remaining_subscription_days' => $t->remainingSubscriptionDays(),
                 'is_trial_active'       => $t->isTrialActive(),
                 'is_pending_approval'   => $t->isPendingApproval(),
                 'is_rejected'           => $t->isRejected(),
                 'rejection_reason'      => $t->rejection_reason ?: '',
                 'approved_at'           => $t->approved_at ? $t->approved_at->format('Y-m-d H:i:s') : null,
+                'approved_at_human'     => $t->approved_at ? $t->approved_at->translatedFormat('d M Y') : null,
+                'approved_at_full'      => $t->approved_at ? $t->approved_at->translatedFormat('d M Y, H:i') . ' WIB' : null,
                 'allowed_menu_ids'      => $allowedMenuIds,
                 'created_at'            => $t->created_at ? $t->created_at->format('Y-m-d H:i:s') : null,
+                'created_at_human'      => $t->created_at ? $t->created_at->translatedFormat('d M Y') : null,
+                'created_at_full'       => $t->created_at ? $t->created_at->translatedFormat('d M Y, H:i') . ' WIB' : null,
+                'waktu_mulai'           => ($t->approved_at ?? $t->created_at) ? ($t->approved_at ?? $t->created_at)->translatedFormat('d M Y') : '-',
+                'waktu_mulai_full'      => ($t->approved_at ?? $t->created_at) ? ($t->approved_at ?? $t->created_at)->translatedFormat('d M Y, H:i') . ' WIB' : '-',
+                'waktu_berakhir'        => $t->id === '00000000-0000-0000-0000-000000000000' 
+                                            ? 'Permanen (Lifetime)' 
+                                            : ($t->trial_ends_at 
+                                                ? $t->trial_ends_at->translatedFormat('d M Y') 
+                                                : ($t->subscription_expires_at 
+                                                    ? $t->subscription_expires_at->translatedFormat('d M Y') 
+                                                    : 'Permanen')),
+                'waktu_berakhir_full'   => $t->id === '00000000-0000-0000-0000-000000000000' 
+                                            ? 'Permanen (Lifetime)' 
+                                            : ($t->trial_ends_at 
+                                                ? $t->trial_ends_at->translatedFormat('d M Y, H:i') . ' WIB' 
+                                                : ($t->subscription_expires_at 
+                                                    ? $t->subscription_expires_at->translatedFormat('d M Y, H:i') . ' WIB' 
+                                                    : 'Permanen')),
+                'sisa_hari'             => $t->id === '00000000-0000-0000-0000-000000000000' 
+                                            ? null 
+                                            : ($t->trial_ends_at 
+                                                ? $t->remainingTrialDays() 
+                                                : ($t->subscription_expires_at 
+                                                    ? $t->remainingSubscriptionDays() 
+                                                    : null)),
+                'is_expired'            => $t->id !== '00000000-0000-0000-0000-000000000000' && (
+                                            ($t->trial_ends_at && $t->trial_ends_at->isPast()) ||
+                                            ($t->subscription_expires_at && $t->subscription_expires_at->isPast())
+                                        ),
             ];
         });
 

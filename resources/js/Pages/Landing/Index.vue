@@ -7,71 +7,68 @@
     <div class="absolute top-[50%] left-[-200px] w-[650px] h-[650px] bg-blue-600/10 blur-[170px] pointer-events-none -z-10"></div>
     <div class="absolute top-[75%] right-[-150px] w-[600px] h-[600px] bg-emerald-600/10 blur-[160px] pointer-events-none -z-10"></div>
 
-    <!-- 1. NAVBAR HEADER (Glassmorphism Sticky) -->
-    <header class="relative z-40 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl sticky top-0 transition-all duration-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
-        
-        <!-- Logo Brand -->
-        <Link href="/" class="flex items-center gap-3 shrink-0 group">
-          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-blue-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/25 group-hover:scale-105 transition transform duration-200">
-            <i class="bi bi-mortarboard-fill text-lg"></i>
+    <!-- 1. NAVBAR HEADER (Ultra-Responsive Modern Glass Island) -->
+    <header class="relative z-40 sticky top-0 w-full transition-all duration-300">
+      <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3">
+        <div class="h-16 px-4 sm:px-6 rounded-2xl sm:rounded-3xl bg-slate-950/85 backdrop-blur-xl border border-slate-800/80 shadow-2xl shadow-slate-950/50 flex items-center justify-between gap-2 sm:gap-4">
+          
+          <!-- Logo Brand (Left) -->
+          <Link href="/" class="flex items-center gap-2.5 shrink-0 group">
+            <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-blue-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/25 group-hover:scale-105 transition transform duration-200 shrink-0">
+              <i class="bi bi-mortarboard-fill text-base sm:text-lg"></i>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-lg sm:text-xl font-black text-white tracking-tight">SINTA</span>
+              <span class="hidden md:inline-block px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-extrabold tracking-wider">
+                SaaS v2.0
+              </span>
+            </div>
+          </Link>
+
+          <!-- Desktop Center Navigation (Floating Pill Bar) -->
+          <nav class="hidden xl:flex items-center gap-1 p-1 rounded-full bg-slate-900/60 border border-slate-800/80 backdrop-blur-md">
+            <a v-for="(nav, nIdx) in navMenuItems" :key="nIdx" 
+               :href="nav.cta_link || nav.content || '#'"
+               :target="nav.content_json?.target || '_self'"
+               class="px-3.5 py-1.5 rounded-full text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/90 transition-all duration-150 flex items-center gap-1.5">
+              <i :class="['bi', nav.icon_class || 'bi-circle-fill text-[7px]', 'text-blue-400 text-xs']"></i>
+              <span>{{ nav.title }}</span>
+            </a>
+          </nav>
+
+          <!-- Desktop & Tablet Auth Actions (Right) -->
+          <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+            <Link href="/login" class="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-900 border border-slate-800/60 hover:border-slate-700 transition">
+              <i class="bi bi-box-arrow-in-right text-xs"></i>
+              <span>Masuk Portal</span>
+            </Link>
+
+            <Link href="/daftar-sekolah" class="relative group overflow-hidden px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-extrabold shadow-md shadow-blue-600/30 transition-all duration-200 transform hover:-translate-y-0.5 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap">
+              <i class="bi bi-gift-fill text-yellow-300 text-xs"></i>
+              <span>Free Trial 1 Bulan</span>
+            </Link>
+
+            <!-- Mobile & Tablet Hamburger Toggle Button (Below xl) -->
+            <button type="button" 
+                    @click="mobileMenuOpen = !mobileMenuOpen"
+                    class="xl:hidden w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 transition shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                    title="Menu Navigasi">
+              <i :class="['bi text-lg transition-transform duration-200', mobileMenuOpen ? 'bi-x-lg rotate-90 text-red-400' : 'bi-list text-blue-400']"></i>
+            </button>
           </div>
-          <div class="flex items-center gap-2">
-            <span class="text-xl font-black text-white tracking-tight">SINTA</span>
-            <span class="hidden sm:inline-block px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-extrabold tracking-wider">
-              Enterprise v2.0
-            </span>
-          </div>
-        </Link>
 
-        <!-- Desktop Navigation Links (Dynamic CMS) -->
-        <nav class="hidden lg:flex items-center gap-5 xl:gap-7 text-xs font-bold text-slate-300 shrink-0">
-          <a v-for="(nav, nIdx) in navMenuItems" :key="nIdx" 
-             :href="nav.cta_link || nav.content || '#'"
-             :target="nav.content_json?.target || '_self'"
-             class="px-2.5 py-1.5 rounded-xl hover:text-white hover:bg-slate-900/80 transition-all duration-150 flex items-center gap-1.5 group">
-            <i :class="['bi', nav.icon_class || 'bi-circle-fill text-[7px]', 'text-blue-400 group-hover:text-blue-300 transition']"></i>
-            <span>{{ nav.title }}</span>
-            <span v-if="nav.badge_text" class="px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[9px] font-extrabold border border-blue-500/30">
-              {{ nav.badge_text }}
-            </span>
-          </a>
-        </nav>
-
-        <!-- Desktop & Tablet Auth Actions -->
-        <div class="hidden sm:flex items-center gap-3 shrink-0">
-          <Link href="/login" class="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-900 border border-transparent hover:border-slate-800 transition flex items-center gap-1.5">
-            <i class="bi bi-box-arrow-in-right text-sm"></i>
-            <span>Masuk Portal</span>
-          </Link>
-          <Link href="/daftar-sekolah" class="relative group overflow-hidden px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 bg-size-200 hover:bg-right hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-extrabold shadow-lg shadow-blue-600/30 transition-all duration-300 transform hover:-translate-y-0.5 flex items-center gap-2 whitespace-nowrap">
-            <i class="bi bi-gift-fill text-yellow-300 animate-pulse"></i>
-            <span>Coba Gratis 1 Bulan</span>
-          </Link>
         </div>
-
-        <!-- Mobile & Tablet Hamburger Toggle Button -->
-        <div class="flex items-center gap-2 lg:hidden">
-          <Link href="/login" class="sm:hidden px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-900">
-            Masuk
-          </Link>
-          <button type="button" 
-                  @click="mobileMenuOpen = !mobileMenuOpen"
-                  class="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 transition shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-                  title="Buka Navigasi">
-            <i :class="['bi text-lg transition-transform duration-200', mobileMenuOpen ? 'bi-x-lg rotate-90 text-red-400' : 'bi-list text-blue-400']"></i>
-          </button>
-        </div>
-
       </div>
     </header>
 
-    <!-- MOBILE SIDEBAR DRAWER -->
-    <div v-if="mobileMenuOpen" class="fixed inset-0 z-50 lg:hidden flex justify-end">
-      <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity" 
+    <!-- RESPONSIVE MOBILE / TABLET SLIDE-OVER DRAWER -->
+    <div v-if="mobileMenuOpen" class="fixed inset-0 z-50 xl:hidden flex justify-end">
+      <!-- Backdrop Overlay -->
+      <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md transition-opacity" 
            @click="mobileMenuOpen = false"></div>
 
-      <div class="relative w-full max-w-xs bg-slate-900 border-l border-slate-800 shadow-2xl p-6 flex flex-col justify-between h-full overflow-y-auto z-10">
+      <!-- Drawer Content -->
+      <div class="relative w-full max-w-sm bg-slate-900 border-l border-slate-800 shadow-2xl p-6 flex flex-col justify-between h-full overflow-y-auto z-10 animate-in slide-in-from-right duration-200">
         <div>
           <!-- Drawer Header -->
           <div class="flex items-center justify-between pb-5 border-b border-slate-800">
@@ -79,7 +76,7 @@
               <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md">
                 <i class="bi bi-mortarboard-fill text-sm"></i>
               </div>
-              <span class="font-black text-white text-lg tracking-tight">SINTA</span>
+              <span class="font-black text-white text-lg tracking-tight">SINTA SaaS</span>
             </div>
             <button type="button" 
                     @click="mobileMenuOpen = false"
@@ -94,7 +91,7 @@
                :href="nav.cta_link || nav.content || '#'"
                :target="nav.content_json?.target || '_self'"
                @click="mobileMenuOpen = false"
-               class="flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition">
+               class="flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/90 transition">
               <div class="flex items-center gap-3">
                 <div class="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
                   <i :class="['bi', nav.icon_class || 'bi-link-45deg']"></i>
@@ -121,7 +118,7 @@
                 @click="mobileMenuOpen = false"
                 class="w-full py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs text-center border border-slate-700 transition flex items-center justify-center gap-2">
             <i class="bi bi-box-arrow-in-right"></i>
-            <span>Login Portal Sekolah</span>
+            <span>Masuk Portal Sekolah</span>
           </Link>
 
           <div class="text-center pt-2">
@@ -187,117 +184,6 @@
         </div>
 
       </div>
-
-      <!-- VISUAL APPLICATION MOCKUP / PREVIEW FRAME (High-Impact Hero Visual) -->
-      <div class="mt-14 max-w-5xl mx-auto relative group">
-        <!-- Ambient Radiant Blur Behind Mockup -->
-        <div class="absolute -inset-1.5 bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 rounded-3xl blur-xl opacity-30 group-hover:opacity-45 transition duration-500"></div>
-
-        <!-- Window Mockup Container -->
-        <div class="relative rounded-2xl sm:rounded-3xl bg-slate-900 border border-slate-700/80 shadow-2xl overflow-hidden backdrop-blur-2xl">
-          
-          <!-- Mockup Window Titlebar -->
-          <div class="px-4 py-3 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400 select-none">
-            <div class="flex items-center gap-2">
-              <span class="w-3 h-3 rounded-full bg-rose-500/80 inline-block"></span>
-              <span class="w-3 h-3 rounded-full bg-amber-500/80 inline-block"></span>
-              <span class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block"></span>
-              <span class="ml-2 font-mono text-[11px] text-slate-500 hidden sm:inline-block">sinta.cloud/app/dashboard</span>
-            </div>
-            <div class="flex items-center gap-2 text-[11px] font-semibold">
-              <span class="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                Server Active
-              </span>
-              <span class="text-slate-500 hidden sm:inline">|</span>
-              <span class="text-slate-400 hidden sm:inline">SMA Teladan Nusantara</span>
-            </div>
-          </div>
-
-          <!-- Mockup Interactive View Body -->
-          <div class="p-5 sm:p-7 bg-slate-900/95 space-y-6">
-            
-            <!-- Mockup Header Metric Cards -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-              <div class="p-3.5 sm:p-4 rounded-2xl bg-slate-800/80 border border-slate-700/70 text-left">
-                <div class="flex items-center justify-between text-slate-400 text-xs font-semibold">
-                  <span>Total Siswa Aktif</span>
-                  <i class="bi bi-people text-blue-400"></i>
-                </div>
-                <div class="text-xl sm:text-2xl font-black text-white mt-1">742 Siswa</div>
-                <div class="text-[10px] text-emerald-400 mt-0.5 flex items-center gap-1 font-bold">
-                  <i class="bi bi-arrow-up-right"></i> 100% Terverifikasi
-                </div>
-              </div>
-
-              <div class="p-3.5 sm:p-4 rounded-2xl bg-slate-800/80 border border-slate-700/70 text-left">
-                <div class="flex items-center justify-between text-slate-400 text-xs font-semibold">
-                  <span>Kehadiran Hari Ini</span>
-                  <i class="bi bi-geo-alt text-emerald-400"></i>
-                </div>
-                <div class="text-xl sm:text-2xl font-black text-emerald-400 mt-1">98.4%</div>
-                <div class="text-[10px] text-slate-400 mt-0.5 font-bold">
-                  GPS Geofence Verified
-                </div>
-              </div>
-
-              <div class="p-3.5 sm:p-4 rounded-2xl bg-slate-800/80 border border-slate-700/70 text-left">
-                <div class="flex items-center justify-between text-slate-400 text-xs font-semibold">
-                  <span>Kelunasan SPP</span>
-                  <i class="bi bi-wallet2 text-purple-400"></i>
-                </div>
-                <div class="text-xl sm:text-2xl font-black text-purple-400 mt-1">Rp 148,5 Jt</div>
-                <div class="text-[10px] text-emerald-400 mt-0.5 font-bold">
-                  Auto Midtrans QRIS
-                </div>
-              </div>
-
-              <div class="p-3.5 sm:p-4 rounded-2xl bg-slate-800/80 border border-slate-700/70 text-left">
-                <div class="flex items-center justify-between text-slate-400 text-xs font-semibold">
-                  <span>Rapor Kurikulum</span>
-                  <i class="bi bi-award text-amber-400"></i>
-                </div>
-                <div class="text-xl sm:text-2xl font-black text-amber-400 mt-1">24 Rombel</div>
-                <div class="text-[10px] text-blue-400 mt-0.5 font-bold">
-                  Siap Cetak Massal PDF
-                </div>
-              </div>
-            </div>
-
-            <!-- Mockup Mini Table & Flow Visualizer -->
-            <div class="rounded-2xl bg-slate-950/70 border border-slate-800 p-4 text-left space-y-3">
-              <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
-                <div class="flex items-center gap-2 text-xs font-extrabold text-white">
-                  <i class="bi bi-activity text-blue-400"></i>
-                  <span>Live Transaksi & Presensi Real-Time</span>
-                </div>
-                <span class="text-[10px] text-slate-400 font-mono">16 Modul Terkoneksi</span>
-              </div>
-              <div class="space-y-2 text-xs">
-                <div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/60 border border-slate-800/60">
-                  <div class="flex items-center gap-2.5">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                    <span class="font-bold text-white">Kasir POS SPP</span>
-                    <span class="text-slate-400 text-[11px]">Siswa: Muhammad Faiz (XII MIPA 1)</span>
-                  </div>
-                  <span class="text-emerald-400 font-bold font-mono">Rp 350.000 (Lunas - QRIS)</span>
-                </div>
-                <div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/60 border border-slate-800/60">
-                  <div class="flex items-center gap-2.5">
-                    <span class="w-2 h-2 rounded-full bg-blue-400"></span>
-                    <span class="font-bold text-white">Jurnal KBM Guru</span>
-                    <span class="text-slate-400 text-[11px]">Matematika Lanjut (Jam Ke 3-4)</span>
-                  </div>
-                  <span class="text-blue-400 font-bold text-[11px]">Foto KBM Terkompresi (32 KB)</span>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-        </div>
-      </div>
-
     </section>
 
     <!-- 3. SOCIAL PROOF & LOGO SEKOLAH MITRA -->
@@ -340,20 +226,20 @@
           <p class="text-sm text-slate-400 leading-relaxed">
             Hilangkan sistem yang terpisah-pisah. Seluruh data akademik, kesiswaan, keuangan, dan presensi terpusat dalam satu ekosistem PostgreSQL multi-tenant yang aman.
           </p>
+        </div>
 
-          <!-- Module Category Filter Tabs -->
-          <div class="pt-4 flex items-center justify-center overflow-x-auto no-scrollbar pb-1">
-            <div class="p-1.5 rounded-2xl bg-slate-900 border border-slate-800 inline-flex flex-nowrap items-center gap-1 shadow-inner">
-              <button v-for="tab in moduleCategoryTabs" :key="tab.id"
-                      type="button" 
-                      @click="activeModuleTab = tab.id"
-                      :class="['px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all duration-150 whitespace-nowrap flex items-center gap-1.5',
-                               activeModuleTab === tab.id ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800/60']">
-                <i :class="['bi', tab.icon]"></i>
-                <span>{{ tab.name }}</span>
-              </button>
-            </div>
-          </div>
+        <!-- Module Category Filter Tabs (Responsive Modern Wrap Pills) -->
+        <div class="mb-12 flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 max-w-5xl mx-auto px-2">
+          <button v-for="tab in moduleCategoryTabs" :key="tab.id"
+                  type="button" 
+                  @click="activeModuleTab = tab.id"
+                  :class="['px-4 py-2.5 rounded-2xl text-xs font-bold transition-all duration-200 flex items-center gap-2 cursor-pointer select-none',
+                           activeModuleTab === tab.id 
+                             ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 text-white shadow-lg shadow-blue-600/30 border border-blue-400/40 scale-102' 
+                             : 'bg-slate-900/90 hover:bg-slate-800/90 text-slate-300 hover:text-white border border-slate-800 hover:border-slate-700 backdrop-blur-md shadow-xs']">
+            <i :class="['bi', tab.icon, activeModuleTab === tab.id ? 'text-white' : 'text-blue-400']"></i>
+            <span>{{ tab.name }}</span>
+          </button>
         </div>
 
         <!-- 4x4 Responsive Grid Cards -->

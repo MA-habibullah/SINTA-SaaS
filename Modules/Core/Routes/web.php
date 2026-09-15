@@ -8,6 +8,9 @@ use Modules\Core\Http\Controllers\SekolahIdentitasController;
 use Modules\Core\Http\Controllers\KonfigurasiAksesController;
 use Modules\Core\Http\Controllers\BantuanController;
 
+use Modules\Core\Http\Controllers\DashboardController;
+use Modules\Core\Http\Controllers\SekolahBillingController;
+
 // 1. Guest Routes (Landing, Registration & Login)
 Route::middleware('guest')->group(function () {
     Route::get('/', [AuthController::class, 'showLandingPage'])->name('landing');
@@ -25,10 +28,12 @@ Route::middleware(['auth', 'tenant.guard'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::post('/switch-tenant', [AuthController::class, 'switchTenant'])->name('core.switch-tenant');
 
-    // Dashboard
-    Route::get('/dashboard', function () {
-        return \Inertia\Inertia::render('Dashboard');
-    })->name('dashboard');
+    // Role-Specific & Canonical Dashboard Routes
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/super-admin/dashboard', [DashboardController::class, 'index'])->name('dashboard.super-admin');
+    Route::get('/admin/dashboard', [DashboardController::class, 'index'])->name('dashboard.admin');
+    Route::get('/siswa/dashboard', [DashboardController::class, 'index'])->name('dashboard.siswa');
+    Route::get('/guru/dashboard', [DashboardController::class, 'index'])->name('dashboard.guru');
 
     // Core - Tenant Management (Super Admin Platform)
     Route::prefix('core/tenants')->name('core.tenants.')->middleware('role:super_admin')->group(function () {
@@ -53,6 +58,16 @@ Route::middleware(['auth', 'tenant.guard'])->group(function () {
         Route::get('/', [SekolahIdentitasController::class, 'show'])->name('show');
         Route::match(['post', 'put'], '/', [SekolahIdentitasController::class, 'update'])->name('update');
     });
+
+    // Core - Sekolah Billing & Subscription
+    Route::prefix('sekolah/billing')->name('core.billing.')->group(function () {
+        Route::get('/', [SekolahBillingController::class, 'index'])->name('index');
+        Route::post('/pay/{id}', [SekolahBillingController::class, 'submitPayment'])->name('pay');
+        Route::get('/invoice/{id}/download', [SekolahBillingController::class, 'downloadInvoice'])->name('invoice.download');
+    });
+
+    // Standalone Subscription Expired Lockout Screen
+    Route::get('/subscription-expired', [SekolahBillingController::class, 'subscriptionExpired'])->name('subscription.expired');
 
     // Core - Konfigurasi Hak Akses (RBAC Matrix)
     Route::prefix('core/konfigurasi-akses')->name('core.konfigurasi-akses.')->group(function () {

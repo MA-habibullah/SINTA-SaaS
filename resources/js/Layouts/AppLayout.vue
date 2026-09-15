@@ -58,18 +58,18 @@
         <ul class="space-y-1 w-full min-w-0 max-w-full">
           <li v-for="menu in databaseMenus" :key="menu.id" class="w-full min-w-0 max-w-full">
             <!-- Single Item (Tanpa Anak / Direct Route) -->
-            <a v-if="!menu.children || menu.children.length === 0" 
-               :href="menu.url" 
-               :class="[
-                 'w-full min-w-0 flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group overflow-hidden',
-                 isUrlActive(menu.url)
-                   ? 'bg-blue-50 text-blue-600 font-bold shadow-2xs border-l-4 border-blue-600 pl-2' 
-                   : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900'
-               ]"
-               :title="isCollapsed ? menu.title : ''">
+            <Link v-if="!menu.children || menu.children.length === 0" 
+                  :href="menu.url" 
+                  :class="[
+                    'w-full min-w-0 flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group overflow-hidden',
+                    isUrlActive(menu.url)
+                      ? 'bg-blue-50 text-blue-600 font-bold shadow-2xs border-l-4 border-blue-600 pl-2' 
+                      : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900'
+                  ]"
+                  :title="isCollapsed ? menu.title : ''">
               <i :class="[menu.icon || 'bi bi-circle', 'text-base shrink-0', isUrlActive(menu.url) ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-600']"></i>
               <span v-if="!isCollapsed" class="truncate flex-1 min-w-0">{{ menu.title || menu.nama_menu }}</span>
-            </a>
+            </Link>
 
             <!-- Parent Menu with Submenus (Dropdown Collapsible) -->
             <div v-else class="w-full min-w-0">
@@ -94,16 +94,16 @@
               <ul v-if="!isCollapsed && (expandedMenus[menu.id] || isParentActive(menu))" 
                   class="mt-1 ml-4 pl-3 border-l-2 border-slate-200/80 space-y-1 py-1 w-[calc(100%-1rem)] min-w-0">
                 <li v-for="sub in menu.children" :key="sub.id || sub.url" class="w-full min-w-0">
-                  <a :href="sub.url" 
-                     :class="[
-                       'w-full min-w-0 flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs transition-all overflow-hidden',
-                       isUrlActive(sub.url)
-                         ? 'text-blue-600 font-bold bg-blue-50/80' 
-                         : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/60'
-                     ]">
+                  <Link :href="sub.url" 
+                        :class="[
+                          'w-full min-w-0 flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs transition-all overflow-hidden',
+                          isUrlActive(sub.url)
+                            ? 'text-blue-600 font-bold bg-blue-50/80' 
+                            : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/60'
+                        ]">
                     <i :class="[sub.icon || 'bi bi-dot', 'text-sm shrink-0', isUrlActive(sub.url) ? 'text-blue-600' : 'text-slate-400']"></i>
                     <span class="truncate flex-1 min-w-0">{{ sub.title || sub.nama_menu }}</span>
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>
@@ -196,8 +196,8 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
-import { usePage, router, Head } from '@inertiajs/vue3';
+import { ref, computed, watchEffect } from 'vue';
+import { usePage, router, Head, Link } from '@inertiajs/vue3';
 import MandatoryStudentSurveyModal from '@/Components/MandatoryStudentSurveyModal.vue';
 
 const props = defineProps({
@@ -221,16 +221,35 @@ const mobileSidebarOpen = ref(false);
 const expandedMenus = ref({});
 
 const isUrlActive = (url) => {
-  const current = page.url;
   if (!url || url === '#') return false;
-  if (url === '/dashboard') return current === '/dashboard' || current === '/';
-  return current.startsWith(url);
+  const current = page.url ? page.url.split('?')[0] : '';
+  const target = url.split('?')[0];
+
+  if (target.includes('/dashboard') || current.includes('/dashboard')) {
+    return current === target || 
+           (current === '/dashboard' && target.endsWith('/dashboard')) ||
+           (target === '/dashboard' && current.endsWith('/dashboard'));
+  }
+
+  if (current === target) return true;
+  return current.startsWith(target + '/');
 };
 
 const isParentActive = (menu) => {
   if (!menu.children || menu.children.length === 0) return isUrlActive(menu.url);
   return menu.children.some(child => isUrlActive(child.url));
 };
+
+// Auto-expand active parent menu on initial load or navigation
+watchEffect(() => {
+  if (databaseMenus.value && databaseMenus.value.length > 0) {
+    databaseMenus.value.forEach(menu => {
+      if (isParentActive(menu)) {
+        expandedMenus.value[menu.id] = true;
+      }
+    });
+  }
+});
 
 const toggleSubmenu = (menuId) => {
   expandedMenus.value[menuId] = !expandedMenus.value[menuId];

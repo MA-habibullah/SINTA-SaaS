@@ -20,5 +20,8 @@ Schedule::command('sinta:generate-monthly-invoices')->monthlyOn(1, '01:00');
 // 2. Audit dan sinkronisasi pemakaian kuota storage per sekolah setiap malam pukul 02:00
 Schedule::command('sinta:recalculate-storage')->dailyAt('02:00');
 
-// 3. Eksekusi antrean worker jika menggunakan sync/cron
+// 3. Pengecekan masa aktif langganan sekolah dan auto-lockout / invoice harian pukul 00:05
+Schedule::command('sinta:check-subscriptions')->dailyAt('00:05');
+
+// 4. Eksekusi antrean worker jika menggunakan sync/cron
 Schedule::command('queue:work --stop-when-empty --tries=3')->everyFiveMinutes();

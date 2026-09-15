@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -30,16 +31,19 @@ class AuthController extends Controller
             return redirect()->route('dashboard');
         }
 
-        $promotions = CmsPromotion::where('is_active', true)
-            ->orderBy('order_num', 'asc')
-            ->get()
-            ->groupBy('section_key');
-
-        $tenantsCount = Tenant::whereIn('status', ['active', 'aktif'])->count();
+        $promotions = CmsPromotion::getGroupedForLanding();
 
         return Inertia::render('Landing/Index', [
             'promotions'   => $promotions,
-            'tenantsCount' => max(1, $tenantsCount),
+            'tenantsCount' => Tenant::count(),
+            'features'     => [
+                ['title' => 'Buku Induk & Akademik', 'desc' => 'Kelola profil siswa, NISN, mutasi, dan cetak lembar buku induk.', 'icon' => 'bi-journal-text'],
+                ['title' => 'Cetak Rapor Kurikulum Merdeka', 'desc' => 'Hitung nilai otomatis dan cetak raport PDF rapi instan.', 'icon' => 'bi-award'],
+                ['title' => 'Keuangan & Pembayaran SPP', 'desc' => 'Pos tagihan, pembayaran kasir, kuitansi dan notifikasi WA.', 'icon' => 'bi-wallet2'],
+                ['title' => 'PPDB & Seleksi Masuk Online', 'desc' => 'Penerimaan calon siswa baru lengkap dengan alur verifikasi berkas.', 'icon' => 'bi-person-plus'],
+                ['title' => 'Bimbingan Konseling & Disiplin', 'desc' => 'Catatan bimbingan siswa, poin pelanggaran & pembinaan siswa.', 'icon' => 'bi-shield-check'],
+                ['title' => 'Perpustakaan & Katalog Buku', 'desc' => 'Sirkulasi peminjaman buku, katalog OPAC dan barcode anggota.', 'icon' => 'bi-book'],
+            ],
         ]);
     }
 
@@ -76,12 +80,12 @@ class AuthController extends Controller
         $validated = $request->validate([
             // Identitas Sekolah
             'nama_sekolah'          => ['required', 'string', 'max:255'],
-            'npsn'                  => ['required', 'string', 'max:20', 'unique:core.tenants,npsn'],
+            'npsn'                  => ['required', 'string', 'max:20', Rule::unique(Tenant::class, 'npsn')],
             'bentuk_pendidikan'     => ['required', 'string', 'in:SD,SMP,SMA,SMK,Madrasah,Lainnya'],
             'status_sekolah'        => ['required', 'string', 'in:Negeri,Swasta'],
             'kabupaten_kota'        => ['nullable', 'string', 'max:100'],
             'provinsi'              => ['nullable', 'string', 'max:100'],
-            'subdomain'             => ['required', 'string', 'min:3', 'max:50', 'regex:/^[a-z0-9-]+$/', 'unique:core.tenants,subdomain'],
+            'subdomain'             => ['required', 'string', 'min:3', 'max:50', 'regex:/^[a-z0-9-]+$/', Rule::unique(Tenant::class, 'subdomain')],
             
             // Kontak Penanggung Jawab (PIC)
             'pic_nama'              => ['required', 'string', 'max:255'],
@@ -91,7 +95,7 @@ class AuthController extends Controller
 
             // Akun Administrator Awal
             'admin_nama'            => ['required', 'string', 'max:255'],
-            'admin_username'        => ['required', 'string', 'min:4', 'max:50', 'regex:/^[a-zA-Z0-9_.-]+$/', 'unique:core.users,username'],
+            'admin_username'        => ['required', 'string', 'min:4', 'max:50', 'regex:/^[a-zA-Z0-9_.-]+$/', Rule::unique(User::class, 'username')],
             'admin_password'        => ['required', 'string', 'min:6'],
 
             // Pilihan Uji Coba Gratis

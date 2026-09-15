@@ -1093,5 +1093,198 @@ Seluruh dropdown di bawah ini dan seluruh fitur baru yang akan dikembangkan **WA
 - **SELURUH MODUL & FITUR BARU LAINNYA**: Wajib menggunakan `SearchableSelect` tanpa pengecualian!
 
 
+## Standardisasi Struktur Menu Sidebar & RBAC Multi-Context (Berbasis Tupoksi Divisi Sekolah & SaaS Platform)
+Saat membangun, memodifikasi, atau melakukan seeding menu sidebar dan hak akses role, agen **WAJIB** mematuhi pembagian 3 Kelompok Konteks berikut secara konsisten:
+
+### 1. Context A: Super Admin (Platform Owner & SaaS Master Overlord)
+Super Admin memiliki akses 'God-Mode' yang mencakup manajemen platform SaaS di posisi teratas serta inspeksi operasional sekolah:
+- **Manajemen Platform SaaS**:
+  - `Dashboard Platform` (`/super-admin/dashboard`)
+  - `Kelola Sekolah & Tenant`: `Daftar Sekolah & Paket` (`/super-admin/tenants`), `Akses Fitur Sekolah` (`/super-admin/tenant-menus`)
+  - `CMS Landing & Promosi` (`/super-admin/cms-promosi`)
+- **Server, Keamanan & Health Monitor**:
+  - `Server Monitor` (`/super-admin/server-monitor`)
+  - `Error & Exception Log` (`/super-admin/error-monitor`)
+  - `Antrean Queue Worker` (`/utilitas/antrean`)
+  - `Sesi Aktif Real-Time` (`/utilitas/sesi-aktif`)
+  - `Audit Trail & Log Global` (`/utilitas/log-aktivitas`)
+- **Inspeksi Operasional Sekolah**: Memiliki hak akses penuh ke modul-modul Context B untuk supervisi teknis.
+
+### 2. Context B: Operasional Sekolah (Tupoksi Divisi & Unit Kerja Riil)
+Struktur menu sekolah dikelompokkan secara presisi berdasarkan tanggung jawab unit kerja:
+- **Dashboard & Informasi**:
+  - `Dashboard Sekolah` (`/admin/dashboard` atau `/guru/dashboard`)
+  - `Pengumuman Sekolah` (`/informasi/pengumuman`)
+  - `Agenda & Timeline` (`/informasi/agenda`)
+- **Tata Usaha & Administrasi (TU)** *(Menangani Data Pokok, Persuratan & Kepegawaian)*:
+  - `Calon Siswa PPDB` (`/ppdb/calon-siswa`)
+  - `Verifikasi PPDB` (`/ppdb/verifikasi`)
+  - `Buku Induk Siswa` (`/buku-induk`)
+  - `Data GTK & Kepegawaian` (`/kepegawaian`)
+  - `Surat Masuk` (`/persuratan/surat-masuk`)
+  - `Surat Keluar` (`/persuratan/surat-keluar`)
+  - `Pemindai Dokumen (AeroScan)` (`/utilitas/pemindai-dokumen`)
+  - `Profil & Identitas Sekolah` (`/sekolah/identitas`)
+- **Akademik & Kurikulum** *(Fokus KBM & Capaian Belajar)*:
+  - `Master Data Akademik` (`/master-data`)
+  - `Jadwal Pelajaran` (`/akademik/jadwal`)
+  - `Presensi & Kehadiran` (`/absensi`)
+  - `Rapor & Penilaian` (`/akademik/rapor`)
+- **Bimbingan Konseling (BK) & Karir** *(Menangani Konseling, Disiplin & Studi Lanjut PTN)*:
+  - `Layanan Konseling Siswa` (`/bk/layanan`)
+  - `Kedisiplinan & Pelanggaran` (`/bk/kedisiplinan`)
+  - `PDSS & Peluang PTN` (`/akademik/pdss`)
+  - `Tracer Study Alumni` (`/alumni/tracer-study`)
+- **Kesiswaan & Pembinaan**:
+  - `Ekstrakurikuler & Prestasi` (`/kesiswaan/ekskul`)
+- **Keuangan & Billing SPP**:
+  - `Dashboard Keuangan` (`/keuangan/dashboard`)
+  - `Kasir & Pembayaran SPP` (`/keuangan/kasir`)
+  - `Tagihan & Billing Siswa` (`/keuangan/tagihan`)
+  - `Pos Tarif & Master Biaya` (`/keuangan/master`)
+  - `Laporan Keuangan` (`/keuangan/laporan`)
+  - `Audit Log Transaksi` (`/keuangan/audit-log`)
+- **Sarana, Prasarana & Perpustakaan**:
+  - `Sarana & Prasarana (Sarpras)` (`/sarpras`)
+  - `Katalog Buku (INLISLite)` (`/perpustakaan/katalog`)
+  - `Sirkulasi Peminjaman` (`/perpustakaan/sirkulasi`)
+  - `Anggota Perpustakaan` (`/perpustakaan/anggota`)
+  - `OPAC Perpustakaan` (`/perpustakaan/opac`)
+- **Supervisi & Manajemen Sistem**:
+  - `Pembinaan Guru (Kepsek)` (`/kepala-sekolah/pembinaan`)
+  - `Survei Kinerja Guru` (`/kepala-sekolah/survei-guru`)
+  - `Manajemen Pengguna` (`/pengguna`)
+  - `Konfigurasi Hak Akses` (`/konfigurasi/akses`)
+  - `Pusat Bantuan` (`/bantuan`)
+  - `Langganan & Billing SaaS` (`/sekolah/billing`)
+- **Khusus SMK / Vokasi** *(Opsional)*:
+  - `Vokasi & Kemitraan SMK` (`/smk`)
+
+### 3. Context C: Portal Mandiri (Siswa & Orang Tua)
+Terisolasi murni hanya untuk kebutuhan self-service peserta didik dan wali:
+- `Dashboard Siswa` (`/siswa/dashboard`)
+- `Presensi Mandiri GPS` (`/absensi/mandiri`)
+- `Tagihan & SPP Saya` (`/keuangan/tagihan-saya`)
+- `Rapor & Nilai Saya` (`/akademik/rapor-saya`)
+- `Perpustakaan Saya` (`/perpustakaan/riwayat-saya`)
+- `Konseling Saya` (`/bk/konseling-saya`)
+
+
+## 🏢 Matriks Struktur Hirarki Menu Aktif (Tree Hierarchy - 63 Menus)
+Struktur hirarki resmi menu sidebar SINTA terdiri dari **19 Parent Nodes** dan **44 Submenu Items** (Total 63 items) tanpa redundansi:
+
+```text
+├── 1. [SINGLE] Dashboard Platform                -> /super-admin/dashboard (Ikon: bi bi-speedometer2)
+├── 2. [SINGLE] Dashboard Siswa                   -> /siswa/dashboard (Ikon: bi bi-speedometer2)
+├── 3. [GROUP ] Kelola Sekolah & Tenant           (Ikon: bi bi-buildings)
+│   ├── 3.1 Daftar Sekolah & Paket                -> /super-admin/tenants (Ikon: bi bi-building-gear)
+│   └── 3.2 Akses Fitur Sekolah                   -> /super-admin/tenant-menus (Ikon: bi bi-toggles)
+├── 4. [SINGLE] Presensi Mandiri GPS              -> /absensi/mandiri (Ikon: bi bi-geo-alt-fill)
+├── 5. [SINGLE] CMS Landing & Promosi             -> /super-admin/cms-promosi (Ikon: bi bi-layout-text-window-reverse)
+├── 6. [SINGLE] Tagihan & SPP Saya                -> /keuangan/tagihan-saya (Ikon: bi bi-wallet2)
+├── 7. [GROUP ] Server & Health Monitor           (Ikon: bi bi-hdd-network)
+│   ├── 7.1 Server Monitor                        -> /super-admin/server-monitor (Ikon: bi bi-cpu)
+│   ├── 7.2 Error & Exception Log                 -> /super-admin/error-monitor (Ikon: bi bi-shield-exclamation)
+│   ├── 7.3 Antrean Queue Worker                  -> /utilitas/antrean (Ikon: bi bi-arrow-repeat)
+│   ├── 7.4 Sesi Aktif Real-Time                  -> /utilitas/sesi-aktif (Ikon: bi bi-activity)
+│   └── 7.5 Audit Trail & Log Global              -> /utilitas/log-aktivitas (Ikon: bi bi-journal-text)
+├── 8. [SINGLE] Rapor & Nilai Saya                -> /akademik/rapor-saya (Ikon: bi bi-award-fill)
+├── 9. [SINGLE] Perpustakaan Saya                 -> /perpustakaan/riwayat-saya (Ikon: bi bi-book)
+├── 10. [SINGLE] Konseling Saya                   -> /bk/konseling-saya (Ikon: bi bi-chat-heart)
+├── 11. [GROUP ] Dashboard & Informasi            (Ikon: bi bi-grid-1x2-fill)
+│   ├── 11.1 Dashboard Sekolah                    -> /admin/dashboard (Ikon: bi bi-speedometer2)
+│   ├── 11.2 Pengumuman Sekolah                   -> /informasi/pengumuman (Ikon: bi bi-megaphone)
+│   └── 11.3 Agenda & Timeline                    -> /informasi/agenda (Ikon: bi bi-calendar-event)
+├── 12. [GROUP ] Tata Usaha & Administrasi        (Ikon: bi bi-folder2-open)
+│   ├── 12.1 Calon Siswa PPDB                     -> /ppdb/calon-siswa (Ikon: bi bi-person-plus)
+│   ├── 12.2 Verifikasi PPDB                      -> /ppdb/verifikasi (Ikon: bi bi-patch-check)
+│   ├── 12.3 Buku Induk Siswa                     -> /buku-induk (Ikon: bi bi-journal-text)
+│   ├── 12.4 Data GTK & Kepegawaian               -> /kepegawaian (Ikon: bi bi-person-workspace)
+│   ├── 12.5 Surat Masuk                          -> /persuratan/surat-masuk (Ikon: bi bi-inbox)
+│   ├── 12.6 Surat Keluar                         -> /persuratan/surat-keluar (Ikon: bi bi-send)
+│   ├── 12.7 Pemindai Dokumen (AeroScan)          -> /utilitas/pemindai-dokumen (Ikon: bi bi-scanner)
+│   └── 12.8 Profil & Identitas Sekolah           -> /sekolah/identitas (Ikon: bi bi-building)
+├── 13. [GROUP ] Akademik & Kurikulum             (Ikon: bi bi-mortarboard)
+│   ├── 13.1 Master Data Akademik                 -> /master-data (Ikon: bi bi-diagram-3)
+│   ├── 13.2 Jadwal Pelajaran                     -> /akademik/jadwal (Ikon: bi bi-calendar3)
+│   ├── 13.3 Presensi & Kehadiran                 -> /absensi (Ikon: bi bi-calendar-check)
+│   └── 13.4 Rapor & Penilaian                    -> /akademik/rapor (Ikon: bi bi-file-earmark-spreadsheet)
+├── 14. [GROUP ] Bimbingan Konseling & Karir      (Ikon: bi bi-shield-heart)
+│   ├── 14.1 Layanan Konseling Siswa              -> /bk/layanan (Ikon: bi bi-chat-heart)
+│   ├── 14.2 Kedisiplinan & Pelanggaran           -> /bk/kedisiplinan (Ikon: bi bi-shield-slash)
+│   ├── 14.3 PDSS & Peluang PTN                   -> /akademik/pdss (Ikon: bi bi-graph-up-arrow)
+│   └── 14.4 Tracer Study Alumni                  -> /alumni/tracer-study (Ikon: bi bi-mortarboard)
+├── 15. [GROUP ] Kesiswaan & Pembinaan            (Ikon: bi bi-trophy)
+│   └── 15.1 Ekstrakurikuler & Prestasi           -> /kesiswaan/ekskul (Ikon: bi bi-award)
+├── 16. [GROUP ] Keuangan & Billing SPP           (Ikon: bi bi-cash-stack)
+│   ├── 16.1 Dashboard Keuangan                   -> /keuangan/dashboard (Ikon: bi bi-pie-chart)
+│   ├── 16.2 Kasir & Pembayaran SPP               -> /keuangan/kasir (Ikon: bi bi-calculator)
+│   ├── 16.3 Tagihan & Billing Siswa              -> /keuangan/tagihan (Ikon: bi bi-receipt-cutoff)
+│   ├── 16.4 Pos Tarif & Master Biaya             -> /keuangan/master (Ikon: bi bi-tags)
+│   ├── 16.5 Laporan Keuangan                     -> /keuangan/laporan (Ikon: bi bi-file-earmark-bar-graph)
+│   └── 16.6 Audit Log Transaksi                  -> /keuangan/audit-log (Ikon: bi bi-shield-check)
+├── 17. [GROUP ] Sarana, Prasarana & Perpus       (Ikon: bi bi-box-seam)
+│   ├── 17.1 Sarana & Prasarana (Sarpras)         -> /sarpras (Ikon: bi bi-buildings)
+│   ├── 17.2 Katalog Buku (INLISLite)             -> /perpustakaan/katalog (Ikon: bi bi-journal-album)
+│   ├── 17.3 Sirkulasi Peminjaman                 -> /perpustakaan/sirkulasi (Ikon: bi bi-arrow-left-right)
+│   ├── 17.4 Anggota Perpustakaan                 -> /perpustakaan/anggota (Ikon: bi bi-person-badge)
+│   └── 17.5 OPAC Perpustakaan                    -> /perpustakaan/opac (Ikon: bi bi-search)
+├── 18. [GROUP ] Supervisi & Manajemen Sistem     (Ikon: bi bi-gear-wide-connected)
+│   ├── 18.1 Pembinaan Guru (Kepsek)              -> /kepala-sekolah/pembinaan (Ikon: bi bi-person-lines-fill)
+│   ├── 18.2 Survei Kinerja Guru                  -> /kepala-sekolah/survei-guru (Ikon: bi bi-clipboard2-pulse)
+│   ├── 18.3 Manajemen Pengguna                   -> /pengguna (Ikon: bi bi-people)
+│   ├── 18.4 Konfigurasi Hak Akses                -> /konfigurasi/akses (Ikon: bi bi-shield-lock)
+│   ├── 18.5 Pusat Bantuan                        -> /bantuan (Ikon: bi bi-question-circle)
+│   └── 18.6 Langganan & Billing SaaS             -> /sekolah/billing (Ikon: bi bi-credit-card-2-front)
+└── 19. [SINGLE] Vokasi & Kemitraan SMK           -> /smk (Ikon: bi bi-wrench-adjustable)
+```
+
+
+## 🛡️ Distribusi Menu Berdasarkan 21 Peran Pengguna (RBAC Matrix)
+
+| No | Peran Pengguna (*Role*) | Total Menu Aktif | Deskripsi Tupoksi & Konteks |
+|:--:|---|:---:|---|
+| 1 | `super_admin` | **47 menu** | **Platform Overlord**: Seluruh menu platform SaaS master & modul operasional sekolah |
+| 2 | `admin_sekolah` / `admin` | **38 menu** | **Admin Sekolah**: Seluruh manajemen operasional sekolah, tata usaha & sistem |
+| 3 | `kepala_sekolah` | **37 menu** | **Kepala Sekolah**: Supervisi akademik, pembinaan GTK & seluruh divisi sekolah |
+| 4 | `operator_sekolah` | **23 menu** | **Operator**: Data pokok PPDB, Buku Induk, Dapodik, GTK, Sarpras & Perpus |
+| 5 | `staf_tu` | **15 menu** | **Tata Usaha**: Buku Induk, PPDB, GTK, Persuratan, AeroScan, Profil Sekolah |
+| 6 | `guru` | **12 menu** | **Tenaga Pengajar**: Jadwal KBM, Presensi, Nilai Rapor, Sarpras, Perpus, Survei |
+| 7 | `wali_kelas` | **11 menu** | **Wali Kelas**: Presensi rombel, Rapor, Buku Induk, Disiplin Siswa, BK |
+| 8 | `keuangan` | **10 menu** | **Bendahara**: Dashboard Keuangan, Kasir POS, Tagihan, Pos Tarif, Laporan, Audit Log |
+| 9 | `kurikulum` | **10 menu** | **Kurikulum**: Master Data Akademik, Jadwal Pelajaran, Rapor, PDSS PTN |
+| 10 | `kesiswaan` | **9 menu** | **Kesiswaan**: Ekstrakurikuler, Prestasi Siswa, PPDB, Tracer Study Alumni |
+| 11 | `staf_keuangan` | **9 menu** | **Kasir Keuangan**: Kasir POS SPP, Tagihan Siswa, Pos Tarif, Laporan Keuangan |
+| 12 | `bk` / `guru_bk` | **7 menu** | **Bimbingan Konseling**: Layanan Konseling, Kedisiplinan, PDSS SNBP, Tracer Study |
+| 13 | `perpustakaan` | **7 menu** | **Pengelola Perpus**: Katalog MARC21, Sirkulasi Barcode, Anggota, OPAC |
+| 14 | `sarpras` | **4 menu** | **Pengelola Sarpras**: Aset Inventaris Ruangan, KIR, Pemeliharaan |
+| 15 | `pembina_ekskul` | **4 menu** | **Pembina Ekskul**: Manajemen Ekstrakurikuler, Anggota & Prestasi Lomba |
+| 16 | `humas` | **3 menu** | **Humas**: Dashboard Sekolah, Pengumuman, Agenda & Timeline |
+| 17 | `karyawan` | **3 menu** | **Karyawan/Staf**: Dashboard Sekolah, Pengumuman, Agenda & Timeline |
+| 18 | `siswa` | **6 menu** | **Portal Siswa**: Dashboard Siswa, Presensi GPS, SPP Saya, Rapor, Perpus, BK |
+| 19 | `orang_tua` | **6 menu** | **Portal Wali**: Dashboard Siswa, Presensi GPS, SPP Saya, Rapor, Perpus, BK |
+
+
+## 💳 Sistem Langganan SaaS, Real-Time Countdown Timer & Lockout Automations
+Agen **WAJIB** menerapkan ketentuan berikut pada modul Billing & Langganan SaaS:
+1. **Widget Countdown Real-Time**:
+   - Tampil pada Dashboard Admin Sekolah (`/admin/dashboard` & `/dashboard`).
+   - Menghitung mundur sisa masa aktif per detik (`Hari`, `Jam`, `Menit`, `Detik`).
+   - 3 Indikator warna dinamis:
+     * 🟢 **Hijau**: Sisa waktu $> 30$ hari.
+     * 🟡 **Kuning/Orange**: Sisa waktu $\le 30$ hari (Peringatan masa tenggang).
+     * 🔴 **Merah**: Sisa waktu $\le 10$ hari (Kritis & Tagihan Terbit).
+2. **Auto-Invoice Generation H-10**:
+   - Tagihan perpanjangan otomatis terbit saat sisa masa aktif $\le 10$ hari.
+   - Sediakan tombol download invoice PDF resmi (`/sekolah/billing/invoice/{id}/download`).
+3. **Lockout Guard & Penguncian Massal**:
+   - Middleware `TenantSubscriptionLockoutGuard` otomatis aktif saat `subscription_expires_at < now()`.
+   - Mengalihkan seluruh user sekolah ke halaman lockout khusus (`/subscription-expired`) tanpa menampilkan menu sidebar atau navbar operasional sekolah.
+   - Hak akses Super Admin (`super_admin`) **TETAP MEMILIKI BYPASS MUTLAK** untuk pengelolaan maintenance atau perpanjangan manual.
+4. **Daily Console Automation**:
+   - Jalankan schedule harian `sinta:check-subscriptions` pada `routes/console.php` pukul 00:05 WIB.
+
+
+
 
 
