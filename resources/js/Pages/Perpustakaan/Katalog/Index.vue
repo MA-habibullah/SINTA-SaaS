@@ -1,7 +1,9 @@
 <script setup>
 import { ref, computed } from 'vue'
 import AppLayout from '@/Layouts/AppLayout.vue'
-import { Link, useForm, router } from '@inertiajs/vue3'
+import { Link, useForm } from '@inertiajs/vue3'
+import axios from 'axios'
+
 
 const props = defineProps({
   bukuList: Object,
@@ -23,60 +25,63 @@ const searchQuery = ref(props.filters?.search || '')
 const searchEksemplarQuery = ref('')
 const filterDdc = ref(props.filters?.ddc || '')
 const filterJenisBahan = ref(props.filters?.jenis_bahan || '')
-const selectedTenantId = ref(props.filters?.tenant_id || '')
+const selectedTenantId = ref(props.activeTenantId || '')
+const isLoadingFilter = ref(false)
 
-const perPageBuku = ref(Number(props.filters?.per_page) || 10)
-const perPageEksemplar = ref(Number(props.filters?.per_page_eksemplar) || 15)
+// State lokal data (async filter)
+const localBukuList     = ref(props.bukuList     || { data: [] })
+const localEksemplarList = ref(props.eksemplarList || { data: [] })
 
 const getSelectedTenantName = () => {
   if (!selectedTenantId.value) return 'Semua Sekolah (Agregat Global)'
   const found = props.tenants?.find(t => t.id === selectedTenantId.value)
-  return found ? `${found.nama_sekolah} (${found.npsn})` : 'Sekolah Terpilih'
+  return found ? `${found.nama_sekolah}` : 'Sekolah Terpilih'
 }
 
-const applyTenantFilter = () => {
-  applySearch(1)
+const applyTenantFilter = () => { applySearch(1) }
+
+const applySearch = async (page = 1) => {
+  isLoadingFilter.value = true
+  try {
+    const headers = {}
+    if (selectedTenantId.value) headers['X-Tenant-Id'] = selectedTenantId.value
+    const res = await axios.get('/perpustakaan/katalog', {
+      params: {
+        async: 1,
+        search: searchQuery.value || undefined,
+        ddc: filterDdc.value || undefined,
+        jenis_bahan: filterJenisBahan.value || undefined,
+        per_page: perPageBuku.value || undefined,
+        page: page > 1 ? page : undefined,
+        search_eksemplar: searchEksemplarQuery.value || undefined,
+        per_page_eksemplar: perPageEksemplar.value || undefined,
+      },
+      headers,
+    })
+    if (res.data?.success) {
+      if (res.data.data?.bukuList)     localBukuList.value     = res.data.data.bukuList
+      if (res.data.data?.eksemplarList) localEksemplarList.value = res.data.data.eksemplarList
+    }
+  } catch (err) {
+    console.error('Gagal filter katalog:', err)
+  } finally {
+    isLoadingFilter.value = false
+  }
 }
 
-const applySearch = (page = 1) => {
-  router.get('/perpustakaan/katalog', {
-    search: searchQuery.value || undefined,
-    ddc: filterDdc.value || undefined,
-    jenis_bahan: filterJenisBahan.value || undefined,
-    tenant_id: selectedTenantId.value || undefined,
-    per_page: perPageBuku.value || undefined,
-    page: page > 1 ? page : undefined,
-    search_eksemplar: searchEksemplarQuery.value || undefined,
-    per_page_eksemplar: perPageEksemplar.value || undefined,
-  }, {
-    preserveState: true,
-    preserveScroll: true,
-  })
-}
+const applyEksemplarSearch = (page = 1) => applySearch(page)
 
-const applyEksemplarSearch = (page = 1) => {
-  router.get('/perpustakaan/katalog', {
-    search: searchQuery.value || undefined,
-    ddc: filterDdc.value || undefined,
-    jenis_bahan: filterJenisBahan.value || undefined,
-    tenant_id: selectedTenantId.value || undefined,
-    per_page: perPageBuku.value || undefined,
-    search_eksemplar: searchEksemplarQuery.value || undefined,
-    per_page_eksemplar: perPageEksemplar.value || undefined,
-    page_eksemplar: page > 1 ? page : undefined,
-  }, {
-    preserveState: true,
-    preserveScroll: true,
-  })
-}
-
-const goToPage = (url) => {
+const goToPage = async (url) => {
   if (!url) return
-  router.visit(url, {
-    preserveState: true,
-    preserveScroll: true,
-  })
+  try {
+    const urlObj = new URL(url, window.location.origin)
+    const page = urlObj.searchParams.get('page') || 1
+    await applySearch(parseInt(page))
+  } catch (err) {
+    console.error('Gagal navigasi halaman:', err)
+  }
 }
+
 
 const getSmartPaginationLinks = (pagination) => {
   if (!pagination?.links || pagination.links.length === 0) return []

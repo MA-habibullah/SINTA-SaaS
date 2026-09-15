@@ -1,7 +1,9 @@
 <script setup>
 import { ref, computed } from 'vue'
 import AppLayout from '@/Layouts/AppLayout.vue'
-import { Link, useForm, router } from '@inertiajs/vue3'
+import { Link, useForm } from '@inertiajs/vue3'
+import axios from 'axios'
+
 
 const props = defineProps({
   bukuList: Object,
@@ -16,46 +18,50 @@ const props = defineProps({
 const searchQuery = ref(props.filters?.q || '')
 const selectedDdc = ref(props.filters?.ddc || '')
 const selectedJenisBahan = ref(props.filters?.jenis_bahan || '')
-const selectedTenantId = ref(props.filters?.tenant_id || '')
-const perPage = ref(Number(props.filters?.per_page) || 12)
-const viewMode = ref('grid') // 'grid' | 'table'
+const selectedTenantId = ref(props.activeTenantId || '')
+const perPage = ref(12)
+const viewMode = ref('grid')
+const isSearching = ref(false)
+const localBukuList = ref(props.bukuList || { data: [] })
 
 const getSelectedTenantName = () => {
   if (!selectedTenantId.value) return 'Semua Sekolah (Agregat Global)'
   const found = props.tenants?.find(t => t.id === selectedTenantId.value)
-  return found ? `${found.nama_sekolah} (${found.npsn})` : 'Sekolah Terpilih'
+  return found ? `${found.nama_sekolah}` : 'Sekolah Terpilih'
 }
 
-const applyTenantFilter = () => {
-  router.get('/perpustakaan/opac', {
-    q: searchQuery.value || undefined,
-    ddc: selectedDdc.value || undefined,
-    jenis_bahan: selectedJenisBahan.value || undefined,
-    tenant_id: selectedTenantId.value || undefined,
-    per_page: perPage.value !== 12 ? perPage.value : undefined,
-  }, {
-    preserveState: true,
-    preserveScroll: true,
-  })
+const search = async () => {
+  isSearching.value = true
+  try {
+    const headers = {}
+    if (selectedTenantId.value) headers['X-Tenant-Id'] = selectedTenantId.value
+    const res = await axios.get('/perpustakaan/opac', {
+      params: {
+        async: 1,
+        q: searchQuery.value || undefined,
+        ddc: selectedDdc.value || undefined,
+        jenis_bahan: selectedJenisBahan.value || undefined,
+        per_page: perPage.value !== 12 ? perPage.value : undefined,
+      },
+      headers,
+    })
+    if (res.data?.success) {
+      localBukuList.value = res.data.data?.bukuList || { data: [] }
+    }
+  } catch (err) {
+    console.error('Gagal search OPAC:', err)
+  } finally {
+    isSearching.value = false
+  }
 }
 
-const search = () => {
-  router.get('/perpustakaan/opac', {
-    q: searchQuery.value || undefined,
-    ddc: selectedDdc.value || undefined,
-    jenis_bahan: selectedJenisBahan.value || undefined,
-    tenant_id: selectedTenantId.value || undefined,
-    per_page: perPage.value !== 12 ? perPage.value : undefined,
-  }, {
-    preserveState: true,
-    replace: true,
-  })
-}
+const applyTenantFilter = () => { search() }
 
 const selectDdc = (kode) => {
   selectedDdc.value = selectedDdc.value === kode ? '' : kode
   search()
 }
+
 
 const uniqueDdcList = computed(() => {
   if (!props.ddcList) return []

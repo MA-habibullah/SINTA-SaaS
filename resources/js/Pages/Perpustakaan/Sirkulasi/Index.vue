@@ -1,7 +1,8 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import AppLayout from '@/Layouts/AppLayout.vue'
-import { Link, useForm, router } from '@inertiajs/vue3'
+import { Link, useForm } from '@inertiajs/vue3'
+import axios from 'axios'
 
 const props = defineProps({
   sirkulasiAktif: Object,
@@ -24,92 +25,64 @@ const props = defineProps({
   filters: Object,
 })
 
-const activeTab = ref('aktif') // 'aktif' | 'quick_return' | 'riwayat' | 'denda' | 'opname' | 'baca' | 'reservasi' | 'loker' | 'survey' | 'paket'
-const searchQuery = ref(props.filters?.search || '')
-const selectedTenantId = ref(props.filters?.tenant_id || '')
+// === ZERO-SSR: State lokal reaktif ===
+const localSirkulasiAktif = ref(props.sirkulasiAktif || { data: [] })
+const localSirkulasiRiwayat = ref(props.sirkulasiRiwayat || { data: [] })
+const localDendaList = ref(props.dendaList || { data: [] })
+const localBacaList = ref(props.bacaList || { data: [] })
+const isLoadingFilter = ref(false)
 
-const perPageAktif = ref(Number(props.filters?.per_page_aktif) || 10)
-const perPageRiwayat = ref(Number(props.filters?.per_page_riwayat) || 10)
-const perPageDenda = ref(Number(props.filters?.per_page_denda) || 10)
-const perPageBaca = ref(Number(props.filters?.per_page_baca) || 10)
+// Tenant in-memory (BUKAN dari URL)
+const activeTenantId = ref(props.activeTenantId || '')
 
-const getSelectedTenantName = () => {
-  if (!selectedTenantId.value) return 'Semua Sekolah (Agregat Global)'
-  const found = props.tenants?.find(t => t.id === selectedTenantId.value)
-  return found ? `${found.nama_sekolah} (${found.npsn})` : 'Sekolah Terpilih'
+const applySearch = async (page = 1) => {
+  isLoadingFilter.value = true
+  try {
+    const headers = {}
+    if (activeTenantId.value) headers['X-Tenant-Id'] = activeTenantId.value
+
+    const res = await axios.get('/perpustakaan/sirkulasi', {
+      params: {
+        async: 1,
+        search: searchQuery.value || undefined,
+        per_page_aktif: perPageAktif.value || undefined,
+        p_aktif: page > 1 ? page : undefined,
+        per_page_riwayat: perPageRiwayat.value || undefined,
+        per_page_denda: perPageDenda.value || undefined,
+        per_page_baca: perPageBaca.value || undefined,
+      },
+      headers,
+    })
+    if (res.data?.success) {
+      const d = res.data.data
+      if (d.sirkulasiAktif)   localSirkulasiAktif.value   = d.sirkulasiAktif
+      if (d.sirkulasiRiwayat) localSirkulasiRiwayat.value = d.sirkulasiRiwayat
+      if (d.dendaList)        localDendaList.value        = d.dendaList
+      if (d.bacaList)         localBacaList.value         = d.bacaList
+    }
+  } catch (err) {
+    console.error('Gagal filter sirkulasi:', err)
+  } finally {
+    isLoadingFilter.value = false
+  }
 }
 
-const applyTenantFilter = () => {
-  applySearch(1)
-}
+const applyTenantFilter = () => { applySearch(1) }
+const applyRiwayatPage  = (page = 1) => applySearch(page)
+const applyDendaPage    = (page = 1) => applySearch(page)
+const applyBacaPage     = (page = 1) => applySearch(page)
 
-const applySearch = (page = 1) => {
-  router.get('/perpustakaan/sirkulasi', {
-    search: searchQuery.value || undefined,
-    tenant_id: selectedTenantId.value || undefined,
-    per_page_aktif: perPageAktif.value || undefined,
-    p_aktif: page > 1 ? page : undefined,
-    per_page_riwayat: perPageRiwayat.value || undefined,
-    per_page_denda: perPageDenda.value || undefined,
-    per_page_baca: perPageBaca.value || undefined,
-  }, {
-    preserveState: true,
-    preserveScroll: true,
-  })
-}
-
-const applyRiwayatPage = (page = 1) => {
-  router.get('/perpustakaan/sirkulasi', {
-    search: searchQuery.value || undefined,
-    tenant_id: selectedTenantId.value || undefined,
-    per_page_aktif: perPageAktif.value || undefined,
-    per_page_riwayat: perPageRiwayat.value || undefined,
-    p_riwayat: page > 1 ? page : undefined,
-    per_page_denda: perPageDenda.value || undefined,
-    per_page_baca: perPageBaca.value || undefined,
-  }, {
-    preserveState: true,
-    preserveScroll: true,
-  })
-}
-
-const applyDendaPage = (page = 1) => {
-  router.get('/perpustakaan/sirkulasi', {
-    search: searchQuery.value || undefined,
-    tenant_id: selectedTenantId.value || undefined,
-    per_page_aktif: perPageAktif.value || undefined,
-    per_page_riwayat: perPageRiwayat.value || undefined,
-    per_page_denda: perPageDenda.value || undefined,
-    p_denda: page > 1 ? page : undefined,
-    per_page_baca: perPageBaca.value || undefined,
-  }, {
-    preserveState: true,
-    preserveScroll: true,
-  })
-}
-
-const applyBacaPage = (page = 1) => {
-  router.get('/perpustakaan/sirkulasi', {
-    search: searchQuery.value || undefined,
-    tenant_id: selectedTenantId.value || undefined,
-    per_page_aktif: perPageAktif.value || undefined,
-    per_page_riwayat: perPageRiwayat.value || undefined,
-    per_page_denda: perPageDenda.value || undefined,
-    per_page_baca: perPageBaca.value || undefined,
-    p_baca: page > 1 ? page : undefined,
-  }, {
-    preserveState: true,
-    preserveScroll: true,
-  })
-}
-
-const goToPage = (url) => {
+const goToPage = async (url) => {
   if (!url) return
-  router.visit(url, {
-    preserveState: true,
-    preserveScroll: true,
-  })
+  try {
+    const urlObj = new URL(url, window.location.origin)
+    const page   = urlObj.searchParams.get('page') || 1
+    await applySearch(parseInt(page))
+  } catch (err) {
+    console.error('Gagal navigasi halaman:', err)
+  }
 }
+
 
 const getSmartPaginationLinks = (pagination) => {
   if (!pagination?.links || pagination.links.length === 0) return []

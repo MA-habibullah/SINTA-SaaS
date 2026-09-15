@@ -1,7 +1,9 @@
 <script setup>
 import { ref, computed } from 'vue'
 import AppLayout from '@/Layouts/AppLayout.vue'
-import { Link, useForm, router } from '@inertiajs/vue3'
+import { Link, useForm } from '@inertiajs/vue3'
+import axios from 'axios'
+
 
 const props = defineProps({
   members: [Array, Object],
@@ -22,66 +24,66 @@ const searchQuery = ref(props.filters?.search || '')
 const filterKategori = ref(props.filters?.kategori || '')
 const filterKelas = ref(props.filters?.kelas || '')
 const filterStatus = ref(props.filters?.status || '')
-const selectedTenantId = ref(props.filters?.tenant_id || '')
-
-const perPageMembers = ref(Number(props.filters?.per_page) || 15)
-const perPageTamu = ref(Number(props.filters?.per_page_tamu) || 15)
+const selectedTenantId = ref(props.activeTenantId || '')
+const isLoadingFilter = ref(false)
+const localMembers  = ref(props.members     || { data: [] })
+const localBukuTamu = ref(props.bukuTamuList || { data: [] })
 
 const getSelectedTenantName = () => {
   if (!selectedTenantId.value) return 'Semua Sekolah (Agregat Global)'
   const found = props.tenants?.find(t => t.id === selectedTenantId.value)
-  return found ? `${found.nama_sekolah} (${found.npsn})` : 'Sekolah Terpilih'
+  return found ? `${found.nama_sekolah}` : 'Sekolah Terpilih'
 }
 
-const applyTenantFilter = () => {
-  applySearch(1)
-}
+const applyTenantFilter = () => { applySearch(1) }
 
-const applySearch = (page = 1) => {
-  router.get('/perpustakaan/anggota', {
-    search: searchQuery.value || undefined,
-    kategori: filterKategori.value || undefined,
-    kelas: filterKelas.value || undefined,
-    status: filterStatus.value || undefined,
-    tenant_id: selectedTenantId.value || undefined,
-    per_page: perPageMembers.value || undefined,
-    page: page > 1 ? page : undefined,
-    per_page_tamu: perPageTamu.value || undefined,
-  }, {
-    preserveState: true,
-    preserveScroll: true,
-  })
+const applySearch = async (page = 1) => {
+  isLoadingFilter.value = true
+  try {
+    const headers = {}
+    if (selectedTenantId.value) headers['X-Tenant-Id'] = selectedTenantId.value
+    const res = await axios.get('/perpustakaan/anggota', {
+      params: {
+        async: 1,
+        search: searchQuery.value || undefined,
+        kategori: filterKategori.value || undefined,
+        kelas: filterKelas.value || undefined,
+        status: filterStatus.value || undefined,
+        per_page: perPageMembers.value || undefined,
+        page: page > 1 ? page : undefined,
+        per_page_tamu: perPageTamu.value || undefined,
+      },
+      headers,
+    })
+    if (res.data?.success) {
+      if (res.data.data?.members)     localMembers.value  = res.data.data.members
+      if (res.data.data?.bukuTamuList) localBukuTamu.value = res.data.data.bukuTamuList
+    }
+  } catch (err) {
+    console.error('Gagal filter anggota:', err)
+  } finally {
+    isLoadingFilter.value = false
+  }
 }
 
 const resetFilters = () => {
-  searchQuery.value = ''
-  filterKategori.value = ''
-  filterKelas.value = ''
-  filterStatus.value = ''
+  searchQuery.value = filterKategori.value = filterKelas.value = filterStatus.value = ''
   applySearch(1)
 }
 
-const applyTamuPage = (page = 1) => {
-  router.get('/perpustakaan/anggota', {
-    search: searchQuery.value || undefined,
-    kategori: filterKategori.value || undefined,
-    tenant_id: selectedTenantId.value || undefined,
-    per_page: perPageMembers.value || undefined,
-    per_page_tamu: perPageTamu.value || undefined,
-    p_tamu: page > 1 ? page : undefined,
-  }, {
-    preserveState: true,
-    preserveScroll: true,
-  })
+const applyTamuPage = (page = 1) => applySearch(page)
+
+const goToPage = async (url) => {
+  if (!url) return
+  try {
+    const urlObj = new URL(url, window.location.origin)
+    const page = urlObj.searchParams.get('page') || 1
+    await applySearch(parseInt(page))
+  } catch (err) {
+    console.error(err)
+  }
 }
 
-const goToPage = (url) => {
-  if (!url) return
-  router.visit(url, {
-    preserveState: true,
-    preserveScroll: true,
-  })
-}
 
 const getSmartPaginationLinks = (pagination) => {
   if (!pagination?.links || pagination.links.length === 0) return []

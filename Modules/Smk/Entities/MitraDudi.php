@@ -24,6 +24,7 @@ class MitraDudi extends BaseTenantModel
         'tanggal_mulai_mou',
         'tanggal_akhir_mou',
         'kuota_penerimaan_pkl',
+        'status_kerjasama', // 'Aktif', 'Kadaluarsa', 'Nonaktif'
         'is_active',
     ];
 
@@ -32,6 +33,8 @@ class MitraDudi extends BaseTenantModel
         'tanggal_akhir_mou'    => 'date',
         'kuota_penerimaan_pkl' => 'integer',
         'is_active'            => 'boolean',
+        'created_at'           => 'datetime',
+        'updated_at'           => 'datetime',
     ];
 
     public function pkl(): HasMany

@@ -1,7 +1,9 @@
 <script setup>
 import { ref, computed } from 'vue'
 import AppLayout from '@/Layouts/AppLayout.vue'
-import { Link, router } from '@inertiajs/vue3'
+import { Link } from '@inertiajs/vue3'
+import axios from 'axios'
+
 
 const props = defineProps({
   pinjamanAktif: [Object, Array],
@@ -45,44 +47,47 @@ const formatDate = (dateStr) => {
 // -------------------------------------------------------------
 // SMART WINDOWING PAGINATION HELPER
 // -------------------------------------------------------------
-const goToPage = (url) => {
-  if (url) {
-    router.visit(url, { preserveState: true, preserveScroll: true })
-  }
+// Fetch in-memory (no URL reload)
+const isLoadingPage = ref(false)
+const localPinjamanAktif  = ref(props.pinjamanAktif  || [])
+const localRiwayatSelesai = ref(props.riwayatSelesai || { data: [] })
+const localReservasi      = ref(props.reservasiSaya  || [])
+
+const applyPageReload = async () => {
+  isLoadingPage.value = true
+  try {
+    const res = await axios.get('/perpustakaan/riwayat-saya', {
+      params: {
+        async: 1,
+        per_page_aktif: perPageAktif.value,
+        per_page_riwayat: perPageRiwayat.value,
+        per_page_reservasi: perPageReservasi.value,
+      }
+    })
+    if (res.data?.success) {
+      const d = res.data.data
+      if (d.pinjamanAktif)  localPinjamanAktif.value  = d.pinjamanAktif
+      if (d.riwayatSelesai) localRiwayatSelesai.value = d.riwayatSelesai
+      if (d.reservasiSaya)  localReservasi.value      = d.reservasiSaya
+    }
+  } catch (err) { console.error(err) }
+  finally { isLoadingPage.value = false }
 }
 
-const applyAktifPageSize = () => {
-  router.get('/perpustakaan/riwayat-saya', {
-    per_page_aktif: perPageAktif.value,
-    per_page_riwayat: perPageRiwayat.value,
-    per_page_reservasi: perPageReservasi.value,
-  }, {
-    preserveState: true,
-    preserveScroll: true,
-  })
+const goToPage = async (url) => {
+  if (!url) return
+  try {
+    const res = await axios.get(url, { params: { async: 1 } })
+    if (res.data?.success) {
+      if (res.data.data?.riwayatSelesai) localRiwayatSelesai.value = res.data.data.riwayatSelesai
+    }
+  } catch (err) { console.error(err) }
 }
 
-const applyRiwayatPageSize = () => {
-  router.get('/perpustakaan/riwayat-saya', {
-    per_page_aktif: perPageAktif.value,
-    per_page_riwayat: perPageRiwayat.value,
-    per_page_reservasi: perPageReservasi.value,
-  }, {
-    preserveState: true,
-    preserveScroll: true,
-  })
-}
+const applyAktifPageSize    = () => applyPageReload()
+const applyRiwayatPageSize  = () => applyPageReload()
+const applyReservasiPageSize = () => applyPageReload()
 
-const applyReservasiPageSize = () => {
-  router.get('/perpustakaan/riwayat-saya', {
-    per_page_aktif: perPageAktif.value,
-    per_page_riwayat: perPageRiwayat.value,
-    per_page_reservasi: perPageReservasi.value,
-  }, {
-    preserveState: true,
-    preserveScroll: true,
-  })
-}
 
 const getSmartPaginationLinks = (paginator) => {
   if (!paginator || !paginator.links) return []

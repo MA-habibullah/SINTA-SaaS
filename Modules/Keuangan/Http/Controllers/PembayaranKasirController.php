@@ -18,39 +18,92 @@ use Modules\Keuangan\Entities\KasBank;
 use Modules\Keuangan\Entities\PengaturanKeuangan;
 use Modules\Keuangan\Entities\KeuanganAuditLog;
 use Modules\Siswa\Entities\Siswa;
+use App\Services\SecurityPayloadService;
 
 class PembayaranKasirController extends Controller
 {
+    /**
+     * Halaman Loket Kasir Pembayaran Real-time
+     * Zero-SSR Pattern: initial GET hanya render shell, data dimuat via ?async=1
+     */
     public function index(Request $request): InertiaResponse|JsonResponse
     {
         $user = Auth::user();
         $isSuperAdmin = $user ? $user->isSuperAdmin() : false;
-        $selectedTenantId = $request->query('tenant_id');
-        $tenantId = ($isSuperAdmin && !empty($selectedTenantId)) ? $selectedTenantId : (session('tenant_id') ?? $user?->tenant_id);
 
-        $kasList = KasBank::when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))->where('is_active', true)->orderBy('created_at', 'asc')->get();
-        $kelasList = DB::table('akademik.kelas')->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))->where('is_active', true)->orderBy('nama_kelas', 'asc')->get(['id', 'nama_kelas', 'kode_kelas']);
-        $pengaturan = PengaturanKeuangan::where('tenant_id', $tenantId)->first();
-        $tenantsList = $isSuperAdmin ? Tenant::orderBy('nama_sekolah', 'asc')->get(['id', 'nama_sekolah']) : [];
+        // === ZERO-SSR: Initial page load hanya render shell kosong ===
+        $isInitialSsr = !$request->header('X-Inertia') && !$request->has('async');
 
-        $data = [
-            'kasList'          => $kasList,
-            'kelasList'        => $kelasList,
-            'pengaturan'       => $pengaturan,
-            'isSuperAdmin'     => $isSuperAdmin,
-            'tenantsList'      => $tenantsList,
-            'selectedTenantId' => $selectedTenantId,
-        ];
-
-        if ($request->wantsJson()) {
-            return response()->json(['success' => true, 'data' => $data]);
+        if ($isInitialSsr) {
+            return Inertia::render('Keuangan/Kasir/Index', [
+                'kasList'      => null,
+                'kelasList'    => null,
+                'pengaturan'   => null,
+                'isSuperAdmin' => $isSuperAdmin,
+                'tenantsList'  => null,
+            ]);
         }
 
-        return Inertia::render('Keuangan/Kasir/Index', $data);
+        // === ASYNC JSON: Data aktual dimuat on-demand via Axios ===
+        // Tenant ditentukan dari sesi server, bukan dari URL query parameter
+        $selectedTenantId = $request->header('X-Tenant-Id') ?? $request->query('async_tenant_id');
+        $tenantId = ($isSuperAdmin && !empty($selectedTenantId))
+            ? $selectedTenantId
+            : (session('tenant_id') ?? $user?->tenant_id);
+
+        $kasList         = KasBank::when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))->where('is_active', true)->orderBy('created_at', 'asc')->get();
+        $kelasList       = DB::table('akademik.kelas')->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))->where('is_active', true)->orderBy('nama_kelas', 'asc')->get(['id', 'nama_kelas', 'kode_kelas']);
+        $pengaturan      = PengaturanKeuangan::where('tenant_id', $tenantId)->first();
+        $tenantsList     = $isSuperAdmin ? Tenant::orderBy('nama_sekolah', 'asc')->get(['id', 'nama_sekolah']) : [];
+
+        $payload = [
+            'kasList'      => $kasList,
+            'kelasList'    => $kelasList,
+            'pengaturan'   => $pengaturan,
+            'isSuperAdmin' => $isSuperAdmin,
+            'tenantsList'  => $tenantsList,
+        ];
+
+        // Sanitasi: hilangkan data internal sensitif sebelum kirim ke frontend
+        $payload = SecurityPayloadService::sanitize($payload);
+
+        if ($request->wantsJson() || $request->has('async')) {
+            return response()->json(['success' => true, 'data' => $payload]);
+        }
+
+        return Inertia::render('Keuangan/Kasir/Index', $payload);
     }
 
     /**
-     * API Ambil Tagihan Siswa Terpilih
+     * API: Cari Siswa via NISN/Nama (dipanggil dari SearchableSelect)
+     */
+    public function searchSiswa(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        $isSuperAdmin = $user ? $user->isSuperAdmin() : false;
+        $selectedTenantId = $request->header('X-Tenant-Id') ?? $request->query('async_tenant_id');
+        $tenantId = ($isSuperAdmin && !empty($selectedTenantId))
+            ? $selectedTenantId
+            : (session('tenant_id') ?? $user?->tenant_id);
+
+        $q = trim((string)$request->query('q', ''));
+        $kelasId = $request->query('kelas_id');
+
+        $query = Siswa::where('tenant_id', $tenantId)
+            ->where('status_siswa', 'Aktif')
+            ->where(function ($sub) use ($q) {
+                $sub->where('nama_lengkap', 'ILIKE', "%{$q}%")
+                    ->orWhere('nisn', 'ILIKE', "%{$q}%")
+                    ->orWhere('nis', 'ILIKE', "%{$q}%");
+            })
+            ->limit(15)
+            ->get(['id', 'nama_lengkap', 'nisn', 'nis', 'kelas_saat_ini']);
+
+        return response()->json(['success' => true, 'data' => $query]);
+    }
+
+    /**
+     * API Ambil Tagihan Siswa Terpilih (on-demand per siswa)
      */
     public function getSiswaTagihan(Request $request, string $siswaId): JsonResponse
     {
@@ -75,12 +128,14 @@ class PembayaranKasirController extends Controller
             ->limit(15)
             ->get();
 
-        return response()->json([
-            'success'          => true,
+        // Sanitasi: hilangkan field sensitif sebelum kirim ke frontend
+        $responsePayload = SecurityPayloadService::sanitize([
             'siswa'            => $siswa,
             'tagihanList'      => $tagihanList,
             'riwayatTransaksi' => $riwayatTransaksi,
         ]);
+
+        return response()->json(array_merge(['success' => true], $responsePayload));
     }
 
     /**
@@ -186,6 +241,9 @@ class PembayaranKasirController extends Controller
                 'nama_bendahara'     => $pengaturan?->nama_bendahara ?? 'Bendahara',
                 'catatan_kuitansi'   => $pengaturan?->catatan_kuitansi ?? '',
             ];
+
+            // Sanitasi kuitansi payload sebelum dikirim ke frontend
+            $kuitansiPayload = SecurityPayloadService::sanitize($kuitansiPayload);
 
             if ($request->wantsJson()) {
                 return response()->json([

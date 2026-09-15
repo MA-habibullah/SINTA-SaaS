@@ -18,22 +18,48 @@ use Modules\Keuangan\Entities\TarifPembayaran;
 use Modules\Keuangan\Entities\KeringananSiswa;
 use Modules\Keuangan\Entities\KeuanganAuditLog;
 use Modules\Siswa\Entities\Siswa;
+use App\Services\SecurityPayloadService;
 
 class TagihanSiswaController extends Controller
 {
+    /**
+     * Daftar Tagihan Siswa & Generator Tagihan Massal
+     * Zero-SSR Pattern: initial GET render shell kosong, data via ?async=1
+     */
     public function index(Request $request): InertiaResponse|JsonResponse
     {
         $user = Auth::user();
         $isSuperAdmin = $user ? $user->isSuperAdmin() : false;
-        $selectedTenantId = $request->query('tenant_id');
-        $tenantId = ($isSuperAdmin && !empty($selectedTenantId)) ? $selectedTenantId : (session('tenant_id') ?? $user?->tenant_id);
 
-        $search = trim((string)$request->query('search', ''));
-        $status = $request->query('status');
-        $posId = $request->query('pos_id');
+        // === ZERO-SSR: Initial page load hanya render shell kosong ===
+        $isInitialSsr = !$request->header('X-Inertia') && !$request->has('async');
+
+        if ($isInitialSsr) {
+            return Inertia::render('Keuangan/Tagihan/Index', [
+                'tagihanList'     => null,
+                'posList'         => null,
+                'kelasList'       => null,
+                'tahunAjaranList' => null,
+                'isSuperAdmin'    => $isSuperAdmin,
+                'tenantsList'     => null,
+                'filters'         => null,
+            ]);
+        }
+
+        // === ASYNC JSON: Data aktual dimuat on-demand via Axios ===
+        // Tenant dari sesi server, bukan URL query parameter
+        $selectedTenantId = $request->header('X-Tenant-Id') ?? $request->query('async_tenant_id');
+        $tenantId = ($isSuperAdmin && !empty($selectedTenantId))
+            ? $selectedTenantId
+            : (session('tenant_id') ?? $user?->tenant_id);
+
+        // Filter dari request body/query (boleh karena ini panggilan API, bukan URL navigasi)
+        $search  = trim((string)$request->query('search', ''));
+        $status  = $request->query('status');
+        $posId   = $request->query('pos_id');
         $kelasId = $request->query('kelas_id');
-        $bulan = $request->query('bulan');
-        $tahun = $request->query('tahun');
+        $bulan   = $request->query('bulan');
+        $tahun   = $request->query('tahun');
 
         $query = TagihanSiswa::when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))->with([
             'siswa:id,nama_lengkap,nisn,nis,kelas_saat_ini,jurusan',
@@ -47,62 +73,39 @@ class TagihanSiswaController extends Controller
                     ->orWhere('nis', 'ILIKE', "%{$search}%");
             });
         }
-
-        if (!empty($status)) {
-            $query->where('status_pembayaran', $status);
-        }
-
-        if (!empty($posId)) {
-            $query->where('pos_id', $posId);
-        }
-
+        if (!empty($status))  $query->where('status_pembayaran', $status);
+        if (!empty($posId))   $query->where('pos_id', $posId);
         if (!empty($kelasId)) {
             $kelasObj = DB::table('akademik.kelas')->where('id', $kelasId)->first();
             $namaKelas = $kelasObj ? $kelasObj->nama_kelas : $kelasId;
-            $query->whereHas('siswa', function ($sub) use ($namaKelas) {
-                $sub->where('kelas_saat_ini', $namaKelas);
-            });
+            $query->whereHas('siswa', fn($sub) => $sub->where('kelas_saat_ini', $namaKelas));
         }
+        if (!empty($bulan)) $query->where('bulan', (int)$bulan);
+        if (!empty($tahun)) $query->where('tahun', (int)$tahun);
 
-        if (!empty($bulan)) {
-            $query->where('bulan', (int)$bulan);
-        }
-
-        if (!empty($tahun)) {
-            $query->where('tahun', (int)$tahun);
-        }
-
-        $tagihanList = $query->orderBy('tahun', 'desc')->orderBy('bulan', 'desc')->orderBy('created_at', 'desc')->paginate(20);
-
-        $posList = PosKeuangan::when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))->where('is_active', true)->orderBy('urutan', 'asc')->get(['id', 'nama_pos', 'tipe_periode']);
-        $kelasList = DB::table('akademik.kelas')->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))->where('is_active', true)->orderBy('nama_kelas', 'asc')->get(['id', 'nama_kelas', 'kode_kelas']);
+        $tagihanList     = $query->orderBy('tahun', 'desc')->orderBy('bulan', 'desc')->orderBy('created_at', 'desc')->paginate(20);
+        $posList         = PosKeuangan::when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))->where('is_active', true)->orderBy('urutan', 'asc')->get(['id', 'nama_pos', 'tipe_periode']);
+        $kelasList       = DB::table('akademik.kelas')->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))->where('is_active', true)->orderBy('nama_kelas', 'asc')->get(['id', 'nama_kelas', 'kode_kelas']);
         $tahunAjaranList = DB::table('akademik.tahun_ajaran')->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))->orderBy('is_active', 'desc')->get(['id', 'nama_tahun_ajaran as tahun_ajaran']);
-        $tenantsList = $isSuperAdmin ? Tenant::orderBy('nama_sekolah', 'asc')->get(['id', 'nama_sekolah']) : [];
+        $tenantsList     = $isSuperAdmin ? Tenant::orderBy('nama_sekolah', 'asc')->get(['id', 'nama_sekolah']) : [];
 
-        $data = [
-            'tagihanList'      => $tagihanList,
-            'posList'          => $posList,
-            'kelasList'        => $kelasList,
-            'tahunAjaranList'  => $tahunAjaranList,
-            'isSuperAdmin'     => $isSuperAdmin,
-            'tenantsList'      => $tenantsList,
-            'selectedTenantId' => $selectedTenantId,
-            'filters'          => [
-                'tenant_id' => $selectedTenantId,
-                'search'    => $search,
-                'status'    => $status,
-                'pos_id'    => $posId,
-                'kelas_id'  => $kelasId,
-                'bulan'     => $bulan,
-                'tahun'     => $tahun,
-            ]
+        $payload = [
+            'tagihanList'     => $tagihanList,
+            'posList'         => $posList,
+            'kelasList'       => $kelasList,
+            'tahunAjaranList' => $tahunAjaranList,
+            'isSuperAdmin'    => $isSuperAdmin,
+            'tenantsList'     => $tenantsList,
+            'filters'         => compact('search', 'status', 'posId', 'kelasId', 'bulan', 'tahun'),
         ];
 
-        if ($request->wantsJson()) {
-            return response()->json(['success' => true, 'data' => $data]);
+        $payload = SecurityPayloadService::sanitize($payload);
+
+        if ($request->wantsJson() || $request->has('async')) {
+            return response()->json(['success' => true, 'data' => $payload]);
         }
 
-        return Inertia::render('Keuangan/Tagihan/Index', $data);
+        return Inertia::render('Keuangan/Tagihan/Index', $payload);
     }
 
     /**
@@ -149,7 +152,7 @@ class TagihanSiswaController extends Controller
         }
 
         // Ambil tarif acuan aktif
-        $tarifList = TarifPembayaran::where('tenant_id', $tenantId)->where('pos_id', $pos->id)->get();
+        $tarifList   = TarifPembayaran::where('tenant_id', $tenantId)->where('pos_id', $pos->id)->get();
         $defaultTarif = $tarifList->whereNull('kelas_id')->whereNull('tingkat')->first()?->nominal_tarif ?? 0;
 
         // Ambil keringanan beasiswa aktif
@@ -172,39 +175,29 @@ class TagihanSiswaController extends Controller
                     })
                     ->exists();
 
-                if ($exists) {
-                    $skippedCount++;
-                    continue;
-                }
+                if ($exists) { $skippedCount++; continue; }
 
                 // Hitung Tarif Dasar
                 $tarifDasar = $defaultTarif;
-                // Cek tarif khusus kelas
                 $tarifKelas = $tarifList->where('kelas_id', $siswa->kelas_id)->first();
                 if ($tarifKelas) {
                     $tarifDasar = $tarifKelas->nominal_tarif;
                 } else {
-                    // Cek tarif tingkat
                     $tarifTingkat = $tarifList->where('tingkat', $siswa->kelas?->tingkat)->first();
-                    if ($tarifTingkat) {
-                        $tarifDasar = $tarifTingkat->nominal_tarif;
-                    }
+                    if ($tarifTingkat) $tarifDasar = $tarifTingkat->nominal_tarif;
                 }
 
                 // Hitung Potongan Keringanan
                 $potongan = 0;
                 if (isset($keringananList[$siswa->id])) {
                     $k = $keringananList[$siswa->id];
-                    if ($k->tipe_potongan === 'Persentase') {
-                        $potongan = ($tarifDasar * (float)$k->nilai_potongan) / 100;
-                    } else {
-                        $potongan = (float)$k->nilai_potongan;
-                    }
+                    $potongan = ($k->tipe_potongan === 'Persentase')
+                        ? ($tarifDasar * (float)$k->nilai_potongan) / 100
+                        : (float)$k->nilai_potongan;
                 }
 
                 $totalTagihan = max(0, $tarifDasar - $potongan);
                 $status = ($totalTagihan <= 0) ? 'Lunas' : 'Belum Bayar';
-
                 $nomorTagihan = 'INV/' . ($validated['tahun'] ?? date('Y')) . '/' . ($pos->kode_pos ?? 'SPP') . '/' . strtoupper(Str::random(6));
 
                 TagihanSiswa::create([
