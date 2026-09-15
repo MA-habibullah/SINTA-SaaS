@@ -13,6 +13,7 @@ use Modules\Siswa\Http\Controllers\PpdbController;
 use Modules\Siswa\Http\Controllers\MutasiController;
 use Modules\Siswa\Http\Controllers\PrestasiController;
 use Modules\Akademik\Http\Controllers\AkademikMasterController;
+use Modules\Akademik\Http\Controllers\JadwalPelajaranController;
 use Modules\Akademik\Http\Controllers\PenilaianController;
 use Modules\Akademik\Http\Controllers\RaporController;
 use Modules\Keuangan\Http\Controllers\DashboardKeuanganController;
@@ -237,12 +238,17 @@ Route::middleware(['auth', 'tenant.guard'])->group(function () {
     Route::get('/keuangan/tagihan-saya', [TagihanSayaController::class, 'index'])->name('menu.keuangan.tagihan-saya');
     Route::get('/keuangan/audit-log', [KeuanganAuditLogController::class, 'index'])->name('menu.keuangan.audit-log');
 
-    // 7. Kurikulum & Akademik
-    Route::get('/akademik/jadwal', [AkademikMasterController::class, 'index'])->name('menu.akademik.jadwal');
-    Route::get('/akademik/jadwal/export', [AkademikMasterController::class, 'exportJadwal'])->name('menu.akademik.jadwal.export');
-    Route::get('/akademik/jadwal/template', [AkademikMasterController::class, 'downloadTemplateJadwal'])->name('menu.akademik.jadwal.template');
-    Route::post('/akademik/jadwal/import', [AkademikMasterController::class, 'importJadwal'])->name('menu.akademik.jadwal.import');
-    Route::post('/akademik/jadwal/copy', [AkademikMasterController::class, 'copyJadwal'])->name('menu.akademik.jadwal.copy');
+    // 7. Kurikulum & Akademik (Manajemen Jadwal Pelajaran Matrix & Anti-Bentrok)
+    Route::get('/akademik/jadwal', [JadwalPelajaranController::class, 'index'])->name('menu.akademik.jadwal');
+    Route::post('/akademik/jadwal', [JadwalPelajaranController::class, 'store'])->name('menu.akademik.jadwal.store');
+    Route::put('/akademik/jadwal/{id}', [JadwalPelajaranController::class, 'update'])->name('menu.akademik.jadwal.update');
+    Route::delete('/akademik/jadwal/{id}', [JadwalPelajaranController::class, 'destroy'])->name('menu.akademik.jadwal.destroy');
+    Route::post('/akademik/jadwal/check-conflict', [JadwalPelajaranController::class, 'checkConflict'])->name('menu.akademik.jadwal.check-conflict');
+    Route::get('/akademik/jadwal/export', [JadwalPelajaranController::class, 'exportJadwal'])->name('menu.akademik.jadwal.export');
+    Route::get('/akademik/jadwal/template', [JadwalPelajaranController::class, 'downloadTemplateJadwal'])->name('menu.akademik.jadwal.template');
+    Route::post('/akademik/jadwal/preview-import', [JadwalPelajaranController::class, 'previewImport'])->name('menu.akademik.jadwal.preview-import');
+    Route::post('/akademik/jadwal/import', [JadwalPelajaranController::class, 'importJadwal'])->name('menu.akademik.jadwal.import');
+    Route::post('/akademik/jadwal/copy', [JadwalPelajaranController::class, 'copyJadwal'])->name('menu.akademik.jadwal.copy');
 
     // 8. Kepala Sekolah & Manajemen (Pembinaan GTK & Survei Guru)
     Route::get('/kepala-sekolah/pembinaan', [PembinaanController::class, 'index'])->name('menu.kepala-sekolah.pembinaan');

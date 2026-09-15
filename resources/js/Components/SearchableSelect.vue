@@ -49,8 +49,52 @@ const emit = defineEmits(['update:modelValue', 'change'])
 const isOpen = ref(false)
 const searchQuery = ref('')
 const searchInputRef = ref(null)
-const dropdownRef = ref(null)
+const triggerRef = ref(null)
+const dropdownMenuRef = ref(null)
 const highlightedIndex = ref(-1)
+
+const dropdownStyle = ref({
+  top: '0px',
+  left: '0px',
+  width: '220px',
+  position: 'absolute',
+  zIndex: 99999
+})
+
+function updateDropdownPosition() {
+  if (!triggerRef.value) return
+  const rect = triggerRef.value.getBoundingClientRect()
+  const spaceBelow = window.innerHeight - rect.bottom
+  const dropdownEstimatedHeight = 260
+  const openUpward = spaceBelow < dropdownEstimatedHeight && rect.top > dropdownEstimatedHeight
+
+  const top = openUpward
+    ? (rect.top + window.scrollY - 6)
+    : (rect.bottom + window.scrollY + 6)
+
+  const width = Math.max(220, rect.width)
+  let left = rect.left + window.scrollX
+
+  // Viewport right edge protection
+  if (left + width > window.innerWidth - 15) {
+    left = Math.max(10, window.innerWidth - width - 15)
+  }
+
+  dropdownStyle.value = {
+    top: `${top}px`,
+    left: `${left}px`,
+    width: `${width}px`,
+    transform: openUpward ? 'translateY(-100%)' : 'none',
+    position: 'absolute',
+    zIndex: 99999
+  }
+}
+
+function handleScrollOrResize() {
+  if (isOpen.value) {
+    updateDropdownPosition()
+  }
+}
 
 // Normalize options to unified objects
 const normalizedOptions = computed(() => {
@@ -107,6 +151,7 @@ function openDropdown() {
   searchQuery.value = ''
   highlightedIndex.value = -1
   nextTick(() => {
+    updateDropdownPosition()
     if (searchInputRef.value) {
       searchInputRef.value.focus()
     }
@@ -162,22 +207,28 @@ function handleKeyDown(e) {
 }
 
 function handleClickOutside(e) {
-  if (dropdownRef.value && !dropdownRef.value.contains(e.target)) {
+  const inTrigger = triggerRef.value && triggerRef.value.contains(e.target)
+  const inMenu = dropdownMenuRef.value && dropdownMenuRef.value.contains(e.target)
+  if (!inTrigger && !inMenu) {
     closeDropdown()
   }
 }
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  window.addEventListener('scroll', handleScrollOrResize, { capture: true, passive: true })
+  window.addEventListener('resize', handleScrollOrResize)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
+  window.removeEventListener('scroll', handleScrollOrResize, { capture: true })
+  window.removeEventListener('resize', handleScrollOrResize)
 })
 </script>
 
 <template>
-  <div ref="dropdownRef" class="relative select-none text-xs" :class="customClass">
+  <div ref="triggerRef" class="relative select-none text-xs" :class="customClass">
     <!-- Trigger Button -->
     <div
       tabindex="0"
@@ -215,58 +266,61 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <!-- Dropdown Menu Panel -->
-    <div
-      v-if="isOpen"
-      class="absolute left-0 right-0 top-full mt-1.5 bg-white rounded-2xl shadow-xl border border-slate-200/90 z-50 overflow-hidden animate-dropdown"
-      style="min-width: 220px;"
-    >
-      <!-- Search Input Box -->
-      <div class="p-2 border-b border-slate-100 bg-slate-50/70">
-        <div class="relative">
-          <i class="bi bi-search absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[11px]"></i>
-          <input
-            ref="searchInputRef"
-            type="text"
-            v-model="searchQuery"
-            :placeholder="searchPlaceholder"
-            class="w-full pl-7 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-hidden transition"
-            @keydown="handleKeyDown"
-          />
-        </div>
-      </div>
-
-      <!-- Options List Scroll Area -->
-      <div class="max-h-52 overflow-y-auto p-1 space-y-0.5 custom-scrollbar">
-        <div
-          v-if="filteredOptions.length === 0"
-          class="py-4 text-center text-slate-400 text-xs font-medium"
-        >
-          <i class="bi bi-emoji-neutral text-sm mb-1 d-block"></i>
-          Tidak ada opsi yang cocok
-        </div>
-
-        <div
-          v-for="(opt, idx) in filteredOptions"
-          :key="opt.value"
-          class="px-3 py-2 rounded-xl cursor-pointer transition flex items-center justify-between gap-2 text-xs"
-          :class="[
-            String(opt.value) === String(modelValue) ? 'bg-blue-600 text-white font-bold shadow-2xs' : 'text-slate-700 hover:bg-slate-100',
-            highlightedIndex === idx && String(opt.value) !== String(modelValue) ? 'bg-slate-100 text-blue-600 font-semibold' : ''
-          ]"
-          @click="selectOption(opt)"
-          @mouseenter="highlightedIndex = idx"
-        >
-          <div class="truncate grow">
-            <div class="truncate">{{ opt.label }}</div>
-            <div v-if="opt.subLabel" class="text-[10px] truncate" :class="String(opt.value) === String(modelValue) ? 'text-blue-100' : 'text-slate-400'">
-              {{ opt.subLabel }}
-            </div>
+    <!-- Dropdown Menu Panel (Teleported directly to Body to escape overflow:hidden / overflow-x:auto) -->
+    <Teleport to="body">
+      <div
+        v-if="isOpen"
+        ref="dropdownMenuRef"
+        class="bg-white rounded-2xl shadow-2xl border border-slate-200/90 overflow-hidden animate-dropdown"
+        :style="dropdownStyle"
+      >
+        <!-- Search Input Box -->
+        <div class="p-2 border-b border-slate-100 bg-slate-50/70">
+          <div class="relative">
+            <i class="bi bi-search absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[11px]"></i>
+            <input
+              ref="searchInputRef"
+              type="text"
+              v-model="searchQuery"
+              :placeholder="searchPlaceholder"
+              class="w-full pl-7 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-hidden transition"
+              @keydown="handleKeyDown"
+            />
           </div>
-          <i v-if="String(opt.value) === String(modelValue)" class="bi bi-check-lg text-sm shrink-0"></i>
+        </div>
+
+        <!-- Options List Scroll Area -->
+        <div class="max-h-52 overflow-y-auto p-1 space-y-0.5 custom-scrollbar">
+          <div
+            v-if="filteredOptions.length === 0"
+            class="py-4 text-center text-slate-400 text-xs font-medium"
+          >
+            <i class="bi bi-emoji-neutral text-sm mb-1 d-block"></i>
+            Tidak ada opsi yang cocok
+          </div>
+
+          <div
+            v-for="(opt, idx) in filteredOptions"
+            :key="opt.value"
+            class="px-3 py-2 rounded-xl cursor-pointer transition flex items-center justify-between gap-2 text-xs"
+            :class="[
+              String(opt.value) === String(modelValue) ? 'bg-blue-600 text-white font-bold shadow-2xs' : 'text-slate-700 hover:bg-slate-100',
+              highlightedIndex === idx && String(opt.value) !== String(modelValue) ? 'bg-slate-100 text-blue-600 font-semibold' : ''
+            ]"
+            @click="selectOption(opt)"
+            @mouseenter="highlightedIndex = idx"
+          >
+            <div class="truncate grow">
+              <div class="truncate">{{ opt.label }}</div>
+              <div v-if="opt.subLabel" class="text-[10px] truncate" :class="String(opt.value) === String(modelValue) ? 'text-blue-100' : 'text-slate-400'">
+                {{ opt.subLabel }}
+              </div>
+            </div>
+            <i v-if="String(opt.value) === String(modelValue)" class="bi bi-check-lg text-sm shrink-0"></i>
+          </div>
         </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
