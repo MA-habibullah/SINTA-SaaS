@@ -9,6 +9,7 @@ use Inertia\Response as InertiaResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Modules\Core\Entities\Tenant;
+use Modules\Core\Services\SecurityPayloadService;
 use Modules\Sistem\Entities\ActiveSession;
 use Modules\Sistem\Entities\ActivityLog;
 
@@ -24,6 +25,17 @@ class ActiveSessionController extends Controller
         $userRoleName = is_object($user?->role) ? ($user->role->nama_role ?? 'admin_sekolah') : ($user?->role ?? 'admin_sekolah');
         $isSuperAdmin = ($user && ($userRoleName === 'super_admin' || $user->tenant_id === '00000000-0000-0000-0000-000000000000'));
         $currentTenantId = session('tenant_id') ?? $user?->tenant_id ?? '00000000-0000-0000-0000-000000000000';
+
+        $isInitialSsr = !$request->header('X-Inertia') && !$request->has('async');
+
+        if ($isInitialSsr) {
+            return Inertia::render('Sistem/ActiveSessions/Index', [
+                'initialStats'    => null,
+                'isSuperAdmin'    => $isSuperAdmin,
+                'tenantsList'     => null,
+                'currentTenantId' => $currentTenantId,
+            ]);
+        }
 
         // 1. Ringkasan Statistik Real-time
         $statsWhere = [];
@@ -74,29 +86,26 @@ class ActiveSessionController extends Controller
                 ->get();
         }
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
-            return response()->json([
-                'success' => true,
-                'stats' => [
-                    'total_sessions_today' => (int)$totalSessionsToday,
-                    'unique_users_today'   => (int)$uniqueUsersToday,
-                    'total_logins_24h'     => (int)$totalLogins24h,
-                    'total_logouts_24h'    => (int)$totalLogouts24h,
-                ],
+        $statsPayload = [
+            'total_sessions_today' => (int)$totalSessionsToday,
+            'unique_users_today'   => (int)$uniqueUsersToday,
+            'total_logins_24h'     => (int)$totalLogins24h,
+            'total_logouts_24h'    => (int)$totalLogouts24h,
+        ];
+
+        if (($request->has('async') || $request->wantsJson()) && !$request->header('X-Inertia')) {
+            return response()->json(SecurityPayloadService::sanitize([
+                'success'        => true,
+                'stats'          => $statsPayload,
                 'is_super_admin' => $isSuperAdmin,
                 'tenants_list'   => $tenantsList,
-            ]);
+            ]));
         }
 
         return Inertia::render('Sistem/ActiveSessions/Index', [
-            'initialStats' => [
-                'total_sessions_today' => (int)$totalSessionsToday,
-                'unique_users_today'   => (int)$uniqueUsersToday,
-                'total_logins_24h'     => (int)$totalLogins24h,
-                'total_logouts_24h'    => (int)$totalLogouts24h,
-            ],
-            'isSuperAdmin' => $isSuperAdmin,
-            'tenantsList'  => $tenantsList,
+            'initialStats'    => $statsPayload,
+            'isSuperAdmin'    => $isSuperAdmin,
+            'tenantsList'     => $tenantsList,
             'currentTenantId' => $currentTenantId,
         ]);
     }
@@ -250,12 +259,12 @@ class ActiveSessionController extends Controller
 
             $auditChartData = DB::select($sqlAuditChart, $auditParams);
 
-            return response()->json([
+            return response()->json(SecurityPayloadService::sanitize([
                 'success'          => true,
                 'online_users'     => $onlineUsers,
                 'chart_data'       => $chartData,
                 'audit_chart_data' => $auditChartData,
-            ]);
+            ]));
         } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
@@ -317,10 +326,10 @@ class ActiveSessionController extends Controller
 
             $logs = DB::select($sql, $params);
 
-            return response()->json([
+            return response()->json(SecurityPayloadService::sanitize([
                 'success'    => true,
                 'audit_logs' => $logs,
-            ]);
+            ]));
         } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,

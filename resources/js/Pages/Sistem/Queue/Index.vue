@@ -1,6 +1,8 @@
 <script setup>
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import AppLayout from '@/Layouts/AppLayout.vue'
+import SearchableSelect from '@/Components/SearchableSelect.vue'
+import { useMemorySecurity } from '@/Utils/cryptoSecurity.js'
 import axios from 'axios'
 
 // Toast notification helper
@@ -36,7 +38,7 @@ const showModal = (icon, title, text) => {
 const props = defineProps({
     metrics: {
         type: Object,
-        default: () => ({ pending: 0, processing: 0, completed: 0, failed: 0, total: 0 })
+        default: null
     },
     tenantsList: {
         type: Array,
@@ -53,13 +55,17 @@ const props = defineProps({
 })
 
 // Metrics reactive state
-const metricsState = ref({ ...props.metrics })
+const metricsState = ref(props.metrics || { pending: 0, processing: 0, completed: 0, failed: 0, total: 0 })
+const localTenantsList = ref(props.tenantsList && props.tenantsList.length > 0 ? [...props.tenantsList] : [])
 const jobs = ref([])
 const currentPage = ref(1)
 const totalPages = ref(1)
 const totalCount = ref(0)
 const loading = ref(false)
 const autoRefresh = ref(true)
+
+// Memory Security Garbage Collector
+useMemorySecurity([jobs, metricsState, localTenantsList])
 
 // Filters
 const filters = reactive({
@@ -72,6 +78,57 @@ const filters = reactive({
 const simJobType = ref('DEMO_SYNC_SUCCESS')
 const simTenantId = ref('')
 const dispatching = ref(false)
+
+// Options for SearchableSelect
+const simJobTypeOptions = [
+    { id: 'DEMO_SYNC_SUCCESS', nama: 'Sinkronisasi Pusdatin (Simulasi Sukses)', subLabel: 'Sinkronisasi data ke Pusdatin' },
+    { id: 'DEMO_SYNC_FAIL', nama: 'Sinkronisasi Pusdatin (Simulasi Gagal)', subLabel: 'Uji kegagalan error handler' },
+    { id: 'DEMO_EMAIL', nama: 'Kirim Email Blast Masal SPMB', subLabel: 'Notifikasi massal pendaftar' },
+    { id: 'CLEANUP_SESSIONS', nama: 'Pembersihan Sesi Kedaluwarsa', subLabel: 'Maintenance database aktif' }
+]
+
+const simTenantOptions = computed(() => {
+    const options = [
+        { id: '', nama: '-- Sistem Global / Universal --', subLabel: 'Seluruh Platform' }
+    ]
+    localTenantsList.value.forEach(t => {
+        options.push({
+            id: t.id,
+            nama: t.nama_sekolah,
+            subLabel: `NPSN: ${t.npsn || '-'}`
+        })
+    })
+    return options
+})
+
+const filterStatusOptions = [
+    { id: '', nama: '-- Semua Status --' },
+    { id: 'pending', nama: 'Menunggu (Pending)' },
+    { id: 'processing', nama: 'Diproses (Processing)' },
+    { id: 'completed', nama: 'Selesai (Completed)' },
+    { id: 'failed', nama: 'Gagal (Failed)' }
+]
+
+const filterJobTypeOptions = [
+    { id: '', nama: '-- Semua Jenis --' },
+    { id: 'DEMO_SYNC', nama: 'DEMO_SYNC' },
+    { id: 'DEMO_EMAIL', nama: 'DEMO_EMAIL' },
+    { id: 'CLEANUP_SESSIONS', nama: 'CLEANUP_SESSIONS' }
+]
+
+const filterTenantOptions = computed(() => {
+    const options = [
+        { id: '', nama: '-- Semua Sekolah --' }
+    ]
+    localTenantsList.value.forEach(t => {
+        options.push({
+            id: t.id,
+            nama: t.nama_sekolah,
+            subLabel: `NPSN: ${t.npsn || '-'}`
+        })
+    })
+    return options
+})
 
 // Web worker trigger state
 const runningWorker = ref(false)
@@ -110,10 +167,13 @@ const fetchData = async (page = 1) => {
         })
         
         if (response.data && response.data.success) {
-            metricsState.value = response.data.metrics
-            jobs.value = response.data.jobs
-            totalPages.value = response.data.total_pages
-            totalCount.value = response.data.total_count
+            metricsState.value = response.data.metrics || { pending: 0, processing: 0, completed: 0, failed: 0, total: 0 }
+            jobs.value = response.data.jobs || []
+            totalPages.value = response.data.total_pages || 1
+            totalCount.value = response.data.total_count || 0
+            if (response.data.tenantsList && response.data.tenantsList.length > 0) {
+                localTenantsList.value = response.data.tenantsList
+            }
         }
     } catch (err) {
         console.error('Failed to fetch queue data:', err)
@@ -395,24 +455,24 @@ onUnmounted(() => {
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                             <!-- Select Simulation Type -->
                             <div>
-                                <label for="simJobType" class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Tipe Simulasi</label>
-                                <select id="simJobType" v-model="simJobType" class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:outline-none transition">
-                                    <option value="DEMO_SYNC_SUCCESS">Sinkronisasi Pusdatin (Simulasi Sukses)</option>
-                                    <option value="DEMO_SYNC_FAIL">Sinkronisasi Pusdatin (Simulasi Gagal)</option>
-                                    <option value="DEMO_EMAIL">Kirim Email Blast Masal SPMB</option>
-                                    <option value="CLEANUP_SESSIONS">Pembersihan Sesi Kedaluwarsa</option>
-                                </select>
+                                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Tipe Simulasi</label>
+                                <SearchableSelect 
+                                    v-model="simJobType" 
+                                    :options="simJobTypeOptions"
+                                    placeholder="-- Pilih Tipe Simulasi --"
+                                    search-placeholder="Cari simulasi..."
+                                />
                             </div>
 
                             <!-- Select School / Tenant (Super Admin Only) -->
                             <div v-if="isSuperAdmin">
-                                <label for="simTenantId" class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Sekolah / Tenant</label>
-                                <select id="simTenantId" v-model="simTenantId" class="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:outline-none transition">
-                                    <option value="">-- Sistem Global / Universal --</option>
-                                    <option v-for="t in tenantsList" :key="t.id" :value="t.id">
-                                        {{ t.nama_sekolah }} (NPSN: {{ t.npsn || '-' }})
-                                    </option>
-                                </select>
+                                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Sekolah / Tenant</label>
+                                <SearchableSelect 
+                                    v-model="simTenantId" 
+                                    :options="simTenantOptions"
+                                    placeholder="-- Sistem Global / Universal --"
+                                    search-placeholder="Cari sekolah atau NPSN..."
+                                />
                             </div>
                             <div v-else class="flex flex-col justify-end">
                                 <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Ruang Lingkup</span>
@@ -448,27 +508,37 @@ onUnmounted(() => {
                     <div class="flex flex-wrap items-center gap-2.5">
                         
                         <!-- Status Filter -->
-                        <select v-model="filters.status" @change="fetchData(1)" class="h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-none transition">
-                            <option value="">-- Semua Status --</option>
-                            <option value="pending">Menunggu (Pending)</option>
-                            <option value="processing">Diproses (Processing)</option>
-                            <option value="completed">Selesai (Completed)</option>
-                            <option value="failed">Gagal (Failed)</option>
-                        </select>
+                        <div class="w-44">
+                            <SearchableSelect 
+                                v-model="filters.status" 
+                                :options="filterStatusOptions"
+                                placeholder="Status"
+                                search-placeholder="Cari status..."
+                                @change="fetchData(1)"
+                            />
+                        </div>
 
                         <!-- Job Type Filter -->
-                        <select v-model="filters.job_type" @change="fetchData(1)" class="h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-none transition">
-                            <option value="">-- Semua Jenis --</option>
-                            <option value="DEMO_SYNC">DEMO_SYNC</option>
-                            <option value="DEMO_EMAIL">DEMO_EMAIL</option>
-                            <option value="CLEANUP_SESSIONS">CLEANUP_SESSIONS</option>
-                        </select>
+                        <div class="w-44">
+                            <SearchableSelect 
+                                v-model="filters.job_type" 
+                                :options="filterJobTypeOptions"
+                                placeholder="Jenis"
+                                search-placeholder="Cari jenis..."
+                                @change="fetchData(1)"
+                            />
+                        </div>
 
                         <!-- Tenant Filter (Super Admin Only) -->
-                        <select v-if="isSuperAdmin" v-model="filters.tenant_id" @change="fetchData(1)" class="h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-none transition max-w-[200px]">
-                            <option value="">-- Semua Sekolah --</option>
-                            <option v-for="t in tenantsList" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
-                        </select>
+                        <div v-if="isSuperAdmin" class="min-w-[180px] max-w-[240px]">
+                            <SearchableSelect 
+                                v-model="filters.tenant_id" 
+                                :options="filterTenantOptions"
+                                placeholder="Semua Sekolah"
+                                search-placeholder="Cari sekolah..."
+                                @change="fetchData(1)"
+                            />
+                        </div>
 
                         <!-- Refresh & Reset Button -->
                         <button type="button" 

@@ -2,16 +2,14 @@
 import { ref, computed, onMounted } from 'vue'
 import { router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
+import SearchableSelect from '@/Components/SearchableSelect.vue'
+import { useMemorySecurity } from '@/Utils/cryptoSecurity.js'
+import axios from 'axios'
 
 const props = defineProps({
   initialStats: {
     type: Object,
-    default: () => ({
-      total_sessions_today: 0,
-      unique_users_today: 0,
-      total_logins_24h: 0,
-      total_logouts_24h: 0,
-    })
+    default: null
   },
   isSuperAdmin: {
     type: Boolean,
@@ -27,6 +25,16 @@ const props = defineProps({
   }
 })
 
+// Local Stats State for Zero-SSR
+const localStats = ref(props.initialStats || {
+  total_sessions_today: 0,
+  unique_users_today: 0,
+  total_logins_24h: 0,
+  total_logouts_24h: 0,
+})
+
+const localTenantsList = ref(props.tenantsList && props.tenantsList.length > 0 ? [...props.tenantsList] : [])
+
 // State Management
 const activeTab = ref('sessions') // 'sessions' | 'audit'
 const selectedTenant = ref(props.currentTenantId)
@@ -40,6 +48,31 @@ const auditLogs = ref([])
 const isLoadingSessions = ref(false)
 const isLoadingAudit = ref(false)
 const isCleaningRetention = ref(false)
+
+// Memory Security Garbage Collector
+useMemorySecurity([onlineUsers, auditLogs, chartData, auditChartData, localStats])
+
+// Options for SearchableSelect
+const tenantSelectOptions = computed(() => {
+  const options = [
+    { id: '00000000-0000-0000-0000-000000000000', nama: '🌐 Seluruh Tenant (Global)', subLabel: 'Semua Sekolah' }
+  ]
+  localTenantsList.value.forEach(t => {
+    options.push({
+      id: t.id,
+      nama: t.nama_sekolah,
+      subLabel: `${t.subdomain || ''} ${t.npsn ? '• NPSN: ' + t.npsn : ''}`.trim()
+    })
+  })
+  return options
+})
+
+const perPageOptions = [
+  { id: 10, nama: '10 / hal' },
+  { id: 15, nama: '15 / hal' },
+  { id: 25, nama: '25 / hal' },
+  { id: 50, nama: '50 / hal' }
+]
 
 // Filter & Pagination - Sessions Table
 const sessionStartDate = ref('')
@@ -75,24 +108,41 @@ const triggerToast = (msg, type = 'success') => {
   }, 4000)
 }
 
+// Fetch Initial Stats & Metadata (Zero-SSR Hydration)
+const fetchInitialSummary = async () => {
+  try {
+    const res = await axios.get('/utilitas/sesi-aktif?async=1')
+    if (res.data && res.data.success) {
+      if (res.data.stats) {
+        localStats.value = res.data.stats
+      }
+      if (res.data.tenants_list) {
+        localTenantsList.value = res.data.tenants_list
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load initial session stats:', err)
+  }
+}
+
 // Fetch Session & Chart Data
 const fetchSessionData = async () => {
   isLoadingSessions.value = true
   try {
-    const params = new URLSearchParams()
-    params.append('timeframe', chartTimeframe.value)
-    if (sessionStartDate.value) params.append('start_date', sessionStartDate.value)
-    if (sessionEndDate.value) params.append('end_date', sessionEndDate.value)
+    const params = {
+      timeframe: chartTimeframe.value
+    }
+    if (sessionStartDate.value) params.start_date = sessionStartDate.value
+    if (sessionEndDate.value) params.end_date = sessionEndDate.value
     if (selectedTenant.value && selectedTenant.value !== '00000000-0000-0000-0000-000000000000') {
-      params.append('tenant_id', selectedTenant.value)
+      params.tenant_id = selectedTenant.value
     }
 
-    const res = await fetch(`/utilitas/sesi-aktif/data?${params.toString()}`)
-    const json = await res.json()
-    if (json.success) {
-      onlineUsers.value = json.online_users || []
-      chartData.value = json.chart_data || []
-      auditChartData.value = json.audit_chart_data || []
+    const res = await axios.get('/utilitas/sesi-aktif/data', { params })
+    if (res.data && res.data.success) {
+      onlineUsers.value = res.data.online_users || []
+      chartData.value = res.data.chart_data || []
+      auditChartData.value = res.data.audit_chart_data || []
       sessionPage.value = 1
     }
   } catch (err) {
@@ -107,17 +157,16 @@ const fetchSessionData = async () => {
 const fetchAuditLogs = async () => {
   isLoadingAudit.value = true
   try {
-    const params = new URLSearchParams()
-    if (auditStartDate.value) params.append('start_date', auditStartDate.value)
-    if (auditEndDate.value) params.append('end_date', auditEndDate.value)
+    const params = {}
+    if (auditStartDate.value) params.start_date = auditStartDate.value
+    if (auditEndDate.value) params.end_date = auditEndDate.value
     if (selectedTenant.value && selectedTenant.value !== '00000000-0000-0000-0000-000000000000') {
-      params.append('tenant_id', selectedTenant.value)
+      params.tenant_id = selectedTenant.value
     }
 
-    const res = await fetch(`/utilitas/sesi-aktif/audit?${params.toString()}`)
-    const json = await res.json()
-    if (json.success) {
-      auditLogs.value = json.audit_logs || []
+    const res = await axios.get('/utilitas/sesi-aktif/audit', { params })
+    if (res.data && res.data.success) {
+      auditLogs.value = res.data.audit_logs || []
       auditPage.value = 1
     }
   } catch (err) {
@@ -216,7 +265,7 @@ const chartMaxVal = computed(() => {
     if (d.total_logins > max) max = Number(d.total_logins)
     if (d.total_logouts > max) max = Number(d.total_logouts)
   })
-  return Math.ceil(max * 1.2)
+  return Math.ceil(max * 1.15) || 5
 })
 
 // Combined Chart Points
@@ -226,6 +275,140 @@ const chartCombinedLabels = computed(() => {
   auditChartData.value.forEach(d => set.add(d.label))
   return Array.from(set).sort()
 })
+
+// Chart Display Modes & Series Toggles
+const chartDisplayMode = ref('area') // 'area' | 'bar'
+const activeSeries = ref({
+  users: true,
+  logins: true,
+  logouts: true
+})
+const hoveredPoint = ref(null)
+
+// SVG Chart Geometry Constants
+const svgChartW = 840
+const svgChartH = 280
+const svgPadL = 45
+const svgPadR = 25
+const svgPadT = 25
+const svgPadB = 35
+const svgPlotW = svgChartW - svgPadL - svgPadR
+const svgPlotH = svgChartH - svgPadT - svgPadB
+
+// Y-Axis Grid Ticks
+const chartYTicks = computed(() => {
+  const max = chartMaxVal.value
+  const count = 4
+  const ticks = []
+  for (let i = 0; i <= count; i++) {
+    const val = Math.round((max / count) * i)
+    const y = svgPadT + svgPlotH - (val / max) * svgPlotH
+    ticks.push({ val, y })
+  }
+  return ticks
+})
+
+// Data Points with Coordinates
+const chartPoints = computed(() => {
+  const labels = chartCombinedLabels.value
+  if (labels.length === 0) return []
+
+  const max = chartMaxVal.value
+  const count = labels.length
+
+  return labels.map((label, idx) => {
+    const userItem = chartData.value.find(d => d.label === label)
+    const auditItem = auditChartData.value.find(d => d.label === label)
+
+    const users = userItem ? Number(userItem.total_users) : 0
+    const logins = auditItem ? Number(auditItem.total_logins) : 0
+    const logouts = auditItem ? Number(auditItem.total_logouts) : 0
+
+    const x = count > 1 ? svgPadL + (idx * (svgPlotW / (count - 1))) : svgPadL + svgPlotW / 2
+    const barCenter = svgPadL + (idx + 0.5) * (svgPlotW / count)
+    const barWidth = Math.min(22, (svgPlotW / count) * 0.75)
+
+    const yUsers = svgPadT + svgPlotH - (users / max) * svgPlotH
+    const yLogins = svgPadT + svgPlotH - (logins / max) * svgPlotH
+    const yLogouts = svgPadT + svgPlotH - (logouts / max) * svgPlotH
+
+    let displayLabel = label
+    if (label.includes('-')) {
+      const parts = label.split('-')
+      displayLabel = parts.slice(1).join('/')
+    }
+
+    return {
+      index: idx,
+      label,
+      displayLabel,
+      users,
+      logins,
+      logouts,
+      x,
+      barCenter,
+      barWidth,
+      yUsers,
+      yLogins,
+      yLogouts
+    }
+  })
+})
+
+// Helper to generate smooth cubic spline bezier curves
+const getSplineD = (points, keyY) => {
+  if (points.length === 0) return ''
+  if (points.length === 1) return `M ${points[0].x} ${points[0][keyY]}`
+
+  let d = `M ${points[0].x} ${points[0][keyY]}`
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i === 0 ? 0 : i - 1]
+    const p1 = points[i]
+    const p2 = points[i + 1]
+    const p3 = points[i + 2 < points.length ? i + 2 : i + 1]
+
+    const cp1x = p1.x + (p2.x - p0.x) / 6
+    const cp1y = p1[keyY] + (p2[keyY] - p0[keyY]) / 6
+    const cp2x = p2.x - (p3.x - p1.x) / 6
+    const cp2y = p2[keyY] - (p3[keyY] - p1[keyY]) / 6
+
+    d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2[keyY]}`
+  }
+  return d
+}
+
+// SVG Spline Paths for Line & Area
+const splinePaths = computed(() => {
+  const pts = chartPoints.value
+  if (pts.length === 0) return { users: '', usersArea: '', logins: '', loginsArea: '', logouts: '', logoutsArea: '' }
+
+  const groundY = svgPadT + svgPlotH
+  const firstX = pts[0].x
+  const lastX = pts[pts.length - 1].x
+
+  const lineUsers = getSplineD(pts, 'yUsers')
+  const areaUsers = `${lineUsers} L ${lastX} ${groundY} L ${firstX} ${groundY} Z`
+
+  const lineLogins = getSplineD(pts, 'yLogins')
+  const areaLogins = `${lineLogins} L ${lastX} ${groundY} L ${firstX} ${groundY} Z`
+
+  const lineLogouts = getSplineD(pts, 'yLogouts')
+  const areaLogouts = `${lineLogouts} L ${lastX} ${groundY} L ${firstX} ${groundY} Z`
+
+  return {
+    users: lineUsers,
+    usersArea: areaUsers,
+    logins: lineLogins,
+    loginsArea: areaLogins,
+    logouts: lineLogouts,
+    logoutsArea: areaLogouts
+  }
+})
+
+// Toggle active series
+const toggleSeries = (s) => {
+  activeSeries.value[s] = !activeSeries.value[s]
+}
 
 // Execution of Data Retention Clean
 const openRetentionDialog = (type) => {
@@ -278,6 +461,9 @@ onMounted(() => {
   yesterday.setDate(yesterday.getDate() - 1)
   maxRetentionDate.value = yesterday.toISOString().split('T')[0]
   
+  if (!props.initialStats || !props.tenantsList || props.tenantsList.length === 0) {
+    fetchInitialSummary()
+  }
   fetchSessionData()
   fetchAuditLogs()
 })
@@ -323,25 +509,20 @@ onMounted(() => {
         </div>
 
         <div class="flex flex-wrap items-center gap-2.5">
-          <!-- Super Admin Tenant Selector -->
-          <div v-if="isSuperAdmin && tenantsList.length > 0" class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
-            <i class="bi bi-buildings text-slate-400 text-sm"></i>
-            <span class="text-xs font-semibold text-slate-600 whitespace-nowrap">Filter Sekolah:</span>
-            <select 
+          <!-- Super Admin Tenant Selector via SearchableSelect -->
+          <div v-if="isSuperAdmin && tenantSelectOptions.length > 0" class="min-w-[260px] sm:min-w-[300px]">
+            <SearchableSelect 
               v-model="selectedTenant" 
+              :options="tenantSelectOptions"
+              placeholder="-- Pilih Instansi Sekolah --"
+              search-placeholder="Cari sekolah atau NPSN..."
               @change="fetchSessionData(); fetchAuditLogs();"
-              class="text-xs font-bold text-slate-800 bg-transparent border-0 focus:ring-0 py-0.5 pl-1 pr-7 cursor-pointer"
-            >
-              <option value="00000000-0000-0000-0000-000000000000">🌐 Seluruh Tenant (Global)</option>
-              <option v-for="t in tenantsList" :key="t.id" :value="t.id">
-                {{ t.nama_sekolah }} ({{ t.subdomain }})
-              </option>
-            </select>
+            />
           </div>
 
           <button 
             type="button" 
-            @click="fetchSessionData(); fetchAuditLogs(); triggerToast('Data sesi berhasil disegarkan', 'success')" 
+            @click="fetchSessionData(); fetchAuditLogs(); fetchInitialSummary(); triggerToast('Data sesi berhasil disegarkan', 'success')" 
             class="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200/80 rounded-xl shadow-2xs transition"
           >
             <i class="bi bi-arrow-clockwise" :class="isLoadingSessions || isLoadingAudit ? 'animate-spin text-blue-600' : ''"></i>
@@ -356,7 +537,7 @@ onMounted(() => {
         <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center justify-between relative overflow-hidden group hover:border-blue-400 transition">
           <div class="space-y-1">
             <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Sesi Aktif Hari Ini</span>
-            <div class="text-2xl font-black text-slate-900">{{ initialStats.total_sessions_today }}</div>
+            <div class="text-2xl font-black text-slate-900">{{ localStats.total_sessions_today }}</div>
             <span class="text-[10px] font-semibold text-emerald-600 flex items-center gap-1">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
               Sesi terhubung hari ini
@@ -371,7 +552,7 @@ onMounted(() => {
         <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center justify-between relative overflow-hidden group hover:border-indigo-400 transition">
           <div class="space-y-1">
             <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Pengguna Unik Hari Ini</span>
-            <div class="text-2xl font-black text-slate-900">{{ initialStats.unique_users_today }}</div>
+            <div class="text-2xl font-black text-slate-900">{{ localStats.unique_users_today }}</div>
             <span class="text-[10px] font-semibold text-indigo-600 flex items-center gap-1">
               <i class="bi bi-people-fill"></i> Akun berbeda terdeteksi
             </span>
@@ -385,7 +566,7 @@ onMounted(() => {
         <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center justify-between relative overflow-hidden group hover:border-emerald-400 transition">
           <div class="space-y-1">
             <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Total Login (24 Jam)</span>
-            <div class="text-2xl font-black text-slate-900">{{ initialStats.total_logins_24h }}</div>
+            <div class="text-2xl font-black text-slate-900">{{ localStats.total_logins_24h }}</div>
             <span class="text-[10px] font-semibold text-emerald-600 flex items-center gap-1">
               <i class="bi bi-box-arrow-in-right"></i> Berhasil login ke sistem
             </span>
@@ -399,7 +580,7 @@ onMounted(() => {
         <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center justify-between relative overflow-hidden group hover:border-amber-400 transition">
           <div class="space-y-1">
             <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Total Logout (24 Jam)</span>
-            <div class="text-2xl font-black text-slate-900">{{ initialStats.total_logouts_24h }}</div>
+            <div class="text-2xl font-black text-slate-900">{{ localStats.total_logouts_24h }}</div>
             <span class="text-[10px] font-semibold text-amber-600 flex items-center gap-1">
               <i class="bi bi-box-arrow-right"></i> Sesi ditutup normal/timeout
             </span>
@@ -413,7 +594,7 @@ onMounted(() => {
       <!-- Top Section: Interactive Trend Chart & Retention Box -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        <!-- Left: Line Chart Analitik -->
+        <!-- Left: Interactive Vector Chart Analitik -->
         <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 p-5 shadow-2xs flex flex-col justify-between">
           <div>
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
@@ -422,104 +603,415 @@ onMounted(() => {
                   <i class="bi bi-graph-up-arrow text-blue-600"></i>
                   Tren Aktivitas Pengguna & Sesi
                 </h3>
-                <p class="text-[11px] text-slate-400">Analitik perbandingan pengguna unik, login baru, dan logout</p>
+                <p class="text-[11px] text-slate-400">Visualisasi tren kurva pengguna unik, login baru, dan logout</p>
               </div>
 
-              <!-- Timeframe Selector -->
-              <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-                <button 
-                  v-for="tf in [
-                    { id: '30_minutes', label: '30 Menit' },
-                    { id: '1_hour', label: '1 Jam' },
-                    { id: '1_day', label: '1 Hari' },
-                    { id: '15_days', label: '15 Hari' },
-                    { id: '30_days', label: '30 Hari' }
-                  ]"
-                  :key="tf.id"
-                  @click="chartTimeframe = tf.id; fetchSessionData();"
-                  class="px-2.5 py-1 text-[11px] font-bold rounded-lg transition"
-                  :class="chartTimeframe === tf.id ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-600 hover:text-slate-900'"
-                >
-                  {{ tf.label }}
-                </button>
+              <div class="flex flex-wrap items-center gap-2">
+                <!-- Chart Mode Selector (Area vs Bar) -->
+                <div class="flex items-center gap-1 bg-slate-100 p-0.5 rounded-xl">
+                  <button 
+                    type="button"
+                    @click="chartDisplayMode = 'area'"
+                    class="px-2.5 py-1 text-[11px] font-bold rounded-lg transition flex items-center gap-1.5"
+                    :class="chartDisplayMode === 'area' ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-600 hover:text-slate-900'"
+                    title="Tampilan Grafik Area / Kurva Halus"
+                  >
+                    <i class="bi bi-bezier2"></i> Area
+                  </button>
+                  <button 
+                    type="button"
+                    @click="chartDisplayMode = 'bar'"
+                    class="px-2.5 py-1 text-[11px] font-bold rounded-lg transition flex items-center gap-1.5"
+                    :class="chartDisplayMode === 'bar' ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-600 hover:text-slate-900'"
+                    title="Tampilan Grafik Batang Interaktif"
+                  >
+                    <i class="bi bi-bar-chart-fill"></i> Batang
+                  </button>
+                </div>
+
+                <!-- Timeframe Selector -->
+                <div class="flex items-center gap-1 bg-slate-100 p-0.5 rounded-xl">
+                  <button 
+                    v-for="tf in [
+                      { id: '30_minutes', label: '30 Menit' },
+                      { id: '1_hour', label: '1 Jam' },
+                      { id: '1_day', label: '1 Hari' },
+                      { id: '15_days', label: '15 Hari' },
+                      { id: '30_days', label: '30 Hari' }
+                    ]"
+                    :key="tf.id"
+                    @click="chartTimeframe = tf.id; fetchSessionData();"
+                    class="px-2.5 py-1 text-[11px] font-bold rounded-lg transition"
+                    :class="chartTimeframe === tf.id ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-600 hover:text-slate-900'"
+                  >
+                    {{ tf.label }}
+                  </button>
+                </div>
               </div>
             </div>
 
-            <!-- Modern SVG Chart Visualization -->
-            <div class="h-64 w-full relative flex items-end pt-6 pb-2">
-              <div v-if="isLoadingSessions" class="absolute inset-0 bg-white/70 backdrop-blur-xs flex items-center justify-center z-10">
+            <!-- Modern SVG Vector Chart Area -->
+            <div class="h-64 w-full relative pt-2 select-none">
+              <!-- Loading Overlay -->
+              <div v-if="isLoadingSessions" class="absolute inset-0 bg-white/80 backdrop-blur-xs flex items-center justify-center z-20 rounded-xl">
                 <div class="flex items-center gap-2 text-xs font-bold text-blue-600">
                   <i class="bi bi-arrow-clockwise animate-spin text-base"></i>
-                  Memuat data tren...
+                  Memuat visualisasi chart...
                 </div>
               </div>
 
-              <!-- Empty State if no points -->
+              <!-- Empty State -->
               <div v-else-if="chartCombinedLabels.length === 0" class="w-full h-full flex flex-col items-center justify-center text-slate-400">
-                <i class="bi bi-bar-chart text-3xl mb-1"></i>
-                <span class="text-xs font-semibold">Belum ada rekaman data tren pada periode ini</span>
+                <i class="bi bi-bar-chart text-3xl mb-1 text-slate-300"></i>
+                <span class="text-xs font-semibold">Belum ada rekaman aktivitas sesi pada periode ini</span>
               </div>
 
-              <!-- Interactive Multi-Bar / Trend Representation -->
-              <div v-else class="w-full h-full flex items-end justify-between gap-1.5 px-2 border-b border-slate-100">
+              <!-- Full SVG Render -->
+              <svg 
+                v-else 
+                class="w-full h-full overflow-visible" 
+                viewBox="0 0 840 280" 
+                preserveAspectRatio="none"
+                @mouseleave="hoveredPoint = null"
+              >
+                <defs>
+                  <!-- Gradient for Unique Users Area -->
+                  <linearGradient id="gradUsers" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.38" />
+                    <stop offset="60%" stop-color="#3b82f6" stop-opacity="0.08" />
+                    <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.0" />
+                  </linearGradient>
+
+                  <!-- Gradient for Logins Area -->
+                  <linearGradient id="gradLogins" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#10b981" stop-opacity="0.38" />
+                    <stop offset="60%" stop-color="#10b981" stop-opacity="0.08" />
+                    <stop offset="100%" stop-color="#10b981" stop-opacity="0.0" />
+                  </linearGradient>
+
+                  <!-- Gradient for Logouts Area -->
+                  <linearGradient id="gradLogouts" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.38" />
+                    <stop offset="60%" stop-color="#f59e0b" stop-opacity="0.08" />
+                    <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.0" />
+                  </linearGradient>
+
+                  <!-- Drop shadow filter for glow dots -->
+                  <filter id="glowEffect" x="-30%" y="-30%" width="160%" height="160%">
+                    <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.25" />
+                  </filter>
+                </defs>
+
+                <!-- Horizontal Y-Axis Grid Lines & Labels -->
+                <g class="chart-grid">
+                  <g v-for="(tick, idx) in chartYTicks" :key="'tick-' + idx">
+                    <line 
+                      :x1="svgPadL" 
+                      :y1="tick.y" 
+                      :x2="svgChartW - svgPadR" 
+                      :y2="tick.y" 
+                      stroke="#f1f5f9" 
+                      stroke-width="1"
+                      stroke-dasharray="4 4"
+                    />
+                    <text 
+                      :x="svgPadL - 8" 
+                      :y="tick.y + 4" 
+                      fill="#94a3b8" 
+                      font-size="10" 
+                      font-family="sans-serif"
+                      font-weight="600"
+                      text-anchor="end"
+                    >
+                      {{ tick.val }}
+                    </text>
+                  </g>
+                </g>
+
+                <!-- MODE 1: AREA / SPLINE CURVES -->
+                <g v-if="chartDisplayMode === 'area'" class="chart-spline-area">
+                  <!-- Filled Gradient Areas -->
+                  <path 
+                    v-if="activeSeries.users && splinePaths.usersArea" 
+                    :d="splinePaths.usersArea" 
+                    fill="url(#gradUsers)" 
+                    class="transition-opacity duration-300"
+                  />
+                  <path 
+                    v-if="activeSeries.logins && splinePaths.loginsArea" 
+                    :d="splinePaths.loginsArea" 
+                    fill="url(#gradLogins)" 
+                    class="transition-opacity duration-300"
+                  />
+                  <path 
+                    v-if="activeSeries.logouts && splinePaths.logoutsArea" 
+                    :d="splinePaths.logoutsArea" 
+                    fill="url(#gradLogouts)" 
+                    class="transition-opacity duration-300"
+                  />
+
+                  <!-- Smooth Spline Lines -->
+                  <path 
+                    v-if="activeSeries.users && splinePaths.users" 
+                    :d="splinePaths.users" 
+                    fill="none" 
+                    stroke="#3b82f6" 
+                    stroke-width="2.5" 
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path 
+                    v-if="activeSeries.logins && splinePaths.logins" 
+                    :d="splinePaths.logins" 
+                    fill="none" 
+                    stroke="#10b981" 
+                    stroke-width="2.5" 
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path 
+                    v-if="activeSeries.logouts && splinePaths.logouts" 
+                    :d="splinePaths.logouts" 
+                    fill="none" 
+                    stroke="#f59e0b" 
+                    stroke-width="2.5" 
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+
+                  <!-- Dots on Points -->
+                  <g v-for="pt in chartPoints" :key="'dots-' + pt.index">
+                    <!-- Users Dot -->
+                    <circle 
+                      v-if="activeSeries.users" 
+                      :cx="pt.x" 
+                      :cy="pt.yUsers" 
+                      :r="hoveredPoint?.index === pt.index ? 5.5 : 3.5" 
+                      fill="#ffffff" 
+                      stroke="#3b82f6" 
+                      :stroke-width="hoveredPoint?.index === pt.index ? 3 : 2"
+                      filter="url(#glowEffect)"
+                      class="transition-all duration-200"
+                    />
+                    <!-- Logins Dot -->
+                    <circle 
+                      v-if="activeSeries.logins" 
+                      :cx="pt.x" 
+                      :cy="pt.yLogins" 
+                      :r="hoveredPoint?.index === pt.index ? 5.5 : 3.5" 
+                      fill="#ffffff" 
+                      stroke="#10b981" 
+                      :stroke-width="hoveredPoint?.index === pt.index ? 3 : 2"
+                      filter="url(#glowEffect)"
+                      class="transition-all duration-200"
+                    />
+                    <!-- Logouts Dot -->
+                    <circle 
+                      v-if="activeSeries.logouts" 
+                      :cx="pt.x" 
+                      :cy="pt.yLogouts" 
+                      :r="hoveredPoint?.index === pt.index ? 5.5 : 3.5" 
+                      fill="#ffffff" 
+                      stroke="#f59e0b" 
+                      :stroke-width="hoveredPoint?.index === pt.index ? 3 : 2"
+                      filter="url(#glowEffect)"
+                      class="transition-all duration-200"
+                    />
+                  </g>
+                </g>
+
+                <!-- MODE 2: MODERN BAR CHART -->
+                <g v-else class="chart-bars">
+                  <g v-for="pt in chartPoints" :key="'bar-group-' + pt.index">
+                    <!-- Background Track on Hover -->
+                    <rect 
+                      :x="pt.barCenter - (pt.barWidth * 1.8)" 
+                      :y="svgPadT" 
+                      :width="pt.barWidth * 3.6" 
+                      :height="svgPlotH" 
+                      fill="#f8fafc" 
+                      rx="8" 
+                      :opacity="hoveredPoint?.index === pt.index ? 1 : 0" 
+                      class="transition-opacity duration-200"
+                    />
+
+                    <!-- Bar 1: Users (Blue) -->
+                    <rect 
+                      v-if="activeSeries.users" 
+                      :x="pt.barCenter - (pt.barWidth * 1.55)" 
+                      :y="pt.yUsers" 
+                      :width="pt.barWidth" 
+                      :height="Math.max(3, (svgPadT + svgPlotH) - pt.yUsers)" 
+                      fill="#3b82f6" 
+                      rx="3" 
+                      class="transition-all duration-300 hover:brightness-110"
+                    />
+                    <!-- Bar 2: Logins (Emerald) -->
+                    <rect 
+                      v-if="activeSeries.logins" 
+                      :x="pt.barCenter - (pt.barWidth * 0.5)" 
+                      :y="pt.yLogins" 
+                      :width="pt.barWidth" 
+                      :height="Math.max(3, (svgPadT + svgPlotH) - pt.yLogins)" 
+                      fill="#10b981" 
+                      rx="3" 
+                      class="transition-all duration-300 hover:brightness-110"
+                    />
+                    <!-- Bar 3: Logouts (Amber) -->
+                    <rect 
+                      v-if="activeSeries.logouts" 
+                      :x="pt.barCenter + (pt.barWidth * 0.55)" 
+                      :y="pt.yLogouts" 
+                      :width="pt.barWidth" 
+                      :height="Math.max(3, (svgPadT + svgPlotH) - pt.yLogouts)" 
+                      fill="#f59e0b" 
+                      rx="3" 
+                      class="transition-all duration-300 hover:brightness-110"
+                    />
+                  </g>
+                </g>
+
+                <!-- X-Axis Labels & Baseline -->
+                <g class="chart-xaxis">
+                  <line 
+                    :x1="svgPadL" 
+                    :y1="svgPadT + svgPlotH" 
+                    :x2="svgChartW - svgPadR" 
+                    :y2="svgPadT + svgPlotH" 
+                    stroke="#cbd5e1" 
+                    stroke-width="1"
+                  />
+                  <text 
+                    v-for="pt in chartPoints" 
+                    :key="'lbl-' + pt.index" 
+                    :x="chartDisplayMode === 'area' ? pt.x : pt.barCenter" 
+                    :y="svgPadT + svgPlotH + 18" 
+                    fill="#94a3b8" 
+                    font-size="10" 
+                    font-family="monospace"
+                    font-weight="600"
+                    text-anchor="middle"
+                  >
+                    {{ pt.displayLabel }}
+                  </text>
+                </g>
+
+                <!-- Interactive Hover Crosshair Line & Hotspots -->
+                <g class="chart-interactions">
+                  <!-- Vertical Hover Line -->
+                  <line 
+                    v-if="hoveredPoint" 
+                    :x1="chartDisplayMode === 'area' ? hoveredPoint.x : hoveredPoint.barCenter" 
+                    :y1="svgPadT" 
+                    :x2="chartDisplayMode === 'area' ? hoveredPoint.x : hoveredPoint.barCenter" 
+                    :y2="svgPadT + svgPlotH" 
+                    stroke="#94a3b8" 
+                    stroke-width="1.5" 
+                    stroke-dasharray="4 4"
+                    class="pointer-events-none"
+                  />
+
+                  <!-- Invisible Target Rectangles for Hover Discovery -->
+                  <rect 
+                    v-for="pt in chartPoints" 
+                    :key="'hit-' + pt.index" 
+                    :x="chartDisplayMode === 'area' ? (pt.x - (svgPlotW / Math.max(1, chartPoints.length)) / 2) : (pt.barCenter - (svgPlotW / chartPoints.length) / 2)" 
+                    :y="svgPadT" 
+                    :width="svgPlotW / Math.max(1, chartPoints.length)" 
+                    :height="svgPlotH" 
+                    fill="transparent" 
+                    class="cursor-pointer"
+                    @mouseenter="hoveredPoint = pt"
+                  />
+                </g>
+              </svg>
+
+              <!-- Floating Glassmorphism Tooltip -->
+              <transition
+                enter-active-class="transition ease-out duration-150"
+                enter-from-class="opacity-0 scale-95"
+                enter-to-class="opacity-100 scale-100"
+                leave-active-class="transition ease-in duration-100"
+                leave-from-class="opacity-100"
+                leave-to-class="opacity-0"
+              >
                 <div 
-                  v-for="(label, idx) in chartCombinedLabels" 
-                  :key="idx" 
-                  class="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end"
+                  v-if="hoveredPoint" 
+                  class="absolute pointer-events-none z-30 bg-slate-900/95 backdrop-blur-md text-white text-xs rounded-xl shadow-2xl p-3 border border-slate-700/60 min-w-[170px]"
+                  :style="{
+                    left: `${Math.min(75, Math.max(5, ((chartDisplayMode === 'area' ? hoveredPoint.x : hoveredPoint.barCenter) / svgChartW) * 100))}%`,
+                    top: '15px'
+                  }"
                 >
-                  <!-- Tooltip Hover Popup -->
-                  <div class="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-20 pointer-events-none">
-                    <div class="bg-slate-900 text-white text-[10px] rounded-xl py-1.5 px-3 shadow-xl whitespace-nowrap space-y-0.5">
-                      <div class="font-extrabold text-slate-300">{{ label }}</div>
-                      <div class="text-blue-400">Pengguna Unik: {{ (chartData.find(d => d.label === label)?.total_users || 0) }}</div>
-                      <div class="text-emerald-400">Login: {{ (auditChartData.find(d => d.label === label)?.total_logins || 0) }}</div>
-                      <div class="text-amber-400">Logout: {{ (auditChartData.find(d => d.label === label)?.total_logouts || 0) }}</div>
+                  <div class="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-700/80">
+                    <span class="font-extrabold text-slate-300 font-mono">{{ hoveredPoint.label }}</span>
+                    <span class="text-[10px] text-slate-400 font-medium">Periode</span>
+                  </div>
+                  <div class="space-y-1">
+                    <div class="flex items-center justify-between text-blue-300 font-semibold">
+                      <span class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-blue-500"></span> Pengguna Unik:
+                      </span>
+                      <span class="font-bold text-white font-mono">{{ hoveredPoint.users }}</span>
                     </div>
-                    <div class="w-2 h-2 bg-slate-900 transform rotate-45 -mt-1"></div>
+                    <div class="flex items-center justify-between text-emerald-300 font-semibold">
+                      <span class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Aktivitas Login:
+                      </span>
+                      <span class="font-bold text-white font-mono">{{ hoveredPoint.logins }}</span>
+                    </div>
+                    <div class="flex items-center justify-between text-amber-300 font-semibold">
+                      <span class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-amber-400"></span> Aktivitas Logout:
+                      </span>
+                      <span class="font-bold text-white font-mono">{{ hoveredPoint.logouts }}</span>
+                    </div>
                   </div>
-
-                  <!-- Stacked / Multi-colored bars -->
-                  <div class="w-full max-w-[28px] flex items-end gap-0.5 h-full justify-center">
-                    <!-- Unique Users Bar -->
-                    <div 
-                      class="w-2 bg-blue-500 hover:bg-blue-600 rounded-t-md transition-all duration-300"
-                      :style="{ height: `${Math.max(8, ((chartData.find(d => d.label === label)?.total_users || 0) / chartMaxVal) * 100)}%` }"
-                    ></div>
-                    <!-- Login Bar -->
-                    <div 
-                      class="w-2 bg-emerald-500 hover:bg-emerald-600 rounded-t-md transition-all duration-300"
-                      :style="{ height: `${Math.max(8, ((auditChartData.find(d => d.label === label)?.total_logins || 0) / chartMaxVal) * 100)}%` }"
-                    ></div>
-                    <!-- Logout Bar -->
-                    <div 
-                      class="w-2 bg-amber-400 hover:bg-amber-500 rounded-t-md transition-all duration-300"
-                      :style="{ height: `${Math.max(8, ((auditChartData.find(d => d.label === label)?.total_logouts || 0) / chartMaxVal) * 100)}%` }"
-                    ></div>
-                  </div>
-
-                  <!-- X-Axis Label -->
-                  <span class="text-[9px] font-mono text-slate-400 truncate max-w-[40px] pt-1">
-                    {{ label.includes('-') ? label.split('-').slice(1).join('/') : label }}
-                  </span>
                 </div>
-              </div>
+              </transition>
             </div>
           </div>
 
-          <!-- Chart Legends -->
-          <div class="flex items-center justify-center gap-6 pt-3 border-t border-slate-100 text-xs font-semibold text-slate-600">
-            <div class="flex items-center gap-2">
-              <span class="w-3 h-3 rounded-md bg-blue-500"></span>
+          <!-- Interactive Chart Legends & Series Filter Toggles -->
+          <div class="flex flex-wrap items-center justify-center gap-5 pt-3 mt-2 border-t border-slate-100 text-xs font-semibold text-slate-600">
+            <button 
+              type="button" 
+              @click="toggleSeries('users')" 
+              class="flex items-center gap-2 px-2.5 py-1 rounded-lg transition hover:bg-slate-50"
+              :class="{ 'opacity-40 line-through': !activeSeries.users }"
+              title="Klik untuk menyembunyikan/menampilkan Pengguna Unik"
+            >
+              <span class="w-3.5 h-3.5 rounded-md bg-blue-500 shadow-xs flex items-center justify-center text-[10px] text-white font-bold">
+                <i v-if="activeSeries.users" class="bi bi-check"></i>
+              </span>
               <span>Pengguna Unik</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="w-3 h-3 rounded-md bg-emerald-500"></span>
+            </button>
+
+            <button 
+              type="button" 
+              @click="toggleSeries('logins')" 
+              class="flex items-center gap-2 px-2.5 py-1 rounded-lg transition hover:bg-slate-50"
+              :class="{ 'opacity-40 line-through': !activeSeries.logins }"
+              title="Klik untuk menyembunyikan/menampilkan Aktivitas Login"
+            >
+              <span class="w-3.5 h-3.5 rounded-md bg-emerald-500 shadow-xs flex items-center justify-center text-[10px] text-white font-bold">
+                <i v-if="activeSeries.logins" class="bi bi-check"></i>
+              </span>
               <span>Aktivitas Login</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="w-3 h-3 rounded-md bg-amber-400"></span>
+            </button>
+
+            <button 
+              type="button" 
+              @click="toggleSeries('logouts')" 
+              class="flex items-center gap-2 px-2.5 py-1 rounded-lg transition hover:bg-slate-50"
+              :class="{ 'opacity-40 line-through': !activeSeries.logouts }"
+              title="Klik untuk menyembunyikan/menampilkan Aktivitas Logout"
+            >
+              <span class="w-3.5 h-3.5 rounded-md bg-amber-400 shadow-xs flex items-center justify-center text-[10px] text-white font-bold">
+                <i v-if="activeSeries.logouts" class="bi bi-check"></i>
+              </span>
               <span>Aktivitas Logout</span>
-            </div>
+            </button>
           </div>
         </div>
 
@@ -650,15 +1142,14 @@ onMounted(() => {
                 class="w-full pl-8 pr-3 py-1.5 text-xs bg-white rounded-xl border border-slate-200 shadow-2xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium"
               />
             </div>
-            <select 
-              v-model="sessionPerPage" 
-              class="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-700 shadow-2xs"
-            >
-              <option :value="10">10 / hal</option>
-              <option :value="15">15 / hal</option>
-              <option :value="25">25 / hal</option>
-              <option :value="50">50 / hal</option>
-            </select>
+            <div class="w-28 shrink-0">
+              <SearchableSelect 
+                v-model="sessionPerPage" 
+                :options="perPageOptions"
+                placeholder="Per Hal"
+                search-placeholder="Cari..."
+              />
+            </div>
           </div>
         </div>
 
@@ -689,7 +1180,6 @@ onMounted(() => {
                 </td>
               </tr>
               <tr 
-                v-else 
                 v-for="(session, idx) in paginatedSessions" 
                 :key="session.id || idx" 
                 class="hover:bg-blue-50/40 transition"
@@ -820,15 +1310,14 @@ onMounted(() => {
                 class="w-full pl-8 pr-3 py-1.5 text-xs bg-white rounded-xl border border-slate-200 shadow-2xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium"
               />
             </div>
-            <select 
-              v-model="auditPerPage" 
-              class="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-700 shadow-2xs"
-            >
-              <option :value="10">10 / hal</option>
-              <option :value="15">15 / hal</option>
-              <option :value="25">25 / hal</option>
-              <option :value="50">50 / hal</option>
-            </select>
+            <div class="w-28 shrink-0">
+              <SearchableSelect 
+                v-model="auditPerPage" 
+                :options="perPageOptions"
+                placeholder="Per Hal"
+                search-placeholder="Cari..."
+              />
+            </div>
           </div>
         </div>
 

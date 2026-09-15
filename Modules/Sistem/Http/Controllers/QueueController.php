@@ -12,6 +12,7 @@ use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use Modules\Core\Entities\Tenant;
 use Modules\Core\Entities\User;
+use Modules\Core\Services\SecurityPayloadService;
 use Modules\Sistem\Entities\QueueJob;
 
 class QueueController extends Controller
@@ -27,6 +28,17 @@ class QueueController extends Controller
         $roleName = $user && $user->role ? $user->role->nama_role : ($isSuperAdmin ? 'super_admin' : 'user');
         $tenantId = $isSuperAdmin ? null : ($user ? $user->tenant_id : null);
 
+        $isInitialSsr = !$request->header('X-Inertia') && !$request->has('async');
+
+        if ($isInitialSsr) {
+            return Inertia::render('Sistem/Queue/Index', [
+                'metrics'      => null,
+                'tenantsList'  => null,
+                'isSuperAdmin' => $isSuperAdmin,
+                'userRole'     => $roleName,
+            ]);
+        }
+
         // Ambil list tenant untuk Super Admin
         $tenantsList = [];
         if ($isSuperAdmin) {
@@ -38,12 +50,12 @@ class QueueController extends Controller
         // Ambil metrik awal
         $metrics = $this->calculateMetrics($isSuperAdmin, $tenantId);
 
-        if ($request->wantsJson()) {
-            return response()->json([
+        if (($request->has('async') || $request->wantsJson()) && !$request->header('X-Inertia')) {
+            return response()->json(SecurityPayloadService::sanitize([
                 'success'     => true,
                 'metrics'     => $metrics,
                 'tenantsList' => $tenantsList,
-            ]);
+            ]));
         }
 
         return Inertia::render('Sistem/Queue/Index', [
@@ -113,14 +125,23 @@ class QueueController extends Controller
             ];
         });
 
-        return response()->json([
+        // Sertakan juga tenantsList untuk kemudahan Super Admin
+        $tenantsList = [];
+        if ($isSuperAdmin) {
+            $tenantsList = Tenant::select('id', 'nama_sekolah', 'npsn')
+                ->orderBy('nama_sekolah', 'asc')
+                ->get();
+        }
+
+        return response()->json(SecurityPayloadService::sanitize([
             'success'      => true,
             'metrics'      => $metrics,
             'jobs'         => $jobs,
+            'tenantsList'  => $tenantsList,
             'current_page' => $paginator->currentPage(),
             'total_pages'  => $paginator->lastPage(),
             'total_count'  => $paginator->total(),
-        ]);
+        ]));
     }
 
     /**
