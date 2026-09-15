@@ -1,35 +1,36 @@
 <template>
   <div class="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-500 selection:text-white relative overflow-hidden">
 
-    <!-- BACKGROUND GLOW EFFECTS -->
-    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[450px] bg-gradient-to-b from-blue-600/20 via-indigo-600/10 to-transparent blur-[140px] pointer-events-none -z-10"></div>
-    <div class="absolute top-[35%] right-[-200px] w-[600px] h-[600px] bg-purple-600/10 blur-[160px] pointer-events-none -z-10"></div>
-    <div class="absolute top-[65%] left-[-200px] w-[600px] h-[600px] bg-blue-600/10 blur-[160px] pointer-events-none -z-10"></div>
+    <!-- AMBIENT BACKGROUND GLOW ENGINE -->
+    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[550px] bg-gradient-to-b from-blue-600/20 via-indigo-600/10 to-transparent blur-[150px] pointer-events-none -z-10"></div>
+    <div class="absolute top-[25%] right-[-150px] w-[650px] h-[650px] bg-purple-600/10 blur-[170px] pointer-events-none -z-10"></div>
+    <div class="absolute top-[50%] left-[-200px] w-[650px] h-[650px] bg-blue-600/10 blur-[170px] pointer-events-none -z-10"></div>
+    <div class="absolute top-[75%] right-[-150px] w-[600px] h-[600px] bg-emerald-600/10 blur-[160px] pointer-events-none -z-10"></div>
 
-    <!-- NAVBAR HEADER -->
-    <header class="relative z-30 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-lg sticky top-0">
+    <!-- 1. NAVBAR HEADER (Glassmorphism Sticky) -->
+    <header class="relative z-40 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl sticky top-0 transition-all duration-200">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
         
         <!-- Logo Brand -->
         <Link href="/" class="flex items-center gap-3 shrink-0 group">
-          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 group-hover:scale-105 transition transform">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-blue-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/25 group-hover:scale-105 transition transform duration-200">
             <i class="bi bi-mortarboard-fill text-lg"></i>
           </div>
           <div class="flex items-center gap-2">
             <span class="text-xl font-black text-white tracking-tight">SINTA</span>
-            <span class="hidden sm:inline-block px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-extrabold tracking-wider">
-              SaaS v2.0
+            <span class="hidden sm:inline-block px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-extrabold tracking-wider">
+              Enterprise v2.0
             </span>
           </div>
         </Link>
 
-        <!-- Desktop Navigation Links (Dynamic from CMS) -->
+        <!-- Desktop Navigation Links (Dynamic CMS) -->
         <nav class="hidden lg:flex items-center gap-5 xl:gap-7 text-xs font-bold text-slate-300 shrink-0">
           <a v-for="(nav, nIdx) in navMenuItems" :key="nIdx" 
              :href="nav.cta_link || nav.content || '#'"
              :target="nav.content_json?.target || '_self'"
-             class="px-2.5 py-1.5 rounded-lg hover:text-white hover:bg-slate-900 transition flex items-center gap-1.5 group">
-            <i :class="['bi', nav.icon_class || 'bi-circle-fill text-[8px]', 'text-blue-400 group-hover:text-blue-300 transition']"></i>
+             class="px-2.5 py-1.5 rounded-xl hover:text-white hover:bg-slate-900/80 transition-all duration-150 flex items-center gap-1.5 group">
+            <i :class="['bi', nav.icon_class || 'bi-circle-fill text-[7px]', 'text-blue-400 group-hover:text-blue-300 transition']"></i>
             <span>{{ nav.title }}</span>
             <span v-if="nav.badge_text" class="px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[9px] font-extrabold border border-blue-500/30">
               {{ nav.badge_text }}
@@ -38,13 +39,13 @@
         </nav>
 
         <!-- Desktop & Tablet Auth Actions -->
-        <div class="hidden sm:flex items-center gap-2.5 shrink-0">
-          <Link href="/login" class="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-900 transition flex items-center gap-1.5">
+        <div class="hidden sm:flex items-center gap-3 shrink-0">
+          <Link href="/login" class="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-900 border border-transparent hover:border-slate-800 transition flex items-center gap-1.5">
             <i class="bi bi-box-arrow-in-right text-sm"></i>
-            <span>Masuk</span>
+            <span>Masuk Portal</span>
           </Link>
-          <Link href="/daftar-sekolah" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-extrabold shadow-md shadow-blue-600/30 transition transform hover:-translate-y-0.5 flex items-center gap-2 whitespace-nowrap">
-            <i class="bi bi-gift-fill text-yellow-300"></i>
+          <Link href="/daftar-sekolah" class="relative group overflow-hidden px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 bg-size-200 hover:bg-right hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-extrabold shadow-lg shadow-blue-600/30 transition-all duration-300 transform hover:-translate-y-0.5 flex items-center gap-2 whitespace-nowrap">
+            <i class="bi bi-gift-fill text-yellow-300 animate-pulse"></i>
             <span>Coba Gratis 1 Bulan</span>
           </Link>
         </div>
@@ -65,15 +66,12 @@
       </div>
     </header>
 
-    <!-- RESPONSIVE MOBILE SIDEBAR DRAWER -->
+    <!-- MOBILE SIDEBAR DRAWER -->
     <div v-if="mobileMenuOpen" class="fixed inset-0 z-50 lg:hidden flex justify-end">
-      <!-- Backdrop Overlay -->
       <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity" 
            @click="mobileMenuOpen = false"></div>
 
-      <!-- Slide-in Drawer Container -->
-      <div class="relative w-full max-w-xs bg-slate-900 border-l border-slate-800 shadow-2xl p-6 flex flex-col justify-between h-full overflow-y-auto z-10 transition-transform">
-        
+      <div class="relative w-full max-w-xs bg-slate-900 border-l border-slate-800 shadow-2xl p-6 flex flex-col justify-between h-full overflow-y-auto z-10">
         <div>
           <!-- Drawer Header -->
           <div class="flex items-center justify-between pb-5 border-b border-slate-800">
@@ -90,7 +88,7 @@
             </button>
           </div>
 
-          <!-- Drawer Navigation Links -->
+          <!-- Drawer Links -->
           <nav class="space-y-1.5 py-6">
             <a v-for="(nav, nIdx) in navMenuItems" :key="nIdx"
                :href="nav.cta_link || nav.content || '#'"
@@ -110,7 +108,7 @@
           </nav>
         </div>
 
-        <!-- Drawer Footer Actions -->
+        <!-- Drawer Footer -->
         <div class="space-y-3 pt-6 border-t border-slate-800">
           <Link href="/daftar-sekolah" 
                 @click="mobileMenuOpen = false"
@@ -134,14 +132,14 @@
       </div>
     </div>
 
-    <!-- HERO SECTION -->
+    <!-- 2. HERO SECTION WITH MODERN DASHBOARD MOCKUP PREVIEW -->
     <section class="relative z-10 pt-16 pb-20 lg:pt-24 lg:pb-28 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       <div class="text-center max-w-4xl mx-auto space-y-6">
         
         <!-- Hero Badge -->
-        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-500/30 text-blue-400 text-xs font-bold shadow-xs">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 border border-blue-500/30 text-blue-300 text-xs font-bold shadow-lg shadow-blue-500/10 backdrop-blur-md">
           <i class="bi bi-stars text-amber-400"></i>
-          <span>{{ heroItem?.badge_text || 'Platform Tata Kelola Sekolah Terpadu #1' }}</span>
+          <span>{{ heroItem?.badge_text || 'Platform Tata Kelola Sekolah Multi-Tenant SaaS #1' }}</span>
         </div>
 
         <!-- Main Title -->
@@ -154,45 +152,250 @@
           {{ heroItem?.subtitle || 'SINTA menghadirkan ekosistem tata kelola sekolah all-in-one: Rapor Kurikulum Merdeka, Buku Induk Siswa, Tagihan SPP Multi-Channel Midtrans, Presensi Geofencing GPS, hingga BK & Perpustakaan. Coba gratis 1 bulan!' }}
         </p>
 
-        <!-- CTA Buttons -->
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+        <!-- CTA Action Buttons -->
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-3">
           <Link href="/daftar-sekolah" 
-                class="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-800 text-white font-extrabold text-sm shadow-xl shadow-blue-500/30 transition-all transform hover:-translate-y-1 flex items-center justify-center gap-2.5">
+                class="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-800 text-white font-extrabold text-sm shadow-xl shadow-blue-500/30 transition-all duration-200 transform hover:-translate-y-1 flex items-center justify-center gap-2.5">
             <i class="bi bi-rocket-takeoff-fill text-yellow-300 text-base"></i>
             <span>{{ heroItem?.cta_text || 'Daftarkan Sekolah (Free Trial 1 Bulan)' }}</span>
           </Link>
           <a href="#kalkulator" 
-             class="w-full sm:w-auto px-7 py-4 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 hover:text-white font-bold text-sm border border-slate-700/80 transition flex items-center justify-center gap-2">
+             class="w-full sm:w-auto px-7 py-4 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 hover:text-white font-bold text-sm border border-slate-700/80 transition flex items-center justify-center gap-2 shadow-sm">
             <i class="bi bi-calculator text-blue-400 text-base"></i>
-            <span>Hitung Simulasi Anggaran RKAS</span>
+            <span>Hitung Estimasi Anggaran RKAS</span>
           </a>
         </div>
 
         <!-- Trust Badges / Stats -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-10 max-w-3xl mx-auto">
-          <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xs text-center">
-            <span class="block text-2xl font-black text-white tracking-tight">16</span>
-            <span class="text-xs text-slate-400 font-medium">Modul Terintegrasi</span>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3.5 pt-6 max-w-3xl mx-auto">
+          <div class="p-3.5 rounded-2xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-md text-center shadow-xs">
+            <span class="block text-2xl font-black text-white tracking-tight">16 Modul</span>
+            <span class="text-[11px] text-slate-400 font-medium">Terpadu & Siap Pakai</span>
           </div>
-          <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xs text-center">
+          <div class="p-3.5 rounded-2xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-md text-center shadow-xs">
             <span class="block text-2xl font-black text-emerald-400 tracking-tight">1 Bulan</span>
-            <span class="text-xs text-slate-400 font-medium">Free Trial Tanpa Syarat</span>
+            <span class="text-[11px] text-slate-400 font-medium">Free Trial Tanpa Syarat</span>
           </div>
-          <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xs text-center">
+          <div class="p-3.5 rounded-2xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-md text-center shadow-xs">
             <span class="block text-2xl font-black text-blue-400 tracking-tight">Multi-Schema</span>
-            <span class="text-xs text-slate-400 font-medium">Isolasi Data Terlindungi</span>
+            <span class="text-[11px] text-slate-400 font-medium">Isolasi Data Terlindungi</span>
           </div>
-          <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xs text-center">
-            <span class="block text-2xl font-black text-amber-400 tracking-tight">100%</span>
-            <span class="text-xs text-slate-400 font-medium">Format RKAS/RAPBS Ready</span>
+          <div class="p-3.5 rounded-2xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-md text-center shadow-xs">
+            <span class="block text-2xl font-black text-amber-400 tracking-tight">100% Ready</span>
+            <span class="text-[11px] text-slate-400 font-medium">Format RKAS & Dapodik</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- VISUAL APPLICATION MOCKUP / PREVIEW FRAME (High-Impact Hero Visual) -->
+      <div class="mt-14 max-w-5xl mx-auto relative group">
+        <!-- Ambient Radiant Blur Behind Mockup -->
+        <div class="absolute -inset-1.5 bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 rounded-3xl blur-xl opacity-30 group-hover:opacity-45 transition duration-500"></div>
+
+        <!-- Window Mockup Container -->
+        <div class="relative rounded-2xl sm:rounded-3xl bg-slate-900 border border-slate-700/80 shadow-2xl overflow-hidden backdrop-blur-2xl">
+          
+          <!-- Mockup Window Titlebar -->
+          <div class="px-4 py-3 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400 select-none">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-rose-500/80 inline-block"></span>
+              <span class="w-3 h-3 rounded-full bg-amber-500/80 inline-block"></span>
+              <span class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block"></span>
+              <span class="ml-2 font-mono text-[11px] text-slate-500 hidden sm:inline-block">sinta.cloud/app/dashboard</span>
+            </div>
+            <div class="flex items-center gap-2 text-[11px] font-semibold">
+              <span class="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                Server Active
+              </span>
+              <span class="text-slate-500 hidden sm:inline">|</span>
+              <span class="text-slate-400 hidden sm:inline">SMA Teladan Nusantara</span>
+            </div>
+          </div>
+
+          <!-- Mockup Interactive View Body -->
+          <div class="p-5 sm:p-7 bg-slate-900/95 space-y-6">
+            
+            <!-- Mockup Header Metric Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+              <div class="p-3.5 sm:p-4 rounded-2xl bg-slate-800/80 border border-slate-700/70 text-left">
+                <div class="flex items-center justify-between text-slate-400 text-xs font-semibold">
+                  <span>Total Siswa Aktif</span>
+                  <i class="bi bi-people text-blue-400"></i>
+                </div>
+                <div class="text-xl sm:text-2xl font-black text-white mt-1">742 Siswa</div>
+                <div class="text-[10px] text-emerald-400 mt-0.5 flex items-center gap-1 font-bold">
+                  <i class="bi bi-arrow-up-right"></i> 100% Terverifikasi
+                </div>
+              </div>
+
+              <div class="p-3.5 sm:p-4 rounded-2xl bg-slate-800/80 border border-slate-700/70 text-left">
+                <div class="flex items-center justify-between text-slate-400 text-xs font-semibold">
+                  <span>Kehadiran Hari Ini</span>
+                  <i class="bi bi-geo-alt text-emerald-400"></i>
+                </div>
+                <div class="text-xl sm:text-2xl font-black text-emerald-400 mt-1">98.4%</div>
+                <div class="text-[10px] text-slate-400 mt-0.5 font-bold">
+                  GPS Geofence Verified
+                </div>
+              </div>
+
+              <div class="p-3.5 sm:p-4 rounded-2xl bg-slate-800/80 border border-slate-700/70 text-left">
+                <div class="flex items-center justify-between text-slate-400 text-xs font-semibold">
+                  <span>Kelunasan SPP</span>
+                  <i class="bi bi-wallet2 text-purple-400"></i>
+                </div>
+                <div class="text-xl sm:text-2xl font-black text-purple-400 mt-1">Rp 148,5 Jt</div>
+                <div class="text-[10px] text-emerald-400 mt-0.5 font-bold">
+                  Auto Midtrans QRIS
+                </div>
+              </div>
+
+              <div class="p-3.5 sm:p-4 rounded-2xl bg-slate-800/80 border border-slate-700/70 text-left">
+                <div class="flex items-center justify-between text-slate-400 text-xs font-semibold">
+                  <span>Rapor Kurikulum</span>
+                  <i class="bi bi-award text-amber-400"></i>
+                </div>
+                <div class="text-xl sm:text-2xl font-black text-amber-400 mt-1">24 Rombel</div>
+                <div class="text-[10px] text-blue-400 mt-0.5 font-bold">
+                  Siap Cetak Massal PDF
+                </div>
+              </div>
+            </div>
+
+            <!-- Mockup Mini Table & Flow Visualizer -->
+            <div class="rounded-2xl bg-slate-950/70 border border-slate-800 p-4 text-left space-y-3">
+              <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                <div class="flex items-center gap-2 text-xs font-extrabold text-white">
+                  <i class="bi bi-activity text-blue-400"></i>
+                  <span>Live Transaksi & Presensi Real-Time</span>
+                </div>
+                <span class="text-[10px] text-slate-400 font-mono">16 Modul Terkoneksi</span>
+              </div>
+              <div class="space-y-2 text-xs">
+                <div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/60 border border-slate-800/60">
+                  <div class="flex items-center gap-2.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    <span class="font-bold text-white">Kasir POS SPP</span>
+                    <span class="text-slate-400 text-[11px]">Siswa: Muhammad Faiz (XII MIPA 1)</span>
+                  </div>
+                  <span class="text-emerald-400 font-bold font-mono">Rp 350.000 (Lunas - QRIS)</span>
+                </div>
+                <div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/60 border border-slate-800/60">
+                  <div class="flex items-center gap-2.5">
+                    <span class="w-2 h-2 rounded-full bg-blue-400"></span>
+                    <span class="font-bold text-white">Jurnal KBM Guru</span>
+                    <span class="text-slate-400 text-[11px]">Matematika Lanjut (Jam Ke 3-4)</span>
+                  </div>
+                  <span class="text-blue-400 font-bold text-[11px]">Foto KBM Terkompresi (32 KB)</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+
+    <!-- 3. SOCIAL PROOF & LOGO SEKOLAH MITRA -->
+    <section class="relative z-10 py-12 border-y border-slate-800/80 bg-slate-900/40">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-5">
+        <p class="text-xs font-extrabold text-slate-400 uppercase tracking-widest">
+          Dipercaya & Diterapkan oleh Berbagai Jenjang Satuan Pendidikan di Indonesia
+        </p>
+        <div class="flex flex-wrap items-center justify-center gap-6 sm:gap-10 opacity-75 grayscale hover:grayscale-0 transition-all duration-300">
+          <div class="flex items-center gap-2 text-slate-300 font-bold text-xs sm:text-sm px-3 py-1.5 rounded-xl bg-slate-800/50 border border-slate-700/50">
+            <i class="bi bi-building text-blue-400"></i> SMA Negeri Unggulan
+          </div>
+          <div class="flex items-center gap-2 text-slate-300 font-bold text-xs sm:text-sm px-3 py-1.5 rounded-xl bg-slate-800/50 border border-slate-700/50">
+            <i class="bi bi-tools text-indigo-400"></i> SMK Pusat Keunggulan
+          </div>
+          <div class="flex items-center gap-2 text-slate-300 font-bold text-xs sm:text-sm px-3 py-1.5 rounded-xl bg-slate-800/50 border border-slate-700/50">
+            <i class="bi bi-bank text-emerald-400"></i> Madrasah Aliyah (MA/MTs)
+          </div>
+          <div class="flex items-center gap-2 text-slate-300 font-bold text-xs sm:text-sm px-3 py-1.5 rounded-xl bg-slate-800/50 border border-slate-700/50">
+            <i class="bi bi-mortarboard text-purple-400"></i> Yayasan Pendidikan Islam
+          </div>
+          <div class="flex items-center gap-2 text-slate-300 font-bold text-xs sm:text-sm px-3 py-1.5 rounded-xl bg-slate-800/50 border border-slate-700/50">
+            <i class="bi bi-star-fill text-amber-400"></i> SD / SMP Swasta Terakreditasi A
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. SEKSI 16 MODUL TERPADU (Interactive Category Tabs & Grid 4x4) -->
+    <section id="fitur" class="relative z-10 py-24 bg-slate-900/30 border-b border-slate-800/70">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <div class="text-center max-w-3xl mx-auto mb-12 space-y-3">
+          <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-bold shadow-xs">
+            <i class="bi bi-grid-fill"></i> Arsitektur 16 Modul Komprehensif
+          </div>
+          <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight">
+            16 Modul Terpadu untuk Seluruh Kebutuhan Sekolah
+          </h2>
+          <p class="text-sm text-slate-400 leading-relaxed">
+            Hilangkan sistem yang terpisah-pisah. Seluruh data akademik, kesiswaan, keuangan, dan presensi terpusat dalam satu ekosistem PostgreSQL multi-tenant yang aman.
+          </p>
+
+          <!-- Module Category Filter Tabs -->
+          <div class="pt-4 flex items-center justify-center overflow-x-auto no-scrollbar pb-1">
+            <div class="p-1.5 rounded-2xl bg-slate-900 border border-slate-800 inline-flex flex-nowrap items-center gap-1 shadow-inner">
+              <button v-for="tab in moduleCategoryTabs" :key="tab.id"
+                      type="button" 
+                      @click="activeModuleTab = tab.id"
+                      :class="['px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all duration-150 whitespace-nowrap flex items-center gap-1.5',
+                               activeModuleTab === tab.id ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800/60']">
+                <i :class="['bi', tab.icon]"></i>
+                <span>{{ tab.name }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4x4 Responsive Grid Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div v-for="(feat, idx) in filteredFeatureItems" :key="idx" 
+               class="p-6 rounded-3xl bg-slate-900/90 border border-slate-800/90 hover:border-blue-500/50 hover:bg-slate-900 transition-all duration-300 group shadow-xl flex flex-col justify-between relative overflow-hidden">
+            
+            <!-- Subtle Top Glow on Hover -->
+            <div class="absolute -top-10 -right-10 w-24 h-24 bg-blue-600/10 rounded-full blur-xl pointer-events-none group-hover:bg-blue-600/25 transition"></div>
+
+            <div>
+              <!-- Icon & Badge Header -->
+              <div class="flex items-center justify-between gap-3 mb-4">
+                <div class="w-12 h-12 rounded-2xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition transform group-hover:scale-105 duration-200">
+                  <i :class="['bi', feat.icon_class || 'bi-grid-fill', 'text-xl']"></i>
+                </div>
+                <span class="px-2.5 py-0.5 rounded-md bg-blue-500/10 text-blue-400 text-[10px] font-extrabold uppercase tracking-wider border border-blue-500/20">
+                  {{ feat.badge_text || 'Modul' }}
+                </span>
+              </div>
+
+              <h3 class="text-base font-bold text-white mb-2 group-hover:text-blue-400 transition leading-snug">
+                {{ feat.title }}
+              </h3>
+              <p class="text-xs text-slate-400 leading-relaxed line-clamp-3">
+                {{ feat.subtitle || feat.content }}
+              </p>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-slate-500 group-hover:text-blue-400 transition">
+              <span class="font-semibold">Fitur Terintegrasi</span>
+              <i class="bi bi-arrow-right font-bold group-hover:translate-x-1 transition transform"></i>
+            </div>
+
           </div>
         </div>
 
       </div>
     </section>
 
-    <!-- SECTION: KEUNTUNGAN APLIKASI (BENEFITS & ADVANTAGES) -->
-    <section id="keuntungan" class="relative z-10 py-24 border-t border-slate-800/80 bg-slate-950/60">
+    <!-- 5. SEKSI KEUNTUNGAN APLIKASI (Benefits & Enterprise Security) -->
+    <section id="keuntungan" class="relative z-10 py-24 border-b border-slate-800/80 bg-slate-950">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         <div class="text-center max-w-3xl mx-auto mb-16 space-y-3">
@@ -212,11 +415,9 @@
           <div v-for="(benefit, bIdx) in benefitItems" :key="bIdx"
                class="p-7 rounded-3xl bg-slate-900/90 border border-slate-800/90 hover:border-slate-700 hover:bg-slate-900 transition-all duration-300 group shadow-xl flex flex-col justify-between relative overflow-hidden">
             
-            <!-- Top Subtle Glow -->
             <div class="absolute -top-12 -right-12 w-28 h-28 bg-purple-600/10 rounded-full blur-2xl pointer-events-none group-hover:bg-purple-600/20 transition"></div>
 
             <div>
-              <!-- Icon & Badge Header -->
               <div class="flex items-center justify-between gap-3 mb-5">
                 <div class="w-13 h-13 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 group-hover:bg-purple-600 group-hover:text-white transition transform group-hover:scale-105 shadow-md">
                   <i :class="['bi', benefit.icon_class || 'bi-shield-check', 'text-2xl']"></i>
@@ -226,17 +427,14 @@
                 </span>
               </div>
 
-              <!-- Title -->
               <h3 class="text-lg font-black text-white mb-2 group-hover:text-purple-300 transition leading-snug">
                 {{ benefit.title }}
               </h3>
 
-              <!-- Subtitle & Content -->
               <p class="text-xs text-slate-400 leading-relaxed">
                 {{ benefit.subtitle || benefit.content }}
               </p>
 
-              <!-- Highlights Checklist -->
               <div v-if="benefit.content_json?.highlights && benefit.content_json.highlights.length > 0" 
                    class="mt-4 pt-4 border-t border-slate-800/80 space-y-2">
                 <div v-for="(h, hIdx) in benefit.content_json.highlights" :key="hIdx" 
@@ -247,7 +445,6 @@
               </div>
             </div>
 
-            <!-- Optional Card Footer CTA -->
             <div v-if="benefit.cta_text && benefit.cta_link" class="mt-6 pt-4 border-t border-slate-800/60">
               <a :href="benefit.cta_link" class="text-xs font-bold text-purple-400 hover:text-purple-300 flex items-center gap-1.5 transition">
                 <span>{{ benefit.cta_text }}</span>
@@ -261,60 +458,22 @@
       </div>
     </section>
 
-    <!-- SECTION: FITUR UNGGULAN (16 MODUL TERPADU) -->
-    <section id="fitur" class="relative z-10 py-24 border-t border-slate-800/60 bg-slate-900/20">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        <div class="text-center max-w-3xl mx-auto mb-16 space-y-3">
-          <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-bold shadow-xs">
-            <i class="bi bi-grid-fill"></i> Arsitektur Modul Komprehensif
-          </div>
-          <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight">
-            16 Modul Terpadu untuk Seluruh Kebutuhan Sekolah
-          </h2>
-          <p class="text-sm text-slate-400 leading-relaxed">
-            Hilangkan sistem yang terpisah-pisah. Seluruh data akademik, kesiswaan, keuangan, dan presensi terpusat dalam satu database.
-          </p>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div v-for="(feat, idx) in featureItems" :key="idx" 
-               class="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 hover:bg-slate-900 transition-all group shadow-xl">
-            <div class="w-12 h-12 rounded-2xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition transform group-hover:scale-110 mb-5">
-              <i :class="['bi', feat.icon_class || 'bi-check-circle-fill', 'text-xl']"></i>
-            </div>
-            <div class="flex items-center gap-2 mb-2">
-              <span class="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 text-[10px] font-extrabold uppercase tracking-wider">
-                {{ feat.badge_text || 'Modul Inti' }}
-              </span>
-            </div>
-            <h3 class="text-lg font-bold text-white mb-2 group-hover:text-blue-400 transition">
-              {{ feat.title }}
-            </h3>
-            <p class="text-xs text-slate-400 leading-relaxed">
-              {{ feat.subtitle || feat.content }}
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- INTERACTIVE PRICING CALCULATOR SECTION -->
-    <section id="kalkulator" class="relative z-10 py-24 border-t border-slate-800/60 bg-gradient-to-b from-slate-950 via-slate-900/50 to-slate-950">
+    <!-- 6. INTEGRATED PRICING CALCULATOR & PACKAGES SECTION -->
+    <section id="kalkulator" class="relative z-10 py-24 border-b border-slate-800/60 bg-gradient-to-b from-slate-950 via-slate-900/60 to-slate-950">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         <div class="text-center max-w-3xl mx-auto mb-14 space-y-3">
           <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold">
-            <i class="bi bi-calculator-fill"></i> Estimator Anggaran Dinamis (RKAS Friendly)
+            <i class="bi bi-calculator-fill"></i> Estimator Anggaran Dinamis & Pilihan Paket
           </div>
           <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight">
-            Hitung Kebutuhan Investasi Sesuai Jumlah Siswa & Guru
+            Transparan, Terukur & Sesuai Anggaran RKAS Sekolah
           </h2>
           <p class="text-sm text-slate-400">
-            Transparan tanpa biaya tersembunyi. Semakin besar populasi sekolah Anda, biaya per siswa semakin terjangkau (*Volume Discount*).
+            Hitung estimasi biaya berdasarkan populasi siswa & guru, lalu bandingkan langsung dengan pilihan paket berlangganan.
           </p>
 
-          <!-- BILLING CYCLE TOGGLE -->
+          <!-- Billing Cycle Switcher Toggle -->
           <div class="pt-4 flex items-center justify-center">
             <div class="p-1.5 rounded-2xl bg-slate-900 border border-slate-800 inline-flex flex-wrap items-center justify-center gap-1 shadow-inner">
               <button type="button" 
@@ -343,8 +502,8 @@
           </div>
         </div>
 
-        <!-- CALCULATOR CARD CONTAINER -->
-        <div class="max-w-4xl mx-auto rounded-3xl bg-slate-900/90 border border-slate-800 shadow-2xl p-6 sm:p-10">
+        <!-- TANDEM 1: CALCULATOR CARD CONTAINER -->
+        <div class="max-w-5xl mx-auto rounded-3xl bg-slate-900/90 border border-slate-800 shadow-2xl p-6 sm:p-10 mb-16">
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             
             <!-- Sliders Inputs (7 cols) -->
@@ -457,66 +616,106 @@
           </div>
         </div>
 
+        <!-- TANDEM 2: STANDARD PRICING PACKAGES CARDS -->
+        <div id="paket" class="pt-4">
+          <div class="text-center max-w-2xl mx-auto mb-10">
+            <h3 class="text-2xl font-bold text-white">Atau Pilih Paket Berlangganan Tetap</h3>
+            <p class="text-xs text-slate-400 mt-1">Seluruh paket mendapatkan masa uji coba gratis 1 bulan penuh tanpa biaya pendaftaran.</p>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch max-w-6xl mx-auto">
+            <div v-for="(card, cIdx) in standardCards" :key="cIdx"
+                 :class="['p-8 rounded-3xl flex flex-col justify-between transition-all duration-300 relative',
+                          card.isPopular ? 'bg-slate-900/95 border-2 border-blue-500 shadow-2xl shadow-blue-500/20 ring-1 ring-blue-500/40' : 'bg-slate-900/60 border border-slate-800 hover:border-slate-700']">
+              
+              <!-- Radiant Badge on Most Popular -->
+              <div v-if="card.isPopular" class="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 text-white font-black text-[10px] tracking-wider uppercase shadow-lg shadow-blue-500/30">
+                Paling Populer & Rekomendasi
+              </div>
+
+              <div>
+                <div class="flex items-center justify-between mb-4">
+                  <span :class="['px-3 py-1 rounded-full text-xs font-bold border', card.badgeClass]">
+                    {{ card.badge }}
+                  </span>
+                </div>
+
+                <h3 class="text-2xl font-black text-white mb-1">{{ card.name }}</h3>
+                <p class="text-xs text-slate-400 mb-6">{{ card.subtitle }}</p>
+
+                <div class="mb-6 pb-6 border-b border-slate-800">
+                  <div v-if="card.price !== 'Kustom'" class="flex items-baseline gap-2">
+                    <span class="text-3xl font-black text-white">Rp {{ formatRupiah(card.price) }}</span>
+                    <span class="text-xs text-slate-400">/ bulan</span>
+                  </div>
+                  <div v-else class="text-3xl font-black text-white">
+                    Kustom / MoU
+                  </div>
+                </div>
+
+                <ul class="space-y-3 mb-8">
+                  <li v-for="(feat, fIdx) in card.features" :key="fIdx" class="text-xs text-slate-300 flex items-start gap-2.5">
+                    <i class="bi bi-check-circle-fill text-emerald-400 text-sm shrink-0 mt-0.5"></i>
+                    <span>{{ feat }}</span>
+                  </li>
+                </ul>
+              </div>
+
+              <Link :href="card.ctaLink" 
+                    :class="['w-full py-3.5 px-4 rounded-xl text-xs font-extrabold text-center transition flex items-center justify-center gap-2', card.btnClass]">
+                <span>{{ card.ctaText }}</span>
+              </Link>
+
+            </div>
+          </div>
+        </div>
+
       </div>
     </section>
 
-    <!-- STANDARD PRICING PACKAGES -->
-    <section id="paket" class="relative z-10 py-24 border-t border-slate-800/60 bg-slate-900/30">
+    <!-- 7. SOCIAL PROOF & TESTIMONI KEPALA SEKOLAH -->
+    <section class="relative z-10 py-24 border-b border-slate-800/80 bg-slate-900/40">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         <div class="text-center max-w-3xl mx-auto mb-16 space-y-3">
-          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-bold">
-            <i class="bi bi-box-seam-fill"></i> Pilihan Paket Berlangganan
+          <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold shadow-xs">
+            <i class="bi bi-chat-quote-fill"></i> Cerita Sukses Sekolah Mitra
           </div>
           <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight">
-            Paket Transparan Sesuai Skala Sekolah Anda
+            Apa Kata Mereka Tentang Platform SINTA?
           </h2>
-          <p class="text-sm text-slate-400">
-            Seluruh paket mendapatkan masa uji coba gratis (Free Trial) 1 bulan penuh tanpa komitmen kontrak.
+          <p class="text-sm text-slate-400 leading-relaxed">
+            Pengalaman nyata para pimpinan sekolah dan tenaga pendidik setelah mendigitalkan manajemen sekolah bersama SINTA.
           </p>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
-          <div v-for="(card, cIdx) in standardCards" :key="cIdx"
-               :class="['p-8 rounded-3xl flex flex-col justify-between transition-all duration-300 relative',
-                        card.isPopular ? 'bg-slate-900/90 border-2 border-blue-500/80 shadow-2xl shadow-blue-500/10 ring-1 ring-blue-500/30' : 'bg-slate-900/60 border border-slate-800 hover:border-slate-700']">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div v-for="(testi, tIdx) in testimonialItems" :key="tIdx"
+               class="p-7 rounded-3xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition duration-300 flex flex-col justify-between shadow-xl">
             
-            <div v-if="card.isPopular" class="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-[10px] tracking-wider uppercase shadow-md">
-              Paling Populer
-            </div>
-
             <div>
-              <div class="flex items-center justify-between mb-4">
-                <span :class="['px-3 py-1 rounded-full text-xs font-bold border', card.badgeClass]">
-                  {{ card.badge }}
-                </span>
+              <!-- 5 Stars Rating -->
+              <div class="flex items-center gap-1 text-amber-400 text-sm mb-4">
+                <i v-for="s in 5" :key="s" class="bi bi-star-fill"></i>
               </div>
 
-              <h3 class="text-2xl font-black text-white mb-1">{{ card.name }}</h3>
-              <p class="text-xs text-slate-400 mb-6">{{ card.subtitle }}</p>
-
-              <div class="mb-6 pb-6 border-b border-slate-800">
-                <div v-if="card.price !== 'Kustom'" class="flex items-baseline gap-2">
-                  <span class="text-3xl font-black text-white">Rp {{ formatRupiah(card.price) }}</span>
-                  <span class="text-xs text-slate-400">/ bulan</span>
-                </div>
-                <div v-else class="text-3xl font-black text-white">
-                  Kustom / MoU
-                </div>
-              </div>
-
-              <ul class="space-y-3 mb-8">
-                <li v-for="(feat, fIdx) in card.features" :key="fIdx" class="text-xs text-slate-300 flex items-start gap-2.5">
-                  <i class="bi bi-check-circle-fill text-emerald-400 text-sm shrink-0 mt-0.5"></i>
-                  <span>{{ feat }}</span>
-                </li>
-              </ul>
+              <!-- Quote Text -->
+              <p class="text-xs text-slate-300 leading-relaxed italic mb-6">
+                "{{ testi.content || testi.subtitle }}"
+              </p>
             </div>
 
-            <Link :href="card.ctaLink" 
-                  :class="['w-full py-3.5 px-4 rounded-xl text-xs font-extrabold text-center transition flex items-center justify-center gap-2', card.btnClass]">
-              <span>{{ card.ctaText }}</span>
-            </Link>
+            <!-- Profile Info -->
+            <div class="flex items-center gap-3 pt-4 border-t border-slate-800">
+              <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-xs shrink-0 shadow-md">
+                {{ testi.content_json?.avatar || (testi.title ? testi.title.slice(0, 2).toUpperCase() : 'ST') }}
+              </div>
+              <div class="min-w-0">
+                <h4 class="text-xs font-black text-white truncate">{{ testi.title }}</h4>
+                <p class="text-[11px] text-slate-400 truncate">{{ testi.subtitle || testi.badge_text }}</p>
+                <p v-if="testi.content_json?.school_name" class="text-[10px] text-blue-400 font-semibold truncate">{{ testi.content_json.school_name }} ({{ testi.content_json.city }})</p>
+              </div>
+            </div>
 
           </div>
         </div>
@@ -524,70 +723,110 @@
       </div>
     </section>
 
-    <!-- FAQ SECTION -->
-    <section id="faq" class="relative z-10 py-24 border-t border-slate-800/60 bg-slate-950">
+    <!-- 8. FAQ SECTION (Interactive Accordion) -->
+    <section id="faq" class="relative z-10 py-24 border-b border-slate-800/80 bg-slate-950">
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         
         <div class="text-center mb-16 space-y-3">
-          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold">
+          <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold">
             <i class="bi bi-question-circle"></i> Tanya Jawab
           </div>
           <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight">
             Pertanyaan yang Sering Diajukan (FAQ)
           </h2>
+          <p class="text-sm text-slate-400">
+            Segala hal yang perlu Anda ketahui mengenai pendaftaran, uji coba, dan implementasi SINTA di sekolah Anda.
+          </p>
         </div>
 
-        <div class="space-y-4">
+        <div class="space-y-3.5">
           <div v-for="(faq, fIdx) in faqItems" :key="fIdx" 
-               class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 transition">
-            <h4 class="text-sm font-bold text-white flex items-center gap-2">
-              <i class="bi bi-question-circle text-blue-400"></i>
-              <span>{{ faq.title }}</span>
-            </h4>
-            <p class="text-xs text-slate-400 mt-2 leading-relaxed pl-6">
+               class="rounded-2xl bg-slate-900/70 border border-slate-800 overflow-hidden transition-all duration-200">
+            <button type="button" 
+                    @click="toggleFaq(fIdx)"
+                    class="w-full p-5 text-left flex items-center justify-between gap-4 font-bold text-sm text-white hover:text-blue-400 transition">
+              <span class="flex items-center gap-2.5">
+                <i class="bi bi-question-circle text-blue-400 shrink-0"></i>
+                <span>{{ faq.title }}</span>
+              </span>
+              <i :class="['bi transition-transform duration-200', openFaqIndex === fIdx ? 'bi-chevron-up text-blue-400' : 'bi-chevron-down text-slate-500']"></i>
+            </button>
+            <div v-if="openFaqIndex === fIdx" class="px-5 pb-5 text-xs text-slate-400 leading-relaxed border-t border-slate-800/60 pt-3">
               {{ faq.subtitle || faq.content }}
-            </p>
+            </div>
           </div>
         </div>
+
       </div>
     </section>
 
-    <!-- FINAL CTA BANNER -->
-    <section class="relative z-10 py-20 border-t border-slate-800/80">
+    <!-- 9. FINAL HIGH-CONVERSION CTA BANNER -->
+    <section class="relative z-10 py-24 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
       <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="p-10 sm:p-14 rounded-3xl bg-gradient-to-tr from-blue-900/70 via-indigo-900/60 to-slate-900 border border-blue-500/40 text-center space-y-6 shadow-2xl">
+        <div class="relative overflow-hidden p-10 sm:p-14 rounded-3xl bg-gradient-to-tr from-blue-900/80 via-indigo-900/70 to-slate-900 border border-blue-500/40 text-center space-y-6 shadow-2xl">
+          
+          <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/30 text-yellow-300 text-xs font-bold">
+            <i class="bi bi-gift-fill"></i> Free Trial 1 Bulan Tanpa Komitmen
+          </div>
+
           <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight">
             Siap Mewujudkan Digitalisasi Sekolah Anda Hari Ini?
           </h2>
-          <p class="text-sm text-slate-300 max-w-2xl mx-auto">
-            Daftarkan sekolah Anda dalam 2 menit. Super Admin akan memverifikasi dan memberikan akses penuh 1 bulan secara gratis.
+          <p class="text-sm text-slate-300 max-w-2xl mx-auto leading-relaxed">
+            Daftarkan sekolah Anda dalam 2 menit. Super Admin akan memverifikasi dan memberikan akses penuh 16 modul selama 1 bulan secara gratis tanpa perlu kartu kredit.
           </p>
-          <div class="pt-2">
+
+          <div class="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="/daftar-sekolah" 
-                  class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white text-blue-900 hover:bg-slate-100 font-black text-sm shadow-xl transition transform hover:scale-105">
+                  class="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl bg-white text-blue-900 hover:bg-slate-100 font-black text-sm shadow-xl transition transform hover:scale-105">
               <i class="bi bi-gift-fill text-blue-600"></i>
               <span>{{ heroItem?.cta_text || 'Mulai Free Trial 1 Bulan Sekarang' }}</span>
             </Link>
+            <a :href="whatsappProposalUrl" target="_blank"
+               class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl bg-slate-800/80 hover:bg-slate-800 text-slate-200 hover:text-white font-bold text-sm border border-slate-700 transition">
+              <i class="bi bi-whatsapp text-emerald-400"></i>
+              <span>Konsultasi via WhatsApp</span>
+            </a>
           </div>
+
+          <div class="flex items-center justify-center gap-6 pt-3 text-[11px] text-slate-400 font-medium">
+            <span><i class="bi bi-check2 text-emerald-400 font-bold"></i> Tanpa Kartu Kredit</span>
+            <span><i class="bi bi-check2 text-emerald-400 font-bold"></i> Setup Instan 2 Menit</span>
+            <span><i class="bi bi-check2 text-emerald-400 font-bold"></i> Pendampingan Onboarding</span>
+          </div>
+
         </div>
       </div>
     </section>
 
-    <!-- FOOTER -->
-    <footer class="relative z-10 border-t border-slate-800/80 bg-slate-950 py-10 text-xs text-slate-500">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-          <div class="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-black text-sm">S</div>
-          <span class="font-bold text-slate-400">&copy; 2026 SINTA Platform Tata Kelola Sekolah</span>
+    <!-- 10. ENTERPRISE FOOTER -->
+    <footer class="relative z-10 border-t border-slate-800/80 bg-slate-950 py-12 text-xs text-slate-500">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-md">
+              S
+            </div>
+            <div>
+              <span class="font-black text-white text-sm tracking-tight block">SINTA SaaS Platform</span>
+              <span class="text-[11px] text-slate-500">Sistem Informasi Manajemen Tata Kelola Sekolah Terpadu</span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-6 flex-wrap justify-center text-xs">
+            <a v-for="(nav, nIdx) in navMenuItems" :key="nIdx" 
+               :href="nav.cta_link || nav.content || '#'"
+               class="hover:text-slate-300 transition">
+              {{ nav.title }}
+            </a>
+            <Link href="/login" class="hover:text-slate-300 transition font-bold">Login Portal</Link>
+            <Link href="/daftar-sekolah" class="text-blue-400 hover:text-blue-300 font-bold transition">Daftar Free Trial</Link>
+          </div>
         </div>
-        <div class="flex items-center gap-6 flex-wrap">
-          <a v-for="(nav, nIdx) in navMenuItems" :key="nIdx" 
-             :href="nav.cta_link || nav.content || '#'"
-             class="hover:text-slate-300 transition">
-            {{ nav.title }}
-          </a>
-          <Link href="/login" class="hover:text-slate-300 transition">Login Portal</Link>
-          <Link href="/daftar-sekolah" class="text-blue-400 hover:text-blue-300 font-bold transition">Daftar Free Trial</Link>
+
+        <div class="pt-6 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-600">
+          <span>&copy; 2026 SINTA Platform. Hak Cipta Dilindungi Undang-Undang.</span>
+          <span>Arsitektur PostgreSQL 16 Multi-Tenant &bull; OWASP ASVS L3 Compliance</span>
         </div>
       </div>
     </footer>
@@ -612,6 +851,26 @@ const props = defineProps({
 
 // Mobile Sidebar Drawer State
 const mobileMenuOpen = ref(false);
+
+// Active Module Category Tab in 16 Modules Section
+const activeModuleTab = ref('all');
+
+const moduleCategoryTabs = [
+  { id: 'all',         name: 'Semua Modul (16)',         icon: 'bi-grid-fill' },
+  { id: 'akademik',    name: 'Akademik & Rapor (4)',      icon: 'bi-journal-check' },
+  { id: 'kesiswaan',   name: 'Kesiswaan & BK (3)',        icon: 'bi-people-fill' },
+  { id: 'keuangan',    name: 'Keuangan SPP (1)',          icon: 'bi-wallet2' },
+  { id: 'presensi',    name: 'Presensi GPS & KBM (2)',    icon: 'bi-geo-alt-fill' },
+  { id: 'sarpras',     name: 'Sarpras & Perpus (2)',      icon: 'bi-building' },
+  { id: 'kepegawaian', name: 'GTK & Administrasi (4)',    icon: 'bi-person-vcard' },
+];
+
+// Interactive FAQ Accordion State
+const openFaqIndex = ref(0);
+
+const toggleFaq = (idx) => {
+  openFaqIndex.value = openFaqIndex.value === idx ? null : idx;
+};
 
 // Billing Cycle State: 'annual' (default - 25% discount), 'semester' (10% discount), 'monthly' (0% discount)
 const billingCycle = ref('annual');
@@ -777,7 +1036,7 @@ const navMenuItems = computed(() => {
     return props.promotions.nav_menu;
   }
   return [
-    { title: 'Fitur Unggulan', cta_link: '#fitur', icon_class: 'bi bi-grid-fill', badge_text: null },
+    { title: 'Fitur 16 Modul', cta_link: '#fitur', icon_class: 'bi bi-grid-fill', badge_text: null },
     { title: 'Keuntungan Aplikasi', cta_link: '#keuntungan', icon_class: 'bi bi-shield-check', badge_text: 'Keunggulan' },
     { title: 'Simulasi Biaya', cta_link: '#kalkulator', icon_class: 'bi bi-calculator-fill', badge_text: null },
     { title: 'Paket & Harga', cta_link: '#paket', icon_class: 'bi bi-box-seam-fill', badge_text: null },
@@ -841,28 +1100,76 @@ const benefitItems = computed(() => {
 });
 
 // Dynamic Features from CMS
-const featureItems = computed(() => {
-  if (props.promotions?.features && props.promotions.features.length > 0) {
-    return props.promotions.features;
+const rawFeatures = computed(() => {
+  return props.promotions?.features || [];
+});
+
+const filteredFeatureItems = computed(() => {
+  const all = rawFeatures.value.length > 0 ? rawFeatures.value : [
+    { title: 'Buku Induk & Data Siswa', subtitle: 'Pencatatan NISN, biodata terpadu, mutasi, dan cetak lembar buku induk resmi.', icon_class: 'bi-journal-text', badge_text: 'Akademik', content_json: { category: 'akademik' } },
+    { title: 'Rapor Kurikulum Merdeka & K13', subtitle: 'Kalkulasi nilai otomatis, deskripsi dinamis, cetak PDF massal & ledger Excel.', icon_class: 'bi-award-fill', badge_text: 'Kurikulum', content_json: { category: 'akademik' } },
+    { title: 'Jadwal Pelajaran Anti-Bentrok', subtitle: 'Matriks jadwal kelas & guru, deteksi konflik ruangan, dan ekspor/impor Excel.', icon_class: 'bi-calendar3', badge_text: 'Akademik', content_json: { category: 'akademik' } },
+    { title: 'Keuangan & Kasir SPP POS', subtitle: 'Billing tagihan massal, kasir kilat nota thermal, Midtrans QRIS & notifikasi WA.', icon_class: 'bi-wallet2', badge_text: 'Keuangan', content_json: { category: 'keuangan' } },
+    { title: 'Presensi Geofencing GPS', subtitle: 'Presensi mandiri radius akurat, proteksi Fake GPS, dan kompresi surat izin < 500 KB.', icon_class: 'bi-geo-alt-fill', badge_text: 'Presensi', content_json: { category: 'presensi' } },
+    { title: 'Jurnal Mengajar Guru (KBM)', subtitle: 'Auto-fill jadwal harian, input CP, absensi KBM per jam & upload foto dokumentasi.', icon_class: 'bi-book-half', badge_text: 'Presensi', content_json: { category: 'presensi' } },
+    { title: 'PPDB Online & Seleksi Masuk', subtitle: 'Pendaftaran calon siswa mandiri, verifikasi berkas online & jalur zonasi/prestasi.', icon_class: 'bi-person-plus-fill', badge_text: 'Kesiswaan', content_json: { category: 'kesiswaan' } },
+    { title: 'Bimbingan Konseling & Disiplin', subtitle: 'Layanan konseling siswa, buku saku poin pelanggaran dan surat panggilan ortu.', icon_class: 'bi-shield-check', badge_text: 'Kesiswaan', content_json: { category: 'kesiswaan' } },
+    { title: 'Kesiswaan & Ekstrakurikuler', subtitle: 'Registrasi anggota ekskul, jurnal kegiatan pembina, absensi & predikat nilai.', icon_class: 'bi-trophy-fill', badge_text: 'Kesiswaan', content_json: { category: 'kesiswaan' } },
+    { title: 'Perpustakaan Standar INLISLite', subtitle: 'Sirkulasi barcode peminjaman kilat, katalog OPAC, kiosk buku tamu & kartu anggota.', icon_class: 'bi-book-fill', badge_text: 'Sarpras', content_json: { category: 'sarpras' } },
+    { title: 'Sarpras & KIR Aset Ruangan', subtitle: 'Barcode QR aset, cetak Kartu Inventaris Ruangan (KIR), stok BHP & peminjaman lab.', icon_class: 'bi-building-fill-check', badge_text: 'Sarpras', content_json: { category: 'sarpras' } },
+    { title: 'Kepegawaian & GTK', subtitle: 'Data pokok NIP/NUPTK guru, riwayat pangkat/KGB, sertifikasi & e-recruitment.', icon_class: 'bi-person-vcard-fill', badge_text: 'Kepegawaian', content_json: { category: 'kepegawaian' } },
+    { title: 'Vokasi SMK & Prakerin PKL', subtitle: 'Database mitra industri DUDI, plotting siswa magang, jurnal PKL & rubrik UKK LSP.', icon_class: 'bi-tools', badge_text: 'Kejuruan', content_json: { category: 'kepegawaian' } },
+    { title: 'Persuratan & E-Disposisi', subtitle: 'Nomor agenda surat otomatis, arsip PDF terenkripsi, dan alur disposisi pimpinan.', icon_class: 'bi-envelope-paper-fill', badge_text: 'Administrasi', content_json: { category: 'kepegawaian' } },
+    { title: 'PDSS & Peluang Kampus SNBP', subtitle: 'Pemeringkatan siswa eligible, kalkulasi rerata rapor & analisis alumni di PTN.', icon_class: 'bi-mortarboard-fill', badge_text: 'Alumni', content_json: { category: 'akademik' } },
+    { title: 'CMS Website Portal Sekolah', subtitle: 'Publikasi pengumuman, agenda kalender akademik, galeri dan landing page sekolah.', icon_class: 'bi-globe2', badge_text: 'Portal Publik', content_json: { category: 'kepegawaian' } },
+  ];
+
+  if (activeModuleTab.value === 'all') {
+    return all;
+  }
+  return all.filter(f => f.content_json?.category === activeModuleTab.value);
+});
+
+// Dynamic Testimonials from CMS
+const testimonialItems = computed(() => {
+  if (props.promotions?.testimonials && props.promotions.testimonials.length > 0) {
+    return props.promotions.testimonials;
   }
   return [
-    { title: 'Buku Induk & Profil Siswa', subtitle: 'Pencatatan NISN, biodata, mutasi, riwayat beasiswa dan cetak lembar buku induk resmi.', icon_class: 'bi-journal-text', badge_text: 'Data Pokok' },
-    { title: 'Cetak Rapor Kurikulum Merdeka & K13', subtitle: 'Kalkulasi nilai otomatis, deskripsi capaian pembelajaran dinamis, dan cetak PDF instan.', icon_class: 'bi-award', badge_text: 'Kurikulum' },
-    { title: 'Manajemen Keuangan SPP & Kasir', subtitle: 'Pos tarif, tagihan siswa, kuitansi kasir, dan integrasi notifikasi WA.', icon_class: 'bi-wallet2', badge_text: 'Keuangan' },
-    { title: 'PPDB & Seleksi Siswa Baru Online', subtitle: 'Pendaftaran mandiri, alur seleksi, dan verifikasi berkas pendaftar.', icon_class: 'bi-person-plus', badge_text: 'Kesiswaan' },
-    { title: 'Bimbingan Konseling & Kedisiplinan', subtitle: 'Layanan konseling siswa, pencatatan poin pelanggaran dan surat panggilan orang tua.', icon_class: 'bi-shield-check', badge_text: 'Bimbingan' },
-    { title: 'Perpustakaan & Katalog Buku OPAC', subtitle: 'Sirkulasi peminjaman, barcode buku, kartu anggota, dan pelaporan denda.', icon_class: 'bi-book', badge_text: 'Perpustakaan' },
+    {
+      title: 'Drs. H. Ahmad Fauzi, M.Pd.',
+      subtitle: 'Kepala Sekolah',
+      content: 'Penerapan SINTA memangkas waktu cetak rapor dari 2 minggu menjadi hanya 1 hari. Pengelolaan SPP dan presensi GPS sangat transparan dan memudahkan koordinasi dengan wali murid.',
+      badge_text: 'SMAN 1 Teladan',
+      content_json: { school_name: 'SMAN 1 Teladan', avatar: 'AF', city: 'Surabaya' }
+    },
+    {
+      title: 'Siti Nurhaliza, S.Kom., M.T.',
+      subtitle: 'Waka Kurikulum',
+      content: 'Fitur Jurnal Mengajar dan Modul PKL Mitra Industri sangat luar biasa. Guru-guru merasa sangat terbantu karena presensi KBM dan CP otomatis terhubung ke jadwal harian.',
+      badge_text: 'SMK Mitra Vokasi',
+      content_json: { school_name: 'SMK Mitra Vokasi', avatar: 'SN', city: 'Bandung' }
+    },
+    {
+      title: 'Dra. Hj. Wahyuni Rahayu',
+      subtitle: 'Pengurus Yayasan',
+      content: 'Sistem Multi-Tenant SINTA memungkinkan yayasan kami memantau 4 unit sekolah (SD, SMP, SMA, SMK) dalam satu dashboard terpadu. Tagihan SPP Midtrans langsung cair otomatis.',
+      badge_text: 'Yayasan Al-Hikmah',
+      content_json: { school_name: 'Yayasan Pendidikan Al-Hikmah', avatar: 'WR', city: 'Jakarta' }
+    },
   ];
 });
 
+// Dynamic FAQ from CMS
 const faqItems = computed(() => {
   if (props.promotions?.faq && props.promotions.faq.length > 0) {
     return props.promotions.faq;
   }
   return [
     { title: 'Bagaimana cara mendapatkan Free Trial 1 Bulan?', subtitle: 'Cukup isi formulir di menu Daftar Sekolah. Super Admin akan memverifikasi permohonan dalam waktu 1x24 jam dan mengaktifkan akses Anda.' },
-    { title: 'Apakah data sekolah aman?', subtitle: 'Sangat aman. Setiap sekolah memiliki isolasi skema PostgreSQL dan hak akses terenkripsi multi-tenant.' },
-    { title: 'Apakah bisa melakukan penyesuaian modul yang diizinkan?', subtitle: 'Bisa. Super Admin dapat mengatur menu dan modul mana saja yang diaktifkan untuk sekolah Anda saat masa trial maupun langganan.' },
+    { title: 'Apakah data sekolah aman dan terisolasi?', subtitle: 'Sangat aman. Setiap sekolah memiliki isolasi skema PostgreSQL dan hak akses terenkripsi multi-tenant.' },
+    { title: 'Apakah SINTA mendukung cetak Rapor Kurikulum Merdeka & K13?', subtitle: 'Ya, SINTA mendukung penuh perhitungan capaian pembelajaran (CP), deskripsi otomatis, cetak massal 1 rombel format PDF berstandar Kemendikbudristek, dan ekspor ledger nilai Excel.' },
+    { title: 'Bagaimana integrasi pembayaran SPP siswa?', subtitle: 'SINTA menyediakan Kasir POS kilat dengan cetak struk thermal 58mm/80mm serta pembayaran online otomatis via QRIS & Virtual Account Midtrans dengan notifikasi WhatsApp.' },
   ];
 });
 </script>
