@@ -217,10 +217,15 @@ class KonfigurasiAksesController extends Controller
 
         $accessInput = $request->input('access', []); // [ roleId => [menuId, menuId...] ]
 
+        // Capture old access stats for Audit Trail
+        $oldAccessCount = DB::table('core.role_menu_access')->where('tenant_id', $targetTenantId)->count();
+
         // Map parent menus for auto-cascade
         $menuParents = DB::table('core.menus')->whereNotNull('parent_id')->pluck('parent_id', 'id')->toArray();
 
-        DB::transaction(function () use ($targetTenantId, $accessInput, $menuParents) {
+        $insertedCount = 0;
+
+        DB::transaction(function () use ($targetTenantId, $accessInput, $menuParents, &$insertedCount) {
             // Delete existing access for target tenant
             DB::table('core.role_menu_access')->where('tenant_id', $targetTenantId)->delete();
 
@@ -261,11 +266,34 @@ class KonfigurasiAksesController extends Controller
             }
 
             if (!empty($insertData)) {
+                $insertedCount = count($insertData);
                 foreach (array_chunk($insertData, 500) as $chunk) {
                     DB::table('core.role_menu_access')->insert($chunk);
                 }
             }
         });
+
+        // Record Audit Trail in sistem.activity_logs
+        try {
+            DB::table('sistem.activity_logs')->insert([
+                'id'         => (string) \Illuminate\Support\Str::uuid(),
+                'tenant_id'  => $targetTenantId,
+                'user_id'    => $user?->id,
+                'user_role'  => $userRoleName,
+                'table_name' => 'core.role_menu_access',
+                'action'     => 'RBAC_MUTATION',
+                'old_data'   => json_encode(['total_rules_before' => $oldAccessCount]),
+                'new_data'   => json_encode([
+                    'total_rules_after' => $insertedCount,
+                    'roles_configured'  => count($accessInput),
+                    'timestamp'         => now()->toIso8601String(),
+                ]),
+                'ip_address' => $request->ip(),
+                'created_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            // Silent catch to prevent blocking main transaction
+        }
 
         if ($request->wantsJson() && !$request->header('X-Inertia')) {
             return response()->json([
@@ -279,6 +307,133 @@ class KonfigurasiAksesController extends Controller
             : "/konfigurasi/akses";
 
         return redirect($redirectUrl)->with('success', 'Matriks hak akses menu berhasil disimpan dan diterapkan secara real-time.');
+    }
+
+    public function resetDefault(Request $request): RedirectResponse|JsonResponse
+    {
+        $user = auth()->user();
+        $userRoleName = is_object($user?->role) ? ($user->role->nama_role ?? 'admin_sekolah') : ($user?->role ?? 'admin_sekolah');
+        $isSuperAdmin = ($user && ($userRoleName === 'super_admin' || $user->tenant_id === '00000000-0000-0000-0000-000000000000'));
+
+        $targetTenantId = ($isSuperAdmin && $request->filled('target_tenant_id'))
+            ? $request->input('target_tenant_id')
+            : (session('tenant_id') ?? $user?->tenant_id ?? '00000000-0000-0000-0000-000000000000');
+
+        if (!$targetTenantId || $targetTenantId === '00000000-0000-0000-0000-000000000000') {
+            return back()->with('error', 'Template global master tidak dapat direset.');
+        }
+
+        $deletedCount = DB::table('core.role_menu_access')->where('tenant_id', $targetTenantId)->delete();
+
+        // Record Audit Trail
+        try {
+            DB::table('sistem.activity_logs')->insert([
+                'id'         => (string) \Illuminate\Support\Str::uuid(),
+                'tenant_id'  => $targetTenantId,
+                'user_id'    => $user?->id,
+                'user_role'  => $userRoleName,
+                'table_name' => 'core.role_menu_access',
+                'action'     => 'RBAC_RESET_DEFAULT',
+                'old_data'   => json_encode(['custom_rules_deleted' => $deletedCount]),
+                'new_data'   => json_encode(['status' => 'Fallback to Global Template Master']),
+                'ip_address' => $request->ip(),
+                'created_at' => now(),
+            ]);
+        } catch (\Throwable $e) {}
+
+        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Hak akses berhasil dikembalikan ke Template Standar Global.',
+            ]);
+        }
+
+        return redirect("/konfigurasi/akses?tenant_id={$targetTenantId}")->with('success', 'Hak akses berhasil dikembalikan ke Template Standar Global.');
+    }
+
+    public function cloneRole(Request $request): RedirectResponse|JsonResponse
+    {
+        $validated = $request->validate([
+            'source_role_id'   => 'required|uuid',
+            'target_role_id'   => 'required|uuid|different:source_role_id',
+            'target_tenant_id' => 'nullable|uuid',
+        ]);
+
+        $user = auth()->user();
+        $userRoleName = is_object($user?->role) ? ($user->role->nama_role ?? 'admin_sekolah') : ($user?->role ?? 'admin_sekolah');
+        $isSuperAdmin = ($user && ($userRoleName === 'super_admin' || $user->tenant_id === '00000000-0000-0000-0000-000000000000'));
+
+        $targetTenantId = ($isSuperAdmin && !empty($validated['target_tenant_id']))
+            ? $validated['target_tenant_id']
+            : (session('tenant_id') ?? $user?->tenant_id ?? '00000000-0000-0000-0000-000000000000');
+
+        $sourceRoleId = $validated['source_role_id'];
+        $targetRoleId = $validated['target_role_id'];
+
+        // Get source role permissions
+        $sourceMenus = DB::table('core.role_menu_access')
+            ->where('tenant_id', $targetTenantId)
+            ->where('role_id', $sourceRoleId)
+            ->pluck('menu_id')
+            ->toArray();
+
+        if (empty($sourceMenus)) {
+            // Fallback to global master permissions for source role
+            $sourceMenus = DB::table('core.role_menu_access')
+                ->where('tenant_id', '00000000-0000-0000-0000-000000000000')
+                ->where('role_id', $sourceRoleId)
+                ->pluck('menu_id')
+                ->toArray();
+        }
+
+        DB::transaction(function () use ($targetTenantId, $targetRoleId, $sourceMenus) {
+            DB::table('core.role_menu_access')
+                ->where('tenant_id', $targetTenantId)
+                ->where('role_id', $targetRoleId)
+                ->delete();
+
+            $insertData = [];
+            foreach ($sourceMenus as $menuId) {
+                $insertData[] = [
+                    'tenant_id' => $targetTenantId,
+                    'role_id'   => $targetRoleId,
+                    'menu_id'   => $menuId,
+                ];
+            }
+
+            if (!empty($insertData)) {
+                DB::table('core.role_menu_access')->insert($insertData);
+            }
+        });
+
+        // Record Audit Trail
+        try {
+            DB::table('sistem.activity_logs')->insert([
+                'id'         => (string) \Illuminate\Support\Str::uuid(),
+                'tenant_id'  => $targetTenantId,
+                'user_id'    => $user?->id,
+                'user_role'  => $userRoleName,
+                'table_name' => 'core.role_menu_access',
+                'action'     => 'RBAC_CLONE_ROLE',
+                'old_data'   => json_encode(['source_role_id' => $sourceRoleId]),
+                'new_data'   => json_encode([
+                    'target_role_id'  => $targetRoleId,
+                    'cloned_menus'    => count($sourceMenus),
+                    'timestamp'       => now()->toIso8601String(),
+                ]),
+                'ip_address' => $request->ip(),
+                'created_at' => now(),
+            ]);
+        } catch (\Throwable $e) {}
+
+        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Hak akses role berhasil disalin.',
+            ]);
+        }
+
+        return redirect("/konfigurasi/akses?tenant_id={$targetTenantId}")->with('success', 'Hak akses role berhasil disalin.');
     }
 
     private function getAccessMapForTenant(?string $tenantId, ?bool &$isCustom = false): array

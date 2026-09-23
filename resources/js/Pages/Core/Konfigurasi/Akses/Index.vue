@@ -291,6 +291,98 @@ const saveMatrix = async () => {
   }
 }
 
+// Reset Default Template state & handler
+const isResetModalOpen = ref(false)
+const isResetting = ref(false)
+
+const openResetModal = () => {
+  isResetModalOpen.value = true
+}
+
+const submitResetDefault = async () => {
+  isResetting.value = true
+  try {
+    const res = await axios.post('/konfigurasi/akses/reset-default', {
+      target_tenant_id: targetTenant.value
+    }, {
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    if (res.data && res.data.success) {
+      triggerToast(res.data.message || 'Hak akses berhasil dikembalikan ke Template Standar Global.', 'success')
+      isResetModalOpen.value = false
+      await loadMatrixDataAsync(targetTenant.value)
+    }
+  } catch (err) {
+    console.error('Gagal mereset ke template global:', err)
+    triggerToast(err.response?.data?.message || 'Gagal mereset ke template standar.', 'error')
+  } finally {
+    isResetting.value = false
+  }
+}
+
+// Clone Role Permissions state & handler
+const isCloneModalOpen = ref(false)
+const isCloning = ref(false)
+const cloneSourceRole = ref('')
+const cloneTargetRole = ref('')
+
+const openCloneModal = () => {
+  cloneSourceRole.value = ''
+  cloneTargetRole.value = ''
+  isCloneModalOpen.value = true
+}
+
+const sourceRoleOptions = computed(() => {
+  return localRoles.value.map(r => ({
+    id: r.id,
+    nama: formatRoleName(r.nama_role),
+    subLabel: r.deskripsi || ''
+  }))
+})
+
+const targetRoleOptions = computed(() => {
+  return localRoles.value
+    .filter(r => r.id !== cloneSourceRole.value)
+    .map(r => ({
+      id: r.id,
+      nama: formatRoleName(r.nama_role),
+      subLabel: r.deskripsi || ''
+    }))
+})
+
+const submitCloneRole = async () => {
+  if (!cloneSourceRole.value || !cloneTargetRole.value) {
+    triggerToast('Pilih role asal dan role target terlebih dahulu.', 'error')
+    return
+  }
+  isCloning.value = true
+  try {
+    const res = await axios.post('/konfigurasi/akses/clone-role', {
+      source_role_id: cloneSourceRole.value,
+      target_role_id: cloneTargetRole.value,
+      target_tenant_id: targetTenant.value
+    }, {
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    if (res.data && res.data.success) {
+      triggerToast(res.data.message || 'Hak akses role berhasil disalin.', 'success')
+      isCloneModalOpen.value = false
+      await loadMatrixDataAsync(targetTenant.value)
+    }
+  } catch (err) {
+    console.error('Gagal menyalin hak akses role:', err)
+    triggerToast(err.response?.data?.message || 'Gagal menyalin hak akses role.', 'error')
+  } finally {
+    isCloning.value = false
+  }
+}
+
 const triggerToast = (msg, type = 'success') => {
   toastMessage.value = msg
   toastType.value = type
@@ -335,11 +427,36 @@ const triggerToast = (msg, type = 'success') => {
             <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 text-blue-700 font-mono">RBAC Matrix</span>
           </div>
           <p class="text-xs text-slate-500 mt-1">
-            Atur visibilitas menu sidebar dan hak otorisasi modul untuk masing-masing peran pengguna secara real-time.
+            Atur visibilitas menu sidebar, sub-menu, dan navtab modul untuk masing-masing peran pengguna secara real-time.
           </p>
         </div>
 
-        <div class="flex items-center gap-2.5">
+        <div class="flex flex-wrap items-center gap-2.5">
+          <!-- Reset to Default Template Button -->
+          <button 
+            type="button" 
+            @click="openResetModal" 
+            :disabled="isLoading || isSubmitting"
+            class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl border border-slate-300/80 transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            title="Kembalikan konfigurasi hak akses sekolah ke Template Standar Global"
+          >
+            <i class="bi bi-arrow-counterclockwise text-slate-600"></i>
+            <span>Reset ke Template Standar</span>
+          </button>
+
+          <!-- Clone Role Button -->
+          <button 
+            type="button" 
+            @click="openCloneModal" 
+            :disabled="isLoading || isSubmitting"
+            class="px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-xl transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            title="Salin seluruh hak akses dari satu role ke role lain"
+          >
+            <i class="bi bi-copy text-indigo-600"></i>
+            <span>Salin Hak Akses Role</span>
+          </button>
+
+          <!-- Save Button -->
           <button 
             type="button" 
             @click="saveMatrix" 
@@ -350,6 +467,105 @@ const triggerToast = (msg, type = 'success') => {
             <i v-else class="bi bi-floppy-fill"></i>
             <span>{{ isSubmitting ? 'Menyimpan...' : 'Simpan Hak Akses' }}</span>
           </button>
+        </div>
+      </div>
+
+      <!-- Modal: Reset Default Confirmation -->
+      <div v-if="isResetModalOpen" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
+          <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center text-2xl font-bold">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-slate-800">Kembalikan ke Template Standar?</h3>
+            <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+              Tindakan ini akan menghapus kustomisasi matriks hak akses mandiri sekolah dan mengembalikannya ke template bawaan master global platform.
+            </p>
+          </div>
+          <div class="flex items-center justify-end gap-2.5 pt-2">
+            <button 
+              type="button" 
+              @click="isResetModalOpen = false" 
+              class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition"
+            >
+              Batal
+            </button>
+            <button 
+              type="button" 
+              @click="submitResetDefault" 
+              :disabled="isResetting"
+              class="px-4 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-sm transition flex items-center gap-1.5"
+            >
+              <span v-if="isResetting" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              <span>{{ isResetting ? 'Mereset...' : 'Ya, Reset Sekarang' }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal: Clone Role Permissions -->
+      <div v-if="isCloneModalOpen" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-slate-200 space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl font-bold">
+                <i class="bi bi-copy"></i>
+              </div>
+              <div>
+                <h3 class="text-base font-bold text-slate-800">Salin Hak Akses Antar-Role</h3>
+                <p class="text-xs text-slate-500">Duplikasi seluruh izin menu dan tab dari satu role ke role target</p>
+              </div>
+            </div>
+            <button @click="isCloneModalOpen = false" class="text-slate-400 hover:text-slate-600 text-sm">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+
+          <div class="space-y-3.5 pt-2">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">1. Pilih Role Asal (Sumber Izin):</label>
+              <SearchableSelect 
+                v-model="cloneSourceRole"
+                :options="sourceRoleOptions"
+                placeholder="-- Pilih Role Sumber --"
+                search-placeholder="Cari role asal..."
+              />
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">2. Pilih Role Tujuan (Target Penerima):</label>
+              <SearchableSelect 
+                v-model="cloneTargetRole"
+                :options="targetRoleOptions"
+                placeholder="-- Pilih Role Tujuan --"
+                search-placeholder="Cari role target..."
+              />
+            </div>
+
+            <div class="bg-indigo-50/70 border border-indigo-200/70 rounded-2xl p-3 text-[11px] text-indigo-900 leading-relaxed">
+              <i class="bi bi-info-circle-fill text-indigo-600 me-1"></i>
+              Seluruh izin menu dan navtab yang dimiliki oleh role asal akan disalin dan menggantikan izin role tujuan.
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+            <button 
+              type="button" 
+              @click="isCloneModalOpen = false" 
+              class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition"
+            >
+              Batal
+            </button>
+            <button 
+              type="button" 
+              @click="submitCloneRole" 
+              :disabled="isCloning || !cloneSourceRole || !cloneTargetRole"
+              class="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition flex items-center gap-1.5 disabled:opacity-50"
+            >
+              <span v-if="isCloning" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              <span>{{ isCloning ? 'Menyalin...' : 'Salin Hak Akses' }}</span>
+            </button>
+          </div>
         </div>
       </div>
 

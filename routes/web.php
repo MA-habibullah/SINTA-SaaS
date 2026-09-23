@@ -149,6 +149,8 @@ Route::middleware(['auth', 'tenant.guard'])->group(function () {
     Route::get('/konfigurasi/akses', [KonfigurasiAksesController::class, 'index'])->name('menu.konfigurasi.akses');
     Route::post('/konfigurasi/akses', [KonfigurasiAksesController::class, 'store'])->name('menu.konfigurasi.akses.store');
     Route::get('/konfigurasi/akses/fetch', [KonfigurasiAksesController::class, 'fetch'])->name('menu.konfigurasi.akses.fetch');
+    Route::post('/konfigurasi/akses/reset-default', [KonfigurasiAksesController::class, 'resetDefault'])->name('menu.konfigurasi.akses.reset-default');
+    Route::post('/konfigurasi/akses/clone-role', [KonfigurasiAksesController::class, 'cloneRole'])->name('menu.konfigurasi.akses.clone-role');
     Route::get('/utilitas/sesi-aktif', [ActiveSessionController::class, 'index'])->name('menu.utilitas.sesi-aktif');
     Route::get('/utilitas/sesi-aktif/data', [ActiveSessionController::class, 'fetchData'])->name('menu.utilitas.sesi-aktif.data');
     Route::get('/utilitas/sesi-aktif/audit', [ActiveSessionController::class, 'fetchAudit'])->name('menu.utilitas.sesi-aktif.audit');

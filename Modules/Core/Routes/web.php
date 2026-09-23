@@ -74,6 +74,8 @@ Route::middleware(['auth', 'tenant.guard'])->group(function () {
         Route::get('/', [KonfigurasiAksesController::class, 'index'])->name('index');
         Route::post('/', [KonfigurasiAksesController::class, 'store'])->name('store');
         Route::get('/fetch', [KonfigurasiAksesController::class, 'fetch'])->name('fetch');
+        Route::post('/reset-default', [KonfigurasiAksesController::class, 'resetDefault'])->name('reset-default');
+        Route::post('/clone-role', [KonfigurasiAksesController::class, 'cloneRole'])->name('clone-role');
     });
 
     // Core - Pusat Bantuan & Layanan Tiket

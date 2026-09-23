@@ -215,4 +215,77 @@ class MenuService
 
         return array_values(array_unique($allowedTabs));
     }
+
+    /**
+     * Dapatkan matriks hak aksi granular (CRUD + Export/Print) untuk pengguna aktif
+     */
+    public static function getActionPermissionsForUser($user, ?string $routePath = null): array
+    {
+        if (!$user) {
+            return [
+                'can_view'   => false,
+                'can_create' => false,
+                'can_edit'   => false,
+                'can_delete' => false,
+                'can_export' => false,
+            ];
+        }
+
+        $roleName = strtolower(is_object($user->role) ? ($user->role->nama_role ?? '') : (string)($user->role ?? ''));
+        $isSuperAdmin = method_exists($user, 'isSuperAdmin') ? $user->isSuperAdmin() : ($roleName === 'super_admin');
+
+        // Super Admin & Admin Sekolah: Full Administrative Access
+        if ($isSuperAdmin || $roleName === 'admin_sekolah' || $roleName === 'kepala_sekolah') {
+            return [
+                'can_view'   => true,
+                'can_create' => true,
+                'can_edit'   => true,
+                'can_delete' => true,
+                'can_export' => true,
+            ];
+        }
+
+        // Staf Operasional Khusus (Keuangan, Sarpras, Perpustakaan, Operator, Kesiswaan, Humas)
+        if (in_array($roleName, ['keuangan', 'sarpras', 'perpustakaan', 'operator_sekolah', 'kesiswaan', 'humas', 'kurikulum'])) {
+            return [
+                'can_view'   => true,
+                'can_create' => true,
+                'can_edit'   => true,
+                'can_delete' => true,
+                'can_export' => true,
+            ];
+        }
+
+        // Tenaga Pendidik & BK (Guru, Wali Kelas, BK) -> View, Create, Edit, Export (Delete dibatasi ke admin)
+        if (in_array($roleName, ['guru', 'wali_kelas', 'bk', 'guru_bk'])) {
+            return [
+                'can_view'   => true,
+                'can_create' => true,
+                'can_edit'   => true,
+                'can_delete' => false,
+                'can_export' => true,
+            ];
+        }
+
+        // Siswa & Orang Tua -> Read-Only (kecuali submit formulir diri sendiri)
+        if (in_array($roleName, ['siswa', 'orang_tua', 'alumni'])) {
+            return [
+                'can_view'   => true,
+                'can_create' => false,
+                'can_edit'   => false,
+                'can_delete' => false,
+                'can_export' => false,
+            ];
+        }
+
+        // Default Fallback
+        return [
+            'can_view'   => true,
+            'can_create' => false,
+            'can_edit'   => false,
+            'can_delete' => false,
+            'can_export' => false,
+        ];
+    }
 }
+

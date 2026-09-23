@@ -48,6 +48,7 @@ class HandleInertiaRequests extends Middleware
                     'role'         => $user->role?->nama_role ?? 'user',
                     'roles'        => $user->role ? [$user->role->nama_role] : [],
                     'avatar'       => $user->foto_url ?? null,
+                    'permissions'  => \Modules\Core\Services\MenuService::getActionPermissionsForUser($user, $request->path()),
                 ] : null,
             ],
             'menus' => fn () => $user ? \Modules\Core\Services\MenuService::getMenusForUser($user, $tenantId) : [],
