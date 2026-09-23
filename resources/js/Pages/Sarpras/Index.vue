@@ -52,6 +52,21 @@ const modalType      = ref('') // 'tambah-aset', 'tambah-bhp', 'tambah-peminjama
 const modalData      = ref({})
 const isSaving       = ref(false)
 
+// Granular RBAC NavTabs Definition
+const allTabs = [
+  { key: 'barang-modal', icon: 'bi-box-seam', label: 'Barang Modal' },
+  { key: 'kir', icon: 'bi-building', label: 'Kartu Inventaris Ruangan' },
+  { key: 'bhp', icon: 'bi-bag-check', label: 'Barang Habis Pakai' },
+  { key: 'peminjaman', icon: 'bi-arrow-left-right', label: 'Peminjaman Fasilitas' },
+  { key: 'pemeliharaan', icon: 'bi-tools', label: 'Pemeliharaan & Service' },
+]
+
+const allowedTabs = ref([])
+const availableTabs = computed(() => {
+  if (!allowedTabs.value || allowedTabs.value.length === 0) return allTabs
+  return allTabs.filter(t => allowedTabs.value.includes(t.key))
+})
+
 useMemorySecurity([asetList, bhpList, peminjamanList, pemeliharaanList, inventarisRuangan])
 
 // =============================================
@@ -96,6 +111,14 @@ async function loadTabData(tab = activeTab.value) {
 
     const res = await axios.get('/sarpras', { params })
     if (res.data?.success) {
+      if (res.data.allowed_tabs && Array.isArray(res.data.allowed_tabs)) {
+        allowedTabs.value = res.data.allowed_tabs
+        if (!res.data.allowed_tabs.includes(activeTab.value) && res.data.allowed_tabs.length > 0) {
+          activeTab.value = res.data.allowed_tabs[0]
+          return loadTabData(activeTab.value)
+        }
+      }
+
       const d = res.data.data
       if (tab === 'barang-modal') {
         asetList.value     = d.asetList     || { data: [] }
@@ -123,7 +146,7 @@ async function loadTabData(tab = activeTab.value) {
   }
 }
 
-onMounted(() => { loadTabData('barang-modal') })
+onMounted(() => { loadTabData(activeTab.value) })
 
 // =============================================
 // COMPUTED OPTIONS
@@ -288,13 +311,7 @@ async function deleteAset(id, nama) {
       <!-- Tab Navigation -->
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="flex overflow-x-auto border-b border-slate-200">
-          <button v-for="tab in [
-            { key: 'barang-modal', icon: 'bi-box-seam', label: 'Barang Modal' },
-            { key: 'kir', icon: 'bi-building', label: 'Kartu Inventaris Ruangan' },
-            { key: 'bhp', icon: 'bi-bag-check', label: 'Barang Habis Pakai' },
-            { key: 'peminjaman', icon: 'bi-arrow-left-right', label: 'Peminjaman Fasilitas' },
-            { key: 'pemeliharaan', icon: 'bi-tools', label: 'Pemeliharaan & Service' },
-          ]" :key="tab.key"
+          <button v-for="tab in availableTabs" :key="tab.key"
             type="button"
             class="flex items-center gap-2 px-5 py-3.5 text-xs font-bold whitespace-nowrap border-b-2 transition"
             :class="activeTab === tab.key ? 'border-blue-600 text-blue-700 bg-blue-50/50' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'"

@@ -11,69 +11,126 @@ use Illuminate\Support\Facades\Auth;
 class TenantRouteGuard
 {
     /**
-     * Memeriksa apakah sekolah (tenant_id) dan role user aktif diizinkan mengakses menu/fitur tertentu.
+     * Memeriksa otorisasi 2-Lapis SINTA:
+     * Lapisan 1: Akses Fitur Sekolah / Tenant (core.tenant_menu_access) - Plafon Tertinggi
+     * Lapisan 2: Manajemen User & Hak Akses / RBAC (core.role_menu_access) - Hak Peran Pengguna
      */
     public function handle(Request $request, Closure $next): Response
     {
         $user = Auth::user();
 
-        // 1. Jika belum login atau Super Admin, izinkan akses langsung
-        if (!$user || $user->hasRole('super_admin')) {
+        // 1. Jika belum login atau Super Admin, izinkan akses bypass langsung
+        if (!$user) {
+            return $next($request);
+        }
+
+        $roleName = strtolower(is_object($user->role) ? ($user->role->nama_role ?? '') : (string)$user->role);
+        $isSuperAdmin = $user->tenant_id === '00000000-0000-0000-0000-000000000000' 
+            || $roleName === 'super_admin' 
+            || (method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin())
+            || (method_exists($user, 'hasRole') && $user->hasRole('super_admin'));
+
+        if ($isSuperAdmin) {
             return $next($request);
         }
 
         $tenantId = session('tenant_id') ?? $user->tenant_id;
         if (empty($tenantId)) {
-            abort(403, 'Akses Ditolak: Tenant tidak teridentifikasi.');
+            abort(403, 'Akses Ditolak: Tenant sekolah tidak teridentifikasi.');
         }
 
-        $path = '/' . ltrim($request->path(), '/');
+        $rawPath = '/' . ltrim($request->path(), '/');
 
-        // 2. Bypass URL internal, assets, atau auth endpoints
-        if (str_starts_with($path, '/api/') || in_array($path, ['/login', '/logout', '/up', '/dashboard'])) {
+        // 2. Bypass URL internal, assets, API publik, atau endpoint auth dasar
+        if (str_starts_with($rawPath, '/api/') || in_array($rawPath, ['/login', '/logout', '/up', '/dashboard', '/subscription-expired'])) {
             return $next($request);
         }
 
         try {
-            // 3. Ambil menu ID dari core.menus
-            $menuId = DB::table('core.menus')
-                ->where('url', $path)
+            // 3. Cari menu terdekat di tabel core.menus (mencocokkan exact match atau route prefix)
+            $menu = DB::table('core.menus')
                 ->where('is_active', true)
-                ->value('id');
+                ->where(function ($q) use ($rawPath) {
+                    $q->where('url', $rawPath)
+                      ->orWhereRaw('? LIKE CONCAT(url, "/%")', [$rawPath]);
+                })
+                ->orderByRaw('LENGTH(url) DESC')
+                ->first();
 
-            if (!$menuId) {
+            if (!$menu || empty($menu->url) || $menu->url === '#') {
                 return $next($request);
             }
 
-            // 4. Periksa apakah menu aktif untuk tenant ini di core.tenant_menu_access
-            $tenantAllowed = DB::table('core.tenant_menu_access')
+            $menuId = $menu->id;
+
+            // =========================================================================
+            // LAPISAN 1: AKSES FITUR SEKOLAH (TENANT FEATURE ENTITLEMENT)
+            // =========================================================================
+            // Jika Super Admin mengatur pembatasan fitur untuk sekolah ini di core.tenant_menu_access:
+            $hasCustomTenantConfig = DB::table('core.tenant_menu_access')
                 ->where('tenant_id', $tenantId)
-                ->where('menu_id', $menuId)
                 ->exists();
 
-            if (!$tenantAllowed) {
-                abort(403, '403 Fitur Belum Aktif: Menu ini dinonaktifkan untuk sekolah Anda.');
+            if ($hasCustomTenantConfig) {
+                $tenantAllowed = DB::table('core.tenant_menu_access')
+                    ->where('tenant_id', $tenantId)
+                    ->where('menu_id', $menuId)
+                    ->exists();
+
+                if (!$tenantAllowed) {
+                    abort(403, "403 Fitur Dinonaktifkan: Menu '{$menu->nama_menu}' dinonaktifkan pada paket langganan sekolah Anda.");
+                }
             }
 
-            // 5. Periksa apakah role user ini memiliki izin di core.role_menu_access
-            $roles = $user->getRoleNames()->toArray();
-            if (!empty($roles)) {
-                $roleAllowed = DB::table('core.role_menu_access as rma')
-                    ->join('core.roles as r', 'rma.role_id', '=', 'r.id')
-                    ->where('rma.menu_id', $menuId)
+            // =========================================================================
+            // LAPISAN 2: MANAJEMEN USER & HAK AKSES (ROLE-BASED ACCESS CONTROL / RBAC)
+            // =========================================================================
+            $roleId = $user->role_id;
+            if ($roleId) {
+                $roleAllowed = DB::table('core.role_menu_access')
+                    ->where('role_id', $roleId)
+                    ->where('menu_id', $menuId)
                     ->where(function ($q) use ($tenantId) {
-                        $q->where('rma.tenant_id', $tenantId)
-                          ->orWhere('rma.tenant_id', 'e8b1d4c2-9f3a-4e78-b125-6c7d8e9f0a12');
+                        $q->where('tenant_id', $tenantId)
+                          ->orWhere('tenant_id', '00000000-0000-0000-0000-000000000000');
                     })
-                    ->whereIn('r.nama_role', $roles)
                     ->exists();
 
                 if (!$roleAllowed) {
-                    abort(403, '403 Akses Ditolak: Peran akun Anda tidak memiliki izin mengakses fitur ini.');
+                    abort(403, "403 Akses Ditolak: Peran akun Anda ({$roleName}) tidak memiliki izin untuk membuka fitur '{$menu->nama_menu}'.");
+                }
+
+                // =========================================================================
+                // LAPISAN 3: GRANULAR NAVTAB RBAC GUARD
+                // =========================================================================
+                if ($request->filled('tab')) {
+                    $tabKey = $request->query('tab');
+                    $tabMenu = DB::table('core.menus')
+                        ->where('is_active', true)
+                        ->where('url', "{$rawPath}?tab={$tabKey}")
+                        ->first();
+
+                    if ($tabMenu) {
+                        $tabAllowed = DB::table('core.role_menu_access')
+                            ->where('role_id', $roleId)
+                            ->where('menu_id', $tabMenu->id)
+                            ->where(function ($q) use ($tenantId) {
+                                $q->where('tenant_id', $tenantId)
+                                  ->orWhere('tenant_id', '00000000-0000-0000-0000-000000000000');
+                            })
+                            ->exists();
+
+                        if (!$tabAllowed) {
+                            abort(403, "403 Akses Ditolak: Peran akun Anda ({$roleName}) tidak memiliki izin untuk membuka sub-tab '{$tabMenu->nama_menu}'.");
+                        }
+                    }
                 }
             }
 
         } catch (\Throwable $e) {
+            if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpException) {
+                throw $e;
+            }
             report($e);
         }
 

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch, onUnmounted } from 'vue'
 import AppLayout from '@/Layouts/AppLayout.vue'
+import SearchableSelect from '@/Components/SearchableSelect.vue'
 import { router, useForm, usePage } from '@inertiajs/vue3'
 import axios from 'axios'
 
@@ -126,6 +127,25 @@ const useERapor = ref(Boolean(props.filters?.use_erapor))
 const isRecalculating = ref(false)
 const perPage = ref(15)
 const currentPage = ref(1)
+
+const tenantOptions = computed(() => {
+  return [
+    { id: '', nama: '-- Semua Sekolah (Global) --' },
+    ...(props.tenants || []).map(t => ({
+      id: t.id,
+      nama: t.nama_sekolah,
+      subLabel: t.npsn ? `NPSN: ${t.npsn}` : ''
+    }))
+  ]
+})
+
+const tahunAjaranOptions = computed(() => {
+  return (props.tahunAjaranList || []).map(ta => ({
+    id: ta.nama_tahun_ajaran,
+    nama: `T.A. ${ta.nama_tahun_ajaran}`,
+    subLabel: ta.is_active ? '★ (Aktif Sekarang)' : '(Arsip Riwayat)'
+  }))
+})
 
 // Mapel State & Filter Berjenjang (Langkah 1)
 const filterTingkatMapel = ref(props.filters?.tingkat_mapel || '')
@@ -1377,18 +1397,14 @@ const toggleLockStep = (stepNumber, currentLockState) => {
           </span>
 
           <!-- Dropdown Filter Sekolah -->
-          <div class="my-1 md:my-0">
-            <select
+          <div class="my-1 md:my-0 min-w-[260px]">
+            <SearchableSelect
               v-model="selectedTenant"
+              :options="tenantOptions"
+              placeholder="-- Semua Sekolah (Global) --"
+              search-placeholder="Cari nama sekolah..."
               @change="applyTenantFilter"
-              id="pdss-tenant-selector"
-              class="h-9 px-3 bg-white border border-blue-200 rounded-xl text-xs font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 min-w-[240px] cursor-pointer"
-            >
-              <option value="">-- Semua Sekolah (Global) --</option>
-              <option v-for="t in filteredTenants" :key="t.id" :value="t.id">
-                {{ t.nama_sekolah }} {{ t.npsn ? `(${t.npsn})` : '' }}
-              </option>
-            </select>
+            />
           </div>
         </div>
 
@@ -1416,12 +1432,14 @@ const toggleLockStep = (stepNumber, currentLockState) => {
               </span>
               <div>
                 <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider">Tahun Ajaran SNBP / Riwayat Kelas</label>
-                <div class="flex items-center gap-2 mt-0.5">
-                  <select v-model="filterTahunAjaran" @change="applyFilters" class="h-9 px-3.5 pr-8 rounded-xl border border-slate-300/80 bg-slate-50 text-xs font-black text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition cursor-pointer">
-                    <option v-for="ta in tahunAjaranList" :key="ta.id" :value="ta.nama_tahun_ajaran">
-                      T.A. {{ ta.nama_tahun_ajaran }} {{ ta.is_active ? '★ (Aktif Sekarang)' : '(Arsip Riwayat)' }}
-                    </option>
-                  </select>
+                <div class="flex items-center gap-2 mt-0.5 min-w-[200px]">
+                  <SearchableSelect
+                    v-model="filterTahunAjaran"
+                    :options="tahunAjaranOptions"
+                    placeholder="Pilih Tahun Ajaran"
+                    search-placeholder="Cari tahun ajaran..."
+                    @change="applyFilters"
+                  />
                 </div>
               </div>
             </div>

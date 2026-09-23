@@ -46,7 +46,7 @@
     <!-- Navigation Tabs -->
     <div class="flex border-b border-slate-200 mb-6 gap-2 sm:gap-6 overflow-x-auto">
       <button
-        v-for="t in tabs"
+        v-for="t in availableTabs"
         :key="t.id"
         @click="switchTab(t.id)"
         class="pb-3 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition cursor-pointer"
@@ -777,12 +777,18 @@ const filters = ref({
 
 useMemorySecurity([tabData, filters]);
 
-const tabs = [
+const allTabs = [
   { id: 'mitra', name: 'Mitra Industri (DUDI)', icon: 'bi-building' },
   { id: 'pkl', name: 'Penempatan PKL', icon: 'bi-person-workspace' },
   { id: 'jurnal', name: 'Jurnal Harian PKL', icon: 'bi-journal-check' },
   { id: 'ukk', name: 'Uji Kompetensi Keahlian (UKK)', icon: 'bi-patch-check' },
 ];
+
+const allowedTabs = ref([]);
+const availableTabs = computed(() => {
+  if (!allowedTabs.value || allowedTabs.value.length === 0) return allTabs;
+  return allTabs.filter(t => allowedTabs.value.includes(t.id));
+});
 
 const siswaDropdownOptions = computed(() => {
   const list = tabData.value.siswaList || [];
@@ -894,6 +900,13 @@ const fetchTabData = async (page = 1) => {
       },
     });
     if (res.data?.success) {
+      if (res.data.allowed_tabs && Array.isArray(res.data.allowed_tabs)) {
+        allowedTabs.value = res.data.allowed_tabs;
+        if (!res.data.allowed_tabs.includes(activeTab.value) && res.data.allowed_tabs.length > 0) {
+          activeTab.value = res.data.allowed_tabs[0];
+          return fetchTabData();
+        }
+      }
       tabData.value = res.data.data;
     }
   } catch (err) {

@@ -225,14 +225,33 @@ const isUrlActive = (url) => {
   const current = page.url ? page.url.split('?')[0] : '';
   const target = url.split('?')[0];
 
-  if (target.includes('/dashboard') || current.includes('/dashboard')) {
-    return current === target || 
-           (current === '/dashboard' && target.endsWith('/dashboard')) ||
-           (target === '/dashboard' && current.endsWith('/dashboard'));
+  // Exact Match
+  if (current === target) return true;
+
+  // Canonical Role Dashboard Matching saat mengakses generic '/dashboard'
+  if (current === '/dashboard') {
+    const role = (user.value?.role || '').toLowerCase();
+    if (role === 'super_admin' || role === 'superadmin') {
+      return target === '/super-admin/dashboard';
+    } else if (['admin_sekolah', 'admin', 'kepala_sekolah', 'tu', 'operator_sekolah', 'staf_tu'].includes(role)) {
+      return target === '/admin/dashboard';
+    } else if (['guru', 'wali_kelas', 'pendidik'].includes(role)) {
+      return target === '/guru/dashboard';
+    } else if (['siswa', 'orang_tua'].includes(role)) {
+      return target === '/siswa/dashboard';
+    } else if (['keuangan', 'staf_keuangan', 'bendahara'].includes(role)) {
+      return target === '/keuangan/dashboard';
+    }
+    return target === '/dashboard';
   }
 
-  if (current === target) return true;
-  return current.startsWith(target + '/');
+  // Nested Route Prefix Matching (contoh: /buku-induk/123/edit mencocokkan /buku-induk)
+  // Kecuali jika target adalah route dashboard spesifik agar tidak memicu multiple activation
+  if (target !== '/dashboard' && !target.endsWith('/dashboard')) {
+    return current.startsWith(target + '/');
+  }
+
+  return false;
 };
 
 const isParentActive = (menu) => {

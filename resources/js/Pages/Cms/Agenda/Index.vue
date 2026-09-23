@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import AppLayout from '@/Layouts/AppLayout.vue'
+import SearchableSelect from '@/Components/SearchableSelect.vue'
 import { router, useForm } from '@inertiajs/vue3'
 
 // ─────────────────────────────────────────────
@@ -42,6 +43,15 @@ const status = ref(props.filters.status !== undefined ? String(props.filters.sta
 const tenantId = ref(props.filters.tenant_id || '')
 const perPage = ref(props.filters.per_page || 12)
 const viewMode = ref('table') // 'table' | 'timeline'
+
+const tenantOptions = computed(() => [
+    { id: '', nama: '-- Semua Sekolah (Global) --' },
+    ...(props.tenants || []).map(t => ({
+        id: t.id,
+        nama: t.nama_sekolah,
+        subLabel: t.npsn ? `NPSN: ${t.npsn}` : ''
+    }))
+])
 
 let searchTimeout = null
 function handleSearch() {
@@ -390,15 +400,14 @@ const getSelectedTenantName = () => {
                     </span>
 
                     <!-- Dropdown Filter Sekolah (Khusus Super Admin) -->
-                    <div class="my-1 md:my-0">
-                        <select
+                    <div class="my-1 md:my-0 min-w-[260px]">
+                        <SearchableSelect
                             v-model="tenantId"
+                            :options="tenantOptions"
+                            placeholder="-- Semua Sekolah (Global) --"
+                            search-placeholder="Cari nama sekolah..."
                             @change="applyFilters"
-                            class="h-9 px-3 bg-white border border-blue-200 rounded-xl text-xs font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 min-w-[240px]"
-                        >
-                            <option value="">-- Semua Sekolah (Global) --</option>
-                            <option v-for="t in tenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
-                        </select>
+                        />
                     </div>
                 </div>
 

@@ -57,17 +57,14 @@
           </span>
 
           <!-- Dropdown Filter Sekolah (Khusus Super Admin) -->
-          <div class="my-1 md:my-0">
-            <select
+          <div class="my-1 md:my-0 min-w-[260px]">
+            <SearchableSelect
               v-model="selectedTenant"
+              :options="tenantOptions"
+              placeholder="-- Semua Sekolah (Global) --"
+              search-placeholder="Cari nama sekolah..."
               @change="applyTenantFilter"
-              class="h-9 px-3 bg-white border border-blue-200 rounded-xl text-xs font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 min-w-[240px] cursor-pointer"
-            >
-              <option value="">-- Semua Sekolah (Global) --</option>
-              <option v-for="t in tenants" :key="t.id" :value="t.id">
-                {{ t.nama_sekolah }} {{ t.npsn ? `(${t.npsn})` : '' }}
-              </option>
-            </select>
+            />
           </div>
         </div>
 
@@ -1025,33 +1022,25 @@
               <div v-if="!modalKuliah.form.is_kampus_swasta" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label class="block font-bold text-slate-700 mb-1">Perguruan Tinggi (PDSS) <span class="text-rose-500">*</span></label>
-                  <select
+                  <SearchableSelect
                     v-model="modalKuliah.form.kampus_id"
+                    :options="masterKampusOptions"
+                    placeholder="-- Pilih Perguruan Tinggi --"
+                    search-placeholder="Ketik nama kampus / universitas..."
                     @change="onKampusChange"
-                    class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  >
-                    <option value="">-- Pilih Perguruan Tinggi --</option>
-                    <option v-for="k in masterKampus" :key="k.id" :value="k.id">
-                      {{ k.nama_kampus }} ({{ k.jenis_kampus || 'PTN' }})
-                    </option>
-                  </select>
+                  />
                 </div>
 
                 <div>
                   <label class="block font-bold text-slate-700 mb-1">Program Studi <span class="text-rose-500">*</span></label>
-                  <select
+                  <SearchableSelect
                     v-model="modalKuliah.form.prodi_id"
-                    @change="onProdiChange"
-                    class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    :options="listProdiOptions"
+                    :placeholder="loadingProdi ? 'Memuat prodi...' : '-- Pilih Program Studi --'"
+                    search-placeholder="Ketik nama program studi..."
                     :disabled="loadingProdi || listProdi.length === 0"
-                    required
-                  >
-                    <option value="">{{ loadingProdi ? 'Memuat prodi...' : '-- Pilih Program Studi --' }}</option>
-                    <option v-for="p in listProdi" :key="p.id" :value="p.id">
-                      {{ p.program_studi }} ({{ p.jenjang || 'S1' }})
-                    </option>
-                  </select>
+                    @change="onProdiChange"
+                  />
                 </div>
               </div>
 
@@ -1083,26 +1072,22 @@
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                 <div>
                   <label class="block font-bold text-slate-700 mb-1">Jalur Masuk / Seleksi</label>
-                  <select
+                  <SearchableSelect
                     v-model="modalKuliah.form.jalur_masuk_id"
-                    class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">-- Pilih Jalur Masuk --</option>
-                    <option v-for="j in masterJalur" :key="j.id" :value="j.id">{{ j.nama_jalur }}</option>
-                  </select>
+                    :options="masterJalurOptions"
+                    placeholder="-- Pilih Jalur Masuk --"
+                    search-placeholder="Cari jalur..."
+                  />
                 </div>
 
                 <div>
                   <label class="block font-bold text-slate-700 mb-1">Jenjang Pendidikan</label>
-                  <select
+                  <SearchableSelect
                     v-model="modalKuliah.form.jenjang"
-                    class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="S1">S1 (Sarjana)</option>
-                    <option value="D4">D4 (Sarjana Terapan)</option>
-                    <option value="D3">D3 (Diploma Tiga)</option>
-                    <option value="S2">S2 (Magister)</option>
-                  </select>
+                    :options="jenjangKuliahOptions"
+                    placeholder="Pilih Jenjang"
+                    search-placeholder="Cari jenjang..."
+                  />
                 </div>
 
                 <div>
@@ -1153,15 +1138,12 @@
 
                 <div>
                   <label class="block font-bold text-slate-700 mb-1">Status Kuliah <span class="text-rose-500">*</span></label>
-                  <select
+                  <SearchableSelect
                     v-model="modalKuliah.form.status_kuliah"
-                    class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  >
-                    <option value="Aktif">Aktif</option>
-                    <option value="Lulus">Lulus</option>
-                    <option value="Drop">Drop Out</option>
-                  </select>
+                    :options="statusKuliahOptions"
+                    placeholder="Pilih Status Kuliah"
+                    search-placeholder="Cari status..."
+                  />
                 </div>
               </div>
             </div>
@@ -1262,13 +1244,12 @@
               <!-- Pilihan Sekolah jika Super Admin & Mode Manual -->
               <div v-if="isSuperAdmin && !modalPekerjaan.isEdit && modalPekerjaan.form.is_manual">
                 <label class="block font-bold text-slate-700 mb-1">Sekolah / Tenant Pemilik Data</label>
-                <select
+                <SearchableSelect
                   v-model="modalPekerjaan.form.tenant_id"
-                  class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="">-- Gunakan Sekolah Terpilih Saat Ini --</option>
-                  <option v-for="t in tenants" :key="t.id" :value="t.id">{{ t.nama_sekolah }}</option>
-                </select>
+                  :options="tenantOptions"
+                  placeholder="-- Gunakan Sekolah Terpilih Saat Ini --"
+                  search-placeholder="Cari nama sekolah..."
+                />
               </div>
 
               <!-- Mode Edit Display -->
@@ -1401,30 +1382,22 @@
 
                 <div>
                   <label class="block font-bold text-slate-700 mb-1">Jenis Instansi</label>
-                  <select
+                  <SearchableSelect
                     v-model="modalPekerjaan.form.jenis_instansi"
-                    class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="Swasta">Perusahaan Swasta / Multinasional</option>
-                    <option value="BUMN">BUMN / BUMD</option>
-                    <option value="Pemerintah">Pemerintah / Instansi Negeri</option>
-                    <option value="Wirausaha">Wirausaha / Bisnis Mandiri</option>
-                    <option value="Lainnya">Lainnya</option>
-                  </select>
+                    :options="jenisInstansiOptions"
+                    placeholder="Pilih Jenis Instansi"
+                    search-placeholder="Cari jenis instansi..."
+                  />
                 </div>
 
                 <div>
                   <label class="block font-bold text-slate-700 mb-1">Rentang Pendapatan Bulanan</label>
-                  <select
+                  <SearchableSelect
                     v-model="modalPekerjaan.form.pendapatan_bulanan"
-                    class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="">-- Pilih Rentang Pendapatan --</option>
-                    <option value="< 3 Juta">< Rp 3.000.000</option>
-                    <option value="3 - 5 Juta">Rp 3.000.000 - Rp 5.000.000</option>
-                    <option value="5 - 10 Juta">Rp 5.000.000 - Rp 10.000.000</option>
-                    <option value="> 10 Juta">> Rp 10.000.000</option>
-                  </select>
+                    :options="rentangPendapatanOptions"
+                    placeholder="-- Pilih Rentang Pendapatan --"
+                    search-placeholder="Cari rentang pendapatan..."
+                  />
                 </div>
               </div>
             </div>
@@ -1465,16 +1438,12 @@
 
                 <div>
                   <label class="block font-bold text-slate-700 mb-1">Status Karir <span class="text-rose-500">*</span></label>
-                  <select
+                  <SearchableSelect
                     v-model="modalPekerjaan.form.status_kerja"
-                    class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    required
-                  >
-                    <option value="Tetap">Karyawan Tetap</option>
-                    <option value="Kontrak">Karyawan Kontrak</option>
-                    <option value="Magang">Magang / Internship</option>
-                    <option value="Wirausaha">Wirausaha / Freelance</option>
-                  </select>
+                    :options="statusKerjaOptions"
+                    placeholder="Pilih Status Karir"
+                    search-placeholder="Cari status kerja..."
+                  />
                 </div>
               </div>
             </div>
@@ -1550,10 +1519,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { router } from '@inertiajs/vue3';
 import axios from 'axios';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import SearchableSelect from '@/Components/SearchableSelect.vue';
 
 const props = defineProps({
   riwayatKuliah: Object,
@@ -1573,6 +1543,76 @@ const currentYear = new Date().getFullYear();
 const activeTab = ref(props.filters?.tab || 'kuliah');
 const isRefreshing = ref(false);
 const selectedTenant = ref(props.selectedTenant || props.filters?.tenant_id || '');
+
+// Standarisasi Opsi Dropdown (SearchableSelect)
+const tenantOptions = computed(() => {
+  return [
+    { id: '', nama: '-- Semua Sekolah (Global) --' },
+    ...(props.tenants || []).map(t => ({
+      id: t.id,
+      nama: t.nama_sekolah,
+      subLabel: t.npsn ? `NPSN: ${t.npsn}` : ''
+    }))
+  ];
+});
+
+const masterKampusOptions = computed(() => {
+  return (props.masterKampus || []).map(k => ({
+    id: k.id,
+    nama: k.nama_kampus,
+    subLabel: k.jenis_kampus || 'PTN'
+  }));
+});
+
+const listProdiOptions = computed(() => {
+  return (listProdi.value || []).map(p => ({
+    id: p.id,
+    nama: p.program_studi,
+    subLabel: p.jenjang || 'S1'
+  }));
+});
+
+const masterJalurOptions = computed(() => {
+  return (props.masterJalur || []).map(j => ({
+    id: j.id,
+    nama: j.nama_jalur
+  }));
+});
+
+const jenjangKuliahOptions = [
+  { id: 'S1', nama: 'S1 (Sarjana)' },
+  { id: 'D4', nama: 'D4 (Sarjana Terapan)' },
+  { id: 'D3', nama: 'D3 (Diploma Tiga)' },
+  { id: 'S2', nama: 'S2 (Magister)' },
+];
+
+const statusKuliahOptions = [
+  { id: 'Aktif', nama: 'Aktif' },
+  { id: 'Lulus', nama: 'Lulus' },
+  { id: 'Drop', nama: 'Drop Out' },
+];
+
+const jenisInstansiOptions = [
+  { id: 'Swasta', nama: 'Perusahaan Swasta / Multinasional' },
+  { id: 'BUMN', nama: 'BUMN / BUMD' },
+  { id: 'Pemerintah', nama: 'Pemerintah / Instansi Negeri' },
+  { id: 'Wirausaha', nama: 'Wirausaha / Bisnis Mandiri' },
+  { id: 'Lainnya', nama: 'Lainnya' },
+];
+
+const rentangPendapatanOptions = [
+  { id: '< 3 Juta', nama: '< Rp 3.000.000' },
+  { id: '3 - 5 Juta', nama: 'Rp 3.000.000 - Rp 5.000.000' },
+  { id: '5 - 10 Juta', nama: 'Rp 5.000.000 - Rp 10.000.000' },
+  { id: '> 10 Juta', nama: '> Rp 10.000.000' },
+];
+
+const statusKerjaOptions = [
+  { id: 'Tetap', nama: 'Karyawan Tetap' },
+  { id: 'Kontrak', nama: 'Karyawan Kontrak' },
+  { id: 'Magang', nama: 'Magang / Internship' },
+  { id: 'Wirausaha', nama: 'Wirausaha / Freelance' },
+];
 
 // Filter states
 const searchKuliah = ref(props.filters?.tab === 'kuliah' ? props.filters?.search || '' : '');

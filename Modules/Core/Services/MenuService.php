@@ -20,8 +20,12 @@ class MenuService
         $isSuperAdmin = method_exists($user, 'isSuperAdmin') ? $user->isSuperAdmin() : ($roleName === 'super_admin');
         $effectiveTenantId = $tenantId ?? $user->tenant_id;
 
-        // Query dasar seluruh menu aktif diurutkan berdasarkan urutan database
-        $query = Menu::where('is_active', true)->orderBy('urutan', 'asc')->orderBy('nama_menu', 'asc');
+        // Query dasar seluruh menu aktif diurutkan berdasarkan urutan database (filter keluar tab internal dari sidebar)
+        $query = Menu::where('is_active', true)
+            ->where('id', 'NOT LIKE', '22%')
+            ->where('url', 'NOT LIKE', '%?tab=%')
+            ->orderBy('urutan', 'asc')
+            ->orderBy('nama_menu', 'asc');
 
         // 1. Context Super Admin (God Mode: Mengakses 100% Seluruh Menu Platform & Operasional Sekolah)
         if ($isSuperAdmin) {
@@ -110,11 +114,10 @@ class MenuService
                 if ($url === '/admin/dashboard') {
                     if (in_array($roleName, ['guru', 'wali_kelas', 'pendidik'])) {
                         $url = '/guru/dashboard';
-                    } elseif ($roleName === 'super_admin') {
-                        $url = '/super-admin/dashboard';
                     } elseif (in_array($roleName, ['siswa', 'orang_tua'])) {
                         $url = '/siswa/dashboard';
                     }
+                    // Super Admin tetap mempertahankan '/admin/dashboard' untuk inspeksi dashboard operasional sekolah
                 }
 
                 $node = [
@@ -136,5 +139,80 @@ class MenuService
         });
 
         return $branch;
+    }
+
+    /**
+     * Dapatkan daftar key tab yang diizinkan untuk rute/halaman tertentu berdasarkan role & tenant pengguna aktif
+     */
+    public static function getAllowedTabsForRoute($user, string $routePath, ?string $tenantId = null): array
+    {
+        if (!$user) {
+            return [];
+        }
+
+        $roleName = strtolower(is_object($user->role) ? ($user->role->nama_role ?? '') : (string)($user->role ?? ''));
+        $isSuperAdmin = method_exists($user, 'isSuperAdmin') ? $user->isSuperAdmin() : ($roleName === 'super_admin');
+
+        // Clean route path (e.g. /sarpras, /kepegawaian, /smk)
+        $cleanPath = '/' . ltrim(parse_url($routePath, PHP_URL_PATH), '/');
+
+        // Find tab menu records for this route
+        $tabMenus = DB::table('core.menus')
+            ->where('is_active', true)
+            ->where(function ($q) use ($cleanPath) {
+                $q->where('url', 'LIKE', "{$cleanPath}?tab=%")
+                  ->orWhere('id', 'LIKE', '22%');
+            })
+            ->get();
+
+        // Filter tabs specifically matching $cleanPath in URL
+        $matchingTabs = [];
+        foreach ($tabMenus as $tm) {
+            $menuPath = parse_url($tm->url, PHP_URL_PATH);
+            if ($menuPath === $cleanPath) {
+                parse_str(parse_url($tm->url, PHP_URL_QUERY) ?? '', $queryParams);
+                $tabKey = $queryParams['tab'] ?? null;
+                if ($tabKey) {
+                    $matchingTabs[$tm->id] = $tabKey;
+                }
+            }
+        }
+
+        if (empty($matchingTabs)) {
+            // No tab restrictions defined in DB for this route -> allow all
+            return [];
+        }
+
+        if ($isSuperAdmin) {
+            return array_values($matchingTabs);
+        }
+
+        $effectiveTenantId = $tenantId ?? session('tenant_id') ?? $user->tenant_id ?? '00000000-0000-0000-0000-000000000000';
+
+        $roleAccessQuery = DB::table('core.role_menu_access')
+            ->where('role_id', $user->role_id)
+            ->whereIn('menu_id', array_keys($matchingTabs));
+
+        if ($effectiveTenantId && $effectiveTenantId !== '00000000-0000-0000-0000-000000000000') {
+            $hasTenantAccess = (clone $roleAccessQuery)->where('tenant_id', $effectiveTenantId)->exists();
+            if ($hasTenantAccess) {
+                $roleAccessQuery->where('tenant_id', $effectiveTenantId);
+            } else {
+                $roleAccessQuery->where('tenant_id', '00000000-0000-0000-0000-000000000000');
+            }
+        } else {
+            $roleAccessQuery->where('tenant_id', '00000000-0000-0000-0000-000000000000');
+        }
+
+        $allowedMenuIds = $roleAccessQuery->pluck('menu_id')->toArray();
+
+        $allowedTabs = [];
+        foreach ($allowedMenuIds as $mId) {
+            if (isset($matchingTabs[$mId])) {
+                $allowedTabs[] = $matchingTabs[$mId];
+            }
+        }
+
+        return array_values(array_unique($allowedTabs));
     }
 }

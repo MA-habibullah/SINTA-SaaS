@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import SearchableSelect from '@/Components/SearchableSelect.vue';
 import { useMemorySecurity } from '@/Utils/cryptoSecurity.js';
 
 const props = defineProps({
@@ -26,6 +27,38 @@ const state = ref({
 });
 
 useMemorySecurity([state]);
+
+// Standarisasi Opsi Dropdown
+const sifatSuratOptions = [
+  { id: 'Biasa', nama: 'Biasa' },
+  { id: 'Penting', nama: 'Penting' },
+  { id: 'Segera', nama: 'Segera' },
+  { id: 'Rahasia', nama: 'Rahasia' },
+];
+
+const kategoriSuratOptions = [
+  { id: 'Dinas', nama: 'Dinas' },
+  { id: 'Undangan', nama: 'Undangan' },
+  { id: 'Pemberitahuan', nama: 'Pemberitahuan' },
+  { id: 'Lainnya', nama: 'Lainnya' },
+];
+
+const statusSuratOptions = [
+  { id: 'Draft', nama: 'Draft' },
+  { id: 'Menunggu Persetujuan', nama: 'Menunggu Persetujuan' },
+  { id: 'Disetujui', nama: 'Disetujui' },
+  { id: 'Diterbitkan', nama: 'Diterbitkan' },
+  { id: 'Terkirim', nama: 'Terkirim' },
+];
+
+const diteruskanKepadaOptions = [
+  { id: 'Waka Kurikulum', nama: 'Waka Kurikulum' },
+  { id: 'Waka Kesiswaan', nama: 'Waka Kesiswaan' },
+  { id: 'Waka Sarpras', nama: 'Waka Sarpras' },
+  { id: 'Kepala Tata Usaha', nama: 'Kepala Tata Usaha' },
+  { id: 'Bendahara Sekolah', nama: 'Bendahara Sekolah' },
+  { id: 'Guru BK', nama: 'Guru BK' },
+];
 
 // Form Surat Masuk
 const formSuratMasuk = useForm({
@@ -392,7 +425,23 @@ const formatDate = (dateStr) => {
                 </td>
               </tr>
               <tr v-if="!suratMasukList?.data?.length">
-                <td colspan="5" class="px-5 py-8 text-center text-slate-400">Belum ada agenda surat masuk yang tercatat.</td>
+                <td colspan="5" class="px-5 py-12 text-center">
+                  <div class="max-w-sm mx-auto flex flex-col items-center justify-center space-y-3">
+                    <div class="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-2xl shadow-inner">
+                      <i class="bi bi-inbox"></i>
+                    </div>
+                    <div class="text-sm font-bold text-slate-700">Belum Ada Agenda Surat Masuk</div>
+                    <p class="text-xs text-slate-400">Seluruh surat resmi yang diterima dari instansi, dinas, atau pihak luar akan tercatat di buku agenda digital ini.</p>
+                    <button
+                      type="button"
+                      @click="openCreateSuratMasuk"
+                      class="mt-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md transition inline-flex items-center gap-1.5"
+                    >
+                      <i class="bi bi-plus-lg"></i>
+                      <span>Catat Surat Masuk Pertama</span>
+                    </button>
+                  </div>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -459,7 +508,23 @@ const formatDate = (dateStr) => {
                 </td>
               </tr>
               <tr v-if="!suratKeluarList?.data?.length">
-                <td colspan="6" class="px-5 py-8 text-center text-slate-400">Belum ada arsip surat keluar yang diterbitkan.</td>
+                <td colspan="6" class="px-5 py-12 text-center">
+                  <div class="max-w-sm mx-auto flex flex-col items-center justify-center space-y-3">
+                    <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl shadow-inner">
+                      <i class="bi bi-send-check"></i>
+                    </div>
+                    <div class="text-sm font-bold text-slate-700">Belum Ada Arsip Surat Keluar</div>
+                    <p class="text-xs text-slate-400">Penerbitan surat keluar dinas, surat tugas guru, dan undangan resmi sekolah akan terarsip otomatis di sini.</p>
+                    <button
+                      type="button"
+                      @click="openCreateSuratKeluar"
+                      class="mt-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition inline-flex items-center gap-1.5"
+                    >
+                      <i class="bi bi-plus-lg"></i>
+                      <span>Terbitkan Surat Keluar Baru</span>
+                    </button>
+                  </div>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -513,21 +578,21 @@ const formatDate = (dateStr) => {
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="font-bold text-slate-700 block mb-1">Sifat Surat</label>
-              <select v-model="formSuratMasuk.sifat_surat" class="w-full p-2.5 rounded-xl border border-slate-200">
-                <option value="Biasa">Biasa</option>
-                <option value="Penting">Penting</option>
-                <option value="Segera">Segera</option>
-                <option value="Rahasia">Rahasia</option>
-              </select>
+              <SearchableSelect
+                v-model="formSuratMasuk.sifat_surat"
+                :options="sifatSuratOptions"
+                placeholder="Pilih Sifat Surat"
+                search-placeholder="Cari sifat surat..."
+              />
             </div>
             <div>
               <label class="font-bold text-slate-700 block mb-1">Kategori</label>
-              <select v-model="formSuratMasuk.kategori_surat" class="w-full p-2.5 rounded-xl border border-slate-200">
-                <option value="Dinas">Dinas</option>
-                <option value="Undangan">Undangan</option>
-                <option value="Pemberitahuan">Pemberitahuan</option>
-                <option value="Lainnya">Lainnya</option>
-              </select>
+              <SearchableSelect
+                v-model="formSuratMasuk.kategori_surat"
+                :options="kategoriSuratOptions"
+                placeholder="Pilih Kategori"
+                search-placeholder="Cari kategori surat..."
+              />
             </div>
           </div>
 
@@ -591,13 +656,12 @@ const formatDate = (dateStr) => {
 
           <div>
             <label class="font-bold text-slate-700 block mb-1">Status Penerbitan</label>
-            <select v-model="formSuratKeluar.status_surat" class="w-full p-2.5 rounded-xl border border-slate-200">
-              <option value="Draft">Draft</option>
-              <option value="Menunggu Persetujuan">Menunggu Persetujuan</option>
-              <option value="Disetujui">Disetujui</option>
-              <option value="Diterbitkan">Diterbitkan</option>
-              <option value="Terkirim">Terkirim</option>
-            </select>
+            <SearchableSelect
+              v-model="formSuratKeluar.status_surat"
+              :options="statusSuratOptions"
+              placeholder="Pilih Status Surat"
+              search-placeholder="Cari status..."
+            />
           </div>
 
           <div>
@@ -646,14 +710,12 @@ const formatDate = (dateStr) => {
             </div>
             <div>
               <label class="font-bold text-slate-700 block mb-1">Diteruskan Kepada</label>
-              <select v-model="formDisposisi.diteruskan_kepada" class="w-full p-2.5 rounded-xl border border-slate-200">
-                <option value="Waka Kurikulum">Waka Kurikulum</option>
-                <option value="Waka Kesiswaan">Waka Kesiswaan</option>
-                <option value="Waka Sarpras">Waka Sarpras</option>
-                <option value="Kepala Tata Usaha">Kepala Tata Usaha</option>
-                <option value="Bendahara Sekolah">Bendahara Sekolah</option>
-                <option value="Guru BK">Guru BK</option>
-              </select>
+              <SearchableSelect
+                v-model="formDisposisi.diteruskan_kepada"
+                :options="diteruskanKepadaOptions"
+                placeholder="Pilih Pejabat / Staf"
+                search-placeholder="Cari pejabat tujuan..."
+              />
             </div>
           </div>
 

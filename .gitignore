@@ -1,7 +1,24 @@
 # Mengabaikan file konfigurasi database lokal & env
 .env
+.env.*
+.env.backup
+.env.production
 .env.local
 .deploy_pass
+
+# Mengabaikan kunci kriptografis, sertifikat SSL & token sensitif
+*.key
+*.pem
+*.crt
+*.csr
+*.pfx
+*.p12
+
+# Mengabaikan database dump & backup SQL
+*.sql
+*.sqlite
+*.sqlite3
+database_export.sql
 
 # Mengabaikan konfigurasi database (berisi credential sensitif)
 /app/Config/Database.php
@@ -18,7 +35,7 @@
 /public/storage
 /public/storage/*
 /public/hot
-/public/storage
+/writable/
 
 # PENGECUALIAN: Tetap lacak berkas .htaccess untuk keamanan direktori web server
 !/storage/app/public/.htaccess
@@ -35,12 +52,10 @@
 /node_modules/
 /vendor/
 
-
 # Mengabaikan folder scratch & file debugging lokal
 /scratch/
 test_*.php
 rename_script.php
-database_export.sql
 SOP_INSTALLATION.*
 
 # Mengabaikan file sistem operasi

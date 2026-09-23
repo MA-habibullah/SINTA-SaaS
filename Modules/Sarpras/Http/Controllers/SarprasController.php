@@ -41,14 +41,23 @@ class SarprasController extends Controller
 
         // === ASYNC: Routing per tab ===
         $tab = $request->query('tab', 'barang-modal');
+        $allowedTabs = \Modules\Core\Services\MenuService::getAllowedTabsForRoute($user, '/sarpras');
 
-        return match($tab) {
+        $response = match($tab) {
             'bhp'          => $this->getBarangHabisPakai($request),
             'kir'          => $this->getKartuInventarisRuangan($request),
             'peminjaman'   => $this->getPeminjaman($request),
             'pemeliharaan' => $this->getPemeliharaan($request),
             default        => $this->getBarangModal($request),
         };
+
+        if ($response instanceof JsonResponse) {
+            $originalData = $response->getData(true);
+            $originalData['allowed_tabs'] = $allowedTabs;
+            return response()->json($originalData, $response->getStatusCode());
+        }
+
+        return $response;
     }
 
     // =============================================

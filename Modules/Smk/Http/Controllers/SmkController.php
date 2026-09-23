@@ -20,6 +20,7 @@ class SmkController extends Controller
     public function index(Request $request): InertiaResponse|JsonResponse
     {
         $tab = $request->input('tab', 'mitra');
+        $allowedTabs = \Modules\Core\Services\MenuService::getAllowedTabsForRoute(auth()->user(), '/smk');
 
         if ($request->wantsJson() || $request->ajax() || $request->has('async')) {
             $data = match ($tab) {
@@ -30,9 +31,10 @@ class SmkController extends Controller
             };
 
             return response()->json([
-                'success' => true,
-                'tab'     => $tab,
-                'data'    => SecurityPayloadService::sanitize($data),
+                'success'      => true,
+                'tab'          => $tab,
+                'allowed_tabs' => $allowedTabs,
+                'data'         => SecurityPayloadService::sanitize($data),
             ]);
         }
 

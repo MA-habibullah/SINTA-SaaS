@@ -21,6 +21,7 @@ class KepegawaianController extends Controller
     public function index(Request $request): InertiaResponse|JsonResponse
     {
         $tab = $request->input('tab', 'gtk');
+        $allowedTabs = \Modules\Core\Services\MenuService::getAllowedTabsForRoute(auth()->user(), '/kepegawaian');
 
         if ($request->wantsJson() || $request->ajax() || $request->has('async')) {
             $data = match ($tab) {
@@ -32,9 +33,10 @@ class KepegawaianController extends Controller
             };
 
             return response()->json([
-                'success' => true,
-                'tab'     => $tab,
-                'data'    => SecurityPayloadService::sanitize($data),
+                'success'      => true,
+                'tab'          => $tab,
+                'allowed_tabs' => $allowedTabs,
+                'data'         => SecurityPayloadService::sanitize($data),
             ]);
         }
 

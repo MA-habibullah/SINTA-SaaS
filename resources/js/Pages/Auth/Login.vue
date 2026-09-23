@@ -49,12 +49,13 @@
         <!-- Pilihan Sekolah / Tenant (Global Platform disembunyikan untuk privasi) -->
         <div>
           <label class="block text-xs font-bold text-slate-700 mb-1">Sekolah / Instansi</label>
-          <select v-model="form.tenant_id" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:outline-none focus:bg-white transition">
-            <option value="">-- Pilih Sekolah / Deteksi Otomatis --</option>
-            <option v-for="t in tenants" :key="t.id" :value="t.id">
-              {{ t.nama_sekolah }} (NPSN: {{ t.npsn }})
-            </option>
-          </select>
+          <SearchableSelect
+            v-model="form.tenant_id"
+            :options="tenantOptions"
+            placeholder="-- Pilih Sekolah / Deteksi Otomatis --"
+            search-placeholder="Ketik nama sekolah atau NPSN..."
+            :allow-clear="true"
+          />
         </div>
 
         <!-- Username / Email -->
@@ -135,9 +136,18 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { Link, useForm } from '@inertiajs/vue3';
+import SearchableSelect from '@/Components/SearchableSelect.vue';
 
-defineProps({
+const props = defineProps({
   tenants: Array,
+});
+
+const tenantOptions = computed(() => {
+  return (props.tenants || []).map(t => ({
+    id: t.id,
+    nama: t.nama_sekolah,
+    subLabel: 'NPSN: ' + (t.npsn || '-'),
+  }));
 });
 
 const showManualTokenField = ref(false);

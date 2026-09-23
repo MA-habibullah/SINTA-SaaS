@@ -85,7 +85,7 @@ class KonfigurasiAksesController extends Controller
             ->orderBy('nama_menu', 'asc')
             ->get();
 
-        // Build parent & child menu tree
+        // Build 3-level hierarchical menu tree (Category -> Page Menu -> NavTab Menu)
         $parents = [];
         $childMap = [];
         foreach ($rawMenus as $m) {
@@ -105,10 +105,13 @@ class KonfigurasiAksesController extends Controller
                 'url'       => $p->url,
                 'icon'      => $p->icon,
                 'urutan'    => $p->urutan,
+                'level'     => 1,
                 'is_child'  => false,
+                'is_tab'    => false,
             ];
             if (isset($childMap[$p->id])) {
                 foreach ($childMap[$p->id] as $c) {
+                    $isTab = str_starts_with($c->id, '22') || str_contains($c->url, '?tab=') || str_starts_with($c->nama_menu, 'Tab:');
                     $orderedMenus[] = [
                         'id'        => $c->id,
                         'parent_id' => $p->id,
@@ -116,8 +119,27 @@ class KonfigurasiAksesController extends Controller
                         'url'       => $c->url,
                         'icon'      => $c->icon,
                         'urutan'    => $c->urutan,
+                        'level'     => 2,
                         'is_child'  => true,
+                        'is_tab'    => $isTab,
                     ];
+                    // Level 3: NavTab menus inside page
+                    if (isset($childMap[$c->id])) {
+                        foreach ($childMap[$c->id] as $t) {
+                            $orderedMenus[] = [
+                                'id'             => $t->id,
+                                'parent_id'      => $c->id,
+                                'root_parent_id' => $p->id,
+                                'nama_menu'      => $t->nama_menu,
+                                'url'            => $t->url,
+                                'icon'           => $t->icon,
+                                'urutan'         => $t->urutan,
+                                'level'          => 3,
+                                'is_child'       => true,
+                                'is_tab'         => true,
+                            ];
+                        }
+                    }
                 }
             }
         }
@@ -221,20 +243,19 @@ class KonfigurasiAksesController extends Controller
                         ];
                     }
 
-                    // Auto-grant parent menu if child is granted
-                    if (isset($menuParents[$menuId])) {
-                        $parentId = $menuParents[$menuId];
-                        if (\Illuminate\Support\Str::isUuid($parentId)) {
-                            $parentKey = "{$targetTenantId}___{$roleId}___{$parentId}";
-                            if (!isset($seen[$parentKey])) {
-                                $seen[$parentKey] = true;
-                                $insertData[] = [
-                                    'tenant_id' => $targetTenantId,
-                                    'role_id'   => $roleId,
-                                    'menu_id'   => $parentId,
-                                ];
-                            }
+                    // Auto-grant all ancestors (Level 2 page and Level 1 category) if child/tab is granted
+                    $currParentId = $menuParents[$menuId] ?? null;
+                    while ($currParentId && \Illuminate\Support\Str::isUuid($currParentId)) {
+                        $parentKey = "{$targetTenantId}___{$roleId}___{$currParentId}";
+                        if (!isset($seen[$parentKey])) {
+                            $seen[$parentKey] = true;
+                            $insertData[] = [
+                                'tenant_id' => $targetTenantId,
+                                'role_id'   => $roleId,
+                                'menu_id'   => $currParentId,
+                            ];
                         }
+                        $currParentId = $menuParents[$currParentId] ?? null;
                     }
                 }
             }

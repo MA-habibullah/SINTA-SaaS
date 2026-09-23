@@ -196,24 +196,29 @@ const handleTenantChange = (newTenantId) => {
   loadMatrixDataAsync(targetTenant.value)
 }
 
-// Checkbox change handler with Parent-Child Cascading logic
+// Checkbox change handler with Multi-Level (3-Tier) Cascading logic
 const handleCheckboxChange = (roleId, menu) => {
   const key = `${roleId}___${menu.id}`
   const isChecked = !!matrix[key]
 
   if (!isChecked) {
-    // If Parent is UNCHECKED -> Auto-uncheck all its children
-    if (!menu.is_child) {
+    // If UNCHECKED -> Auto-uncheck all descendants (children and sub-tabs)
+    const uncheckDescendants = (parentId) => {
       localMenuList.value.forEach(m => {
-        if (m.parent_id === menu.id) {
+        if (m.parent_id === parentId) {
           matrix[`${roleId}___${m.id}`] = false
+          uncheckDescendants(m.id)
         }
       })
     }
+    uncheckDescendants(menu.id)
   } else {
-    // If Child is CHECKED -> Auto-check its parent
-    if (menu.is_child && menu.parent_id) {
-      matrix[`${roleId}___${menu.parent_id}`] = true
+    // If CHECKED -> Auto-check all ancestors (parent page and category)
+    let currParentId = menu.parent_id
+    while (currParentId) {
+      matrix[`${roleId}___${currParentId}`] = true
+      const parentMenu = localMenuList.value.find(m => m.id === currParentId)
+      currParentId = parentMenu ? parentMenu.parent_id : null
     }
   }
 }
@@ -474,39 +479,60 @@ const triggerToast = (msg, type = 'success') => {
                 v-for="(menu, idx) in filteredMenus" 
                 :key="menu.id"
                 class="transition hover:bg-blue-50/40"
-                :class="!menu.is_child ? 'bg-slate-50/80 font-bold text-slate-900 border-t-2 border-slate-200/60' : 'bg-white text-slate-700'"
+                :class="[
+                  menu.level === 1 ? 'bg-slate-100/90 font-bold text-slate-900 border-t-2 border-slate-300/70' : '',
+                  menu.level === 2 ? 'bg-white text-slate-800 font-medium' : '',
+                  (menu.level === 3 || menu.is_tab) ? 'bg-indigo-50/20 text-slate-600 border-l-4 border-l-indigo-400' : ''
+                ]"
               >
                 <!-- Row Number -->
                 <td class="py-3 px-4 text-center font-mono text-slate-400 text-[11px]">
                   {{ idx + 1 }}
                 </td>
 
-                <!-- Menu Name & Indentation -->
-                <td class="py-3 px-4" :class="menu.is_child ? 'pl-8' : 'pl-4'">
+                <!-- Menu Name & Indentation (3 Levels) -->
+                <td class="py-2.5 px-4" :class="[
+                  menu.level === 1 ? 'pl-4' : '',
+                  menu.level === 2 ? 'pl-8' : '',
+                  (menu.level === 3 || menu.is_tab) ? 'pl-14' : ''
+                ]">
                   <div class="flex items-center gap-2">
-                    <template v-if="menu.is_child">
-                      <span class="text-slate-300 font-mono select-none">└──</span>
-                      <i :class="menu.icon || 'bi bi-circle'" class="text-slate-400 text-xs"></i>
-                      <span class="text-xs font-semibold text-slate-700">{{ menu.nama_menu }}</span>
+                    <!-- Level 3 / NavTab Menu -->
+                    <template v-if="menu.level === 3 || menu.is_tab">
+                      <span class="text-indigo-300 font-mono select-none text-xs">└──</span>
+                      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-700 text-[10px] font-black uppercase tracking-wider">
+                        <i class="bi bi-segmented-nav text-[9px]"></i> TAB
+                      </span>
+                      <i :class="menu.icon || 'bi bi-tag'" class="text-indigo-500 text-xs"></i>
+                      <span class="text-xs font-semibold text-slate-700">{{ menu.nama_menu.replace(/^Tab:\s*/i, '') }}</span>
                     </template>
+
+                    <!-- Level 2 / Page Menu -->
+                    <template v-else-if="menu.level === 2 || menu.is_child">
+                      <span class="text-slate-300 font-mono select-none">└──</span>
+                      <i :class="menu.icon || 'bi bi-file-earmark-text'" class="text-blue-500 text-xs"></i>
+                      <span class="text-xs font-bold text-slate-800">{{ menu.nama_menu }}</span>
+                    </template>
+
+                    <!-- Level 1 / Parent Category -->
                     <template v-else>
-                      <i :class="menu.icon || 'bi bi-folder-fill'" class="text-blue-600 text-sm"></i>
+                      <i :class="menu.icon || 'bi bi-folder2-open'" class="text-slate-700 text-sm"></i>
                       <span class="text-xs font-black text-slate-900 uppercase tracking-tight">{{ menu.nama_menu }}</span>
                     </template>
                   </div>
                 </td>
 
                 <!-- URL Path -->
-                <td class="py-3 px-4 font-mono text-[11px] text-slate-500">
-                  <span v-if="menu.url && menu.url !== '#'" class="bg-slate-100 px-2 py-0.5 rounded-md text-slate-600 border border-slate-200/60">
+                <td class="py-2.5 px-4 font-mono text-[11px] text-slate-500">
+                  <span v-if="menu.url && menu.url !== '#'" class="px-2 py-0.5 rounded-md border text-[11px]" :class="(menu.level === 3 || menu.is_tab) ? 'bg-indigo-50/60 text-indigo-600 border-indigo-200/60' : 'bg-slate-100 text-slate-600 border-slate-200/60'">
                     {{ menu.url }}
                   </span>
                   <span v-else class="text-slate-300 select-none">-</span>
                 </td>
 
                 <!-- Menu Icon -->
-                <td class="py-3 px-4 text-center">
-                  <span v-if="menu.icon" class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 text-slate-600 border border-slate-200/80">
+                <td class="py-2.5 px-4 text-center">
+                  <span v-if="menu.icon" class="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-slate-100 text-slate-600 border border-slate-200/80 text-xs">
                     <i :class="menu.icon"></i>
                   </span>
                   <span v-else class="text-slate-300">-</span>

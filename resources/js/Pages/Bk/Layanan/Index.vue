@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import AppLayout from '@/Layouts/AppLayout.vue'
+import SearchableSelect from '@/Components/SearchableSelect.vue'
 import { router, useForm, usePage } from '@inertiajs/vue3'
 
 const props = defineProps({
@@ -38,6 +39,24 @@ const getSelectedTenantName = () => {
     const t = (props.tenants || []).find(t => t.id === tenantId.value)
     return t ? t.nama_sekolah : 'Sekolah Terpilih'
 }
+
+const tenantOptions = computed(() => [
+    { id: '', nama: '-- Semua Sekolah (Global) --' },
+    ...(props.tenants || []).map(t => ({
+        id: t.id,
+        nama: t.nama_sekolah,
+        subLabel: t.npsn ? `NPSN: ${t.npsn}` : ''
+    }))
+])
+
+const tahunAjaranOptions = computed(() => [
+    { id: '', nama: '-- Semua Tahun Ajaran --' },
+    ...(props.tahunAjaranList || []).map(ta => ({
+        id: ta.nama_tahun_ajaran,
+        nama: `T.A. ${ta.nama_tahun_ajaran}`,
+        subLabel: ta.is_active ? '★ (Aktif)' : ''
+    }))
+])
 
 // Modals State
 const showModalRecord = ref(false)
@@ -437,33 +456,25 @@ onMounted(() => {
                     </span>
 
                     <!-- Dropdown Pilih Sekolah -->
-                    <div class="my-1 md:my-0">
-                        <select
+                    <div class="my-1 md:my-0 min-w-[260px]">
+                        <SearchableSelect
                             v-model="tenantId"
+                            :options="tenantOptions"
+                            placeholder="-- Semua Sekolah (Global) --"
+                            search-placeholder="Cari nama sekolah..."
                             @change="applyFilters"
-                            id="layanan-tenant-selector"
-                            class="h-9 px-3 bg-white border border-blue-200 rounded-xl text-xs font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 min-w-[240px] cursor-pointer"
-                        >
-                            <option value="">-- Semua Sekolah (Global) --</option>
-                            <option v-for="t in tenants || []" :key="t.id" :value="t.id">
-                                {{ t.nama_sekolah }}
-                            </option>
-                        </select>
+                        />
                     </div>
 
                     <!-- Dropdown Tahun Ajaran -->
-                    <div class="my-1 md:my-0">
-                        <select
+                    <div class="my-1 md:my-0 min-w-[200px]">
+                        <SearchableSelect
                             v-model="tahunAjaran"
+                            :options="tahunAjaranOptions"
+                            placeholder="-- Semua Tahun Ajaran --"
+                            search-placeholder="Cari tahun ajaran..."
                             @change="applyFilters"
-                            id="layanan-tahun-ajaran-selector"
-                            class="h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
-                        >
-                            <option value="">-- Semua Tahun Ajaran --</option>
-                            <option v-for="ta in tahunAjaranList || []" :key="ta.id" :value="ta.nama_tahun_ajaran">
-                                {{ ta.nama_tahun_ajaran }} {{ ta.is_active ? '(Aktif)' : '' }}
-                            </option>
-                        </select>
+                        />
                     </div>
 
                     <!-- Tombol Reset -->
