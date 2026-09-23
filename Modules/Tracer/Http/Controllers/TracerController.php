@@ -194,6 +194,7 @@ class TracerController extends Controller
                 'totalWirausaha'    => $totalWirausaha,
                 'totalBelumTerdata' => $totalBelumTerdata,
             ],
+            'allowed_tabs'      => \Modules\Core\Services\MenuService::getAllowedTabsForRoute($user, '/alumni/tracer-study'),
             'filters'           => [
                 'search'        => $search,
                 'tab'           => $tab,

@@ -102,6 +102,7 @@ class PersuratanController extends Controller
             'suratMasukList' => $suratMasukList,
             'suratKeluarList' => $suratKeluarList,
             'stats' => $stats,
+            'allowed_tabs' => \Modules\Core\Services\MenuService::getAllowedTabsForRoute(auth()->user(), '/persuratan'),
             'filters' => [
                 'tab' => $activeTab,
                 'search' => $search,

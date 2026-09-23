@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import SearchableSelect from '@/Components/SearchableSelect.vue';
@@ -9,10 +9,27 @@ const props = defineProps({
   suratMasukList: Object,
   suratKeluarList: Object,
   stats: Object,
+  allowed_tabs: { type: Array, default: () => [] },
   filters: Object,
 });
 
+const allTabs = [
+  { id: 'surat_masuk', label: 'Agenda Surat Masuk', icon: 'bi-inbox', color: 'indigo', count: () => props.suratMasukList?.total || 0 },
+  { id: 'surat_keluar', label: 'Arsip Surat Keluar', icon: 'bi-send', color: 'emerald', count: () => props.suratKeluarList?.total || 0 },
+];
+
+const availableTabs = computed(() => {
+  if (!props.allowed_tabs || props.allowed_tabs.length === 0) return allTabs;
+  return allTabs.filter(t => props.allowed_tabs.includes(t.id));
+});
+
 const activeTab = ref(props.filters?.tab || 'surat_masuk');
+
+onMounted(() => {
+  if (props.allowed_tabs && props.allowed_tabs.length > 0 && !props.allowed_tabs.includes(activeTab.value)) {
+    activeTab.value = props.allowed_tabs[0];
+  }
+});
 const search = ref(props.filters?.search || '');
 const filterStatusDisposisi = ref(props.filters?.status_disposisi || '');
 const filterStatusSurat = ref(props.filters?.status_surat || '');
@@ -313,20 +330,14 @@ const formatDate = (dateStr) => {
         <div class="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div class="flex items-center gap-2">
             <button
-              @click="switchTab('surat_masuk')"
+              v-for="t in availableTabs"
+              :key="t.id"
+              @click="switchTab(t.id)"
               class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2"
-              :class="activeTab === 'surat_masuk' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+              :class="activeTab === t.id ? (t.id === 'surat_masuk' ? 'bg-indigo-600 text-white shadow-md' : 'bg-emerald-600 text-white shadow-md') : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
             >
-              <i class="bi bi-inbox"></i>
-              <span>Agenda Surat Masuk ({{ suratMasukList?.total || 0 }})</span>
-            </button>
-            <button
-              @click="switchTab('surat_keluar')"
-              class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2"
-              :class="activeTab === 'surat_keluar' ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
-            >
-              <i class="bi bi-send"></i>
-              <span>Arsip Surat Keluar ({{ suratKeluarList?.total || 0 }})</span>
+              <i :class="['bi', t.icon]"></i>
+              <span>{{ t.label }} ({{ t.count() }})</span>
             </button>
           </div>
 

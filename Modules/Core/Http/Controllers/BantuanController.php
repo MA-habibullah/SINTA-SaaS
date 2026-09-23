@@ -56,6 +56,7 @@ class BantuanController extends Controller
                     'user_role'        => $roleName,
                     'faqs'             => $faqs,
                     'canned_responses' => $cannedResponses,
+                    'allowed_tabs'     => \Modules\Core\Services\MenuService::getAllowedTabsForRoute($user, '/bantuan'),
                 ]
             ]);
         }
@@ -67,6 +68,7 @@ class BantuanController extends Controller
             'userRole'        => $roleName,
             'initialFaqs'     => $faqs,
             'cannedResponses' => $cannedResponses,
+            'allowed_tabs'    => \Modules\Core\Services\MenuService::getAllowedTabsForRoute($user, '/bantuan'),
         ]);
     }
 

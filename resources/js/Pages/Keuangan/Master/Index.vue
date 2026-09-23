@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import SearchableSelect from '@/Components/SearchableSelect.vue'
@@ -17,16 +17,30 @@ const props = defineProps({
   isSuperAdmin: { type: Boolean, default: false },
   tenantsList: { type: Array, default: () => [] },
   selectedTenantId: { type: String, default: '' },
+  allowed_tabs: { type: Array, default: () => [] },
+})
+
+const allTabs = [
+  { id: 'komponen', label: '1. Pos Pembayaran (Komponen)', icon: 'bi-grid-3x3-gap-fill', color: 'blue', count: () => props.posList.length },
+  { id: 'tarif', label: '2. Matriks Tarif Acuan', icon: 'bi-cash-coin', color: 'emerald', count: () => props.tarifList.length },
+  { id: 'keringanan', label: '3. Keringanan & Beasiswa', icon: 'bi-award-fill', color: 'amber', count: () => props.keringananList.length },
+  { id: 'kas', label: '4. Akun Kas & Bank', icon: 'bi-bank', color: 'purple', count: () => props.kasList.length },
+  { id: 'pengaturan', label: '5. Pengaturan & Kuitansi', icon: 'bi-gear-fill', color: 'slate', count: () => 1 },
+]
+
+const availableTabs = computed(() => {
+  if (!props.allowed_tabs || props.allowed_tabs.length === 0) return allTabs
+  return allTabs.filter(t => props.allowed_tabs.includes(t.id))
 })
 
 const currentTenantId = ref(props.selectedTenantId || '')
 
 const tenantOptions = computed(() => [
-  { value: '', label: '-- Semua Sekolah (Agregat Global) --', sublabel: 'Tampilkan seluruh tenant' },
+  { id: '', nama: '-- Semua Sekolah (Agregat Global) --', subLabel: 'Tampilkan seluruh tenant' },
   ...props.tenantsList.map(t => ({
-    value: t.id,
-    label: t.nama_sekolah,
-    sublabel: 'Tenant ID: ' + t.id.substring(0, 8) + '...'
+    id: t.id,
+    nama: t.nama_sekolah,
+    subLabel: 'Tenant ID: ' + t.id.substring(0, 8) + '...'
   }))
 ])
 
@@ -47,6 +61,12 @@ const getSelectedTenantName = () => {
 
 const activeTab = ref('komponen') // 'komponen', 'tarif', 'keringanan', 'kas', 'pengaturan'
 const toast = ref({ show: false, message: '', type: 'success' })
+
+onMounted(() => {
+  if (props.allowed_tabs && props.allowed_tabs.length > 0 && !props.allowed_tabs.includes(activeTab.value)) {
+    activeTab.value = props.allowed_tabs[0]
+  }
+})
 
 function showToast(msg, type = 'success') {
   toast.value = { show: true, message: msg, type }
@@ -409,80 +429,19 @@ function submitPengaturan() {
 
           <div class="nav-tabs-wrapper grow overflow-hidden relative">
             <ul class="flex border-0 flex-nowrap overflow-x-auto whitespace-nowrap scrollable-nav-tabs gap-1.5 px-1 select-none no-scrollbar" id="navTabsMasterKeuangan" role="tablist">
-              <!-- TAB 1: POS BIAYA -->
-              <li class="nav-item">
+              <!-- DYNAMIC NAVTABS -->
+              <li v-for="t in availableTabs" :key="t.id" class="nav-item">
                 <button
                   type="button"
                   class="border-0 font-semibold px-4 py-2.5 rounded-xl text-xs transition flex items-center gap-2"
-                  :class="activeTab === 'komponen' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'"
-                  @click="activeTab = 'komponen'"
+                  :class="activeTab === t.id ? (t.id === 'komponen' ? 'bg-blue-600 text-white shadow-xs' : (t.id === 'tarif' ? 'bg-emerald-600 text-white shadow-xs' : (t.id === 'keringanan' ? 'bg-amber-500 text-white shadow-xs' : (t.id === 'kas' ? 'bg-purple-600 text-white shadow-xs' : 'bg-slate-800 text-white shadow-xs')))) : 'text-slate-600 hover:bg-slate-100'"
+                  @click="activeTab = t.id"
                 >
-                  <i class="bi bi-grid-3x3-gap-fill text-sm"></i>
-                  <span>1. Pos Pembayaran (Komponen)</span>
-                  <span class="px-1.5 py-0.2 bg-blue-500/20 text-blue-100 text-[10px] font-bold rounded-full">
-                    {{ posList.length }}
+                  <i :class="['bi', t.icon, 'text-sm']"></i>
+                  <span>{{ t.label }}</span>
+                  <span v-if="t.id !== 'pengaturan'" class="px-1.5 py-0.2 bg-white/20 text-white text-[10px] font-bold rounded-full">
+                    {{ t.count() }}
                   </span>
-                </button>
-              </li>
-
-              <!-- TAB 2: TARIF ACUAN -->
-              <li class="nav-item">
-                <button
-                  type="button"
-                  class="border-0 font-semibold px-4 py-2.5 rounded-xl text-xs transition flex items-center gap-2"
-                  :class="activeTab === 'tarif' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'"
-                  @click="activeTab = 'tarif'"
-                >
-                  <i class="bi bi-cash-coin text-sm"></i>
-                  <span>2. Matriks Tarif Acuan</span>
-                  <span class="px-1.5 py-0.2 bg-emerald-500/20 text-emerald-100 text-[10px] font-bold rounded-full">
-                    {{ tarifList.length }}
-                  </span>
-                </button>
-              </li>
-
-              <!-- TAB 3: KERINGANAN & BEASISWA -->
-              <li class="nav-item">
-                <button
-                  type="button"
-                  class="border-0 font-semibold px-4 py-2.5 rounded-xl text-xs transition flex items-center gap-2"
-                  :class="activeTab === 'keringanan' ? 'bg-amber-500 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'"
-                  @click="activeTab = 'keringanan'"
-                >
-                  <i class="bi bi-award-fill text-sm"></i>
-                  <span>3. Keringanan & Beasiswa</span>
-                  <span class="px-1.5 py-0.2 bg-amber-600/30 text-white text-[10px] font-bold rounded-full">
-                    {{ keringananList.length }}
-                  </span>
-                </button>
-              </li>
-
-              <!-- TAB 4: KAS & BANK -->
-              <li class="nav-item">
-                <button
-                  type="button"
-                  class="border-0 font-semibold px-4 py-2.5 rounded-xl text-xs transition flex items-center gap-2"
-                  :class="activeTab === 'kas' ? 'bg-purple-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'"
-                  @click="activeTab = 'kas'"
-                >
-                  <i class="bi bi-bank text-sm"></i>
-                  <span>4. Akun Kas & Bank</span>
-                  <span class="px-1.5 py-0.2 bg-purple-500/20 text-purple-100 text-[10px] font-bold rounded-full">
-                    {{ kasList.length }}
-                  </span>
-                </button>
-              </li>
-
-              <!-- TAB 5: PENGATURAN KEUANGAN -->
-              <li class="nav-item">
-                <button
-                  type="button"
-                  class="border-0 font-semibold px-4 py-2.5 rounded-xl text-xs transition flex items-center gap-2"
-                  :class="activeTab === 'pengaturan' ? 'bg-slate-800 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'"
-                  @click="activeTab = 'pengaturan'"
-                >
-                  <i class="bi bi-gear-fill text-sm"></i>
-                  <span>5. Pengaturan & Kuitansi</span>
                 </button>
               </li>
             </ul>

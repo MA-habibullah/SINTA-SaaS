@@ -106,6 +106,7 @@ class LaporanKeuanganController extends Controller
             'isSuperAdmin'          => $isSuperAdmin,
             'tenantsList'           => $tenantsList,
             'selectedTenantId'      => $selectedTenantId,
+            'allowed_tabs'          => \Modules\Core\Services\MenuService::getAllowedTabsForRoute($user, '/keuangan/laporan'),
             'filters'               => [
                 'tenant_id' => $selectedTenantId,
                 'date_from' => $dateFrom,

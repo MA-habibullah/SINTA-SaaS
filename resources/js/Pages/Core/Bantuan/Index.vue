@@ -29,11 +29,38 @@ const props = defineProps({
   cannedResponses: {
     type: Array,
     default: () => []
+  },
+  allowed_tabs: {
+    type: Array,
+    default: () => []
   }
 })
 
 // Tab Navigation State
+const allTabs = [
+  { id: 'tickets', label: 'Riwayat Tiket Laporan', icon: 'bi-ticket-detailed', color: 'blue', isSuperOnly: false },
+  { id: 'feature_requests', label: 'Request & Usulan Fitur Baru', icon: 'bi-rocket-takeoff-fill', color: 'indigo', isSuperOnly: false },
+  { id: 'faq', label: 'Basis Pengetahuan (FAQ)', icon: 'bi-question-circle', color: 'blue', isSuperOnly: false },
+  { id: 'admin_manage', label: 'Kelola FAQ & Canned Responses', icon: 'bi-sliders', color: 'purple', isSuperOnly: true },
+  { id: 'hotline', label: 'Hotline & Kontak Darurat', icon: 'bi-telephone-inbound', color: 'blue', isSuperOnly: false },
+]
+
+const availableTabs = computed(() => {
+  let list = allTabs
+  if (!props.isSuperAdmin) {
+    list = list.filter(t => !t.isSuperOnly)
+  }
+  if (!props.allowed_tabs || props.allowed_tabs.length === 0) return list
+  return list.filter(t => props.allowed_tabs.includes(t.id))
+})
+
 const activeTab = ref('tickets') // 'tickets', 'feature_requests', 'faq', 'admin_manage', 'hotline'
+
+onMounted(() => {
+  if (availableTabs.value.length > 0 && !availableTabs.value.some(t => t.id === activeTab.value)) {
+    activeTab.value = availableTabs.value[0].id
+  }
+})
 
 // Modul List for Feature Requests (16 Modul SINTA)
 const modulList = [
@@ -905,77 +932,24 @@ onMounted(() => {
 
           <div class="nav-tabs-wrapper grow overflow-hidden relative">
             <ul class="flex border-0 flex-nowrap overflow-x-auto whitespace-nowrap scrollable-nav-tabs gap-1.5 px-1 select-none no-scrollbar" id="navTabsBantuan" role="tablist">
-              <!-- TAB: TIKET -->
-              <li class="nav-item">
+              <li v-for="tab in availableTabs" :key="tab.id" class="nav-item">
                 <button
                   type="button"
                   class="border-0 font-semibold px-4 py-2.5 rounded-xl text-xs transition flex items-center gap-2"
-                  :class="activeTab === 'tickets' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'"
-                  @click="activeTab = 'tickets'"
+                  :class="activeTab === tab.id ? (tab.id === 'feature_requests' ? 'bg-indigo-600 text-white shadow-xs' : (tab.id === 'admin_manage' ? 'bg-purple-600 text-white shadow-xs' : 'bg-blue-600 text-white shadow-xs')) : 'text-slate-600 hover:bg-slate-100'"
+                  @click="activeTab = tab.id"
                 >
-                  <i class="bi bi-ticket-detailed text-sm"></i>
-                  <span>Riwayat Tiket Laporan</span>
-                  <span v-if="localUnreadCount > 0" class="px-1.5 py-0.2 bg-rose-500 text-white text-[10px] font-black rounded-full">
+                  <i :class="['bi text-sm', tab.icon]"></i>
+                  <span>{{ tab.label }}</span>
+                  <span v-if="tab.id === 'tickets' && localUnreadCount > 0" class="px-1.5 py-0.2 bg-rose-500 text-white text-[10px] font-black rounded-full">
                     {{ localUnreadCount }}
                   </span>
-                </button>
-              </li>
-
-              <!-- TAB: REQUEST FITUR -->
-              <li class="nav-item">
-                <button
-                  type="button"
-                  class="border-0 font-semibold px-4 py-2.5 rounded-xl text-xs transition flex items-center gap-2"
-                  :class="activeTab === 'feature_requests' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'"
-                  @click="activeTab = 'feature_requests'"
-                >
-                  <i class="bi bi-rocket-takeoff-fill text-sm"></i>
-                  <span>Request & Usulan Fitur Baru</span>
-                  <span class="px-1.5 py-0.2 bg-amber-400 text-slate-900 text-[10px] font-extrabold rounded-full">
+                  <span v-else-if="tab.id === 'feature_requests'" class="px-1.5 py-0.2 bg-amber-400 text-slate-900 text-[10px] font-extrabold rounded-full">
                     {{ featureStats.total || featureRequests.length }}
                   </span>
-                </button>
-              </li>
-
-              <!-- TAB: FAQ -->
-              <li class="nav-item">
-                <button
-                  type="button"
-                  class="border-0 font-semibold px-4 py-2.5 rounded-xl text-xs transition flex items-center gap-2"
-                  :class="activeTab === 'faq' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'"
-                  @click="activeTab = 'faq'"
-                >
-                  <i class="bi bi-question-circle text-sm"></i>
-                  <span>Basis Pengetahuan (FAQ)</span>
-                  <span class="px-1.5 py-0.2 bg-slate-200 text-slate-700 text-[10px] font-bold rounded-full">
+                  <span v-else-if="tab.id === 'faq'" class="px-1.5 py-0.2 bg-slate-200 text-slate-700 text-[10px] font-bold rounded-full">
                     {{ allFaqs.length }}
                   </span>
-                </button>
-              </li>
-
-              <!-- TAB: SUPER ADMIN -->
-              <li v-if="isSuperAdmin" class="nav-item">
-                <button
-                  type="button"
-                  class="border-0 font-semibold px-4 py-2.5 rounded-xl text-xs transition flex items-center gap-2"
-                  :class="activeTab === 'admin_manage' ? 'bg-purple-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'"
-                  @click="activeTab = 'admin_manage'"
-                >
-                  <i class="bi bi-sliders text-sm"></i>
-                  <span>Kelola FAQ & Canned Responses</span>
-                </button>
-              </li>
-
-              <!-- TAB: HOTLINE -->
-              <li class="nav-item">
-                <button
-                  type="button"
-                  class="border-0 font-semibold px-4 py-2.5 rounded-xl text-xs transition flex items-center gap-2"
-                  :class="activeTab === 'hotline' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'"
-                  @click="activeTab = 'hotline'"
-                >
-                  <i class="bi bi-telephone-inbound text-sm"></i>
-                  <span>Hotline & Kontak Darurat</span>
                 </button>
               </li>
             </ul>

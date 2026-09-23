@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import SearchableSelect from '@/Components/SearchableSelect.vue'
@@ -17,10 +17,34 @@ const props = defineProps({
   isSuperAdmin: { type: Boolean, default: false },
   tenantsList: { type: Array, default: () => [] },
   selectedTenantId: { type: String, default: '' },
+  allowed_tabs: { type: Array, default: () => [] },
   filters: { type: Object, default: () => ({}) },
 })
 
+function formatRupiah(val) {
+  if (!val || isNaN(val)) return '0'
+  return Number(val).toLocaleString('id-ID')
+}
+
+const allTabs = [
+  { id: 'pemasukan', label: '1. Rekap Pemasukan Kas (Buku Kas Umum)', icon: 'bi-wallet2', color: 'emerald', total: () => `Rp ${formatRupiah(props.totalPemasukanNominal)}` },
+  { id: 'tunggakan', label: '2. Rekap Tunggakan & Surat Tagihan Ortu', icon: 'bi-exclamation-octagon', color: 'rose', total: () => `Rp ${formatRupiah(props.totalTunggakanNominal)}` },
+]
+
+const availableTabs = computed(() => {
+  if (!props.allowed_tabs || props.allowed_tabs.length === 0) return allTabs
+  return allTabs.filter(t => props.allowed_tabs.includes(t.id))
+})
+
 const currentTenantId = ref(props.selectedTenantId || '')
+
+const currentTab = ref(props.activeTab || 'pemasukan')
+
+onMounted(() => {
+  if (props.allowed_tabs && props.allowed_tabs.length > 0 && !props.allowed_tabs.includes(currentTab.value)) {
+    currentTab.value = props.allowed_tabs[0]
+  }
+})
 
 const tenantOptions = computed(() => [
   { value: '', label: '-- Semua Sekolah (Agregat Global) --', sublabel: 'Tampilkan seluruh tenant' },
@@ -51,13 +75,6 @@ const getSelectedTenantName = () => {
   if (!currentTenantId.value) return 'Semua Sekolah (Agregat Platform)'
   const found = props.tenantsList.find(t => t.id === currentTenantId.value)
   return found ? found.nama_sekolah : 'Sekolah Terpilih'
-}
-
-const currentTab = ref(props.activeTab || 'pemasukan')
-
-function formatRupiah(val) {
-  if (!val || isNaN(val)) return '0'
-  return Number(val).toLocaleString('id-ID')
 }
 
 function formatDate(dateStr) {
@@ -190,35 +207,20 @@ function openSuratTagihan(siswaItem) {
         </div>
       </div>
 
-      <!-- Modern NavTabs (Pemasukan vs Tunggakan) -->
+      <!-- Modern Dynamic NavTabs -->
       <div class="bg-white rounded-2xl shadow-2xs border border-slate-200/80 p-2">
         <ul class="flex border-0 gap-2 select-none" role="tablist">
-          <li class="flex-1">
+          <li v-for="t in availableTabs" :key="t.id" class="flex-1">
             <button
               type="button"
               class="w-full border-0 font-bold px-4 py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-2"
-              :class="currentTab === 'pemasukan' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'"
-              @click="currentTab = 'pemasukan'; applyFilters()"
+              :class="currentTab === t.id ? (t.id === 'pemasukan' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-rose-600 text-white shadow-xs') : 'text-slate-600 hover:bg-slate-100'"
+              @click="currentTab = t.id; applyFilters()"
             >
-              <i class="bi bi-wallet2 text-sm"></i>
-              <span>1. Rekap Pemasukan Kas (Buku Kas Umum)</span>
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" :class="currentTab === 'pemasukan' ? 'bg-emerald-700 text-white' : 'bg-slate-200 text-slate-700'">
-                Rp {{ formatRupiah(totalPemasukanNominal) }}
-              </span>
-            </button>
-          </li>
-
-          <li class="flex-1">
-            <button
-              type="button"
-              class="w-full border-0 font-bold px-4 py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-2"
-              :class="currentTab === 'tunggakan' ? 'bg-rose-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'"
-              @click="currentTab = 'tunggakan'; applyFilters()"
-            >
-              <i class="bi bi-exclamation-octagon text-sm"></i>
-              <span>2. Rekap Tunggakan & Surat Tagihan Ortu</span>
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" :class="currentTab === 'tunggakan' ? 'bg-rose-700 text-white' : 'bg-slate-200 text-slate-700'">
-                Rp {{ formatRupiah(totalTunggakanNominal) }}
+              <i :class="['bi', t.icon, 'text-sm']"></i>
+              <span>{{ t.label }}</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" :class="currentTab === t.id ? (t.id === 'pemasukan' ? 'bg-emerald-700 text-white' : 'bg-rose-700 text-white') : 'bg-slate-200 text-slate-700'">
+                {{ t.total() }}
               </span>
             </button>
           </li>

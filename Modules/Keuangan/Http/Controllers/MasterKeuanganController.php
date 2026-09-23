@@ -66,6 +66,7 @@ class MasterKeuanganController extends Controller
             'isSuperAdmin'     => $isSuperAdmin,
             'tenantsList'      => $tenantsList,
             'selectedTenantId' => $selectedTenantId,
+            'allowed_tabs'     => \Modules\Core\Services\MenuService::getAllowedTabsForRoute($user, '/keuangan/master'),
         ];
 
         if ($request->wantsJson()) {

@@ -153,59 +153,20 @@
               @mouseup="handleTabsMouseUp"
               @mousemove="handleTabsMouseMove"
             >
-              <!-- Tab 1: Riwayat Kuliah -->
-              <li>
+              <li v-for="t in availableTabs" :key="t.id">
                 <button
                   type="button"
-                  @click="switchTab('kuliah')"
+                  @click="switchTab(t.id)"
                   class="font-bold px-4 py-2.5 rounded-xl text-xs transition flex items-center gap-2"
-                  :class="activeTab === 'kuliah' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
+                  :class="activeTab === t.id ? (t.id === 'kuliah' ? 'bg-blue-600 text-white shadow-sm' : (t.id === 'pekerjaan' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-indigo-600 text-white shadow-sm')) : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
                 >
-                  <i class="bi bi-mortarboard text-sm"></i>
-                  <span>Riwayat Kuliah / PTN / PTS</span>
+                  <i :class="['bi', t.icon, 'text-sm']"></i>
+                  <span>{{ t.name }}</span>
                   <span
                     class="px-2 py-0.5 rounded-full text-[10px] font-bold"
-                    :class="activeTab === 'kuliah' ? 'bg-blue-700/80 text-white' : 'bg-slate-100 text-slate-600'"
+                    :class="activeTab === t.id ? (t.id === 'kuliah' ? 'bg-blue-700/80 text-white' : (t.id === 'pekerjaan' ? 'bg-emerald-700/80 text-white' : 'bg-indigo-700/80 text-white')) : 'bg-slate-100 text-slate-600'"
                   >
-                    {{ riwayatKuliah?.total || 0 }}
-                  </span>
-                </button>
-              </li>
-
-              <!-- Tab 2: Riwayat Pekerjaan -->
-              <li>
-                <button
-                  type="button"
-                  @click="switchTab('pekerjaan')"
-                  class="font-bold px-4 py-2.5 rounded-xl text-xs transition flex items-center gap-2"
-                  :class="activeTab === 'pekerjaan' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
-                >
-                  <i class="bi bi-briefcase text-sm"></i>
-                  <span>Riwayat Karir & Pekerjaan</span>
-                  <span
-                    class="px-2 py-0.5 rounded-full text-[10px] font-bold"
-                    :class="activeTab === 'pekerjaan' ? 'bg-emerald-700/80 text-white' : 'bg-slate-100 text-slate-600'"
-                  >
-                    {{ riwayatPekerjaan?.total || 0 }}
-                  </span>
-                </button>
-              </li>
-
-              <!-- Tab 3: Tracking Direktori Alumni -->
-              <li>
-                <button
-                  type="button"
-                  @click="switchTab('tracking')"
-                  class="font-bold px-4 py-2.5 rounded-xl text-xs transition flex items-center gap-2"
-                  :class="activeTab === 'tracking' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
-                >
-                  <i class="bi bi-search text-sm"></i>
-                  <span>Tracking Direktori Siswa Lulus</span>
-                  <span
-                    class="px-2 py-0.5 rounded-full text-[10px] font-bold"
-                    :class="activeTab === 'tracking' ? 'bg-indigo-700/80 text-white' : 'bg-slate-100 text-slate-600'"
-                  >
-                    {{ alumniTracking?.total || 0 }}
+                    {{ t.count() }}
                   </span>
                 </button>
               </li>
@@ -1536,13 +1497,31 @@ const props = defineProps({
   tenants: Array,
   selectedTenant: String,
   metrics: Object,
+  allowed_tabs: { type: Array, default: () => [] },
   filters: Object,
+});
+
+const allTabs = [
+  { id: 'kuliah', name: 'Riwayat Kuliah / PTN / PTS', icon: 'bi-mortarboard', color: 'blue', count: () => props.riwayatKuliah?.total || 0 },
+  { id: 'pekerjaan', name: 'Riwayat Karir & Pekerjaan', icon: 'bi-briefcase', color: 'emerald', count: () => props.riwayatPekerjaan?.total || 0 },
+  { id: 'tracking', name: 'Tracking Direktori Siswa Lulus', icon: 'bi-search', color: 'indigo', count: () => props.alumniTracking?.total || 0 },
+];
+
+const availableTabs = computed(() => {
+  if (!props.allowed_tabs || props.allowed_tabs.length === 0) return allTabs;
+  return allTabs.filter(t => props.allowed_tabs.includes(t.id));
 });
 
 const currentYear = new Date().getFullYear();
 const activeTab = ref(props.filters?.tab || 'kuliah');
 const isRefreshing = ref(false);
 const selectedTenant = ref(props.selectedTenant || props.filters?.tenant_id || '');
+
+onMounted(() => {
+  if (props.allowed_tabs && props.allowed_tabs.length > 0 && !props.allowed_tabs.includes(activeTab.value)) {
+    activeTab.value = props.allowed_tabs[0];
+  }
+});
 
 // Standarisasi Opsi Dropdown (SearchableSelect)
 const tenantOptions = computed(() => {
